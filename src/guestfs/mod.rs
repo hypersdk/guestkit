@@ -11,6 +11,8 @@ pub mod file_ops;
 pub mod device;
 pub mod lvm;
 pub mod partition;
+pub mod command;
+pub mod archive;
 
 pub use handle::Guestfs;
 pub use inspect::*;

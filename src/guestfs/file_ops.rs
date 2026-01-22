@@ -330,6 +330,201 @@ impl Guestfs {
         // For now, return path as-is
         Ok(path.to_string())
     }
+
+    /// Copy file
+    ///
+    /// Compatible with libguestfs g.cp()
+    pub fn cp(&mut self, src: &str, dest: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: cp {} {}", src, dest);
+        }
+
+        Err(Error::Unsupported(
+            "File copy requires filesystem implementation".to_string()
+        ))
+    }
+
+    /// Copy file preserving attributes
+    ///
+    /// Compatible with libguestfs g.cp_a()
+    pub fn cp_a(&mut self, src: &str, dest: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: cp_a {} {}", src, dest);
+        }
+
+        Err(Error::Unsupported(
+            "File copy requires filesystem implementation".to_string()
+        ))
+    }
+
+    /// Copy recursively
+    ///
+    /// Compatible with libguestfs g.cp_r()
+    pub fn cp_r(&mut self, src: &str, dest: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: cp_r {} {}", src, dest);
+        }
+
+        Err(Error::Unsupported(
+            "Recursive copy requires filesystem implementation".to_string()
+        ))
+    }
+
+    /// Move/rename file
+    ///
+    /// Compatible with libguestfs g.mv()
+    pub fn mv(&mut self, src: &str, dest: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: mv {} {}", src, dest);
+        }
+
+        Err(Error::Unsupported(
+            "File move requires filesystem implementation".to_string()
+        ))
+    }
+
+    /// Download file from guest to host
+    ///
+    /// Compatible with libguestfs g.download()
+    pub fn download(&mut self, remotefilename: &str, filename: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: download {} {}", remotefilename, filename);
+        }
+
+        Err(Error::Unsupported(
+            "File download requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Upload file from host to guest
+    ///
+    /// Compatible with libguestfs g.upload()
+    pub fn upload(&mut self, filename: &str, remotefilename: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: upload {} {}", filename, remotefilename);
+        }
+
+        Err(Error::Unsupported(
+            "File upload requires filesystem writer implementation".to_string()
+        ))
+    }
+
+    /// Append content to file
+    ///
+    /// Compatible with libguestfs g.write_append()
+    pub fn write_append(&mut self, path: &str, content: &[u8]) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: write_append {} ({} bytes)", path, content.len());
+        }
+
+        Err(Error::Unsupported(
+            "File append requires filesystem writer implementation".to_string()
+        ))
+    }
+
+    /// Search file for pattern
+    ///
+    /// Compatible with libguestfs g.grep()
+    pub fn grep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: grep {} {}", regex, path);
+        }
+
+        Err(Error::Unsupported(
+            "Grep requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Search file for pattern (extended regex)
+    ///
+    /// Compatible with libguestfs g.egrep()
+    pub fn egrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: egrep {} {}", regex, path);
+        }
+
+        Err(Error::Unsupported(
+            "Egrep requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Search file for fixed strings
+    ///
+    /// Compatible with libguestfs g.fgrep()
+    pub fn fgrep(&mut self, pattern: &str, path: &str) -> Result<Vec<String>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: fgrep {} {}", pattern, path);
+        }
+
+        Err(Error::Unsupported(
+            "Fgrep requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Find files
+    ///
+    /// Compatible with libguestfs g.find()
+    pub fn find(&mut self, directory: &str) -> Result<Vec<String>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: find {}", directory);
+        }
+
+        Err(Error::Unsupported(
+            "Find requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Find files (NUL-separated)
+    ///
+    /// Compatible with libguestfs g.find0()
+    pub fn find0(&mut self, directory: &str, files: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: find0 {} {}", directory, files);
+        }
+
+        Err(Error::Unsupported(
+            "Find0 requires filesystem reader implementation".to_string()
+        ))
+    }
+
+    /// Calculate disk usage
+    ///
+    /// Compatible with libguestfs g.du()
+    pub fn du(&mut self, path: &str) -> Result<i64> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: du {}", path);
+        }
+
+        Err(Error::Unsupported(
+            "Du requires filesystem reader implementation".to_string()
+        ))
+    }
 }
 
 #[cfg(test)]
