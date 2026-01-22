@@ -1,15 +1,21 @@
 # guestkit Architecture
 
-Complete Rust implementation for guest VM operations with libguestfs integration.
+Complete **Pure Rust** implementation for guest VM operations.
 
 ## Overview
 
 **guestkit** is a modern Rust library providing:
 - **Disk format conversion** (qemu-img wrapper)
-- **Complete libguestfs FFI bindings** (auto-generated via bindgen)
+- **Pure Rust disk image reading** (qcow2, raw, vmdk detection)
+- **Pure Rust partition table parsing** (MBR, GPT)
+- **Pure Rust filesystem detection** (ext4, NTFS, XFS, Btrfs, FAT32)
 - **Guest OS detection and manipulation**
 - **PyO3 Python bindings** for zero-overhead integration
 - **Production-ready CLI tool**
+
+## Key Design Principle
+
+**Zero External C Dependencies** - All disk and filesystem operations are implemented in pure Rust without libguestfs or other C libraries (except qemu-img for conversion).
 
 ## Architecture Layers
 
@@ -31,6 +37,15 @@ Complete Rust implementation for guest VM operations with libguestfs integration
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────┐
+│              Pure Rust Disk Layer                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │ DiskReader   │  │PartitionTable│  │ FileSystem   │ │
+│  │ (qcow2, raw) │  │ (MBR, GPT)   │  │(ext4, NTFS)  │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────┐
 │              Core Utilities                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
 │  │ Error Types  │  │ Retry Logic  │  │ Type System  │ │
@@ -39,18 +54,10 @@ Complete Rust implementation for guest VM operations with libguestfs integration
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────┐
-│           FFI Layer (Bindgen Auto-Generated)            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ libguestfs   │  │ qemu-img     │  │ System Libs  │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│                 C Libraries                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ libguestfs.so│  │ qemu tooling │  │ libc         │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
+│              External Tools (Optional)                   │
+│  ┌──────────────┐                                       │
+│  │ qemu-img     │  (for format conversion only)         │
+│  └──────────────┘                                       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -73,7 +80,6 @@ pub enum Error {
     Detection(String),
     CommandFailed(String),
     InvalidFormat(String),
-    Ffi(String),
     // ...
 }
 
@@ -99,6 +105,84 @@ pub struct GuestIdentity {
     pub distro: Option<String>,
 }
 ```
+
+### `src/disk/` - Pure Rust Disk Operations
+
+**Purpose:** Read and parse disk images, partition tables, and filesystems without C dependencies
+
+#### `disk/reader.rs` - Disk Image Reader
+
+**Features:**
+- Auto-detect disk format from magic bytes
+- Read from raw and qcow2 disk images
+- Memory-efficient byte-level access
+
+**Example:**
+```rust
+use guestkit::disk::DiskReader;
+
+let mut reader = DiskReader::open("/path/to/disk.qcow2")?;
+println!("Format: {:?}", reader.format());
+println!("Size: {} bytes", reader.size());
+
+let mut buffer = vec![0u8; 512];
+reader.read_exact_at(0, &mut buffer)?; // Read MBR
+```
+
+#### `disk/partition.rs` - Partition Table Parser
+
+**Features:**
+- Parse MBR (Master Boot Record) partition tables
+- Parse GPT (GUID Partition Table)
+- Extract partition metadata (LBA, size, type)
+
+**Example:**
+```rust
+use guestkit::disk::PartitionTable;
+
+let partition_table = PartitionTable::parse(&mut reader)?;
+for partition in partition_table.partitions() {
+    println!("Partition {}: {} sectors at LBA {}",
+        partition.number,
+        partition.size_sectors,
+        partition.start_lba
+    );
+}
+```
+
+**Supported Partition Schemes:**
+- MBR (DOS partition table)
+- GPT (GUID Partition Table)
+- Automatic detection
+
+#### `disk/filesystem.rs` - Filesystem Detection
+
+**Features:**
+- Detect ext2/ext3/ext4 filesystems
+- Detect NTFS filesystems
+- Detect FAT32 filesystems
+- Detect XFS filesystems
+- Detect Btrfs filesystems
+- Extract filesystem labels and UUIDs
+
+**Example:**
+```rust
+use guestkit::disk::FileSystem;
+
+let fs = FileSystem::detect(&mut reader, &partition)?;
+println!("Filesystem: {:?}", fs.fs_type());
+if let Some(label) = fs.label() {
+    println!("Label: {}", label);
+}
+```
+
+**Detection Method:**
+Each filesystem has a unique signature (magic bytes) at specific offsets:
+- ext2/3/4: 0xEF53 at offset 1024+56
+- NTFS: "NTFS    " at offset 3
+- FAT32: "FAT32   " at offset 82
+- XFS: "XFSB" at offset 0
+- Btrfs: "_BHRfS_M" at offset 65536+64
 
 ### `src/converters/` - Disk Format Conversion
 
@@ -127,50 +211,9 @@ let result = converter.convert(
 )?;
 ```
 
-### `src/ffi/` - libguestfs FFI Bindings
-
-**Purpose:** Safe Rust bindings to libguestfs C library
-
-**Files:**
-- `bindings.rs` - Auto-generated FFI (via bindgen)
-- `guestfs.rs` - Safe Rust wrapper
-- `mod.rs` - Module exports
-
-**Auto-Generation:**
-```
-build.rs → wrapper.h → bindgen → bindings.rs (OUT_DIR)
-```
-
-**Architecture:**
-```
-Raw C FFI (bindgen) → Safe Wrapper (Guestfs) → High-Level API
-```
-
-**Key Features:**
-- **Automatic binding generation** - Always up-to-date with libguestfs
-- **Complete API coverage** - 500+ functions from libguestfs
-- **Type safety** - Rust ownership prevents memory leaks
-- **Error handling** - All C errors converted to Rust Results
-- **RAII cleanup** - Handles freed on Drop
-
-**Example:**
-```rust
-use guestkit::ffi::Guestfs;
-
-let g = Guestfs::new()?;
-g.add_drive_ro("/path/to/disk.qcow2")?;
-g.launch()?;
-
-let roots = g.inspect_os()?;
-for root in roots {
-    let os_type = g.inspect_get_type(&root)?;
-    println!("Found: {}", os_type);
-}
-```
-
 ### `src/detectors/` - Guest OS Detection
 
-**Purpose:** High-level guest OS detection API
+**Purpose:** High-level guest OS detection using pure Rust disk analysis
 
 **Files:**
 - `guest_detector.rs` - GuestDetector implementation
@@ -180,7 +223,17 @@ for root in roots {
 - Version detection
 - Architecture detection
 - Firmware detection (BIOS/UEFI)
-- Distribution detection
+- Distribution detection (Fedora, Ubuntu, RHEL, etc.)
+
+**Detection Strategy:**
+1. Open disk image
+2. Parse partition table (MBR/GPT)
+3. Detect filesystem type on each partition
+4. Infer OS from filesystem patterns:
+   - NTFS → Windows
+   - ext4/XFS/Btrfs → Linux
+   - Filesystem labels provide distribution hints
+5. GPT → UEFI firmware, MBR → BIOS firmware
 
 **Example:**
 ```rust
@@ -192,6 +245,7 @@ let guest = detector.detect_from_image("/path/to/disk.qcow2")?;
 println!("OS: {} {}", guest.os_name, guest.os_version);
 println!("Type: {:?}", guest.os_type);
 println!("Arch: {}", guest.architecture);
+println!("Firmware: {:?}", guest.firmware);
 ```
 
 ### `src/python.rs` - PyO3 Python Bindings
@@ -199,9 +253,9 @@ println!("Arch: {}", guest.architecture);
 **Purpose:** Native Python module for zero-overhead integration
 
 **Features:**
-- **Zero subprocess overhead** - Direct FFI calls
+- **Zero subprocess overhead** - Direct function calls
 - **Type-safe Python API** - Proper dictionaries, not strings
-- **Error propagation** - C errors → Rust errors → Python exceptions
+- **Error propagation** - Rust errors → Python exceptions
 
 **Build:**
 ```bash
@@ -246,37 +300,37 @@ FETCH → FLATTEN → INSPECT → FIX → CONVERT → VALIDATE
 
 ```toml
 [features]
-default = ["disk-ops"]
+default = ["disk-ops", "guest-inspect"]
 disk-ops = []                    # Disk operations (qemu-img)
 guest-inspect = []               # Guest OS detection
-ffi-bindings = []                # libguestfs FFI bindings
 python-bindings = ["pyo3"]       # PyO3 Python module
 ```
 
-### Build Script (`build.rs`)
+### Dependencies
 
-**Purpose:** Auto-generate FFI bindings at compile time
+**Core:**
+- `anyhow`, `thiserror` - Error handling
+- `tokio` - Async runtime
+- `serde`, `serde_json` - Serialization
+- `clap` - CLI parsing
 
-**Process:**
-1. Check for `ffi-bindings` feature
-2. Use pkg-config to find libguestfs
-3. Run bindgen on `wrapper.h`
-4. Generate `bindings.rs` in `$OUT_DIR`
-5. Fallback to manual bindings if not available
+**Disk Operations:**
+- `memmap2` - Memory-mapped file I/O
+- `byteorder` - Binary parsing
+- `regex` - Pattern matching
 
-**Benefits:**
-- Always up-to-date with installed libguestfs version
-- Type-safe bindings guaranteed to match C API
-- No manual maintenance of 500+ function declarations
-- Automatic documentation from C headers
+**Python:**
+- `pyo3` - Python bindings (optional)
+
+**No C Dependencies** - No bindgen, no pkg-config, no libguestfs!
 
 ## Error Handling
 
 ### Error Flow
 
 ```
-C Error → FFI Error → Rust Error → Application
-         (errno)     (Result<T>)    (user handling)
+Disk I/O → Rust Error → Application
+ (std::io)  (Result<T>)  (user handling)
 ```
 
 ### Error Types
@@ -290,8 +344,8 @@ pub enum Error {
     #[error("Conversion error: {0}")]
     Conversion(String),
 
-    #[error("FFI error: {0}")]
-    Ffi(String),
+    #[error("Detection error: {0}")]
+    Detection(String),
 
     // ...
 }
@@ -299,60 +353,23 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 ```
 
-### Error Conversion
-
-```rust
-// From C
-last_error() → String → Error::Ffi
-
-// From std
-io::Error → Error::Io (automatic via #[from])
-
-// Custom
-"message" → Error::Conversion
-```
-
 ## Memory Management
 
-### RAII Pattern
+### Safe Rust Patterns
 
-```rust
-pub struct Guestfs {
-    handle: *mut guestfs_h,
-}
+All memory management uses safe Rust:
+- No manual memory allocation
+- No unsafe pointer arithmetic (except for reading disk bytes)
+- RAII for file handles
+- Automatic cleanup via Drop trait
 
-impl Drop for Guestfs {
-    fn drop(&mut self) {
-        unsafe {
-            if !self.handle.is_null() {
-                guestfs_close(self.handle);
-            }
-        }
-    }
-}
-```
+### Minimal Unsafe Code
 
-**Benefits:**
-- Automatic cleanup
-- No memory leaks
-- Exception-safe
-- No manual free() calls
+Unsafe code is limited to:
+- Reading raw bytes from disk images
+- Memory-mapped file I/O (via memmap2)
 
-### String Management
-
-```rust
-// C string → Rust String (with automatic free)
-unsafe fn c_str_to_string(ptr: *mut c_char) -> Option<String> {
-    if ptr.is_null() {
-        None
-    } else {
-        let c_str = CStr::from_ptr(ptr);
-        let result = c_str.to_string_lossy().into_owned();
-        libc::free(ptr as *mut c_void);  // Automatic free
-        Some(result)
-    }
-}
-```
+All unsafe blocks are carefully audited and documented.
 
 ## Testing Strategy
 
@@ -366,6 +383,9 @@ mod tests {
 
     #[test]
     fn test_disk_format_conversion() { ... }
+
+    #[test]
+    fn test_partition_parsing() { ... }
 }
 ```
 
@@ -397,9 +417,15 @@ pub fn convert(...) { ... }
 
 ### Zero-Cost Abstractions
 
-- Rust wrappers compile to same code as raw C calls
+- Rust wrappers compile to same code as manual implementations
 - No runtime overhead for safety
 - Inlining optimizations
+
+### Memory Efficiency
+
+- Stream-based reading (no loading entire disk into memory)
+- Memory-mapped I/O for large files
+- Efficient buffer reuse
 
 ### Async Support (Planned)
 
@@ -409,15 +435,6 @@ pub async fn convert_async(...) -> Result<ConversionResult> {
         converter.convert(...)
     }).await?
 }
-```
-
-### Parallel Operations (Planned)
-
-```rust
-// Convert multiple disks concurrently
-let results = futures::future::join_all(
-    disks.into_iter().map(|disk| convert_async(disk))
-).await;
 ```
 
 ## Integration Points
@@ -447,10 +464,12 @@ let result = converter.convert(source, output, "qcow2", true, true)?;
 ## Future Enhancements
 
 ### Short-term
+- [ ] Complete qcow2 image format parser (currently detects, not fully parses)
+- [ ] File reading from ext4 filesystems
+- [ ] File reading from NTFS filesystems
+- [ ] More accurate OS version detection
 - [ ] Async disk operations
 - [ ] Progress callbacks
-- [ ] More libguestfs wrappers (networking, etc.)
-- [ ] Comprehensive benchmarks
 
 ### Long-term
 - [ ] Cloud integration (AWS, Azure, GCP)
@@ -460,20 +479,49 @@ let result = converter.convert(source, output, "qcow2", true, true)?;
 
 ## Design Principles
 
-1. **Safety** - Leverage Rust's type system and ownership
-2. **Zero-cost** - Abstractions with no runtime overhead
-3. **Correctness** - Extensive testing and type checking
-4. **Usability** - Ergonomic high-level APIs
-5. **Performance** - Async, parallel, optimized
-6. **Compatibility** - Works with existing tools
-7. **Maintainability** - Auto-generated, well-documented
+1. **Pure Rust** - No C dependencies (except qemu-img tool)
+2. **Safety** - Leverage Rust's type system and ownership
+3. **Zero-cost** - Abstractions with no runtime overhead
+4. **Correctness** - Extensive testing and type checking
+5. **Usability** - Ergonomic high-level APIs
+6. **Performance** - Async, efficient, optimized
+7. **Compatibility** - Works with existing tools
+8. **Maintainability** - Clean, well-documented code
+
+## Disk Format Support
+
+### Read Support
+
+| Format | Detection | Full Parsing |
+|--------|-----------|--------------|
+| Raw    | ✅        | ✅           |
+| QCOW2  | ✅        | 🚧 Planned   |
+| VMDK   | ✅        | 🚧 Planned   |
+| VHD    | 🚧        | 🚧 Planned   |
+| VHDX   | 🚧        | 🚧 Planned   |
+| VDI    | 🚧        | 🚧 Planned   |
+
+### Conversion Support
+
+All formats supported via qemu-img wrapper
+
+## Filesystem Support
+
+| Filesystem | Detection | Read Files |
+|------------|-----------|------------|
+| ext2/3/4   | ✅        | 🚧 Planned |
+| NTFS       | ✅        | 🚧 Planned |
+| FAT32      | ✅        | ❌         |
+| XFS        | ✅        | 🚧 Planned |
+| Btrfs      | ✅        | 🚧 Planned |
 
 ## References
 
-- **libguestfs docs**: https://libguestfs.org
-- **bindgen docs**: https://rust-lang.github.io/rust-bindgen/
+- **Rust std::io**: https://doc.rust-lang.org/std/io/
 - **PyO3 docs**: https://pyo3.rs
 - **Rust async book**: https://rust-lang.github.io/async-book/
+- **MBR specification**: https://en.wikipedia.org/wiki/Master_boot_record
+- **GPT specification**: https://en.wikipedia.org/wiki/GUID_Partition_Table
 
 ---
 

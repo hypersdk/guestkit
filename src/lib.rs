@@ -37,14 +37,15 @@
 //!
 //! - `core` - Error types, retry logic, common types
 //! - `converters` - Disk format conversion
+//! - `disk` - Pure Rust disk image, partition, and filesystem handling
 //! - `detectors` - Guest OS detection
 //! - `fixers` - Guest OS repair operations
 //! - `orchestrator` - Pipeline orchestration
 //! - `cli` - Command-line interface
-//! - `ffi` - FFI bindings to libguestfs (optional)
 
 pub mod core;
 pub mod converters;
+pub mod disk;
 
 // Optional modules
 #[cfg(feature = "guest-inspect")]
@@ -55,9 +56,6 @@ pub mod fixers;
 
 pub mod orchestrator;
 
-#[cfg(feature = "ffi-bindings")]
-pub mod ffi;
-
 #[cfg(feature = "python-bindings")]
 pub mod python;
 
@@ -65,12 +63,10 @@ pub mod python;
 pub use core::{Error, Result, RetryConfig};
 pub use core::types::*;
 pub use converters::DiskConverter;
+pub use disk::{DiskReader, PartitionTable, FileSystem};
 
 #[cfg(feature = "guest-inspect")]
 pub use detectors::GuestDetector;
-
-#[cfg(feature = "ffi-bindings")]
-pub use ffi::Guestfs;
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
