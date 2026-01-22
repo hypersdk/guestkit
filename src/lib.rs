@@ -38,6 +38,7 @@
 //! - `core` - Error types, retry logic, common types
 //! - `converters` - Disk format conversion
 //! - `disk` - Pure Rust disk image, partition, and filesystem handling
+//! - `guestfs` - GuestFS-compatible API for disk inspection and manipulation
 //! - `detectors` - Guest OS detection
 //! - `fixers` - Guest OS repair operations
 //! - `orchestrator` - Pipeline orchestration
@@ -46,6 +47,7 @@
 pub mod core;
 pub mod converters;
 pub mod disk;
+pub mod guestfs;
 
 // Optional modules
 #[cfg(feature = "guest-inspect")]
@@ -64,6 +66,7 @@ pub use core::{Error, Result, RetryConfig};
 pub use core::types::*;
 pub use converters::DiskConverter;
 pub use disk::{DiskReader, PartitionTable, FileSystem};
+pub use guestfs::Guestfs;
 
 #[cfg(feature = "guest-inspect")]
 pub use detectors::GuestDetector;
