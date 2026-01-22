@@ -37,6 +37,9 @@ pub enum Error {
     #[error("FFI error: {0}")]
     Ffi(String),
 
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }
