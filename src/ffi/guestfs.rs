@@ -5,7 +5,6 @@ use super::bindings::*;
 use crate::core::{Error, GuestIdentity, GuestType, Firmware, Result};
 use std::ffi::CString;
 use std::path::Path;
-use std::ptr;
 
 /// Safe wrapper around libguestfs handle
 pub struct Guestfs {
