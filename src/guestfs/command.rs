@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Command execution inside guest
 //!
-//! NOTE: Command execution requires a running guest with shell access.
-//! This needs either:
-//! 1. Guest agent (like qemu-guest-agent)
-//! 2. SSH/network access to guest
-//! 3. Mounted filesystem + chroot
+//! This implementation uses chroot to execute commands inside the
+//! mounted guest filesystem.
 //!
-//! This provides the API structure for future implementation.
+//! **Requires**: Mounted filesystem and sudo/root permissions
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use std::process::Command;
 
 impl Guestfs {
     /// Execute a command in the guest
@@ -48,15 +46,38 @@ impl Guestfs {
             eprintln!("guestfs: command {:?}", arguments);
         }
 
-        // TODO: Implement command execution
-        // Options:
-        // 1. Use guest agent (qemu-guest-agent)
-        // 2. Use chroot after NBD mount
-        // 3. Use libvirt domExecCommand API
+        if arguments.is_empty() {
+            return Err(Error::InvalidFormat("No command provided".to_string()));
+        }
 
-        Err(Error::Unsupported(
-            "Command execution requires guest agent or mount implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Execute command using chroot
+        let output = Command::new("chroot")
+            .arg(root_mountpoint)
+            .args(arguments)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!(
+                "Failed to execute command via chroot: {}. Requires sudo/root.", e
+            )))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!(
+                "Command failed with exit code {:?}: {}",
+                output.status.code(),
+                stderr
+            )));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
     /// Execute a command and return output as lines

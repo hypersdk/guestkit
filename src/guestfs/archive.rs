@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Archive operations (tar, tgz, cpio)
 //!
-//! NOTE: Archive operations require filesystem access.
-//! Full implementation needs NBD mounting or filesystem parsers.
+//! This implementation uses system tar command with mounted filesystems.
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use std::path::Path;
+use std::process::Command;
 
 impl Guestfs {
     /// Extract tar archive into directory
@@ -31,19 +31,50 @@ impl Guestfs {
     pub fn tar_in<P: AsRef<Path>>(&mut self, tarfile: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        let tarfile = tarfile.as_ref();
+
         if self.verbose {
-            eprintln!("guestfs: tar_in {} {}", tarfile.as_ref().display(), directory);
+            eprintln!("guestfs: tar_in {} {}", tarfile.display(), directory);
         }
 
-        // TODO: Implement tar extraction
-        // Options:
-        // 1. Use tar command with NBD-mounted filesystem
-        // 2. Implement tar parser and write files
-        // 3. Use rust tar crate + filesystem writer
+        // Verify tar file exists
+        if !tarfile.exists() {
+            return Err(Error::NotFound(format!("Tar file not found: {}", tarfile.display())));
+        }
 
-        Err(Error::Unsupported(
-            "Archive extraction requires mount or filesystem writer implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build target directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let target_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Ensure target directory exists
+        std::fs::create_dir_all(&target_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to create target directory: {}", e))
+        })?;
+
+        // Extract tar
+        let output = Command::new("tar")
+            .arg("-xf")
+            .arg(tarfile)
+            .arg("-C")
+            .arg(&target_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Create tar archive from directory
@@ -52,14 +83,46 @@ impl Guestfs {
     pub fn tar_out<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P) -> Result<()> {
         self.ensure_ready()?;
 
+        let tarfile = tarfile.as_ref();
+
         if self.verbose {
-            eprintln!("guestfs: tar_out {} {}", directory, tarfile.as_ref().display());
+            eprintln!("guestfs: tar_out {} {}", directory, tarfile.display());
         }
 
-        // TODO: Implement tar creation
-        Err(Error::Unsupported(
-            "Archive creation requires mount or filesystem reader implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build source directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let source_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Verify source exists
+        if !source_path.exists() {
+            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+        }
+
+        // Create tar archive
+        let output = Command::new("tar")
+            .arg("-cf")
+            .arg(tarfile)
+            .arg("-C")
+            .arg(&source_path)
+            .arg(".")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Extract compressed tar archive
@@ -68,14 +131,50 @@ impl Guestfs {
     pub fn tgz_in<P: AsRef<Path>>(&mut self, tarball: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        let tarball = tarball.as_ref();
+
         if self.verbose {
-            eprintln!("guestfs: tgz_in {} {}", tarball.as_ref().display(), directory);
+            eprintln!("guestfs: tgz_in {} {}", tarball.display(), directory);
         }
 
-        // TODO: Decompress then tar_in
-        Err(Error::Unsupported(
-            "Compressed archive extraction requires implementation".to_string()
-        ))
+        // Verify tar file exists
+        if !tarball.exists() {
+            return Err(Error::NotFound(format!("Tar file not found: {}", tarball.display())));
+        }
+
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build target directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let target_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Ensure target directory exists
+        std::fs::create_dir_all(&target_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to create target directory: {}", e))
+        })?;
+
+        // Extract compressed tar
+        let output = Command::new("tar")
+            .arg("-xzf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(&target_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Create compressed tar archive
@@ -84,14 +183,46 @@ impl Guestfs {
     pub fn tgz_out<P: AsRef<Path>>(&mut self, directory: &str, tarball: P) -> Result<()> {
         self.ensure_ready()?;
 
+        let tarball = tarball.as_ref();
+
         if self.verbose {
-            eprintln!("guestfs: tgz_out {} {}", directory, tarball.as_ref().display());
+            eprintln!("guestfs: tgz_out {} {}", directory, tarball.display());
         }
 
-        // TODO: tar_out then compress
-        Err(Error::Unsupported(
-            "Compressed archive creation requires implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build source directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let source_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Verify source exists
+        if !source_path.exists() {
+            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+        }
+
+        // Create compressed tar archive
+        let output = Command::new("tar")
+            .arg("-czf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(&source_path)
+            .arg(".")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Extract tar with options
