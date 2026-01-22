@@ -7,7 +7,9 @@
 pub mod reader;
 pub mod partition;
 pub mod filesystem;
+pub mod nbd;
 
 pub use reader::DiskReader;
 pub use partition::{Partition, PartitionTable, PartitionType};
 pub use filesystem::{FileSystem, FileSystemType};
+pub use nbd::NbdDevice;

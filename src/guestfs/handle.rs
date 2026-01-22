@@ -2,7 +2,7 @@
 //! Main GuestFS handle implementation
 
 use crate::core::{Error, Result};
-use crate::disk::{DiskReader, PartitionTable};
+use crate::disk::{DiskReader, PartitionTable, NbdDevice};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
@@ -25,7 +25,9 @@ pub struct Guestfs {
     pub(crate) drives: Vec<DriveConfig>,
     pub(crate) reader: Option<DiskReader>,
     pub(crate) partition_table: Option<PartitionTable>,
+    pub(crate) nbd_device: Option<NbdDevice>,
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
+    pub(crate) mount_root: Option<PathBuf>, // Temporary mount directory
 }
 
 /// Drive configuration
@@ -54,7 +56,9 @@ impl Guestfs {
             drives: Vec::new(),
             reader: None,
             partition_table: None,
+            nbd_device: None,
             mounted: HashMap::new(),
+            mount_root: None,
         })
     }
 
@@ -121,8 +125,24 @@ impl Guestfs {
             return Ok(());
         }
 
-        // Unmount all
-        self.mounted.clear();
+        if self.verbose {
+            eprintln!("guestfs: shutdown");
+        }
+
+        // Unmount all filesystems
+        let _ = self.umount_all();
+
+        // Disconnect NBD device
+        if let Some(mut nbd) = self.nbd_device.take() {
+            let _ = nbd.disconnect();
+        }
+
+        // Clean up mount root
+        if let Some(mount_root) = self.mount_root.take() {
+            let _ = std::fs::remove_dir_all(&mount_root);
+        }
+
+        // Clean up resources
         self.reader = None;
         self.partition_table = None;
         self.state = GuestfsState::Closed;

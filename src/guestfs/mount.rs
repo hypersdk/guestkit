@@ -1,44 +1,125 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Mount operations compatible with libguestfs
 //!
-//! NOTE: Full mounting requires kernel-level support or FUSE implementations.
-//! For production use, consider:
-//! 1. Using nbd-client to expose qcow2 as block device, then mount normally
-//! 2. Using FUSE filesystem implementations (ext4fuse, ntfs-3g, etc.)
-//! 3. Implementing userspace filesystem parsers (complex)
+//! This implementation uses qemu-nbd to export disk images as NBD devices,
+//! then mounts them using the kernel's filesystem drivers.
 //!
-//! This implementation provides the API structure for future implementation.
+//! **Requires**: qemu-nbd and sudo/root permissions for mounting
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use crate::disk::NbdDevice;
 use std::collections::HashMap;
+use std::process::Command;
+use std::fs;
 
 impl Guestfs {
     /// Mount a filesystem read-only
     ///
     /// Compatible with libguestfs g.mount_ro()
     ///
-    /// NOTE: This is a stub implementation. Full mounting requires:
-    /// - NBD export of qcow2 images
-    /// - FUSE filesystem implementations
-    /// - Or userspace filesystem parsers
+    /// # Arguments
+    ///
+    /// * `mountable` - Device name (e.g., "/dev/sda1")
+    /// * `mountpoint` - Mount point path (e.g., "/")
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use guestkit::guestfs::Guestfs;
+    ///
+    /// let mut g = Guestfs::new()?;
+    /// g.add_drive_ro("/path/to/disk.qcow2")?;
+    /// g.launch()?;
+    /// g.mount_ro("/dev/sda1", "/")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn mount_ro(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
-
-        // Verify partition exists
-        let _partition_num = self.parse_device_name(mountable)?;
-
-        // Record the mount
-        self.mounted.insert(mountable.to_string(), mountpoint.to_string());
 
         if self.verbose {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        // TODO: Actual mounting requires:
-        // 1. NBD export: qemu-nbd -r -c /dev/nbd0 disk.qcow2
-        // 2. Then: mount -o ro /dev/nbd0p1 /mnt
-        // Or: Implement userspace filesystem parser
+        // Ensure NBD device is set up
+        self.setup_nbd_if_needed()?;
+
+        // Parse device name to get partition number
+        let partition_num = self.parse_device_name(mountable)?;
+
+        // Get NBD partition device path
+        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd_partition = if partition_num > 0 {
+            nbd.partition_path(partition_num)
+        } else {
+            nbd.device_path().to_path_buf()
+        };
+
+        // Create mount root if needed
+        if self.mount_root.is_none() {
+            let tmpdir = std::env::temp_dir().join(format!("guestkit-{}", std::process::id()));
+            fs::create_dir_all(&tmpdir).map_err(|e| {
+                Error::CommandFailed(format!("Failed to create mount root: {}", e))
+            })?;
+            self.mount_root = Some(tmpdir);
+        }
+
+        // Build actual mount path
+        let mount_root = self.mount_root.as_ref().unwrap();
+        let actual_mountpoint = if mountpoint == "/" {
+            mount_root.clone()
+        } else {
+            mount_root.join(mountpoint.trim_start_matches('/'))
+        };
+
+        // Create mountpoint directory
+        fs::create_dir_all(&actual_mountpoint).map_err(|e| {
+            Error::CommandFailed(format!("Failed to create mountpoint: {}", e))
+        })?;
+
+        // Mount using system mount command
+        let output = Command::new("mount")
+            .arg("-o")
+            .arg("ro")
+            .arg(&nbd_partition)
+            .arg(&actual_mountpoint)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!(
+                "Mount failed: {}. You may need sudo/root permissions.",
+                stderr
+            )));
+        }
+
+        // Record the mount
+        self.mounted.insert(mountable.to_string(), actual_mountpoint.to_string_lossy().to_string());
+
+        Ok(())
+    }
+
+    /// Set up NBD device if not already set up
+    fn setup_nbd_if_needed(&mut self) -> Result<()> {
+        if self.nbd_device.is_some() {
+            return Ok(());
+        }
+
+        // Get first drive
+        let drive = self.drives.first().ok_or_else(|| {
+            Error::InvalidState("No drives added".to_string())
+        })?;
+
+        // Create and connect NBD device
+        let mut nbd = NbdDevice::new()?;
+        nbd.connect(&drive.path, drive.readonly)?;
+
+        self.nbd_device = Some(nbd);
+
+        if self.verbose {
+            eprintln!("guestfs: NBD device connected");
+        }
 
         Ok(())
     }
@@ -99,18 +180,31 @@ impl Guestfs {
     pub fn umount(&mut self, pathordevice: &str) -> Result<()> {
         self.ensure_ready()?;
 
-        // Find and remove mount by device or mountpoint
-        let to_remove: Vec<String> = self.mounted.iter()
-            .filter(|(dev, mp)| dev.as_str() == pathordevice || mp.as_str() == pathordevice)
-            .map(|(dev, _)| dev.clone())
-            .collect();
-
-        for dev in to_remove {
-            self.mounted.remove(&dev);
-        }
-
         if self.verbose {
             eprintln!("guestfs: umount {}", pathordevice);
+        }
+
+        // Find mounts to remove
+        let to_unmount: Vec<(String, String)> = self.mounted.iter()
+            .filter(|(dev, mp)| dev.as_str() == pathordevice || mp.as_str() == pathordevice)
+            .map(|(dev, mp)| (dev.clone(), mp.clone()))
+            .collect();
+
+        // Unmount each
+        for (dev, mountpoint) in to_unmount {
+            // Execute umount command
+            let output = Command::new("umount")
+                .arg(&mountpoint)
+                .output()
+                .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("Warning: umount failed: {}", stderr);
+            }
+
+            // Remove from tracking
+            self.mounted.remove(&dev);
         }
 
         Ok(())
@@ -122,11 +216,26 @@ impl Guestfs {
     pub fn umount_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
-        self.mounted.clear();
-
         if self.verbose {
             eprintln!("guestfs: umount_all");
         }
+
+        // Unmount all in reverse order (to handle nested mounts)
+        let mountpoints: Vec<String> = self.mounted.values().cloned().collect();
+
+        for mountpoint in mountpoints.iter().rev() {
+            let output = Command::new("umount")
+                .arg(mountpoint)
+                .output()
+                .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("Warning: umount {} failed: {}", mountpoint, stderr);
+            }
+        }
+
+        self.mounted.clear();
 
         Ok(())
     }
