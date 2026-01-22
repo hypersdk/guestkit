@@ -1,0 +1,63 @@
+[package]
+name = "guestkit"
+version = "0.1.0"
+edition = "2021"
+authors = ["Susant Sahani <ssahani@gmail.com>"]
+license = "LGPL-3.0-or-later"
+description = "Guest VM toolkit for disk inspection and manipulation"
+repository = "https://github.com/ssahani/guestkit"
+keywords = ["virtualization", "vm", "disk", "qemu", "kvm"]
+categories = ["virtualization", "filesystem", "command-line-utilities"]
+
+[dependencies]
+# Core
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# CLI
+clap = { version = "4", features = ["derive", "cargo"] }
+
+# Utilities
+rand = "0.8"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# FFI for libguestfs bindings (optional)
+libc = "0.2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+tempfile = "3.0"
+assert_cmd = "2.0"
+predicates = "3.0"
+
+[features]
+default = ["disk-ops"]
+disk-ops = []
+guest-inspect = []
+ffi-bindings = []
+
+[[bin]]
+name = "guestkit"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
