@@ -35,6 +35,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # FFI for libguestfs bindings (optional)
 libc = "0.2"
 
+# PyO3 for Python bindings (optional)
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12"
@@ -47,10 +50,16 @@ default = ["disk-ops"]
 disk-ops = []
 guest-inspect = []
 ffi-bindings = []
+python-bindings = ["pyo3"]
 
 [[bin]]
 name = "guestkit"
 path = "src/main.rs"
+
+# Python module (optional)
+[lib]
+name = "guestkit"
+crate-type = ["rlib", "cdylib"]
 
 [profile.release]
 opt-level = 3

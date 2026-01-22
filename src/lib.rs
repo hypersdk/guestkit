@@ -58,10 +58,19 @@ pub mod orchestrator;
 #[cfg(feature = "ffi-bindings")]
 pub mod ffi;
 
+#[cfg(feature = "python-bindings")]
+pub mod python;
+
 // Re-exports for convenience
 pub use core::{Error, Result, RetryConfig};
 pub use core::types::*;
 pub use converters::DiskConverter;
+
+#[cfg(feature = "guest-inspect")]
+pub use detectors::GuestDetector;
+
+#[cfg(feature = "ffi-bindings")]
+pub use ffi::Guestfs;
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
