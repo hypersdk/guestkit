@@ -38,6 +38,10 @@ libc = "0.2"
 # PyO3 for Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 
+[build-dependencies]
+bindgen = "0.70"
+pkg-config = "0.3"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12"
