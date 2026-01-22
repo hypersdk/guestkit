@@ -59,15 +59,11 @@ pub mod fallback {
         pub fn guestfs_list_partitions(g: *mut guestfs_h) -> *mut *mut c_char;
 
         // Utility
-        pub fn guestfs_free_string_list(argv: *mut *mut c_char);
         pub fn guestfs_last_error(g: *mut guestfs_h) -> *const c_char;
     }
 }
 
-// Re-export from the appropriate module
-#[cfg(all(feature = "ffi-bindings", not(doc)))]
-pub use self::*;
-
+// Re-export fallback bindings when not using auto-generated ones
 #[cfg(any(not(feature = "ffi-bindings"), doc))]
 pub use fallback::*;
 
@@ -88,6 +84,8 @@ pub unsafe fn c_str_to_string(ptr: *mut c_char) -> Option<String> {
 
 /// Helper to convert C string list to Rust Vec<String>
 pub unsafe fn c_str_list_to_vec(ptr: *mut *mut c_char) -> Vec<String> {
+    use libc::c_void;
+
     if ptr.is_null() {
         return Vec::new();
     }
@@ -101,14 +99,15 @@ pub unsafe fn c_str_list_to_vec(ptr: *mut *mut c_char) -> Vec<String> {
         }
         let c_str = std::ffi::CStr::from_ptr(elem_ptr);
         result.push(c_str.to_string_lossy().into_owned());
+        libc::free(elem_ptr as *mut c_void); // Free each string
         i += 1;
     }
 
-    guestfs_free_string_list(ptr);
+    libc::free(ptr as *mut c_void); // Free the array itself
     result
 }
 
-use libc::{c_char, c_int};
+use libc::c_char;
 
 #[cfg(test)]
 mod tests {
