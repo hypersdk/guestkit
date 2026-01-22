@@ -1,80 +1,85 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Raw FFI bindings to libguestfs C API
+//! Auto-generated FFI bindings to libguestfs
 //!
-//! These are low-level bindings. Use the `guestfs` module for safe wrappers.
+//! These bindings are automatically generated from the libguestfs C headers
+//! using bindgen at build time.
 
-use libc::{c_char, c_int, c_void};
-use std::ptr;
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(dead_code)]
+#![allow(deref_nullptr)]
 
-/// Opaque guestfs handle
-#[repr(C)]
-pub struct guestfs_h {
-    _private: [u8; 0],
+// Include the auto-generated bindings if available
+#[cfg(all(feature = "ffi-bindings", not(doc)))]
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+// Fallback manual bindings for documentation or when libguestfs is not available
+#[cfg(any(not(feature = "ffi-bindings"), doc))]
+pub mod fallback {
+    use libc::{c_char, c_int, c_void};
+
+    /// Opaque guestfs handle (fallback)
+    #[repr(C)]
+    pub struct guestfs_h {
+        _private: [u8; 0],
+    }
+
+    extern "C" {
+        // Core functions
+        pub fn guestfs_create() -> *mut guestfs_h;
+        pub fn guestfs_create_flags(flags: c_int, ...) -> *mut guestfs_h;
+        pub fn guestfs_close(g: *mut guestfs_h);
+
+        // Configuration
+        pub fn guestfs_set_verbose(g: *mut guestfs_h, verbose: c_int) -> c_int;
+        pub fn guestfs_get_verbose(g: *mut guestfs_h) -> c_int;
+        pub fn guestfs_set_trace(g: *mut guestfs_h, trace: c_int) -> c_int;
+        pub fn guestfs_get_trace(g: *mut guestfs_h) -> c_int;
+
+        // Disk operations
+        pub fn guestfs_add_drive_ro(g: *mut guestfs_h, filename: *const c_char) -> c_int;
+        pub fn guestfs_launch(g: *mut guestfs_h) -> c_int;
+        pub fn guestfs_shutdown(g: *mut guestfs_h) -> c_int;
+
+        // Inspection
+        pub fn guestfs_inspect_os(g: *mut guestfs_h) -> *mut *mut c_char;
+        pub fn guestfs_inspect_get_type(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
+        pub fn guestfs_inspect_get_distro(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
+        pub fn guestfs_inspect_get_product_name(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
+        pub fn guestfs_inspect_get_major_version(g: *mut guestfs_h, root: *const c_char) -> c_int;
+        pub fn guestfs_inspect_get_minor_version(g: *mut guestfs_h, root: *const c_char) -> c_int;
+        pub fn guestfs_inspect_get_arch(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
+
+        // Filesystem operations
+        pub fn guestfs_mount_ro(g: *mut guestfs_h, mountable: *const c_char, mountpoint: *const c_char) -> c_int;
+        pub fn guestfs_umount(g: *mut guestfs_h, pathordevice: *const c_char) -> c_int;
+        pub fn guestfs_is_file(g: *mut guestfs_h, path: *const c_char) -> c_int;
+        pub fn guestfs_is_dir(g: *mut guestfs_h, path: *const c_char) -> c_int;
+        pub fn guestfs_list_partitions(g: *mut guestfs_h) -> *mut *mut c_char;
+
+        // Utility
+        pub fn guestfs_free_string_list(argv: *mut *mut c_char);
+        pub fn guestfs_last_error(g: *mut guestfs_h) -> *const c_char;
+    }
 }
 
-/// Link to libguestfs C library
-#[link(name = "guestfs")]
-extern "C" {
-    // Handle creation and destruction
-    pub fn guestfs_create() -> *mut guestfs_h;
-    pub fn guestfs_create_flags(flags: c_int) -> *mut guestfs_h;
-    pub fn guestfs_close(g: *mut guestfs_h);
+// Re-export from the appropriate module
+#[cfg(all(feature = "ffi-bindings", not(doc)))]
+pub use self::*;
 
-    // Configuration
-    pub fn guestfs_set_verbose(g: *mut guestfs_h, verbose: c_int) -> c_int;
-    pub fn guestfs_get_verbose(g: *mut guestfs_h) -> c_int;
-    pub fn guestfs_set_trace(g: *mut guestfs_h, trace: c_int) -> c_int;
-    pub fn guestfs_get_trace(g: *mut guestfs_h) -> c_int;
-
-    // Disk operations
-    pub fn guestfs_add_drive_opts(
-        g: *mut guestfs_h,
-        filename: *const c_char,
-        ...
-    ) -> c_int;
-    pub fn guestfs_add_drive_ro(g: *mut guestfs_h, filename: *const c_char) -> c_int;
-
-    // Launch
-    pub fn guestfs_launch(g: *mut guestfs_h) -> c_int;
-    pub fn guestfs_shutdown(g: *mut guestfs_h) -> c_int;
-
-    // Inspection
-    pub fn guestfs_inspect_os(g: *mut guestfs_h) -> *mut *mut c_char;
-    pub fn guestfs_inspect_get_type(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
-    pub fn guestfs_inspect_get_distro(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
-    pub fn guestfs_inspect_get_product_name(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
-    pub fn guestfs_inspect_get_major_version(g: *mut guestfs_h, root: *const c_char) -> c_int;
-    pub fn guestfs_inspect_get_minor_version(g: *mut guestfs_h, root: *const c_char) -> c_int;
-    pub fn guestfs_inspect_get_arch(g: *mut guestfs_h, root: *const c_char) -> *mut c_char;
-
-    // Filesystem operations
-    pub fn guestfs_mount_ro(g: *mut guestfs_h, mountable: *const c_char, mountpoint: *const c_char) -> c_int;
-    pub fn guestfs_mount(g: *mut guestfs_h, mountable: *const c_char, mountpoint: *const c_char) -> c_int;
-    pub fn guestfs_umount(g: *mut guestfs_h, pathordevice: *const c_char) -> c_int;
-    pub fn guestfs_umount_all(g: *mut guestfs_h) -> c_int;
-
-    // File operations
-    pub fn guestfs_is_file(g: *mut guestfs_h, path: *const c_char) -> c_int;
-    pub fn guestfs_is_dir(g: *mut guestfs_h, path: *const c_char) -> c_int;
-    pub fn guestfs_cat(g: *mut guestfs_h, path: *const c_char) -> *mut c_char;
-    pub fn guestfs_read_file(g: *mut guestfs_h, path: *const c_char, size_r: *mut usize) -> *mut c_char;
-    pub fn guestfs_write(g: *mut guestfs_h, path: *const c_char, content: *const c_char, content_size: usize) -> c_int;
-
-    // List operations
-    pub fn guestfs_list_partitions(g: *mut guestfs_h) -> *mut *mut c_char;
-    pub fn guestfs_list_filesystems(g: *mut guestfs_h) -> *mut *mut c_char;
-
-    // Utility
-    pub fn guestfs_free_string_list(argv: *mut *mut c_char);
-    pub fn guestfs_last_error(g: *mut guestfs_h) -> *const c_char;
-}
+#[cfg(any(not(feature = "ffi-bindings"), doc))]
+pub use fallback::*;
 
 /// Helper to convert C string to Rust String
 pub unsafe fn c_str_to_string(ptr: *mut c_char) -> Option<String> {
+    use libc::c_void;
+    use std::ffi::CStr;
+
     if ptr.is_null() {
         None
     } else {
-        let c_str = std::ffi::CStr::from_ptr(ptr);
+        let c_str = CStr::from_ptr(ptr);
         let result = c_str.to_string_lossy().into_owned();
         libc::free(ptr as *mut c_void);
         Some(result)
@@ -101,4 +106,17 @@ pub unsafe fn c_str_list_to_vec(ptr: *mut *mut c_char) -> Vec<String> {
 
     guestfs_free_string_list(ptr);
     result
+}
+
+use libc::{c_char, c_int};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bindings_module_exists() {
+        // This test just ensures the module compiles
+        assert!(true);
+    }
 }
