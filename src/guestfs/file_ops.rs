@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! File operations compatible with libguestfs
 //!
-//! NOTE: File operations require filesystem parsing or mounting.
-//! For production use, this would need:
-//! 1. Full ext4/NTFS/XFS/etc. filesystem parsers
-//! 2. Or NBD + kernel mount + file I/O
-//! 3. Or FUSE implementations
-//!
-//! This provides the API structure for future implementation.
+//! This implementation uses mounted filesystems (via NBD) to perform
+//! file operations using standard Rust file I/O.
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use std::fs;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 
 /// File statistics
 #[derive(Debug, Clone)]
@@ -31,6 +29,22 @@ pub struct Stat {
 }
 
 impl Guestfs {
+    /// Resolve guest path to host path (internal helper)
+    fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
+        // Find root mount
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build full path
+        let guest_path_clean = guest_path.trim_start_matches('/');
+        Ok(PathBuf::from(root_mountpoint).join(guest_path_clean))
+    }
+
     /// Check if path is a file
     ///
     /// Compatible with libguestfs g.is_file()
@@ -41,9 +55,8 @@ impl Guestfs {
             eprintln!("guestfs: is_file {}", path);
         }
 
-        // TODO: Parse filesystem and check inode type
-        // For now, heuristic based on path
-        Ok(!path.ends_with('/') && path.contains('.'))
+        let host_path = self.resolve_guest_path(path)?;
+        Ok(host_path.is_file())
     }
 
     /// Check if path is a directory
@@ -56,9 +69,8 @@ impl Guestfs {
             eprintln!("guestfs: is_dir {}", path);
         }
 
-        // TODO: Parse filesystem and check inode type
-        // For now, heuristic based on path
-        Ok(path.ends_with('/') || path == "/" || !path.contains('.'))
+        let host_path = self.resolve_guest_path(path)?;
+        Ok(host_path.is_dir())
     }
 
     /// Check if path exists
@@ -71,9 +83,8 @@ impl Guestfs {
             eprintln!("guestfs: exists {}", path);
         }
 
-        // TODO: Parse filesystem and lookup path
-        // For now, assume common paths exist
-        Ok(path.starts_with('/'))
+        let host_path = self.resolve_guest_path(path)?;
+        Ok(host_path.exists())
     }
 
     /// Read file content as bytes
@@ -86,12 +97,10 @@ impl Guestfs {
             eprintln!("guestfs: read_file {}", path);
         }
 
-        // TODO: Parse filesystem, locate inode, read data blocks
-        // This requires full filesystem implementation
-
-        Err(Error::Unsupported(
-            "File reading requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::read(&host_path).map_err(|e| {
+            Error::NotFound(format!("Failed to read {}: {}", path, e))
+        })
     }
 
     /// Read file as text
@@ -121,11 +130,10 @@ impl Guestfs {
             eprintln!("guestfs: write {} ({} bytes)", path, content.len());
         }
 
-        // TODO: Parse filesystem, update or create inode, write data blocks
-
-        Err(Error::Unsupported(
-            "File writing requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::write(&host_path, content).map_err(|e| {
+            Error::CommandFailed(format!("Failed to write {}: {}", path, e))
+        })
     }
 
     /// Create directory
@@ -138,11 +146,10 @@ impl Guestfs {
             eprintln!("guestfs: mkdir {}", path);
         }
 
-        // TODO: Parse filesystem, create directory inode
-
-        Err(Error::Unsupported(
-            "Directory creation requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::create_dir(&host_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to create directory {}: {}", path, e))
+        })
     }
 
     /// Create directory with parents
@@ -155,11 +162,10 @@ impl Guestfs {
             eprintln!("guestfs: mkdir_p {}", path);
         }
 
-        // TODO: Parse filesystem, create directory chain
-
-        Err(Error::Unsupported(
-            "Directory creation requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::create_dir_all(&host_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to create directory {}: {}", path, e))
+        })
     }
 
     /// List directory contents
@@ -172,11 +178,22 @@ impl Guestfs {
             eprintln!("guestfs: ls {}", directory);
         }
 
-        // TODO: Parse filesystem, read directory entries
+        let host_path = self.resolve_guest_path(directory)?;
+        let entries = fs::read_dir(&host_path).map_err(|e| {
+            Error::NotFound(format!("Failed to read directory {}: {}", directory, e))
+        })?;
 
-        Err(Error::Unsupported(
-            "Directory listing requires filesystem parser implementation".to_string()
-        ))
+        let mut names = Vec::new();
+        for entry in entries {
+            if let Ok(entry) = entry {
+                if let Some(name) = entry.file_name().to_str() {
+                    names.push(name.to_string());
+                }
+            }
+        }
+
+        names.sort();
+        Ok(names)
     }
 
     /// List directory with long format
