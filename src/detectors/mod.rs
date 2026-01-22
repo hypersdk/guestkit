@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Guest OS detectors (planned)
+//! Guest OS detection
 
-// Placeholder module for future implementation
+pub mod guest_detector;
+
+pub use guest_detector::GuestDetector;
