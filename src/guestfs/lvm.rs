@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! LVM (Logical Volume Manager) operations compatible with libguestfs
 //!
-//! NOTE: LVM support requires parsing LVM metadata from disk.
-//! Full implementation would need:
-//! 1. LVM2 metadata parser
-//! 2. Physical volume detection
-//! 3. Volume group assembly
-//! 4. Logical volume mapping
+//! This implementation uses LVM command-line tools (lvm2 package).
 //!
-//! This provides the API structure for future implementation.
+//! **Requires**: lvm2 package and sudo/root permissions
 
-use crate::core::Result;
+use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use std::process::Command;
 
 /// Logical volume information
 #[derive(Debug, Clone)]
@@ -45,9 +41,165 @@ impl Guestfs {
             eprintln!("guestfs: vgscan");
         }
 
-        // TODO: Scan partitions for LVM physical volumes
-        // Parse LVM metadata from PVs
-        // Build volume group catalog
+        // Ensure NBD device is set up for LVM to detect
+        self.setup_nbd_if_needed()?;
+
+        // Run vgscan to detect volume groups
+        let output = Command::new("vgscan")
+            .arg("--mknodes")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!(
+                "Failed to run vgscan: {}. Is lvm2 installed? Requires sudo/root.",
+                e
+            )))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("vgscan failed: {}", stderr)));
+        }
+
+        if self.verbose {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            eprintln!("vgscan output: {}", stdout);
+        }
+
+        Ok(())
+    }
+
+    /// Activate all LVM volume groups
+    ///
+    /// Compatible with libguestfs g.vg_activate_all()
+    pub fn vg_activate_all(&mut self, activate: bool) -> Result<()> {
+        self.ensure_ready()?;
+
+        let action = if activate { "y" } else { "n" };
+
+        if self.verbose {
+            eprintln!("guestfs: vg_activate_all {}", activate);
+        }
+
+        // Run vgchange to activate/deactivate all VGs
+        let output = Command::new("vgchange")
+            .arg("-a")
+            .arg(action)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run vgchange: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("vgchange failed: {}", stderr)));
+        }
+
+        if self.verbose {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            eprintln!("vgchange output: {}", stdout);
+        }
+
+        Ok(())
+    }
+
+    /// Activate a specific volume group
+    ///
+    /// Compatible with libguestfs g.vg_activate()
+    pub fn vg_activate(&mut self, activate: bool, volgroups: &[&str]) -> Result<()> {
+        self.ensure_ready()?;
+
+        let action = if activate { "y" } else { "n" };
+
+        if self.verbose {
+            eprintln!("guestfs: vg_activate {} {:?}", activate, volgroups);
+        }
+
+        for vg in volgroups {
+            let output = Command::new("vgchange")
+                .arg("-a")
+                .arg(action)
+                .arg(vg)
+                .output()
+                .map_err(|e| Error::CommandFailed(format!("Failed to run vgchange: {}", e)))?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(Error::CommandFailed(format!("vgchange {} failed: {}", vg, stderr)));
+            }
+
+            if self.verbose {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                eprintln!("vgchange {} output: {}", vg, stdout);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Create a logical volume
+    ///
+    /// Compatible with libguestfs g.lvcreate()
+    ///
+    /// # Arguments
+    ///
+    /// * `logvol` - Name of logical volume to create
+    /// * `volgroup` - Name of volume group
+    /// * `mbytes` - Size in megabytes
+    pub fn lvcreate(&mut self, logvol: &str, volgroup: &str, mbytes: i32) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: lvcreate {} {} {}M", logvol, volgroup, mbytes);
+        }
+
+        // Check if drive is readonly
+        if let Some(drive) = self.drives.first() {
+            if drive.readonly {
+                return Err(Error::PermissionDenied(
+                    "Cannot create LV on read-only drive".to_string()
+                ));
+            }
+        }
+
+        // Create logical volume
+        let output = Command::new("lvcreate")
+            .arg("-L")
+            .arg(format!("{}M", mbytes))
+            .arg("-n")
+            .arg(logvol)
+            .arg(volgroup)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run lvcreate: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("lvcreate failed: {}", stderr)));
+        }
+
+        Ok(())
+    }
+
+    /// Remove a logical volume
+    ///
+    /// Compatible with libguestfs g.lvremove()
+    ///
+    /// # Arguments
+    ///
+    /// * `device` - Logical volume device path (e.g., "/dev/vg/lv")
+    pub fn lvremove(&mut self, device: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: lvremove {}", device);
+        }
+
+        // Remove logical volume
+        let output = Command::new("lvremove")
+            .arg("-f") // Force, don't ask for confirmation
+            .arg(device)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run lvremove: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("lvremove failed: {}", stderr)));
+        }
 
         Ok(())
     }
@@ -78,10 +230,27 @@ impl Guestfs {
             eprintln!("guestfs: lvs");
         }
 
-        // TODO: Return list of LV device paths
-        // Example: /dev/mapper/vg-lv or /dev/vg/lv
+        // List logical volumes
+        let output = Command::new("lvs")
+            .arg("--noheadings")
+            .arg("-o")
+            .arg("lv_path")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run lvs: {}", e)))?;
 
-        Ok(Vec::new())
+        if !output.status.success() {
+            // Not an error if no LVs found
+            return Ok(Vec::new());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let lvs: Vec<String> = stdout
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        Ok(lvs)
     }
 
     /// List volume groups
@@ -94,9 +263,27 @@ impl Guestfs {
             eprintln!("guestfs: vgs");
         }
 
-        // TODO: Return list of volume group names
+        // List volume groups
+        let output = Command::new("vgs")
+            .arg("--noheadings")
+            .arg("-o")
+            .arg("vg_name")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run vgs: {}", e)))?;
 
-        Ok(Vec::new())
+        if !output.status.success() {
+            // Not an error if no VGs found
+            return Ok(Vec::new());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let vgs: Vec<String> = stdout
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        Ok(vgs)
     }
 
     /// List physical volumes
@@ -109,10 +296,27 @@ impl Guestfs {
             eprintln!("guestfs: pvs");
         }
 
-        // TODO: Scan partitions for LVM physical volume signature
-        // LVM2 signature: "LABELONE" at offset 512 or 1024
+        // List physical volumes
+        let output = Command::new("pvs")
+            .arg("--noheadings")
+            .arg("-o")
+            .arg("pv_name")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run pvs: {}", e)))?;
 
-        Ok(Vec::new())
+        if !output.status.success() {
+            // Not an error if no PVs found
+            return Ok(Vec::new());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let pvs: Vec<String> = stdout
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        Ok(pvs)
     }
 }
 

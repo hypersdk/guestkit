@@ -100,30 +100,6 @@ impl Guestfs {
         Ok(())
     }
 
-    /// Set up NBD device if not already set up
-    fn setup_nbd_if_needed(&mut self) -> Result<()> {
-        if self.nbd_device.is_some() {
-            return Ok(());
-        }
-
-        // Get first drive
-        let drive = self.drives.first().ok_or_else(|| {
-            Error::InvalidState("No drives added".to_string())
-        })?;
-
-        // Create and connect NBD device
-        let mut nbd = NbdDevice::new()?;
-        nbd.connect(&drive.path, drive.readonly)?;
-
-        self.nbd_device = Some(nbd);
-
-        if self.verbose {
-            eprintln!("guestfs: NBD device connected");
-        }
-
-        Ok(())
-    }
-
     /// Mount a filesystem read-write
     ///
     /// Compatible with libguestfs g.mount()
