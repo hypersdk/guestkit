@@ -13,6 +13,7 @@ pub mod lvm;
 pub mod partition;
 pub mod command;
 pub mod archive;
+pub mod luks;
 
 pub use handle::Guestfs;
 pub use inspect::*;
