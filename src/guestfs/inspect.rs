@@ -116,6 +116,11 @@ impl Guestfs {
     pub fn inspect_get_distro(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
+        // Try to read /etc/os-release first
+        if let Ok(os_release) = self.read_os_release(root) {
+            return Ok(os_release.id);
+        }
+
         let partition_num = self.parse_device_name(root)?;
 
         // Clone partition to avoid borrow checker issues
@@ -145,16 +150,43 @@ impl Guestfs {
                 return Ok("rhel".to_string());
             } else if label.contains("centos") || label.contains("CentOS") {
                 return Ok("centos".to_string());
+            } else if label.contains("photon") || label.contains("Photon") {
+                return Ok("photon".to_string());
             }
         }
 
         Ok("unknown".to_string())
     }
 
+    /// Read and parse /etc/os-release
+    fn read_os_release(&mut self, root: &str) -> Result<OsRelease> {
+        // Try to mount the root partition first
+        let was_mounted = self.mounted.contains_key("/");
+
+        if !was_mounted {
+            // Try to mount root temporarily
+            self.mount(root, "/").ok();
+        }
+
+        let os_release_content = self.cat("/etc/os-release")
+            .or_else(|_| self.cat("/usr/lib/os-release"))?;
+
+        if !was_mounted {
+            self.umount("/").ok();
+        }
+
+        OsRelease::parse(&os_release_content)
+    }
+
     /// Get the product name
     ///
     /// Compatible with libguestfs g.inspect_get_product_name()
     pub fn inspect_get_product_name(&mut self, root: &str) -> Result<String> {
+        // Try to get from /etc/os-release first
+        if let Ok(os_release) = self.read_os_release(root) {
+            return Ok(os_release.pretty_name);
+        }
+
         let os_type = self.inspect_get_type(root)?;
         let distro = self.inspect_get_distro(root)?;
 
@@ -167,6 +199,7 @@ impl Guestfs {
                 "debian" => Ok("Debian GNU/Linux".to_string()),
                 "rhel" => Ok("Red Hat Enterprise Linux".to_string()),
                 "centos" => Ok("CentOS Linux".to_string()),
+                "photon" => Ok("VMware Photon OS".to_string()),
                 _ => Ok("Linux".to_string()),
             }
         } else {
@@ -186,28 +219,51 @@ impl Guestfs {
     /// Get the major version number
     ///
     /// Compatible with libguestfs g.inspect_get_major_version()
-    pub fn inspect_get_major_version(&mut self, _root: &str) -> Result<i32> {
+    pub fn inspect_get_major_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
-        // TODO: Read from /etc/os-release or registry
+
+        if let Ok(os_release) = self.read_os_release(root) {
+            return Ok(os_release.version_major);
+        }
+
         Ok(0)
     }
 
     /// Get the minor version number
     ///
     /// Compatible with libguestfs g.inspect_get_minor_version()
-    pub fn inspect_get_minor_version(&mut self, _root: &str) -> Result<i32> {
+    pub fn inspect_get_minor_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
-        // TODO: Read from /etc/os-release or registry
+
+        if let Ok(os_release) = self.read_os_release(root) {
+            return Ok(os_release.version_minor);
+        }
+
         Ok(0)
     }
 
     /// Get the hostname
     ///
     /// Compatible with libguestfs g.inspect_get_hostname()
-    pub fn inspect_get_hostname(&mut self, _root: &str) -> Result<String> {
+    pub fn inspect_get_hostname(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
-        // TODO: Read from /etc/hostname or registry
-        Ok("localhost".to_string())
+
+        // Try to mount and read /etc/hostname
+        let was_mounted = self.mounted.contains_key("/");
+
+        if !was_mounted {
+            self.mount(root, "/").ok();
+        }
+
+        let hostname = self.cat("/etc/hostname")
+            .map(|content| content.trim().to_string())
+            .unwrap_or_else(|_| "localhost".to_string());
+
+        if !was_mounted {
+            self.umount("/").ok();
+        }
+
+        Ok(hostname)
     }
 
     /// Get the package format (rpm, deb, etc.)
@@ -217,7 +273,7 @@ impl Guestfs {
         let distro = self.inspect_get_distro(root)?;
 
         match distro.as_str() {
-            "fedora" | "rhel" | "centos" => Ok("rpm".to_string()),
+            "fedora" | "rhel" | "centos" | "photon" => Ok("rpm".to_string()),
             "ubuntu" | "debian" => Ok("deb".to_string()),
             _ => Ok("unknown".to_string()),
         }
@@ -277,6 +333,64 @@ pub struct Application {
     pub description: String,
 }
 
+/// Parsed /etc/os-release information
+#[derive(Debug, Clone)]
+struct OsRelease {
+    pub id: String,
+    pub pretty_name: String,
+    pub version_id: String,
+    pub version_major: i32,
+    pub version_minor: i32,
+}
+
+impl OsRelease {
+    fn parse(content: &str) -> Result<Self> {
+        let mut id = String::new();
+        let mut pretty_name = String::new();
+        let mut version_id = String::new();
+
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+
+            if let Some((key, value)) = line.split_once('=') {
+                let value = value.trim_matches('"').trim();
+
+                match key {
+                    "ID" => id = value.to_lowercase(),
+                    "PRETTY_NAME" => pretty_name = value.to_string(),
+                    "VERSION_ID" => version_id = value.to_string(),
+                    _ => {}
+                }
+            }
+        }
+
+        // Parse version into major.minor
+        let (version_major, version_minor) = if !version_id.is_empty() {
+            let parts: Vec<&str> = version_id.split('.').collect();
+            let major = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+            let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+            (major, minor)
+        } else {
+            (0, 0)
+        };
+
+        if id.is_empty() {
+            return Err(Error::NotFound("ID not found in os-release".to_string()));
+        }
+
+        Ok(OsRelease {
+            id,
+            pretty_name,
+            version_id,
+            version_major,
+            version_minor,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,5 +400,35 @@ mod tests {
         let g = Guestfs::new().unwrap();
         // API structure tests
         let _ = g;
+    }
+
+    #[test]
+    fn test_os_release_parse_photon() {
+        let content = r#"
+NAME="VMware Photon OS"
+VERSION="5.0"
+ID=photon
+VERSION_ID=5.0
+PRETTY_NAME="VMware Photon OS/Linux"
+"#;
+        let os_release = OsRelease::parse(content).unwrap();
+        assert_eq!(os_release.id, "photon");
+        assert_eq!(os_release.version_major, 5);
+        assert_eq!(os_release.version_minor, 0);
+    }
+
+    #[test]
+    fn test_os_release_parse_fedora() {
+        let content = r#"
+NAME="Fedora Linux"
+VERSION="39 (Server Edition)"
+ID=fedora
+VERSION_ID=39
+PRETTY_NAME="Fedora Linux 39 (Server Edition)"
+"#;
+        let os_release = OsRelease::parse(content).unwrap();
+        assert_eq!(os_release.id, "fedora");
+        assert_eq!(os_release.version_major, 39);
+        assert_eq!(os_release.version_minor, 0);
     }
 }
