@@ -341,6 +341,10 @@ struct OsRelease {
     pub version_id: String,
     pub version_major: i32,
     pub version_minor: i32,
+    pub cpe_name: String,
+    pub support_end: String,
+    pub home_url: String,
+    pub bug_report_url: String,
 }
 
 impl OsRelease {
@@ -348,6 +352,10 @@ impl OsRelease {
         let mut id = String::new();
         let mut pretty_name = String::new();
         let mut version_id = String::new();
+        let mut cpe_name = String::new();
+        let mut support_end = String::new();
+        let mut home_url = String::new();
+        let mut bug_report_url = String::new();
 
         for line in content.lines() {
             let line = line.trim();
@@ -362,6 +370,10 @@ impl OsRelease {
                     "ID" => id = value.to_lowercase(),
                     "PRETTY_NAME" => pretty_name = value.to_string(),
                     "VERSION_ID" => version_id = value.to_string(),
+                    "CPE_NAME" => cpe_name = value.to_string(),
+                    "SUPPORT_END" => support_end = value.to_string(),
+                    "HOME_URL" => home_url = value.to_string(),
+                    "BUG_REPORT_URL" => bug_report_url = value.to_string(),
                     _ => {}
                 }
             }
@@ -387,6 +399,10 @@ impl OsRelease {
             version_id,
             version_major,
             version_minor,
+            cpe_name,
+            support_end,
+            home_url,
+            bug_report_url,
         })
     }
 }
