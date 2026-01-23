@@ -167,8 +167,10 @@ impl Guestfs {
 
         match self.state {
             GuestfsState::Config => Ok(0),
-            GuestfsState::Ready => Ok(1),
-            GuestfsState::Closed => Ok(2),
+            GuestfsState::Launching => Ok(1),
+            GuestfsState::Ready => Ok(2),
+            GuestfsState::Error(_) => Ok(3),
+            GuestfsState::Closed => Ok(4),
         }
     }
 

@@ -5,7 +5,9 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use std::process::Command;
+use crate::guestfs::security_utils::PathValidator;
+use std::process::{Command, Stdio};
+use std::io::Write;
 
 impl Guestfs {
     /// Extract CPIO archive to directory
@@ -61,26 +63,50 @@ impl Guestfs {
             eprintln!("guestfs: cpio_create {} {} {}", directory, archive, format);
         }
 
+        // Validate inputs to prevent command injection
+        PathValidator::validate_fs_path(directory)?;
+        PathValidator::validate_fs_path(archive)?;
+        PathValidator::validate_cpio_format(format)?;
+
         let host_dir = self.resolve_guest_path(directory)?;
 
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c")
-           .arg(format!(
-               "cd {} && find . -print | cpio -o -H {} > {}",
-               host_dir.display(),
-               format,
-               archive
-           ));
+        // Use piped commands instead of shell to prevent injection
+        // Start find process
+        let find_child = Command::new("find")
+            .arg(".")
+            .current_dir(&host_dir)
+            .arg("-print")
+            .stdout(Stdio::piped())
+            .spawn()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute find: {}", e)))?;
 
-        let output = cmd.output()
+        let find_stdout = find_child.stdout
+            .ok_or_else(|| Error::CommandFailed("Failed to capture find output".to_string()))?;
+
+        // Start cpio process with find output as stdin
+        let mut cpio_child = Command::new("cpio")
+            .arg("-o")
+            .arg("-H")
+            .arg(format)
+            .stdin(find_stdout)
+            .stdout(Stdio::piped())
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute cpio: {}", e)))?;
 
-        if !output.status.success() {
+        // Get cpio output
+        let cpio_output = cpio_child.wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
+
+        if !cpio_output.status.success() {
             return Err(Error::CommandFailed(format!(
                 "cpio creation failed: {}",
-                String::from_utf8_lossy(&output.stderr)
+                String::from_utf8_lossy(&cpio_output.stderr)
             )));
         }
+
+        // Write cpio output to archive file
+        std::fs::write(archive, &cpio_output.stdout)
+            .map_err(|e| Error::Io(e))?;
 
         Ok(())
     }

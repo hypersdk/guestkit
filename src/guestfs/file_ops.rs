@@ -6,25 +6,69 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use crate::guestfs::security_utils::PathValidator;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 impl Guestfs {
-    /// Resolve guest path to host path (internal helper)
-    pub(crate) fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
-        // Find root mount
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+    /// Find the root mountpoint (internal helper)
+    fn find_root_mountpoint(&self) -> Result<&str> {
+        self.mounted.get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
             .ok_or_else(|| Error::InvalidState(
                 "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            ))
+            .map(|s| s.as_str())
+    }
 
-        // Build full path
+    /// Resolve guest path to host path (internal helper)
+    ///
+    /// This function securely resolves guest paths by:
+    /// 1. Validating the path doesn't contain dangerous patterns like ".."
+    /// 2. Normalizing the path
+    /// 3. Canonicalizing it to resolve symlinks
+    /// 4. Verifying the canonical path stays within the guest root
+    pub(crate) fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
+        // 1. Validate path to prevent path traversal attacks
+        PathValidator::validate_fs_path(guest_path)?;
+
+        // 2. Find root mount
+        let root_mountpoint = self.find_root_mountpoint()?;
+
+        // 3. Build candidate path
         let guest_path_clean = guest_path.trim_start_matches('/');
-        Ok(PathBuf::from(root_mountpoint).join(guest_path_clean))
+        let candidate_path = PathBuf::from(root_mountpoint).join(guest_path_clean);
+
+        // 4. Canonicalize path to resolve symlinks and get absolute path
+        // Note: canonicalize() requires the path to exist
+        let canonical = candidate_path.canonicalize()
+            .map_err(|e| {
+                // If path doesn't exist, return NotFound instead of generic error
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    Error::NotFound(format!("Path does not exist: {}", guest_path))
+                } else {
+                    Error::Io(e)
+                }
+            })?;
+
+        // 5. Get canonical root for security check
+        let root_canonical = PathBuf::from(root_mountpoint).canonicalize()
+            .map_err(|e| Error::InvalidState(format!(
+                "Failed to canonicalize mount root: {}", e
+            )))?;
+
+        // 6. Security check: ensure resolved path is within guest root
+        if !canonical.starts_with(&root_canonical) {
+            return Err(Error::InvalidOperation(format!(
+                "Path '{}' escapes guest root (symlink attack or path traversal)",
+                guest_path
+            )));
+        }
+
+        Ok(canonical)
     }
 
     /// Check if path is a file

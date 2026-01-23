@@ -42,12 +42,17 @@ impl NbdDevice {
             let device = PathBuf::from(format!("/dev/nbd{}", i));
             if device.exists() {
                 // Check if device is in use by checking its size
+                let device_str = device.to_str()
+                    .ok_or_else(|| Error::InvalidFormat(
+                        format!("Device path contains invalid Unicode: {:?}", device)
+                    ))?;
+
                 if let Ok(output) = Command::new("lsblk")
                     .arg("-b")  // Show sizes in bytes
                     .arg("-n")  // No headings
                     .arg("-o")
                     .arg("SIZE")
-                    .arg(device.to_str().unwrap())
+                    .arg(device_str)
                     .output()
                 {
                     // If size is 0, device is not connected
