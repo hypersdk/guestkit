@@ -176,11 +176,33 @@ impl Guestfs {
 
         // Attempt to launch - if any error occurs, move to Error state
         let result: Result<()> = (|| {
-            let reader = DiskReader::open(&drive.path)?;
-            let partition_table = PartitionTable::parse(&mut DiskReader::open(&drive.path)?)?;
+            // Check if we need NBD for non-raw formats (qcow2, vmdk, etc.)
+            let needs_nbd = Self::needs_nbd_for_format(&drive.path);
 
-            self.reader = Some(reader);
-            self.partition_table = Some(partition_table);
+            if needs_nbd {
+                // Use NBD to expose the disk image as a block device
+                if self.verbose {
+                    eprintln!("guestfs: using NBD for non-raw disk format");
+                }
+
+                let mut nbd = NbdDevice::new()?;
+                nbd.connect(&drive.path, drive.readonly)?;
+
+                // Read partitions from the NBD device
+                let reader = DiskReader::open(nbd.device_path())?;
+                let partition_table = PartitionTable::parse(&mut DiskReader::open(nbd.device_path())?)?;
+
+                self.reader = Some(reader);
+                self.partition_table = Some(partition_table);
+                self.nbd_device = Some(nbd);
+            } else {
+                // Direct access for raw format
+                let reader = DiskReader::open(&drive.path)?;
+                let partition_table = PartitionTable::parse(&mut DiskReader::open(&drive.path)?)?;
+
+                self.reader = Some(reader);
+                self.partition_table = Some(partition_table);
+            }
 
             Ok(())
         })();
@@ -200,6 +222,14 @@ impl Guestfs {
                 Err(e)
             }
         }
+    }
+
+    /// Check if a disk file needs NBD based on its format
+    fn needs_nbd_for_format(path: &Path) -> bool {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| matches!(ext.to_lowercase().as_str(), "qcow2" | "vmdk" | "vdi" | "vhd" | "vpc"))
+            .unwrap_or(false)
     }
 
     /// Shutdown the guestfs handle

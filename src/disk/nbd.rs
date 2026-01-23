@@ -165,19 +165,33 @@ impl NbdDevice {
 
     /// Wait for NBD device to become available
     fn wait_for_device(&self) -> Result<()> {
-        for _ in 0..50 {
+        for i in 0..50 {
             // Try to read from device
             if let Ok(_) = std::fs::metadata(&self.device_path) {
-                // Check if device is actually readable
-                if let Ok(_) = std::fs::File::open(&self.device_path) {
-                    return Ok(());
+                // Check if device is actually readable and has non-zero size
+                if let Ok(file) = std::fs::File::open(&self.device_path) {
+                    use std::os::unix::io::AsRawFd;
+                    const BLKGETSIZE64: libc::c_ulong = 0x80081272;
+
+                    let mut size_bytes: u64 = 0;
+                    let result = unsafe {
+                        libc::ioctl(
+                            file.as_raw_fd(),
+                            BLKGETSIZE64 as _,
+                            &mut size_bytes as *mut u64
+                        )
+                    };
+
+                    if result == 0 && size_bytes > 0 {
+                        return Ok(());
+                    }
                 }
             }
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(200));
         }
 
         Err(Error::CommandFailed(format!(
-            "NBD device {} did not become ready in time",
+            "NBD device {} did not become ready in time (no data or zero size)",
             self.device_path.display()
         )))
     }
