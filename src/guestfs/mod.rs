@@ -88,6 +88,18 @@ pub mod time_ops;
 pub mod backup_ops;
 pub mod template_ops;
 
+// Ergonomic API extensions
+pub mod builder;
+pub mod types;
+pub mod filesystem_ops;
+
 pub use handle::Guestfs;
 pub use inspect::*;
 pub use metadata::Stat;
+
+// Re-export type-safe types for convenience
+pub use builder::GuestfsBuilder;
+pub use types::{
+    FilesystemType, PartitionTableType, OsType, Distro,
+    PackageManager, MountOpts,
+};
