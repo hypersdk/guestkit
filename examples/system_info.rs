@@ -25,14 +25,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== GuestKit System Information ===" );
     println!("Image: {}\n", disk_path);
 
-    // Create GuestFS handle
-    let mut g = Guestfs::new()?;
-    g.set_verbose(true);
-
-    // Add disk and launch
-    println!("Adding disk and launching...");
-    g.add_drive_ro(disk_path)?;
-    g.launch()?;
+    // Create GuestFS handle using builder pattern
+    println!("Creating guest and launching...");
+    let mut g = Guestfs::builder()
+        .add_drive_ro(disk_path)
+        .verbose(true)
+        .build_and_launch()?;
 
     // Find and mount OS root
     println!("\nFinding OS root...");

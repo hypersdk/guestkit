@@ -7,8 +7,10 @@ A pure Rust implementation of libguestfs-compatible API for disk image inspectio
 
 ## Features
 
+- 🦀 **Ergonomic Rust API** - Type-safe enums, builder patterns, and fluent interfaces for modern Rust idioms
 - 🔍 **GuestFS-Compatible API** - 578 functions compatible with libguestfs (563 fully working, 15 API-defined) - **97.4% coverage, 76.8% of libguestfs**
 - 🦀 **Pure Rust** - No C dependencies for core library, memory safe, high performance
+- ⚡ **Compile-Time Safety** - Type-safe filesystems, OS detection, and partition tables prevent runtime errors
 - 💿 **Disk Format Support** - QCOW2, VMDK, RAW detection via magic bytes
 - 📊 **Partition Tables** - MBR and GPT parsing, partition creation/deletion/resizing
 - 🗂️ **Filesystem Operations** - Mount/unmount, create (mkfs), check (fsck), tune, trim, resize
@@ -141,6 +143,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+#### Ergonomic Rust API (Recommended)
+
+GuestKit provides modern Rust patterns for better type safety and ergonomics:
+
+```rust
+use guestkit::guestfs::{Guestfs, FilesystemType, OsType, Distro};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Builder pattern for configuration
+    let mut g = Guestfs::builder()
+        .add_drive_ro("/path/to/disk.qcow2")
+        .verbose(true)
+        .build_and_launch()?;
+
+    // Type-safe filesystem creation
+    g.mkfs("/dev/sda1")
+        .ext4()              // Type-safe enum, not string!
+        .label("rootfs")
+        .blocksize(4096)
+        .create()?;
+
+    // Type-safe OS detection with pattern matching
+    for root in g.inspect_os()? {
+        let os_type = OsType::from_str(&g.inspect_get_type(&root)?);
+
+        match os_type {
+            OsType::Linux => {
+                let distro = Distro::from_str(&g.inspect_get_distro(&root)?);
+
+                // Smart methods on enums
+                if let Some(pkg_mgr) = distro.package_manager() {
+                    println!("Package manager: {}", pkg_mgr);  // "deb", "rpm", "pacman", etc.
+                }
+
+                // Exhaustive pattern matching
+                match distro {
+                    Distro::Ubuntu | Distro::Debian => println!("Debian-based"),
+                    Distro::Fedora | Distro::Rhel => println!("RPM-based"),
+                    Distro::Archlinux => println!("Arch Linux"),
+                    _ => println!("Other Linux"),
+                }
+            }
+            OsType::Windows => println!("Windows detected"),
+            _ => println!("Other OS"),
+        }
+    }
+
+    g.shutdown()?;
+    Ok(())
+}
+```
+
+See [`docs/ERGONOMIC_API.md`](docs/ERGONOMIC_API.md) and [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for details.
 
 #### Python Bindings
 
