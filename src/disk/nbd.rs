@@ -7,7 +7,7 @@
 
 use crate::core::{Error, Result};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -15,8 +15,6 @@ use std::time::Duration;
 pub struct NbdDevice {
     /// NBD device path (e.g., /dev/nbd0)
     device_path: PathBuf,
-    /// qemu-nbd process handle
-    process: Option<Child>,
     /// Image path being exported
     image_path: PathBuf,
     /// Whether device is connected
@@ -32,7 +30,6 @@ impl NbdDevice {
 
         Ok(NbdDevice {
             device_path,
-            process: None,
             image_path: PathBuf::new(),
             connected: false,
         })
@@ -100,8 +97,18 @@ impl NbdDevice {
             )));
         }
 
+        // Check if we need to use sudo (qemu-nbd --connect requires root)
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
         // Build qemu-nbd command
-        let mut cmd = Command::new("qemu-nbd");
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("qemu-nbd");
+            sudo_cmd
+        } else {
+            Command::new("qemu-nbd")
+        };
+
         cmd.arg("--connect")
             .arg(&self.device_path)
             .arg(image_path);
@@ -110,22 +117,38 @@ impl NbdDevice {
             cmd.arg("--read-only");
         }
 
-        // Enable partition detection
+        // Detect image format from extension
+        let format = image_path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| match ext.to_lowercase().as_str() {
+                "qcow2" => "qcow2",
+                "vmdk" => "vmdk",
+                "vdi" => "vdi",
+                "vhd" | "vpc" => "vpc",
+                _ => "raw",
+            })
+            .unwrap_or("raw");
+
         cmd.arg("--format")
-            .arg("auto"); // Auto-detect format
+            .arg(format);
 
-        cmd.stdout(Stdio::null())
-            .stderr(Stdio::null());
-
-        // Execute qemu-nbd
-        let child = cmd.spawn().map_err(|e| {
+        // Capture output for debugging
+        let output = cmd.output().map_err(|e| {
             Error::CommandFailed(format!(
-                "Failed to start qemu-nbd: {}. Is qemu-nbd installed?",
+                "Failed to execute qemu-nbd: {}. Is qemu-nbd installed?",
                 e
             ))
         })?;
 
-        self.process = Some(child);
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(Error::CommandFailed(format!(
+                "qemu-nbd failed: stdout='{}', stderr='{}'. You may need sudo privileges.",
+                stdout, stderr
+            )));
+        }
+
         self.image_path = image_path.to_path_buf();
         self.connected = true;
 
@@ -160,9 +183,19 @@ impl NbdDevice {
             return Ok(());
         }
 
+        // Check if we need to use sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
         // Disconnect using qemu-nbd
-        let output = Command::new("qemu-nbd")
-            .arg("--disconnect")
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("qemu-nbd");
+            sudo_cmd
+        } else {
+            Command::new("qemu-nbd")
+        };
+
+        let output = cmd.arg("--disconnect")
             .arg(&self.device_path)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to disconnect NBD: {}", e)))?;
@@ -172,12 +205,6 @@ impl NbdDevice {
                 "Warning: qemu-nbd disconnect failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
-        }
-
-        // Kill process if still running
-        if let Some(mut process) = self.process.take() {
-            let _ = process.kill();
-            let _ = process.wait();
         }
 
         self.connected = false;

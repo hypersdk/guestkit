@@ -115,9 +115,14 @@ impl Guestfs {
             .map_err(|e| Error::CommandFailed(format!("Failed to execute parted: {}", e)))?;
 
         if !output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(Error::CommandFailed(format!(
-                "parted failed: {}",
-                String::from_utf8_lossy(&output.stderr)
+                "parted failed on device {}: stdout='{}', stderr='{}', exit_code={:?}",
+                nbd_device.device_path().display(),
+                stdout,
+                stderr,
+                output.status.code()
             )));
         }
 
