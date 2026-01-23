@@ -28,6 +28,8 @@ serde_yaml = "0.9"
 clap = { version = "4", features = ["derive", "cargo"] }
 indicatif = "0.17"
 miette = { version = "7.0", features = ["fancy"] }
+owo-colors = "4.0"
+unicode-width = "0.1"
 
 # Utilities
 rand = "0.8"

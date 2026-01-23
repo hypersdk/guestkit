@@ -156,7 +156,7 @@ impl Guestfs {
     pub fn umount(&mut self, pathordevice: &str) -> Result<()> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: umount {}", pathordevice);
         }
 
@@ -192,7 +192,7 @@ impl Guestfs {
     pub fn umount_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: umount_all");
         }
 

@@ -175,7 +175,7 @@ impl Guestfs {
     pub fn inspect_get_package_management(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: inspect_get_package_management {}", root);
         }
 

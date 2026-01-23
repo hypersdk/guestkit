@@ -181,7 +181,7 @@ impl Guestfs {
 
             if needs_nbd {
                 // Use NBD to expose the disk image as a block device
-                if self.verbose {
+                if self.trace {
                     eprintln!("guestfs: using NBD for non-raw disk format");
                 }
 
@@ -211,7 +211,7 @@ impl Guestfs {
             Ok(_) => {
                 self.state = GuestfsState::Ready;
 
-                if self.verbose {
+                if self.trace {
                     eprintln!("guestfs: launched with {} drive(s)", self.drives.len());
                 }
 
@@ -238,7 +238,7 @@ impl Guestfs {
             return Ok(());
         }
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: shutdown");
         }
 
@@ -260,7 +260,7 @@ impl Guestfs {
         self.partition_table = None;
         self.state = GuestfsState::Closed;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: shutdown complete");
         }
 

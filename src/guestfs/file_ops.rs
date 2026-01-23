@@ -91,7 +91,7 @@ impl Guestfs {
     pub fn is_dir(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: is_dir {}", path);
         }
 
@@ -105,7 +105,7 @@ impl Guestfs {
     pub fn exists(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: exists {}", path);
         }
 
@@ -119,7 +119,8 @@ impl Guestfs {
     pub fn read_file(&mut self, path: &str) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        // Only show detailed file operations in trace mode (not verbose)
+        if self.trace {
             eprintln!("guestfs: read_file {}", path);
         }
 
@@ -275,7 +276,7 @@ impl Guestfs {
     pub fn rmdir(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: rmdir {}", path);
         }
 
@@ -419,7 +420,7 @@ impl Guestfs {
     pub fn cp(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
-        if self.verbose {
+        if self.trace {
             eprintln!("guestfs: cp {} {}", src, dest);
         }
 
