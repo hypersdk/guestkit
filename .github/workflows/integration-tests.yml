@@ -1,0 +1,289 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Integration Tests - ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            url: "https://cloud-images.ubuntu.com/releases/20.04/release/ubuntu-20.04-server-cloudimg-amd64.img"
+            expected_distro: "ubuntu"
+            expected_version: "20"
+
+          - os: ubuntu-22.04
+            url: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+            expected_distro: "ubuntu"
+            expected_version: "22"
+
+          - os: ubuntu-24.04
+            url: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+            expected_distro: "ubuntu"
+            expected_version: "24"
+
+          - os: debian-12
+            url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+            expected_distro: "debian"
+            expected_version: "12"
+
+          - os: fedora-39
+            url: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
+            expected_distro: "fedora"
+            expected_version: "39"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libguestfs-tools \
+            qemu-kvm \
+            qemu-utils \
+            libvirt-daemon-system \
+            libvirt-clients
+
+      - name: Setup KVM permissions
+        run: |
+          sudo usermod -aG kvm $USER
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm
+
+      - name: Cache test images
+        uses: actions/cache@v3
+        with:
+          path: test-images/
+          key: test-images-${{ matrix.os }}-v1
+
+      - name: Download test image
+        run: |
+          mkdir -p test-images
+          cd test-images
+          if [ ! -f "${{ matrix.os }}.img" ]; then
+            echo "Downloading ${{ matrix.os }} image..."
+            wget -q -O "${{ matrix.os }}.img" "${{ matrix.url }}" || \
+            curl -L -o "${{ matrix.os }}.img" "${{ matrix.url }}"
+
+            echo "Image downloaded: $(ls -lh ${{ matrix.os }}.img)"
+          else
+            echo "Using cached image: $(ls -lh ${{ matrix.os }}.img)"
+          fi
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build guestctl
+        run: |
+          cargo build --bin guestctl --release
+          ./target/release/guestctl --version
+
+      - name: Test CLI - inspect
+        run: |
+          sudo ./target/release/guestctl inspect \
+            test-images/${{ matrix.os }}.img | tee inspect-output.txt
+
+          # Verify expected output
+          grep -q "${{ matrix.expected_distro }}" inspect-output.txt
+          echo "✓ Detected correct distribution: ${{ matrix.expected_distro }}"
+
+      - name: Test CLI - inspect JSON
+        run: |
+          sudo ./target/release/guestctl inspect --json \
+            test-images/${{ matrix.os }}.img > inspect.json
+
+          cat inspect.json | jq '.'
+
+          # Verify JSON structure
+          distro=$(cat inspect.json | jq -r '.operating_systems[0].distro')
+          [ "$distro" = "${{ matrix.expected_distro }}" ]
+          echo "✓ JSON output correct: $distro"
+
+      - name: Test CLI - filesystems
+        run: |
+          sudo ./target/release/guestctl filesystems \
+            test-images/${{ matrix.os }}.img | tee fs-output.txt
+
+          # Should list devices and partitions
+          grep -q "/dev/sda" fs-output.txt
+          echo "✓ Found block devices"
+
+      - name: Test CLI - filesystems detailed
+        run: |
+          sudo ./target/release/guestctl filesystems --detailed \
+            test-images/${{ matrix.os }}.img | tee fs-detailed.txt
+
+          # Should show sizes and UUIDs
+          grep -qE "[0-9]+ bytes" fs-detailed.txt
+          echo "✓ Detailed filesystem info shown"
+
+      - name: Test CLI - packages
+        run: |
+          sudo ./target/release/guestctl packages \
+            test-images/${{ matrix.os }}.img > packages-output.txt || true
+
+          if [ -s packages-output.txt ]; then
+            echo "✓ Package listing works"
+            head -20 packages-output.txt
+          else
+            echo "⚠ Package listing not supported or no packages found"
+          fi
+
+      - name: Test CLI - ls root
+        run: |
+          sudo ./target/release/guestctl ls \
+            test-images/${{ matrix.os }}.img / | tee ls-output.txt
+
+          # Should contain standard directories
+          grep -q "etc" ls-output.txt
+          grep -q "var" ls-output.txt
+          echo "✓ Directory listing works"
+
+      - name: Test CLI - cat file
+        run: |
+          sudo ./target/release/guestctl cat \
+            test-images/${{ matrix.os }}.img /etc/hostname | tee hostname.txt
+
+          [ -s hostname.txt ]
+          echo "✓ File reading works: $(cat hostname.txt)"
+
+      - name: Test CLI - copy file
+        run: |
+          sudo ./target/release/guestctl cp \
+            "test-images/${{ matrix.os }}.img:/etc/hostname" \
+            ./copied-hostname.txt
+
+          [ -f ./copied-hostname.txt ]
+          echo "✓ File copying works: $(cat ./copied-hostname.txt)"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            inspect-output.txt
+            inspect.json
+            fs-output.txt
+            packages-output.txt
+            ls-output.txt
+            hostname.txt
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libguestfs-tools qemu-kvm
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Cache test images
+        uses: actions/cache@v3
+        with:
+          path: test-images/
+          key: test-images-ubuntu-22.04-v1
+
+      - name: Download test image
+        run: |
+          mkdir -p test-images
+          cd test-images
+          if [ ! -f "ubuntu-22.04.qcow2" ]; then
+            wget -q -O ubuntu-22.04.qcow2 \
+              "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+          fi
+
+      - name: Run benchmarks
+        run: |
+          export GUESTKIT_TEST_UBUNTU_22_04=test-images/ubuntu-22.04.qcow2
+          cargo bench --bench operations -- --save-baseline main
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: target/criterion/
+
+  clippy:
+    name: Clippy (Lints)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check

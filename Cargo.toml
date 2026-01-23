@@ -1,6 +1,6 @@
 [package]
 name = "guestkit"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
@@ -26,6 +26,8 @@ serde_yaml = "0.9"
 
 # CLI
 clap = { version = "4", features = ["derive", "cargo"] }
+indicatif = "0.17"
+miette = { version = "7.0", features = ["fancy"] }
 
 # Utilities
 rand = "0.8"
@@ -66,8 +68,8 @@ guest-inspect = []
 python-bindings = ["pyo3"]
 
 [[bin]]
-name = "guestkit"
-path = "src/main.rs"
+name = "guestctl"
+path = "src/bin/guestctl.rs"
 
 # Python module (optional)
 [lib]
@@ -85,5 +87,5 @@ opt-level = 0
 debug = true
 
 [[bench]]
-name = "benchmarks"
+name = "operations"
 harness = false
