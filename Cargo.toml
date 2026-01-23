@@ -54,6 +54,7 @@ mockall = "0.12"
 tempfile = "3.0"
 assert_cmd = "2.0"
 predicates = "3.0"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = ["disk-ops", "guest-inspect"]
@@ -79,3 +80,7 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+[[bench]]
+name = "benchmarks"
+harness = false
