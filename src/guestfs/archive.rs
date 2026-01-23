@@ -231,32 +231,131 @@ impl Guestfs {
     pub fn tar_in_opts<P: AsRef<Path>>(&mut self, tarfile: P, directory: &str, compress: Option<&str>, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
         self.ensure_ready()?;
 
+        let tarfile = tarfile.as_ref();
+
         if self.verbose {
             eprintln!("guestfs: tar_in_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
-                tarfile.as_ref().display(), directory, compress, xattrs, selinux, acls);
+                tarfile.display(), directory, compress, xattrs, selinux, acls);
         }
 
-        // TODO: Implement with options
-        Err(Error::Unsupported(
-            "Archive extraction with options requires implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build target directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let target_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Build tar command with options
+        let mut cmd = Command::new("tar");
+
+        // Add compression flag if specified
+        match compress {
+            Some("gzip") | Some("gz") => { cmd.arg("-z"); },
+            Some("bzip2") | Some("bz2") => { cmd.arg("-j"); },
+            Some("xz") => { cmd.arg("-J"); },
+            Some("compress") => { cmd.arg("-Z"); },
+            _ => {}
+        }
+
+        cmd.arg("-xf").arg(tarfile);
+        cmd.arg("-C").arg(&target_path);
+
+        // Add extended attributes options
+        if xattrs {
+            cmd.arg("--xattrs");
+        }
+        if selinux {
+            cmd.arg("--selinux");
+        }
+        if acls {
+            cmd.arg("--acls");
+        }
+
+        let output = cmd.output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Create tar with options
     ///
     /// Compatible with libguestfs g.tar_out_opts()
-    pub fn tar_out_opts<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P, compress: Option<&str>, numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
+    pub fn tar_out_opts<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P, compress: Option<&str>, _numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
         self.ensure_ready()?;
+
+        let tarfile = tarfile.as_ref();
 
         if self.verbose {
             eprintln!("guestfs: tar_out_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
-                directory, tarfile.as_ref().display(), compress, xattrs, selinux, acls);
+                directory, tarfile.display(), compress, xattrs, selinux, acls);
         }
 
-        // TODO: Implement with options
-        Err(Error::Unsupported(
-            "Archive creation with options requires implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build source directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let source_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Verify source exists
+        if !source_path.exists() {
+            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+        }
+
+        // Build tar command with options
+        let mut cmd = Command::new("tar");
+
+        // Add compression flag if specified
+        match compress {
+            Some("gzip") | Some("gz") => { cmd.arg("-z"); },
+            Some("bzip2") | Some("bz2") => { cmd.arg("-j"); },
+            Some("xz") => { cmd.arg("-J"); },
+            Some("compress") => { cmd.arg("-Z"); },
+            _ => {}
+        }
+
+        cmd.arg("-cf").arg(tarfile);
+        cmd.arg("-C").arg(&source_path);
+
+        // Add extended attributes options
+        if xattrs {
+            cmd.arg("--xattrs");
+        }
+        if selinux {
+            cmd.arg("--selinux");
+        }
+        if acls {
+            cmd.arg("--acls");
+        }
+
+        cmd.arg(".");
+
+        let output = cmd.output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+        }
+
+        Ok(())
     }
 
     /// Create cpio archive
@@ -265,14 +364,86 @@ impl Guestfs {
     pub fn cpio_out<P: AsRef<Path>>(&mut self, directory: &str, cpiofile: P, format: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        let cpiofile = cpiofile.as_ref();
+
         if self.verbose {
-            eprintln!("guestfs: cpio_out {} {} {}", directory, cpiofile.as_ref().display(), format);
+            eprintln!("guestfs: cpio_out {} {} {}", directory, cpiofile.display(), format);
         }
 
-        // TODO: Implement cpio creation
-        Err(Error::Unsupported(
-            "CPIO archive creation requires implementation".to_string()
-        ))
+        // Get root mount point
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.get("/dev/vda1"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState(
+                "No filesystem mounted. Call mount_ro() first.".to_string()
+            ))?;
+
+        // Build source directory path
+        let directory_clean = directory.trim_start_matches('/');
+        let source_path = std::path::PathBuf::from(root_mountpoint).join(directory_clean);
+
+        // Verify source exists
+        if !source_path.exists() {
+            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+        }
+
+        // Build cpio format flag
+        let format_flag = match format {
+            "newc" => "--format=newc",
+            "crc" => "--format=crc",
+            "odc" => "--format=odc",
+            "bin" => "--format=bin",
+            "tar" => "--format=tar",
+            _ => "--format=newc", // default
+        };
+
+        // Use find + cpio to create archive
+        // find . -print | cpio -o --format=newc > archive.cpio
+        let find_output = Command::new("find")
+            .current_dir(&source_path)
+            .arg(".")
+            .arg("-print")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run find: {}", e)))?;
+
+        if !find_output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Find failed: {}",
+                String::from_utf8_lossy(&find_output.stderr)
+            )));
+        }
+
+        // Pass find output to cpio
+        let mut cpio_cmd = Command::new("cpio");
+        cpio_cmd.arg("-o")
+            .arg(format_flag)
+            .arg("-O")
+            .arg(cpiofile)
+            .stdin(std::process::Stdio::piped())
+            .current_dir(&source_path);
+
+        let mut cpio_process = cpio_cmd.spawn()
+            .map_err(|e| Error::CommandFailed(format!("Failed to spawn cpio: {}", e)))?;
+
+        // Write find output to cpio's stdin
+        if let Some(mut stdin) = cpio_process.stdin.take() {
+            use std::io::Write;
+            stdin.write_all(&find_output.stdout)
+                .map_err(|e| Error::CommandFailed(format!("Failed to write to cpio stdin: {}", e)))?;
+        }
+
+        let cpio_output = cpio_process.wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
+
+        if !cpio_output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "CPIO creation failed: {}",
+                String::from_utf8_lossy(&cpio_output.stderr)
+            )));
+        }
+
+        Ok(())
     }
 }
 

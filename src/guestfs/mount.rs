@@ -8,7 +8,6 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use crate::disk::NbdDevice;
 use std::collections::HashMap;
 use std::process::Command;
 use std::fs;
@@ -245,10 +244,8 @@ impl Guestfs {
             eprintln!("guestfs: mkmountpoint {}", exemptpath);
         }
 
-        // In a real implementation, this would create the directory
-        // in the guest filesystem
-
-        Ok(())
+        // Use mkdir_p to create the directory
+        self.mkdir_p(exemptpath)
     }
 
     /// Remove a mountpoint
@@ -261,10 +258,8 @@ impl Guestfs {
             eprintln!("guestfs: rmmountpoint {}", exemptpath);
         }
 
-        // In a real implementation, this would remove the directory
-        // from the guest filesystem
-
-        Ok(())
+        // Use rmdir to remove the directory
+        self.rmdir(exemptpath)
     }
 
     /// Sync filesystems
@@ -277,7 +272,17 @@ impl Guestfs {
             eprintln!("guestfs: sync");
         }
 
-        // In a real implementation, this would flush all filesystem buffers
+        // Call the sync command to flush filesystem buffers
+        let output = Command::new("sync")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute sync: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Sync failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
 
         Ok(())
     }
