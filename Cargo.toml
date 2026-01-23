@@ -45,6 +45,9 @@ glob = "0.3"
 # Base64 encoding/decoding
 base64 = "0.22"
 
+# Unix system calls for privilege checking
+libc = "0.2"
+
 # PyO3 for Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 

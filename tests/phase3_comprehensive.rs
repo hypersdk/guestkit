@@ -28,6 +28,7 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
     // Create disk image
     println!("  Creating {}MB disk image...", DISK_SIZE / 1024 / 1024);
     g.disk_create(DISK_PATH, "raw", DISK_SIZE)?;
+    println!("  ✓ Disk image created");
 
     // Test 2: Using add_drive() (Phase 3 API - read-write mode)
     println!("\n[2/10] Testing add_drive() (read-write mode)...");

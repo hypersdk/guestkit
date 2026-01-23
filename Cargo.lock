@@ -458,6 +458,7 @@ dependencies = [
  "criterion",
  "env_logger",
  "glob",
+ "libc",
  "log",
  "memmap2",
  "mockall",
