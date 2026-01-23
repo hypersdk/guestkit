@@ -242,15 +242,23 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
 
     if verbose {
         g.set_verbose(true);
-        eprintln!("Launching appliance...");
     }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
 
     g.add_drive_ro(&disk)
         .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    progress.set_message("Launching appliance...");
     g.launch().context("Failed to launch appliance")?;
 
-    println!("=== Devices ===");
+    progress.set_message("Scanning filesystems...");
+
     let devices = g.list_devices().context("Failed to list devices")?;
+
+    progress.finish_and_clear();
+
+    println!("=== Devices ===");
     for device in devices {
         println!("{}", device);
 
@@ -487,17 +495,18 @@ fn cmd_cp(source: String, dest: PathBuf, verbose: bool) -> Result<()> {
 
     if verbose {
         g.set_verbose(true);
-        eprintln!("Launching appliance...");
     }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
 
     g.add_drive_ro(&disk)
         .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    progress.set_message("Launching appliance...");
     g.launch().context("Failed to launch appliance")?;
 
     // Try to mount automatically
-    if verbose {
-        eprintln!("Mounting filesystems...");
-    }
+    progress.set_message("Mounting filesystems...");
 
     let roots = g.inspect_os().unwrap_or_default();
     if !roots.is_empty() {
@@ -513,16 +522,17 @@ fn cmd_cp(source: String, dest: PathBuf, verbose: bool) -> Result<()> {
 
     // Check if file exists
     if !g.is_file(src_path).unwrap_or(false) {
+        progress.abandon_with_message(&format!("File not found: {}", src_path));
         anyhow::bail!("File not found: {}", src_path);
     }
 
     // Copy file
-    if verbose {
-        eprintln!("Copying {} to {}", src_path, dest.display());
-    }
+    progress.set_message(&format!("Copying {}...", src_path));
 
     g.download(src_path, dest.to_str().unwrap())
         .with_context(|| format!("Failed to copy file: {}", src_path))?;
+
+    progress.finish_and_clear();
 
     println!("✓ Copied {} -> {}", source, dest.display());
 
@@ -536,17 +546,18 @@ fn cmd_ls(disk: PathBuf, path: String, long: bool, verbose: bool) -> Result<()> 
 
     if verbose {
         g.set_verbose(true);
-        eprintln!("Launching appliance...");
     }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
 
     g.add_drive_ro(&disk)
         .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    progress.set_message("Launching appliance...");
     g.launch().context("Failed to launch appliance")?;
 
     // Mount filesystems
-    if verbose {
-        eprintln!("Mounting filesystems...");
-    }
+    progress.set_message("Mounting filesystems...");
 
     let roots = g.inspect_os().unwrap_or_default();
     if !roots.is_empty() {
@@ -562,19 +573,26 @@ fn cmd_ls(disk: PathBuf, path: String, long: bool, verbose: bool) -> Result<()> 
 
     // Check if directory exists
     if !g.is_dir(&path).unwrap_or(false) {
+        progress.abandon_with_message(&format!("Not a directory: {}", path));
         anyhow::bail!("Not a directory: {}", path);
     }
 
-    if long {
+    progress.set_message(&format!("Listing {}...", path));
+
+    let result = if long {
         // Long listing
-        let output = g.ll(&path).context("Failed to list directory")?;
-        print!("{}", output);
+        g.ll(&path).context("Failed to list directory")
     } else {
         // Simple listing
         let entries = g.ls(&path).context("Failed to list directory")?;
-        for entry in entries {
-            println!("{}", entry);
-        }
+        Ok(entries.join("\n"))
+    };
+
+    progress.finish_and_clear();
+
+    match result {
+        Ok(output) => println!("{}", output),
+        Err(e) => return Err(e),
     }
 
     g.umount_all().ok();
@@ -587,17 +605,18 @@ fn cmd_cat(disk: PathBuf, path: String, verbose: bool) -> Result<()> {
 
     if verbose {
         g.set_verbose(true);
-        eprintln!("Launching appliance...");
     }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
 
     g.add_drive_ro(&disk)
         .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    progress.set_message("Launching appliance...");
     g.launch().context("Failed to launch appliance")?;
 
     // Mount filesystems
-    if verbose {
-        eprintln!("Mounting filesystems...");
-    }
+    progress.set_message("Mounting filesystems...");
 
     let roots = g.inspect_os().unwrap_or_default();
     if !roots.is_empty() {
@@ -613,13 +632,17 @@ fn cmd_cat(disk: PathBuf, path: String, verbose: bool) -> Result<()> {
 
     // Check if file exists
     if !g.is_file(&path).unwrap_or(false) {
+        progress.abandon_with_message(&format!("File not found: {}", path));
         anyhow::bail!("File not found: {}", path);
     }
 
     // Read and print file
+    progress.set_message(&format!("Reading {}...", path));
     let content = g
         .read_file(&path)
         .with_context(|| format!("Failed to read file: {}", path))?;
+
+    progress.finish_and_clear();
 
     // Try to print as UTF-8, fall back to hex if binary
     match String::from_utf8(content.clone()) {
