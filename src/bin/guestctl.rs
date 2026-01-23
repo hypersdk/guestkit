@@ -7,6 +7,7 @@ use guestkit::core::ProgressReporter;
 use std::path::PathBuf;
 use anyhow::{Result, Context};
 use serde_json::json;
+use owo_colors::OwoColorize;
 
 #[derive(Parser)]
 #[command(
@@ -178,58 +179,125 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
             "operating_systems": os_info,
         }))?);
     } else {
-        // Human-readable output
-        println!("=== Disk Image: {} ===\n", disk.display());
+        // Human-readable output with colors
+        println!("\n{}", "═".repeat(70).bright_blue());
+        println!("{} {}", "📀 Disk Image:".bright_cyan().bold(), disk.display().to_string().bright_white());
+        println!("{}\n", "═".repeat(70).bright_blue());
 
         if roots.is_empty() {
-            println!("⚠️  No operating systems detected");
-            println!("\nPossible reasons:");
-            println!("  • Disk is not bootable");
-            println!("  • Disk is encrypted (try checking with LUKS tools)");
-            println!("  • Unsupported OS type");
-            println!("  • Corrupted disk image");
+            println!("{}", "⚠️  No operating systems detected".bright_yellow().bold());
+            println!("\n{}", "Possible reasons:".dimmed());
+            println!("  {} Disk is not bootable", "•".bright_black());
+            println!("  {} Disk is encrypted (try checking with LUKS tools)", "•".bright_black());
+            println!("  {} Unsupported OS type", "•".bright_black());
+            println!("  {} Corrupted disk image", "•".bright_black());
         } else {
-            println!("Found {} operating system(s):\n", roots.len());
+            println!("{} {} {}\n",
+                "✓".bright_green().bold(),
+                "Found".bright_white(),
+                format!("{} operating system(s)", roots.len()).bright_cyan().bold()
+            );
 
             for (i, root) in roots.iter().enumerate() {
-                println!("OS #{}", i + 1);
-                println!("  Root device: {}", root);
+                if i > 0 {
+                    println!("\n{}", "─".repeat(70).bright_black());
+                }
+
+                println!("\n{} {}",
+                    format!("OS #{}", i + 1).bright_magenta().bold(),
+                    format!("({})", root).dimmed()
+                );
+                println!("{}", "─".repeat(50).bright_black());
 
                 if let Ok(os_type) = g.inspect_get_type(root) {
-                    println!("  Type: {}", os_type);
+                    let icon = match os_type.as_str() {
+                        "linux" => "🐧",
+                        "windows" => "🪟",
+                        _ => "💻",
+                    };
+                    println!("  {} {}  {}",
+                        "Type:".bright_white().bold(),
+                        icon,
+                        os_type.bright_cyan()
+                    );
                 }
 
                 if let Ok(distro) = g.inspect_get_distro(root) {
-                    println!("  Distribution: {}", distro);
+                    let display_distro = if distro == "unknown" || distro.is_empty() {
+                        format!("{} (detection requires mounting)", "unknown".dimmed())
+                    } else {
+                        distro.bright_green().to_string()
+                    };
+                    println!("  {} {}",
+                        "Distribution:".bright_white().bold(),
+                        display_distro
+                    );
                 }
 
                 if let Ok(major) = g.inspect_get_major_version(root) {
                     let minor = g.inspect_get_minor_version(root).unwrap_or(0);
-                    println!("  Version: {}.{}", major, minor);
+                    if major > 0 || minor > 0 {
+                        println!("  {} {}",
+                            "Version:".bright_white().bold(),
+                            format!("{}.{}", major, minor).bright_yellow()
+                        );
+                    }
                 }
 
                 if let Ok(product) = g.inspect_get_product_name(root) {
-                    println!("  Product: {}", product);
+                    if product != "Linux" && !product.is_empty() {
+                        println!("  {} {}",
+                            "Product:".bright_white().bold(),
+                            product.bright_white()
+                        );
+                    }
                 }
 
                 if let Ok(hostname) = g.inspect_get_hostname(root) {
-                    println!("  Hostname: {}", hostname);
+                    let display_hostname = if hostname == "localhost" || hostname.is_empty() {
+                        format!("{} (default)", hostname.dimmed())
+                    } else {
+                        hostname.bright_cyan().to_string()
+                    };
+                    println!("  {} {}",
+                        "Hostname:".bright_white().bold(),
+                        display_hostname
+                    );
                 }
 
                 if let Ok(arch) = g.inspect_get_arch(root) {
-                    println!("  Architecture: {}", arch);
+                    println!("  {} {}",
+                        "Architecture:".bright_white().bold(),
+                        arch.bright_yellow()
+                    );
                 }
 
                 if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
-                    println!("  Package format: {}", pkg_fmt);
+                    let display_pkg = if pkg_fmt == "unknown" || pkg_fmt.is_empty() {
+                        format!("{} (requires mounting)", "unknown".dimmed())
+                    } else {
+                        pkg_fmt.bright_green().to_string()
+                    };
+                    println!("  {} {}",
+                        "Package format:".bright_white().bold(),
+                        display_pkg
+                    );
                 }
 
                 if let Ok(pkg_mgmt) = g.inspect_get_package_management(root) {
-                    println!("  Package management: {}", pkg_mgmt);
+                    let display_mgmt = if pkg_mgmt == "unknown" || pkg_mgmt.is_empty() {
+                        format!("{} (requires mounting)", "unknown".dimmed())
+                    } else {
+                        pkg_mgmt.bright_magenta().to_string()
+                    };
+                    println!("  {} {}",
+                        "Package management:".bright_white().bold(),
+                        display_mgmt
+                    );
                 }
-
-                println!();
             }
+
+            println!("\n{}", "═".repeat(70).bright_blue());
         }
     }
 

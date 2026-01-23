@@ -528,6 +528,7 @@ dependencies = [
  "memmap2",
  "miette",
  "mockall",
+ "owo-colors",
  "predicates",
  "pyo3",
  "rand",
@@ -539,6 +540,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-test",
+ "unicode-width 0.1.14",
  "uuid",
 ]
 
