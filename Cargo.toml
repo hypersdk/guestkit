@@ -39,6 +39,12 @@ byteorder = "1.5"
 # Regex for OS detection
 regex = "1"
 
+# Glob for pattern matching
+glob = "0.3"
+
+# Base64 encoding/decoding
+base64 = "0.22"
+
 # PyO3 for Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 
