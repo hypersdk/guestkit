@@ -183,8 +183,10 @@ impl Guestfs {
 
         let tool = match pkg_format.as_str() {
             "rpm" => {
-                // Check which tool is available
-                if self.exists(&format!("{}/usr/bin/dnf", root)).unwrap_or(false) {
+                // Check which tool is available (check tdnf first for Photon OS)
+                if self.exists(&format!("{}/usr/bin/tdnf", root)).unwrap_or(false) {
+                    "tdnf"
+                } else if self.exists(&format!("{}/usr/bin/dnf", root)).unwrap_or(false) {
                     "dnf"
                 } else if self.exists(&format!("{}/usr/bin/yum", root)).unwrap_or(false) {
                     "yum"
