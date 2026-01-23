@@ -326,79 +326,127 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
 
     progress.finish_and_clear();
 
-    println!("=== Devices ===");
+    println!("\n{}", "═".repeat(70).bright_blue());
+    println!("{} {}", "💾 Disk Image:".bright_cyan().bold(), disk.display().to_string().bright_white());
+    println!("{}\n", "═".repeat(70).bright_blue());
+
+    // Devices
+    println!("{}", "Block Devices".bright_white().bold());
+    println!("{}", "─".repeat(50).bright_black());
     for device in devices {
-        println!("{}", device);
+        println!("  {} {}",
+            "▪".bright_cyan(),
+            device.bright_white().bold()
+        );
 
         if detailed {
             if let Ok(size) = g.blockdev_getsize64(&device) {
-                println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
+                let gb = size as f64 / 1_073_741_824.0;  // 1024^3
+                println!("    {} {} ({:.2} GiB)",
+                    "Size:".dimmed(),
+                    size.to_string().bright_yellow(),
+                    gb
+                );
             }
 
             if let Ok(parttype) = g.part_get_parttype(&device) {
-                println!("  Partition table: {}", parttype);
+                println!("    {} {}",
+                    "Partition table:".dimmed(),
+                    parttype.bright_green()
+                );
             }
         }
     }
 
-    println!("\n=== Partitions ===");
+    // Partitions
     let partitions = g.list_partitions().context("Failed to list partitions")?;
-    for partition in partitions {
-        println!("{}", partition);
+    if !partitions.is_empty() {
+        println!("\n{}", "Partitions".bright_white().bold());
+        println!("{}", "─".repeat(50).bright_black());
 
-        if let Ok(size) = g.blockdev_getsize64(&partition) {
-            println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
-        }
+        for partition in partitions {
+            let fstype = g.vfs_type(&partition).unwrap_or_else(|_| "unknown".to_string());
+            let size = g.blockdev_getsize64(&partition).unwrap_or(0);
+            let gb = size as f64 / 1_073_741_824.0;
 
-        if let Ok(fstype) = g.vfs_type(&partition) {
-            println!("  Filesystem: {}", fstype);
-        }
+            let fs_icon = match fstype.as_str() {
+                "ext2" | "ext3" | "ext4" => "📁",
+                "ntfs" => "🪟",
+                "vfat" | "fat" | "fat32" => "💾",
+                "xfs" => "🗄",
+                "btrfs" => "🌳",
+                "swap" => "💫",
+                _ => "❓",
+            };
 
-        if let Ok(label) = g.vfs_label(&partition) {
-            if !label.is_empty() {
-                println!("  Label: {}", label);
-            }
-        }
+            println!("  {} {} {} {}",
+                fs_icon,
+                partition.bright_white().bold(),
+                format!("({})", fstype).bright_cyan(),
+                format!("{:.1} GiB", gb).bright_yellow()
+            );
 
-        if detailed {
-            if let Ok(uuid) = g.vfs_uuid(&partition) {
-                if !uuid.is_empty() {
-                    println!("  UUID: {}", uuid);
+            if let Ok(label) = g.vfs_label(&partition) {
+                if !label.is_empty() {
+                    println!("    {} {}",
+                        "Label:".dimmed(),
+                        label.bright_green()
+                    );
                 }
             }
 
-            if let Ok(partnum) = g.part_to_partnum(&partition) {
-                println!("  Partition number: {}", partnum);
+            if detailed {
+                if let Ok(uuid) = g.vfs_uuid(&partition) {
+                    if !uuid.is_empty() {
+                        println!("    {} {}",
+                            "UUID:".dimmed(),
+                            uuid.dimmed()
+                        );
+                    }
+                }
+
+                if let Ok(partnum) = g.part_to_partnum(&partition) {
+                    println!("    {} {}",
+                        "Number:".dimmed(),
+                        partnum.to_string().bright_magenta()
+                    );
+                }
             }
         }
-
-        println!();
     }
 
     // LVM information
     if let Ok(vgs) = g.vgs() {
         if !vgs.is_empty() {
-            println!("=== LVM Volume Groups ===");
+            println!("\n{}", "LVM Volume Groups".bright_white().bold());
+            println!("{}", "─".repeat(50).bright_black());
             for vg in vgs {
-                println!("{}", vg);
+                println!("  {} {}",
+                    "▸".bright_magenta(),
+                    vg.bright_white().bold()
+                );
             }
-            println!();
         }
     }
 
     if let Ok(lvs) = g.lvs() {
         if !lvs.is_empty() {
-            println!("=== LVM Logical Volumes ===");
+            println!("\n{}", "LVM Logical Volumes".bright_white().bold());
+            println!("{}", "─".repeat(50).bright_black());
             for lv in lvs {
-                println!("{}", lv);
-                if detailed {
-                    if let Ok(size) = g.blockdev_getsize64(&lv) {
-                        println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
-                    }
-                }
+                let size = g.blockdev_getsize64(&lv).unwrap_or(0);
+                let gb = size as f64 / 1_073_741_824.0;
+
+                println!("  {} {} {}",
+                    "▸".bright_magenta(),
+                    lv.bright_white().bold(),
+                    format!("{:.1} GiB", gb).bright_yellow()
+                );
             }
         }
     }
+
+    println!("\n{}", "═".repeat(70).bright_blue());
 
     g.shutdown().ok();
     Ok(())
