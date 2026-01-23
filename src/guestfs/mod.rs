@@ -89,6 +89,7 @@ pub mod inspect_ext_ops;
 pub mod time_ops;
 pub mod backup_ops;
 pub mod template_ops;
+pub mod system_info;
 
 // Ergonomic API extensions
 pub mod builder;

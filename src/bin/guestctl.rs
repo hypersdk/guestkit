@@ -149,6 +149,22 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
     let roots = g.inspect_os().context("Failed to inspect OS")?;
 
+    // Mount the root filesystem to gather detailed system information
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            // Mount in order (shortest paths first)
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| mount.len());
+
+            for (mount, device) in mounts {
+                if let Err(_) = g.mount_ro(device, mount) {
+                    // Mounting failed, continue anyway
+                }
+            }
+        }
+    }
+
     if let Some(p) = progress {
         p.finish_and_clear();
     }
@@ -179,11 +195,7 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
             "operating_systems": os_info,
         }))?);
     } else {
-        // Human-readable output with colors
-        println!("\n{}", "═".repeat(70).bright_blue());
-        println!("{} {}", "📀 Disk Image:".bright_cyan().bold(), disk.display().to_string().bright_white());
-        println!("{}\n", "═".repeat(70).bright_blue());
-
+        // Human-readable output with colors (hostnamectl-style)
         if roots.is_empty() {
             println!("{}", "⚠️  No operating systems detected".bright_yellow().bold());
             println!("\n{}", "Possible reasons:".dimmed());
@@ -192,112 +204,105 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
             println!("  {} Unsupported OS type", "•".bright_black());
             println!("  {} Corrupted disk image", "•".bright_black());
         } else {
-            println!("{} {} {}\n",
-                "✓".bright_green().bold(),
-                "Found".bright_white(),
-                format!("{} operating system(s)", roots.len()).bright_cyan().bold()
-            );
-
             for (i, root) in roots.iter().enumerate() {
                 if i > 0 {
                     println!("\n{}", "─".repeat(70).bright_black());
+                    println!();
                 }
 
-                println!("\n{} {}",
-                    format!("OS #{}", i + 1).bright_magenta().bold(),
-                    format!("({})", root).dimmed()
-                );
-                println!("{}", "─".repeat(50).bright_black());
+                // Helper function for right-aligned labels (hostnamectl style)
+                let print_field = |label: &str, value: String| {
+                    println!("{:>20}: {}", label, value);
+                };
 
-                if let Ok(os_type) = g.inspect_get_type(root) {
-                    let icon = match os_type.as_str() {
-                        "linux" => "🐧",
-                        "windows" => "🪟",
-                        _ => "💻",
-                    };
-                    println!("  {} {}  {}",
-                        "Type:".bright_white().bold(),
-                        icon,
-                        os_type.bright_cyan()
-                    );
-                }
-
-                if let Ok(distro) = g.inspect_get_distro(root) {
-                    let display_distro = if distro == "unknown" || distro.is_empty() {
-                        format!("{} (detection requires mounting)", "unknown".dimmed())
-                    } else {
-                        distro.bright_green().to_string()
-                    };
-                    println!("  {} {}",
-                        "Distribution:".bright_white().bold(),
-                        display_distro
-                    );
-                }
-
-                if let Ok(major) = g.inspect_get_major_version(root) {
-                    let minor = g.inspect_get_minor_version(root).unwrap_or(0);
-                    if major > 0 || minor > 0 {
-                        println!("  {} {}",
-                            "Version:".bright_white().bold(),
-                            format!("{}.{}", major, minor).bright_yellow()
-                        );
-                    }
-                }
-
-                if let Ok(product) = g.inspect_get_product_name(root) {
-                    if product != "Linux" && !product.is_empty() {
-                        println!("  {} {}",
-                            "Product:".bright_white().bold(),
-                            product.bright_white()
-                        );
-                    }
-                }
-
+                // Static hostname
                 if let Ok(hostname) = g.inspect_get_hostname(root) {
-                    let display_hostname = if hostname == "localhost" || hostname.is_empty() {
-                        format!("{} (default)", hostname.dimmed())
-                    } else {
-                        hostname.bright_cyan().to_string()
-                    };
-                    println!("  {} {}",
-                        "Hostname:".bright_white().bold(),
-                        display_hostname
-                    );
+                    print_field("Static hostname", hostname.bright_cyan().to_string());
                 }
 
+                // Icon name
+                if let Ok(icon) = g.get_icon_name() {
+                    print_field("Icon name", icon);
+                }
+
+                // Chassis
+                if let Ok(chassis) = g.get_chassis_type() {
+                    let icon = match chassis.as_str() {
+                        "laptop" => " 💻",
+                        "desktop" => " 🖥",
+                        "server" => " 🖥",
+                        "tablet" => " 📱",
+                        _ => "",
+                    };
+                    print_field("Chassis", format!("{}{}", chassis, icon));
+                }
+
+                // Chassis Asset Tag
+                if let Ok(tag) = g.get_chassis_asset_tag() {
+                    print_field("Chassis Asset Tag", tag.dimmed().to_string());
+                }
+
+                // Machine ID
+                if let Ok(machine_id) = g.get_machine_id() {
+                    print_field("Machine ID", machine_id);
+                }
+
+                // Boot ID
+                if let Ok(boot_id) = g.get_boot_id() {
+                    print_field("Boot ID", boot_id.dimmed().to_string());
+                }
+
+                // Operating System
+                if let Ok(product) = g.inspect_get_product_name(root) {
+                    if !product.is_empty() && product != "Linux" {
+                        print_field("Operating System", product.bright_white().to_string());
+                    } else if let Ok(distro) = g.inspect_get_distro(root) {
+                        if distro != "unknown" && !distro.is_empty() {
+                            let major = g.inspect_get_major_version(root).unwrap_or(0);
+                            let minor = g.inspect_get_minor_version(root).unwrap_or(0);
+                            let version_str = if major > 0 {
+                                format!(" {}.{}", major, minor)
+                            } else {
+                                String::new()
+                            };
+                            print_field("Operating System", format!("{}{}", distro, version_str).bright_white().to_string());
+                        }
+                    }
+                }
+
+                // CPE OS Name (from os-release)
+                // Would need mounting to read
+
+                // Kernel
+                if let Ok(kernel) = g.get_kernel_version() {
+                    print_field("Kernel", kernel.bright_white().to_string());
+                }
+
+                // Architecture
                 if let Ok(arch) = g.inspect_get_arch(root) {
-                    println!("  {} {}",
-                        "Architecture:".bright_white().bold(),
-                        arch.bright_yellow()
-                    );
+                    print_field("Architecture", arch.bright_yellow().to_string());
                 }
 
-                if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
-                    let display_pkg = if pkg_fmt == "unknown" || pkg_fmt.is_empty() {
-                        format!("{} (requires mounting)", "unknown".dimmed())
-                    } else {
-                        pkg_fmt.bright_green().to_string()
-                    };
-                    println!("  {} {}",
-                        "Package format:".bright_white().bold(),
-                        display_pkg
-                    );
+                // Hardware Vendor
+                if let Ok(vendor) = g.get_hardware_vendor() {
+                    print_field("Hardware Vendor", vendor);
                 }
 
-                if let Ok(pkg_mgmt) = g.inspect_get_package_management(root) {
-                    let display_mgmt = if pkg_mgmt == "unknown" || pkg_mgmt.is_empty() {
-                        format!("{} (requires mounting)", "unknown".dimmed())
-                    } else {
-                        pkg_mgmt.bright_magenta().to_string()
-                    };
-                    println!("  {} {}",
-                        "Package management:".bright_white().bold(),
-                        display_mgmt
-                    );
+                // Hardware Model
+                if let Ok(model) = g.get_hardware_model() {
+                    print_field("Hardware Model", model);
+                }
+
+                // Firmware Version
+                if let Ok(firmware) = g.get_firmware_version() {
+                    print_field("Firmware Version", firmware);
+                }
+
+                // Firmware Date
+                if let Ok(fw_date) = g.get_firmware_date() {
+                    print_field("Firmware Date", fw_date.dimmed().to_string());
                 }
             }
-
-            println!("\n{}", "═".repeat(70).bright_blue());
         }
     }
 
