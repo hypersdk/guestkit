@@ -90,3 +90,4 @@ pub mod template_ops;
 
 pub use handle::Guestfs;
 pub use inspect::*;
+pub use metadata::Stat;

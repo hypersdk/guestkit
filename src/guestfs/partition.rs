@@ -63,6 +63,48 @@ impl Guestfs {
         }
     }
 
+    /// Set partition table type (mbr or gpt)
+    ///
+    /// Compatible with libguestfs g.part_set_parttype()
+    pub fn part_set_parttype(&mut self, device: &str, parttype: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: part_set_parttype {} {}", device, parttype);
+        }
+
+        if !self.is_whole_device(device)? {
+            return Err(Error::InvalidFormat(
+                "part_set_parttype requires whole device".to_string()
+            ));
+        }
+
+        // Convert libguestfs names to parted names
+        let parted_type = match parttype {
+            "msdos" | "mbr" => "msdos",
+            "gpt" => "gpt",
+            _ => return Err(Error::InvalidOperation(
+                format!("Unsupported partition table type: {}", parttype)
+            )),
+        };
+
+        // Use parted to set partition table type
+        let output = std::process::Command::new("parted")
+            .arg("-s")
+            .arg(device)
+            .arg("mklabel")
+            .arg(parted_type)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run parted: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("parted failed: {}", stderr)));
+        }
+
+        Ok(())
+    }
+
     /// Get bootable flag for partition
     ///
     /// Compatible with libguestfs g.part_get_bootable()
@@ -151,6 +193,54 @@ impl Guestfs {
 
         num_str.parse::<i32>()
             .map_err(|_| Error::InvalidFormat(format!("Invalid partition number: {}", num_str)))
+    }
+
+    /// Get partition name (GPT partition label)
+    ///
+    /// Compatible with libguestfs g.part_get_name()
+    pub fn part_get_name(&mut self, device: &str, partnum: i32) -> Result<String> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: part_get_name {} {}", device, partnum);
+        }
+
+        if !self.is_whole_device(device)? {
+            return Err(Error::InvalidFormat(
+                "part_get_name requires whole device".to_string()
+            ));
+        }
+
+        // Use sgdisk to get partition name (GPT only)
+        let output = std::process::Command::new("sgdisk")
+            .arg("-i")
+            .arg(partnum.to_string())
+            .arg(device)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to run sgdisk: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(
+                "Failed to get partition name (may not be GPT)".to_string()
+            ));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        // Parse output for "Partition name:"
+        for line in stdout.lines() {
+            if line.contains("Partition name:") {
+                let name = line.split("Partition name:")
+                    .nth(1)
+                    .unwrap_or("")
+                    .trim()
+                    .trim_matches('\'')
+                    .to_string();
+                return Ok(name);
+            }
+        }
+
+        Ok(String::new())
     }
 }
 
