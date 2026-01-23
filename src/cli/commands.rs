@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! CLI commands implementation
 
-use crate::guestfs::Guestfs;
+use guestkit::Guestfs;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 

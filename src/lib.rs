@@ -48,7 +48,6 @@ pub mod core;
 pub mod converters;
 pub mod disk;
 pub mod guestfs;
-pub mod cli;
 
 // Optional modules
 #[cfg(feature = "guest-inspect")]
