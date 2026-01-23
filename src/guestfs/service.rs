@@ -3,7 +3,7 @@
 //!
 //! This implementation provides service management access.
 
-use crate::core::{Error, Result};
+use crate::core::Result;
 use crate::guestfs::Guestfs;
 
 impl Guestfs {

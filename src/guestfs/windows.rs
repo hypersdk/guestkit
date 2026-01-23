@@ -5,7 +5,6 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use std::process::Command;
 use std::collections::HashMap;
 
 impl Guestfs {

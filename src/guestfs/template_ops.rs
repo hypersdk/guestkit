@@ -3,7 +3,7 @@
 //!
 //! This implementation provides VM template and cloning functionality.
 
-use crate::core::{Error, Result};
+use crate::core::Result;
 use crate::guestfs::Guestfs;
 
 impl Guestfs {
@@ -76,7 +76,7 @@ impl Guestfs {
             content = content.replace(&placeholder, value);
         }
 
-        self.write(output_file, &content)
+        self.write(output_file, content.as_bytes())
     }
 
     /// Create VM template (generalize)
@@ -111,14 +111,14 @@ impl Guestfs {
         // Generate new machine ID
         let machine_id = uuid::Uuid::new_v4().to_string().replace("-", "");
         if self.exists("/etc/machine-id")? {
-            self.write("/etc/machine-id", &machine_id)?;
+            self.write("/etc/machine-id", machine_id.as_bytes())?;
         }
 
         // If IP address provided, update network config
         if let Some(ip) = ip_address {
             // This is simplified - real implementation would update specific network config
             let network_config = format!("IPADDR={}\n", ip);
-            let _ = self.write("/etc/sysconfig/network-scripts/ifcfg-eth0", &network_config);
+            let _ = self.write("/etc/sysconfig/network-scripts/ifcfg-eth0", network_config.as_bytes());
         }
 
         // Generate new SSH host keys
@@ -143,7 +143,7 @@ impl Guestfs {
         // Copy ownership
         if let Ok(uid) = self.get_uid(config_dir) {
             if let Ok(gid) = self.get_gid(config_dir) {
-                let _ = self.chown_recursive(uid, gid, dest_dir);
+                let _ = self.chown_recursive(uid as i32, gid as i32, dest_dir);
             }
         }
 
@@ -164,11 +164,11 @@ impl Guestfs {
         let machine_id = uuid::Uuid::new_v4().to_string().replace("-", "");
 
         if self.exists("/etc/machine-id")? {
-            self.write("/etc/machine-id", &machine_id)?;
+            self.write("/etc/machine-id", machine_id.as_bytes())?;
         }
 
         if self.exists("/var/lib/dbus/machine-id")? {
-            self.write("/var/lib/dbus/machine-id", &machine_id)?;
+            self.write("/var/lib/dbus/machine-id", machine_id.as_bytes())?;
         }
 
         // Remove old SSH host keys (they'll be regenerated on first boot)

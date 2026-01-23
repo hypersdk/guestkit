@@ -45,7 +45,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let mut filesystems = HashMap::new();
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         for partition in partition_table.partitions() {
             let device_name = format!("/dev/sda{}", partition.number);
@@ -74,7 +74,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         let partition = partition_table.partitions()
             .iter()
@@ -102,7 +102,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         let partition = partition_table.partitions()
             .iter()
@@ -123,7 +123,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         let partition = partition_table.partitions()
             .iter()

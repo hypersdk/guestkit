@@ -5,7 +5,6 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use std::process::Command;
 
 impl Guestfs {
     // Note: filesize, du, df_h, ping_daemon already exist in other modules
@@ -63,7 +62,7 @@ impl Guestfs {
         // Get current umask by setting and restoring
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
+            
             // This is a simplified implementation
             Ok(0o022)
         }

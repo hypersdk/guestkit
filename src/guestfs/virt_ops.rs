@@ -3,7 +3,7 @@
 //!
 //! This implementation provides equivalents to virt-* command-line tools.
 
-use crate::core::{Error, Result};
+use crate::core::Result;
 use crate::guestfs::Guestfs;
 
 impl Guestfs {

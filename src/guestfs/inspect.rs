@@ -45,7 +45,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let mut roots = Vec::new();
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         // Examine each partition
         for partition in partition_table.partitions() {
@@ -78,7 +78,7 @@ impl Guestfs {
 
         // Parse device name to get partition
         let partition_num = self.parse_device_name(root)?;
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         let partition = partition_table.partitions()
             .iter()
@@ -104,7 +104,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let partition_num = self.parse_device_name(root)?;
-        let partition_table = self.partition_table.as_ref().unwrap().clone();
+        let partition_table = self.partition_table.as_ref().unwrap();
 
         let partition = partition_table.partitions()
             .iter()
