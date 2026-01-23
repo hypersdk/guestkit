@@ -10,24 +10,6 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-/// File statistics
-#[derive(Debug, Clone)]
-pub struct Stat {
-    pub dev: i64,
-    pub ino: i64,
-    pub mode: i64,
-    pub nlink: i64,
-    pub uid: i64,
-    pub gid: i64,
-    pub rdev: i64,
-    pub size: i64,
-    pub blksize: i64,
-    pub blocks: i64,
-    pub atime: i64,
-    pub mtime: i64,
-    pub ctime: i64,
-}
-
 impl Guestfs {
     /// Resolve guest path to host path (internal helper)
     pub(crate) fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
@@ -225,62 +207,6 @@ impl Guestfs {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
-    /// Get file statistics
-    ///
-    /// Compatible with libguestfs g.stat()
-    pub fn stat(&mut self, path: &str) -> Result<Stat> {
-        self.ensure_ready()?;
-
-        if self.verbose {
-            eprintln!("guestfs: stat {}", path);
-        }
-
-        let host_path = self.resolve_guest_path(path)?;
-        let metadata = fs::metadata(&host_path).map_err(|e| {
-            Error::NotFound(format!("Failed to stat {}: {}", path, e))
-        })?;
-
-        // Convert Rust metadata to libguestfs Stat format
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            Ok(Stat {
-                dev: metadata.dev() as i64,
-                ino: metadata.ino() as i64,
-                mode: metadata.mode() as i64,
-                nlink: metadata.nlink() as i64,
-                uid: metadata.uid() as i64,
-                gid: metadata.gid() as i64,
-                rdev: metadata.rdev() as i64,
-                size: metadata.size() as i64,
-                blksize: metadata.blksize() as i64,
-                blocks: metadata.blocks() as i64,
-                atime: metadata.atime(),
-                mtime: metadata.mtime(),
-                ctime: metadata.ctime(),
-            })
-        }
-
-        #[cfg(not(unix))]
-        {
-            Ok(Stat {
-                dev: 0,
-                ino: 0,
-                mode: if metadata.is_dir() { 0o040755 } else { 0o100644 },
-                nlink: 1,
-                uid: 0,
-                gid: 0,
-                rdev: 0,
-                size: metadata.len() as i64,
-                blksize: 4096,
-                blocks: (metadata.len() / 512) as i64,
-                atime: 0,
-                mtime: 0,
-                ctime: 0,
-            })
-        }
-    }
-
     /// Get file size
     ///
     /// Compatible with libguestfs g.filesize()
@@ -297,22 +223,6 @@ impl Guestfs {
         })?;
 
         Ok(metadata.len() as i64)
-    }
-
-    /// Remove file
-    ///
-    /// Compatible with libguestfs g.rm()
-    pub fn rm(&mut self, path: &str) -> Result<()> {
-        self.ensure_ready()?;
-
-        if self.verbose {
-            eprintln!("guestfs: rm {}", path);
-        }
-
-        let host_path = self.resolve_guest_path(path)?;
-        fs::remove_file(&host_path).map_err(|e| {
-            Error::CommandFailed(format!("Failed to remove {}: {}", path, e))
-        })
     }
 
     /// Remove directory

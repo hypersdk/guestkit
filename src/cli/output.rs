@@ -23,7 +23,7 @@ impl OutputFormat {
 }
 
 /// Format output based on format type
-pub fn format_output<T: Serialize>(data: &T, format: OutputFormat) -> Result<String, Box<dyn std::error::Error>> {
+pub fn format_output<T: Serialize + std::fmt::Debug>(data: &T, format: OutputFormat) -> Result<String, Box<dyn std::error::Error>> {
     match format {
         OutputFormat::Json => Ok(serde_json::to_string_pretty(data)?),
         OutputFormat::Yaml => Ok(serde_yaml::to_string(data)?),
