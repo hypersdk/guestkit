@@ -1,0 +1,234 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//! Internal operations compatible with libguestfs
+//!
+//! This implementation provides internal/debug functionality.
+
+use crate::core::{Error, Result};
+use crate::guestfs::Guestfs;
+use std::collections::HashMap;
+
+impl Guestfs {
+    /// Get internal state for debugging
+    ///
+    /// Compatible with libguestfs g.internal_test()
+    pub fn internal_test(&mut self, str: &str, optstr: Option<&str>, strlist: &[&str],
+                         b: bool, integer: i32, integer64: i64) -> Result<String> {
+        if self.verbose {
+            eprintln!("guestfs: internal_test {} {:?} {:?} {} {} {}",
+                     str, optstr, strlist, b, integer, integer64);
+        }
+
+        // Return a formatted debug string
+        Ok(format!(
+            "str={}, optstr={:?}, strlist={:?}, bool={}, int={}, int64={}",
+            str, optstr, strlist, b, integer, integer64
+        ))
+    }
+
+    /// Test only parameters
+    ///
+    /// Compatible with libguestfs g.internal_test_only_optargs()
+    pub fn internal_test_only_optargs(&mut self, test: i32) -> Result<()> {
+        if self.verbose {
+            eprintln!("guestfs: internal_test_only_optargs {}", test);
+        }
+
+        Ok(())
+    }
+
+    /// Get free disk space
+    ///
+    /// Compatible with libguestfs g.statvfs()
+    pub fn statvfs(&mut self, path: &str) -> Result<HashMap<String, i64>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: statvfs {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+
+        // Use df command to get filesystem stats
+        use std::process::Command;
+
+        let output = Command::new("df")
+            .arg("-B1") // 1-byte blocks for precision
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute df: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "df failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut info = HashMap::new();
+
+        // Parse df output (simplified)
+        if let Some(line) = stdout.lines().nth(1) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 4 {
+                info.insert("blocks".to_string(), parts[1].parse().unwrap_or(0));
+                info.insert("bfree".to_string(), parts[3].parse().unwrap_or(0));
+                info.insert("bavail".to_string(), parts[3].parse().unwrap_or(0));
+            }
+        }
+
+        info.insert("bsize".to_string(), 4096); // Standard block size
+        info.insert("frsize".to_string(), 4096);
+        info.insert("files".to_string(), 0);
+        info.insert("ffree".to_string(), 0);
+        info.insert("favail".to_string(), 0);
+
+        Ok(info)
+    }
+
+    /// Get max number of disks
+    ///
+    /// Compatible with libguestfs g.max_disks()
+    pub fn max_disks(&self) -> Result<i32> {
+        // Return a reasonable maximum
+        Ok(255)
+    }
+
+    /// Get number of devices
+    ///
+    /// Compatible with libguestfs g.nr_devices()
+    pub fn nr_devices(&self) -> Result<i32> {
+        Ok(self.drives.len() as i32)
+    }
+
+    /// Canonical device name
+    ///
+    /// Compatible with libguestfs g.device_name()
+    pub fn device_name(&self, index: i32) -> Result<String> {
+        if index < 0 || index >= self.drives.len() as i32 {
+            return Err(Error::InvalidFormat("Invalid device index".to_string()));
+        }
+
+        // Return /dev/sdX style name
+        let letter = (b'a' + index as u8) as char;
+        Ok(format!("/dev/sd{}", letter))
+    }
+
+    /// Parse environment variable
+    ///
+    /// Compatible with libguestfs g.parse_environment()
+    pub fn parse_environment(&mut self) -> Result<()> {
+        if self.verbose {
+            eprintln!("guestfs: parse_environment");
+        }
+
+        // Check for LIBGUESTFS_* environment variables
+        if let Ok(debug) = std::env::var("LIBGUESTFS_DEBUG") {
+            if debug == "1" {
+                self.verbose = true;
+            }
+        }
+
+        if let Ok(trace) = std::env::var("LIBGUESTFS_TRACE") {
+            if trace == "1" {
+                self.trace = true;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse environment list
+    ///
+    /// Compatible with libguestfs g.parse_environment_list()
+    pub fn parse_environment_list(&mut self, environment: &[&str]) -> Result<()> {
+        if self.verbose {
+            eprintln!("guestfs: parse_environment_list {:?}", environment);
+        }
+
+        for env in environment {
+            if let Some((key, value)) = env.split_once('=') {
+                match key {
+                    "LIBGUESTFS_DEBUG" if value == "1" => self.verbose = true,
+                    "LIBGUESTFS_TRACE" if value == "1" => self.trace = true,
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get state
+    ///
+    /// Compatible with libguestfs g.get_state()
+    pub fn get_state(&self) -> Result<i32> {
+        use crate::guestfs::handle::GuestfsState;
+
+        match self.state {
+            GuestfsState::Config => Ok(0),
+            GuestfsState::Ready => Ok(1),
+            GuestfsState::Closed => Ok(2),
+        }
+    }
+
+    /// Check if config
+    ///
+    /// Compatible with libguestfs g.is_config()
+    pub fn is_config(&self) -> Result<bool> {
+        use crate::guestfs::handle::GuestfsState;
+        Ok(matches!(self.state, GuestfsState::Config))
+    }
+
+    /// Check if launching
+    ///
+    /// Compatible with libguestfs g.is_launching()
+    pub fn is_launching(&self) -> Result<bool> {
+        // We don't have a separate launching state in our implementation
+        Ok(false)
+    }
+
+    /// Check if ready
+    ///
+    /// Compatible with libguestfs g.is_ready()
+    pub fn is_ready(&self) -> Result<bool> {
+        use crate::guestfs::handle::GuestfsState;
+        Ok(matches!(self.state, GuestfsState::Ready))
+    }
+
+    /// Check if busy
+    ///
+    /// Compatible with libguestfs g.is_busy()
+    pub fn is_busy(&self) -> Result<bool> {
+        // For this implementation, we're never truly "busy"
+        // since operations are synchronous
+        Ok(false)
+    }
+
+    /// Get PID (not applicable for NBD backend)
+    ///
+    /// Compatible with libguestfs g.get_pid()
+    pub fn get_pid(&self) -> Result<i32> {
+        // Return 0 since we don't run a separate daemon process
+        Ok(0)
+    }
+
+    /// User cancel (not implemented for sync operations)
+    ///
+    /// Compatible with libguestfs g.user_cancel()
+    pub fn user_cancel(&mut self) -> Result<()> {
+        // No-op for synchronous operations
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_internal_api_exists() {
+        let mut g = Guestfs::new().unwrap();
+        // API structure tests
+    }
+}
