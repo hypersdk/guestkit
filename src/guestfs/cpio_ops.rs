@@ -7,7 +7,6 @@ use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use crate::guestfs::security_utils::PathValidator;
 use std::process::{Command, Stdio};
-use std::io::Write;
 
 impl Guestfs {
     /// Extract CPIO archive to directory
