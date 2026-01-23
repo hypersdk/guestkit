@@ -44,15 +44,21 @@ impl NbdDevice {
         for i in 0..16 {
             let device = PathBuf::from(format!("/dev/nbd{}", i));
             if device.exists() {
-                // Check if device is in use
+                // Check if device is in use by checking its size
                 if let Ok(output) = Command::new("lsblk")
+                    .arg("-b")  // Show sizes in bytes
+                    .arg("-n")  // No headings
+                    .arg("-o")
+                    .arg("SIZE")
                     .arg(device.to_str().unwrap())
                     .output()
                 {
-                    // If lsblk shows no partitions, device is free
+                    // If size is 0, device is not connected
                     let stdout = String::from_utf8_lossy(&output.stdout);
-                    if !stdout.contains("part") && !stdout.contains("disk") {
-                        return Ok(device);
+                    if let Ok(size) = stdout.trim().parse::<u64>() {
+                        if size == 0 {
+                            return Ok(device);
+                        }
                     }
                 }
             }
