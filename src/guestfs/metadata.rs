@@ -8,7 +8,101 @@ use crate::guestfs::Guestfs;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
+/// File stat information
+#[derive(Debug, Clone)]
+pub struct Stat {
+    pub dev: u64,
+    pub ino: u64,
+    pub mode: u32,
+    pub nlink: u64,
+    pub uid: u32,
+    pub gid: u32,
+    pub rdev: u64,
+    pub size: i64,
+    pub blksize: i64,
+    pub blocks: i64,
+    pub atime: i64,
+    pub mtime: i64,
+    pub ctime: i64,
+}
+
 impl Guestfs {
+    /// Get file or directory status
+    ///
+    /// Compatible with libguestfs g.stat()
+    pub fn stat(&mut self, path: &str) -> Result<Stat> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: stat {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+        let metadata = fs::metadata(&host_path)
+            .map_err(|e| Error::Io(e))?;
+
+        self.metadata_to_stat(&metadata)
+    }
+
+    /// Get symbolic link status (don't follow links)
+    ///
+    /// Compatible with libguestfs g.lstat()
+    pub fn lstat(&mut self, path: &str) -> Result<Stat> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: lstat {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+        let metadata = fs::symlink_metadata(&host_path)
+            .map_err(|e| Error::Io(e))?;
+
+        self.metadata_to_stat(&metadata)
+    }
+
+    /// Convert Rust Metadata to Stat struct
+    fn metadata_to_stat(&self, metadata: &fs::Metadata) -> Result<Stat> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            Ok(Stat {
+                dev: metadata.dev(),
+                ino: metadata.ino(),
+                mode: metadata.mode(),
+                nlink: metadata.nlink(),
+                uid: metadata.uid(),
+                gid: metadata.gid(),
+                rdev: metadata.rdev(),
+                size: metadata.size() as i64,
+                blksize: metadata.blksize() as i64,
+                blocks: metadata.blocks() as i64,
+                atime: metadata.atime(),
+                mtime: metadata.mtime(),
+                ctime: metadata.ctime(),
+            })
+        }
+
+        #[cfg(not(unix))]
+        {
+            Ok(Stat {
+                dev: 0,
+                ino: 0,
+                mode: if metadata.is_dir() { 0o40755 } else { 0o100644 },
+                nlink: 1,
+                uid: 0,
+                gid: 0,
+                rdev: 0,
+                size: metadata.len() as i64,
+                blksize: 4096,
+                blocks: (metadata.len() + 4095) / 4096,
+                atime: 0,
+                mtime: 0,
+                ctime: 0,
+            })
+        }
+    }
+
     /// Get file inode number
     ///
     /// Compatible with libguestfs g.inotify_files()

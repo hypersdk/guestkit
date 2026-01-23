@@ -808,6 +808,56 @@ impl Guestfs {
             .parse::<i64>()
             .map_err(|e| Error::InvalidFormat(format!("Failed to parse du output: {}", e)))
     }
+
+    /// Remove a file
+    ///
+    /// Compatible with libguestfs g.rm()
+    pub fn rm(&mut self, path: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: rm {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+
+        if !host_path.exists() {
+            return Err(Error::NotFound(format!("File not found: {}", path)));
+        }
+
+        if host_path.is_dir() {
+            return Err(Error::InvalidOperation(format!("Cannot rm directory (use rmdir or rm_rf): {}", path)));
+        }
+
+        fs::remove_file(&host_path)
+            .map_err(|e| Error::Io(e))
+    }
+
+    /// Remove a file or directory recursively (force)
+    ///
+    /// Compatible with libguestfs g.rm_rf()
+    pub fn rm_rf(&mut self, path: &str) -> Result<()> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: rm_rf {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+
+        if !host_path.exists() {
+            // rm_rf doesn't error if path doesn't exist (like shell rm -rf)
+            return Ok(());
+        }
+
+        if host_path.is_dir() {
+            fs::remove_dir_all(&host_path)
+                .map_err(|e| Error::Io(e))
+        } else {
+            fs::remove_file(&host_path)
+                .map_err(|e| Error::Io(e))
+        }
+    }
 }
 
 #[cfg(test)]
