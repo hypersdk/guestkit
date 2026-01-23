@@ -100,6 +100,45 @@ cargo build --release
 cargo install --path .
 ```
 
+### CLI Tool (`guestctl`)
+
+GuestCtl is a command-line tool for inspecting and manipulating disk images without mounting them.
+
+```bash
+# Inspect a disk image
+sudo guestctl inspect ubuntu.qcow2
+
+# List filesystems
+sudo guestctl filesystems ubuntu.qcow2
+
+# List installed packages
+sudo guestctl packages ubuntu.qcow2
+
+# Copy files
+sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
+
+# List directory
+sudo guestctl ls ubuntu.qcow2 /etc
+
+# Read file
+sudo guestctl cat ubuntu.qcow2 /etc/hostname
+
+# JSON output for scripting
+sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+```
+
+**Available Commands:**
+- `inspect` - OS detection and information
+- `filesystems` - List devices, partitions, LVM
+- `packages` - List installed software (dpkg, RPM, pacman)
+- `cp` - Copy files from disk images
+- `ls` - List directories
+- `cat` - Read files
+
+**Full Documentation:** [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md)
+
+---
+
 ### Basic Usage
 
 #### Library (GuestFS API)
@@ -200,27 +239,60 @@ See [`docs/ERGONOMIC_API.md`](docs/ERGONOMIC_API.md) and [`docs/MIGRATION_GUIDE.
 
 #### Python Bindings
 
+GuestKit provides native Python bindings via PyO3 for seamless integration with Python workflows.
+
+**Installation:**
+```bash
+# Install libguestfs Python bindings (Ubuntu/Debian)
+sudo apt-get install python3-guestfs
+
+# Install libguestfs Python bindings (Fedora/RHEL)
+sudo dnf install python3-libguestfs
+```
+
+**Basic Example:**
 ```python
 from guestkit import Guestfs
 
+# Create handle and configure
 g = Guestfs()
 g.add_drive_ro("/path/to/disk.qcow2")
 g.launch()
 
-# Inspect OS
+# Inspect operating system
 roots = g.inspect_os()
 for root in roots:
     print(f"OS Type: {g.inspect_get_type(root)}")
     print(f"Distro: {g.inspect_get_distro(root)}")
     print(f"Version: {g.inspect_get_major_version(root)}.{g.inspect_get_minor_version(root)}")
+    print(f"Hostname: {g.inspect_get_hostname(root)}")
 
-# List filesystems
-filesystems = g.list_filesystems()
-for device, fstype in filesystems.items():
-    print(f"{device}: {fstype}")
+# Mount and read files
+mountpoints = g.inspect_get_mountpoints(root)
+for mount_path, device in sorted(mountpoints, key=lambda x: len(x[0])):
+    g.mount_ro(device, mount_path)
 
+if g.is_file("/etc/hostname"):
+    content = g.read_file("/etc/hostname")
+    print(f"Hostname from file: {content.decode('utf-8').strip()}")
+
+# List installed packages
+apps = g.inspect_list_applications(root)
+print(f"Total packages: {len(apps)}")
+
+# Cleanup
+g.umount_all()
 g.shutdown()
 ```
+
+**More Examples:**
+- [`examples/python/basic_inspection.py`](examples/python/basic_inspection.py) - OS detection and inspection
+- [`examples/python/list_filesystems.py`](examples/python/list_filesystems.py) - Enumerate devices and partitions
+- [`examples/python/mount_and_explore.py`](examples/python/mount_and_explore.py) - Mount and read files
+- [`examples/python/package_inspection.py`](examples/python/package_inspection.py) - List installed packages
+- [`examples/python/create_disk.py`](examples/python/create_disk.py) - Create new disk images
+
+**Full Documentation:** [`docs/PYTHON_BINDINGS.md`](docs/PYTHON_BINDINGS.md)
 
 ## Project Structure
 

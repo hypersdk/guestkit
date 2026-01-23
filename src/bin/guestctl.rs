@@ -1,0 +1,642 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//! GuestCtl CLI - Command-line interface for disk image inspection and manipulation
+
+use clap::{Parser, Subcommand};
+use guestkit::guestfs::Guestfs;
+use guestkit::core::ProgressReporter;
+use std::path::PathBuf;
+use anyhow::{Result, Context};
+use serde_json::json;
+
+#[derive(Parser)]
+#[command(
+    name = "guestctl",
+    version,
+    about = "Inspect and manipulate disk images",
+    long_about = "A command-line tool for inspecting and manipulating virtual machine disk images.\n\
+                  Supports QCOW2, VMDK, RAW, and other formats."
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+
+    /// Enable verbose output
+    #[arg(short, long, global = true)]
+    verbose: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Inspect a disk image and show OS information
+    #[command(alias = "info")]
+    Inspect {
+        /// Path to disk image
+        disk: PathBuf,
+
+        /// Output as JSON
+        #[arg(short, long)]
+        json: bool,
+    },
+
+    /// List filesystems and partitions
+    #[command(alias = "fs")]
+    Filesystems {
+        /// Path to disk image
+        disk: PathBuf,
+
+        /// Show detailed information
+        #[arg(short, long)]
+        detailed: bool,
+    },
+
+    /// List installed packages
+    #[command(alias = "pkg")]
+    Packages {
+        /// Path to disk image
+        disk: PathBuf,
+
+        /// Filter packages by name
+        #[arg(short, long)]
+        filter: Option<String>,
+
+        /// Limit number of results
+        #[arg(short, long)]
+        limit: Option<usize>,
+
+        /// Output as JSON
+        #[arg(short, long)]
+        json: bool,
+    },
+
+    /// Copy file from disk image
+    Cp {
+        /// Source in format: disk.img:/path/to/file
+        source: String,
+
+        /// Destination path
+        dest: PathBuf,
+    },
+
+    /// List files in a directory
+    Ls {
+        /// Path to disk image
+        disk: PathBuf,
+
+        /// Path to list (default: /)
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Long listing format
+        #[arg(short, long)]
+        long: bool,
+    },
+
+    /// Read file content from disk image
+    Cat {
+        /// Path to disk image
+        disk: PathBuf,
+
+        /// Path to file
+        path: String,
+    },
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Inspect { disk, json } => cmd_inspect(disk, json, cli.verbose)?,
+        Commands::Filesystems { disk, detailed } => cmd_filesystems(disk, detailed, cli.verbose)?,
+        Commands::Packages { disk, filter, limit, json } => {
+            cmd_packages(disk, filter, limit, json, cli.verbose)?
+        }
+        Commands::Cp { source, dest } => cmd_cp(source, dest, cli.verbose)?,
+        Commands::Ls { disk, path, long } => cmd_ls(disk, path, long, cli.verbose)?,
+        Commands::Cat { disk, path } => cmd_cat(disk, path, cli.verbose)?,
+    }
+
+    Ok(())
+}
+
+fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    // Show progress for long operations
+    let progress = if !json_output {
+        let p = ProgressReporter::spinner("Loading disk image...");
+        Some(p)
+    } else {
+        None
+    };
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Launching appliance...");
+    }
+
+    g.launch().context("Failed to launch appliance")?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Inspecting operating systems...");
+    }
+
+    let roots = g.inspect_os().context("Failed to inspect OS")?;
+
+    if let Some(p) = progress {
+        p.finish_and_clear();
+    }
+
+    if json_output {
+        // JSON output
+        let os_info: Vec<_> = roots
+            .iter()
+            .map(|root| {
+                json!({
+                    "root": root,
+                    "type": g.inspect_get_type(root).ok(),
+                    "distro": g.inspect_get_distro(root).ok(),
+                    "major_version": g.inspect_get_major_version(root).ok(),
+                    "minor_version": g.inspect_get_minor_version(root).ok(),
+                    "product_name": g.inspect_get_product_name(root).ok(),
+                    "hostname": g.inspect_get_hostname(root).ok(),
+                    "arch": g.inspect_get_arch(root).ok(),
+                    "package_format": g.inspect_get_package_format(root).ok(),
+                    "package_management": g.inspect_get_package_management(root).ok(),
+                })
+            })
+            .collect();
+
+        println!("{}", serde_json::to_string_pretty(&json!({
+            "disk": disk.display().to_string(),
+            "os_count": roots.len(),
+            "operating_systems": os_info,
+        }))?);
+    } else {
+        // Human-readable output
+        println!("=== Disk Image: {} ===\n", disk.display());
+
+        if roots.is_empty() {
+            println!("⚠️  No operating systems detected");
+            println!("\nPossible reasons:");
+            println!("  • Disk is not bootable");
+            println!("  • Disk is encrypted (try checking with LUKS tools)");
+            println!("  • Unsupported OS type");
+            println!("  • Corrupted disk image");
+        } else {
+            println!("Found {} operating system(s):\n", roots.len());
+
+            for (i, root) in roots.iter().enumerate() {
+                println!("OS #{}", i + 1);
+                println!("  Root device: {}", root);
+
+                if let Ok(os_type) = g.inspect_get_type(root) {
+                    println!("  Type: {}", os_type);
+                }
+
+                if let Ok(distro) = g.inspect_get_distro(root) {
+                    println!("  Distribution: {}", distro);
+                }
+
+                if let Ok(major) = g.inspect_get_major_version(root) {
+                    let minor = g.inspect_get_minor_version(root).unwrap_or(0);
+                    println!("  Version: {}.{}", major, minor);
+                }
+
+                if let Ok(product) = g.inspect_get_product_name(root) {
+                    println!("  Product: {}", product);
+                }
+
+                if let Ok(hostname) = g.inspect_get_hostname(root) {
+                    println!("  Hostname: {}", hostname);
+                }
+
+                if let Ok(arch) = g.inspect_get_arch(root) {
+                    println!("  Architecture: {}", arch);
+                }
+
+                if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
+                    println!("  Package format: {}", pkg_fmt);
+                }
+
+                if let Ok(pkg_mgmt) = g.inspect_get_package_management(root) {
+                    println!("  Package management: {}", pkg_mgmt);
+                }
+
+                println!();
+            }
+        }
+    }
+
+    g.shutdown().ok();
+    Ok(())
+}
+
+fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+        eprintln!("Launching appliance...");
+    }
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+    g.launch().context("Failed to launch appliance")?;
+
+    println!("=== Devices ===");
+    let devices = g.list_devices().context("Failed to list devices")?;
+    for device in devices {
+        println!("{}", device);
+
+        if detailed {
+            if let Ok(size) = g.blockdev_getsize64(&device) {
+                println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
+            }
+
+            if let Ok(parttype) = g.part_get_parttype(&device) {
+                println!("  Partition table: {}", parttype);
+            }
+        }
+    }
+
+    println!("\n=== Partitions ===");
+    let partitions = g.list_partitions().context("Failed to list partitions")?;
+    for partition in partitions {
+        println!("{}", partition);
+
+        if let Ok(size) = g.blockdev_getsize64(&partition) {
+            println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
+        }
+
+        if let Ok(fstype) = g.vfs_type(&partition) {
+            println!("  Filesystem: {}", fstype);
+        }
+
+        if let Ok(label) = g.vfs_label(&partition) {
+            if !label.is_empty() {
+                println!("  Label: {}", label);
+            }
+        }
+
+        if detailed {
+            if let Ok(uuid) = g.vfs_uuid(&partition) {
+                if !uuid.is_empty() {
+                    println!("  UUID: {}", uuid);
+                }
+            }
+
+            if let Ok(partnum) = g.part_to_partnum(&partition) {
+                println!("  Partition number: {}", partnum);
+            }
+        }
+
+        println!();
+    }
+
+    // LVM information
+    if let Ok(vgs) = g.vgs() {
+        if !vgs.is_empty() {
+            println!("=== LVM Volume Groups ===");
+            for vg in vgs {
+                println!("{}", vg);
+            }
+            println!();
+        }
+    }
+
+    if let Ok(lvs) = g.lvs() {
+        if !lvs.is_empty() {
+            println!("=== LVM Logical Volumes ===");
+            for lv in lvs {
+                println!("{}", lv);
+                if detailed {
+                    if let Ok(size) = g.blockdev_getsize64(&lv) {
+                        println!("  Size: {} bytes ({:.2} GB)", size, size as f64 / 1_000_000_000.0);
+                    }
+                }
+            }
+        }
+    }
+
+    g.shutdown().ok();
+    Ok(())
+}
+
+fn cmd_packages(
+    disk: PathBuf,
+    filter: Option<String>,
+    limit: Option<usize>,
+    json_output: bool,
+    verbose: bool,
+) -> Result<()> {
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    // Show progress for long operations
+    let progress = if !json_output {
+        let p = ProgressReporter::spinner("Loading disk image...");
+        Some(p)
+    } else {
+        None
+    };
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Launching appliance...");
+    }
+
+    g.launch().context("Failed to launch appliance")?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Detecting operating system...");
+    }
+
+    let roots = g.inspect_os().context("Failed to inspect OS")?;
+    if roots.is_empty() {
+        if let Some(p) = progress {
+            p.abandon_with_message("No operating system detected");
+        }
+        anyhow::bail!("No operating system detected in disk image");
+    }
+
+    let root = &roots[0];
+
+    // Mount filesystems
+    if let Some(ref p) = progress {
+        p.set_message("Mounting filesystems...");
+    }
+
+    if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+        let mut mounts: Vec<_> = mountpoints.iter().collect();
+        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+        for (mount, device) in mounts {
+            g.mount_ro(device, mount).ok();
+        }
+    }
+
+    // List packages
+    if let Some(ref p) = progress {
+        p.set_message("Listing installed packages...");
+    }
+
+    let apps = g
+        .inspect_list_applications(root)
+        .context("Failed to list applications")?;
+
+    if let Some(p) = progress {
+        p.finish_and_clear();
+    }
+
+    // Apply filter
+    let filtered: Vec<_> = apps
+        .into_iter()
+        .filter(|app| {
+            if let Some(ref f) = filter {
+                app.name.contains(f)
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    // Apply limit
+    let limited: Vec<_> = if let Some(lim) = limit {
+        filtered.into_iter().take(lim).collect()
+    } else {
+        filtered
+    };
+
+    if json_output {
+        let packages: Vec<_> = limited
+            .iter()
+            .map(|app| {
+                json!({
+                    "name": app.name,
+                    "version": app.version,
+                    "release": app.release,
+                    "epoch": app.epoch,
+                })
+            })
+            .collect();
+
+        println!("{}", serde_json::to_string_pretty(&json!({
+            "total": packages.len(),
+            "packages": packages,
+        }))?);
+    } else {
+        println!("Found {} package(s)\n", limited.len());
+
+        if !limited.is_empty() {
+            println!("{:<40} {:<20} {:<20}", "Package", "Version", "Release");
+            println!("{}", "-".repeat(82));
+
+            for app in limited {
+                let name = if app.name.len() > 38 {
+                    format!("{}...", &app.name[..35])
+                } else {
+                    app.name.clone()
+                };
+
+                let version = if app.version.len() > 18 {
+                    format!("{}...", &app.version[..15])
+                } else {
+                    app.version.clone()
+                };
+
+                let release = if app.release.len() > 18 {
+                    format!("{}...", &app.release[..15])
+                } else {
+                    app.release.clone()
+                };
+
+                println!("{:<40} {:<20} {:<20}", name, version, release);
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+fn cmd_cp(source: String, dest: PathBuf, verbose: bool) -> Result<()> {
+    // Parse "disk.img:/path/to/file" format
+    let parts: Vec<&str> = source.splitn(2, ':').collect();
+    if parts.len() != 2 {
+        anyhow::bail!(
+            "Source must be in format: disk.img:/path/to/file\nGot: {}",
+            source
+        );
+    }
+
+    let disk = PathBuf::from(parts[0]);
+    let src_path = parts[1];
+
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+        eprintln!("Launching appliance...");
+    }
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+    g.launch().context("Failed to launch appliance")?;
+
+    // Try to mount automatically
+    if verbose {
+        eprintln!("Mounting filesystems...");
+    }
+
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+        for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if file exists
+    if !g.is_file(src_path).unwrap_or(false) {
+        anyhow::bail!("File not found: {}", src_path);
+    }
+
+    // Copy file
+    if verbose {
+        eprintln!("Copying {} to {}", src_path, dest.display());
+    }
+
+    g.download(src_path, dest.to_str().unwrap())
+        .with_context(|| format!("Failed to copy file: {}", src_path))?;
+
+    println!("✓ Copied {} -> {}", source, dest.display());
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+fn cmd_ls(disk: PathBuf, path: String, long: bool, verbose: bool) -> Result<()> {
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+        eprintln!("Launching appliance...");
+    }
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+    g.launch().context("Failed to launch appliance")?;
+
+    // Mount filesystems
+    if verbose {
+        eprintln!("Mounting filesystems...");
+    }
+
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+        for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if directory exists
+    if !g.is_dir(&path).unwrap_or(false) {
+        anyhow::bail!("Not a directory: {}", path);
+    }
+
+    if long {
+        // Long listing
+        let output = g.ll(&path).context("Failed to list directory")?;
+        print!("{}", output);
+    } else {
+        // Simple listing
+        let entries = g.ls(&path).context("Failed to list directory")?;
+        for entry in entries {
+            println!("{}", entry);
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+fn cmd_cat(disk: PathBuf, path: String, verbose: bool) -> Result<()> {
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+        eprintln!("Launching appliance...");
+    }
+
+    g.add_drive_ro(&disk)
+        .with_context(|| format!("Failed to add disk: {}", disk.display()))?;
+    g.launch().context("Failed to launch appliance")?;
+
+    // Mount filesystems
+    if verbose {
+        eprintln!("Mounting filesystems...");
+    }
+
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+        for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if file exists
+    if !g.is_file(&path).unwrap_or(false) {
+        anyhow::bail!("File not found: {}", path);
+    }
+
+    // Read and print file
+    let content = g
+        .read_file(&path)
+        .with_context(|| format!("Failed to read file: {}", path))?;
+
+    // Try to print as UTF-8, fall back to hex if binary
+    match String::from_utf8(content.clone()) {
+        Ok(text) => print!("{}", text),
+        Err(_) => {
+            eprintln!("Warning: File contains binary data, displaying hex dump");
+            for (i, chunk) in content.chunks(16).enumerate() {
+                print!("{:08x}  ", i * 16);
+                for byte in chunk {
+                    print!("{:02x} ", byte);
+                }
+                println!();
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}

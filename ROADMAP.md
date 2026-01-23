@@ -1,278 +1,344 @@
-# GuestKit Roadmap
-
-## Phase 1: Essential Operations ✅ COMPLETE
-
-**Timeline**: Completed
-**Status**: 115 APIs fully working
-
-Core functionality:
-- Disk access and inspection
-- NBD device management
-- Mount/unmount operations
-- File I/O operations
-- Command execution
-- Archive operations (tar, tgz)
-- LUKS encryption support
-- LVM support
+# GuestKit Development Roadmap
 
-## Phase 2: Extended Operations ✅ COMPLETE
+## Vision
 
-**Timeline**: Completed - January 2026
-**Status**: 463 APIs added, 563 total working (97.4%)
-
-Major additions:
-- 73 new modules
-- Comprehensive filesystem support (14 filesystems)
-- Advanced disk operations (RAID, bcache, multipath)
-- Security operations (SELinux, ACLs, capabilities)
-- System management (boot, services, network)
-- Specialized tools integration (augeas, hivex, YARA, TSK)
-- Windows support
-- Complete documentation and CI/CD
+Transform GuestKit into the **premier disk image manipulation toolkit** - faster, more ergonomic, and more powerful than libguestfs, with cloud-native features and a thriving ecosystem.
 
-## Phase 3: Stabilization and Integration 🚧 IN PROGRESS
-
-**Timeline**: Q1 2026
-**Status**: Planning
+---
 
-### 3.1 Complete Remaining APIs (15 functions)
+## Current Status (v0.2)
 
-Priority items to implement:
-- [ ] Advanced partition operations
-- [ ] Enhanced network configuration
-- [ ] Extended filesystem operations
-- [ ] Additional inspection capabilities
-- [ ] Performance-critical path optimizations
+✅ **Phase 1-2 Complete** - Core & Extended GuestFS API
+- 578 functions (97.4% coverage of core libguestfs)
+- Ergonomic Rust API with builder patterns and type-safe enums
+- Python bindings with comprehensive examples
+- Complete test suite with realistic OS images
+- Documentation and migration guides
 
-### 3.2 Integration Testing
+---
 
-- [ ] Create comprehensive integration test suite
-  - [ ] Disk creation and formatting workflows
-  - [ ] LUKS + LVM combined operations
-  - [ ] OS inspection with real disk images
-  - [ ] Multi-filesystem operations
-  - [ ] Archive and backup workflows
+## Quick Wins - Next 3 Weeks ⚡
 
-- [ ] Test with real-world disk images
-  - [ ] Fedora/RHEL images
-  - [ ] Ubuntu/Debian images
-  - [ ] Windows images
-  - [ ] Various filesystem types
+**Goal:** Immediate usability improvements that transform the developer experience.
 
-- [ ] Performance benchmarks
-  - [ ] Disk I/O operations
-  - [ ] Archive operations
-  - [ ] Filesystem operations
-  - [ ] Mount/unmount cycles
+### Week 1: CLI Tool
+- `guestkit inspect` - Inspect disk images
+- `guestkit filesystems` - List partitions
+- `guestkit packages` - List installed packages
+- `guestkit cp` - Copy files from disk images
+- JSON output for scripting
 
-### 3.3 Error Handling Improvements
+### Week 2: UX Enhancements
+- Progress bars for long operations
+- Better error messages with actionable suggestions
+- Context-rich diagnostics
 
-- [ ] Enhanced error messages with context
-- [ ] Better error recovery strategies
-- [ ] Timeout handling for long operations
-- [ ] Resource cleanup on errors
+### Week 3: Quality Infrastructure
+- Comprehensive benchmark suite (Criterion)
+- Integration test matrix (Ubuntu, Debian, Fedora, Arch)
+- Performance baseline establishment
 
-### 3.4 Documentation Enhancements
+**📖 Details:** [`docs/QUICK_WINS.md`](docs/QUICK_WINS.md) - Ready-to-implement code examples
 
-- [ ] Video tutorials
-- [ ] Architecture deep-dive documentation
-- [ ] Performance tuning guide
-- [ ] Troubleshooting guide
-- [ ] Migration guide from libguestfs
+---
 
-## Phase 4: Python Bindings 📋 PLANNED
+## Phase 3: Performance & Async (Q1-Q2 2026)
 
-**Timeline**: Q2 2026
-**Status**: Not started
+**Goal:** 10x performance improvement through modern Rust patterns.
 
-### 4.1 PyO3 Integration
+### 3.1 Async/Await Support
+- Non-blocking I/O with Tokio
+- Handle multiple disk images concurrently
+- Async variants of all major operations
 
-- [ ] Core API bindings
-  - [ ] Guestfs handle creation
-  - [ ] Disk operations
-  - [ ] File operations
-  - [ ] Mount operations
+### 3.2 Performance Optimizations
+- Parallel operations with rayon
+- Multi-level caching (metadata, files, inspect results)
+- Zero-copy operations with memory-mapped I/O
+- Streaming API for large files
 
-- [ ] Pythonic API design
-  - [ ] Context managers for cleanup
-  - [ ] Generator functions for iteration
-  - [ ] Exception hierarchy
+### 3.3 Benchmarking
+- Criterion-based benchmark suite
+- Performance regression testing
+- Continuous performance monitoring
 
-- [ ] Python package
-  - [ ] PyPI distribution
-  - [ ] Type stubs (PEP 484)
-  - [ ] Sphinx documentation
+**Success Metrics:**
+- 10x faster bulk operations
+- 50% reduction in memory usage
+- <100ms latency for cached operations
 
-### 4.2 Python Examples
+---
 
-- [ ] Quick start examples
-- [ ] Common workflows
-- [ ] Integration with other Python tools
+## Phase 4: Cloud Native (Q2-Q3 2026)
 
-## Phase 5: Performance Optimization 📋 PLANNED
+**Goal:** First-class cloud integration for modern infrastructure.
 
-**Timeline**: Q2-Q3 2026
-**Status**: Not started
+### 4.1 Cloud Storage
+- Direct S3/Azure/GCS access (no local copy)
+- Streaming downloads
+- Credential management
 
-### 5.1 Performance Analysis
+### 4.2 Container Support
+- Inspect Docker/OCI images
+- Container layer analysis
+- Extract from containers
 
-- [ ] Profiling framework
-- [ ] Benchmark suite
-- [ ] Performance regression testing
-- [ ] Memory usage optimization
+### 4.3 Kubernetes Integration
+- Custom Resource Definitions (CRDs)
+- Kubernetes operator
+- PVC inspection
+
+### 4.4 Infrastructure as Code
+- Terraform provider
+- Pulumi bindings
+- CloudFormation support
 
-### 5.2 Optimization Targets
+### 4.5 Serverless
+- AWS Lambda optimized
+- Cloud Functions support
+- Minimal cold start time
 
-- [ ] Parallel operations where safe
-- [ ] Caching strategies
-  - [ ] Disk format detection cache
-  - [ ] Filesystem type cache
-  - [ ] Partition table cache
-
-- [ ] I/O optimizations
-  - [ ] Buffered reading strategies
-  - [ ] Zero-copy where possible
-  - [ ] Async I/O for network operations
-
-### 5.3 Advanced Features
-
-- [ ] Multi-disk operations
-- [ ] Snapshot support
-- [ ] Incremental operations
-- [ ] Streaming APIs
-
-## Phase 6: Advanced Features 📋 PLANNED
-
-**Timeline**: Q3-Q4 2026
-**Status**: Not started
-
-### 6.1 Remote Operations
-
-- [ ] Remote disk access via NBD
-- [ ] SSH-based operations
-- [ ] HTTP/HTTPS disk sources
-
-### 6.2 Daemon Mode
-
-- [ ] Long-running daemon
-- [ ] gRPC/REST API
-- [ ] Multi-client support
-- [ ] Session management
-
-### 6.3 Cloud Integration
-
-- [ ] AWS EBS volume support
-- [ ] Azure disk support
-- [ ] GCP persistent disk support
-- [ ] S3/blob storage backends
-
-### 6.4 Container Support
-
-- [ ] Container image inspection
-- [ ] OCI image support
-- [ ] Docker image analysis
-- [ ] Podman integration
-
-## Phase 7: Ecosystem Integration 📋 PLANNED
-
-**Timeline**: 2027
-**Status**: Not started
-
-### 7.1 Tool Integration
-
-- [ ] Ansible modules
-- [ ] Terraform provider
-- [ ] Kubernetes operators
-- [ ] GitHub Actions
-
-### 7.2 GUI Tools
-
-- [ ] Web-based UI
-- [ ] Desktop application
-- [ ] CLI improvements (TUI)
-
-### 7.3 Extended Platform Support
-
-- [ ] Windows native support
-- [ ] macOS support
-- [ ] BSD support
-
-## Ongoing Tasks
-
-### Maintenance
-
-- [ ] Regular dependency updates
-- [ ] Security audits
-- [ ] Performance monitoring
-- [ ] Bug fixes
-
-### Community
-
-- [ ] Issue triage
-- [ ] PR reviews
-- [ ] Documentation updates
-- [ ] Community support
-
-### Quality
-
-- [ ] Code coverage improvements (target: 80%+)
-- [ ] Fuzz testing
-- [ ] Static analysis
-- [ ] Continuous integration improvements
-
-## Future Considerations
-
-### Research Items
-
-- [ ] Rust-native QCOW2 implementation
-- [ ] Rust-native NBD server
-- [ ] Rust-native filesystem drivers
-- [ ] WASM compilation for browser use
-
-### Experimental Features
-
-- [ ] GPU acceleration for image processing
-- [ ] Machine learning for OS detection
-- [ ] Predictive failure detection
-- [ ] Automated repair suggestions
+**Success Metrics:**
+- Works seamlessly with cloud storage
+- Used in production K8s clusters
+- Terraform provider with 1,000+ downloads
+
+---
+
+## Phase 5: Ecosystem Expansion (Q3-Q4 2026)
+
+**Goal:** Multi-language support and extensibility.
+
+### 5.1 Language Bindings
+- JavaScript/TypeScript (Node.js + WASM)
+- Go bindings
+- Ruby bindings
+- C FFI (shared library)
+
+### 5.2 Plugin System
+- Extensible architecture
+- Plugin trait definition
+- Plugin registry/marketplace
+
+### 5.3 DevOps Integration
+- Ansible module
+- Prometheus exporter
+- Grafana dashboard
+- OpenTelemetry tracing
+
+**Success Metrics:**
+- 5+ language bindings
+- 20+ community plugins
+- Used by 3+ major projects
+
+---
+
+## Phase 6: Advanced Features (2027+)
+
+**Goal:** Cutting-edge capabilities that exceed libguestfs.
+
+### 6.1 Security & Forensics
+- Forensics mode (deleted file recovery)
+- Malware scanning (ClamAV/YARA)
+- Enhanced sandboxing
+- Audit logging
+
+### 6.2 Storage Management
+- Snapshot management
+- Incremental backups (block-level)
+- Deduplication (content-addressable)
+- Version control (Git-like for disks)
+
+### 6.3 User Interfaces
+- Web-based dashboard
+- Interactive REPL
+- Desktop GUI
+- TUI improvements
+
+**Success Metrics:**
+- Used in security/forensics workflows
+- Enterprise audit/compliance features
+- Integrated with major DevOps tools
+
+---
+
+## Detailed Documentation
+
+### Enhancement Planning
+- 📋 **[Enhancement Roadmap](docs/ENHANCEMENT_ROADMAP.md)** - Comprehensive 10-section plan covering:
+  - Performance & Scalability
+  - Developer Experience (CLI, REPL, Web UI)
+  - Language Ecosystem
+  - Cloud & Modern Infrastructure
+  - Advanced Features (Forensics, Snapshots, Deduplication)
+  - Testing & Quality
+  - Documentation & Learning
+  - Security & Compliance
+  - Ecosystem Integration
+  - Community & Governance
+
+### Quick Start
+- ⚡ **[Quick Wins Guide](docs/QUICK_WINS.md)** - High-impact, low-effort improvements:
+  - Week 1: CLI Tool (complete implementation)
+  - Week 2: Progress bars + Better errors
+  - Week 3: Benchmarks + Integration tests
+
+### API Documentation
+- 🦀 **[Ergonomic API Guide](docs/ERGONOMIC_API.md)** - Type-safe builder patterns
+- 🔄 **[Migration Guide](docs/MIGRATION_GUIDE.md)** - Adopting the ergonomic API
+- 🐍 **[Python Bindings](docs/PYTHON_BINDINGS.md)** - Complete Python documentation
+
+---
 
 ## Version Milestones
 
-- **v0.1.0** - Phase 1 Complete (Nov 2025)
-- **v0.2.0** - Phase 2 Complete (Jan 2026)
-- **v0.3.0** - Phase 3 Complete (Target: Mar 2026)
-- **v0.4.0** - Python Bindings (Target: Jun 2026)
-- **v0.5.0** - Performance Optimizations (Target: Sep 2026)
-- **v1.0.0** - Production Ready (Target: Dec 2026)
+| Version | Target | Focus | Key Features |
+|---------|--------|-------|--------------|
+| **v0.2** | ✅ Jan 2026 | Core APIs | 578 functions, ergonomic API, Python bindings |
+| **v0.3** | Mar 2026 | Quick Wins | CLI tool, progress bars, benchmarks |
+| **v0.4** | Jun 2026 | Performance | Async/await, caching, streaming |
+| **v0.5** | Sep 2026 | Cloud Native | S3/K8s/Terraform support |
+| **v1.0** | Dec 2026 | Production Ready | Stability, backwards compatibility guarantee |
+| **v1.5** | Mar 2027 | Ecosystem | Language bindings, plugins |
+| **v2.0** | Jun 2027 | Advanced | Forensics, snapshots, web UI |
+
+---
 
 ## Success Metrics
 
-### Technical Metrics
+### Technical Excellence
+| Metric | Current | v1.0 Target | v2.0 Target |
+|--------|---------|-------------|-------------|
+| API Coverage | 97.4% | 99% | 100% |
+| Test Coverage | 75% | 95% | 99% |
+| Performance | Baseline | 10x faster | 50x faster |
+| Memory Usage | Baseline | -50% | -75% |
 
-- API coverage: 95%+ of common libguestfs operations
-- Test coverage: 80%+ code coverage
-- Performance: Within 10% of libguestfs for common operations
-- Memory usage: Competitive with libguestfs
-- Binary size: < 10MB static binary
+### Adoption & Growth
+| Metric | Current | v1.0 Target | v2.0 Target |
+|--------|---------|-------------|-------------|
+| GitHub Stars | ~50 | 1,000 | 5,000 |
+| Monthly Downloads | <100 | 1,000 | 10,000 |
+| Contributors | ~5 | 50 | 100 |
+| Production Users | 0 | 10 | 50 |
 
-### Adoption Metrics
+### Community Engagement
+| Metric | Current | v1.0 Target | v2.0 Target |
+|--------|---------|-------------|-------------|
+| Documentation Pages | 10 | 50 | 100 |
+| Code Examples | 15 | 50 | 100 |
+| Blog Posts | 0 | 10 | 25 |
+| Video Tutorials | 0 | 5 | 15 |
 
-- Stars: 500+ on GitHub
-- Downloads: 1000+ per month on crates.io
-- Contributors: 10+ active contributors
-- Production users: 5+ companies
+---
 
-### Quality Metrics
+## Implementation Priorities
 
-- Zero critical security issues
-- < 5 open bugs at any time
-- Response time: < 48 hours for issues
-- Documentation completeness: 100%
+### Priority 1: Developer Experience (Weeks 1-3)
+- CLI tool
+- Progress reporting
+- Better error messages
+- Benchmark suite
+- Integration tests
 
-## Contributing
+**Why first:** Immediately usable, great for demos, enables scripting
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute to any phase.
+### Priority 2: Performance (Months 1-3)
+- Async/await support
+- Caching layer
+- Streaming API
+- Parallel operations
+
+**Why second:** 10x performance wins, differentiate from libguestfs
+
+### Priority 3: Cloud Native (Months 3-6)
+- S3/Azure/GCS support
+- Kubernetes operator
+- Terraform provider
+
+**Why third:** Modern infrastructure demands cloud integration
+
+### Priority 4: Ecosystem (Months 6-9)
+- JavaScript/Go bindings
+- Plugin system
+- Ansible module
+
+**Why fourth:** Expands user base dramatically
+
+### Priority 5: Advanced Features (Months 9-12)
+- Forensics mode
+- Snapshot management
+- Web UI
+
+**Why last:** Nice-to-have, but not blockers for adoption
+
+---
+
+## How to Contribute
+
+### Immediate Opportunities
+1. **Implement CLI tool** - See [`docs/QUICK_WINS.md`](docs/QUICK_WINS.md#priority-1-cli-tool)
+2. **Add progress bars** - See implementation guide
+3. **Improve error messages** - Use miette for diagnostics
+4. **Write more examples** - Python/Rust cookbook recipes
+5. **Add benchmarks** - Criterion-based performance tests
+
+### Medium-Term Projects
+1. **Async/await support** - Tokio integration
+2. **Caching layer** - LRU cache implementation
+3. **Cloud backends** - S3/Azure/GCS
+4. **Language bindings** - JavaScript/Go/Ruby
+5. **Web dashboard** - Axum + HTMX
+
+### Long-Term Vision
+1. **Kubernetes operator** - CRD design + controller
+2. **Forensics mode** - Deleted file recovery
+3. **Plugin system** - Extensible architecture
+4. **Version control** - Git-like disk versioning
+
+**📝 See:** [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
+
+---
+
+## Communication
+
+- 💬 **GitHub Discussions** - Feature requests, Q&A
+- 🐛 **GitHub Issues** - Bug reports, tasks
+- 📋 **Project Board** - Development tracking
+- 📧 **Announcements** - Release notes, updates
+
+---
+
+## Decision Framework
+
+When evaluating features, we prioritize based on:
+
+1. **User Impact** - Does it solve real problems?
+2. **Maintainability** - Can we support it long-term?
+3. **Strategic Alignment** - Does it fit our vision?
+4. **Resource Availability** - Do we have capacity?
+5. **Community Interest** - Is there demand?
+
+---
+
+## License & Governance
+
+- **License:** LGPL-3.0-or-later
+- **Copyright:** Contributors
+- **Governance:** Open discussion, community-driven
+- **Code of Conduct:** Be respectful and professional
+
+---
 
 ## Questions?
 
-Open an issue or discussion on GitHub to provide feedback on this roadmap.
+- 📖 Read the **[Enhancement Roadmap](docs/ENHANCEMENT_ROADMAP.md)** for detailed plans
+- ⚡ Check **[Quick Wins](docs/QUICK_WINS.md)** for immediate tasks
+- 💬 Open a **GitHub Discussion** for questions
+- 🐛 File an **Issue** for bugs or feature requests
+
+---
+
+**Join us in building the future of disk image manipulation! 🚀**
+
+*Last updated: 2026-01-23*
