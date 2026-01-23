@@ -5,6 +5,9 @@ use clap::{Parser, Subcommand};
 use guestkit::{converters::DiskConverter, VERSION};
 use std::path::PathBuf;
 
+mod cli;
+use cli::commands::*;
+
 /// guestkit - Guest VM toolkit for disk inspection and manipulation
 #[derive(Parser)]
 #[command(name = "guestkit")]
@@ -21,10 +24,65 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Inspect a disk image and display OS information
+    Inspect {
+        /// Disk image path
+        image: PathBuf,
+    },
+
+    /// List files in a disk image
+    #[command(alias = "ls")]
+    List {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Path to list (default: /)
+        #[arg(default_value = "/")]
+        path: String,
+    },
+
+    /// Extract a file from disk image
+    #[command(alias = "get")]
+    Extract {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Path in guest filesystem
+        guest_path: String,
+
+        /// Output file path on host
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+
+    /// Execute a command in the guest
+    #[command(alias = "exec")]
+    Execute {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Command and arguments to execute
+        #[arg(trailing_var_arg = true, required = true)]
+        command: Vec<String>,
+    },
+
+    /// Backup files from guest to tar archive
+    Backup {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Path to backup in guest
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Output tar.gz file
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+
     /// Convert disk image format
     Convert {
         /// Source disk image path
-        #[arg(short, long)]
         source: PathBuf,
 
         /// Output disk image path
@@ -40,21 +98,51 @@ enum Commands {
         compress: bool,
 
         /// Flatten snapshot chains
-        #[arg(short, long)]
+        #[arg(short = 'F', long)]
         flatten: bool,
+    },
+
+    /// Create a new disk image
+    Create {
+        /// Output disk image path
+        path: PathBuf,
+
+        /// Size in megabytes
+        #[arg(short, long)]
+        size: u64,
+
+        /// Disk format (raw, qcow2, vmdk, vhd, vdi)
+        #[arg(short, long, default_value = "raw")]
+        format: String,
+    },
+
+    /// Check filesystem on a disk image
+    #[command(alias = "fsck")]
+    Check {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Specific device to check (optional)
+        #[arg(short, long)]
+        device: Option<String>,
+    },
+
+    /// Show disk usage statistics
+    #[command(alias = "df")]
+    Usage {
+        /// Disk image path
+        image: PathBuf,
     },
 
     /// Detect disk image format
     Detect {
         /// Disk image path
-        #[arg(short, long)]
         image: PathBuf,
     },
 
     /// Get disk image information
     Info {
         /// Disk image path
-        #[arg(short, long)]
         image: PathBuf,
     },
 
@@ -78,6 +166,38 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     match cli.command {
+        Commands::Inspect { image } => {
+            inspect_image(&image, cli.verbose)?;
+        }
+
+        Commands::List { image, path } => {
+            list_files(&image, &path, cli.verbose)?;
+        }
+
+        Commands::Extract { image, guest_path, output } => {
+            extract_file(&image, &guest_path, &output, cli.verbose)?;
+        }
+
+        Commands::Execute { image, command } => {
+            execute_command(&image, &command, cli.verbose)?;
+        }
+
+        Commands::Backup { image, path, output } => {
+            backup_files(&image, &path, &output, cli.verbose)?;
+        }
+
+        Commands::Create { path, size, format } => {
+            create_disk(&path, size, &format, cli.verbose)?;
+        }
+
+        Commands::Check { image, device } => {
+            check_filesystem(&image, device, cli.verbose)?;
+        }
+
+        Commands::Usage { image } => {
+            show_disk_usage(&image, cli.verbose)?;
+        }
+
         Commands::Convert {
             source,
             output,
@@ -124,6 +244,10 @@ fn main() -> anyhow::Result<()> {
 
         Commands::Version => {
             println!("guestkit {}", VERSION);
+            println!("A pure Rust implementation of libguestfs-compatible APIs");
+            println!();
+            println!("Project: https://github.com/ssahani/guestkit");
+            println!("License: LGPL-3.0-or-later");
         }
     }
 
