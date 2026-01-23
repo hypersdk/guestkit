@@ -25,7 +25,7 @@ impl Guestfs {
         let partition_num = self.parse_device_name(device)?;
 
         // Get NBD partition device path
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {
@@ -71,7 +71,7 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {
@@ -107,7 +107,7 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {
@@ -302,7 +302,7 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_device = if partition_num > 0 {
             // Get disk, not partition
             nbd.device_path().to_path_buf()
@@ -341,7 +341,7 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         let partition_num = self.parse_device_name(device)?;
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {

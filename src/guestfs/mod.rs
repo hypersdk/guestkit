@@ -17,6 +17,8 @@ pub mod luks;
 pub mod checksum;
 pub mod filesystem;
 pub mod utils;
+pub mod security_utils;
+pub mod validation;
 pub mod network;
 pub mod package;
 pub mod system;
@@ -91,7 +93,8 @@ pub mod template_ops;
 // Ergonomic API extensions
 pub mod builder;
 pub mod types;
-pub mod filesystem_ops;
+// TODO: Fix mkfs naming conflict
+// pub mod filesystem_ops;
 
 pub use handle::Guestfs;
 pub use inspect::*;

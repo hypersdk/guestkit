@@ -5,6 +5,7 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
+use crate::guestfs::security_utils::PathValidator;
 use std::process::Command;
 
 impl Guestfs {
@@ -90,18 +91,16 @@ impl Guestfs {
             eprintln!("guestfs: bcache_register {}", device);
         }
 
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(format!("echo {} > /sys/fs/bcache/register", device))
-            .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to register bcache: {}", e)))?;
+        // Validate device path to prevent command injection
+        PathValidator::validate_device_path(device)?;
 
-        if !output.status.success() {
-            return Err(Error::CommandFailed(format!(
-                "bcache register failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
-        }
+        // Write directly to sysfs instead of using shell command
+        let register_path = "/sys/fs/bcache/register";
+        std::fs::write(register_path, device)
+            .map_err(|e| Error::CommandFailed(format!(
+                "Failed to register bcache device {}: {}",
+                device, e
+            )))?;
 
         Ok(())
     }
@@ -116,20 +115,21 @@ impl Guestfs {
             eprintln!("guestfs: bcache_stop {}", device);
         }
 
+        // Validate device path to prevent command injection
+        PathValidator::validate_device_path(device)?;
+
         let bcache_name = device.trim_start_matches("/dev/");
 
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(format!("echo 1 > /sys/block/{}/bcache/stop", bcache_name))
-            .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to stop bcache: {}", e)))?;
+        // Validate bcache name doesn't contain path traversal
+        PathValidator::validate_path_component(bcache_name)?;
 
-        if !output.status.success() {
-            return Err(Error::CommandFailed(format!(
-                "bcache stop failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
-        }
+        // Write directly to sysfs instead of using shell command
+        let stop_path = format!("/sys/block/{}/bcache/stop", bcache_name);
+        std::fs::write(&stop_path, "1")
+            .map_err(|e| Error::CommandFailed(format!(
+                "Failed to stop bcache device {}: {}",
+                device, e
+            )))?;
 
         Ok(())
     }

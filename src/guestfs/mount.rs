@@ -47,7 +47,7 @@ impl Guestfs {
         let partition_num = self.parse_device_name(mountable)?;
 
         // Get NBD partition device path
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device()?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {
@@ -64,7 +64,8 @@ impl Guestfs {
         }
 
         // Build actual mount path
-        let mount_root = self.mount_root.as_ref().unwrap();
+        let mount_root = self.mount_root.as_ref()
+            .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
         let actual_mountpoint = if mountpoint == "/" {
             mount_root.clone()
         } else {

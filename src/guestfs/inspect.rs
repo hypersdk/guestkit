@@ -45,14 +45,21 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let mut roots = Vec::new();
-        let partition_table = self.partition_table.as_ref().unwrap();
+
+        // Clone partition data to avoid borrow checker issues
+        let partitions: Vec<_> = {
+            let partition_table = self.partition_table()?;
+            partition_table.partitions().to_vec()
+        };
 
         // Examine each partition
-        for partition in partition_table.partitions() {
+        for partition in &partitions {
             let device_name = format!("/dev/sda{}", partition.number);
 
             // Try to detect filesystem
-            if let Ok(fs) = FileSystem::detect(self.reader.as_mut().unwrap(), partition) {
+            let reader = self.reader.as_mut()
+                .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
+            if let Ok(fs) = FileSystem::detect(reader, partition) {
                 // Check if this looks like a root filesystem
                 match fs.fs_type() {
                     crate::disk::FileSystemType::Ext |
@@ -78,15 +85,21 @@ impl Guestfs {
 
         // Parse device name to get partition
         let partition_num = self.parse_device_name(root)?;
-        let partition_table = self.partition_table.as_ref().unwrap();
 
-        let partition = partition_table.partitions()
-            .iter()
-            .find(|p| p.number == partition_num)
-            .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?;
+        // Clone partition to avoid borrow checker issues
+        let partition = {
+            let partition_table = self.partition_table()?;
+            partition_table.partitions()
+                .iter()
+                .find(|p| p.number == partition_num)
+                .cloned()
+                .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
+        };
 
         // Detect filesystem
-        let fs = FileSystem::detect(self.reader.as_mut().unwrap(), partition)?;
+        let reader = self.reader.as_mut()
+            .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
+        let fs = FileSystem::detect(reader, &partition)?;
 
         match fs.fs_type() {
             crate::disk::FileSystemType::Ntfs => Ok("windows".to_string()),
@@ -104,15 +117,21 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let partition_num = self.parse_device_name(root)?;
-        let partition_table = self.partition_table.as_ref().unwrap();
 
-        let partition = partition_table.partitions()
-            .iter()
-            .find(|p| p.number == partition_num)
-            .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?;
+        // Clone partition to avoid borrow checker issues
+        let partition = {
+            let partition_table = self.partition_table()?;
+            partition_table.partitions()
+                .iter()
+                .find(|p| p.number == partition_num)
+                .cloned()
+                .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
+        };
 
         // Detect filesystem
-        let fs = FileSystem::detect(self.reader.as_mut().unwrap(), partition)?;
+        let reader = self.reader.as_mut()
+            .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
+        let fs = FileSystem::detect(reader, &partition)?;
 
         // Try to infer distribution from filesystem label
         if let Some(label) = fs.label() {
