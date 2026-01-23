@@ -5,7 +5,6 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use std::process::Command;
 
 impl Guestfs {
     /// List Debian packages

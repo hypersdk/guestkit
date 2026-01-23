@@ -3,7 +3,7 @@
 //!
 //! This implementation provides Windows VM preparation functionality (removing unique data).
 
-use crate::core::{Error, Result};
+use crate::core::Result;
 use crate::guestfs::Guestfs;
 
 impl Guestfs {

@@ -6,7 +6,6 @@
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use std::process::Command;
-use std::path::Path;
 
 impl Guestfs {
     /// Create ISO image from directory

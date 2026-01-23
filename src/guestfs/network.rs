@@ -5,7 +5,6 @@
 
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
-use std::fs;
 
 impl Guestfs {
     /// Get hostname

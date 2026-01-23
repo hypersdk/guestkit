@@ -3,7 +3,7 @@
 //!
 //! This implementation provides additional OS inspection functionality.
 
-use crate::core::{Error, Result};
+use crate::core::Result;
 use crate::guestfs::Guestfs;
 
 impl Guestfs {
