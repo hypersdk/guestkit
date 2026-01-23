@@ -441,12 +441,27 @@ RUST_LOG=debug cargo run -- convert --source test.vmdk --output test.qcow2
 # Unit tests
 cargo test
 
-# Integration tests
+# Integration tests (does not require NBD/mounting)
 cargo test --test '*'
+
+# Phase 3 comprehensive tests (Linux + Windows scenarios)
+./scripts/run_all_phase3_tests.sh
+
+# Just Fedora tests
+./scripts/run_phase3_tests.sh
+
+# Just Windows tests
+./scripts/run_phase3_windows_tests.sh
 
 # With coverage
 cargo tarpaulin --out Html
 ```
+
+**Note on Permissions:** Some tests require access to `/dev/nbd*` devices for mounting disk images. You may need to:
+- Add your user to the `disk` group: `sudo usermod -a -G disk $USER` (requires logout/login)
+- Or ensure NBD kernel module is loaded: `sudo modprobe nbd max_part=8`
+
+See [docs/PHASE3_TESTING.md](docs/PHASE3_TESTING.md) for detailed testing documentation.
 
 ### Code Quality
 
