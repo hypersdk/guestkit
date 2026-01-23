@@ -19,15 +19,19 @@ pub enum GuestfsState {
 
 /// Main GuestFS handle
 pub struct Guestfs {
-    state: GuestfsState,
+    pub(crate) state: GuestfsState,
     pub(crate) verbose: bool,
     pub(crate) trace: bool,
+    pub(crate) readonly: bool,
     pub(crate) drives: Vec<DriveConfig>,
     pub(crate) reader: Option<DiskReader>,
     pub(crate) partition_table: Option<PartitionTable>,
     pub(crate) nbd_device: Option<NbdDevice>,
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
     pub(crate) mount_root: Option<PathBuf>, // Temporary mount directory
+    pub(crate) identifier: Option<String>,
+    pub(crate) autosync: bool,
+    pub(crate) selinux: bool,
 }
 
 /// Drive configuration
@@ -53,12 +57,16 @@ impl Guestfs {
             state: GuestfsState::Config,
             verbose: false,
             trace: false,
+            readonly: false,
             drives: Vec::new(),
             reader: None,
             partition_table: None,
             nbd_device: None,
             mounted: HashMap::new(),
             mount_root: None,
+            identifier: None,
+            autosync: true,
+            selinux: false,
         })
     }
 

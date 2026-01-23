@@ -204,9 +204,9 @@ impl Guestfs {
         Ok(())
     }
 
-    /// Activate all LVM logical volumes
+    /// List logical volumes with full details
     ///
-    /// Compatible with libguestfs g.vgchange_activate_all()
+    /// Compatible with libguestfs g.lvs_full()
     pub fn lvs_full(&self) -> Result<Vec<LV>> {
         self.ensure_ready()?;
 
@@ -214,10 +214,62 @@ impl Guestfs {
             eprintln!("guestfs: lvs_full");
         }
 
-        // TODO: Return list of all logical volumes
-        // This requires parsing LVM metadata
+        // Use lvs with specific output fields
+        let output = Command::new("lvs")
+            .arg("--noheadings")
+            .arg("--separator")
+            .arg("|")
+            .arg("-o")
+            .arg("lv_name,lv_uuid,lv_attr,lv_major,lv_minor,lv_kernel_major,lv_kernel_minor,lv_size,seg_count,origin,snap_percent,copy_percent,move_pv,lv_tags,mirror_log,modules")
+            .arg("--units")
+            .arg("b")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute lvs: {}", e)))?;
 
-        Ok(Vec::new())
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!("LVS command failed: {}", stderr)));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut lvs = Vec::new();
+
+        for line in stdout.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() < 16 {
+                continue;
+            }
+
+            // Parse size (remove 'B' suffix)
+            let size_str = parts[7].trim().trim_end_matches('B');
+            let lv_size = size_str.parse::<i64>().unwrap_or(0);
+
+            lvs.push(LV {
+                lv_name: parts[0].trim().to_string(),
+                lv_uuid: parts[1].trim().to_string(),
+                lv_attr: parts[2].trim().to_string(),
+                lv_major: parts[3].trim().parse::<i64>().unwrap_or(-1),
+                lv_minor: parts[4].trim().parse::<i64>().unwrap_or(-1),
+                lv_kernel_major: parts[5].trim().parse::<i64>().unwrap_or(-1),
+                lv_kernel_minor: parts[6].trim().parse::<i64>().unwrap_or(-1),
+                lv_size,
+                seg_count: parts[8].trim().parse::<i64>().unwrap_or(0),
+                origin: parts[9].trim().to_string(),
+                snap_percent: parts[10].trim().parse::<f32>().unwrap_or(0.0),
+                copy_percent: parts[11].trim().parse::<f32>().unwrap_or(0.0),
+                move_pv: parts[12].trim().to_string(),
+                lv_tags: parts[13].trim().to_string(),
+                mirror_log: parts[14].trim().to_string(),
+                modules: parts[15].trim().to_string(),
+            });
+        }
+
+        Ok(lvs)
     }
 
     /// List logical volumes (simple)

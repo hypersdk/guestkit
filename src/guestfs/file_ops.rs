@@ -7,7 +7,7 @@
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// File statistics
@@ -30,7 +30,7 @@ pub struct Stat {
 
 impl Guestfs {
     /// Resolve guest path to host path (internal helper)
-    fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
+    pub(crate) fn resolve_guest_path(&self, guest_path: &str) -> Result<PathBuf> {
         // Find root mount
         let root_mountpoint = self.mounted.get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
@@ -206,11 +206,23 @@ impl Guestfs {
             eprintln!("guestfs: ll {}", directory);
         }
 
-        // TODO: Parse filesystem, read directory entries with metadata
+        let host_path = self.resolve_guest_path(directory)?;
 
-        Err(Error::Unsupported(
-            "Directory listing requires filesystem parser implementation".to_string()
-        ))
+        // Use ls -l command for long listing
+        let output = std::process::Command::new("ls")
+            .arg("-l")
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute ls: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::NotFound(format!(
+                "Directory listing failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
     /// Get file statistics
@@ -223,11 +235,50 @@ impl Guestfs {
             eprintln!("guestfs: stat {}", path);
         }
 
-        // TODO: Parse filesystem, read inode metadata
+        let host_path = self.resolve_guest_path(path)?;
+        let metadata = fs::metadata(&host_path).map_err(|e| {
+            Error::NotFound(format!("Failed to stat {}: {}", path, e))
+        })?;
 
-        Err(Error::Unsupported(
-            "Stat requires filesystem parser implementation".to_string()
-        ))
+        // Convert Rust metadata to libguestfs Stat format
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            Ok(Stat {
+                dev: metadata.dev() as i64,
+                ino: metadata.ino() as i64,
+                mode: metadata.mode() as i64,
+                nlink: metadata.nlink() as i64,
+                uid: metadata.uid() as i64,
+                gid: metadata.gid() as i64,
+                rdev: metadata.rdev() as i64,
+                size: metadata.size() as i64,
+                blksize: metadata.blksize() as i64,
+                blocks: metadata.blocks() as i64,
+                atime: metadata.atime(),
+                mtime: metadata.mtime(),
+                ctime: metadata.ctime(),
+            })
+        }
+
+        #[cfg(not(unix))]
+        {
+            Ok(Stat {
+                dev: 0,
+                ino: 0,
+                mode: if metadata.is_dir() { 0o040755 } else { 0o100644 },
+                nlink: 1,
+                uid: 0,
+                gid: 0,
+                rdev: 0,
+                size: metadata.len() as i64,
+                blksize: 4096,
+                blocks: (metadata.len() / 512) as i64,
+                atime: 0,
+                mtime: 0,
+                ctime: 0,
+            })
+        }
     }
 
     /// Get file size
@@ -240,11 +291,12 @@ impl Guestfs {
             eprintln!("guestfs: filesize {}", file);
         }
 
-        // TODO: Parse filesystem, read inode size
+        let host_path = self.resolve_guest_path(file)?;
+        let metadata = fs::metadata(&host_path).map_err(|e| {
+            Error::NotFound(format!("Failed to get size of {}: {}", file, e))
+        })?;
 
-        Err(Error::Unsupported(
-            "Filesize requires filesystem parser implementation".to_string()
-        ))
+        Ok(metadata.len() as i64)
     }
 
     /// Remove file
@@ -257,11 +309,10 @@ impl Guestfs {
             eprintln!("guestfs: rm {}", path);
         }
 
-        // TODO: Parse filesystem, unlink inode
-
-        Err(Error::Unsupported(
-            "File removal requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::remove_file(&host_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to remove {}: {}", path, e))
+        })
     }
 
     /// Remove directory
@@ -274,11 +325,10 @@ impl Guestfs {
             eprintln!("guestfs: rmdir {}", path);
         }
 
-        // TODO: Parse filesystem, remove directory inode
-
-        Err(Error::Unsupported(
-            "Directory removal requires filesystem parser implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+        fs::remove_dir(&host_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to remove directory {}: {}", path, e))
+        })
     }
 
     /// Touch a file (create empty or update timestamp)
@@ -291,11 +341,26 @@ impl Guestfs {
             eprintln!("guestfs: touch {}", path);
         }
 
-        // TODO: Parse filesystem, create or update inode
+        let host_path = self.resolve_guest_path(path)?;
 
-        Err(Error::Unsupported(
-            "Touch requires filesystem parser implementation".to_string()
-        ))
+        // Create file if it doesn't exist
+        if !host_path.exists() {
+            fs::File::create(&host_path).map_err(|e| {
+                Error::CommandFailed(format!("Failed to touch {}: {}", path, e))
+            })?;
+        } else {
+            // Update timestamp - use filetime crate or just write/truncate
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .open(&host_path)
+                .map_err(|e| {
+                    Error::CommandFailed(format!("Failed to touch {}: {}", path, e))
+                })?;
+            // Just opening for write updates the timestamp
+            drop(file);
+        }
+
+        Ok(())
     }
 
     /// Change file permissions
@@ -308,11 +373,23 @@ impl Guestfs {
             eprintln!("guestfs: chmod {:o} {}", mode, path);
         }
 
-        // TODO: Parse filesystem, update inode permissions
+        let host_path = self.resolve_guest_path(path)?;
 
-        Err(Error::Unsupported(
-            "Chmod requires filesystem parser implementation".to_string()
-        ))
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let permissions = fs::Permissions::from_mode(mode as u32);
+            fs::set_permissions(&host_path, permissions).map_err(|e| {
+                Error::CommandFailed(format!("Failed to chmod {}: {}", path, e))
+            })
+        }
+
+        #[cfg(not(unix))]
+        {
+            Err(Error::Unsupported(
+                "Chmod is only supported on Unix systems".to_string()
+            ))
+        }
     }
 
     /// Change file ownership
@@ -325,11 +402,23 @@ impl Guestfs {
             eprintln!("guestfs: chown {}:{} {}", owner, group, path);
         }
 
-        // TODO: Parse filesystem, update inode ownership
+        let host_path = self.resolve_guest_path(path)?;
 
-        Err(Error::Unsupported(
-            "Chown requires filesystem parser implementation".to_string()
-        ))
+        // Use chown command to change ownership
+        let output = std::process::Command::new("chown")
+            .arg(format!("{}:{}", owner, group))
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute chown: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Chown failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        Ok(())
     }
 
     /// Resolve symlink to real path
@@ -342,10 +431,32 @@ impl Guestfs {
             eprintln!("guestfs: realpath {}", path);
         }
 
-        // TODO: Parse filesystem, follow symlinks
+        let host_path = self.resolve_guest_path(path)?;
 
-        // For now, return path as-is
-        Ok(path.to_string())
+        // Canonicalize to resolve symlinks and relative paths
+        let canonical = fs::canonicalize(&host_path).map_err(|e| {
+            Error::NotFound(format!("Failed to resolve path {}: {}", path, e))
+        })?;
+
+        // Convert back to guest path by stripping the mount root prefix
+        let root_mountpoint = self.mounted.get("/dev/sda1")
+            .or_else(|| self.mounted.get("/dev/sda2"))
+            .or_else(|| self.mounted.values().next())
+            .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
+
+        let canonical_str = canonical.to_string_lossy();
+        let guest_path = canonical_str
+            .strip_prefix(root_mountpoint)
+            .unwrap_or(&canonical_str);
+
+        // Ensure path starts with /
+        let result = if guest_path.starts_with('/') {
+            guest_path.to_string()
+        } else {
+            format!("/{}", guest_path)
+        };
+
+        Ok(result)
     }
 
     /// Copy file
@@ -358,9 +469,14 @@ impl Guestfs {
             eprintln!("guestfs: cp {} {}", src, dest);
         }
 
-        Err(Error::Unsupported(
-            "File copy requires filesystem implementation".to_string()
-        ))
+        let src_path = self.resolve_guest_path(src)?;
+        let dest_path = self.resolve_guest_path(dest)?;
+
+        fs::copy(&src_path, &dest_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to copy {} to {}: {}", src, dest, e))
+        })?;
+
+        Ok(())
     }
 
     /// Copy file preserving attributes
@@ -373,9 +489,26 @@ impl Guestfs {
             eprintln!("guestfs: cp_a {} {}", src, dest);
         }
 
-        Err(Error::Unsupported(
-            "File copy requires filesystem implementation".to_string()
-        ))
+        let src_path = self.resolve_guest_path(src)?;
+        let dest_path = self.resolve_guest_path(dest)?;
+
+        // Use cp command to preserve attributes
+        let output = std::process::Command::new("cp")
+            .arg("-a")
+            .arg(&src_path)
+            .arg(&dest_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute cp: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Failed to copy {} to {}: {}",
+                src, dest,
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        Ok(())
     }
 
     /// Copy recursively
@@ -388,9 +521,26 @@ impl Guestfs {
             eprintln!("guestfs: cp_r {} {}", src, dest);
         }
 
-        Err(Error::Unsupported(
-            "Recursive copy requires filesystem implementation".to_string()
-        ))
+        let src_path = self.resolve_guest_path(src)?;
+        let dest_path = self.resolve_guest_path(dest)?;
+
+        // Use cp command for recursive copy
+        let output = std::process::Command::new("cp")
+            .arg("-r")
+            .arg(&src_path)
+            .arg(&dest_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute cp: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Failed to copy {} to {}: {}",
+                src, dest,
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        Ok(())
     }
 
     /// Move/rename file
@@ -403,9 +553,12 @@ impl Guestfs {
             eprintln!("guestfs: mv {} {}", src, dest);
         }
 
-        Err(Error::Unsupported(
-            "File move requires filesystem implementation".to_string()
-        ))
+        let src_path = self.resolve_guest_path(src)?;
+        let dest_path = self.resolve_guest_path(dest)?;
+
+        fs::rename(&src_path, &dest_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to move {} to {}: {}", src, dest, e))
+        })
     }
 
     /// Download file from guest to host
@@ -418,9 +571,14 @@ impl Guestfs {
             eprintln!("guestfs: download {} {}", remotefilename, filename);
         }
 
-        Err(Error::Unsupported(
-            "File download requires filesystem reader implementation".to_string()
-        ))
+        let guest_path = self.resolve_guest_path(remotefilename)?;
+        let host_path = Path::new(filename);
+
+        fs::copy(&guest_path, &host_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to download {} to {}: {}", remotefilename, filename, e))
+        })?;
+
+        Ok(())
     }
 
     /// Upload file from host to guest
@@ -433,9 +591,14 @@ impl Guestfs {
             eprintln!("guestfs: upload {} {}", filename, remotefilename);
         }
 
-        Err(Error::Unsupported(
-            "File upload requires filesystem writer implementation".to_string()
-        ))
+        let host_path = Path::new(filename);
+        let guest_path = self.resolve_guest_path(remotefilename)?;
+
+        fs::copy(&host_path, &guest_path).map_err(|e| {
+            Error::CommandFailed(format!("Failed to upload {} to {}: {}", filename, remotefilename, e))
+        })?;
+
+        Ok(())
     }
 
     /// Append content to file
@@ -448,9 +611,18 @@ impl Guestfs {
             eprintln!("guestfs: write_append {} ({} bytes)", path, content.len());
         }
 
-        Err(Error::Unsupported(
-            "File append requires filesystem writer implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&host_path)
+            .map_err(|e| Error::CommandFailed(format!("Failed to open {} for append: {}", path, e)))?;
+
+        file.write_all(content)
+            .map_err(|e| Error::CommandFailed(format!("Failed to append to {}: {}", path, e)))?;
+
+        Ok(())
     }
 
     /// Search file for pattern
@@ -463,9 +635,18 @@ impl Guestfs {
             eprintln!("guestfs: grep {} {}", regex, path);
         }
 
-        Err(Error::Unsupported(
-            "Grep requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+
+        // Use grep command
+        let output = std::process::Command::new("grep")
+            .arg(regex)
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute grep: {}", e)))?;
+
+        // grep returns exit code 1 if no matches found, which is not an error
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.lines().map(|s| s.to_string()).collect())
     }
 
     /// Search file for pattern (extended regex)
@@ -478,9 +659,18 @@ impl Guestfs {
             eprintln!("guestfs: egrep {} {}", regex, path);
         }
 
-        Err(Error::Unsupported(
-            "Egrep requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+
+        // Use grep with -E flag for extended regex
+        let output = std::process::Command::new("grep")
+            .arg("-E")
+            .arg(regex)
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute egrep: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.lines().map(|s| s.to_string()).collect())
     }
 
     /// Search file for fixed strings
@@ -493,9 +683,18 @@ impl Guestfs {
             eprintln!("guestfs: fgrep {} {}", pattern, path);
         }
 
-        Err(Error::Unsupported(
-            "Fgrep requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+
+        // Use grep with -F flag for fixed string matching
+        let output = std::process::Command::new("grep")
+            .arg("-F")
+            .arg(pattern)
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute fgrep: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.lines().map(|s| s.to_string()).collect())
     }
 
     /// Find files
@@ -508,9 +707,34 @@ impl Guestfs {
             eprintln!("guestfs: find {}", directory);
         }
 
-        Err(Error::Unsupported(
-            "Find requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(directory)?;
+
+        // Use find command
+        let output = std::process::Command::new("find")
+            .arg(&host_path)
+            .arg("-type")
+            .arg("f")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute find: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Find failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Remove the host mount prefix to return guest paths
+        let prefix = host_path.to_string_lossy();
+        Ok(stdout
+            .lines()
+            .map(|line| {
+                line.strip_prefix(prefix.as_ref())
+                    .unwrap_or(line)
+                    .to_string()
+            })
+            .collect())
     }
 
     /// Find files (NUL-separated)
@@ -523,9 +747,28 @@ impl Guestfs {
             eprintln!("guestfs: find0 {} {}", directory, files);
         }
 
-        Err(Error::Unsupported(
-            "Find0 requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(directory)?;
+
+        // Use find command with -print0 to get NUL-separated output
+        let output = std::process::Command::new("find")
+            .arg(&host_path)
+            .arg("-type")
+            .arg("f")
+            .arg("-print0")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute find: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Find failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        // Write output to the specified file
+        fs::write(files, &output.stdout).map_err(|e| {
+            Error::CommandFailed(format!("Failed to write find0 output to {}: {}", files, e))
+        })
     }
 
     /// Calculate disk usage
@@ -538,9 +781,32 @@ impl Guestfs {
             eprintln!("guestfs: du {}", path);
         }
 
-        Err(Error::Unsupported(
-            "Du requires filesystem reader implementation".to_string()
-        ))
+        let host_path = self.resolve_guest_path(path)?;
+
+        // Use du command to get disk usage in bytes
+        let output = std::process::Command::new("du")
+            .arg("-sb")
+            .arg(&host_path)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute du: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "Du failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Parse output: "12345\t/path"
+        let size_str = stdout
+            .split_whitespace()
+            .next()
+            .ok_or_else(|| Error::InvalidFormat("Invalid du output".to_string()))?;
+
+        size_str
+            .parse::<i64>()
+            .map_err(|e| Error::InvalidFormat(format!("Failed to parse du output: {}", e)))
     }
 }
 
