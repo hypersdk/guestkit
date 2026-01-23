@@ -40,6 +40,9 @@ pub enum Error {
     #[error("Invalid state: {0}")]
     InvalidState(String),
 
+    #[error("Invalid operation: {0}")]
+    InvalidOperation(String),
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }

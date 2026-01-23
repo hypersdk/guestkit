@@ -65,6 +65,9 @@ impl Guestfs {
 
     /// Set partition table type (mbr or gpt)
     ///
+    /// WARNING: This operation is DESTRUCTIVE and will erase all existing partitions
+    /// on the device. Use with caution.
+    ///
     /// Compatible with libguestfs g.part_set_parttype()
     pub fn part_set_parttype(&mut self, device: &str, parttype: &str) -> Result<()> {
         self.ensure_ready()?;

@@ -240,7 +240,7 @@ pub fn backup_files(image: &PathBuf, guest_path: &str, output_tar: &PathBuf, ver
 
     // Create tar archive in guest
     let temp_tar = "/tmp/backup.tar.gz";
-    g.tar_out_opts(guest_path, temp_tar, Some("gzip"))?;
+    g.tar_out_opts(guest_path, temp_tar, Some("gzip"), false, false, false, false)?;
 
     // Download to host
     g.download(temp_tar, output_tar.to_str().unwrap())?;
@@ -260,7 +260,7 @@ pub fn create_disk(path: &PathBuf, size_mb: u64, format: &str, verbose: bool) ->
 
     println!("Creating {} MB {} disk: {}", size_mb, format, path.display());
 
-    let size_bytes = size_mb * 1024 * 1024;
+    let size_bytes = (size_mb * 1024 * 1024) as i64;
     g.disk_create(path.to_str().unwrap(), format, size_bytes)?;
 
     println!("✓ Disk created successfully");
