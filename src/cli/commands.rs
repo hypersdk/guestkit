@@ -2,6 +2,7 @@
 //! CLI commands implementation
 
 use guestkit::Guestfs;
+use guestkit::core::ProgressReporter;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
@@ -10,9 +11,14 @@ pub fn inspect_image(image: &PathBuf, verbose: bool) -> Result<()> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    println!("Inspecting: {}", image.display());
+    let progress = ProgressReporter::spinner(&format!("Inspecting: {}", image.display()));
+
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch().context("Failed to launch")?;
+
+    progress.set_message("Scanning disk...");
 
     // List devices
     println!("\n=== Block Devices ===");
@@ -58,8 +64,12 @@ pub fn inspect_image(image: &PathBuf, verbose: bool) -> Result<()> {
     }
 
     // OS inspection
-    println!("\n=== Operating Systems ===");
+    progress.set_message("Detecting operating systems...");
     let roots = g.inspect_os()?;
+
+    progress.finish_and_clear();
+
+    println!("\n=== Operating Systems ===");
 
     if roots.is_empty() {
         println!("  No operating systems found");
@@ -102,23 +112,34 @@ pub fn list_files(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
     // Auto-mount root filesystem
+    progress.set_message("Detecting OS...");
     let roots = g.inspect_os()?;
     if roots.is_empty() {
+        progress.abandon_with_message("No operating system found in image");
         anyhow::bail!("No operating system found in image");
     }
 
+    progress.set_message("Mounting filesystems...");
     let mountpoints = g.inspect_get_mountpoints(&roots[0])?;
     for (mp, device) in mountpoints {
         g.mount(&device, &mp)?;
     }
 
     // List files
-    println!("Files in {}:", path);
+    progress.set_message(&format!("Listing {}...", path));
     let files = g.ls(path)?;
+
+    progress.finish_and_clear();
+
+    println!("Files in {}:", path);
 
     for file in files {
         let full_path = if path == "/" {
@@ -153,18 +174,23 @@ pub fn extract_file(image: &PathBuf, guest_path: &str, host_path: &PathBuf, verb
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    println!("Extracting {} from {} to {}",
-             guest_path, image.display(), host_path.display());
+    let progress = ProgressReporter::spinner(&format!("Extracting {} from {}",
+                                                      guest_path, image.display()));
 
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
     // Auto-mount
+    progress.set_message("Detecting OS...");
     let roots = g.inspect_os()?;
     if roots.is_empty() {
+        progress.abandon_with_message("No operating system found in image");
         anyhow::bail!("No operating system found in image");
     }
 
+    progress.set_message("Mounting filesystems...");
     let mountpoints = g.inspect_get_mountpoints(&roots[0])?;
     for (mp, device) in mountpoints {
         g.mount(&device, &mp)?;
@@ -172,14 +198,19 @@ pub fn extract_file(image: &PathBuf, guest_path: &str, host_path: &PathBuf, verb
 
     // Check if file exists
     if !g.exists(guest_path)? {
+        progress.abandon_with_message(&format!("File not found: {}", guest_path));
         anyhow::bail!("File not found: {}", guest_path);
     }
 
     // Download file
+    progress.set_message(&format!("Downloading {}...", guest_path));
     g.download(guest_path, host_path.to_str().unwrap())?;
 
     let size = g.filesize(guest_path)?;
-    println!("✓ Extracted {} bytes", size);
+
+    progress.finish_and_clear();
+
+    println!("✓ Extracted {} bytes to {}", size, host_path.display());
 
     g.umount_all()?;
     g.shutdown()?;
@@ -191,23 +222,33 @@ pub fn execute_command(image: &PathBuf, command: &[String], verbose: bool) -> Re
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
     // Auto-mount
+    progress.set_message("Detecting OS...");
     let roots = g.inspect_os()?;
     if roots.is_empty() {
+        progress.abandon_with_message("No operating system found in image");
         anyhow::bail!("No operating system found in image");
     }
 
+    progress.set_message("Mounting filesystems...");
     let mountpoints = g.inspect_get_mountpoints(&roots[0])?;
     for (mp, device) in mountpoints {
         g.mount(&device, &mp)?;
     }
 
     // Execute command
+    progress.set_message(&format!("Executing command: {}", command.join(" ")));
     let cmd_args: Vec<&str> = command.iter().map(|s| s.as_str()).collect();
     let output = g.command(&cmd_args)?;
+
+    progress.finish_and_clear();
 
     println!("{}", output);
 
@@ -221,32 +262,42 @@ pub fn backup_files(image: &PathBuf, guest_path: &str, output_tar: &PathBuf, ver
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    println!("Backing up {} from {} to {}",
-             guest_path, image.display(), output_tar.display());
+    let progress = ProgressReporter::spinner(&format!("Backing up {} from {}",
+                                                      guest_path, image.display()));
 
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
     // Auto-mount
+    progress.set_message("Detecting OS...");
     let roots = g.inspect_os()?;
     if roots.is_empty() {
+        progress.abandon_with_message("No operating system found in image");
         anyhow::bail!("No operating system found in image");
     }
 
+    progress.set_message("Mounting filesystems...");
     let mountpoints = g.inspect_get_mountpoints(&roots[0])?;
     for (mp, device) in mountpoints {
         g.mount(&device, &mp)?;
     }
 
     // Create tar archive in guest
+    progress.set_message(&format!("Creating archive from {}...", guest_path));
     let temp_tar = "/tmp/backup.tar.gz";
     g.tar_out_opts(guest_path, temp_tar, Some("gzip"), false, false, false, false)?;
 
     // Download to host
+    progress.set_message("Downloading archive...");
     g.download(temp_tar, output_tar.to_str().unwrap())?;
 
     let size = g.filesize(temp_tar)?;
-    println!("✓ Backup complete: {} bytes", size);
+
+    progress.finish_and_clear();
+
+    println!("✓ Backup complete: {} bytes to {}", size, output_tar.display());
 
     g.umount_all()?;
     g.shutdown()?;
@@ -273,29 +324,34 @@ pub fn check_filesystem(image: &PathBuf, device: Option<String>, verbose: bool) 
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    println!("Checking filesystem on {}", image.display());
+    let progress = ProgressReporter::spinner(&format!("Checking filesystem on {}", image.display()));
 
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
+    progress.set_message("Detecting filesystems...");
     let check_device = if let Some(dev) = device {
         dev
     } else {
         // Use first partition
         let partitions = g.list_partitions()?;
         if partitions.is_empty() {
+            progress.abandon_with_message("No partitions found");
             anyhow::bail!("No partitions found");
         }
         partitions[0].clone()
     };
 
     let fstype = g.vfs_type(&check_device)?;
-    println!("Filesystem type: {}", fstype);
 
-    println!("Running fsck on {}...", check_device);
+    progress.set_message(&format!("Running fsck on {} ({})...", check_device, fstype));
     g.fsck(&fstype, &check_device)?;
 
-    println!("✓ Filesystem check complete");
+    progress.finish_and_clear();
+
+    println!("✓ Filesystem check complete for {} ({})", check_device, fstype);
 
     g.shutdown()?;
     Ok(())
@@ -306,23 +362,34 @@ pub fn show_disk_usage(image: &PathBuf, verbose: bool) -> Result<()> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
     g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
     g.launch()?;
 
     // Auto-mount
+    progress.set_message("Detecting OS...");
     let roots = g.inspect_os()?;
     if roots.is_empty() {
+        progress.abandon_with_message("No operating system found in image");
         anyhow::bail!("No operating system found in image");
     }
 
+    progress.set_message("Mounting filesystems...");
     let mountpoints = g.inspect_get_mountpoints(&roots[0])?;
     for (mp, device) in mountpoints {
         g.mount(&device, &mp)?;
     }
 
     // Get disk usage
-    println!("\n=== Disk Usage ===");
+    progress.set_message("Calculating disk usage...");
     let df = g.df()?;
+
+    progress.finish_and_clear();
+
+    println!("\n=== Disk Usage ===");
     println!("{}", df);
 
     g.umount_all()?;
