@@ -112,44 +112,35 @@ cargo build --release
 cargo install --path .
 ```
 
-### CLI Tool (`guestctl`)
+### CLI Tool
 
-GuestCtl is a command-line tool for inspecting and manipulating disk images without mounting them.
+GuestKit is a powerful command-line tool for inspecting and manipulating VM disk images without mounting them.
 
+**Basic Operations:**
 ```bash
 # Inspect a disk image
-sudo guestctl inspect ubuntu.qcow2
+sudo guestkit inspect ubuntu.qcow2
 
-# List filesystems
-sudo guestctl filesystems ubuntu.qcow2
+# List filesystems and partitions
+sudo guestkit filesystems ubuntu.qcow2
 
 # List installed packages
-sudo guestctl packages ubuntu.qcow2
+sudo guestkit packages ubuntu.qcow2
 
-# Copy files
-sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
+# Read a file
+sudo guestkit cat ubuntu.qcow2 /etc/hostname
 
-# List directory
-sudo guestctl ls ubuntu.qcow2 /etc
+# List directory contents
+sudo guestkit list ubuntu.qcow2 /etc
 
-# Read file
-sudo guestctl cat ubuntu.qcow2 /etc/hostname
+# Extract a file
+sudo guestkit extract ubuntu.qcow2 /etc/passwd ./passwd
 
 # JSON output for scripting
-sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+sudo guestkit inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
 ```
 
-**Available Commands:**
-- `inspect` - OS detection and information
-- `filesystems` - List devices, partitions, LVM
-- `packages` - List installed software (dpkg, RPM, pacman)
-- `cp` - Copy files from disk images
-- `ls` - List directories
-- `cat` - Read files
-
-### CLI Tool (`guestkit`) - Advanced Features
-
-GuestKit provides advanced VM inspection capabilities with profiles, caching, and batch processing.
+**Advanced Features:**
 
 ```bash
 # Basic inspection
