@@ -10,8 +10,8 @@ pub enum DiagnosticError {
     /// Failed to mount a filesystem
     #[error("Failed to mount {device} at {mountpoint}")]
     #[diagnostic(
-        code(guestctl::mount::failed),
-        help("Try these solutions:\n  1. Check filesystem type: guestctl filesystems {disk}\n  2. Verify device exists\n  3. Check if encrypted (LUKS)")
+        code(guestkit::mount::failed),
+        help("Try these solutions:\n  1. Check filesystem type: guestkit filesystems {disk}\n  2. Verify device exists\n  3. Check if encrypted (LUKS)")
     )]
     MountFailed {
         device: String,
@@ -24,16 +24,16 @@ pub enum DiagnosticError {
     /// No operating system detected
     #[error("No operating systems detected in {disk}")]
     #[diagnostic(
-        code(guestctl::inspect::no_os),
-        help("Possible reasons:\n  • Disk is not bootable\n  • Disk is encrypted (check with: guestctl filesystems)\n  • Unsupported OS type\n  • Corrupted disk image\n\nTry:\n  guestctl filesystems {disk}")
+        code(guestkit::inspect::no_os),
+        help("Possible reasons:\n  • Disk is not bootable\n  • Disk is encrypted (check with: guestkit filesystems)\n  • Unsupported OS type\n  • Corrupted disk image\n\nTry:\n  guestkit filesystems {disk}")
     )]
     NoOsDetected { disk: String },
 
     /// Appliance failed to launch
     #[error("Failed to launch guestfs appliance")]
     #[diagnostic(
-        code(guestctl::launch::failed),
-        help("Common causes:\n  1. KVM not available - check: ls -l /dev/kvm\n  2. Insufficient permissions - try: sudo guestctl ...\n  3. Corrupted disk image\n  4. QEMU not installed\n\nDebug:\n  Run with: guestctl -v inspect {disk}")
+        code(guestkit::launch::failed),
+        help("Common causes:\n  1. KVM not available - check: ls -l /dev/kvm\n  2. Insufficient permissions - try: sudo guestkit ...\n  3. Corrupted disk image\n  4. QEMU not installed\n\nDebug:\n  Run with: guestkit -v inspect {disk}")
     )]
     LaunchFailed {
         disk: String,
@@ -44,8 +44,8 @@ pub enum DiagnosticError {
     /// File not found in disk image
     #[error("File not found: {path}")]
     #[diagnostic(
-        code(guestctl::file::not_found),
-        help("Verify the file exists:\n  guestctl ls {disk} {parent}\n\nNote: Paths are case-sensitive")
+        code(guestkit::file::not_found),
+        help("Verify the file exists:\n  guestkit ls {disk} {parent}\n\nNote: Paths are case-sensitive")
     )]
     FileNotFound {
         disk: String,
@@ -56,8 +56,8 @@ pub enum DiagnosticError {
     /// Directory not found
     #[error("Not a directory: {path}")]
     #[diagnostic(
-        code(guestctl::dir::not_found),
-        help("Check the path exists:\n  guestctl ls {disk} {parent}\n\nList root:\n  guestctl ls {disk} /")
+        code(guestkit::dir::not_found),
+        help("Check the path exists:\n  guestkit ls {disk} {parent}\n\nList root:\n  guestkit ls {disk} /")
     )]
     NotADirectory {
         disk: String,
@@ -68,8 +68,8 @@ pub enum DiagnosticError {
     /// Package listing failed
     #[error("Failed to list packages")]
     #[diagnostic(
-        code(guestctl::packages::failed),
-        help("This OS may not have a supported package manager.\n\nSupported:\n  • dpkg (Debian/Ubuntu)\n  • RPM (Fedora/RHEL/SUSE)\n  • pacman (Arch Linux)\n\nCheck OS type:\n  guestctl inspect {disk}")
+        code(guestkit::packages::failed),
+        help("This OS may not have a supported package manager.\n\nSupported:\n  • dpkg (Debian/Ubuntu)\n  • RPM (Fedora/RHEL/SUSE)\n  • pacman (Arch Linux)\n\nCheck OS type:\n  guestkit inspect {disk}")
     )]
     PackageListFailed {
         disk: String,
@@ -80,7 +80,7 @@ pub enum DiagnosticError {
     /// Disk image not found
     #[error("Disk image not found: {disk}")]
     #[diagnostic(
-        code(guestctl::disk::not_found),
+        code(guestkit::disk::not_found),
         help("Check:\n  • File path is correct\n  • File exists: ls -l {disk}\n  • You have read permissions")
     )]
     DiskNotFound { disk: String },
@@ -88,7 +88,7 @@ pub enum DiagnosticError {
     /// Invalid disk format
     #[error("Invalid or unsupported disk format: {disk}")]
     #[diagnostic(
-        code(guestctl::disk::invalid_format),
+        code(guestkit::disk::invalid_format),
         help("Supported formats:\n  • QCOW2 (.qcow2)\n  • VMDK (.vmdk)\n  • RAW (.img, .raw)\n  • VDI (.vdi)\n  • VHD (.vhd, .vhdx)\n\nCheck format:\n  qemu-img info {disk}")
     )]
     InvalidDiskFormat {
@@ -100,14 +100,14 @@ pub enum DiagnosticError {
     /// Permission denied
     #[error("Permission denied")]
     #[diagnostic(
-        code(guestctl::permission::denied),
-        help("Most operations require root privileges.\n\nRun with sudo:\n  sudo guestctl {command} {disk}")
+        code(guestkit::permission::denied),
+        help("Most operations require root privileges.\n\nRun with sudo:\n  sudo guestkit {command} {disk}")
     )]
     PermissionDenied { command: String, disk: String },
 
     /// Generic error with context
     #[error("{message}")]
-    #[diagnostic(code(guestctl::error))]
+    #[diagnostic(code(guestkit::error))]
     Generic {
         message: String,
         #[source]

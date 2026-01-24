@@ -137,7 +137,7 @@ See `QUICK_ENHANCEMENTS.md` for detailed implementation:
 ### Rust CLI
 ```bash
 cargo build --release
-./target/release/guestctl inspect disk.img
+./target/release/guestkit inspect disk.img
 ```
 
 ### Python Bindings

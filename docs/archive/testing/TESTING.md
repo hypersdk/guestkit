@@ -197,7 +197,7 @@ tests/test_python_bindings.py::TestDiskConverter::test_detect_format_nonexistent
 
 ```bash
 # Test CLI with real disk
-sudo ./target/release/guestctl inspect /path/to/vm.qcow2
+sudo ./target/release/guestkit inspect /path/to/vm.qcow2
 
 # Test Python bindings
 cd examples/python
@@ -208,13 +208,13 @@ sudo python3 test_bindings.py /path/to/vm.qcow2
 
 ```bash
 # QCOW2
-sudo ./target/release/guestctl inspect disk.qcow2
+sudo ./target/release/guestkit inspect disk.qcow2
 
 # VMDK
-sudo ./target/release/guestctl inspect disk.vmdk
+sudo ./target/release/guestkit inspect disk.vmdk
 
 # RAW
-sudo ./target/release/guestctl inspect disk.img
+sudo ./target/release/guestkit inspect disk.img
 ```
 
 ## Test Coverage

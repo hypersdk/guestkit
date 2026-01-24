@@ -356,7 +356,7 @@ Suggestion: Usage: mount <device> <mountpoint>
 
 **Auto-Fixed Issues:**
 - 32+ automatic clippy fixes applied in bin
-- 8 fixes in guestctl binary
+- 8 fixes in guestkit binary
 - Numerous style improvements across codebase
 
 **Manual Fixes:**

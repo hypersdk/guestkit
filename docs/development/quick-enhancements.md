@@ -197,11 +197,11 @@ pub enum Shell {
 Commands::Completion { shell } => {
     let mut cmd = Cli::command();
     match shell {
-        Shell::Bash => generate(Bash, &mut cmd, "guestctl", &mut io::stdout()),
-        Shell::Zsh => generate(Zsh, &mut cmd, "guestctl", &mut io::stdout()),
-        Shell::Fish => generate(Fish, &mut cmd, "guestctl", &mut io::stdout()),
-        Shell::PowerShell => generate(PowerShell, &mut cmd, "guestctl", &mut io::stdout()),
-        Shell::Elvish => generate(Elvish, &mut cmd, "guestctl", &mut io::stdout()),
+        Shell::Bash => generate(Bash, &mut cmd, "guestkit", &mut io::stdout()),
+        Shell::Zsh => generate(Zsh, &mut cmd, "guestkit", &mut io::stdout()),
+        Shell::Fish => generate(Fish, &mut cmd, "guestkit", &mut io::stdout()),
+        Shell::PowerShell => generate(PowerShell, &mut cmd, "guestkit", &mut io::stdout()),
+        Shell::Elvish => generate(Elvish, &mut cmd, "guestkit", &mut io::stdout()),
     }
 }
 ```
@@ -214,9 +214,9 @@ clap_complete = "4.5"
 **Usage:**
 ```bash
 # Generate and install
-guestctl completion bash > /etc/bash_completion.d/guestctl
-guestctl completion zsh > ~/.zsh/completion/_guestctl
-guestctl completion fish > ~/.config/fish/completions/guestctl.fish
+guestkit completion bash > /etc/bash_completion.d/guestkit
+guestkit completion zsh > ~/.zsh/completion/_guestkit
+guestkit completion fish > ~/.config/fish/completions/guestkit.fish
 ```
 
 ---
@@ -523,7 +523,7 @@ if command -v mypy &> /dev/null; then
 fi
 
 # Test completion
-./target/release/guestctl completion bash > /tmp/completion.bash
+./target/release/guestkit completion bash > /tmp/completion.bash
 [ -s /tmp/completion.bash ] && echo "✓ Shell completion works"
 
 echo "All tests passed!"
