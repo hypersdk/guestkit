@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
 description = "Guest VM toolkit for disk inspection and manipulation"
-repository = "https://github.com/ssahani/guestctl"
+repository = "https://github.com/ssahani/guestkit"
 keywords = ["virtualization", "vm", "disk", "qemu", "kvm"]
 categories = ["virtualization", "filesystem", "command-line-utilities"]
 
