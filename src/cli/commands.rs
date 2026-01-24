@@ -6,6 +6,7 @@ use super::profiles::{FindingStatus, ProfileReport};
 use anyhow::{Context, Result};
 use guestctl::core::ProgressReporter;
 use guestctl::Guestfs;
+use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
 /// Collect inspection data into a structured report
@@ -384,21 +385,30 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Enumerating block devices...");
     }
-    println!("\n=== Block Devices ===");
+    println!("\n{}", "💾 Block Devices".bright_yellow().bold());
+    println!("{}", "─".repeat(60).bright_black());
     let devices = g.list_devices()?;
     for device in &devices {
         let size = g.blockdev_getsize64(device)?;
         if verbose {
             eprintln!("[VERBOSE] Found device: {} ({} bytes)", device, size);
         }
-        println!("  {}: {} bytes ({:.2} GB)", device, size, size as f64 / 1e9);
+        println!("  {} {} {} ({:.2} GB)",
+            "▪".bright_yellow(),
+            device.bright_white().bold(),
+            format!("{} bytes", size).bright_black(),
+            size as f64 / 1e9);
 
         // Additional device information
         if let Ok(ro) = g.blockdev_getro(device) {
-            println!("    Read-only: {}", if ro { "yes" } else { "no" });
+            if ro {
+                println!("    {} Read-only: {}", "•".bright_black(), "yes".red());
+            } else {
+                println!("    {} Read-only: {}", "•".bright_black(), "no".green());
+            }
         }
         if let Ok(ss) = g.blockdev_getss(device) {
-            println!("    Sector size: {} bytes", ss);
+            println!("    {} Sector size: {}", "•".bright_black(), format!("{} bytes", ss).bright_white());
         }
     }
 
@@ -406,25 +416,27 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Analyzing partition table...");
     }
-    println!("\n=== Partitions ===");
+    println!("\n{}", "🗂  Partitions".bright_yellow().bold());
+    println!("{}", "─".repeat(60).bright_black());
     let partitions = g.list_partitions()?;
     for partition in &partitions {
         if verbose {
             eprintln!("[VERBOSE] Examining partition: {}", partition);
         }
-        println!("  {}", partition);
+        println!("  {} {}", "📦".bright_yellow(), partition.bright_white().bold());
 
         if let Ok(part_list) = g.part_list("/dev/sda") {
             let part_num = g.part_to_partnum(partition)?;
             if let Some(p) = part_list.iter().find(|p| p.part_num == part_num) {
-                println!("    Number: {}", p.part_num);
-                println!("    Start:  {} bytes", p.part_start);
+                println!("    {} Number: {}", "•".bright_black(), format!("{}", p.part_num).yellow());
+                println!("    {} Start:  {}", "•".bright_black(), format!("{} bytes", p.part_start).bright_black());
                 println!(
-                    "    Size:   {} bytes ({:.2} GB)",
-                    p.part_size,
-                    p.part_size as f64 / 1e9
+                    "    {} Size:   {} ({})",
+                    "•".bright_black(),
+                    format!("{} bytes", p.part_size).bright_black(),
+                    format!("{:.2} GB", p.part_size as f64 / 1e9).bright_white()
                 );
-                println!("    End:    {} bytes", p.part_end);
+                println!("    {} End:    {}", "•".bright_black(), format!("{} bytes", p.part_end).bright_black());
             }
         }
     }
@@ -434,8 +446,14 @@ pub fn inspect_image(
         eprintln!("[VERBOSE] Detecting partition scheme...");
     }
     if let Ok(scheme) = g.part_get_parttype("/dev/sda") {
-        println!("\n=== Partition Scheme ===");
-        println!("  Type: {}", scheme);
+        println!("\n{}", "⚙️  Partition Scheme".bright_yellow().bold());
+        println!("{}", "─".repeat(60).bright_black());
+        let scheme_icon = match scheme.as_str() {
+            "gpt" => "🔷",
+            "msdos" | "mbr" => "🔶",
+            _ => "⬡",
+        };
+        println!("  {} Type: {}", scheme_icon, scheme.bright_white().bold());
         if verbose {
             eprintln!("[VERBOSE] Partition scheme: {}", scheme);
         }
@@ -445,23 +463,39 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Detecting filesystems...");
     }
-    println!("\n=== Filesystems ===");
+    println!("\n{}", "📁 Filesystems".bright_yellow().bold());
+    println!("{}", "─".repeat(60).bright_black());
     let filesystems = g.list_filesystems()?;
     for (device, fstype) in &filesystems {
         if verbose {
             eprintln!("[VERBOSE] Filesystem on {}: {}", device, fstype);
         }
-        println!("  {}: {}", device, fstype);
+
+        let fs_icon = match fstype.as_str() {
+            "ext2" | "ext3" | "ext4" => "🐧",
+            "xfs" => "🔴",
+            "btrfs" => "🌳",
+            "ntfs" => "🪟",
+            "vfat" | "fat" => "📂",
+            "swap" => "💾",
+            _ => "❓",
+        };
+
+        if fstype == "unknown" {
+            println!("  {} {} {}", fs_icon, device.yellow(), fstype.bright_black());
+        } else {
+            println!("  {} {} {}", fs_icon, device.yellow(), fstype.bright_white().bold());
+        }
 
         if fstype != "unknown" && fstype != "swap" {
             if let Ok(label) = g.vfs_label(device) {
                 if !label.is_empty() {
-                    println!("    Label: {}", label);
+                    println!("    {} Label: {}", "•".bright_black(), label.bright_white());
                 }
             }
             if let Ok(uuid) = g.vfs_uuid(device) {
                 if !uuid.is_empty() {
-                    println!("    UUID:  {}", uuid);
+                    println!("    {} UUID:  {}", "•".bright_black(), uuid.bright_black());
                 }
             }
         }
@@ -560,10 +594,11 @@ pub fn inspect_image(
     }
 
     // Otherwise, use traditional text output
-    println!("\n=== Operating Systems ===");
+    println!("\n{}", "🖥️  Operating Systems".bright_yellow().bold());
+    println!("{}", "─".repeat(60).bright_black());
 
     if roots.is_empty() {
-        println!("  No operating systems found");
+        println!("  {} {}", "⚠️".yellow(), "No operating systems found".bright_black());
         if verbose {
             eprintln!("[VERBOSE] No bootable operating systems detected");
         }
@@ -572,51 +607,81 @@ pub fn inspect_image(
             if verbose {
                 eprintln!("[VERBOSE] Inspecting OS at root: {}", root);
             }
-            println!("  Root: {}", root);
+            println!("  {} Root: {}", "🔹".bright_yellow(), root.bright_white().bold());
+            println!();
 
             if let Ok(ostype) = g.inspect_get_type(root) {
                 if verbose {
                     eprintln!("[VERBOSE] OS type detected: {}", ostype);
                 }
-                println!("    Type:         {}", ostype);
+                let os_icon = match ostype.as_str() {
+                    "linux" => "🐧",
+                    "windows" => "🪟",
+                    "freebsd" => "👿",
+                    _ => "💻",
+                };
+                println!("    {} Type:         {}", os_icon, ostype.bright_white().bold());
             }
             if let Ok(distro) = g.inspect_get_distro(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Distribution: {}", distro);
                 }
-                println!("    Distribution: {}", distro);
+                if distro == "unknown" {
+                    println!("    {} Distribution: {}", "📦".yellow(), distro.bright_black());
+                } else {
+                    println!("    {} Distribution: {}", "📦".yellow(), distro.bright_white().bold());
+                }
             }
             if let Ok(product) = g.inspect_get_product_name(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Product name: {}", product);
                 }
-                println!("    Product:      {}", product);
+                println!("    {} Product:      {}", "🏷️".yellow(), product.bright_white());
             }
             if let Ok(arch) = g.inspect_get_arch(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Architecture: {}", arch);
                 }
-                println!("    Architecture: {}", arch);
+                println!("    {} Architecture: {}", "⚙️".yellow(), arch.bright_white().bold());
             }
             if let Ok(major) = g.inspect_get_major_version(root) {
                 if let Ok(minor) = g.inspect_get_minor_version(root) {
                     if verbose {
                         eprintln!("[VERBOSE] Version: {}.{}", major, minor);
                     }
-                    println!("    Version:      {}.{}", major, minor);
+                    let version = format!("{}.{}", major, minor);
+                    if version == "0.0" {
+                        println!("    {} Version:      {}", "🔢".yellow(), version.bright_black());
+                    } else {
+                        println!("    {} Version:      {}", "🔢".yellow(), version.bright_white().bold());
+                    }
                 }
             }
             if let Ok(hostname) = g.inspect_get_hostname(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Hostname: {}", hostname);
                 }
-                println!("    Hostname:     {}", hostname);
+                if hostname == "localhost" {
+                    println!("    {} Hostname:     {}", "🏠".yellow(), hostname.bright_black());
+                } else {
+                    println!("    {} Hostname:     {}", "🏠".yellow(), hostname.bright_white().bold());
+                }
             }
             if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Package format: {}", pkg_fmt);
                 }
-                println!("    Packages:     {}", pkg_fmt);
+                let pkg_icon = match pkg_fmt.as_str() {
+                    "rpm" => "🔴",
+                    "deb" => "🟣",
+                    "pacman" => "📦",
+                    _ => "📦",
+                };
+                if pkg_fmt == "unknown" {
+                    println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_black());
+                } else {
+                    println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_white().bold());
+                }
             }
 
             // Additional detailed information
@@ -624,21 +689,29 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Retrieving init system information...");
             }
             if let Ok(init) = g.inspect_get_init_system(root) {
-                println!("    Init system:  {}", init);
+                if init == "unknown" {
+                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_black());
+                } else {
+                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_white().bold());
+                }
             }
 
             if verbose {
                 eprintln!("[VERBOSE] Detecting package management tool...");
             }
             if let Ok(pkg_mgr) = g.inspect_get_package_management(root) {
-                println!("    Pkg Manager:  {}", pkg_mgr);
+                if pkg_mgr == "unknown" {
+                    println!("    {} Pkg Manager:  {}", "🔧".yellow(), pkg_mgr.bright_black());
+                } else {
+                    println!("    {} Pkg Manager:  {}", "🔧".yellow(), pkg_mgr.bright_white().bold());
+                }
             }
 
             if verbose {
                 eprintln!("[VERBOSE] Checking OS format...");
             }
             if let Ok(format) = g.inspect_get_format(root) {
-                println!("    Format:       {}", format);
+                println!("    {} Format:       {}", "💿".yellow(), format.bright_white());
             }
 
             if verbose {
@@ -774,27 +847,40 @@ pub fn inspect_image(
             if verbose {
                 eprintln!("[VERBOSE] Gathering system configuration...");
             }
-            println!("\n    === System Configuration ===");
+            println!();
+            println!("    {}", "⚙️  System Configuration".bright_yellow().bold());
+            println!("    {}", "─".repeat(56).bright_black());
 
             if let Ok(timezone) = g.inspect_timezone(root) {
-                println!("      Timezone: {}", timezone);
+                if timezone == "unknown" {
+                    println!("      {} Timezone:    {}", "🌍".yellow(), timezone.bright_black());
+                } else {
+                    println!("      {} Timezone:    {}", "🌍".yellow(), timezone.bright_white().bold());
+                }
             }
 
             if let Ok(locale) = g.inspect_locale(root) {
-                println!("      Locale:   {}", locale);
+                if locale == "unknown" {
+                    println!("      {} Locale:      {}", "🗣️".yellow(), locale.bright_black());
+                } else {
+                    println!("      {} Locale:      {}", "🗣️".yellow(), locale.bright_white());
+                }
             }
 
             // SELinux
             if let Ok(selinux) = g.inspect_selinux(root) {
-                if selinux != "disabled" {
-                    println!("      SELinux:  {}", selinux);
+                match selinux.as_str() {
+                    "enforcing" => println!("      {} SELinux:     {}", "🔒", selinux.green().bold()),
+                    "permissive" => println!("      {} SELinux:     {}", "⚠️", selinux.yellow()),
+                    "disabled" => println!("      {} SELinux:     {}", "🔓", selinux.bright_black()),
+                    _ => println!("      {} SELinux:     {}", "❓", selinux.bright_black()),
                 }
             }
 
             // Cloud-init
             if let Ok(has_cloud_init) = g.inspect_cloud_init(root) {
                 if has_cloud_init {
-                    println!("      Cloud-init: yes");
+                    println!("      {} Cloud-init:  {}", "☁️".yellow(), "yes".green().bold());
                 }
             }
 
@@ -804,7 +890,7 @@ pub fn inspect_image(
             }
             if let Ok(vm_tools) = g.inspect_vm_tools(root) {
                 if !vm_tools.is_empty() {
-                    println!("      VM Tools: {}", vm_tools.join(", "));
+                    println!("      {} VM Tools:    {}", "🔧".yellow(), vm_tools.join(", ").bright_white().bold());
                 }
             }
 
