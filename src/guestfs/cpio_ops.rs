@@ -83,7 +83,7 @@ impl Guestfs {
             .ok_or_else(|| Error::CommandFailed("Failed to capture find output".to_string()))?;
 
         // Start cpio process with find output as stdin
-        let mut cpio_child = Command::new("cpio")
+        let cpio_child = Command::new("cpio")
             .arg("-o")
             .arg("-H")
             .arg(format)

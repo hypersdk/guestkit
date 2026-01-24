@@ -4,8 +4,6 @@
 pub mod html;
 pub mod markdown;
 
-pub use html::*;
-pub use markdown::*;
 
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
@@ -27,6 +25,7 @@ impl ExportFormat {
         }
     }
 
+    #[allow(dead_code)]
     pub fn extension(&self) -> &'static str {
         match self {
             ExportFormat::Html => "html",

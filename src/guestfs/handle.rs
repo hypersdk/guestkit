@@ -364,6 +364,7 @@ impl Guestfs {
     }
 
     /// Check if file size is within limits (internal)
+    #[allow(dead_code)]
     pub(crate) fn check_file_size_limit(&self, size: u64) -> Result<()> {
         if let Some(max) = self.resource_limits.max_file_size {
             if size > max {
@@ -377,6 +378,7 @@ impl Guestfs {
     }
 
     /// Check if path length is within limits (internal)
+    #[allow(dead_code)]
     pub(crate) fn check_path_length_limit(&self, path: &str) -> Result<()> {
         if path.len() > self.resource_limits.max_path_length {
             return Err(Error::InvalidOperation(format!(

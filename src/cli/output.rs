@@ -200,6 +200,7 @@ mod tests {
 }
 
 /// Colorized output helpers
+#[allow(dead_code)]
 pub mod colors {
     use super::*;
 

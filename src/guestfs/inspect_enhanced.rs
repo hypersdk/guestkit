@@ -868,6 +868,7 @@ impl Guestfs {
 
     // ==================== Windows Parsing Helpers ====================
 
+    #[allow(dead_code)]
     fn parse_windows_software(&mut self, content: &str) -> Vec<WindowsApplication> {
         let mut applications = Vec::new();
 
@@ -888,6 +889,7 @@ impl Guestfs {
         applications
     }
 
+    #[allow(dead_code)]
     fn parse_windows_service(&mut self, content: &str, filename: &str) -> Option<WindowsService> {
         let service_name = filename.trim_end_matches(".ini");
         let mut display_name = service_name.to_string();
@@ -917,8 +919,9 @@ impl Guestfs {
         })
     }
 
+    #[allow(dead_code)]
     fn parse_windows_services_from_registry(&mut self, content: &str) -> Vec<WindowsService> {
-        let mut services = Vec::new();
+        let services = Vec::new();
 
         // Parse registry format for services
         let mut current_service: Option<String> = None;
@@ -935,6 +938,7 @@ impl Guestfs {
         services
     }
 
+    #[allow(dead_code)]
     fn parse_windows_network_adapters(&mut self, content: &str) -> Vec<WindowsNetworkAdapter> {
         let mut adapters = Vec::new();
 
@@ -957,8 +961,9 @@ impl Guestfs {
         adapters
     }
 
+    #[allow(dead_code)]
     fn parse_windows_cbs_log(&mut self, _content: &str) -> Vec<WindowsUpdate> {
-        let mut updates = Vec::new();
+        let updates = Vec::new();
 
         // Basic CBS log parsing would go here
         // For now, return empty

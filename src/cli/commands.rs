@@ -2,7 +2,6 @@
 //! CLI commands implementation
 
 use guestkit::Guestfs;
-use guestkit::guestfs::inspect_enhanced::*;
 use guestkit::core::ProgressReporter;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
