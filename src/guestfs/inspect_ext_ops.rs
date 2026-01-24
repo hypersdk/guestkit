@@ -242,31 +242,42 @@ impl Guestfs {
     ///
     /// Already exists as get_init_system, adding alias for inspection
     pub fn inspect_get_init_system(&mut self, root: &str) -> Result<String> {
+        // Try to mount if not already mounted
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            self.mount_ro(root, "/")?;
+        }
+
         // Check for systemd
-        if self
-            .exists(&format!("{}/run/systemd/system", root))
-            .unwrap_or(false)
-            || self
-                .exists(&format!("{}/usr/lib/systemd/systemd", root))
-                .unwrap_or(false)
-        {
+        let is_systemd = self.exists("/run/systemd/system").unwrap_or(false)
+            || self.exists("/usr/lib/systemd/systemd").unwrap_or(false)
+            || self.exists("/lib/systemd/systemd").unwrap_or(false);
+
+        if is_systemd {
+            if !was_mounted {
+                self.umount("/").ok();
+            }
             return Ok("systemd".to_string());
         }
 
         // Check for upstart
-        if self
-            .exists(&format!("{}/sbin/initctl", root))
-            .unwrap_or(false)
-        {
+        if self.exists("/sbin/initctl").unwrap_or(false) {
+            if !was_mounted {
+                self.umount("/").ok();
+            }
             return Ok("upstart".to_string());
         }
 
         // Check for sysvinit
-        if self
-            .exists(&format!("{}/etc/inittab", root))
-            .unwrap_or(false)
-        {
+        if self.exists("/etc/inittab").unwrap_or(false) {
+            if !was_mounted {
+                self.umount("/").ok();
+            }
             return Ok("sysvinit".to_string());
+        }
+
+        if !was_mounted {
+            self.umount("/").ok();
         }
 
         Ok("unknown".to_string())

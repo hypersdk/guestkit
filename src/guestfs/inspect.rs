@@ -172,8 +172,8 @@ impl Guestfs {
         let was_mounted = self.mounted.contains_key("/");
 
         if !was_mounted {
-            // Try to mount root temporarily
-            self.mount(root, "/").ok();
+            // Try to mount root temporarily (read-only for inspection)
+            self.mount_ro(root, "/")?;
         }
 
         let os_release_content = self

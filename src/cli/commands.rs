@@ -765,7 +765,7 @@ pub fn inspect_image(
                     "[VERBOSE] Attempting to mount root filesystem for detailed inspection..."
                 );
             }
-            if g.mount(root, "/").is_ok() {
+            if g.mount_ro(root, "/").is_ok() {
                 // Filesystem usage
                 if verbose {
                     eprintln!("[VERBOSE] Getting filesystem usage statistics...");
