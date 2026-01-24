@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! guestkit CLI - Guest VM toolkit
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, CommandFactory};
+use clap_complete::{generate, shells};
 use guestkit::{converters::DiskConverter, VERSION};
 use std::path::PathBuf;
+use std::io;
 
 mod cli;
 use cli::commands::*;
@@ -223,6 +225,22 @@ enum Commands {
 
     /// Show version information
     Version,
+
+    /// Generate shell completion scripts
+    Completion {
+        /// Shell type
+        #[arg(value_enum)]
+        shell: Shell,
+    },
+}
+
+#[derive(clap::ValueEnum, Clone)]
+enum Shell {
+    Bash,
+    Zsh,
+    Fish,
+    PowerShell,
+    Elvish,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -371,6 +389,17 @@ fn main() -> anyhow::Result<()> {
             println!();
             println!("Project: https://github.com/ssahani/guestkit");
             println!("License: LGPL-3.0-or-later");
+        }
+
+        Commands::Completion { shell } => {
+            let mut cmd = Cli::command();
+            match shell {
+                Shell::Bash => generate(shells::Bash, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::Zsh => generate(shells::Zsh, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::Fish => generate(shells::Fish, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::PowerShell => generate(shells::PowerShell, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::Elvish => generate(shells::Elvish, &mut cmd, "guestkit", &mut io::stdout()),
+            }
         }
     }
 

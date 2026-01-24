@@ -3,6 +3,7 @@
 
 use serde::Serialize;
 use std::fmt;
+use owo_colors::OwoColorize;
 
 /// Output format options
 #[derive(Debug, Clone, Copy)]
@@ -195,5 +196,152 @@ mod tests {
         assert_eq!(format_duration(30.5), "30.50s");
         assert_eq!(format_duration(90.0), "1m 30.00s");
         assert_eq!(format_duration(150.75), "2m 30.75s");
+    }
+}
+
+/// Colorized output helpers
+pub mod colors {
+    use super::*;
+
+    /// Print success message with green checkmark
+    pub fn success(msg: &str) {
+        println!("{} {}", "✓".green(), msg.green());
+    }
+
+    /// Print error message with red X
+    pub fn error(msg: &str) {
+        eprintln!("{} {}", "✗".red(), msg.red());
+    }
+
+    /// Print warning message with yellow triangle
+    pub fn warning(msg: &str) {
+        println!("{} {}", "⚠".yellow(), msg.yellow());
+    }
+
+    /// Print info message with blue info icon
+    pub fn info(msg: &str) {
+        println!("{} {}", "ℹ".blue(), msg);
+    }
+
+    /// Print header with bold and underline
+    pub fn header(msg: &str) {
+        println!("{}", msg.bold().underline());
+    }
+
+    /// Print section header with cyan color
+    pub fn section(msg: &str) {
+        println!("\n{}", msg.cyan().bold());
+    }
+
+    /// Print key-value pair with colored key
+    pub fn kv(key: &str, value: &str) {
+        println!("{}: {}", key.cyan(), value);
+    }
+
+    /// Print key-value with optional value coloring
+    pub fn kv_colored(key: &str, value: &str, color: Color) {
+        let colored_value = match color {
+            Color::Green => value.green().to_string(),
+            Color::Red => value.red().to_string(),
+            Color::Yellow => value.yellow().to_string(),
+            Color::Blue => value.blue().to_string(),
+            Color::Cyan => value.cyan().to_string(),
+            Color::Magenta => value.magenta().to_string(),
+            Color::White => value.white().to_string(),
+        };
+        println!("{}: {}", key.cyan(), colored_value);
+    }
+
+    /// Print dimmed/muted text
+    pub fn dimmed(msg: &str) {
+        println!("{}", msg.dimmed());
+    }
+
+    /// Print emphasized/bright text
+    pub fn emphasis(msg: &str) {
+        println!("{}", msg.bright_white().bold());
+    }
+
+    /// Color enum for output
+    #[derive(Debug, Clone, Copy)]
+    pub enum Color {
+        Green,
+        Red,
+        Yellow,
+        Blue,
+        Cyan,
+        Magenta,
+        White,
+    }
+
+    /// Status indicator with colored icon
+    pub fn status(label: &str, status: Status) {
+        match status {
+            Status::Enabled => println!("{} {}: {}", "✓".bold(), label.cyan(), "enabled".green()),
+            Status::Disabled => println!("{} {}: {}", "✗".bold(), label.cyan(), "disabled".red()),
+            Status::Unknown => println!("{} {}: {}", "?".bold(), label.cyan(), "unknown".yellow()),
+            Status::Running => println!("{} {}: {}", "▶".bold(), label.cyan(), "running".green()),
+            Status::Stopped => println!("{} {}: {}", "■".bold(), label.cyan(), "stopped".red()),
+            Status::Warning => println!("{} {}: {}", "⚠".bold(), label.cyan(), "warning".yellow()),
+        }
+    }
+
+    /// Status types
+    #[derive(Debug, Clone, Copy)]
+    pub enum Status {
+        Enabled,
+        Disabled,
+        Unknown,
+        Running,
+        Stopped,
+        Warning,
+    }
+
+    /// Print a separator line
+    pub fn separator() {
+        println!("{}", "─".repeat(80).dimmed());
+    }
+
+    /// Print a thick separator
+    pub fn thick_separator() {
+        println!("{}", "═".repeat(80).bold());
+    }
+
+    /// Print bullet point item
+    pub fn bullet(msg: &str) {
+        println!("  {} {}", "•".cyan(), msg);
+    }
+
+    /// Print numbered item
+    pub fn numbered(num: usize, msg: &str) {
+        println!("  {}. {}", num.to_string().cyan().bold(), msg);
+    }
+
+    /// Print progress indicator
+    pub fn progress(current: usize, total: usize, msg: &str) {
+        println!("{} {}", format!("[{}/{}]", current, total).cyan(), msg);
+    }
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::colors::*;
+
+    #[test]
+    fn test_colors_compile() {
+        // Just ensure functions compile and can be called
+        success("test");
+        error("test");
+        warning("test");
+        info("test");
+        header("test");
+        section("test");
+        kv("key", "value");
+        dimmed("test");
+        emphasis("test");
+        separator();
+        bullet("test");
+        numbered(1, "test");
+        progress(1, 10, "test");
     }
 }

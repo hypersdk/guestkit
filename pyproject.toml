@@ -41,6 +41,7 @@ Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
 [tool.maturin]
 features = ["python-bindings"]
 module-name = "guestkit"
+include = ["guestkit.pyi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

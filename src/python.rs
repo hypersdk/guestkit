@@ -929,6 +929,36 @@ impl Guestfs {
             .sync()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
+
+    // Context manager support
+    /// Enter context manager
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// from guestkit import Guestfs
+    ///
+    /// with Guestfs() as g:
+    ///     g.add_drive_ro("/path/to/disk.qcow2")
+    ///     g.launch()
+    ///     roots = g.inspect_os()
+    ///     # ... operations
+    ///     # Automatic cleanup on exit
+    /// ```
+    fn __enter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    /// Exit context manager
+    fn __exit__(
+        &mut self,
+        _exc_type: Option<&Bound<'_, PyAny>>,
+        _exc_value: Option<&Bound<'_, PyAny>>,
+        _traceback: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        self.shutdown()?;
+        Ok(false)
+    }
 }
 
 /// Python module definition
