@@ -32,45 +32,87 @@ guestfs: shutdown
 guestfs: shutdown complete
 ```
 
-### After (Modern Colored Output)
+### After (Modern Colored Output - v0.3.2)
 ```
 ══════════════════════════════════════════════════════════════════════
-📀 Disk Image: /path/to/disk.qcow2
+📀 Disk Image: /path/to/photon.qcow2
 ══════════════════════════════════════════════════════════════════════
 
 ✓ Found 1 operating system(s)
 
 OS #1 (/dev/sda3)
 ──────────────────────────────────────────────────
-  Type: 🐧  linux
-  Distribution: unknown (detection requires mounting)
-  Hostname: localhost (default)
-  Architecture: x86_64
-  Package format: unknown (requires mounting)
-  Package management: unknown (requires mounting)
+  Operating System
+    Type: 🐧  linux
+    Distribution: photon
+    Version: 5.0
+    Product Name: VMware Photon OS/Linux
+    Hostname: photon-2e2948360ed5
+    Architecture: ⚙️  x86_64
+
+  Package Management
+    Format: 🔴  rpm
+    Tool: rpm
+
+  System Information
+    Machine ID: 🆔  56d8a0baf2ea44ceaac9c5e3e787b6ad
+    Kernel: 🐧  6.1.10-11.ph5
+    Init system: ⚡  systemd
+
+  Hardware Information
+    Chassis: 💻  laptop
+    Vendor: QEMU
+    Model: Standard PC (Q35 + ICH9, 2009)
 
 ══════════════════════════════════════════════════════════════════════
 ```
 
 ## Key Improvements
 
-### 1. Visual Design
+### 1. Hierarchical Section Structure (v0.3.2)
+
+The inspect command now organizes information into logical sections similar to systemd's `hostnamectl`:
+
+#### Section Organization
+- **Operating System**: OS type, distribution, version, product name, hostname, architecture
+- **Package Management**: Package format (rpm/deb/pacman/apk) and package management tool
+- **System Information**: Machine ID, Boot ID, kernel version, init system (systemd)
+- **Hardware Information**: Chassis type, asset tag, vendor, model, firmware information
+
+#### Section Formatting
+- **Section headers**: Blue bold text with 2-space indent (`  Operating System`)
+- **Field labels**: White bold text with 4-space indent (`    Type:`)
+- **Field values**: Color-coded based on data type
+- **Icons**: Positioned after field label, before value
+
+#### Hierarchical Indentation
+```
+  [Section Header]              # 2-space indent, blue bold
+    [Field]: [icon] [value]     # 4-space indent, white bold label
+    [Field]: [icon] [value]
+```
+
+### 2. Visual Design
 
 #### Icons & Symbols
 - **OS Types**: 🐧 Linux, 🪟 Windows, 💻 Others
+- **Architectures**: ⚙️ x86_64/amd64, 📱 ARM64, 🔧 i386/i686, 💾 Others
+- **Package Formats**: 🔴 rpm, 📘 deb, 🎯 pacman, 🏔 apk, 📦 unknown
+- **System Info**: 🆔 Machine ID, 🔄 Boot ID, 🐧 Kernel, ⚡ Init system (systemd)
+- **Hardware**: 💻 laptop, 🖥 desktop/server, 📱 tablet
 - **Filesystems**: 📁 ext4, 🪟 NTFS, 💾 FAT, 🗄 XFS, 🌳 Btrfs, 💫 swap, ❓ unknown
 - **Status**: ✓ Success, ⚠️ Warning, ❌ Error
 - **Structure**: ═ Borders, ─ Separators, ▪ Devices, ▸ LVM volumes
 
 #### Color Scheme
-- **Cyan** (`bright_cyan`): Primary identifiers (OS type, distribution, hostname, filesystem type)
-- **Yellow** (`bright_yellow`): Numerical values (version, architecture, sizes)
-- **Green** (`bright_green`): Success indicators, labels, package format
-- **Magenta** (`bright_magenta`): Section headers, OS numbers, LVM volumes
-- **White/Bold** (`bright_white().bold()`): Field labels, device names
-- **Dimmed** (`dimmed()`): Secondary info, hints, UUIDs
-- **Blue** (`bright_blue`): Borders and separators
-- **Black** (`bright_black`): Minor separators
+- **Blue** (`bright_blue`): Borders, separators, and section headers (v0.3.2+)
+- **Cyan** (`bright_cyan`): Primary identifiers (OS type, distribution, hostname, kernel version)
+- **Yellow** (`bright_yellow`): Numerical values (version, architecture, sizes, chassis type)
+- **Green** (`bright_green`): Success indicators, package format, init system
+- **Magenta** (`bright_magenta`): OS numbers, LVM volumes, package management tool
+- **White/Bold** (`bright_white().bold()`): Field labels, device names, product names
+- **Dimmed** (`dimmed()`): Secondary info (Machine ID, Boot ID), hints, UUIDs
+- **Black** (`bright_black`): Minor separators (deprecated in v0.3.2)
 
 #### Layout Elements
 - **Top/Bottom Borders**: 70-character `═` lines for clear boundaries
@@ -255,6 +297,14 @@ Potential UX improvements for future releases:
 - Terminal color standards: ANSI escape codes
 
 ## Changelog
+
+### v0.3.2 (2026-01-24)
+- Modernized inspect command with hierarchical sections
+- Added hostnamectl-style system information display
+- Enhanced icon system with section-specific icons
+- New system information module for hardware detection
+- DMI/SMBIOS hardware information gathering
+- Consistent section formatting across all output
 
 ### v0.3.1 (2026-01-24)
 - Initial UX overhaul
