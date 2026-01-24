@@ -318,3 +318,127 @@ class DiskConverter:
             Dictionary with image information
         """
         ...
+
+
+# TODO: AsyncGuestfs - Waiting for pyo3-asyncio PyO3 0.22+ support
+# Planned for future release once pyo3-asyncio is updated
+"""
+class AsyncGuestfs:
+    """Async version of Guestfs for non-blocking operations
+
+    Use this class with asyncio for concurrent VM inspection.
+
+    Example:
+        import asyncio
+        from guestkit import AsyncGuestfs
+
+        async def inspect_vm(disk_path: str):
+            async with AsyncGuestfs() as g:
+                await g.add_drive_ro(disk_path)
+                await g.launch()
+                roots = await g.inspect_os()
+                return roots
+
+        asyncio.run(inspect_vm("/path/to/disk.qcow2"))
+    """
+
+    def __init__(self) -> None:
+        """Create a new AsyncGuestfs handle"""
+        ...
+
+    async def __aenter__(self) -> 'AsyncGuestfs':
+        """Enter async context manager"""
+        ...
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType]
+    ) -> bool:
+        """Exit async context manager and cleanup"""
+        ...
+
+    # Drive operations (async)
+    async def add_drive(self, filename: str) -> None:
+        """Add a disk image (read-write) - async version"""
+        ...
+
+    async def add_drive_ro(self, filename: str) -> None:
+        """Add a disk image (read-only) - async version"""
+        ...
+
+    async def launch(self) -> None:
+        """Launch the appliance - async version"""
+        ...
+
+    async def shutdown(self) -> None:
+        """Shutdown the appliance - async version"""
+        ...
+
+    # Inspection operations (async)
+    async def inspect_os(self) -> List[str]:
+        """Inspect operating systems - async version
+
+        Returns:
+            List of root devices
+        """
+        ...
+
+    async def inspect_get_type(self, root: str) -> str:
+        """Get OS type - async version
+
+        Returns:
+            OS type (e.g., 'linux', 'windows')
+        """
+        ...
+
+    async def inspect_get_distro(self, root: str) -> str:
+        """Get distribution name - async version
+
+        Returns:
+            Distribution name (e.g., 'ubuntu', 'fedora')
+        """
+        ...
+
+    async def inspect_get_major_version(self, root: str) -> int:
+        """Get major version number - async version"""
+        ...
+
+    async def inspect_get_minor_version(self, root: str) -> int:
+        """Get minor version number - async version"""
+        ...
+
+    async def inspect_get_hostname(self, root: str) -> str:
+        """Get hostname - async version"""
+        ...
+
+    # Filesystem operations (async)
+    async def list_filesystems(self) -> Dict[str, str]:
+        """List filesystems - async version
+
+        Returns:
+            Dictionary mapping devices to filesystem types
+        """
+        ...
+
+    async def mount(self, device: str, mountpoint: str) -> None:
+        """Mount a filesystem - async version"""
+        ...
+
+    async def ls(self, directory: str) -> List[str]:
+        """List directory contents - async version
+
+        Returns:
+            List of filenames
+        """
+        ...
+
+    async def cat(self, path: str) -> str:
+        """Read file contents - async version
+
+        Returns:
+            File contents as string
+        """
+        ...
+"""

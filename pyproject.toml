@@ -7,7 +7,7 @@ name = "guestkit"
 version = "0.3.0"
 description = "Pure Rust toolkit for VM disk image inspection and manipulation - Python bindings"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = { text = "LGPL-3.0-or-later" }
 keywords = ["vm", "disk", "qcow2", "vmdk", "inspection", "guestfs"]
 authors = [
@@ -19,16 +19,18 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: System :: Filesystems",
     "Topic :: System :: Systems Administration",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
 ]
 
@@ -37,6 +39,7 @@ Homepage = "https://github.com/ssahani/guestkit"
 Repository = "https://github.com/ssahani/guestkit"
 Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
 "Bug Tracker" = "https://github.com/ssahani/guestkit/issues"
+Changelog = "https://github.com/ssahani/guestkit/blob/main/CHANGELOG.md"
 
 [tool.maturin]
 features = ["python-bindings"]

@@ -475,6 +475,5 @@ git push -u origin main
 **Tested on:** Fedora Linux
 **License:** LGPL-3.0-or-later
 **Author:** Susant Sahani <ssahani@gmail.com>
-**Co-Author:** Claude Sonnet 4.5
 
 **🎉 Project Complete! Ready for production use!**

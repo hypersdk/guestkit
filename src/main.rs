@@ -226,6 +226,13 @@ enum Commands {
     /// Show version information
     Version,
 
+    /// Start interactive mode for exploring disk image
+    #[command(alias = "repl")]
+    Interactive {
+        /// Disk image path
+        image: PathBuf,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -389,6 +396,11 @@ fn main() -> anyhow::Result<()> {
             println!();
             println!("Project: https://github.com/ssahani/guestkit");
             println!("License: LGPL-3.0-or-later");
+        }
+
+        Commands::Interactive { image } => {
+            let mut session = cli::InteractiveSession::new(image)?;
+            session.run()?;
         }
 
         Commands::Completion { shell } => {

@@ -961,11 +961,276 @@ impl Guestfs {
     }
 }
 
+/* TODO: Async Python API - Waiting for pyo3-asyncio PyO3 0.22 support
+ *
+ * AsyncGuestfs will be enabled once pyo3-asyncio releases support for PyO3 0.22+
+ * Track progress at: https://github.com/awestlake87/pyo3-asyncio/issues
+ *
+/// Async Python wrapper for Guestfs handle
+///
+/// Provides non-blocking operations for concurrent VM inspection.
+#[cfg(feature = "python-bindings")]
+#[pyclass]
+struct AsyncGuestfs {
+    handle: std::sync::Arc<tokio::sync::Mutex<crate::guestfs::Guestfs>>,
+}
+
+#[cfg(feature = "python-bindings")]
+#[pymethods]
+impl AsyncGuestfs {
+*/
+/*
+    /// Create a new AsyncGuestfs handle
+    ///
+    /// # Examples
+    ///
+    /// ```python
+    /// import asyncio
+    /// from guestkit import AsyncGuestfs
+    ///
+    /// async def main():
+    ///     async with AsyncGuestfs() as g:
+    ///         await g.add_drive_ro("/path/to/disk.qcow2")
+    ///         await g.launch()
+    ///         roots = await g.inspect_os()
+    ///         for root in roots:
+    ///             print(f"Found OS: {await g.inspect_get_distro(root)}")
+    ///
+    /// asyncio.run(main())
+    /// ```
+    #[new]
+    fn new() -> PyResult<Self> {
+        let handle = crate::guestfs::Guestfs::new()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+        Ok(Self {
+            handle: std::sync::Arc::new(tokio::sync::Mutex::new(handle)),
+        })
+    }
+
+    /// Context manager entry
+    fn __aenter__<'p>(slf: pyo3::Py<Self>, py: pyo3::Python<'p>) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            Ok(slf)
+        })
+    }
+
+    /// Context manager exit
+    fn __aexit__<'p>(
+        slf: pyo3::Py<Self>,
+        py: pyo3::Python<'p>,
+        _exc_type: Option<&pyo3::Bound<'_, pyo3::types::PyAny>>,
+        _exc_value: Option<&pyo3::Bound<'_, pyo3::types::PyAny>>,
+        _traceback: Option<&pyo3::Bound<'_, pyo3::types::PyAny>>,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            Python::with_gil(|py| {
+                let binding = slf.bind(py).borrow_mut();
+                let handle = binding.handle.clone();
+                drop(binding);
+
+                tokio::spawn(async move {
+                    let mut h = handle.lock().await;
+                    let _ = h.shutdown();
+                });
+
+                Ok(false)
+            })
+        })
+    }
+
+    /// Add a disk image (read-only) - async version
+    fn add_drive_ro<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        filename: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.add_drive_ro(&filename)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Add a disk image (read-write) - async version
+    fn add_drive<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        filename: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.add_drive(&filename)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Launch the backend (analyze disk) - async version
+    fn launch<'p>(&self, py: pyo3::Python<'p>) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.launch()
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Shutdown the backend - async version
+    fn shutdown<'p>(&self, py: pyo3::Python<'p>) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.shutdown()
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Inspect operating systems in the disk image - async version
+    fn inspect_os<'p>(&self, py: pyo3::Python<'p>) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_os()
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Get OS type - async version
+    fn inspect_get_type<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        root: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_get_type(&root)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Get distribution name - async version
+    fn inspect_get_distro<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        root: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_get_distro(&root)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Get major version - async version
+    fn inspect_get_major_version<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        root: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_get_major_version(&root)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Get minor version - async version
+    fn inspect_get_minor_version<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        root: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_get_minor_version(&root)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Get hostname - async version
+    fn inspect_get_hostname<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        root: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.inspect_get_hostname(&root)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// List filesystems - async version
+    fn list_filesystems<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.list_filesystems()
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Mount a filesystem - async version
+    fn mount<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        device: String,
+        mountpoint: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.mount(&device, &mountpoint)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// List directory contents - async version
+    fn ls<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        directory: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.ls(&directory)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+
+    /// Read file contents - async version
+    fn cat<'p>(
+        &self,
+        py: pyo3::Python<'p>,
+        path: String,
+    ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
+        let handle = self.handle.clone();
+        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
+            let mut h = handle.lock().await;
+            h.cat(&path)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+        })
+    }
+}
+*/
+
 /// Python module definition
 #[cfg(feature = "python-bindings")]
 #[pymodule]
 fn guestkit(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
     m.add_class::<Guestfs>()?;
+    // m.add_class::<AsyncGuestfs>()?;  // TODO: Enable when pyo3-asyncio supports PyO3 0.22+
     m.add_class::<DiskConverter>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
