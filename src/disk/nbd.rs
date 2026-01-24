@@ -42,14 +42,16 @@ impl NbdDevice {
             let device = PathBuf::from(format!("/dev/nbd{}", i));
             if device.exists() {
                 // Check if device is in use by checking its size
-                let device_str = device.to_str()
-                    .ok_or_else(|| Error::InvalidFormat(
-                        format!("Device path contains invalid Unicode: {:?}", device)
-                    ))?;
+                let device_str = device.to_str().ok_or_else(|| {
+                    Error::InvalidFormat(format!(
+                        "Device path contains invalid Unicode: {:?}",
+                        device
+                    ))
+                })?;
 
                 if let Ok(output) = Command::new("lsblk")
-                    .arg("-b")  // Show sizes in bytes
-                    .arg("-n")  // No headings
+                    .arg("-b") // Show sizes in bytes
+                    .arg("-n") // No headings
                     .arg("-o")
                     .arg("SIZE")
                     .arg(device_str)
@@ -91,7 +93,9 @@ impl NbdDevice {
     /// ```
     pub fn connect<P: AsRef<Path>>(&mut self, image_path: P, read_only: bool) -> Result<()> {
         if self.connected {
-            return Err(Error::InvalidState("NBD device already connected".to_string()));
+            return Err(Error::InvalidState(
+                "NBD device already connected".to_string(),
+            ));
         }
 
         let image_path = image_path.as_ref();
@@ -114,16 +118,15 @@ impl NbdDevice {
             Command::new("qemu-nbd")
         };
 
-        cmd.arg("--connect")
-            .arg(&self.device_path)
-            .arg(image_path);
+        cmd.arg("--connect").arg(&self.device_path).arg(image_path);
 
         if read_only {
             cmd.arg("--read-only");
         }
 
         // Detect image format from extension
-        let format = image_path.extension()
+        let format = image_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .map(|ext| match ext.to_lowercase().as_str() {
                 "qcow2" => "qcow2",
@@ -134,8 +137,7 @@ impl NbdDevice {
             })
             .unwrap_or("raw");
 
-        cmd.arg("--format")
-            .arg(format);
+        cmd.arg("--format").arg(format);
 
         // Capture output for debugging
         let output = cmd.output().map_err(|e| {
@@ -165,9 +167,9 @@ impl NbdDevice {
 
     /// Wait for NBD device to become available
     fn wait_for_device(&self) -> Result<()> {
-        for i in 0..50 {
+        for _i in 0..50 {
             // Try to read from device
-            if let Ok(_) = std::fs::metadata(&self.device_path) {
+            if std::fs::metadata(&self.device_path).is_ok() {
                 // Check if device is actually readable and has non-zero size
                 if let Ok(file) = std::fs::File::open(&self.device_path) {
                     use std::os::unix::io::AsRawFd;
@@ -178,7 +180,7 @@ impl NbdDevice {
                         libc::ioctl(
                             file.as_raw_fd(),
                             BLKGETSIZE64 as _,
-                            &mut size_bytes as *mut u64
+                            &mut size_bytes as *mut u64,
                         )
                     };
 
@@ -214,7 +216,8 @@ impl NbdDevice {
             Command::new("qemu-nbd")
         };
 
-        let output = cmd.arg("--disconnect")
+        let output = cmd
+            .arg("--disconnect")
             .arg(&self.device_path)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to disconnect NBD: {}", e)))?;

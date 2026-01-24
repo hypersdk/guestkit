@@ -97,10 +97,7 @@ impl Guestfs {
 
         for line in output_str.lines() {
             if let Some((file, caps)) = line.split_once('=') {
-                files.push((
-                    file.trim().to_string(),
-                    caps.trim().to_string()
-                ));
+                files.push((file.trim().to_string(), caps.trim().to_string()));
             }
         }
 

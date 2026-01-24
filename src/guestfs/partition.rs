@@ -23,7 +23,7 @@ impl Guestfs {
         // Ensure it's a whole device
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_list requires whole device".to_string()
+                "part_list requires whole device".to_string(),
             ));
         }
 
@@ -50,7 +50,7 @@ impl Guestfs {
 
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_get_parttype requires whole device".to_string()
+                "part_get_parttype requires whole device".to_string(),
             ));
         }
 
@@ -78,7 +78,7 @@ impl Guestfs {
 
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_set_parttype requires whole device".to_string()
+                "part_set_parttype requires whole device".to_string(),
             ));
         }
 
@@ -86,9 +86,12 @@ impl Guestfs {
         let parted_type = match parttype {
             "msdos" | "mbr" => "msdos",
             "gpt" => "gpt",
-            _ => return Err(Error::InvalidOperation(
-                format!("Unsupported partition table type: {}", parttype)
-            )),
+            _ => {
+                return Err(Error::InvalidOperation(format!(
+                    "Unsupported partition table type: {}",
+                    parttype
+                )))
+            }
         };
 
         // Use parted to set partition table type
@@ -116,13 +119,14 @@ impl Guestfs {
 
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_get_bootable requires whole device".to_string()
+                "part_get_bootable requires whole device".to_string(),
             ));
         }
 
         let partition_table = self.partition_table()?;
 
-        let partition = partition_table.partitions()
+        let partition = partition_table
+            .partitions()
             .iter()
             .find(|p| p.number == partnum as u32)
             .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partnum)))?;
@@ -138,20 +142,24 @@ impl Guestfs {
 
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_get_mbr_id requires whole device".to_string()
+                "part_get_mbr_id requires whole device".to_string(),
             ));
         }
 
         let partition_table = self.partition_table()?;
 
         // Check if it's actually MBR
-        if !matches!(partition_table.table_type(), crate::disk::PartitionType::MBR) {
+        if !matches!(
+            partition_table.table_type(),
+            crate::disk::PartitionType::MBR
+        ) {
             return Err(Error::InvalidFormat(
-                "Not an MBR partition table".to_string()
+                "Not an MBR partition table".to_string(),
             ));
         }
 
-        let partition = partition_table.partitions()
+        let partition = partition_table
+            .partitions()
             .iter()
             .find(|p| p.number == partnum as u32)
             .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partnum)))?;
@@ -170,7 +178,10 @@ impl Guestfs {
         if let Some(idx) = partition.rfind(|c: char| !c.is_numeric()) {
             Ok(partition[..=idx].to_string())
         } else {
-            Err(Error::InvalidFormat(format!("Cannot parse partition: {}", partition)))
+            Err(Error::InvalidFormat(format!(
+                "Cannot parse partition: {}",
+                partition
+            )))
         }
     }
 
@@ -182,7 +193,8 @@ impl Guestfs {
         // /dev/sda1 -> 1
         // /dev/vda2 -> 2
 
-        let num_str: String = partition.chars()
+        let num_str: String = partition
+            .chars()
             .rev()
             .take_while(|c| c.is_numeric())
             .collect::<String>()
@@ -191,10 +203,14 @@ impl Guestfs {
             .collect();
 
         if num_str.is_empty() {
-            return Err(Error::InvalidFormat(format!("No partition number in: {}", partition)));
+            return Err(Error::InvalidFormat(format!(
+                "No partition number in: {}",
+                partition
+            )));
         }
 
-        num_str.parse::<i32>()
+        num_str
+            .parse::<i32>()
             .map_err(|_| Error::InvalidFormat(format!("Invalid partition number: {}", num_str)))
     }
 
@@ -210,7 +226,7 @@ impl Guestfs {
 
         if !self.is_whole_device(device)? {
             return Err(Error::InvalidFormat(
-                "part_get_name requires whole device".to_string()
+                "part_get_name requires whole device".to_string(),
             ));
         }
 
@@ -224,7 +240,7 @@ impl Guestfs {
 
         if !output.status.success() {
             return Err(Error::CommandFailed(
-                "Failed to get partition name (may not be GPT)".to_string()
+                "Failed to get partition name (may not be GPT)".to_string(),
             ));
         }
 
@@ -233,7 +249,8 @@ impl Guestfs {
         // Parse output for "Partition name:"
         for line in stdout.lines() {
             if line.contains("Partition name:") {
-                let name = line.split("Partition name:")
+                let name = line
+                    .split("Partition name:")
                     .nth(1)
                     .unwrap_or("")
                     .trim()

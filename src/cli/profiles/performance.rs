@@ -17,28 +17,26 @@ impl InspectionProfile for PerformanceProfile {
     }
 
     fn inspect(&self, g: &mut Guestfs, root: &str) -> Result<ProfileReport> {
-        let mut sections = Vec::new();
-
-        // Section 1: Kernel Parameters
-        sections.push(self.analyze_kernel_params(g, root));
-
-        // Section 2: Swap Configuration
-        sections.push(self.analyze_swap(g, root));
-
-        // Section 3: Disk I/O
-        sections.push(self.analyze_disk_io(g, root));
-
-        // Section 4: Network Tuning
-        sections.push(self.analyze_network_tuning(g, root));
-
-        // Section 5: Services & Resources
-        sections.push(self.analyze_services(g, root));
+        let sections = vec![
+            // Section 1: Kernel Parameters
+            self.analyze_kernel_params(g, root),
+            // Section 2: Swap Configuration
+            self.analyze_swap(g, root),
+            // Section 3: Disk I/O
+            self.analyze_disk_io(g, root),
+            // Section 4: Network Tuning
+            self.analyze_network_tuning(g, root),
+            // Section 5: Services & Resources
+            self.analyze_services(g, root),
+        ];
 
         Ok(ProfileReport {
             profile_name: "Performance Tuning".to_string(),
             sections,
             overall_risk: None,
-            summary: Some("Review tuning opportunities to optimize system performance.".to_string()),
+            summary: Some(
+                "Review tuning opportunities to optimize system performance.".to_string(),
+            ),
         })
     }
 }
@@ -103,7 +101,11 @@ impl PerformanceProfile {
                 findings.push(Finding {
                     item: "Swap Devices".to_string(),
                     status: FindingStatus::Info,
-                    message: format!("{} swap device(s): {}", swap_devices.len(), swap_devices.join(", ")),
+                    message: format!(
+                        "{} swap device(s): {}",
+                        swap_devices.len(),
+                        swap_devices.join(", ")
+                    ),
                     risk_level: None,
                 });
             }
@@ -159,7 +161,10 @@ impl PerformanceProfile {
                 findings.push(Finding {
                     item: mountpoint.clone(),
                     status: FindingStatus::Info,
-                    message: format!("{} ({}) - check for noatime, nodiratime options", device, fstype),
+                    message: format!(
+                        "{} ({}) - check for noatime, nodiratime options",
+                        device, fstype
+                    ),
                     risk_level: None,
                 });
             }
@@ -171,7 +176,10 @@ impl PerformanceProfile {
                 findings.push(Finding {
                     item: "LVM Configuration".to_string(),
                     status: FindingStatus::Info,
-                    message: format!("{} logical volumes (consider stripe configuration for performance)", lvm.logical_volumes.len()),
+                    message: format!(
+                        "{} logical volumes (consider stripe configuration for performance)",
+                        lvm.logical_volumes.len()
+                    ),
                     risk_level: None,
                 });
             }
@@ -208,7 +216,8 @@ impl PerformanceProfile {
                     findings.push(Finding {
                         item: param.to_string(),
                         status: FindingStatus::Warning,
-                        message: "Not tuned (consider optimizing for high-throughput workloads)".to_string(),
+                        message: "Not tuned (consider optimizing for high-throughput workloads)"
+                            .to_string(),
                         risk_level: None,
                     });
                 }
@@ -241,14 +250,25 @@ impl PerformanceProfile {
             findings.push(Finding {
                 item: "Enabled Services".to_string(),
                 status: FindingStatus::Info,
-                message: format!("{} services enabled (review for unnecessary services)", services.len()),
+                message: format!(
+                    "{} services enabled (review for unnecessary services)",
+                    services.len()
+                ),
                 risk_level: None,
             });
 
             // Identify potentially resource-heavy services
             let heavy_services = vec![
-                "postgresql", "mysql", "mariadb", "docker", "containerd",
-                "elasticsearch", "mongod", "redis", "apache2", "nginx",
+                "postgresql",
+                "mysql",
+                "mariadb",
+                "docker",
+                "containerd",
+                "elasticsearch",
+                "mongod",
+                "redis",
+                "apache2",
+                "nginx",
             ];
 
             for heavy in &heavy_services {
@@ -269,7 +289,10 @@ impl PerformanceProfile {
                 findings.push(Finding {
                     item: "Scheduled Tasks".to_string(),
                     status: FindingStatus::Info,
-                    message: format!("{} timer(s) - review scheduling to avoid peak load times", timers.len()),
+                    message: format!(
+                        "{} timer(s) - review scheduling to avoid peak load times",
+                        timers.len()
+                    ),
                     risk_level: None,
                 });
             }

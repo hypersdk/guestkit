@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! guestkit CLI - Guest VM toolkit
 
-use clap::{Parser, Subcommand, CommandFactory};
+use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, shells};
 use guestkit::{converters::DiskConverter, VERSION};
-use std::path::PathBuf;
 use std::io;
+use std::path::PathBuf;
 
 mod cli;
 use cli::commands::*;
@@ -233,6 +233,20 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// Execute commands from a script file (batch mode)
+    #[command(alias = "batch")]
+    Script {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Script file with commands (one per line)
+        script: PathBuf,
+
+        /// Stop on first error
+        #[arg(short, long)]
+        fail_fast: bool,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -266,19 +280,42 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     match cli.command {
-        Commands::Inspect { image, output, profile, export, export_output, cache, cache_refresh } => {
+        Commands::Inspect {
+            image,
+            output,
+            profile,
+            export,
+            export_output,
+            cache,
+            cache_refresh,
+        } => {
             use cli::formatters::OutputFormat;
-            let output_format = output.as_ref()
+            let output_format = output
+                .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            inspect_image(&image, cli.verbose, output_format, profile, export, export_output, cache, cache_refresh)?;
+            inspect_image(
+                &image,
+                cli.verbose,
+                output_format,
+                profile,
+                export,
+                export_output,
+                cache,
+                cache_refresh,
+            )?;
         }
 
-        Commands::Diff { image1, image2, output } => {
+        Commands::Diff {
+            image1,
+            image2,
+            output,
+        } => {
             use cli::formatters::OutputFormat;
-            let output_format = output.as_ref()
+            let output_format = output
+                .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -294,7 +331,11 @@ fn main() -> anyhow::Result<()> {
             list_files(&image, &path, cli.verbose)?;
         }
 
-        Commands::Extract { image, guest_path, output } => {
+        Commands::Extract {
+            image,
+            guest_path,
+            output,
+        } => {
             extract_file(&image, &guest_path, &output, cli.verbose)?;
         }
 
@@ -302,7 +343,11 @@ fn main() -> anyhow::Result<()> {
             execute_command(&image, &command, cli.verbose)?;
         }
 
-        Commands::Backup { image, path, output } => {
+        Commands::Backup {
+            image,
+            path,
+            output,
+        } => {
             backup_files(&image, &path, &output, cli.verbose)?;
         }
 
@@ -328,18 +373,20 @@ fn main() -> anyhow::Result<()> {
             log::info!("Converting {} -> {}", source.display(), output.display());
 
             let converter = DiskConverter::new();
-            let result = converter.convert(
-                &source,
-                &output,
-                &format,
-                compress,
-                flatten,
-            )?;
+            let result = converter.convert(&source, &output, &format, compress, flatten)?;
 
             if result.success {
                 println!("✓ Conversion successful!");
-                println!("  Source:  {} ({})", source.display(), result.source_format.as_str());
-                println!("  Output:  {} ({})", output.display(), result.output_format.as_str());
+                println!(
+                    "  Source:  {} ({})",
+                    source.display(),
+                    result.source_format.as_str()
+                );
+                println!(
+                    "  Output:  {} ({})",
+                    output.display(),
+                    result.output_format.as_str()
+                );
                 println!("  Size:    {} bytes", result.output_size);
                 println!("  Time:    {:.2}s", result.duration_secs);
             } else {
@@ -362,9 +409,15 @@ fn main() -> anyhow::Result<()> {
             println!("{}", serde_json::to_string_pretty(&info)?);
         }
 
-        Commands::InspectBatch { images, parallel, output, cache } => {
+        Commands::InspectBatch {
+            images,
+            parallel,
+            output,
+            cache,
+        } => {
             use cli::formatters::OutputFormat;
-            let output_format = output.as_ref()
+            let output_format = output
+                .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -403,13 +456,26 @@ fn main() -> anyhow::Result<()> {
             session.run()?;
         }
 
+        Commands::Script {
+            image,
+            script,
+            fail_fast,
+        } => {
+            let mut executor = cli::BatchExecutor::new(image, fail_fast, cli.verbose)?;
+            let report = executor.execute_script(&script)?;
+            report.print();
+            std::process::exit(report.exit_code());
+        }
+
         Commands::Completion { shell } => {
             let mut cmd = Cli::command();
             match shell {
                 Shell::Bash => generate(shells::Bash, &mut cmd, "guestkit", &mut io::stdout()),
                 Shell::Zsh => generate(shells::Zsh, &mut cmd, "guestkit", &mut io::stdout()),
                 Shell::Fish => generate(shells::Fish, &mut cmd, "guestkit", &mut io::stdout()),
-                Shell::PowerShell => generate(shells::PowerShell, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::PowerShell => {
+                    generate(shells::PowerShell, &mut cmd, "guestkit", &mut io::stdout())
+                }
                 Shell::Elvish => generate(shells::Elvish, &mut cmd, "guestkit", &mut io::stdout()),
             }
         }

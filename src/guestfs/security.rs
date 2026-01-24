@@ -77,7 +77,9 @@ impl Guestfs {
         }
 
         match self.getxattr(path, "security.selinux") {
-            Ok(data) => Ok(String::from_utf8_lossy(&data).trim_matches('\0').to_string()),
+            Ok(data) => Ok(String::from_utf8_lossy(&data)
+                .trim_matches('\0')
+                .to_string()),
             Err(_) => Ok(String::new()),
         }
     }
@@ -123,10 +125,13 @@ impl Guestfs {
             eprintln!("guestfs: selinux_relabel {} {}", specfile, path);
         }
 
-        let host_path = self.resolve_guest_path(path)?;
+        let _host_path = self.resolve_guest_path(path)?;
 
         let mut cmd = Command::new("chroot");
-        let root_mountpoint = self.mounted.values().next()
+        let root_mountpoint = self
+            .mounted
+            .values()
+            .next()
             .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
 
         cmd.arg(root_mountpoint);
@@ -139,7 +144,8 @@ impl Guestfs {
         cmd.arg("-R");
         cmd.arg(path);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute restorecon: {}", e)))?;
 
         if !output.status.success() {

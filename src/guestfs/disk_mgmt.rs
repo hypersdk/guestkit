@@ -68,7 +68,9 @@ impl Guestfs {
             }
         }
 
-        Err(Error::NotFound("Format not found in qemu-img output".to_string()))
+        Err(Error::NotFound(
+            "Format not found in qemu-img output".to_string(),
+        ))
     }
 
     /// Check if disk has backing file
@@ -132,7 +134,9 @@ impl Guestfs {
             }
         }
 
-        Err(Error::NotFound("Virtual size not found in qemu-img output".to_string()))
+        Err(Error::NotFound(
+            "Virtual size not found in qemu-img output".to_string(),
+        ))
     }
 
     /// Resize disk image
@@ -175,7 +179,7 @@ impl Guestfs {
         // Create a file filled with zeros to consume free space
         let zero_file = host_path.join(".zero_file");
 
-        let output = Command::new("dd")
+        let _output = Command::new("dd")
             .arg("if=/dev/zero")
             .arg(format!("of={}", zero_file.display()))
             .arg("bs=1M")
@@ -220,7 +224,10 @@ impl Guestfs {
     /// GuestFS API: disk_convert()
     pub fn disk_convert(&mut self, input: &str, output: &str, output_format: &str) -> Result<()> {
         if self.verbose {
-            eprintln!("guestfs: disk_convert {} {} {}", input, output, output_format);
+            eprintln!(
+                "guestfs: disk_convert {} {} {}",
+                input, output, output_format
+            );
         }
 
         let cmd_output = Command::new("qemu-img")

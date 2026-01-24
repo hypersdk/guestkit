@@ -459,7 +459,10 @@ fn create_realistic_debian_image(
 
     let boot_mode = if use_efi { "EFI/GPT" } else { "BIOS/MBR" };
 
-    println!("\n=== Creating Realistic Debian {} Image ({}) ===\n", version, boot_mode);
+    println!(
+        "\n=== Creating Realistic Debian {} Image ({}) ===\n",
+        version, boot_mode
+    );
 
     // Step 1: Create disk image and guestfs handle
     println!("[1/16] Creating Guestfs handle and disk image...");
@@ -700,14 +703,8 @@ fn create_realistic_debian_image(
 
     g.write("/boot/vmlinuz-6.1.0-17-amd64", &fake_kernel)?;
     g.write("/boot/initrd.img-6.1.0-17-amd64", &fake_initrd)?;
-    g.ln_s(
-        "/boot/vmlinuz-6.1.0-17-amd64",
-        "/boot/vmlinuz",
-    )?;
-    g.ln_s(
-        "/boot/initrd.img-6.1.0-17-amd64",
-        "/boot/initrd.img",
-    )?;
+    g.ln_s("/boot/vmlinuz-6.1.0-17-amd64", "/boot/vmlinuz")?;
+    g.ln_s("/boot/initrd.img-6.1.0-17-amd64", "/boot/initrd.img")?;
     println!("  ✓ Fake kernel files created");
 
     // Step 13: Create network configuration
@@ -726,7 +723,10 @@ fn create_realistic_debian_image(
 
     // Step 15: Create log files and fake binaries
     println!("\n[15/16] Creating log files and runtime directories...");
-    g.write("/var/log/syslog", "Dec 10 12:00:00 debian systemd[1]: Started System Logging Service.\n")?;
+    g.write(
+        "/var/log/syslog",
+        "Dec 10 12:00:00 debian systemd[1]: Started System Logging Service.\n",
+    )?;
     g.write("/var/log/apt/history.log", "# APT transaction history\n")?;
 
     // Create fake /bin/ls with ELF header
@@ -765,10 +765,7 @@ fn create_realistic_debian_image(
     g.umount_all()?;
     g.shutdown()?;
 
-    println!(
-        "\n=== Debian {} Image Created Successfully! ===",
-        version
-    );
+    println!("\n=== Debian {} Image Created Successfully! ===", version);
     println!("  Image: {}", DISK_PATH);
     println!("  Size: {} MB", DISK_SIZE_MB);
     println!("  Boot mode: {}", boot_mode);

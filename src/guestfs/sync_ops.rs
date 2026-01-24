@@ -37,11 +37,15 @@ impl Guestfs {
             1 => "1", // pagecache
             2 => "2", // dentries and inodes
             3 => "3", // pagecache, dentries and inodes
-            _ => return Err(Error::InvalidFormat(format!("Invalid drop_caches value: {}", whattodrop))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid drop_caches value: {}",
+                    whattodrop
+                )))
+            }
         };
 
-        std::fs::write("/proc/sys/vm/drop_caches", drop_value)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write("/proc/sys/vm/drop_caches", drop_value).map_err(Error::Io)?;
 
         Ok(())
     }

@@ -11,7 +11,7 @@ impl Guestfs {
 
         match self.cat("/proc/sys/kernel/random/boot_id") {
             Ok(content) => Ok(content.trim().to_string()),
-            Err(_) => Err(Error::NotFound("boot_id not found".to_string()))
+            Err(_) => Err(Error::NotFound("boot_id not found".to_string())),
         }
     }
 
@@ -20,10 +20,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         // Try to check if systemd exists
-        if let Ok(_) = self.exists("/lib/systemd/systemd") {
+        if self.exists("/lib/systemd/systemd").is_ok() {
             return Ok("systemd".to_string());
         }
-        if let Ok(_) = self.exists("/usr/lib/systemd/systemd") {
+        if self.exists("/usr/lib/systemd/systemd").is_ok() {
             return Ok("systemd".to_string());
         }
 
@@ -142,7 +142,9 @@ impl Guestfs {
 
     /// Get icon name based on chassis type
     pub fn get_icon_name(&mut self) -> Result<String> {
-        let chassis = self.get_chassis_type().unwrap_or_else(|_| "unknown".to_string());
+        let chassis = self
+            .get_chassis_type()
+            .unwrap_or_else(|_| "unknown".to_string());
 
         let icon = match chassis.as_str() {
             "laptop" | "notebook" | "sub-notebook" => "computer-laptop",

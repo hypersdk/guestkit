@@ -86,10 +86,7 @@ impl Guestfs {
         let mut info = Vec::new();
 
         for (i, line) in output_str.lines().enumerate() {
-            info.push((
-                format!("line_{}", i),
-                line.trim().to_string()
-            ));
+            info.push((format!("line_{}", i), line.trim().to_string()));
         }
 
         Ok(info)

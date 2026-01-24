@@ -31,7 +31,8 @@ impl Guestfs {
 
         cmd.arg(&host_source);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute genisoimage: {}", e)))?;
 
         if !output.status.success() {
@@ -88,13 +89,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("isoinfo")
             .arg("-d")
@@ -139,8 +147,7 @@ impl Guestfs {
 
         // Create mountpoint if it doesn't exist
         if !host_mountpoint.exists() {
-            std::fs::create_dir_all(&host_mountpoint)
-                .map_err(|e| Error::Io(e))?;
+            std::fs::create_dir_all(&host_mountpoint).map_err(Error::Io)?;
         }
 
         let output = Command::new("mount")

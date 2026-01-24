@@ -11,11 +11,20 @@ impl Guestfs {
     /// Get internal state for debugging
     ///
     /// GuestFS API: internal_test()
-    pub fn internal_test(&mut self, str: &str, optstr: Option<&str>, strlist: &[&str],
-                         b: bool, integer: i32, integer64: i64) -> Result<String> {
+    pub fn internal_test(
+        &mut self,
+        str: &str,
+        optstr: Option<&str>,
+        strlist: &[&str],
+        b: bool,
+        integer: i32,
+        integer64: i64,
+    ) -> Result<String> {
         if self.verbose {
-            eprintln!("guestfs: internal_test {} {:?} {:?} {} {} {}",
-                     str, optstr, strlist, b, integer, integer64);
+            eprintln!(
+                "guestfs: internal_test {} {:?} {:?} {} {} {}",
+                str, optstr, strlist, b, integer, integer64
+            );
         }
 
         // Return a formatted debug string

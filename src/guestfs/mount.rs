@@ -9,8 +9,8 @@
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use std::collections::HashMap;
-use std::process::Command;
 use std::fs;
+use std::process::Command;
 
 impl Guestfs {
     /// Mount a filesystem read-only
@@ -57,14 +57,15 @@ impl Guestfs {
         // Create mount root if needed
         if self.mount_root.is_none() {
             let tmpdir = std::env::temp_dir().join(format!("guestkit-{}", std::process::id()));
-            fs::create_dir_all(&tmpdir).map_err(|e| {
-                Error::CommandFailed(format!("Failed to create mount root: {}", e))
-            })?;
+            fs::create_dir_all(&tmpdir)
+                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
             self.mount_root = Some(tmpdir);
         }
 
         // Build actual mount path
-        let mount_root = self.mount_root.as_ref()
+        let mount_root = self
+            .mount_root
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
         let actual_mountpoint = if mountpoint == "/" {
             mount_root.clone()
@@ -73,9 +74,8 @@ impl Guestfs {
         };
 
         // Create mountpoint directory
-        fs::create_dir_all(&actual_mountpoint).map_err(|e| {
-            Error::CommandFailed(format!("Failed to create mountpoint: {}", e))
-        })?;
+        fs::create_dir_all(&actual_mountpoint)
+            .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
 
         // Mount using system mount command
         let output = Command::new("mount")
@@ -95,7 +95,10 @@ impl Guestfs {
         }
 
         // Record the mount
-        self.mounted.insert(mountable.to_string(), actual_mountpoint.to_string_lossy().to_string());
+        self.mounted.insert(
+            mountable.to_string(),
+            actual_mountpoint.to_string_lossy().to_string(),
+        );
 
         Ok(())
     }
@@ -110,7 +113,7 @@ impl Guestfs {
         if let Some(drive) = self.drives.first() {
             if drive.readonly {
                 return Err(Error::PermissionDenied(
-                    "Cannot mount read-write on read-only drive".to_string()
+                    "Cannot mount read-write on read-only drive".to_string(),
                 ));
             }
         }
@@ -119,7 +122,8 @@ impl Guestfs {
         let _partition_num = self.parse_device_name(mountable)?;
 
         // Record the mount
-        self.mounted.insert(mountable.to_string(), mountpoint.to_string());
+        self.mounted
+            .insert(mountable.to_string(), mountpoint.to_string());
 
         if self.verbose {
             eprintln!("guestfs: mount {} {}", mountable, mountpoint);
@@ -131,9 +135,17 @@ impl Guestfs {
     /// Mount with specific options
     ///
     /// GuestFS API: mount_options()
-    pub fn mount_options(&mut self, options: &str, mountable: &str, mountpoint: &str) -> Result<()> {
+    pub fn mount_options(
+        &mut self,
+        options: &str,
+        mountable: &str,
+        mountpoint: &str,
+    ) -> Result<()> {
         if self.verbose {
-            eprintln!("guestfs: mount_options {} {} {}", options, mountable, mountpoint);
+            eprintln!(
+                "guestfs: mount_options {} {} {}",
+                options, mountable, mountpoint
+            );
         }
 
         self.mount(mountable, mountpoint)
@@ -142,9 +154,18 @@ impl Guestfs {
     /// Mount with explicit VFS type
     ///
     /// GuestFS API: mount_vfs()
-    pub fn mount_vfs(&mut self, options: &str, vfstype: &str, mountable: &str, mountpoint: &str) -> Result<()> {
+    pub fn mount_vfs(
+        &mut self,
+        options: &str,
+        vfstype: &str,
+        mountable: &str,
+        mountpoint: &str,
+    ) -> Result<()> {
         if self.verbose {
-            eprintln!("guestfs: mount_vfs {} {} {} {}", options, vfstype, mountable, mountpoint);
+            eprintln!(
+                "guestfs: mount_vfs {} {} {} {}",
+                options, vfstype, mountable, mountpoint
+            );
         }
 
         self.mount(mountable, mountpoint)
@@ -161,7 +182,9 @@ impl Guestfs {
         }
 
         // Find mounts to remove
-        let to_unmount: Vec<(String, String)> = self.mounted.iter()
+        let to_unmount: Vec<(String, String)> = self
+            .mounted
+            .iter()
             .filter(|(dev, mp)| dev.as_str() == pathordevice || mp.as_str() == pathordevice)
             .map(|(dev, mp)| (dev.clone(), mp.clone()))
             .collect();

@@ -66,7 +66,9 @@ impl Guestfs {
             }
         }
 
-        Err(Error::CommandFailed("Could not parse du output".to_string()))
+        Err(Error::CommandFailed(
+            "Could not parse du output".to_string(),
+        ))
     }
 
     /// Get file type (using libmagic-style output)
@@ -281,16 +283,17 @@ impl Guestfs {
             "ls" => {
                 // Debug ls command
                 if extraargs.is_empty() {
-                    return Err(Error::InvalidFormat("debug ls requires path argument".to_string()));
+                    return Err(Error::InvalidFormat(
+                        "debug ls requires path argument".to_string(),
+                    ));
                 }
                 self.ls(extraargs[0]).map(|v| v.join("\n"))
             }
-            "help" => {
-                Ok("Available debug commands: ls".to_string())
-            }
-            _ => {
-                Err(Error::Unsupported(format!("Unknown debug command: {}", subcmd)))
-            }
+            "help" => Ok("Available debug commands: ls".to_string()),
+            _ => Err(Error::Unsupported(format!(
+                "Unknown debug command: {}",
+                subcmd
+            ))),
         }
     }
 }

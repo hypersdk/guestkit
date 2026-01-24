@@ -149,7 +149,13 @@ impl Guestfs {
     /// Set or get ext2/3/4 filesystem parameters
     ///
     /// Compatible with libguestfs g.tune2fs()
-    pub fn tune2fs(&mut self, device: &str, force: bool, maxmountcount: Option<i32>, label: Option<&str>) -> Result<()> {
+    pub fn tune2fs(
+        &mut self,
+        device: &str,
+        force: bool,
+        maxmountcount: Option<i32>,
+        label: Option<&str>,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -296,11 +302,14 @@ impl Guestfs {
 
         // Get actual mountpoint
         let actual_mountpoint = if mountpoint == "/" {
-            self.mount_root.as_ref()
+            self.mount_root
+                .as_ref()
                 .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?
                 .clone()
         } else {
-            let mount_root = self.mount_root.as_ref()
+            let mount_root = self
+                .mount_root
+                .as_ref()
                 .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
             mount_root.join(mountpoint.trim_start_matches('/'))
         };
@@ -331,7 +340,9 @@ impl Guestfs {
         }
 
         // Run df on mount root
-        let mount_root = self.mount_root.as_ref()
+        let mount_root = self
+            .mount_root
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
 
         let output = Command::new("df")

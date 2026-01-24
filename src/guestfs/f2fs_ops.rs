@@ -20,13 +20,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let mut cmd = Command::new("mkfs.f2fs");
 
@@ -36,7 +43,8 @@ impl Guestfs {
 
         cmd.arg(&nbd_partition);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mkfs.f2fs: {}", e)))?;
 
         if !output.status.success() {
@@ -61,13 +69,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let mut cmd = Command::new("fsck.f2fs");
 
@@ -77,7 +92,8 @@ impl Guestfs {
 
         cmd.arg(&nbd_partition);
 
-        let output = cmd.output()
+        let _output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute fsck.f2fs: {}", e)))?;
 
         // fsck returns non-zero for errors found, which is expected
@@ -96,13 +112,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("resize.f2fs")
             .arg(&nbd_partition)
@@ -131,13 +154,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("dump.f2fs")
             .arg(&nbd_partition)
@@ -156,10 +186,7 @@ impl Guestfs {
 
         for line in output_str.lines() {
             if let Some((key, value)) = line.split_once(':') {
-                info.push((
-                    key.trim().to_string(),
-                    value.trim().to_string()
-                ));
+                info.push((key.trim().to_string(), value.trim().to_string()));
             }
         }
 

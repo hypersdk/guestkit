@@ -4,8 +4,8 @@
 //! Pure Rust implementation for detecting filesystem types
 
 use crate::core::{Error, Result};
-use crate::disk::reader::DiskReader;
 use crate::disk::partition::Partition;
+use crate::disk::reader::DiskReader;
 
 /// Filesystem type
 #[derive(Debug, Clone, PartialEq)]
@@ -189,7 +189,12 @@ impl FileSystem {
     }
 
     /// Read file from filesystem (basic implementation)
-    pub fn read_file(&self, _reader: &mut DiskReader, _partition: &Partition, path: &str) -> Result<Vec<u8>> {
+    pub fn read_file(
+        &self,
+        _reader: &mut DiskReader,
+        _partition: &Partition,
+        path: &str,
+    ) -> Result<Vec<u8>> {
         // This is a simplified implementation
         // A full implementation would need to:
         // 1. Parse the filesystem structure (inodes, directories)
@@ -197,7 +202,10 @@ impl FileSystem {
         // 3. Read file blocks
         //
         // For now, we'll focus on detecting OS from common locations
-        Err(Error::Detection(format!("File reading not yet implemented for path: {}", path)))
+        Err(Error::Detection(format!(
+            "File reading not yet implemented for path: {}",
+            path
+        )))
     }
 }
 

@@ -34,7 +34,8 @@ impl Guestfs {
             cmd.arg(devmajor.to_string()).arg(devminor.to_string());
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mknod: {}", e)))?;
 
         if !output.status.success() {
@@ -57,7 +58,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: mknod_b {} {} {} {}", mode, devmajor, devminor, path);
+            eprintln!(
+                "guestfs: mknod_b {} {} {} {}",
+                mode, devmajor, devminor, path
+            );
         }
 
         // Create block device (mode 0x6000)
@@ -72,7 +76,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: mknod_c {} {} {} {}", mode, devmajor, devminor, path);
+            eprintln!(
+                "guestfs: mknod_c {} {} {} {}",
+                mode, devmajor, devminor, path
+            );
         }
 
         // Create character device (mode 0x2000)
@@ -182,7 +189,7 @@ impl Guestfs {
             .write(true)
             .truncate(true)
             .open(&host_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         Ok(())
     }
@@ -202,10 +209,9 @@ impl Guestfs {
         let file = std::fs::OpenOptions::new()
             .write(true)
             .open(&host_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
-        file.set_len(size as u64)
-            .map_err(|e| Error::Io(e))?;
+        file.set_len(size as u64).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -213,19 +219,28 @@ impl Guestfs {
     /// Change file timestamps
     ///
     /// GuestFS API: utimens()
-    pub fn utimens(&mut self, path: &str, atsecs: i64, atnsecs: i64,
-                   mtsecs: i64, mtnsecs: i64) -> Result<()> {
+    pub fn utimens(
+        &mut self,
+        path: &str,
+        atsecs: i64,
+        atnsecs: i64,
+        mtsecs: i64,
+        mtnsecs: i64,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: utimens {} {} {} {} {}", path, atsecs, atnsecs, mtsecs, mtnsecs);
+            eprintln!(
+                "guestfs: utimens {} {} {} {} {}",
+                path, atsecs, atnsecs, mtsecs, mtnsecs
+            );
         }
 
         let host_path = self.resolve_guest_path(path)?;
 
         // Use touch command with specific timestamp
         let atime_str = format!("{}.{:09}", atsecs, atnsecs);
-        let mtime_str = format!("{}.{:09}", mtsecs, mtnsecs);
+        let _mtime_str = format!("{}.{:09}", mtsecs, mtnsecs);
 
         let output = Command::new("touch")
             .arg("-a")
@@ -257,11 +272,9 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let file = std::fs::File::open(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let file = std::fs::File::open(&host_path).map_err(Error::Io)?;
 
-        file.sync_all()
-            .map_err(|e| Error::Io(e))?;
+        file.sync_all().map_err(Error::Io)?;
 
         Ok(())
     }

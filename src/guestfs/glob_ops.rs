@@ -18,7 +18,10 @@ impl Guestfs {
         }
 
         let host_pattern = if pattern.starts_with('/') {
-            let root_mountpoint = self.mounted.values().next()
+            let root_mountpoint = self
+                .mounted
+                .values()
+                .next()
                 .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
             let pattern_clean = pattern.trim_start_matches('/');
             format!("{}/{}", root_mountpoint, pattern_clean)
@@ -69,8 +72,7 @@ impl Guestfs {
             content.push('\0');
         }
 
-        std::fs::write(&host_file, content.as_bytes())
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_file, content.as_bytes()).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -95,8 +97,7 @@ impl Guestfs {
             content.push('\0');
         }
 
-        std::fs::write(&host_file, content.as_bytes())
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_file, content.as_bytes()).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -139,11 +140,11 @@ impl Guestfs {
 
         let mut entries = Vec::new();
 
-        for entry in std::fs::read_dir(&host_path).map_err(|e| Error::Io(e))? {
-            let entry = entry.map_err(|e| Error::Io(e))?;
+        for entry in std::fs::read_dir(&host_path).map_err(Error::Io)? {
+            let entry = entry.map_err(Error::Io)?;
             let name = entry.file_name().to_string_lossy().to_string();
 
-            let file_type = entry.file_type().map_err(|e| Error::Io(e))?;
+            let file_type = entry.file_type().map_err(Error::Io)?;
 
             let type_code = if file_type.is_file() {
                 b'r' // Regular file
@@ -183,7 +184,10 @@ impl Guestfs {
         for part in parts {
             if let Ok(entries) = self.ls(&current) {
                 // Look for case-insensitive match
-                if let Some(matched) = entries.iter().find(|e| e.to_lowercase() == part.to_lowercase()) {
+                if let Some(matched) = entries
+                    .iter()
+                    .find(|e| e.to_lowercase() == part.to_lowercase())
+                {
                     if current == "/" {
                         current = format!("/{}", matched);
                     } else {

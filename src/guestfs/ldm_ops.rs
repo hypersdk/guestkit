@@ -54,7 +54,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -73,12 +75,7 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        let diskgroup = output_str
-            .lines()
-            .next()
-            .unwrap_or("")
-            .trim()
-            .to_string();
+        let diskgroup = output_str.lines().next().unwrap_or("").trim().to_string();
 
         Ok(diskgroup)
     }

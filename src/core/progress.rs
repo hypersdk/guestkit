@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Progress reporting for long-running operations
 
-use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Progress reporter for disk operations
 pub struct ProgressReporter {
     bar: Arc<ProgressBar>,
-    multi: Option<Arc<MultiProgress>>,
+    _multi: Option<Arc<MultiProgress>>,
 }
 
 impl ProgressReporter {
@@ -26,7 +26,7 @@ impl ProgressReporter {
 
         Self {
             bar: Arc::new(bar),
-            multi: None,
+            _multi: None,
         }
     }
 
@@ -44,7 +44,7 @@ impl ProgressReporter {
 
         Self {
             bar: Arc::new(bar),
-            multi: None,
+            _multi: None,
         }
     }
 
@@ -111,7 +111,7 @@ impl MultiProgressReporter {
 
         ProgressReporter {
             bar: Arc::new(bar),
-            multi: Some(self.multi.clone()),
+            _multi: Some(self.multi.clone()),
         }
     }
 
@@ -129,7 +129,7 @@ impl MultiProgressReporter {
 
         ProgressReporter {
             bar: Arc::new(bar),
-            multi: Some(self.multi.clone()),
+            _multi: Some(self.multi.clone()),
         }
     }
 }

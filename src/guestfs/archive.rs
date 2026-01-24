@@ -39,17 +39,22 @@ impl Guestfs {
 
         // Verify tar file exists
         if !tarfile.exists() {
-            return Err(Error::NotFound(format!("Tar file not found: {}", tarfile.display())));
+            return Err(Error::NotFound(format!(
+                "Tar file not found: {}",
+                tarfile.display()
+            )));
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build target directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -71,7 +76,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar extraction failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -90,13 +98,15 @@ impl Guestfs {
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build source directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -104,7 +114,10 @@ impl Guestfs {
 
         // Verify source exists
         if !source_path.exists() {
-            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+            return Err(Error::NotFound(format!(
+                "Directory not found: {}",
+                directory
+            )));
         }
 
         // Create tar archive
@@ -119,7 +132,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar creation failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -139,17 +155,22 @@ impl Guestfs {
 
         // Verify tar file exists
         if !tarball.exists() {
-            return Err(Error::NotFound(format!("Tar file not found: {}", tarball.display())));
+            return Err(Error::NotFound(format!(
+                "Tar file not found: {}",
+                tarball.display()
+            )));
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build target directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -171,7 +192,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar extraction failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -190,13 +214,15 @@ impl Guestfs {
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build source directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -204,7 +230,10 @@ impl Guestfs {
 
         // Verify source exists
         if !source_path.exists() {
-            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+            return Err(Error::NotFound(format!(
+                "Directory not found: {}",
+                directory
+            )));
         }
 
         // Create compressed tar archive
@@ -219,7 +248,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar creation failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -228,24 +260,41 @@ impl Guestfs {
     /// Extract tar with options
     ///
     /// GuestFS API: tar_in_opts()
-    pub fn tar_in_opts<P: AsRef<Path>>(&mut self, tarfile: P, directory: &str, compress: Option<&str>, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
+    pub fn tar_in_opts<P: AsRef<Path>>(
+        &mut self,
+        tarfile: P,
+        directory: &str,
+        compress: Option<&str>,
+        xattrs: bool,
+        selinux: bool,
+        acls: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         let tarfile = tarfile.as_ref();
 
         if self.verbose {
-            eprintln!("guestfs: tar_in_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
-                tarfile.display(), directory, compress, xattrs, selinux, acls);
+            eprintln!(
+                "guestfs: tar_in_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
+                tarfile.display(),
+                directory,
+                compress,
+                xattrs,
+                selinux,
+                acls
+            );
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build target directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -256,10 +305,18 @@ impl Guestfs {
 
         // Add compression flag if specified
         match compress {
-            Some("gzip") | Some("gz") => { cmd.arg("-z"); },
-            Some("bzip2") | Some("bz2") => { cmd.arg("-j"); },
-            Some("xz") => { cmd.arg("-J"); },
-            Some("compress") => { cmd.arg("-Z"); },
+            Some("gzip") | Some("gz") => {
+                cmd.arg("-z");
+            }
+            Some("bzip2") | Some("bz2") => {
+                cmd.arg("-j");
+            }
+            Some("xz") => {
+                cmd.arg("-J");
+            }
+            Some("compress") => {
+                cmd.arg("-Z");
+            }
             _ => {}
         }
 
@@ -277,12 +334,16 @@ impl Guestfs {
             cmd.arg("--acls");
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar extraction failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar extraction failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -291,24 +352,42 @@ impl Guestfs {
     /// Create tar with options
     ///
     /// GuestFS API: tar_out_opts()
-    pub fn tar_out_opts<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P, compress: Option<&str>, _numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
+    pub fn tar_out_opts<P: AsRef<Path>>(
+        &mut self,
+        directory: &str,
+        tarfile: P,
+        compress: Option<&str>,
+        _numericowner: bool,
+        xattrs: bool,
+        selinux: bool,
+        acls: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         let tarfile = tarfile.as_ref();
 
         if self.verbose {
-            eprintln!("guestfs: tar_out_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
-                directory, tarfile.display(), compress, xattrs, selinux, acls);
+            eprintln!(
+                "guestfs: tar_out_opts {} {} compress={:?} xattrs={} selinux={} acls={}",
+                directory,
+                tarfile.display(),
+                compress,
+                xattrs,
+                selinux,
+                acls
+            );
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build source directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -316,7 +395,10 @@ impl Guestfs {
 
         // Verify source exists
         if !source_path.exists() {
-            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+            return Err(Error::NotFound(format!(
+                "Directory not found: {}",
+                directory
+            )));
         }
 
         // Build tar command with options
@@ -324,10 +406,18 @@ impl Guestfs {
 
         // Add compression flag if specified
         match compress {
-            Some("gzip") | Some("gz") => { cmd.arg("-z"); },
-            Some("bzip2") | Some("bz2") => { cmd.arg("-j"); },
-            Some("xz") => { cmd.arg("-J"); },
-            Some("compress") => { cmd.arg("-Z"); },
+            Some("gzip") | Some("gz") => {
+                cmd.arg("-z");
+            }
+            Some("bzip2") | Some("bz2") => {
+                cmd.arg("-j");
+            }
+            Some("xz") => {
+                cmd.arg("-J");
+            }
+            Some("compress") => {
+                cmd.arg("-Z");
+            }
             _ => {}
         }
 
@@ -347,12 +437,16 @@ impl Guestfs {
 
         cmd.arg(".");
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run tar: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("Tar creation failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "Tar creation failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -372,17 +466,22 @@ impl Guestfs {
 
         // Verify CPIO file exists
         if !cpiofile.exists() {
-            return Err(Error::NotFound(format!("CPIO file not found: {}", cpiofile.display())));
+            return Err(Error::NotFound(format!(
+                "CPIO file not found: {}",
+                cpiofile.display()
+            )));
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build target directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -395,8 +494,7 @@ impl Guestfs {
 
         // Extract CPIO archive
         // cpio -idm < archive.cpio
-        let cpio_data = std::fs::read(cpiofile)
-            .map_err(|e| Error::Io(e))?;
+        let cpio_data = std::fs::read(cpiofile).map_err(Error::Io)?;
 
         let mut cmd = Command::new("cpio");
         cmd.arg("-idm")
@@ -404,22 +502,26 @@ impl Guestfs {
             .arg(&target_path)
             .stdin(std::process::Stdio::piped());
 
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to spawn cpio: {}", e)))?;
 
         // Write CPIO data to cpio's stdin
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
-            stdin.write_all(&cpio_data)
-                .map_err(|e| Error::Io(e))?;
+            stdin.write_all(&cpio_data).map_err(Error::Io)?;
         }
 
-        let output = child.wait_with_output()
+        let output = child
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("CPIO extraction failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "CPIO extraction failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -428,23 +530,35 @@ impl Guestfs {
     /// Create cpio archive
     ///
     /// GuestFS API: cpio_out()
-    pub fn cpio_out<P: AsRef<Path>>(&mut self, directory: &str, cpiofile: P, format: &str) -> Result<()> {
+    pub fn cpio_out<P: AsRef<Path>>(
+        &mut self,
+        directory: &str,
+        cpiofile: P,
+        format: &str,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         let cpiofile = cpiofile.as_ref();
 
         if self.verbose {
-            eprintln!("guestfs: cpio_out {} {} {}", directory, cpiofile.display(), format);
+            eprintln!(
+                "guestfs: cpio_out {} {} {}",
+                directory,
+                cpiofile.display(),
+                format
+            );
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Build source directory path
         let directory_clean = directory.trim_start_matches('/');
@@ -452,7 +566,10 @@ impl Guestfs {
 
         // Verify source exists
         if !source_path.exists() {
-            return Err(Error::NotFound(format!("Directory not found: {}", directory)));
+            return Err(Error::NotFound(format!(
+                "Directory not found: {}",
+                directory
+            )));
         }
 
         // Build cpio format flag
@@ -483,24 +600,28 @@ impl Guestfs {
 
         // Pass find output to cpio
         let mut cpio_cmd = Command::new("cpio");
-        cpio_cmd.arg("-o")
+        cpio_cmd
+            .arg("-o")
             .arg(format_flag)
             .arg("-O")
             .arg(cpiofile)
             .stdin(std::process::Stdio::piped())
             .current_dir(&source_path);
 
-        let mut cpio_process = cpio_cmd.spawn()
+        let mut cpio_process = cpio_cmd
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to spawn cpio: {}", e)))?;
 
         // Write find output to cpio's stdin
         if let Some(mut stdin) = cpio_process.stdin.take() {
             use std::io::Write;
-            stdin.write_all(&find_output.stdout)
-                .map_err(|e| Error::CommandFailed(format!("Failed to write to cpio stdin: {}", e)))?;
+            stdin.write_all(&find_output.stdout).map_err(|e| {
+                Error::CommandFailed(format!("Failed to write to cpio stdin: {}", e))
+            })?;
         }
 
-        let cpio_output = cpio_process.wait_with_output()
+        let cpio_output = cpio_process
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
 
         if !cpio_output.status.success() {

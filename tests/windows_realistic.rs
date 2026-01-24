@@ -403,7 +403,10 @@ fn create_realistic_windows_image(
         "/Windows/System32/config/SECURITY",
         "SECURITY Registry Hive\n",
     )?;
-    g.write("/Windows/System32/config/DEFAULT", "DEFAULT Registry Hive\n")?;
+    g.write(
+        "/Windows/System32/config/DEFAULT",
+        "DEFAULT Registry Hive\n",
+    )?;
     println!("  ✓ Registry hives created");
 
     // Step 7: Create boot configuration
@@ -418,10 +421,7 @@ fn create_realistic_windows_image(
 
     // Step 8: Create Windows system files
     println!("\n[8/16] Creating Windows system files...");
-    g.write(
-        "/Windows/System32/drivers/etc/hosts",
-        &make_hosts_file(),
-    )?;
+    g.write("/Windows/System32/drivers/etc/hosts", &make_hosts_file())?;
     g.write(
         "/Windows/Panther/unattend.xml",
         &make_unattend_xml(version_meta),
@@ -513,7 +513,10 @@ fn create_realistic_windows_image(
 
     // Test stat()
     let stat = g.stat("/Windows/System32/version.txt")?;
-    println!("  ✓ stat(/Windows/System32/version.txt): size={} bytes", stat.size);
+    println!(
+        "  ✓ stat(/Windows/System32/version.txt): size={} bytes",
+        stat.size
+    );
 
     // Test rm()
     g.write("/Temp/test-phase3.txt", "test content")?;

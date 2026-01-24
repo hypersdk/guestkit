@@ -201,10 +201,7 @@ impl Guestfs {
         }
 
         // Check SSL keys
-        let key_paths = vec![
-            "/etc/ssl/private",
-            "/etc/pki/tls/private",
-        ];
+        let key_paths = vec!["/etc/ssl/private", "/etc/pki/tls/private"];
 
         for key_dir in key_paths {
             if self.exists(key_dir)? {

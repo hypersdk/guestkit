@@ -36,7 +36,10 @@ impl Guestfs {
         let backup_path = format!("{}.bak", path);
 
         if !self.exists(&backup_path)? {
-            return Err(Error::NotFound(format!("Backup file not found: {}", backup_path)));
+            return Err(Error::NotFound(format!(
+                "Backup file not found: {}",
+                backup_path
+            )));
         }
 
         self.cp_a(&backup_path, path)
@@ -71,11 +74,19 @@ impl Guestfs {
     /// Create incremental backup
     ///
     /// Additional functionality for incremental backups
-    pub fn backup_incremental(&mut self, directory: &str, backup_file: &str, since: i64) -> Result<()> {
+    pub fn backup_incremental(
+        &mut self,
+        directory: &str,
+        backup_file: &str,
+        since: i64,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: backup_incremental {} {} {}", directory, backup_file, since);
+            eprintln!(
+                "guestfs: backup_incremental {} {} {}",
+                directory, backup_file, since
+            );
         }
 
         // Find files modified since timestamp
@@ -107,7 +118,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: snapshot_directory {} {}", directory, snapshot_name);
+            eprintln!(
+                "guestfs: snapshot_directory {} {}",
+                directory, snapshot_name
+            );
         }
 
         // Copy entire directory tree
@@ -148,11 +162,10 @@ impl Guestfs {
 
         let mut removed = 0;
         for backup in backups {
-            if old_backups.contains(&backup) {
-                if self.rm(&backup).is_ok() {
+            if old_backups.contains(&backup)
+                && self.rm(&backup).is_ok() {
                     removed += 1;
                 }
-            }
         }
 
         Ok(removed)
@@ -180,7 +193,7 @@ impl Guestfs {
             return Ok(true);
         }
 
-        Ok(self.is_file(backup_file)?)
+        self.is_file(backup_file)
     }
 }
 

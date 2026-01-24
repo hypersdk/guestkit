@@ -14,26 +14,26 @@ fn main() -> anyhow::Result<()> {
         Path::new("/path/to/source.vmdk"),
         Path::new("/path/to/output.qcow2"),
         "qcow2",
-        true,  // compress
-        true,  // flatten
+        true, // compress
+        true, // flatten
     )?;
 
     if result.success {
         println!("✓ Conversion successful!");
-        println!("  Source:  {} ({})",
+        println!(
+            "  Source:  {} ({})",
             result.source_path.display(),
             result.source_format.as_str()
         );
-        println!("  Output:  {} ({})",
+        println!(
+            "  Output:  {} ({})",
             result.output_path.display(),
             result.output_format.as_str()
         );
         println!("  Size:    {} bytes", result.output_size);
         println!("  Time:    {:.2}s", result.duration_secs);
     } else {
-        eprintln!("✗ Conversion failed: {}",
-            result.error.unwrap_or_default()
-        );
+        eprintln!("✗ Conversion failed: {}", result.error.unwrap_or_default());
         std::process::exit(1);
     }
 

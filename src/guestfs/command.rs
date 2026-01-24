@@ -51,22 +51,27 @@ impl Guestfs {
         }
 
         // Get root mount point
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))?;
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })?;
 
         // Execute command using chroot
         let output = Command::new("chroot")
             .arg(root_mountpoint)
             .args(arguments)
             .output()
-            .map_err(|e| Error::CommandFailed(format!(
-                "Failed to execute command via chroot: {}. Requires sudo/root.", e
-            )))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!(
+                    "Failed to execute command via chroot: {}. Requires sudo/root.",
+                    e
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

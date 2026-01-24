@@ -48,10 +48,12 @@ impl Guestfs {
         let output = Command::new("vgscan")
             .arg("--mknodes")
             .output()
-            .map_err(|e| Error::CommandFailed(format!(
-                "Failed to run vgscan: {}. Is lvm2 installed? Requires sudo/root.",
-                e
-            )))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!(
+                    "Failed to run vgscan: {}. Is lvm2 installed? Requires sudo/root.",
+                    e
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -120,7 +122,10 @@ impl Guestfs {
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(Error::CommandFailed(format!("vgchange {} failed: {}", vg, stderr)));
+                return Err(Error::CommandFailed(format!(
+                    "vgchange {} failed: {}",
+                    vg, stderr
+                )));
             }
 
             if self.verbose {
@@ -152,7 +157,7 @@ impl Guestfs {
         if let Some(drive) = self.drives.first() {
             if drive.readonly {
                 return Err(Error::PermissionDenied(
-                    "Cannot create LV on read-only drive".to_string()
+                    "Cannot create LV on read-only drive".to_string(),
                 ));
             }
         }
@@ -228,7 +233,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LVS command failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LVS command failed: {}",
+                stderr
+            )));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);

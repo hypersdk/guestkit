@@ -16,7 +16,7 @@ impl Guestfs {
         // Return list of drives added
         let mut devices = Vec::new();
         for (i, _) in self.drives.iter().enumerate() {
-            devices.push(format!("/dev/sd{}", ('a' as u8 + i as u8) as char));
+            devices.push(format!("/dev/sd{}", (b'a' + i as u8) as char));
         }
 
         Ok(devices)
@@ -55,7 +55,9 @@ impl Guestfs {
         for partition in &partitions {
             let device_name = format!("/dev/sda{}", partition.number);
 
-            let reader = self.reader.as_mut()
+            let reader = self
+                .reader
+                .as_mut()
                 .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
             if let Ok(fs) = FileSystem::detect(reader, partition) {
                 let fs_type = match fs.fs_type() {
@@ -85,14 +87,17 @@ impl Guestfs {
         // Clone partition to avoid borrow checker issues
         let partition = {
             let partition_table = self.partition_table()?;
-            partition_table.partitions()
+            partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
         };
 
-        let reader = self.reader.as_mut()
+        let reader = self
+            .reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
@@ -119,14 +124,17 @@ impl Guestfs {
         // Clone partition to avoid borrow checker issues
         let partition = {
             let partition_table = self.partition_table()?;
-            partition_table.partitions()
+            partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
         };
 
-        let reader = self.reader.as_mut()
+        let reader = self
+            .reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
@@ -146,14 +154,17 @@ impl Guestfs {
         // Clone partition to avoid borrow checker issues
         let partition = {
             let partition_table = self.partition_table()?;
-            partition_table.partitions()
+            partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
         };
 
-        let reader = self.reader.as_mut()
+        let reader = self
+            .reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
@@ -170,7 +181,9 @@ impl Guestfs {
 
         if device.contains("sda") && !device.contains("sda") {
             // Whole device
-            let reader = self.reader.as_ref()
+            let reader = self
+                .reader
+                .as_ref()
                 .ok_or_else(|| Error::InvalidState("Not launched".to_string()))?;
             Ok(reader.size() as i64)
         } else {
@@ -178,7 +191,8 @@ impl Guestfs {
             let partition_num = self.parse_device_name(device)?;
             let partition_table = self.partition_table()?;
 
-            let partition = partition_table.partitions()
+            let partition = partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?;
@@ -220,11 +234,14 @@ impl Guestfs {
         // Extract the drive letter
         if let Some(rest) = canonical.strip_prefix("/dev/sd") {
             if let Some(letter) = rest.chars().next() {
-                return Ok((letter as u8 - 'a' as u8) as i32);
+                return Ok((letter as u8 - b'a') as i32);
             }
         }
 
-        Err(Error::InvalidFormat(format!("Cannot parse device: {}", device)))
+        Err(Error::InvalidFormat(format!(
+            "Cannot parse device: {}",
+            device
+        )))
     }
 
     /// Check if device name refers to whole device (not partition)
@@ -235,7 +252,11 @@ impl Guestfs {
         // Partitions have numbers (e.g., /dev/sda1)
         let canonical = self.canonical_device_name(device)?;
 
-        Ok(!canonical.chars().last().map(|c| c.is_numeric()).unwrap_or(false))
+        Ok(!canonical
+            .chars()
+            .last()
+            .map(|c| c.is_numeric())
+            .unwrap_or(false))
     }
 }
 

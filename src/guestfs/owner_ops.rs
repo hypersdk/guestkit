@@ -41,8 +41,7 @@ impl Guestfs {
             Ok(())
         }
 
-        change_ownership(&host_path, owner as u32, group as u32)
-            .map_err(|e| Error::Io(e))?;
+        change_ownership(&host_path, owner as u32, group as u32).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -82,8 +81,7 @@ impl Guestfs {
             Ok(())
         }
 
-        change_permissions(&host_path, mode as u32)
-            .map_err(|e| Error::Io(e))?;
+        change_permissions(&host_path, mode as u32).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -130,11 +128,20 @@ impl Guestfs {
     /// Set special permissions (setuid, setgid, sticky)
     ///
     /// Additional functionality for special bits
-    pub fn set_special_perms(&mut self, path: &str, setuid: bool, setgid: bool, sticky: bool) -> Result<()> {
+    pub fn set_special_perms(
+        &mut self,
+        path: &str,
+        setuid: bool,
+        setgid: bool,
+        sticky: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: set_special_perms {} {} {} {}", path, setuid, setgid, sticky);
+            eprintln!(
+                "guestfs: set_special_perms {} {} {} {}",
+                path, setuid, setgid, sticky
+            );
         }
 
         let host_path = self.resolve_guest_path(path)?;
@@ -143,8 +150,7 @@ impl Guestfs {
         {
             use std::os::unix::fs::PermissionsExt;
 
-            let metadata = std::fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = std::fs::metadata(&host_path).map_err(Error::Io)?;
 
             let mut mode = metadata.permissions().mode();
 
@@ -163,13 +169,14 @@ impl Guestfs {
             }
 
             let permissions = std::fs::Permissions::from_mode(mode);
-            std::fs::set_permissions(&host_path, permissions)
-                .map_err(|e| Error::Io(e))?;
+            std::fs::set_permissions(&host_path, permissions).map_err(Error::Io)?;
         }
 
         #[cfg(not(unix))]
         {
-            return Err(Error::Unsupported("Special permissions not supported on this platform".to_string()));
+            return Err(Error::Unsupported(
+                "Special permissions not supported on this platform".to_string(),
+            ));
         }
 
         Ok(())

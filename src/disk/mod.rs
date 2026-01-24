@@ -4,12 +4,12 @@
 //! This module provides pure Rust implementations for reading disk images,
 //! parsing partition tables, and detecting filesystems.
 
-pub mod reader;
-pub mod partition;
 pub mod filesystem;
 pub mod nbd;
+pub mod partition;
+pub mod reader;
 
-pub use reader::DiskReader;
-pub use partition::{Partition, PartitionTable, PartitionType};
 pub use filesystem::{FileSystem, FileSystemType};
 pub use nbd::NbdDevice;
+pub use partition::{Partition, PartitionTable, PartitionType};
+pub use reader::DiskReader;

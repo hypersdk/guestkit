@@ -109,10 +109,7 @@ fn remove_unique_ids(g: &mut Guestfs, ostype: &str) -> Result<(), Box<dyn std::e
 
             // Remove SSH host keys (will be regenerated on first boot)
             println!("  Removing SSH host keys");
-            let ssh_key_patterns = vec![
-                "/etc/ssh/ssh_host_*_key",
-                "/etc/ssh/ssh_host_*_key.pub",
-            ];
+            let ssh_key_patterns = vec!["/etc/ssh/ssh_host_*_key", "/etc/ssh/ssh_host_*_key.pub"];
 
             for pattern in ssh_key_patterns {
                 if let Ok(keys) = g.glob_expand(pattern) {

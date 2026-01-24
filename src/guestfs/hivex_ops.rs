@@ -21,12 +21,14 @@ impl Guestfs {
 
         // Verify the file exists and is a valid hive
         if !std::path::Path::new(&host_path).exists() {
-            return Err(Error::NotFound(format!("Hive file not found: {}", filename)));
+            return Err(Error::NotFound(format!(
+                "Hive file not found: {}",
+                filename
+            )));
         }
 
         // Return a handle (simplified - just use inode number or hash)
-        let metadata = std::fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = std::fs::metadata(&host_path).map_err(Error::Io)?;
 
         // Use inode as handle
         #[cfg(unix)]
@@ -213,8 +215,14 @@ impl Guestfs {
     /// Set node value
     ///
     /// GuestFS API: hivex_node_set_value()
-    pub fn hivex_node_set_value(&mut self, _handle: i64, _node: i64,
-                                 key: &str, _t: i64, _val: &[u8]) -> Result<()> {
+    pub fn hivex_node_set_value(
+        &mut self,
+        _handle: i64,
+        _node: i64,
+        key: &str,
+        _t: i64,
+        _val: &[u8],
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {

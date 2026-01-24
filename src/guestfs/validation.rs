@@ -11,8 +11,7 @@ impl Validator {
     /// Only allows known safe filesystem types
     pub fn validate_fstype(fstype: &str) -> Result<()> {
         const ALLOWED_FS: &[&str] = &[
-            "ext2", "ext3", "ext4", "xfs", "btrfs",
-            "ntfs", "vfat", "fat", "swap", "f2fs",
+            "ext2", "ext3", "ext4", "xfs", "btrfs", "ntfs", "vfat", "fat", "swap", "f2fs",
             "reiserfs", "jfs", "minix", "hfs", "hfsplus",
         ];
 
@@ -29,7 +28,7 @@ impl Validator {
     ///
     /// Ensures mode is within valid range (0-07777)
     pub fn validate_mode(mode: i32) -> Result<()> {
-        if mode < 0 || mode > 0o7777 {
+        if !(0..=0o7777).contains(&mode) {
             return Err(Error::InvalidFormat(format!(
                 "Invalid mode: {:o} (must be 0-07777)",
                 mode
@@ -63,7 +62,7 @@ impl Validator {
     pub fn validate_partition_number(num: u32) -> Result<()> {
         if num == 0 {
             return Err(Error::InvalidFormat(
-                "Partition number cannot be 0".to_string()
+                "Partition number cannot be 0".to_string(),
             ));
         }
         if num > 128 {
@@ -80,8 +79,7 @@ impl Validator {
     /// Only allows known safe archive formats
     pub fn validate_archive_format(format: &str) -> Result<()> {
         const ALLOWED_FORMATS: &[&str] = &[
-            "tar", "tgz", "tbz", "txz", "zip",
-            "cpio", "newc", "crc", "odc",
+            "tar", "tgz", "tbz", "txz", "zip", "cpio", "newc", "crc", "odc",
         ];
 
         if !ALLOWED_FORMATS.contains(&format) {
@@ -98,7 +96,9 @@ impl Validator {
         if s.len() > max_len {
             return Err(Error::InvalidFormat(format!(
                 "{} exceeds maximum length {} (got {})",
-                field_name, max_len, s.len()
+                field_name,
+                max_len,
+                s.len()
             )));
         }
         Ok(())

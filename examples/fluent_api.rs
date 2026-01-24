@@ -4,7 +4,7 @@
 //! This example shows how to use the new builder patterns, type-safe enums,
 //! and fluent interfaces to work with disk images.
 
-use guestkit::guestfs::{Guestfs, FilesystemType, PartitionTableType};
+use guestkit::guestfs::{FilesystemType, Guestfs, PartitionTableType};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -162,23 +162,18 @@ fn full_ergonomic_workflow() -> Result<(), Box<dyn Error>> {
     guest.part_add("/dev/sda", "p", 411648, -34)?;
 
     // Create VFAT filesystem on EFI partition
-    guest.mkfs("/dev/sda1")
-        .vfat()
-        .label("EFI")
-        .create()?;
+    guest.mkfs("/dev/sda1").vfat().label("EFI").create()?;
 
     // Create BTRFS filesystem on root
-    guest.mkfs("/dev/sda2")
-        .btrfs()
-        .label("rootfs")
-        .create()?;
+    guest.mkfs("/dev/sda2").btrfs().label("rootfs").create()?;
 
     // Create BTRFS subvolumes (hypothetical, requires BTRFS support)
     // guest.btrfs_subvolume_create("/", "@")?;
     // guest.btrfs_subvolume_create("/", "@home")?;
 
     // Mount with subvolume
-    guest.mount_with("/dev/sda2", "/")
+    guest
+        .mount_with("/dev/sda2", "/")
         .subvolume("@")
         .perform()?;
 
@@ -191,8 +186,10 @@ fn full_ergonomic_workflow() -> Result<(), Box<dyn Error>> {
 
     // Write configuration files
     guest.write("/etc/hostname", b"ergonomic-guest\n")?;
-    guest.write("/etc/fstab",
-        b"/dev/sda2 / btrfs subvol=@,compress=zstd 0 0\n")?;
+    guest.write(
+        "/etc/fstab",
+        b"/dev/sda2 / btrfs subvol=@,compress=zstd 0 0\n",
+    )?;
 
     // Sync and cleanup
     guest.sync()?;

@@ -109,7 +109,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: btrfs_subvolume_snapshot {} {} {}", source, dest, ro);
+            eprintln!(
+                "guestfs: btrfs_subvolume_snapshot {} {} {}",
+                source, dest, ro
+            );
         }
 
         let host_source = self.resolve_guest_path(source)?;
@@ -124,7 +127,8 @@ impl Guestfs {
 
         cmd.arg(&host_source).arg(&host_dest);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute btrfs: {}", e)))?;
 
         if !output.status.success() {
@@ -206,7 +210,9 @@ impl Guestfs {
             }
         }
 
-        Err(Error::NotFound("Could not parse default subvolume ID".to_string()))
+        Err(Error::NotFound(
+            "Could not parse default subvolume ID".to_string(),
+        ))
     }
 
     /// Show Btrfs subvolume info
@@ -309,13 +315,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("btrfs")
             .arg("filesystem")

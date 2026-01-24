@@ -41,10 +41,7 @@ impl Guestfs {
         }
 
         // Remove SSH host keys
-        let key_patterns = vec![
-            "/etc/ssh/ssh_host_*_key",
-            "/etc/ssh/ssh_host_*_key.pub",
-        ];
+        let key_patterns = vec!["/etc/ssh/ssh_host_*_key", "/etc/ssh/ssh_host_*_key.pub"];
 
         for pattern in key_patterns {
             if let Ok(files) = self.glob_expand(pattern) {
@@ -102,10 +99,7 @@ impl Guestfs {
         }
 
         // Remove systemd machine ID
-        let machine_id_paths = vec![
-            "/etc/machine-id",
-            "/var/lib/dbus/machine-id",
-        ];
+        let machine_id_paths = vec!["/etc/machine-id", "/var/lib/dbus/machine-id"];
 
         for path in machine_id_paths {
             if self.exists(path).unwrap_or(false) {
@@ -128,10 +122,7 @@ impl Guestfs {
         }
 
         // Remove log files
-        let log_patterns = vec![
-            "/var/log/*.log",
-            "/var/log/*/*.log",
-        ];
+        let log_patterns = vec!["/var/log/*.log", "/var/log/*/*.log"];
 
         for pattern in log_patterns {
             if let Ok(files) = self.glob_expand(pattern) {
@@ -186,11 +177,7 @@ impl Guestfs {
         }
 
         // Remove package manager caches
-        let cache_dirs = vec![
-            "/var/cache/yum",
-            "/var/cache/dnf",
-            "/var/cache/apt",
-        ];
+        let cache_dirs = vec!["/var/cache/yum", "/var/cache/dnf", "/var/cache/apt"];
 
         for dir in cache_dirs {
             if self.exists(dir).unwrap_or(false) {

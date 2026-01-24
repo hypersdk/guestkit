@@ -4,7 +4,6 @@
 pub mod html;
 pub mod markdown;
 
-
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
 use std::path::Path;

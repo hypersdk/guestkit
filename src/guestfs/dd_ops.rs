@@ -41,11 +41,21 @@ impl Guestfs {
     /// Copy with count and skip
     ///
     /// Additional functionality for dd operations
-    pub fn dd_opts(&mut self, src: &str, dest: &str, count: Option<i64>, skip: Option<i64>, seek: Option<i64>) -> Result<()> {
+    pub fn dd_opts(
+        &mut self,
+        src: &str,
+        dest: &str,
+        count: Option<i64>,
+        skip: Option<i64>,
+        seek: Option<i64>,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: dd_opts {} {} {:?} {:?} {:?}", src, dest, count, skip, seek);
+            eprintln!(
+                "guestfs: dd_opts {} {} {:?} {:?} {:?}",
+                src, dest, count, skip, seek
+            );
         }
 
         let src_path = self.resolve_guest_path(src)?;
@@ -68,7 +78,8 @@ impl Guestfs {
             cmd.arg(format!("seek={}", s));
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute dd: {}", e)))?;
 
         if !output.status.success() {
@@ -93,11 +104,13 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
-        let output = Command::new("dd")
+        let _output = Command::new("dd")
             .arg("if=/dev/zero")
             .arg(format!("of={}", nbd_device_path.display()))
             .arg("bs=1M")
@@ -130,7 +143,7 @@ impl Guestfs {
         // Create a large file filled with zeros until disk is full
         let temp_file = host_path.join("guestkit_zero_temp");
 
-        let output = Command::new("dd")
+        let _output = Command::new("dd")
             .arg("if=/dev/zero")
             .arg(format!("of={}", temp_file.display()))
             .arg("bs=1M")

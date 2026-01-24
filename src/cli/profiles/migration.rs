@@ -17,31 +17,29 @@ impl InspectionProfile for MigrationProfile {
     }
 
     fn inspect(&self, g: &mut Guestfs, root: &str) -> Result<ProfileReport> {
-        let mut sections = Vec::new();
-
-        // Section 1: Operating System Details
-        sections.push(self.analyze_os(g, root));
-
-        // Section 2: Package Inventory
-        sections.push(self.analyze_packages(g, root));
-
-        // Section 3: Storage Layout
-        sections.push(self.analyze_storage(g, root));
-
-        // Section 4: Network Configuration
-        sections.push(self.analyze_network(g, root));
-
-        // Section 5: Custom Services & Applications
-        sections.push(self.analyze_custom_services(g, root));
-
-        // Section 6: Data Directories
-        sections.push(self.analyze_data_directories(g, root));
+        let sections = vec![
+            // Section 1: Operating System Details
+            self.analyze_os(g, root),
+            // Section 2: Package Inventory
+            self.analyze_packages(g, root),
+            // Section 3: Storage Layout
+            self.analyze_storage(g, root),
+            // Section 4: Network Configuration
+            self.analyze_network(g, root),
+            // Section 5: Custom Services & Applications
+            self.analyze_custom_services(g, root),
+            // Section 6: Data Directories
+            self.analyze_data_directories(g, root),
+        ];
 
         Ok(ProfileReport {
             profile_name: "Migration Planning".to_string(),
             sections,
             overall_risk: None,
-            summary: Some("Review all sections to plan migration strategy and identify dependencies.".to_string()),
+            summary: Some(
+                "Review all sections to plan migration strategy and identify dependencies."
+                    .to_string(),
+            ),
         })
     }
 }
@@ -71,7 +69,10 @@ impl MigrationProfile {
         }
 
         // Version
-        if let (Ok(major), Ok(minor)) = (g.inspect_get_major_version(root), g.inspect_get_minor_version(root)) {
+        if let (Ok(major), Ok(minor)) = (
+            g.inspect_get_major_version(root),
+            g.inspect_get_minor_version(root),
+        ) {
             findings.push(Finding {
                 item: "Version".to_string(),
                 status: FindingStatus::Info,
@@ -152,7 +153,11 @@ impl MigrationProfile {
                 findings.push(Finding {
                     item: "Installed Kernels".to_string(),
                     status: FindingStatus::Info,
-                    message: format!("{} kernel(s): {}", kernel_files.len(), kernel_files.join(", ")),
+                    message: format!(
+                        "{} kernel(s): {}",
+                        kernel_files.len(),
+                        kernel_files.join(", ")
+                    ),
                     risk_level: None,
                 });
             }

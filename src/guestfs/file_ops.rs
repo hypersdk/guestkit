@@ -5,8 +5,8 @@
 //! file operations using standard Rust file I/O.
 
 use crate::core::{Error, Result};
-use crate::guestfs::Guestfs;
 use crate::guestfs::security_utils::PathValidator;
+use crate::guestfs::Guestfs;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -14,13 +14,14 @@ use std::path::{Path, PathBuf};
 impl Guestfs {
     /// Find the root mountpoint (internal helper)
     fn find_root_mountpoint(&self) -> Result<&str> {
-        self.mounted.get("/dev/sda1")
+        self.mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.get("/dev/vda1"))
             .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState(
-                "No filesystem mounted. Call mount_ro() first.".to_string()
-            ))
+            .ok_or_else(|| {
+                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
+            })
             .map(|s| s.as_str())
     }
 
@@ -44,21 +45,19 @@ impl Guestfs {
 
         // 4. Canonicalize path to resolve symlinks and get absolute path
         // Note: canonicalize() requires the path to exist
-        let canonical = candidate_path.canonicalize()
-            .map_err(|e| {
-                // If path doesn't exist, return NotFound instead of generic error
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    Error::NotFound(format!("Path does not exist: {}", guest_path))
-                } else {
-                    Error::Io(e)
-                }
-            })?;
+        let canonical = candidate_path.canonicalize().map_err(|e| {
+            // If path doesn't exist, return NotFound instead of generic error
+            if e.kind() == std::io::ErrorKind::NotFound {
+                Error::NotFound(format!("Path does not exist: {}", guest_path))
+            } else {
+                Error::Io(e)
+            }
+        })?;
 
         // 5. Get canonical root for security check
-        let root_canonical = PathBuf::from(root_mountpoint).canonicalize()
-            .map_err(|e| Error::InvalidState(format!(
-                "Failed to canonicalize mount root: {}", e
-            )))?;
+        let root_canonical = PathBuf::from(root_mountpoint).canonicalize().map_err(|e| {
+            Error::InvalidState(format!("Failed to canonicalize mount root: {}", e))
+        })?;
 
         // 6. Security check: ensure resolved path is within guest root
         if !canonical.starts_with(&root_canonical) {
@@ -125,9 +124,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        fs::read(&host_path).map_err(|e| {
-            Error::NotFound(format!("Failed to read {}: {}", path, e))
-        })
+        fs::read(&host_path).map_err(|e| Error::NotFound(format!("Failed to read {}: {}", path, e)))
     }
 
     /// Read file as text
@@ -135,8 +132,7 @@ impl Guestfs {
     /// GuestFS API: cat()
     pub fn cat(&mut self, path: &str) -> Result<String> {
         let bytes = self.read_file(path)?;
-        String::from_utf8(bytes)
-            .map_err(|e| Error::InvalidFormat(format!("Not UTF-8: {}", e)))
+        String::from_utf8(bytes).map_err(|e| Error::InvalidFormat(format!("Not UTF-8: {}", e)))
     }
 
     /// Read file as lines
@@ -158,9 +154,8 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        fs::write(&host_path, content).map_err(|e| {
-            Error::CommandFailed(format!("Failed to write {}: {}", path, e))
-        })
+        fs::write(&host_path, content)
+            .map_err(|e| Error::CommandFailed(format!("Failed to write {}: {}", path, e)))
     }
 
     /// Create directory
@@ -211,11 +206,9 @@ impl Guestfs {
         })?;
 
         let mut names = Vec::new();
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(name) = entry.file_name().to_str() {
-                    names.push(name.to_string());
-                }
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                names.push(name.to_string());
             }
         }
 
@@ -263,9 +256,8 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(file)?;
-        let metadata = fs::metadata(&host_path).map_err(|e| {
-            Error::NotFound(format!("Failed to get size of {}: {}", file, e))
-        })?;
+        let metadata = fs::metadata(&host_path)
+            .map_err(|e| Error::NotFound(format!("Failed to get size of {}: {}", file, e)))?;
 
         Ok(metadata.len() as i64)
     }
@@ -300,17 +292,14 @@ impl Guestfs {
 
         // Create file if it doesn't exist
         if !host_path.exists() {
-            fs::File::create(&host_path).map_err(|e| {
-                Error::CommandFailed(format!("Failed to touch {}: {}", path, e))
-            })?;
+            fs::File::create(&host_path)
+                .map_err(|e| Error::CommandFailed(format!("Failed to touch {}: {}", path, e)))?;
         } else {
             // Update timestamp - use filetime crate or just write/truncate
             let file = fs::OpenOptions::new()
                 .write(true)
                 .open(&host_path)
-                .map_err(|e| {
-                    Error::CommandFailed(format!("Failed to touch {}: {}", path, e))
-                })?;
+                .map_err(|e| Error::CommandFailed(format!("Failed to touch {}: {}", path, e)))?;
             // Just opening for write updates the timestamp
             drop(file);
         }
@@ -334,15 +323,14 @@ impl Guestfs {
         {
             use std::os::unix::fs::PermissionsExt;
             let permissions = fs::Permissions::from_mode(mode as u32);
-            fs::set_permissions(&host_path, permissions).map_err(|e| {
-                Error::CommandFailed(format!("Failed to chmod {}: {}", path, e))
-            })
+            fs::set_permissions(&host_path, permissions)
+                .map_err(|e| Error::CommandFailed(format!("Failed to chmod {}: {}", path, e)))
         }
 
         #[cfg(not(unix))]
         {
             Err(Error::Unsupported(
-                "Chmod is only supported on Unix systems".to_string()
+                "Chmod is only supported on Unix systems".to_string(),
             ))
         }
     }
@@ -389,12 +377,13 @@ impl Guestfs {
         let host_path = self.resolve_guest_path(path)?;
 
         // Canonicalize to resolve symlinks and relative paths
-        let canonical = fs::canonicalize(&host_path).map_err(|e| {
-            Error::NotFound(format!("Failed to resolve path {}: {}", path, e))
-        })?;
+        let canonical = fs::canonicalize(&host_path)
+            .map_err(|e| Error::NotFound(format!("Failed to resolve path {}: {}", path, e)))?;
 
         // Convert back to guest path by stripping the mount root prefix
-        let root_mountpoint = self.mounted.get("/dev/sda1")
+        let root_mountpoint = self
+            .mounted
+            .get("/dev/sda1")
             .or_else(|| self.mounted.get("/dev/sda2"))
             .or_else(|| self.mounted.values().next())
             .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
@@ -458,7 +447,8 @@ impl Guestfs {
         if !output.status.success() {
             return Err(Error::CommandFailed(format!(
                 "Failed to copy {} to {}: {}",
-                src, dest,
+                src,
+                dest,
                 String::from_utf8_lossy(&output.stderr)
             )));
         }
@@ -490,7 +480,8 @@ impl Guestfs {
         if !output.status.success() {
             return Err(Error::CommandFailed(format!(
                 "Failed to copy {} to {}: {}",
-                src, dest,
+                src,
+                dest,
                 String::from_utf8_lossy(&output.stderr)
             )));
         }
@@ -511,9 +502,8 @@ impl Guestfs {
         let src_path = self.resolve_guest_path(src)?;
         let dest_path = self.resolve_guest_path(dest)?;
 
-        fs::rename(&src_path, &dest_path).map_err(|e| {
-            Error::CommandFailed(format!("Failed to move {} to {}: {}", src, dest, e))
-        })
+        fs::rename(&src_path, &dest_path)
+            .map_err(|e| Error::CommandFailed(format!("Failed to move {} to {}: {}", src, dest, e)))
     }
 
     /// Download file from guest to host
@@ -529,8 +519,11 @@ impl Guestfs {
         let guest_path = self.resolve_guest_path(remotefilename)?;
         let host_path = Path::new(filename);
 
-        fs::copy(&guest_path, &host_path).map_err(|e| {
-            Error::CommandFailed(format!("Failed to download {} to {}: {}", remotefilename, filename, e))
+        fs::copy(&guest_path, host_path).map_err(|e| {
+            Error::CommandFailed(format!(
+                "Failed to download {} to {}: {}",
+                remotefilename, filename, e
+            ))
         })?;
 
         Ok(())
@@ -549,8 +542,11 @@ impl Guestfs {
         let host_path = Path::new(filename);
         let guest_path = self.resolve_guest_path(remotefilename)?;
 
-        fs::copy(&host_path, &guest_path).map_err(|e| {
-            Error::CommandFailed(format!("Failed to upload {} to {}: {}", filename, remotefilename, e))
+        fs::copy(host_path, &guest_path).map_err(|e| {
+            Error::CommandFailed(format!(
+                "Failed to upload {} to {}: {}",
+                filename, remotefilename, e
+            ))
         })?;
 
         Ok(())
@@ -572,7 +568,9 @@ impl Guestfs {
             .create(true)
             .append(true)
             .open(&host_path)
-            .map_err(|e| Error::CommandFailed(format!("Failed to open {} for append: {}", path, e)))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to open {} for append: {}", path, e))
+            })?;
 
         file.write_all(content)
             .map_err(|e| Error::CommandFailed(format!("Failed to append to {}: {}", path, e)))?;
@@ -781,11 +779,13 @@ impl Guestfs {
         }
 
         if host_path.is_dir() {
-            return Err(Error::InvalidOperation(format!("Cannot rm directory (use rmdir or rm_rf): {}", path)));
+            return Err(Error::InvalidOperation(format!(
+                "Cannot rm directory (use rmdir or rm_rf): {}",
+                path
+            )));
         }
 
-        fs::remove_file(&host_path)
-            .map_err(|e| Error::Io(e))
+        fs::remove_file(&host_path).map_err(Error::Io)
     }
 
     /// Remove a file or directory recursively (force)
@@ -806,11 +806,9 @@ impl Guestfs {
         }
 
         if host_path.is_dir() {
-            fs::remove_dir_all(&host_path)
-                .map_err(|e| Error::Io(e))
+            fs::remove_dir_all(&host_path).map_err(Error::Io)
         } else {
-            fs::remove_file(&host_path)
-                .map_err(|e| Error::Io(e))
+            fs::remove_file(&host_path).map_err(Error::Io)
         }
     }
 }

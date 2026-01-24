@@ -62,7 +62,6 @@ impl Guestfs {
         // Get current umask by setting and restoring
         #[cfg(unix)]
         {
-            
             // This is a simplified implementation
             Ok(0o022)
         }
@@ -90,8 +89,7 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = std::fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = std::fs::metadata(&host_path).map_err(Error::Io)?;
 
             let rdev = metadata.rdev();
             let major = (rdev >> 8) as i64;

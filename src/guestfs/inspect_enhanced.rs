@@ -90,7 +90,10 @@ impl Guestfs {
         // 3. Check netplan (newer Ubuntu)
         if self.is_dir("/etc/netplan").unwrap_or(false) {
             if let Ok(files) = self.ls("/etc/netplan") {
-                for file in files.iter().filter(|f| f.ends_with(".yaml") || f.ends_with(".yml")) {
+                for file in files
+                    .iter()
+                    .filter(|f| f.ends_with(".yaml") || f.ends_with(".yml"))
+                {
                     let path = format!("/etc/netplan/{}", file);
                     if let Ok(_content) = self.cat(&path) {
                         // Basic netplan detection
@@ -141,7 +144,10 @@ impl Guestfs {
 
     fn parse_rhel_interface(&self, content: &str, filename: &str) -> Option<NetworkInterface> {
         let mut iface = NetworkInterface {
-            name: filename.strip_prefix("ifcfg-").unwrap_or(filename).to_string(),
+            name: filename
+                .strip_prefix("ifcfg-")
+                .unwrap_or(filename)
+                .to_string(),
             ip_address: Vec::new(),
             mac_address: String::new(),
             dhcp: false,
@@ -294,7 +300,8 @@ impl Guestfs {
         } else if self.is_symlink("/etc/localtime").unwrap_or(false) {
             if let Ok(target) = self.readlink("/etc/localtime") {
                 // Extract timezone from path like /usr/share/zoneinfo/America/New_York
-                target.strip_prefix("/usr/share/zoneinfo/")
+                target
+                    .strip_prefix("/usr/share/zoneinfo/")
                     .unwrap_or(&target)
                     .to_string()
             } else {
@@ -327,7 +334,12 @@ impl Guestfs {
             let mut lang = "unknown".to_string();
             for line in content.lines() {
                 if line.starts_with("LANG=") {
-                    lang = line.split('=').nth(1).unwrap_or("unknown").trim_matches('"').to_string();
+                    lang = line
+                        .split('=')
+                        .nth(1)
+                        .unwrap_or("unknown")
+                        .trim_matches('"')
+                        .to_string();
                     break;
                 }
             }
@@ -443,7 +455,9 @@ impl Guestfs {
             runtimes.push("containerd".to_string());
         }
 
-        if self.exists("/usr/bin/crio").unwrap_or(false) || self.exists("/usr/bin/cri-o").unwrap_or(false) {
+        if self.exists("/usr/bin/crio").unwrap_or(false)
+            || self.exists("/usr/bin/cri-o").unwrap_or(false)
+        {
             runtimes.push("cri-o".to_string());
         }
 
@@ -470,10 +484,20 @@ impl Guestfs {
         }
 
         // Cron directories
-        for dir in &["/etc/cron.d", "/etc/cron.daily", "/etc/cron.hourly", "/etc/cron.weekly", "/etc/cron.monthly"] {
+        for dir in &[
+            "/etc/cron.d",
+            "/etc/cron.daily",
+            "/etc/cron.hourly",
+            "/etc/cron.weekly",
+            "/etc/cron.monthly",
+        ] {
             if let Ok(files) = self.ls(dir) {
                 for file in files {
-                    cron_jobs.push(format!("{}/{}", dir.strip_prefix("/etc/").unwrap_or(dir), file));
+                    cron_jobs.push(format!(
+                        "{}/{}",
+                        dir.strip_prefix("/etc/").unwrap_or(dir),
+                        file
+                    ));
                 }
             }
         }
@@ -491,7 +515,8 @@ impl Guestfs {
         }
 
         if let Ok(links) = self.ls("/etc/systemd/system/timers.target.wants") {
-            timers = links.into_iter()
+            timers = links
+                .into_iter()
                 .filter(|f| f.ends_with(".timer"))
                 .collect();
         }
@@ -511,7 +536,10 @@ impl Guestfs {
         // Common certificate locations
         for dir in &["/etc/ssl/certs", "/etc/pki/tls/certs", "/etc/pki/ca-trust"] {
             if let Ok(files) = self.ls(dir) {
-                for file in files.iter().filter(|f| f.ends_with(".crt") || f.ends_with(".pem")) {
+                for file in files
+                    .iter()
+                    .filter(|f| f.ends_with(".crt") || f.ends_with(".pem"))
+                {
                     certs.push(format!("{}/{}", dir, file));
                 }
             }
@@ -555,7 +583,8 @@ impl Guestfs {
 
         // VMware Tools
         if self.exists("/usr/bin/vmware-toolbox-cmd").unwrap_or(false)
-            || self.exists("/etc/vmware-tools").unwrap_or(false) {
+            || self.exists("/etc/vmware-tools").unwrap_or(false)
+        {
             tools.push("vmware-tools".to_string());
         }
 
@@ -566,7 +595,8 @@ impl Guestfs {
 
         // VirtualBox Guest Additions
         if self.exists("/usr/sbin/VBoxService").unwrap_or(false)
-            || self.exists("/opt/VBoxGuestAdditions").unwrap_or(false) {
+            || self.exists("/opt/VBoxGuestAdditions").unwrap_or(false)
+        {
             tools.push("virtualbox-guest-additions".to_string());
         }
 
@@ -601,9 +631,11 @@ impl Guestfs {
                     // Parse basic GRUB config
                     for line in content.lines() {
                         if line.contains("set timeout=") {
-                            config.timeout = line.split('=').nth(1).unwrap_or("unknown").to_string();
+                            config.timeout =
+                                line.split('=').nth(1).unwrap_or("unknown").to_string();
                         } else if line.contains("set default=") {
-                            config.default_entry = line.split('=').nth(1).unwrap_or("unknown").to_string();
+                            config.default_entry =
+                                line.split('=').nth(1).unwrap_or("unknown").to_string();
                         }
                     }
                 }
@@ -682,7 +714,9 @@ impl Guestfs {
         }
 
         // Get SOFTWARE registry hive path
-        let systemroot = self.inspect_get_windows_systemroot(root).unwrap_or_else(|_| "/Windows".to_string());
+        let systemroot = self
+            .inspect_get_windows_systemroot(root)
+            .unwrap_or_else(|_| "/Windows".to_string());
         let software_path = format!("{}/System32/config/SOFTWARE", systemroot);
 
         // Resolve to host path for direct file access
@@ -712,7 +746,9 @@ impl Guestfs {
             return Ok(services);
         }
 
-        let systemroot = self.inspect_get_windows_systemroot(root).unwrap_or_else(|_| "/Windows".to_string());
+        let systemroot = self
+            .inspect_get_windows_systemroot(root)
+            .unwrap_or_else(|_| "/Windows".to_string());
 
         // Parse from SYSTEM registry hive using nt_hive2
         let system_path = format!("{}/System32/config/SYSTEM", systemroot);
@@ -741,13 +777,17 @@ impl Guestfs {
             return Ok(adapters);
         }
 
-        let systemroot = self.inspect_get_windows_systemroot(root).unwrap_or_else(|_| "/Windows".to_string());
+        let systemroot = self
+            .inspect_get_windows_systemroot(root)
+            .unwrap_or_else(|_| "/Windows".to_string());
 
         // Parse SYSTEM registry for network configuration using nt_hive2
         let system_path = format!("{}/System32/config/SYSTEM", systemroot);
         let host_path = self.resolve_guest_path(&system_path)?;
 
-        if let Ok(net_adapters) = super::windows_registry::parse_network_adapters(host_path.as_path()) {
+        if let Ok(net_adapters) =
+            super::windows_registry::parse_network_adapters(host_path.as_path())
+        {
             for adapter in net_adapters {
                 adapters.push(WindowsNetworkAdapter {
                     name: adapter.name,
@@ -772,12 +812,16 @@ impl Guestfs {
             return Ok(updates);
         }
 
-        let systemroot = self.inspect_get_windows_systemroot(root).unwrap_or_else(|_| "/Windows".to_string());
+        let systemroot = self
+            .inspect_get_windows_systemroot(root)
+            .unwrap_or_else(|_| "/Windows".to_string());
 
         // Parse installed updates from registry
         let software_path = format!("{}/System32/config/SOFTWARE", systemroot);
         let software_host = self.resolve_guest_path(&software_path)?;
-        if let Ok(reg_updates) = super::windows_registry::parse_installed_updates(software_host.as_path()) {
+        if let Ok(reg_updates) =
+            super::windows_registry::parse_installed_updates(software_host.as_path())
+        {
             for upd in reg_updates {
                 updates.push(WindowsUpdate {
                     kb: upd.kb_number,
@@ -803,10 +847,15 @@ impl Guestfs {
         }
 
         // Check Windows Update DataStore
-        let update_db_path = format!("{}/SoftwareDistribution/DataStore/DataStore.edb", systemroot);
+        let update_db_path = format!(
+            "{}/SoftwareDistribution/DataStore/DataStore.edb",
+            systemroot
+        );
         let db_host = self.resolve_guest_path(&update_db_path).ok();
         if let Some(db_path) = db_host {
-            if let Ok(db_updates) = super::windows_registry::parse_update_datastore(db_path.as_path()) {
+            if let Ok(db_updates) =
+                super::windows_registry::parse_update_datastore(db_path.as_path())
+            {
                 for upd in db_updates {
                     updates.push(WindowsUpdate {
                         kb: upd.kb_number,
@@ -820,7 +869,9 @@ impl Guestfs {
 
         // Detect hotfixes from filesystem
         let systemroot_host = self.resolve_guest_path(&systemroot)?;
-        if let Ok(hotfixes) = super::windows_registry::detect_hotfixes_from_filesystem(systemroot_host.as_path()) {
+        if let Ok(hotfixes) =
+            super::windows_registry::detect_hotfixes_from_filesystem(systemroot_host.as_path())
+        {
             for upd in hotfixes {
                 updates.push(WindowsUpdate {
                     kb: upd.kb_number,
@@ -836,20 +887,29 @@ impl Guestfs {
     }
 
     /// Inspect Windows event logs
-    pub fn inspect_windows_events(&mut self, root: &str, log_name: &str, limit: usize) -> Result<Vec<WindowsEventLogEntry>> {
+    pub fn inspect_windows_events(
+        &mut self,
+        root: &str,
+        log_name: &str,
+        limit: usize,
+    ) -> Result<Vec<WindowsEventLogEntry>> {
         let mut events = Vec::new();
 
         if self.mount(root, "/").is_err() {
             return Ok(events);
         }
 
-        let systemroot = self.inspect_get_windows_systemroot(root).unwrap_or_else(|_| "/Windows".to_string());
+        let systemroot = self
+            .inspect_get_windows_systemroot(root)
+            .unwrap_or_else(|_| "/Windows".to_string());
         let event_log_path = format!("{}/System32/winevt/Logs/{}.evtx", systemroot, log_name);
 
         // Resolve to host path for direct file access
         if let Ok(evtx_host) = self.resolve_guest_path(&event_log_path) {
             // Parse EVTX file using evtx crate
-            if let Ok(parsed_events) = super::windows_registry::parse_evtx_file(evtx_host.as_path(), limit) {
+            if let Ok(parsed_events) =
+                super::windows_registry::parse_evtx_file(evtx_host.as_path(), limit)
+            {
                 for evt in parsed_events {
                     events.push(WindowsEventLogEntry {
                         event_id: evt.event_id as i32,
@@ -874,7 +934,12 @@ impl Guestfs {
 
         for line in content.lines() {
             if line.contains("\"DisplayName\"=") {
-                let name = line.split('=').nth(1).unwrap_or("").trim_matches('"').to_string();
+                let name = line
+                    .split('=')
+                    .nth(1)
+                    .unwrap_or("")
+                    .trim_matches('"')
+                    .to_string();
                 if !name.is_empty() {
                     applications.push(WindowsApplication {
                         name,
@@ -907,7 +972,12 @@ impl Guestfs {
                     "disabled" => "Disabled".to_string(),
                     _ => "Unknown".to_string(),
                 };
-                status = if start_val == "auto" { "Running" } else { "Stopped" }.to_string();
+                status = if start_val == "auto" {
+                    "Running"
+                } else {
+                    "Stopped"
+                }
+                .to_string();
             }
         }
 
@@ -924,13 +994,13 @@ impl Guestfs {
         let services = Vec::new();
 
         // Parse registry format for services
-        let mut current_service: Option<String> = None;
+        let mut _current_service: Option<String> = None;
 
         for line in content.lines() {
             if line.contains("\\Services\\") {
                 if let Some(service_name) = line.split("\\Services\\").nth(1) {
                     let service_name = service_name.trim_matches(']').trim_matches('[');
-                    current_service = Some(service_name.to_string());
+                    _current_service = Some(service_name.to_string());
                 }
             }
         }
@@ -951,7 +1021,11 @@ impl Guestfs {
                         description: "Network Adapter".to_string(),
                         mac_address: "00:00:00:00:00:00".to_string(),
                         ip_address: Vec::new(),
-                        dns_servers: dns.trim_matches('"').split_whitespace().map(|s| s.to_string()).collect(),
+                        dns_servers: dns
+                            .trim_matches('"')
+                            .split_whitespace()
+                            .map(|s| s.to_string())
+                            .collect(),
                         dhcp_enabled: true,
                     });
                 }
@@ -963,12 +1037,12 @@ impl Guestfs {
 
     #[allow(dead_code)]
     fn parse_windows_cbs_log(&mut self, _content: &str) -> Vec<WindowsUpdate> {
-        let updates = Vec::new();
+        
 
         // Basic CBS log parsing would go here
         // For now, return empty
 
-        updates
+        Vec::new()
     }
 }
 

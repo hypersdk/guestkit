@@ -11,8 +11,16 @@ impl Guestfs {
     /// Create RAID array
     ///
     /// GuestFS API: md_create()
-    pub fn md_create(&mut self, name: &str, devices: &[&str], missingbitmap: i64,
-                     nrdevices: i32, spare: i32, chunk: i64, level: &str) -> Result<()> {
+    pub fn md_create(
+        &mut self,
+        name: &str,
+        devices: &[&str],
+        _missingbitmap: i64,
+        nrdevices: i32,
+        spare: i32,
+        chunk: i64,
+        level: &str,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -21,22 +29,30 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         // Convert device names to NBD partitions
         let mut nbd_partitions = Vec::new();
         for device in devices {
             if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-                nbd_partitions.push(format!("{}p{}", nbd_device.device_path().display(), partition_number));
+                nbd_partitions.push(format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                ));
             }
         }
 
         let mut cmd = Command::new("mdadm");
         cmd.arg("--create")
-           .arg(format!("/dev/md/{}", name))
-           .arg("--level").arg(level)
-           .arg("--raid-devices").arg(nrdevices.to_string());
+            .arg(format!("/dev/md/{}", name))
+            .arg("--level")
+            .arg(level)
+            .arg("--raid-devices")
+            .arg(nrdevices.to_string());
 
         if spare > 0 {
             cmd.arg("--spare-devices").arg(spare.to_string());
@@ -50,7 +66,8 @@ impl Guestfs {
             cmd.arg(partition);
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mdadm: {}", e)))?;
 
         if !output.status.success() {
@@ -117,10 +134,7 @@ impl Guestfs {
 
         for line in output_str.lines() {
             if let Some((key, value)) = line.split_once(':') {
-                details.push((
-                    key.trim().to_string(),
-                    value.trim().to_string()
-                ));
+                details.push((key.trim().to_string(), value.trim().to_string()));
             }
         }
 
@@ -151,11 +165,7 @@ impl Guestfs {
         let output_str = String::from_utf8_lossy(&output.stdout);
         let devices: Vec<String> = output_str
             .lines()
-            .filter_map(|line| {
-                line.split_whitespace()
-                    .nth(1)
-                    .map(|s| s.to_string())
-            })
+            .filter_map(|line| line.split_whitespace().nth(1).map(|s| s.to_string()))
             .collect();
 
         Ok(devices)

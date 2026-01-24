@@ -247,7 +247,10 @@ fn check_suspicious_files(
                             println!("  Large file in temp: {} ({} bytes)", full_path, size);
                             evidence.suspicious_files.push(SuspiciousFile {
                                 path: full_path,
-                                reason: format!("Large file in temporary directory ({} bytes)", size),
+                                reason: format!(
+                                    "Large file in temporary directory ({} bytes)",
+                                    size
+                                ),
                             });
                         }
                     }

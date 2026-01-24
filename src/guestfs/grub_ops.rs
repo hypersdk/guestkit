@@ -22,7 +22,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -191,7 +193,10 @@ impl Guestfs {
             eprintln!("guestfs: grub_update");
         }
 
-        let host_root = self.mounted.values().next()
+        let host_root = self
+            .mounted
+            .values()
+            .next()
             .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?
             .clone();
 
@@ -211,7 +216,9 @@ impl Guestfs {
             }
         }
 
-        Err(Error::CommandFailed("Failed to update GRUB configuration".to_string()))
+        Err(Error::CommandFailed(
+            "Failed to update GRUB configuration".to_string(),
+        ))
     }
 }
 

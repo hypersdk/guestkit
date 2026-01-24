@@ -3,8 +3,8 @@
 //!
 //! This module implements guest OS detection without external dependencies
 
-use crate::core::{GuestIdentity, GuestType, Firmware, Result};
-use crate::disk::{DiskReader, PartitionTable, FileSystem};
+use crate::core::{Firmware, GuestIdentity, GuestType, Result};
+use crate::disk::{DiskReader, FileSystem, PartitionTable};
 use std::path::Path;
 
 /// Guest OS detector
@@ -44,7 +44,10 @@ impl GuestDetector {
         let mut distro = None;
 
         // Check for GPT (indicates UEFI)
-        if matches!(partition_table.table_type(), crate::disk::PartitionType::GPT) {
+        if matches!(
+            partition_table.table_type(),
+            crate::disk::PartitionType::GPT
+        ) {
             firmware = Firmware::Uefi;
         }
 
@@ -59,9 +62,9 @@ impl GuestDetector {
                         os_name = "Windows".to_string();
                         os_version = "Unknown".to_string();
                     }
-                    crate::disk::FileSystemType::Ext |
-                    crate::disk::FileSystemType::Xfs |
-                    crate::disk::FileSystemType::Btrfs => {
+                    crate::disk::FileSystemType::Ext
+                    | crate::disk::FileSystemType::Xfs
+                    | crate::disk::FileSystemType::Btrfs => {
                         // Likely Linux
                         os_type = GuestType::Linux;
 
@@ -116,7 +119,6 @@ impl GuestDetector {
             distro,
         })
     }
-
 }
 
 impl Default for GuestDetector {

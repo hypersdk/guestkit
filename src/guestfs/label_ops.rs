@@ -24,18 +24,37 @@ impl Guestfs {
         match fstype.as_str() {
             "ext2" | "ext3" | "ext4" => self.set_e2label(mountable, label),
             "xfs" => {
-                self.xfs_admin(mountable, false, false, false, false, false, Some(label), None)?;
+                self.xfs_admin(
+                    mountable,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    Some(label),
+                    None,
+                )?;
                 Ok(())
             }
             "btrfs" => {
                 // Use btrfs filesystem label
                 self.setup_nbd_if_needed()?;
-                let nbd_partition = if let Some(partition_number) = mountable.chars().last().and_then(|c| c.to_digit(10)) {
-                    let nbd_device = self.nbd_device.as_ref()
-                        .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-                    format!("{}p{}", nbd_device.device_path().display(), partition_number)
+                let nbd_partition = if let Some(partition_number) =
+                    mountable.chars().last().and_then(|c| c.to_digit(10))
+                {
+                    let nbd_device = self.nbd_device.as_ref().ok_or_else(|| {
+                        Error::InvalidState("NBD device not available".to_string())
+                    })?;
+                    format!(
+                        "{}p{}",
+                        nbd_device.device_path().display(),
+                        partition_number
+                    )
                 } else {
-                    return Err(Error::InvalidFormat(format!("Invalid device: {}", mountable)));
+                    return Err(Error::InvalidFormat(format!(
+                        "Invalid device: {}",
+                        mountable
+                    )));
                 };
 
                 let output = Command::new("btrfs")
@@ -56,7 +75,10 @@ impl Guestfs {
             }
             "ntfs" => self.ntfs_set_label(mountable, label),
             "swap" => self.swap_set_label(mountable, label),
-            _ => Err(Error::Unsupported(format!("Setting label not supported for {}", fstype))),
+            _ => Err(Error::Unsupported(format!(
+                "Setting label not supported for {}",
+                fstype
+            ))),
         }
     }
 
@@ -79,7 +101,10 @@ impl Guestfs {
                 Ok(())
             }
             "swap" => self.swap_set_uuid(device, uuid),
-            _ => Err(Error::Unsupported(format!("Setting UUID not supported for {}", fstype))),
+            _ => Err(Error::Unsupported(format!(
+                "Setting UUID not supported for {}",
+                fstype
+            ))),
         }
     }
 

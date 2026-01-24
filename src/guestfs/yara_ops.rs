@@ -20,7 +20,10 @@ impl Guestfs {
 
         // Verify rules file exists
         if !std::path::Path::new(filename).exists() {
-            return Err(Error::NotFound(format!("YARA rules file not found: {}", filename)));
+            return Err(Error::NotFound(format!(
+                "YARA rules file not found: {}",
+                filename
+            )));
         }
 
         // In a full implementation, this would compile and store the rules
@@ -37,7 +40,7 @@ impl Guestfs {
             eprintln!("guestfs: yara_scan {}", path);
         }
 
-        let host_path = self.resolve_guest_path(path)?;
+        let _host_path = self.resolve_guest_path(path)?;
 
         // This would require yara command or library
         // For now, return empty detections
@@ -85,10 +88,7 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        let matches: Vec<String> = output_str
-            .lines()
-            .map(|s| s.to_string())
-            .collect();
+        let matches: Vec<String> = output_str.lines().map(|s| s.to_string()).collect();
 
         Ok(matches)
     }

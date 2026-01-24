@@ -103,7 +103,8 @@ impl PartitionTable {
 
             let bootable = entry[0] == 0x80;
             let start_lba = u32::from_le_bytes([entry[8], entry[9], entry[10], entry[11]]) as u64;
-            let size_sectors = u32::from_le_bytes([entry[12], entry[13], entry[14], entry[15]]) as u64;
+            let size_sectors =
+                u32::from_le_bytes([entry[12], entry[13], entry[14], entry[15]]) as u64;
 
             partitions.push(Partition {
                 number: (i + 1) as u32,
@@ -132,12 +133,15 @@ impl PartitionTable {
         }
 
         let mut cursor = Cursor::new(&gpt_header[72..]);
-        let partition_entries_lba = cursor.read_u64::<LittleEndian>()
-            .map_err(|e| Error::Io(e))?;
-        let num_entries = cursor.read_u32::<LittleEndian>()
-            .map_err(|e| Error::Io(e))?;
-        let entry_size = cursor.read_u32::<LittleEndian>()
-            .map_err(|e| Error::Io(e))?;
+        let partition_entries_lba = cursor
+            .read_u64::<LittleEndian>()
+            .map_err(Error::Io)?;
+        let num_entries = cursor
+            .read_u32::<LittleEndian>()
+            .map_err(Error::Io)?;
+        let entry_size = cursor
+            .read_u32::<LittleEndian>()
+            .map_err(Error::Io)?;
 
         // Read partition entries
         let mut partitions = Vec::new();
@@ -154,10 +158,12 @@ impl PartitionTable {
             }
 
             let mut cursor = Cursor::new(&entry[32..]);
-            let start_lba = cursor.read_u64::<LittleEndian>()
-                .map_err(|e| Error::Io(e))?;
-            let end_lba = cursor.read_u64::<LittleEndian>()
-                .map_err(|e| Error::Io(e))?;
+            let start_lba = cursor
+                .read_u64::<LittleEndian>()
+                .map_err(Error::Io)?;
+            let end_lba = cursor
+                .read_u64::<LittleEndian>()
+                .map_err(Error::Io)?;
 
             if start_lba == 0 && end_lba == 0 {
                 continue;

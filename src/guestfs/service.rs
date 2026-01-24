@@ -18,7 +18,10 @@ impl Guestfs {
         }
 
         // Check systemd services
-        let systemd_path = format!("/etc/systemd/system/multi-user.target.wants/{}.service", service);
+        let systemd_path = format!(
+            "/etc/systemd/system/multi-user.target.wants/{}.service",
+            service
+        );
         if self.exists(&systemd_path)? {
             return Ok(true);
         }

@@ -185,7 +185,9 @@ impl Guestfs {
                         }
                     }
                 }
-                Err(Error::NotFound("Could not determine kernel version".to_string()))
+                Err(Error::NotFound(
+                    "Could not determine kernel version".to_string(),
+                ))
             }
         }
     }
@@ -257,11 +259,10 @@ impl Guestfs {
         if self.exists("/lib/systemd/system")? {
             if let Ok(entries) = self.ls("/lib/systemd/system") {
                 for entry in entries {
-                    if entry.ends_with(".service") || entry.ends_with(".target") {
-                        if !units.contains(&entry) {
+                    if (entry.ends_with(".service") || entry.ends_with(".target"))
+                        && !units.contains(&entry) {
                             units.push(entry);
                         }
-                    }
                 }
             }
         }

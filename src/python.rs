@@ -349,7 +349,8 @@ impl Guestfs {
     ///
     /// Dictionary of mountpoint -> device mappings
     fn inspect_get_mountpoints(&mut self, root: String) -> PyResult<PyObject> {
-        let mountpoints = self.handle
+        let mountpoints = self
+            .handle
             .inspect_get_mountpoints(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
@@ -580,7 +581,8 @@ impl Guestfs {
     ///
     /// List of installed packages
     fn inspect_list_applications(&mut self, root: String) -> PyResult<PyObject> {
-        let apps = self.handle
+        let apps = self
+            .handle
             .inspect_list_applications(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
@@ -850,7 +852,8 @@ impl Guestfs {
     ///
     /// Dictionary with stat information
     fn stat(&mut self, path: String) -> PyResult<PyObject> {
-        let stat = self.handle
+        let stat = self
+            .handle
             .stat(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
@@ -883,7 +886,8 @@ impl Guestfs {
     ///
     /// Dictionary with filesystem statistics
     fn statvfs(&mut self, path: String) -> PyResult<PyObject> {
-        let statvfs = self.handle
+        let statvfs = self
+            .handle
             .statvfs(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 

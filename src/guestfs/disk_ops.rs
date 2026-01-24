@@ -44,7 +44,8 @@ impl Guestfs {
 
         cmd.arg(&nbd_partition);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mkswap: {}", e)))?;
 
         if !output.status.success() {
@@ -201,15 +202,22 @@ impl Guestfs {
 
         // Map encoding to strings flags
         match encoding {
-            "b" | "B" => { cmd.arg("-eb"); } // 16-bit big-endian
-            "l" | "L" => { cmd.arg("-el"); } // 16-bit little-endian
-            "s" | "S" => { cmd.arg("-e").arg("s"); } // 7-bit
+            "b" | "B" => {
+                cmd.arg("-eb");
+            } // 16-bit big-endian
+            "l" | "L" => {
+                cmd.arg("-el");
+            } // 16-bit little-endian
+            "s" | "S" => {
+                cmd.arg("-e").arg("s");
+            } // 7-bit
             _ => {} // default
         }
 
         cmd.arg(&host_path);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute strings: {}", e)))?;
 
         if !output.status.success() {
@@ -237,9 +245,8 @@ impl Guestfs {
 
         // Create pattern and write to file
         let pattern = vec![c as u8; len as usize];
-        std::fs::write(&host_path, pattern).map_err(|e| {
-            Error::CommandFailed(format!("Failed to fill file: {}", e))
-        })
+        std::fs::write(&host_path, pattern)
+            .map_err(|e| Error::CommandFailed(format!("Failed to fill file: {}", e)))
     }
 
     /// Fill device with pattern from source
@@ -264,9 +271,8 @@ impl Guestfs {
             data.extend_from_slice(&pattern_bytes[..to_copy]);
         }
 
-        std::fs::write(&host_path, data).map_err(|e| {
-            Error::CommandFailed(format!("Failed to fill file: {}", e))
-        })
+        std::fs::write(&host_path, data)
+            .map_err(|e| Error::CommandFailed(format!("Failed to fill file: {}", e)))
     }
 
     /// Fill directory with empty files

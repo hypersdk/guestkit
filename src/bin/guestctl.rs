@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! GuestCtl CLI - Command-line interface for disk image inspection and manipulation
 
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use guestkit::guestfs::Guestfs;
 use guestkit::core::ProgressReporter;
-use std::path::PathBuf;
-use anyhow::{Result, Context};
-use serde_json::json;
+use guestkit::guestfs::Guestfs;
 use owo_colors::OwoColorize;
+use serde_json::json;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
@@ -108,9 +108,12 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Inspect { disk, json } => cmd_inspect(disk, json, cli.verbose)?,
         Commands::Filesystems { disk, detailed } => cmd_filesystems(disk, detailed, cli.verbose)?,
-        Commands::Packages { disk, filter, limit, json } => {
-            cmd_packages(disk, filter, limit, json, cli.verbose)?
-        }
+        Commands::Packages {
+            disk,
+            filter,
+            limit,
+            json,
+        } => cmd_packages(disk, filter, limit, json, cli.verbose)?,
         Commands::Cp { source, dest } => cmd_cp(source, dest, cli.verbose)?,
         Commands::Ls { disk, path, long } => cmd_ls(disk, path, long, cli.verbose)?,
         Commands::Cat { disk, path } => cmd_cat(disk, path, cli.verbose)?,
@@ -158,7 +161,7 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
             mounts.sort_by_key(|(mount, _)| mount.len());
 
             for (mount, device) in mounts {
-                if let Err(_) = g.mount_ro(device, mount) {
+                if g.mount_ro(device, mount).is_err() {
                     // Mounting failed, continue anyway
                 }
             }
@@ -189,29 +192,45 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
             })
             .collect();
 
-        println!("{}", serde_json::to_string_pretty(&json!({
-            "disk": disk.display().to_string(),
-            "os_count": roots.len(),
-            "operating_systems": os_info,
-        }))?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "disk": disk.display().to_string(),
+                "os_count": roots.len(),
+                "operating_systems": os_info,
+            }))?
+        );
     } else {
         // Human-readable output with colors
         println!("\n{}", "═".repeat(70).bright_blue());
-        println!("{} {}", "📀 Disk Image:".bright_cyan().bold(), disk.display().to_string().bright_white());
+        println!(
+            "{} {}",
+            "📀 Disk Image:".bright_cyan().bold(),
+            disk.display().to_string().bright_white()
+        );
         println!("{}\n", "═".repeat(70).bright_blue());
 
         if roots.is_empty() {
-            println!("{}", "⚠️  No operating systems detected".bright_yellow().bold());
+            println!(
+                "{}",
+                "⚠️  No operating systems detected".bright_yellow().bold()
+            );
             println!("\n{}", "Possible reasons:".dimmed());
             println!("  {} Disk is not bootable", "•".bright_black());
-            println!("  {} Disk is encrypted (try checking with LUKS tools)", "•".bright_black());
+            println!(
+                "  {} Disk is encrypted (try checking with LUKS tools)",
+                "•".bright_black()
+            );
             println!("  {} Unsupported OS type", "•".bright_black());
             println!("  {} Corrupted disk image", "•".bright_black());
         } else {
-            println!("{} {} {}\n",
+            println!(
+                "{} {} {}\n",
                 "✓".bright_green().bold(),
                 "Found".bright_white(),
-                format!("{} operating system(s)", roots.len()).bright_cyan().bold()
+                format!("{} operating system(s)", roots.len())
+                    .bright_cyan()
+                    .bold()
             );
 
             for (i, root) in roots.iter().enumerate() {
@@ -219,7 +238,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                     println!("\n{}", "─".repeat(70).bright_black());
                 }
 
-                println!("\n{} {}",
+                println!(
+                    "\n{} {}",
                     format!("OS #{}", i + 1).bright_magenta().bold(),
                     format!("({})", root).dimmed()
                 );
@@ -234,7 +254,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                         "windows" => "🪟",
                         _ => "💻",
                     };
-                    println!("    {} {}  {}",
+                    println!(
+                        "    {} {}  {}",
                         "Type:".bright_white().bold(),
                         icon,
                         os_type.bright_cyan()
@@ -247,7 +268,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                     } else {
                         distro.bright_green().to_string()
                     };
-                    println!("    {} {}",
+                    println!(
+                        "    {} {}",
                         "Distribution:".bright_white().bold(),
                         display_distro
                     );
@@ -256,7 +278,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                 if let Ok(major) = g.inspect_get_major_version(root) {
                     let minor = g.inspect_get_minor_version(root).unwrap_or(0);
                     if major > 0 || minor > 0 {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Version:".bright_white().bold(),
                             format!("{}.{}", major, minor).bright_yellow()
                         );
@@ -265,7 +288,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                 if let Ok(product) = g.inspect_get_product_name(root) {
                     if product != "Linux" && !product.is_empty() {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Product Name:".bright_white().bold(),
                             product.bright_white()
                         );
@@ -278,7 +302,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                     } else {
                         hostname.bright_cyan().to_string()
                     };
-                    println!("    {} {}",
+                    println!(
+                        "    {} {}",
                         "Hostname:".bright_white().bold(),
                         display_hostname
                     );
@@ -291,7 +316,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                         "i386" | "i686" => "🔧",
                         _ => "💾",
                     };
-                    println!("    {} {}  {}",
+                    println!(
+                        "    {} {}  {}",
                         "Architecture:".bright_white().bold(),
                         arch_icon,
                         arch.bright_yellow()
@@ -299,16 +325,22 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                 }
 
                 // Package Management Section
-                let has_pkg_info =
-                    g.inspect_get_package_format(root).is_ok() ||
-                    g.inspect_get_package_management(root).is_ok();
+                let has_pkg_info = g.inspect_get_package_format(root).is_ok()
+                    || g.inspect_get_package_management(root).is_ok();
 
                 if has_pkg_info {
                     println!("\n  {}", "Package Management".bright_blue().bold());
 
                     if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
                         let (display_pkg, icon) = if pkg_fmt == "unknown" || pkg_fmt.is_empty() {
-                            (format!("{} {}", "unknown".dimmed(), "(requires mounting)".dimmed()), "📦")
+                            (
+                                format!(
+                                    "{} {}",
+                                    "unknown".dimmed(),
+                                    "(requires mounting)".dimmed()
+                                ),
+                                "📦",
+                            )
                         } else {
                             let icon = match pkg_fmt.as_str() {
                                 "rpm" => "🔴",
@@ -319,7 +351,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                             };
                             (pkg_fmt.bright_green().to_string(), icon)
                         };
-                        println!("    {} {}  {}",
+                        println!(
+                            "    {} {}  {}",
                             "Format:".bright_white().bold(),
                             icon,
                             display_pkg
@@ -332,10 +365,7 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                         } else {
                             pkg_mgmt.bright_magenta().to_string()
                         };
-                        println!("    {} {}",
-                            "Tool:".bright_white().bold(),
-                            display_mgmt
-                        );
+                        println!("    {} {}", "Tool:".bright_white().bold(), display_mgmt);
                     }
                 }
 
@@ -344,7 +374,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                 // Machine ID
                 if let Ok(machine_id) = g.get_machine_id() {
-                    println!("    {} 🆔  {}",
+                    println!(
+                        "    {} 🆔  {}",
                         "Machine ID:".bright_white().bold(),
                         machine_id.dimmed()
                     );
@@ -352,7 +383,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                 // Boot ID
                 if let Ok(boot_id) = g.get_boot_id() {
-                    println!("    {} 🔄  {}",
+                    println!(
+                        "    {} 🔄  {}",
                         "Boot ID:".bright_white().bold(),
                         boot_id.dimmed()
                     );
@@ -360,26 +392,27 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                 // Kernel version
                 if let Ok(kernel) = g.get_kernel_version() {
-                    println!("    {} 🐧  {}",
+                    println!(
+                        "    {} 🐧  {}",
                         "Kernel:".bright_white().bold(),
                         kernel.bright_cyan()
                     );
                 }
 
                 // Init system
-                if let Ok(_) = g.get_systemd_version() {
-                    println!("    {} ⚡  {}",
+                if g.get_systemd_version().is_ok() {
+                    println!(
+                        "    {} ⚡  {}",
                         "Init system:".bright_white().bold(),
                         "systemd".bright_green()
                     );
                 }
 
                 // Hardware Information
-                let has_hardware_info =
-                    g.get_chassis_type().is_ok() ||
-                    g.get_hardware_vendor().is_ok() ||
-                    g.get_hardware_model().is_ok() ||
-                    g.get_firmware_version().is_ok();
+                let has_hardware_info = g.get_chassis_type().is_ok()
+                    || g.get_hardware_vendor().is_ok()
+                    || g.get_hardware_model().is_ok()
+                    || g.get_firmware_version().is_ok();
 
                 if has_hardware_info {
                     println!("\n  {}", "Hardware Information".bright_blue().bold());
@@ -393,7 +426,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                             "tablet" => "📱",
                             _ => "💻",
                         };
-                        println!("    {} {}  {}",
+                        println!(
+                            "    {} {}  {}",
                             "Chassis:".bright_white().bold(),
                             icon,
                             chassis.bright_yellow()
@@ -403,7 +437,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
                     // Chassis asset tag
                     if let Ok(tag) = g.get_chassis_asset_tag() {
                         if tag != "No Asset Information" {
-                            println!("    {} {}",
+                            println!(
+                                "    {} {}",
                                 "Asset Tag:".bright_white().bold(),
                                 tag.bright_cyan()
                             );
@@ -412,7 +447,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                     // Hardware vendor
                     if let Ok(vendor) = g.get_hardware_vendor() {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Vendor:".bright_white().bold(),
                             vendor.bright_green()
                         );
@@ -420,7 +456,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                     // Hardware model
                     if let Ok(model) = g.get_hardware_model() {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Model:".bright_white().bold(),
                             model.bright_white()
                         );
@@ -428,7 +465,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                     // Firmware version
                     if let Ok(firmware) = g.get_firmware_version() {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Firmware:".bright_white().bold(),
                             firmware.bright_yellow()
                         );
@@ -436,7 +474,8 @@ fn cmd_inspect(disk: PathBuf, json_output: bool, verbose: bool) -> Result<()> {
 
                     // Firmware date
                     if let Ok(fw_date) = g.get_firmware_date() {
-                        println!("    {} {}",
+                        println!(
+                            "    {} {}",
                             "Firmware Date:".bright_white().bold(),
                             fw_date.dimmed()
                         );
@@ -474,22 +513,24 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
     progress.finish_and_clear();
 
     println!("\n{}", "═".repeat(70).bright_blue());
-    println!("{} {}", "💾 Disk Image:".bright_cyan().bold(), disk.display().to_string().bright_white());
+    println!(
+        "{} {}",
+        "💾 Disk Image:".bright_cyan().bold(),
+        disk.display().to_string().bright_white()
+    );
     println!("{}\n", "═".repeat(70).bright_blue());
 
     // Devices
     println!("{}", "Block Devices".bright_white().bold());
     println!("{}", "─".repeat(50).bright_black());
     for device in devices {
-        println!("  {} {}",
-            "▪".bright_cyan(),
-            device.bright_white().bold()
-        );
+        println!("  {} {}", "▪".bright_cyan(), device.bright_white().bold());
 
         if detailed {
             if let Ok(size) = g.blockdev_getsize64(&device) {
-                let gb = size as f64 / 1_073_741_824.0;  // 1024^3
-                println!("    {} {} ({:.2} GiB)",
+                let gb = size as f64 / 1_073_741_824.0; // 1024^3
+                println!(
+                    "    {} {} ({:.2} GiB)",
                     "Size:".dimmed(),
                     size.to_string().bright_yellow(),
                     gb
@@ -497,7 +538,8 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
             }
 
             if let Ok(parttype) = g.part_get_parttype(&device) {
-                println!("    {} {}",
+                println!(
+                    "    {} {}",
                     "Partition table:".dimmed(),
                     parttype.bright_green()
                 );
@@ -512,7 +554,9 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
         println!("{}", "─".repeat(50).bright_black());
 
         for partition in partitions {
-            let fstype = g.vfs_type(&partition).unwrap_or_else(|_| "unknown".to_string());
+            let fstype = g
+                .vfs_type(&partition)
+                .unwrap_or_else(|_| "unknown".to_string());
             let size = g.blockdev_getsize64(&partition).unwrap_or(0);
             let gb = size as f64 / 1_073_741_824.0;
 
@@ -526,7 +570,8 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
                 _ => "❓",
             };
 
-            println!("  {} {} {} {}",
+            println!(
+                "  {} {} {} {}",
                 fs_icon,
                 partition.bright_white().bold(),
                 format!("({})", fstype).bright_cyan(),
@@ -535,25 +580,20 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
 
             if let Ok(label) = g.vfs_label(&partition) {
                 if !label.is_empty() {
-                    println!("    {} {}",
-                        "Label:".dimmed(),
-                        label.bright_green()
-                    );
+                    println!("    {} {}", "Label:".dimmed(), label.bright_green());
                 }
             }
 
             if detailed {
                 if let Ok(uuid) = g.vfs_uuid(&partition) {
                     if !uuid.is_empty() {
-                        println!("    {} {}",
-                            "UUID:".dimmed(),
-                            uuid.dimmed()
-                        );
+                        println!("    {} {}", "UUID:".dimmed(), uuid.dimmed());
                     }
                 }
 
                 if let Ok(partnum) = g.part_to_partnum(&partition) {
-                    println!("    {} {}",
+                    println!(
+                        "    {} {}",
                         "Number:".dimmed(),
                         partnum.to_string().bright_magenta()
                     );
@@ -568,10 +608,7 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
             println!("\n{}", "LVM Volume Groups".bright_white().bold());
             println!("{}", "─".repeat(50).bright_black());
             for vg in vgs {
-                println!("  {} {}",
-                    "▸".bright_magenta(),
-                    vg.bright_white().bold()
-                );
+                println!("  {} {}", "▸".bright_magenta(), vg.bright_white().bold());
             }
         }
     }
@@ -584,7 +621,8 @@ fn cmd_filesystems(disk: PathBuf, detailed: bool, verbose: bool) -> Result<()> {
                 let size = g.blockdev_getsize64(&lv).unwrap_or(0);
                 let gb = size as f64 / 1_073_741_824.0;
 
-                println!("  {} {} {}",
+                println!(
+                    "  {} {} {}",
                     "▸".bright_magenta(),
                     lv.bright_white().bold(),
                     format!("{:.1} GiB", gb).bright_yellow()
@@ -701,10 +739,13 @@ fn cmd_packages(
             })
             .collect();
 
-        println!("{}", serde_json::to_string_pretty(&json!({
-            "total": packages.len(),
-            "packages": packages,
-        }))?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "total": packages.len(),
+                "packages": packages,
+            }))?
+        );
     } else {
         println!("Found {} package(s)\n", limited.len());
 
@@ -776,8 +817,8 @@ fn cmd_cp(source: String, dest: PathBuf, verbose: bool) -> Result<()> {
         let root = &roots[0];
         if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
             let mut mounts: Vec<_> = mountpoints.iter().collect();
-        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-        for (mount, device) in mounts {
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
                 g.mount_ro(device, mount).ok();
             }
         }
@@ -785,12 +826,12 @@ fn cmd_cp(source: String, dest: PathBuf, verbose: bool) -> Result<()> {
 
     // Check if file exists
     if !g.is_file(src_path).unwrap_or(false) {
-        progress.abandon_with_message(&format!("File not found: {}", src_path));
+        progress.abandon_with_message(format!("File not found: {}", src_path));
         anyhow::bail!("File not found: {}", src_path);
     }
 
     // Copy file
-    progress.set_message(&format!("Copying {}...", src_path));
+    progress.set_message(format!("Copying {}...", src_path));
 
     g.download(src_path, dest.to_str().unwrap())
         .with_context(|| format!("Failed to copy file: {}", src_path))?;
@@ -827,8 +868,8 @@ fn cmd_ls(disk: PathBuf, path: String, long: bool, verbose: bool) -> Result<()> 
         let root = &roots[0];
         if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
             let mut mounts: Vec<_> = mountpoints.iter().collect();
-        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-        for (mount, device) in mounts {
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
                 g.mount_ro(device, mount).ok();
             }
         }
@@ -836,11 +877,11 @@ fn cmd_ls(disk: PathBuf, path: String, long: bool, verbose: bool) -> Result<()> 
 
     // Check if directory exists
     if !g.is_dir(&path).unwrap_or(false) {
-        progress.abandon_with_message(&format!("Not a directory: {}", path));
+        progress.abandon_with_message(format!("Not a directory: {}", path));
         anyhow::bail!("Not a directory: {}", path);
     }
 
-    progress.set_message(&format!("Listing {}...", path));
+    progress.set_message(format!("Listing {}...", path));
 
     let result = if long {
         // Long listing
@@ -886,8 +927,8 @@ fn cmd_cat(disk: PathBuf, path: String, verbose: bool) -> Result<()> {
         let root = &roots[0];
         if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
             let mut mounts: Vec<_> = mountpoints.iter().collect();
-        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-        for (mount, device) in mounts {
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
                 g.mount_ro(device, mount).ok();
             }
         }
@@ -895,12 +936,12 @@ fn cmd_cat(disk: PathBuf, path: String, verbose: bool) -> Result<()> {
 
     // Check if file exists
     if !g.is_file(&path).unwrap_or(false) {
-        progress.abandon_with_message(&format!("File not found: {}", path));
+        progress.abandon_with_message(format!("File not found: {}", path));
         anyhow::bail!("File not found: {}", path);
     }
 
     // Read and print file
-    progress.set_message(&format!("Reading {}...", path));
+    progress.set_message(format!("Reading {}...", path));
     let content = g
         .read_file(&path)
         .with_context(|| format!("Failed to read file: {}", path))?;

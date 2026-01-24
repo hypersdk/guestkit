@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! CLI commands implementation
 
-use guestkit::Guestfs;
-use guestkit::core::ProgressReporter;
-use anyhow::{Context, Result};
-use std::path::PathBuf;
 use super::formatters::*;
-use super::profiles::{ProfileReport, FindingStatus};
+use super::profiles::{FindingStatus, ProfileReport};
+use anyhow::{Context, Result};
+use guestkit::core::ProgressReporter;
+use guestkit::Guestfs;
+use std::path::PathBuf;
 
 /// Collect inspection data into a structured report
-fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Result<InspectionReport> {
+fn collect_inspection_data(
+    g: &mut Guestfs,
+    root: &str,
+    _verbose: bool,
+) -> Result<InspectionReport> {
     let mut report = InspectionReport {
         image_path: None,
         os: OsInfo {
@@ -19,7 +23,10 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
             product_name: g.inspect_get_product_name(root).ok(),
             architecture: g.inspect_get_arch(root).ok(),
             version: {
-                if let (Ok(major), Ok(minor)) = (g.inspect_get_major_version(root), g.inspect_get_minor_version(root)) {
+                if let (Ok(major), Ok(minor)) = (
+                    g.inspect_get_major_version(root),
+                    g.inspect_get_minor_version(root),
+                ) {
                     Some(VersionInfo { major, minor })
                 } else {
                     None
@@ -42,22 +49,27 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
             let interfaces = g.inspect_network(root).ok();
             let dns_servers = g.inspect_dns(root).ok();
             if interfaces.is_some() || dns_servers.is_some() {
-                Some(NetworkInfo { interfaces, dns_servers })
+                Some(NetworkInfo {
+                    interfaces,
+                    dns_servers,
+                })
             } else {
                 None
             }
         },
         users: {
             if let Ok(all_users) = g.inspect_users(root) {
-                let regular_users: Vec<_> = all_users.iter()
+                let regular_users: Vec<_> = all_users
+                    .iter()
                     .filter(|u| {
                         let uid: i32 = u.uid.parse().unwrap_or(0);
-                        uid >= 1000 && uid < 65534
+                        (1000..65534).contains(&uid)
                     })
                     .cloned()
                     .collect();
 
-                let system_users_count = all_users.iter()
+                let system_users_count = all_users
+                    .iter()
                     .filter(|u| {
                         let uid: i32 = u.uid.parse().unwrap_or(0);
                         uid > 0 && uid < 1000
@@ -73,12 +85,18 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
                 None
             }
         },
-        ssh: g.inspect_ssh_config(root).ok().map(|config| SshConfig { config }),
+        ssh: g
+            .inspect_ssh_config(root)
+            .ok()
+            .map(|config| SshConfig { config }),
         services: {
             let enabled_services = g.inspect_systemd_services(root).ok().unwrap_or_default();
             let timers = g.inspect_systemd_timers(root).ok().unwrap_or_default();
             if !enabled_services.is_empty() || !timers.is_empty() {
-                Some(ServicesInfo { enabled_services, timers })
+                Some(ServicesInfo {
+                    enabled_services,
+                    timers,
+                })
             } else {
                 None
             }
@@ -87,34 +105,54 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
             let language_runtimes = g.inspect_runtimes(root).ok().unwrap_or_default();
             let container_runtimes = g.inspect_container_runtimes(root).ok().unwrap_or_default();
             if !language_runtimes.is_empty() || !container_runtimes.is_empty() {
-                Some(RuntimesInfo { language_runtimes, container_runtimes })
+                Some(RuntimesInfo {
+                    language_runtimes,
+                    container_runtimes,
+                })
             } else {
                 None
             }
         },
         storage: {
             let lvm = g.inspect_lvm(root).ok().filter(|l| {
-                !l.physical_volumes.is_empty() || !l.volume_groups.is_empty() || !l.logical_volumes.is_empty()
+                !l.physical_volumes.is_empty()
+                    || !l.volume_groups.is_empty()
+                    || !l.logical_volumes.is_empty()
             });
             let swap_devices = g.inspect_swap(root).ok().filter(|s| !s.is_empty());
             let fstab_mounts = g.inspect_fstab(root).ok().map(|mounts| {
-                mounts.into_iter()
-                    .map(|(device, mountpoint, fstype)| FstabMount { device, mountpoint, fstype })
+                mounts
+                    .into_iter()
+                    .map(|(device, mountpoint, fstype)| FstabMount {
+                        device,
+                        mountpoint,
+                        fstype,
+                    })
                     .collect()
             });
 
             if lvm.is_some() || swap_devices.is_some() || fstab_mounts.is_some() {
-                Some(StorageInfo { lvm, swap_devices, fstab_mounts })
+                Some(StorageInfo {
+                    lvm,
+                    swap_devices,
+                    fstab_mounts,
+                })
             } else {
                 None
             }
         },
-        boot: g.inspect_boot_config(root).ok().filter(|b| b.bootloader != "unknown"),
+        boot: g
+            .inspect_boot_config(root)
+            .ok()
+            .filter(|b| b.bootloader != "unknown"),
         scheduled_tasks: {
             let cron_jobs = g.inspect_cron(root).ok().unwrap_or_default();
             let systemd_timers = g.inspect_systemd_timers(root).ok().unwrap_or_default();
             if !cron_jobs.is_empty() || !systemd_timers.is_empty() {
-                Some(ScheduledTasksInfo { cron_jobs, systemd_timers })
+                Some(ScheduledTasksInfo {
+                    cron_jobs,
+                    systemd_timers,
+                })
             } else {
                 None
             }
@@ -131,9 +169,9 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
                 None
             }
         },
-        packages: None, // Will be filled if we mount and check packages
+        packages: None,   // Will be filled if we mount and check packages
         disk_usage: None, // Will be filled if we mount and get statvfs
-        windows: None, // Will be filled for Windows systems
+        windows: None,    // Will be filled for Windows systems
     };
 
     // Try to mount and get additional info (packages, disk usage)
@@ -169,9 +207,12 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
                 _ => 0,
             };
 
-            let kernels = g.ls("/boot").ok()
+            let kernels = g
+                .ls("/boot")
+                .ok()
                 .map(|files| {
-                    files.iter()
+                    files
+                        .iter()
                         .filter(|f| f.starts_with("vmlinuz-") || f.starts_with("vmlinux-"))
                         .map(|s| s.to_string())
                         .collect()
@@ -197,7 +238,12 @@ fn collect_inspection_data(g: &mut Guestfs, root: &str, _verbose: bool) -> Resul
             let updates = g.inspect_windows_updates(root).ok();
             let event_logs = g.inspect_windows_events(root, "System", 10).ok();
 
-            if software.is_some() || services.is_some() || network_adapters.is_some() || updates.is_some() || event_logs.is_some() {
+            if software.is_some()
+                || services.is_some()
+                || network_adapters.is_some()
+                || updates.is_some()
+                || event_logs.is_some()
+            {
                 report.windows = Some(WindowsInfo {
                     software,
                     services,
@@ -235,7 +281,10 @@ fn print_profile_report(report: &ProfileReport) {
                 String::new()
             };
 
-            println!("  {} {}: {}{}", status_symbol, finding.item, finding.message, risk_display);
+            println!(
+                "  {} {}: {}{}",
+                status_symbol, finding.item, finding.message, risk_display
+            );
         }
         println!();
     }
@@ -291,7 +340,7 @@ pub fn inspect_image(
 
                 // Handle export if requested
                 if let (Some(export_fmt), Some(export_out)) = (export_format, export_path) {
-                    use super::exporters::{ExportFormat, export_report};
+                    use super::exporters::{export_report, ExportFormat};
 
                     let fmt = ExportFormat::from_str(&export_fmt)?;
                     export_report(&cached_report, fmt, &export_out)?;
@@ -367,10 +416,14 @@ pub fn inspect_image(
 
         if let Ok(part_list) = g.part_list("/dev/sda") {
             let part_num = g.part_to_partnum(partition)?;
-            if let Some(p) = part_list.iter().find(|p| p.part_num == part_num as i32) {
+            if let Some(p) = part_list.iter().find(|p| p.part_num == part_num) {
                 println!("    Number: {}", p.part_num);
                 println!("    Start:  {} bytes", p.part_start);
-                println!("    Size:   {} bytes ({:.2} GB)", p.part_size, p.part_size as f64 / 1e9);
+                println!(
+                    "    Size:   {} bytes ({:.2} GB)",
+                    p.part_size,
+                    p.part_size as f64 / 1e9
+                );
                 println!("    End:    {} bytes", p.part_end);
             }
         }
@@ -425,7 +478,7 @@ pub fn inspect_image(
 
     // If profile is specified, run profile inspection
     if let Some(profile_name) = profile {
-        use super::profiles::{get_profile, InspectionProfile};
+        use super::profiles::get_profile;
 
         if roots.is_empty() {
             eprintln!("No operating systems found in image");
@@ -442,7 +495,7 @@ pub fn inspect_image(
 
             // Output profile report
             if let Some(format) = output_format {
-                let formatter = get_formatter(format, true);
+                let _formatter = get_formatter(format, true);
                 let output = serde_json::to_string_pretty(&report)?;
                 println!("{}", output);
             } else {
@@ -453,7 +506,10 @@ pub fn inspect_image(
             g.shutdown()?;
             return Ok(());
         } else {
-            eprintln!("Unknown profile: {}. Available profiles: security, migration, performance", profile_name);
+            eprintln!(
+                "Unknown profile: {}. Available profiles: security, migration, performance",
+                profile_name
+            );
             g.shutdown()?;
             return Err(anyhow::anyhow!("Invalid profile"));
         }
@@ -486,7 +542,7 @@ pub fn inspect_image(
 
         // Handle export if requested
         if let (Some(export_fmt), Some(export_out)) = (export_format, export_path) {
-            use super::exporters::{ExportFormat, export_report};
+            use super::exporters::{export_report, ExportFormat};
 
             let fmt = ExportFormat::from_str(&export_fmt)?;
             export_report(&report, fmt, &export_out)?;
@@ -632,7 +688,9 @@ pub fn inspect_image(
 
             // Try to mount and get additional info
             if verbose {
-                eprintln!("[VERBOSE] Attempting to mount root filesystem for detailed inspection...");
+                eprintln!(
+                    "[VERBOSE] Attempting to mount root filesystem for detailed inspection..."
+                );
             }
             if g.mount(root, "/").is_ok() {
                 // Filesystem usage
@@ -655,7 +713,11 @@ pub fn inspect_image(
 
                     println!("    Disk usage:");
                     println!("      Total: {:.2} GB", total_bytes as f64 / 1e9);
-                    println!("      Used:  {:.2} GB ({:.1}%)", used_bytes as f64 / 1e9, used_percent);
+                    println!(
+                        "      Used:  {:.2} GB ({:.1}%)",
+                        used_bytes as f64 / 1e9,
+                        used_percent
+                    );
                     println!("      Free:  {:.2} GB", free_bytes as f64 / 1e9);
                 }
 
@@ -688,7 +750,8 @@ pub fn inspect_image(
                     eprintln!("[VERBOSE] Searching for kernel versions...");
                 }
                 if let Ok(files) = g.ls("/boot") {
-                    let kernels: Vec<_> = files.iter()
+                    let kernels: Vec<_> = files
+                        .iter()
                         .filter(|f| f.starts_with("vmlinuz-") || f.starts_with("vmlinux-"))
                         .collect();
                     if !kernels.is_empty() {
@@ -776,10 +839,11 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Listing user accounts...");
             }
             if let Ok(users) = g.inspect_users(root) {
-                let regular_users: Vec<_> = users.iter()
+                let regular_users: Vec<_> = users
+                    .iter()
                     .filter(|u| {
                         let uid: i32 = u.uid.parse().unwrap_or(0);
-                        uid >= 1000 && uid < 65534
+                        (1000..65534).contains(&uid)
                     })
                     .collect();
 
@@ -787,14 +851,18 @@ pub fn inspect_image(
                     println!("\n    === User Accounts ===");
                     println!("      Regular users: {}", regular_users.len());
                     for user in regular_users.iter().take(10) {
-                        println!("        {} (uid: {}, home: {})", user.username, user.uid, user.home);
+                        println!(
+                            "        {} (uid: {}, home: {})",
+                            user.username, user.uid, user.home
+                        );
                     }
                     if regular_users.len() > 10 {
                         println!("        ... and {} more", regular_users.len() - 10);
                     }
                 }
 
-                let system_users: Vec<_> = users.iter()
+                let system_users: Vec<_> = users
+                    .iter()
                     .filter(|u| {
                         let uid: i32 = u.uid.parse().unwrap_or(0);
                         uid > 0 && uid < 1000
@@ -872,16 +940,23 @@ pub fn inspect_image(
             if let Ok(lvm_info) = g.inspect_lvm(root) {
                 if !lvm_info.physical_volumes.is_empty()
                     || !lvm_info.volume_groups.is_empty()
-                    || !lvm_info.logical_volumes.is_empty() {
+                    || !lvm_info.logical_volumes.is_empty()
+                {
                     println!("\n    === LVM Configuration ===");
                     if !lvm_info.physical_volumes.is_empty() {
-                        println!("      Physical Volumes: {}", lvm_info.physical_volumes.join(", "));
+                        println!(
+                            "      Physical Volumes: {}",
+                            lvm_info.physical_volumes.join(", ")
+                        );
                     }
                     if !lvm_info.volume_groups.is_empty() {
                         println!("      Volume Groups: {}", lvm_info.volume_groups.join(", "));
                     }
                     if !lvm_info.logical_volumes.is_empty() {
-                        println!("      Logical Volumes: {}", lvm_info.logical_volumes.join(", "));
+                        println!(
+                            "      Logical Volumes: {}",
+                            lvm_info.logical_volumes.join(", ")
+                        );
                     }
                 }
             }
@@ -1025,7 +1100,7 @@ pub fn list_files(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
     }
 
     // List files
-    progress.set_message(&format!("Listing {}...", path));
+    progress.set_message(format!("Listing {}...", path));
     let files = g.ls(path)?;
 
     progress.finish_and_clear();
@@ -1048,10 +1123,15 @@ pub fn list_files(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
                 "file"
             };
 
-            println!("  {} {:>10} {:o} {}",
-                     file_type, stat.size, stat.mode & 0o7777, file);
+            println!(
+                "  {} {:>10} {:o} {}",
+                file_type,
+                stat.size,
+                stat.mode & 0o7777,
+                file
+            );
         } else {
-            println!("  ?    {}",  file);
+            println!("  ?    {}", file);
         }
     }
 
@@ -1061,12 +1141,20 @@ pub fn list_files(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
 }
 
 /// Extract a file from disk image
-pub fn extract_file(image: &PathBuf, guest_path: &str, host_path: &PathBuf, verbose: bool) -> Result<()> {
+pub fn extract_file(
+    image: &PathBuf,
+    guest_path: &str,
+    host_path: &PathBuf,
+    verbose: bool,
+) -> Result<()> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    let progress = ProgressReporter::spinner(&format!("Extracting {} from {}",
-                                                      guest_path, image.display()));
+    let progress = ProgressReporter::spinner(&format!(
+        "Extracting {} from {}",
+        guest_path,
+        image.display()
+    ));
 
     g.add_drive_ro(image.to_str().unwrap())?;
 
@@ -1089,12 +1177,12 @@ pub fn extract_file(image: &PathBuf, guest_path: &str, host_path: &PathBuf, verb
 
     // Check if file exists
     if !g.exists(guest_path)? {
-        progress.abandon_with_message(&format!("File not found: {}", guest_path));
+        progress.abandon_with_message(format!("File not found: {}", guest_path));
         anyhow::bail!("File not found: {}", guest_path);
     }
 
     // Download file
-    progress.set_message(&format!("Downloading {}...", guest_path));
+    progress.set_message(format!("Downloading {}...", guest_path));
     g.download(guest_path, host_path.to_str().unwrap())?;
 
     let size = g.filesize(guest_path)?;
@@ -1135,7 +1223,7 @@ pub fn execute_command(image: &PathBuf, command: &[String], verbose: bool) -> Re
     }
 
     // Execute command
-    progress.set_message(&format!("Executing command: {}", command.join(" ")));
+    progress.set_message(format!("Executing command: {}", command.join(" ")));
     let cmd_args: Vec<&str> = command.iter().map(|s| s.as_str()).collect();
     let output = g.command(&cmd_args)?;
 
@@ -1149,12 +1237,20 @@ pub fn execute_command(image: &PathBuf, command: &[String], verbose: bool) -> Re
 }
 
 /// Backup files from guest to host
-pub fn backup_files(image: &PathBuf, guest_path: &str, output_tar: &PathBuf, verbose: bool) -> Result<()> {
+pub fn backup_files(
+    image: &PathBuf,
+    guest_path: &str,
+    output_tar: &PathBuf,
+    verbose: bool,
+) -> Result<()> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    let progress = ProgressReporter::spinner(&format!("Backing up {} from {}",
-                                                      guest_path, image.display()));
+    let progress = ProgressReporter::spinner(&format!(
+        "Backing up {} from {}",
+        guest_path,
+        image.display()
+    ));
 
     g.add_drive_ro(image.to_str().unwrap())?;
 
@@ -1176,9 +1272,17 @@ pub fn backup_files(image: &PathBuf, guest_path: &str, output_tar: &PathBuf, ver
     }
 
     // Create tar archive in guest
-    progress.set_message(&format!("Creating archive from {}...", guest_path));
+    progress.set_message(format!("Creating archive from {}...", guest_path));
     let temp_tar = "/tmp/backup.tar.gz";
-    g.tar_out_opts(guest_path, temp_tar, Some("gzip"), false, false, false, false)?;
+    g.tar_out_opts(
+        guest_path,
+        temp_tar,
+        Some("gzip"),
+        false,
+        false,
+        false,
+        false,
+    )?;
 
     // Download to host
     progress.set_message("Downloading archive...");
@@ -1188,7 +1292,11 @@ pub fn backup_files(image: &PathBuf, guest_path: &str, output_tar: &PathBuf, ver
 
     progress.finish_and_clear();
 
-    println!("✓ Backup complete: {} bytes to {}", size, output_tar.display());
+    println!(
+        "✓ Backup complete: {} bytes to {}",
+        size,
+        output_tar.display()
+    );
 
     g.umount_all()?;
     g.shutdown()?;
@@ -1200,7 +1308,12 @@ pub fn create_disk(path: &PathBuf, size_mb: u64, format: &str, verbose: bool) ->
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    println!("Creating {} MB {} disk: {}", size_mb, format, path.display());
+    println!(
+        "Creating {} MB {} disk: {}",
+        size_mb,
+        format,
+        path.display()
+    );
 
     let size_bytes = (size_mb * 1024 * 1024) as i64;
     g.disk_create(path.to_str().unwrap(), format, size_bytes)?;
@@ -1215,7 +1328,8 @@ pub fn check_filesystem(image: &PathBuf, device: Option<String>, verbose: bool) 
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
-    let progress = ProgressReporter::spinner(&format!("Checking filesystem on {}", image.display()));
+    let progress =
+        ProgressReporter::spinner(&format!("Checking filesystem on {}", image.display()));
 
     g.add_drive_ro(image.to_str().unwrap())?;
 
@@ -1237,12 +1351,15 @@ pub fn check_filesystem(image: &PathBuf, device: Option<String>, verbose: bool) 
 
     let fstype = g.vfs_type(&check_device)?;
 
-    progress.set_message(&format!("Running fsck on {} ({})...", check_device, fstype));
+    progress.set_message(format!("Running fsck on {} ({})...", check_device, fstype));
     g.fsck(&fstype, &check_device)?;
 
     progress.finish_and_clear();
 
-    println!("✓ Filesystem check complete for {} ({})", check_device, fstype);
+    println!(
+        "✓ Filesystem check complete for {} ({})",
+        check_device, fstype
+    );
 
     g.shutdown()?;
     Ok(())
@@ -1289,7 +1406,12 @@ pub fn show_disk_usage(image: &PathBuf, verbose: bool) -> Result<()> {
 }
 
 /// Diff two disk images
-pub fn diff_images(image1: &PathBuf, image2: &PathBuf, verbose: bool, output_format: Option<OutputFormat>) -> Result<()> {
+pub fn diff_images(
+    image1: &PathBuf,
+    image2: &PathBuf,
+    verbose: bool,
+    output_format: Option<OutputFormat>,
+) -> Result<()> {
     println!("Comparing: {} vs {}\n", image1.display(), image2.display());
 
     // Inspect first image
@@ -1330,7 +1452,7 @@ pub fn diff_images(image1: &PathBuf, image2: &PathBuf, verbose: bool, output_for
 
     // Output
     if let Some(format) = output_format {
-        let formatter = get_formatter(format, true);
+        let _formatter = get_formatter(format, true);
         let output = serde_json::to_string_pretty(&diff)?;
         println!("{}", output);
     } else {
@@ -1342,7 +1464,11 @@ pub fn diff_images(image1: &PathBuf, image2: &PathBuf, verbose: bool, output_for
 
 /// Compare multiple VMs against a baseline
 pub fn compare_images(baseline: &PathBuf, images: &[PathBuf], verbose: bool) -> Result<()> {
-    println!("Comparing {} images against baseline: {}\n", images.len(), baseline.display());
+    println!(
+        "Comparing {} images against baseline: {}\n",
+        images.len(),
+        baseline.display()
+    );
 
     // Inspect baseline
     let mut g_baseline = Guestfs::new()?;
@@ -1362,7 +1488,10 @@ pub fn compare_images(baseline: &PathBuf, images: &[PathBuf], verbose: bool) -> 
 
     // Print header
     println!("=== Comparison Report ===\n");
-    println!("{:<20} {:<15} {:<15} {:<15}", "Metric", "Baseline", "VM1", "VM2");
+    println!(
+        "{:<20} {:<15} {:<15} {:<15}",
+        "Metric", "Baseline", "VM1", "VM2"
+    );
     println!("{:-<65}", "");
 
     // Compare each image
@@ -1386,12 +1515,45 @@ pub fn compare_images(baseline: &PathBuf, images: &[PathBuf], verbose: bool) -> 
         if idx == 0 {
             // Print baseline values
             let hostname = baseline_report.os.hostname.as_deref().unwrap_or("N/A");
-            let version = baseline_report.os.version.as_ref().map(|v| format!("{}.{}", v.major, v.minor)).unwrap_or_else(|| "N/A".to_string());
-            let pkg_count = baseline_report.packages.as_ref().map(|p| p.count.to_string()).unwrap_or_else(|| "N/A".to_string());
+            let version = baseline_report
+                .os
+                .version
+                .as_ref()
+                .map(|v| format!("{}.{}", v.major, v.minor))
+                .unwrap_or_else(|| "N/A".to_string());
+            let pkg_count = baseline_report
+                .packages
+                .as_ref()
+                .map(|p| p.count.to_string())
+                .unwrap_or_else(|| "N/A".to_string());
 
-            println!("{:<20} {:<15} {:<15}", "Hostname", hostname, report.os.hostname.as_deref().unwrap_or("N/A"));
-            println!("{:<20} {:<15} {:<15}", "OS Version", version, report.os.version.as_ref().map(|v| format!("{}.{}", v.major, v.minor)).unwrap_or_else(|| "N/A".to_string()));
-            println!("{:<20} {:<15} {:<15}", "Package Count", pkg_count, report.packages.as_ref().map(|p| p.count.to_string()).unwrap_or_else(|| "N/A".to_string()));
+            println!(
+                "{:<20} {:<15} {:<15}",
+                "Hostname",
+                hostname,
+                report.os.hostname.as_deref().unwrap_or("N/A")
+            );
+            println!(
+                "{:<20} {:<15} {:<15}",
+                "OS Version",
+                version,
+                report
+                    .os
+                    .version
+                    .as_ref()
+                    .map(|v| format!("{}.{}", v.major, v.minor))
+                    .unwrap_or_else(|| "N/A".to_string())
+            );
+            println!(
+                "{:<20} {:<15} {:<15}",
+                "Package Count",
+                pkg_count,
+                report
+                    .packages
+                    .as_ref()
+                    .map(|p| p.count.to_string())
+                    .unwrap_or_else(|| "N/A".to_string())
+            );
         }
     }
 
@@ -1407,9 +1569,9 @@ pub fn inspect_batch(
     output_format: Option<OutputFormat>,
     use_cache: bool,
 ) -> Result<()> {
+    use super::cache::InspectionCache;
     use std::sync::{Arc, Mutex};
     use std::thread;
-    use super::cache::InspectionCache;
 
     println!("=== Batch Inspection ===");
     println!("Images: {}", images.len());
@@ -1417,7 +1579,8 @@ pub fn inspect_batch(
     println!();
 
     // Shared results vector
-    let results: Arc<Mutex<Vec<(String, Result<InspectionReport>)>>> = Arc::new(Mutex::new(Vec::new()));
+    let results: Arc<Mutex<Vec<(String, Result<InspectionReport>)>>> =
+        Arc::new(Mutex::new(Vec::new()));
 
     // Create work queue
     let work_queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(images.to_vec()));
@@ -1510,9 +1673,13 @@ pub fn inspect_batch(
                 } else {
                     // Summary output
                     println!("✓ {}", image_path);
-                    println!("  OS: {} {}",
+                    println!(
+                        "  OS: {} {}",
                         report.os.distribution.as_deref().unwrap_or("Unknown"),
-                        report.os.version.as_ref()
+                        report
+                            .os
+                            .version
+                            .as_ref()
                             .map(|v| format!("{}.{}", v.major, v.minor))
                             .unwrap_or_else(|| "N/A".to_string())
                     );

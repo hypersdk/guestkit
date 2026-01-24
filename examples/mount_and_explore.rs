@@ -44,7 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let root = &roots[0];
-    println!("Found OS: {} {}.{}",
+    println!(
+        "Found OS: {} {}.{}",
         g.inspect_get_distro(root)?,
         g.inspect_get_major_version(root)?,
         g.inspect_get_minor_version(root)?
@@ -98,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("  {}", line);
                     }
                 }
-            },
+            }
             Err(e) => println!("  Error reading: {}", e),
         }
     } else {

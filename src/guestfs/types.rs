@@ -332,7 +332,10 @@ mod tests {
     #[test]
     fn test_filesystem_type_parse() {
         assert_eq!(FilesystemType::from_str("ext4"), Some(FilesystemType::Ext4));
-        assert_eq!(FilesystemType::from_str("btrfs"), Some(FilesystemType::Btrfs));
+        assert_eq!(
+            FilesystemType::from_str("btrfs"),
+            Some(FilesystemType::Btrfs)
+        );
         assert_eq!(FilesystemType::from_str("unknown"), None);
     }
 
@@ -345,14 +348,8 @@ mod tests {
 
     #[test]
     fn test_distro_package_manager() {
-        assert_eq!(
-            Distro::Ubuntu.package_manager(),
-            Some(PackageManager::Dpkg)
-        );
-        assert_eq!(
-            Distro::Fedora.package_manager(),
-            Some(PackageManager::Rpm)
-        );
+        assert_eq!(Distro::Ubuntu.package_manager(), Some(PackageManager::Dpkg));
+        assert_eq!(Distro::Fedora.package_manager(), Some(PackageManager::Rpm));
         assert_eq!(
             Distro::Archlinux.package_manager(),
             Some(PackageManager::Pacman)
@@ -367,6 +364,9 @@ mod tests {
             .option("compress=zstd");
 
         assert!(opts.readonly);
-        assert_eq!(opts.to_string(), Some("subvol=@home,compress=zstd".to_string()));
+        assert_eq!(
+            opts.to_string(),
+            Some("subvol=@home,compress=zstd".to_string())
+        );
     }
 }

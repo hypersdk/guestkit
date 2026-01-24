@@ -20,7 +20,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -52,7 +54,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -84,7 +88,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -117,7 +123,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -149,7 +157,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -181,7 +191,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -199,7 +211,9 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        output_str.trim().parse::<i32>()
+        output_str
+            .trim()
+            .parse::<i32>()
             .map_err(|e| Error::InvalidFormat(format!("Failed to parse block size: {}", e)))
     }
 
@@ -215,7 +229,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -255,7 +271,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -273,7 +291,9 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        output_str.trim().parse::<i32>()
+        output_str
+            .trim()
+            .parse::<i32>()
             .map_err(|e| Error::InvalidFormat(format!("Failed to parse sector size: {}", e)))
     }
 }

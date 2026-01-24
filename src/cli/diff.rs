@@ -103,11 +103,15 @@ impl InspectionDiff {
             let kernels2: HashSet<_> = p2.kernels.iter().collect();
 
             for kernel in kernels2.difference(&kernels1) {
-                diff.package_changes.added.push(format!("kernel: {}", kernel));
+                diff.package_changes
+                    .added
+                    .push(format!("kernel: {}", kernel));
             }
 
             for kernel in kernels1.difference(&kernels2) {
-                diff.package_changes.removed.push(format!("kernel: {}", kernel));
+                diff.package_changes
+                    .removed
+                    .push(format!("kernel: {}", kernel));
             }
 
             if p1.count != p2.count {
@@ -209,12 +213,18 @@ impl InspectionDiff {
             println!("\n=== OS Differences ===");
             has_changes = true;
             for change in &self.os_changes {
-                println!("  {}: {} → {}", change.field, change.old_value, change.new_value);
+                println!(
+                    "  {}: {} → {}",
+                    change.field, change.old_value, change.new_value
+                );
             }
         }
 
         // Package Changes
-        if !self.package_changes.added.is_empty() || !self.package_changes.removed.is_empty() || !self.package_changes.updated.is_empty() {
+        if !self.package_changes.added.is_empty()
+            || !self.package_changes.removed.is_empty()
+            || !self.package_changes.updated.is_empty()
+        {
             println!("\n=== Package Differences ===");
             has_changes = true;
 
@@ -235,7 +245,10 @@ impl InspectionDiff {
             if !self.package_changes.updated.is_empty() {
                 println!("  Updated ({}):", self.package_changes.updated.len());
                 for pkg in &self.package_changes.updated {
-                    println!("    ~ {}: {} → {}", pkg.name, pkg.old_version, pkg.new_version);
+                    println!(
+                        "    ~ {}: {} → {}",
+                        pkg.name, pkg.old_version, pkg.new_version
+                    );
                 }
             }
         }
@@ -285,7 +298,10 @@ impl InspectionDiff {
             println!("\n=== Network Differences ===");
             has_changes = true;
             for change in &self.network_changes {
-                println!("  {}: {} → {}", change.field, change.old_value, change.new_value);
+                println!(
+                    "  {}: {} → {}",
+                    change.field, change.old_value, change.new_value
+                );
             }
         }
 
@@ -294,7 +310,10 @@ impl InspectionDiff {
             println!("\n=== Configuration Differences ===");
             has_changes = true;
             for change in &self.config_changes {
-                println!("  {}: {} → {}", change.field, change.old_value, change.new_value);
+                println!(
+                    "  {}: {} → {}",
+                    change.field, change.old_value, change.new_value
+                );
             }
         }
 

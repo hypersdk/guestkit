@@ -20,7 +20,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -45,7 +47,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -81,7 +85,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -114,10 +120,7 @@ impl Guestfs {
                 if parts.len() >= 10 {
                     let attr_name = parts[1];
                     let value = parts[3];
-                    attributes.push((
-                        attr_name.to_string(),
-                        value.to_string()
-                    ));
+                    attributes.push((attr_name.to_string(), value.to_string()));
                 }
             }
         }
@@ -137,7 +140,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -159,10 +164,7 @@ impl Guestfs {
 
         for line in output_str.lines() {
             if let Some((key, value)) = line.split_once(':') {
-                info.push((
-                    key.trim().to_string(),
-                    value.trim().to_string()
-                ));
+                info.push((key.trim().to_string(), value.trim().to_string()));
             }
         }
 
@@ -181,7 +183,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -189,7 +193,12 @@ impl Guestfs {
             "short" => "short",
             "long" => "long",
             "conveyance" => "conveyance",
-            _ => return Err(Error::InvalidFormat(format!("Invalid test type: {}", test_type))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid test type: {}",
+                    test_type
+                )))
+            }
         };
 
         let output = Command::new("smartctl")

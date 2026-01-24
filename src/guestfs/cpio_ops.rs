@@ -4,8 +4,8 @@
 //! This implementation provides CPIO archive creation and extraction.
 
 use crate::core::{Error, Result};
-use crate::guestfs::Guestfs;
 use crate::guestfs::security_utils::PathValidator;
+use crate::guestfs::Guestfs;
 use std::process::{Command, Stdio};
 
 impl Guestfs {
@@ -21,25 +21,25 @@ impl Guestfs {
 
         let host_dir = self.resolve_guest_path(directory)?;
 
-        let archive_data = std::fs::read(archive)
-            .map_err(|e| Error::Io(e))?;
+        let archive_data = std::fs::read(archive).map_err(Error::Io)?;
 
         let mut cmd = Command::new("cpio");
         cmd.arg("-idm")
-           .arg("-D")
-           .arg(&host_dir)
-           .stdin(std::process::Stdio::piped());
+            .arg("-D")
+            .arg(&host_dir)
+            .stdin(std::process::Stdio::piped());
 
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute cpio: {}", e)))?;
 
         use std::io::Write;
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(&archive_data)
-                .map_err(|e| Error::Io(e))?;
+            stdin.write_all(&archive_data).map_err(Error::Io)?;
         }
 
-        let output = child.wait_with_output()
+        let output = child
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
 
         if !output.status.success() {
@@ -79,7 +79,8 @@ impl Guestfs {
             .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute find: {}", e)))?;
 
-        let find_stdout = find_child.stdout
+        let find_stdout = find_child
+            .stdout
             .ok_or_else(|| Error::CommandFailed("Failed to capture find output".to_string()))?;
 
         // Start cpio process with find output as stdin
@@ -93,7 +94,8 @@ impl Guestfs {
             .map_err(|e| Error::CommandFailed(format!("Failed to execute cpio: {}", e)))?;
 
         // Get cpio output
-        let cpio_output = cpio_child.wait_with_output()
+        let cpio_output = cpio_child
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
 
         if !cpio_output.status.success() {
@@ -104,8 +106,7 @@ impl Guestfs {
         }
 
         // Write cpio output to archive file
-        std::fs::write(archive, &cpio_output.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(archive, &cpio_output.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -120,23 +121,22 @@ impl Guestfs {
             eprintln!("guestfs: cpio_list {}", archive);
         }
 
-        let archive_data = std::fs::read(archive)
-            .map_err(|e| Error::Io(e))?;
+        let archive_data = std::fs::read(archive).map_err(Error::Io)?;
 
         let mut cmd = Command::new("cpio");
-        cmd.arg("-t")
-           .stdin(std::process::Stdio::piped());
+        cmd.arg("-t").stdin(std::process::Stdio::piped());
 
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute cpio: {}", e)))?;
 
         use std::io::Write;
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(&archive_data)
-                .map_err(|e| Error::Io(e))?;
+            stdin.write_all(&archive_data).map_err(Error::Io)?;
         }
 
-        let output = child.wait_with_output()
+        let output = child
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
 
         if !output.status.success() {
@@ -147,10 +147,7 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        let files: Vec<String> = output_str
-            .lines()
-            .map(|s| s.to_string())
-            .collect();
+        let files: Vec<String> = output_str.lines().map(|s| s.to_string()).collect();
 
         Ok(files)
     }

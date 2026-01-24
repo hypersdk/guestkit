@@ -15,18 +15,28 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: xfs_repair {} {} {}", device, forcelogzero, nomodify);
+            eprintln!(
+                "guestfs: xfs_repair {} {} {}",
+                device, forcelogzero, nomodify
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let mut cmd = Command::new("xfs_repair");
 
@@ -40,7 +50,8 @@ impl Guestfs {
 
         cmd.arg(&nbd_partition);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute xfs_repair: {}", e)))?;
 
         Ok(output.status.code().unwrap_or(1))
@@ -61,12 +72,22 @@ impl Guestfs {
             // It's a device
             self.setup_nbd_if_needed()?;
 
-            if let Some(partition_number) = pathordevice.chars().last().and_then(|c| c.to_digit(10)) {
-                let nbd_device = self.nbd_device.as_ref()
+            if let Some(partition_number) = pathordevice.chars().last().and_then(|c| c.to_digit(10))
+            {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
                     .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-                format!("{}p{}", nbd_device.device_path().display(), partition_number)
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
             } else {
-                return Err(Error::InvalidFormat(format!("Invalid device: {}", pathordevice)));
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid device: {}",
+                    pathordevice
+                )));
             }
         } else {
             // It's a path
@@ -92,8 +113,17 @@ impl Guestfs {
     /// Admin XFS filesystem
     ///
     /// GuestFS API: xfs_admin()
-    pub fn xfs_admin(&mut self, device: &str, extunwritten: bool, imgfile: bool, v2log: bool,
-                      projid32bit: bool, lazycounter: bool, label: Option<&str>, uuid: Option<&str>) -> Result<i32> {
+    pub fn xfs_admin(
+        &mut self,
+        device: &str,
+        extunwritten: bool,
+        imgfile: bool,
+        v2log: bool,
+        projid32bit: bool,
+        lazycounter: bool,
+        label: Option<&str>,
+        uuid: Option<&str>,
+    ) -> Result<i32> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -102,13 +132,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let mut cmd = Command::new("xfs_admin");
 
@@ -138,7 +175,8 @@ impl Guestfs {
 
         cmd.arg(&nbd_partition);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute xfs_admin: {}", e)))?;
 
         Ok(output.status.code().unwrap_or(1))
@@ -156,13 +194,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("xfs_db")
             .arg("-r") // Read-only

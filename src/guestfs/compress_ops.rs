@@ -26,14 +26,21 @@ impl Guestfs {
             "xz" => "xz",
             "lzop" | "lzo" => "lzop",
             "compress" => "compress",
-            _ => return Err(Error::InvalidFormat(format!("Unknown compression type: {}", ctype))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Unknown compression type: {}",
+                    ctype
+                )))
+            }
         };
 
         let output_cmd = Command::new(compress_cmd)
             .arg("-c")
             .arg(&host_path)
             .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e)))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e))
+            })?;
 
         if !output_cmd.status.success() {
             return Err(Error::CommandFailed(format!(
@@ -43,8 +50,7 @@ impl Guestfs {
             )));
         }
 
-        std::fs::write(output, &output_cmd.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(output, &output_cmd.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -56,12 +62,17 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: compress_device_out {} {} {}", ctype, device, output);
+            eprintln!(
+                "guestfs: compress_device_out {} {} {}",
+                ctype, device, output
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -70,17 +81,23 @@ impl Guestfs {
             "bzip2" | "bz2" => "bzip2",
             "xz" => "xz",
             "lzop" | "lzo" => "lzop",
-            _ => return Err(Error::InvalidFormat(format!("Unknown compression type: {}", ctype))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Unknown compression type: {}",
+                    ctype
+                )))
+            }
         };
 
         let output_cmd = Command::new(compress_cmd)
             .arg("-c")
             .arg(nbd_device_path)
             .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e)))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e))
+            })?;
 
-        std::fs::write(output, &output_cmd.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(output, &output_cmd.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -102,14 +119,21 @@ impl Guestfs {
             "gzip" | "gz" => "gzip",
             "bzip2" | "bz2" => "bzip2",
             "xz" => "xz",
-            _ => return Err(Error::InvalidFormat(format!("Unknown compression type: {}", ctype))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Unknown compression type: {}",
+                    ctype
+                )))
+            }
         };
 
         let output = Command::new(compress_cmd)
             .arg("-c")
             .arg(&src_path)
             .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e)))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to execute {}: {}", compress_cmd, e))
+            })?;
 
         if !output.status.success() {
             return Err(Error::CommandFailed(format!(
@@ -119,8 +143,7 @@ impl Guestfs {
             )));
         }
 
-        std::fs::write(&dest_path, &output.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&dest_path, &output.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -142,14 +165,21 @@ impl Guestfs {
             "gzip" | "gz" => "gunzip",
             "bzip2" | "bz2" => "bunzip2",
             "xz" => "unxz",
-            _ => return Err(Error::InvalidFormat(format!("Unknown compression type: {}", ctype))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Unknown compression type: {}",
+                    ctype
+                )))
+            }
         };
 
         let output = Command::new(decompress_cmd)
             .arg("-c")
             .arg(&src_path)
             .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to execute {}: {}", decompress_cmd, e)))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to execute {}: {}", decompress_cmd, e))
+            })?;
 
         if !output.status.success() {
             return Err(Error::CommandFailed(format!(
@@ -159,8 +189,7 @@ impl Guestfs {
             )));
         }
 
-        std::fs::write(&dest_path, &output.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&dest_path, &output.stdout).map_err(Error::Io)?;
 
         Ok(())
     }

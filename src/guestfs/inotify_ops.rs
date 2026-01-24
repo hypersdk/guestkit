@@ -20,7 +20,9 @@ impl Guestfs {
         // In a full implementation, this would initialize inotify state
         // For now, just validate the parameter
         if maxevents <= 0 {
-            return Err(Error::InvalidFormat("maxevents must be positive".to_string()));
+            return Err(Error::InvalidFormat(
+                "maxevents must be positive".to_string(),
+            ));
         }
 
         Ok(())

@@ -11,8 +11,13 @@ impl Guestfs {
     /// Synchronize files using rsync (from guest)
     ///
     /// GuestFS API: rsync_out()
-    pub fn rsync_out(&mut self, src: &str, dest: &str, archive: bool,
-                     deletedest: bool) -> Result<()> {
+    pub fn rsync_out(
+        &mut self,
+        src: &str,
+        dest: &str,
+        archive: bool,
+        deletedest: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -33,10 +38,10 @@ impl Guestfs {
             cmd.arg("--delete");
         }
 
-        cmd.arg(&host_src)
-           .arg(dest);
+        cmd.arg(&host_src).arg(dest);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute rsync: {}", e)))?;
 
         if !output.status.success() {
@@ -52,8 +57,13 @@ impl Guestfs {
     /// Synchronize files using rsync (to guest)
     ///
     /// GuestFS API: rsync_in()
-    pub fn rsync_in(&mut self, src: &str, dest: &str, archive: bool,
-                    deletedest: bool) -> Result<()> {
+    pub fn rsync_in(
+        &mut self,
+        src: &str,
+        dest: &str,
+        archive: bool,
+        deletedest: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -74,10 +84,10 @@ impl Guestfs {
             cmd.arg("--delete");
         }
 
-        cmd.arg(src)
-           .arg(&host_dest);
+        cmd.arg(src).arg(&host_dest);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute rsync: {}", e)))?;
 
         if !output.status.success() {

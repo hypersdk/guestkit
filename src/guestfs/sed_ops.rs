@@ -19,8 +19,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         // Parse sed expression (simple s/pattern/replacement/flags)
         if expression.starts_with("s/") {
@@ -39,13 +38,14 @@ impl Guestfs {
                     re.replace(&content, replacement).to_string()
                 };
 
-                std::fs::write(&host_path, new_content)
-                    .map_err(|e| Error::Io(e))?;
+                std::fs::write(&host_path, new_content).map_err(Error::Io)?;
             } else {
                 return Err(Error::InvalidFormat("Invalid sed expression".to_string()));
             }
         } else {
-            return Err(Error::InvalidFormat("Only s/// expressions are supported".to_string()));
+            return Err(Error::InvalidFormat(
+                "Only s/// expressions are supported".to_string(),
+            ));
         }
 
         Ok(())
@@ -61,8 +61,7 @@ impl Guestfs {
             eprintln!("guestfs: sed_file {} {}", sedfile, path);
         }
 
-        let expressions = std::fs::read_to_string(sedfile)
-            .map_err(|e| Error::Io(e))?;
+        let expressions = std::fs::read_to_string(sedfile).map_err(Error::Io)?;
 
         for expr in expressions.lines() {
             if !expr.is_empty() && !expr.starts_with('#') {
@@ -84,13 +83,11 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         let new_content = content.replace(pattern, replacement);
 
-        std::fs::write(&host_path, new_content)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, new_content).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -102,17 +99,18 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: replace_first {} {} {}", path, pattern, replacement);
+            eprintln!(
+                "guestfs: replace_first {} {} {}",
+                path, pattern, replacement
+            );
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         let new_content = content.replacen(pattern, replacement, 1);
 
-        std::fs::write(&host_path, new_content)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, new_content).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -128,8 +126,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         let re = Regex::new(pattern)
             .map_err(|e| Error::InvalidFormat(format!("Invalid regex: {}", e)))?;
@@ -140,8 +137,7 @@ impl Guestfs {
             .collect::<Vec<_>>()
             .join("\n");
 
-        std::fs::write(&host_path, new_content + "\n")
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, new_content + "\n").map_err(Error::Io)?;
 
         Ok(())
     }
@@ -157,8 +153,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         let re = Regex::new(pattern)
             .map_err(|e| Error::InvalidFormat(format!("Invalid regex: {}", e)))?;
@@ -171,8 +166,7 @@ impl Guestfs {
             new_lines.push(existing_line.to_string());
         }
 
-        std::fs::write(&host_path, new_lines.join("\n") + "\n")
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, new_lines.join("\n") + "\n").map_err(Error::Io)?;
 
         Ok(())
     }
@@ -188,8 +182,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let content = std::fs::read_to_string(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         let re = Regex::new(pattern)
             .map_err(|e| Error::InvalidFormat(format!("Invalid regex: {}", e)))?;
@@ -202,8 +195,7 @@ impl Guestfs {
             }
         }
 
-        std::fs::write(&host_path, new_lines.join("\n") + "\n")
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, new_lines.join("\n") + "\n").map_err(Error::Io)?;
 
         Ok(())
     }

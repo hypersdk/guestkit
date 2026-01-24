@@ -3,8 +3,8 @@
 //! Tests for path traversal, command injection, symlink attacks,
 //! and resource limit enforcement.
 
-use guestkit::guestfs::{Guestfs, ResourceLimits};
 use guestkit::guestfs::security_utils::PathValidator;
+use guestkit::guestfs::{Guestfs, ResourceLimits};
 
 #[test]
 fn test_path_traversal_detection() {
