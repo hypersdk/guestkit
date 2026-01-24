@@ -223,6 +223,45 @@ enum Commands {
     #[command(name = "cache-stats")]
     CacheStats,
 
+    /// List filesystems and partitions
+    #[command(alias = "fs")]
+    Filesystems {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Show detailed information
+        #[arg(short, long)]
+        detailed: bool,
+    },
+
+    /// List installed packages
+    #[command(alias = "pkg")]
+    Packages {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Filter packages by name
+        #[arg(short, long)]
+        filter: Option<String>,
+
+        /// Limit number of results
+        #[arg(short, long)]
+        limit: Option<usize>,
+
+        /// Output as JSON
+        #[arg(short, long)]
+        json: bool,
+    },
+
+    /// Read file content from disk image
+    Cat {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Path to file in guest filesystem
+        path: String,
+    },
+
     /// Show version information
     Version,
 
@@ -443,9 +482,26 @@ fn main() -> anyhow::Result<()> {
             println!("  Total Size: {}", stats.size_human());
         }
 
+        Commands::Filesystems { image, detailed } => {
+            list_filesystems(&image, detailed, cli.verbose)?;
+        }
+
+        Commands::Packages {
+            image,
+            filter,
+            limit,
+            json,
+        } => {
+            list_packages(&image, filter, limit, json, cli.verbose)?;
+        }
+
+        Commands::Cat { image, path } => {
+            cat_file(&image, &path, cli.verbose)?;
+        }
+
         Commands::Version => {
             println!("guestkit {}", VERSION);
-            println!("A pure Rust implementation of libguestfs-compatible APIs");
+            println!("A modern VM disk inspection and manipulation toolkit");
             println!();
             println!("Project: https://github.com/ssahani/guestkit");
             println!("License: LGPL-3.0-or-later");

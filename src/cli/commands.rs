@@ -1743,3 +1743,372 @@ fn inspect_single_image(
 
     Ok(report)
 }
+
+/// List filesystems and partitions
+pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use owo_colors::OwoColorize;
+
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())
+        .with_context(|| format!("Failed to add disk: {}", image.display()))?;
+
+    progress.set_message("Launching appliance...");
+    g.launch().context("Failed to launch appliance")?;
+
+    progress.set_message("Scanning filesystems...");
+
+    let devices = g.list_devices().context("Failed to list devices")?;
+
+    progress.finish_and_clear();
+
+    println!("\n{}", "═".repeat(70).bright_blue());
+    println!(
+        "{} {}",
+        "💾 Disk Image:".bright_cyan().bold(),
+        image.display().to_string().bright_white()
+    );
+    println!("{}\n", "═".repeat(70).bright_blue());
+
+    // Devices
+    println!("{}", "Block Devices".bright_white().bold());
+    println!("{}", "─".repeat(50).bright_black());
+    for device in devices {
+        println!("  {} {}", "▪".bright_cyan(), device.bright_white().bold());
+
+        if detailed {
+            if let Ok(size) = g.blockdev_getsize64(&device) {
+                let gb = size as f64 / 1_073_741_824.0; // 1024^3
+                println!(
+                    "    {} {} ({:.2} GiB)",
+                    "Size:".dimmed(),
+                    size.to_string().bright_yellow(),
+                    gb
+                );
+            }
+
+            if let Ok(parttype) = g.part_get_parttype(&device) {
+                println!(
+                    "    {} {}",
+                    "Partition table:".dimmed(),
+                    parttype.bright_green()
+                );
+            }
+        }
+    }
+
+    // Partitions
+    let partitions = g.list_partitions().context("Failed to list partitions")?;
+    if !partitions.is_empty() {
+        println!("\n{}", "Partitions".bright_white().bold());
+        println!("{}", "─".repeat(50).bright_black());
+
+        for partition in partitions {
+            let fstype = g
+                .vfs_type(&partition)
+                .unwrap_or_else(|_| "unknown".to_string());
+            let size = g.blockdev_getsize64(&partition).unwrap_or(0);
+            let gb = size as f64 / 1_073_741_824.0;
+
+            let fs_icon = match fstype.as_str() {
+                "ext2" | "ext3" | "ext4" => "📁",
+                "ntfs" => "🪟",
+                "vfat" | "fat" | "fat32" => "💾",
+                "xfs" => "🗄",
+                "btrfs" => "🌳",
+                "swap" => "💫",
+                _ => "❓",
+            };
+
+            println!(
+                "  {} {} {} {}",
+                fs_icon,
+                partition.bright_white().bold(),
+                format!("({})", fstype).bright_cyan(),
+                format!("{:.1} GiB", gb).bright_yellow()
+            );
+
+            if let Ok(label) = g.vfs_label(&partition) {
+                if !label.is_empty() {
+                    println!("    {} {}", "Label:".dimmed(), label.bright_green());
+                }
+            }
+
+            if detailed {
+                if let Ok(uuid) = g.vfs_uuid(&partition) {
+                    if !uuid.is_empty() {
+                        println!("    {} {}", "UUID:".dimmed(), uuid.dimmed());
+                    }
+                }
+
+                if let Ok(partnum) = g.part_to_partnum(&partition) {
+                    println!(
+                        "    {} {}",
+                        "Number:".dimmed(),
+                        partnum.to_string().bright_magenta()
+                    );
+                }
+            }
+        }
+    }
+
+    // LVM information
+    if let Ok(vgs) = g.vgs() {
+        if !vgs.is_empty() {
+            println!("\n{}", "LVM Volume Groups".bright_white().bold());
+            println!("{}", "─".repeat(50).bright_black());
+            for vg in vgs {
+                println!("  {} {}", "▸".bright_magenta(), vg.bright_white().bold());
+            }
+        }
+    }
+
+    if let Ok(lvs) = g.lvs() {
+        if !lvs.is_empty() {
+            println!("\n{}", "LVM Logical Volumes".bright_white().bold());
+            println!("{}", "─".repeat(50).bright_black());
+            for lv in lvs {
+                let size = g.blockdev_getsize64(&lv).unwrap_or(0);
+                let gb = size as f64 / 1_073_741_824.0;
+
+                println!(
+                    "  {} {} {}",
+                    "▸".bright_magenta(),
+                    lv.bright_white().bold(),
+                    format!("{:.1} GiB", gb).bright_yellow()
+                );
+            }
+        }
+    }
+
+    println!("\n{}", "═".repeat(70).bright_blue());
+
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// List installed packages
+pub fn list_packages(
+    image: &PathBuf,
+    filter: Option<String>,
+    limit: Option<usize>,
+    json_output: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use serde_json::json;
+
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    // Show progress for long operations
+    let progress = if !json_output {
+        let p = ProgressReporter::spinner("Loading disk image...");
+        Some(p)
+    } else {
+        None
+    };
+
+    g.add_drive_ro(image.to_str().unwrap())
+        .with_context(|| format!("Failed to add disk: {}", image.display()))?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Launching appliance...");
+    }
+
+    g.launch().context("Failed to launch appliance")?;
+
+    if let Some(ref p) = progress {
+        p.set_message("Detecting operating system...");
+    }
+
+    let roots = g.inspect_os().context("Failed to inspect OS")?;
+    if roots.is_empty() {
+        if let Some(p) = progress {
+            p.abandon_with_message("No operating system detected");
+        }
+        anyhow::bail!("No operating system detected in disk image");
+    }
+
+    let root = &roots[0];
+
+    // Mount filesystems
+    if let Some(ref p) = progress {
+        p.set_message("Mounting filesystems...");
+    }
+
+    if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+        let mut mounts: Vec<_> = mountpoints.iter().collect();
+        mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+        for (mount, device) in mounts {
+            g.mount_ro(device, mount).ok();
+        }
+    }
+
+    // List packages
+    if let Some(ref p) = progress {
+        p.set_message("Listing installed packages...");
+    }
+
+    let apps = g
+        .inspect_list_applications(root)
+        .context("Failed to list applications")?;
+
+    if let Some(p) = progress {
+        p.finish_and_clear();
+    }
+
+    // Apply filter
+    let filtered: Vec<_> = apps
+        .into_iter()
+        .filter(|app| {
+            if let Some(ref f) = filter {
+                app.name.contains(f)
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    // Apply limit
+    let limited: Vec<_> = if let Some(lim) = limit {
+        filtered.into_iter().take(lim).collect()
+    } else {
+        filtered
+    };
+
+    if json_output {
+        let packages: Vec<_> = limited
+            .iter()
+            .map(|app| {
+                json!({
+                    "name": app.name,
+                    "version": app.version,
+                    "release": app.release,
+                    "epoch": app.epoch,
+                })
+            })
+            .collect();
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "total": packages.len(),
+                "packages": packages,
+            }))?
+        );
+    } else {
+        println!("Found {} package(s)\n", limited.len());
+
+        if !limited.is_empty() {
+            println!("{:<40} {:<20} {:<20}", "Package", "Version", "Release");
+            println!("{}", "-".repeat(82));
+
+            for app in limited {
+                let name = if app.name.len() > 38 {
+                    format!("{}...", &app.name[..35])
+                } else {
+                    app.name.clone()
+                };
+
+                let version = if app.version.len() > 18 {
+                    format!("{}...", &app.version[..15])
+                } else {
+                    app.version.clone()
+                };
+
+                let release = if app.release.len() > 18 {
+                    format!("{}...", &app.release[..15])
+                } else {
+                    app.release.clone()
+                };
+
+                println!("{:<40} {:<20} {:<20}", name, version, release);
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Read and display file content from disk image
+pub fn cat_file(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())
+        .with_context(|| format!("Failed to add disk: {}", image.display()))?;
+
+    progress.set_message("Launching appliance...");
+    g.launch().context("Failed to launch appliance")?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if file exists
+    if !g.is_file(path).unwrap_or(false) {
+        progress.abandon_with_message(format!("File not found: {}", path));
+        anyhow::bail!("File not found: {}", path);
+    }
+
+    // Read and print file
+    progress.set_message(format!("Reading {}...", path));
+    let content = g
+        .read_file(path)
+        .with_context(|| format!("Failed to read file: {}", path))?;
+
+    progress.finish_and_clear();
+
+    // Try to print as UTF-8, fall back to hex if binary
+    match String::from_utf8(content.clone()) {
+        Ok(text) => print!("{}", text),
+        Err(_) => {
+            eprintln!("Warning: File contains binary data, displaying hex dump");
+            for (i, chunk) in content.chunks(16).enumerate() {
+                print!("{:08x}  ", i * 16);
+                for byte in chunk {
+                    print!("{:02x} ", byte);
+                }
+                println!();
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}

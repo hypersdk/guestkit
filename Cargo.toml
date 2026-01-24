@@ -88,10 +88,6 @@ disk-ops = []
 guest-inspect = []
 python-bindings = ["pyo3"]
 
-[[bin]]
-name = "guestctl"
-path = "src/bin/guestctl.rs"
-
 # Python module (optional)
 [lib]
 name = "guestkit"
