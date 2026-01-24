@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Syslinux operations compatible with libguestfs
+//! Syslinux operations for disk image manipulation
 //!
 //! This implementation provides syslinux bootloader installation functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Install syslinux bootloader
     ///
-    /// Compatible with libguestfs g.syslinux()
+    /// GuestFS API: syslinux()
     pub fn syslinux(&mut self, device: &str, directory: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// Install extlinux bootloader
     ///
-    /// Compatible with libguestfs g.extlinux()
+    /// GuestFS API: extlinux()
     pub fn extlinux(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 

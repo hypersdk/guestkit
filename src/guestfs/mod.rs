@@ -6,6 +6,7 @@
 
 pub mod handle;
 pub mod inspect;
+pub mod inspect_enhanced;
 pub mod mount;
 pub mod file_ops;
 pub mod device;
@@ -48,6 +49,7 @@ pub mod selinux_ops;
 pub mod cap_ops;
 pub mod acl_ops;
 pub mod hivex_ops;
+pub mod windows_registry;
 pub mod rsync_ops;
 pub mod syslinux_ops;
 pub mod journal_ops;
@@ -99,6 +101,7 @@ pub mod types;
 
 pub use handle::Guestfs;
 pub use inspect::*;
+pub use inspect_enhanced::*;
 pub use metadata::Stat;
 
 // Re-export type-safe types for convenience

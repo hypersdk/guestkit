@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! GRUB bootloader operations compatible with libguestfs
+//! GRUB bootloader operations for disk image manipulation
 //!
 //! This implementation provides GRUB bootloader installation and configuration.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Install GRUB bootloader
     ///
-    /// Compatible with libguestfs g.grub_install()
+    /// GuestFS API: grub_install()
     pub fn grub_install(&mut self, root: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 

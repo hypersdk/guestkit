@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Node creation operations compatible with libguestfs
+//! Node creation operations for disk image manipulation
 //!
 //! This implementation provides special file and device node creation.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create device node
     ///
-    /// Compatible with libguestfs g.mknod()
+    /// GuestFS API: mknod()
     pub fn mknod(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -52,7 +52,7 @@ impl Guestfs {
 
     /// Create block device node
     ///
-    /// Compatible with libguestfs g.mknod_b()
+    /// GuestFS API: mknod_b()
     pub fn mknod_b(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -67,7 +67,7 @@ impl Guestfs {
 
     /// Create character device node
     ///
-    /// Compatible with libguestfs g.mknod_c()
+    /// GuestFS API: mknod_c()
     pub fn mknod_c(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -82,7 +82,7 @@ impl Guestfs {
 
     /// Create FIFO (named pipe)
     ///
-    /// Compatible with libguestfs g.mkfifo()
+    /// GuestFS API: mkfifo()
     pub fn mkfifo(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -111,7 +111,7 @@ impl Guestfs {
 
     /// Create temporary directory
     ///
-    /// Compatible with libguestfs g.mkdtemp()
+    /// GuestFS API: mkdtemp()
     pub fn mkdtemp(&mut self, tmpl: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -140,7 +140,7 @@ impl Guestfs {
 
     /// Create temporary file
     ///
-    /// Compatible with libguestfs g.mktemp()
+    /// GuestFS API: mktemp()
     pub fn mktemp(&mut self, tmpl: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -168,7 +168,7 @@ impl Guestfs {
 
     /// Truncate file to zero size
     ///
-    /// Compatible with libguestfs g.truncate()
+    /// GuestFS API: truncate()
     pub fn truncate(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -189,7 +189,7 @@ impl Guestfs {
 
     /// Truncate file to specific size
     ///
-    /// Compatible with libguestfs g.truncate_size()
+    /// GuestFS API: truncate_size()
     pub fn truncate_size(&mut self, path: &str, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -212,7 +212,7 @@ impl Guestfs {
 
     /// Change file timestamps
     ///
-    /// Compatible with libguestfs g.utimens()
+    /// GuestFS API: utimens()
     pub fn utimens(&mut self, path: &str, atsecs: i64, atnsecs: i64,
                    mtsecs: i64, mtnsecs: i64) -> Result<()> {
         self.ensure_ready()?;
@@ -247,7 +247,7 @@ impl Guestfs {
 
     /// Synchronize file data to disk
     ///
-    /// Compatible with libguestfs g.fsync()
+    /// GuestFS API: fsync()
     pub fn fsync(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

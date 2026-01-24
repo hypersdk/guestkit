@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! LDM (Windows Logical Disk Manager) operations compatible with libguestfs
+//! LDM (Windows Logical Disk Manager) operations for disk image manipulation
 //!
 //! This implementation provides Windows dynamic disk support.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// List LDM volumes
     ///
-    /// Compatible with libguestfs g.ldmtool_diskgroup_volumes()
+    /// GuestFS API: ldmtool_diskgroup_volumes()
     pub fn ldmtool_diskgroup_volumes(&mut self, diskgroup: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -44,7 +44,7 @@ impl Guestfs {
 
     /// List LDM disk groups
     ///
-    /// Compatible with libguestfs g.ldmtool_diskgroup_name()
+    /// GuestFS API: ldmtool_diskgroup_name()
     pub fn ldmtool_diskgroup_name(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -85,7 +85,7 @@ impl Guestfs {
 
     /// List LDM disks
     ///
-    /// Compatible with libguestfs g.ldmtool_diskgroup_disks()
+    /// GuestFS API: ldmtool_diskgroup_disks()
     pub fn ldmtool_diskgroup_disks(&mut self, diskgroup: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -119,7 +119,7 @@ impl Guestfs {
 
     /// Scan for LDM volumes
     ///
-    /// Compatible with libguestfs g.ldmtool_scan()
+    /// GuestFS API: ldmtool_scan()
     pub fn ldmtool_scan(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -151,7 +151,7 @@ impl Guestfs {
 
     /// Remove all LDM volumes
     ///
-    /// Compatible with libguestfs g.ldmtool_remove_all()
+    /// GuestFS API: ldmtool_remove_all()
     pub fn ldmtool_remove_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -177,7 +177,7 @@ impl Guestfs {
 
     /// Create LDM device nodes
     ///
-    /// Compatible with libguestfs g.ldmtool_create_all()
+    /// GuestFS API: ldmtool_create_all()
     pub fn ldmtool_create_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -203,7 +203,7 @@ impl Guestfs {
 
     /// Get LDM volume type
     ///
-    /// Compatible with libguestfs g.ldmtool_volume_type()
+    /// GuestFS API: ldmtool_volume_type()
     pub fn ldmtool_volume_type(&mut self, diskgroup: &str, volume: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -242,7 +242,7 @@ impl Guestfs {
 
     /// Get LDM volume hint
     ///
-    /// Compatible with libguestfs g.ldmtool_volume_hint()
+    /// GuestFS API: ldmtool_volume_hint()
     pub fn ldmtool_volume_hint(&mut self, diskgroup: &str, volume: &str) -> Result<String> {
         self.ensure_ready()?;
 

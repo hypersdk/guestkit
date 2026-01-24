@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended swap operations compatible with libguestfs
+//! Extended swap operations for disk image manipulation
 //!
 //! This implementation provides additional swap management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create swap with label
     ///
-    /// Compatible with libguestfs g.mkswap_opts()
+    /// GuestFS API: mkswap_opts()
     pub fn mkswap_opts(&mut self, device: &str, label: Option<&str>, uuid: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -55,7 +55,7 @@ impl Guestfs {
 
     /// Get swap label
     ///
-    /// Compatible with libguestfs g.swap_get_label()
+    /// GuestFS API: swap_get_label()
     pub fn swap_get_label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -97,7 +97,7 @@ impl Guestfs {
 
     /// Get swap UUID
     ///
-    /// Compatible with libguestfs g.swap_get_uuid()
+    /// GuestFS API: swap_get_uuid()
     pub fn swap_get_uuid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -139,7 +139,7 @@ impl Guestfs {
 
     /// Set swap label
     ///
-    /// Compatible with libguestfs g.swap_set_label()
+    /// GuestFS API: swap_set_label()
     pub fn swap_set_label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -176,7 +176,7 @@ impl Guestfs {
 
     /// Set swap UUID
     ///
-    /// Compatible with libguestfs g.swap_set_uuid()
+    /// GuestFS API: swap_set_uuid()
     pub fn swap_set_uuid(&mut self, device: &str, uuid: &str) -> Result<()> {
         self.ensure_ready()?;
 

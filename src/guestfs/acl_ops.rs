@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! ACL (Access Control List) operations compatible with libguestfs
+//! ACL (Access Control List) operations for disk image manipulation
 //!
 //! This implementation provides POSIX ACL management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get POSIX ACL
     ///
-    /// Compatible with libguestfs g.acl_get_file()
+    /// GuestFS API: acl_get_file()
     pub fn acl_get_file(&mut self, path: &str, acltype: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// Set POSIX ACL
     ///
-    /// Compatible with libguestfs g.acl_set_file()
+    /// GuestFS API: acl_set_file()
     pub fn acl_set_file(&mut self, path: &str, acltype: &str, acl: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -103,7 +103,7 @@ impl Guestfs {
 
     /// Delete POSIX ACL
     ///
-    /// Compatible with libguestfs g.acl_delete_def_file()
+    /// GuestFS API: acl_delete_def_file()
     pub fn acl_delete_def_file(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Security and SELinux operations compatible with libguestfs
+//! Security and SELinux operations for disk image manipulation
 //!
 //! This implementation provides security context access.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get SELinux context
     ///
-    /// Compatible with libguestfs g.getcon()
+    /// GuestFS API: getcon()
     pub fn getcon(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -37,7 +37,7 @@ impl Guestfs {
 
     /// Set SELinux context
     ///
-    /// Compatible with libguestfs g.setcon()
+    /// GuestFS API: setcon()
     pub fn setcon(&mut self, context: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -68,7 +68,7 @@ impl Guestfs {
 
     /// Get SELinux context of a file
     ///
-    /// Compatible with libguestfs g.lgetxattr() for security.selinux
+    /// GuestFS API: lgetxattr() for security.selinux
     pub fn getxattr_selinux(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -84,7 +84,7 @@ impl Guestfs {
 
     /// Set SELinux context of a file
     ///
-    /// Compatible with libguestfs g.setxattr() for security.selinux
+    /// GuestFS API: setxattr() for security.selinux
     pub fn setxattr_selinux(&mut self, path: &str, context: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -115,7 +115,7 @@ impl Guestfs {
 
     /// Restore SELinux contexts
     ///
-    /// Compatible with libguestfs g.selinux_relabel()
+    /// GuestFS API: selinux_relabel()
     pub fn selinux_relabel(&mut self, specfile: &str, path: &str, force: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -154,7 +154,7 @@ impl Guestfs {
 
     /// Get AppArmor profile
     ///
-    /// Compatible with libguestfs g.get_apparmor_profile()
+    /// GuestFS API: get_apparmor_profile()
     pub fn get_apparmor_profile(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -180,7 +180,7 @@ impl Guestfs {
 
     /// Get file capabilities
     ///
-    /// Compatible with libguestfs g.getcap()
+    /// GuestFS API: getcap()
     pub fn getcap(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -210,7 +210,7 @@ impl Guestfs {
 
     /// Set file capabilities
     ///
-    /// Compatible with libguestfs g.setcap()
+    /// GuestFS API: setcap()
     pub fn setcap(&mut self, cap: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -238,7 +238,7 @@ impl Guestfs {
 
     /// Get file ACL
     ///
-    /// Compatible with libguestfs g.getfacl()
+    /// GuestFS API: getfacl()
     pub fn getfacl(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -265,7 +265,7 @@ impl Guestfs {
 
     /// Set file ACL
     ///
-    /// Compatible with libguestfs g.setfacl()
+    /// GuestFS API: setfacl()
     pub fn setfacl(&mut self, mode: &str, path: &str, acl: &str) -> Result<()> {
         self.ensure_ready()?;
 

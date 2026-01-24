@@ -28,6 +28,53 @@ enum Commands {
     Inspect {
         /// Disk image path
         image: PathBuf,
+
+        /// Output format (text, json, yaml, csv)
+        #[arg(short, long, value_name = "FORMAT")]
+        output: Option<String>,
+
+        /// Inspection profile (security, migration, performance)
+        #[arg(short, long, value_name = "PROFILE")]
+        profile: Option<String>,
+
+        /// Export format (html, markdown)
+        #[arg(short, long, value_name = "EXPORT_FORMAT")]
+        export: Option<String>,
+
+        /// Export output path
+        #[arg(long, value_name = "PATH")]
+        export_output: Option<PathBuf>,
+
+        /// Enable caching of inspection results
+        #[arg(long)]
+        cache: bool,
+
+        /// Force refresh cache (ignore existing cached results)
+        #[arg(long, requires = "cache")]
+        cache_refresh: bool,
+    },
+
+    /// Diff two disk images to show configuration changes
+    Diff {
+        /// First disk image
+        image1: PathBuf,
+
+        /// Second disk image
+        image2: PathBuf,
+
+        /// Output format (text, json, yaml)
+        #[arg(short, long, value_name = "FORMAT")]
+        output: Option<String>,
+    },
+
+    /// Compare multiple VMs against a baseline
+    Compare {
+        /// Baseline disk image
+        baseline: PathBuf,
+
+        /// Disk images to compare
+        #[arg(required = true)]
+        images: Vec<PathBuf>,
     },
 
     /// List files in a disk image
@@ -146,6 +193,34 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// Inspect multiple disk images in batch
+    #[command(name = "inspect-batch")]
+    InspectBatch {
+        /// Disk image paths (can use glob patterns)
+        #[arg(required = true)]
+        images: Vec<PathBuf>,
+
+        /// Number of parallel workers (default: 4)
+        #[arg(short, long, default_value = "4")]
+        parallel: usize,
+
+        /// Output format (text, json, yaml)
+        #[arg(short, long, value_name = "FORMAT")]
+        output: Option<String>,
+
+        /// Enable caching of inspection results
+        #[arg(long)]
+        cache: bool,
+    },
+
+    /// Clear inspection cache
+    #[command(name = "cache-clear")]
+    CacheClear,
+
+    /// Show cache statistics
+    #[command(name = "cache-stats")]
+    CacheStats,
+
     /// Show version information
     Version,
 }
@@ -166,8 +241,28 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     match cli.command {
-        Commands::Inspect { image } => {
-            inspect_image(&image, cli.verbose)?;
+        Commands::Inspect { image, output, profile, export, export_output, cache, cache_refresh } => {
+            use cli::formatters::OutputFormat;
+            let output_format = output.as_ref()
+                .map(|s| s.parse::<OutputFormat>())
+                .transpose()
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            inspect_image(&image, cli.verbose, output_format, profile, export, export_output, cache, cache_refresh)?;
+        }
+
+        Commands::Diff { image1, image2, output } => {
+            use cli::formatters::OutputFormat;
+            let output_format = output.as_ref()
+                .map(|s| s.parse::<OutputFormat>())
+                .transpose()
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            diff_images(&image1, &image2, cli.verbose, output_format)?;
+        }
+
+        Commands::Compare { baseline, images } => {
+            compare_images(&baseline, &images, cli.verbose)?;
         }
 
         Commands::List { image, path } => {
@@ -240,6 +335,34 @@ fn main() -> anyhow::Result<()> {
             let info = converter.get_info(&image)?;
 
             println!("{}", serde_json::to_string_pretty(&info)?);
+        }
+
+        Commands::InspectBatch { images, parallel, output, cache } => {
+            use cli::formatters::OutputFormat;
+            let output_format = output.as_ref()
+                .map(|s| s.parse::<OutputFormat>())
+                .transpose()
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+            inspect_batch(&images, parallel, cli.verbose, output_format, cache)?;
+        }
+
+        Commands::CacheClear => {
+            use cli::cache::InspectionCache;
+            let cache = InspectionCache::new()?;
+            let count = cache.clear_all()?;
+
+            println!("✓ Cleared {} cached inspection results", count);
+        }
+
+        Commands::CacheStats => {
+            use cli::cache::InspectionCache;
+            let cache = InspectionCache::new()?;
+            let stats = cache.stats()?;
+
+            println!("Cache Statistics:");
+            println!("  Entries: {}", stats.entries);
+            println!("  Total Size: {}", stats.size_human());
         }
 
         Commands::Version => {

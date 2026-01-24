@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Advanced file transfer operations compatible with libguestfs
+//! Advanced file transfer operations for disk image manipulation
 //!
 //! This implementation provides advanced download/upload functionality.
 
@@ -11,7 +11,7 @@ use std::io::{Read, Write, Seek, SeekFrom};
 impl Guestfs {
     /// Download file with offset
     ///
-    /// Compatible with libguestfs g.download_offset()
+    /// GuestFS API: download_offset()
     pub fn download_offset(&mut self, remote: &str, local: &str, offset: i64, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -44,7 +44,7 @@ impl Guestfs {
 
     /// Upload file with offset
     ///
-    /// Compatible with libguestfs g.upload_offset()
+    /// GuestFS API: upload_offset()
     pub fn upload_offset(&mut self, local: &str, remote: &str, offset: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -80,7 +80,7 @@ impl Guestfs {
 
     /// Copy file between locations in guest
     ///
-    /// Compatible with libguestfs g.copy_file_to_file()
+    /// GuestFS API: copy_file_to_file()
     pub fn copy_file_to_file(&mut self, src: &str, dest: &str, srcoffset: i64, destoffset: i64, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -120,7 +120,7 @@ impl Guestfs {
 
     /// Copy device to device
     ///
-    /// Compatible with libguestfs g.copy_device_to_device()
+    /// GuestFS API: copy_device_to_device()
     pub fn copy_device_to_device(&mut self, src: &str, dest: &str, srcoffset: i64, destoffset: i64, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -165,7 +165,7 @@ impl Guestfs {
 
     /// Copy file to device
     ///
-    /// Compatible with libguestfs g.copy_file_to_device()
+    /// GuestFS API: copy_file_to_device()
     pub fn copy_file_to_device(&mut self, src: &str, dest: &str, srcoffset: i64, destoffset: i64, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -211,7 +211,7 @@ impl Guestfs {
 
     /// Copy device to file
     ///
-    /// Compatible with libguestfs g.copy_device_to_file()
+    /// GuestFS API: copy_device_to_file()
     pub fn copy_device_to_file(&mut self, src: &str, dest: &str, srcoffset: i64, destoffset: i64, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -258,7 +258,7 @@ impl Guestfs {
 
     /// Compare two files
     ///
-    /// Compatible with libguestfs g.compare()
+    /// GuestFS API: compare()
     pub fn compare(&mut self, file1: &str, file2: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -291,7 +291,7 @@ impl Guestfs {
 
     /// Get size of file or device
     ///
-    /// Compatible with libguestfs g.part_get_size()
+    /// GuestFS API: part_get_size()
     pub fn get_size(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Miscellaneous utility operations compatible with libguestfs
+//! Miscellaneous utility operations for disk image manipulation
 //!
 //! This implementation provides various utility functions.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get available memory in guest
     ///
-    /// Compatible with libguestfs g.available_all_groups()
+    /// GuestFS API: available_all_groups()
     pub fn get_meminfo(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -28,7 +28,7 @@ impl Guestfs {
 
     /// Get library version
     ///
-    /// Compatible with libguestfs g.version()
+    /// GuestFS API: version()
     pub fn version(&self) -> Result<(i64, i64, i64)> {
         // Return guestkit version
         Ok((0, 1, 0))
@@ -36,7 +36,7 @@ impl Guestfs {
 
     /// Get filesystem disk usage
     ///
-    /// Compatible with libguestfs g.disk_usage()
+    /// GuestFS API: disk_usage()
     pub fn disk_usage(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -71,7 +71,7 @@ impl Guestfs {
 
     /// Get file type (using libmagic-style output)
     ///
-    /// Compatible with libguestfs g.file_type()
+    /// GuestFS API: file_type()
     pub fn file_type(&mut self, path: &str) -> Result<String> {
         // Wrapper around file() to get just the type
         self.file(path)
@@ -79,7 +79,7 @@ impl Guestfs {
 
     /// Get available features
     ///
-    /// Compatible with libguestfs g.available()
+    /// GuestFS API: available()
     pub fn available(&mut self, groups: &[&str]) -> Result<bool> {
         if self.verbose {
             eprintln!("guestfs: available {:?}", groups);
@@ -124,7 +124,7 @@ impl Guestfs {
 
     /// List all available feature groups
     ///
-    /// Compatible with libguestfs g.available_all_groups()
+    /// GuestFS API: available_all_groups()
     pub fn available_all_groups(&mut self) -> Result<Vec<String>> {
         if self.verbose {
             eprintln!("guestfs: available_all_groups");
@@ -157,7 +157,7 @@ impl Guestfs {
 
     /// Get path to daemon socket
     ///
-    /// Compatible with libguestfs g.get_sockdir()
+    /// GuestFS API: get_sockdir()
     pub fn get_sockdir(&self) -> Result<String> {
         // For our implementation, we don't use a socket
         Ok("/tmp".to_string())
@@ -165,21 +165,21 @@ impl Guestfs {
 
     /// Get cache directory
     ///
-    /// Compatible with libguestfs g.get_cachedir()
+    /// GuestFS API: get_cachedir()
     pub fn get_cachedir(&self) -> Result<String> {
         Ok("/var/cache/guestkit".to_string())
     }
 
     /// Get temporary directory
     ///
-    /// Compatible with libguestfs g.get_tmpdir()
+    /// GuestFS API: get_tmpdir()
     pub fn get_tmpdir(&self) -> Result<String> {
         Ok("/tmp".to_string())
     }
 
     /// Get identifier
     ///
-    /// Compatible with libguestfs g.get_identifier()
+    /// GuestFS API: get_identifier()
     pub fn get_identifier(&self) -> Result<String> {
         if let Some(ref id) = self.identifier {
             Ok(id.clone())
@@ -190,7 +190,7 @@ impl Guestfs {
 
     /// Set identifier
     ///
-    /// Compatible with libguestfs g.set_identifier()
+    /// GuestFS API: set_identifier()
     pub fn set_identifier(&mut self, id: &str) -> Result<()> {
         self.identifier = Some(id.to_string());
         Ok(())
@@ -198,21 +198,21 @@ impl Guestfs {
 
     /// Get program name
     ///
-    /// Compatible with libguestfs g.get_program()
+    /// GuestFS API: get_program()
     pub fn get_program(&self) -> Result<String> {
         Ok("guestkit".to_string())
     }
 
     /// Get library path
     ///
-    /// Compatible with libguestfs g.get_path()
+    /// GuestFS API: get_path()
     pub fn get_path(&self) -> Result<String> {
         Ok("/usr/lib/guestkit".to_string())
     }
 
     /// Get HV (hypervisor) type
     ///
-    /// Compatible with libguestfs g.get_hv()
+    /// GuestFS API: get_hv()
     pub fn get_hv(&self) -> Result<String> {
         // We use NBD, not a full hypervisor
         Ok("nbd".to_string())
@@ -220,14 +220,14 @@ impl Guestfs {
 
     /// Get autosync setting
     ///
-    /// Compatible with libguestfs g.get_autosync()
+    /// GuestFS API: get_autosync()
     pub fn get_autosync(&self) -> Result<bool> {
         Ok(self.autosync)
     }
 
     /// Set autosync
     ///
-    /// Compatible with libguestfs g.set_autosync()
+    /// GuestFS API: set_autosync()
     pub fn set_autosync(&mut self, autosync: bool) -> Result<()> {
         self.autosync = autosync;
         Ok(())
@@ -235,14 +235,14 @@ impl Guestfs {
 
     /// Get SELinux context
     ///
-    /// Compatible with libguestfs g.get_selinux()
+    /// GuestFS API: get_selinux()
     pub fn get_selinux(&self) -> Result<bool> {
         Ok(self.selinux)
     }
 
     /// Set SELinux context
     ///
-    /// Compatible with libguestfs g.set_selinux()
+    /// GuestFS API: set_selinux()
     pub fn set_selinux(&mut self, selinux: bool) -> Result<()> {
         self.selinux = selinux;
         Ok(())
@@ -250,28 +250,28 @@ impl Guestfs {
 
     /// Check if read-only
     ///
-    /// Compatible with libguestfs g.get_readonly()
+    /// GuestFS API: get_readonly()
     pub fn get_readonly(&self) -> Result<bool> {
         Ok(self.readonly)
     }
 
     /// Get attach method
     ///
-    /// Compatible with libguestfs g.get_attach_method()
+    /// GuestFS API: get_attach_method()
     pub fn get_attach_method(&self) -> Result<String> {
         Ok("nbd".to_string())
     }
 
     /// Get backend
     ///
-    /// Compatible with libguestfs g.get_backend()
+    /// GuestFS API: get_backend()
     pub fn get_backend(&self) -> Result<String> {
         Ok("direct".to_string())
     }
 
     /// Internal test command
     ///
-    /// Compatible with libguestfs g.debug()
+    /// GuestFS API: debug()
     pub fn debug(&mut self, subcmd: &str, extraargs: &[&str]) -> Result<String> {
         if self.verbose {
             eprintln!("guestfs: debug {} {:?}", subcmd, extraargs);

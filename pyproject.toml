@@ -1,0 +1,53 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "guestkit"
+version = "0.3.0"
+description = "Pure Rust toolkit for VM disk image inspection and manipulation - Python bindings"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "LGPL-3.0-or-later" }
+keywords = ["vm", "disk", "qcow2", "vmdk", "inspection", "guestfs"]
+authors = [
+    { name = "Susant Sahani", email = "ssahani@vmware.com" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: System :: Filesystems",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/ssahani/guestkit"
+Repository = "https://github.com/ssahani/guestkit"
+Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
+"Bug Tracker" = "https://github.com/ssahani/guestkit/issues"
+
+[tool.maturin]
+features = ["python-bindings"]
+module-name = "guestkit"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "requires_image: marks tests as requiring a disk image (deselect with '-m \"not requires_image\"')",
+]

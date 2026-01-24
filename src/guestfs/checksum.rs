@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Checksum operations compatible with libguestfs
+//! Checksum operations for disk image manipulation
 //!
 //! This implementation provides file checksumming capabilities.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Calculate MD5 checksum of a file
     ///
-    /// Compatible with libguestfs g.checksum()
+    /// GuestFS API: checksum()
     pub fn checksum(&mut self, csumtype: &str, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -62,7 +62,7 @@ impl Guestfs {
 
     /// Calculate checksum of a device
     ///
-    /// Compatible with libguestfs g.checksum_device()
+    /// GuestFS API: checksum_device()
     pub fn checksum_device(&mut self, csumtype: &str, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -124,14 +124,14 @@ impl Guestfs {
 
     /// Read first N bytes of a file
     ///
-    /// Compatible with libguestfs g.head()
+    /// GuestFS API: head()
     pub fn head(&mut self, path: &str) -> Result<Vec<String>> {
         self.head_n(10, path)
     }
 
     /// Read first N lines of a file
     ///
-    /// Compatible with libguestfs g.head_n()
+    /// GuestFS API: head_n()
     pub fn head_n(&mut self, nrlines: i32, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -161,14 +161,14 @@ impl Guestfs {
 
     /// Read last 10 lines of a file
     ///
-    /// Compatible with libguestfs g.tail()
+    /// GuestFS API: tail()
     pub fn tail(&mut self, path: &str) -> Result<Vec<String>> {
         self.tail_n(10, path)
     }
 
     /// Read last N lines of a file
     ///
-    /// Compatible with libguestfs g.tail_n()
+    /// GuestFS API: tail_n()
     pub fn tail_n(&mut self, nrlines: i32, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -198,7 +198,7 @@ impl Guestfs {
 
     /// Search compressed file for pattern
     ///
-    /// Compatible with libguestfs g.zgrep()
+    /// GuestFS API: zgrep()
     pub fn zgrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -221,7 +221,7 @@ impl Guestfs {
 
     /// Search compressed file for pattern (extended regex)
     ///
-    /// Compatible with libguestfs g.zegrep()
+    /// GuestFS API: zegrep()
     pub fn zegrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -244,7 +244,7 @@ impl Guestfs {
 
     /// Search compressed file for fixed strings
     ///
-    /// Compatible with libguestfs g.zfgrep()
+    /// GuestFS API: zfgrep()
     pub fn zfgrep(&mut self, pattern: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

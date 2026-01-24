@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Utility operations compatible with libguestfs
+//! Utility operations for disk image manipulation
 //!
 //! This implementation provides miscellaneous utility functions.
 
@@ -11,7 +11,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get file type
     ///
-    /// Compatible with libguestfs g.file()
+    /// GuestFS API: file()
     pub fn file(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -39,7 +39,7 @@ impl Guestfs {
 
     /// Get file architecture
     ///
-    /// Compatible with libguestfs g.file_architecture()
+    /// GuestFS API: file_architecture()
     pub fn file_architecture(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -98,7 +98,7 @@ impl Guestfs {
 
     /// Read symbolic link
     ///
-    /// Compatible with libguestfs g.readlink()
+    /// GuestFS API: readlink()
     pub fn readlink(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -117,7 +117,7 @@ impl Guestfs {
 
     /// Create symbolic link
     ///
-    /// Compatible with libguestfs g.ln_s()
+    /// GuestFS API: ln_s()
     pub fn ln_s(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -146,7 +146,7 @@ impl Guestfs {
 
     /// Create hard link
     ///
-    /// Compatible with libguestfs g.ln()
+    /// GuestFS API: ln()
     pub fn ln(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -164,7 +164,7 @@ impl Guestfs {
 
     /// Create hard link (forced)
     ///
-    /// Compatible with libguestfs g.ln_f()
+    /// GuestFS API: ln_f()
     pub fn ln_f(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -181,7 +181,7 @@ impl Guestfs {
 
     /// Create symbolic link (forced)
     ///
-    /// Compatible with libguestfs g.ln_sf()
+    /// GuestFS API: ln_sf()
     pub fn ln_sf(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -198,7 +198,7 @@ impl Guestfs {
 
     /// Get extended attribute
     ///
-    /// Compatible with libguestfs g.getxattr()
+    /// GuestFS API: getxattr()
     pub fn getxattr(&mut self, path: &str, name: &str) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -228,7 +228,7 @@ impl Guestfs {
 
     /// List extended attributes
     ///
-    /// Compatible with libguestfs g.lgetxattrs()
+    /// GuestFS API: lgetxattrs()
     pub fn lgetxattrs(&mut self, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

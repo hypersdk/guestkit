@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Inotify operations compatible with libguestfs
+//! Inotify operations for disk image manipulation
 //!
 //! This implementation provides inotify file monitoring functionality.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Initialize inotify
     ///
-    /// Compatible with libguestfs g.inotify_init()
+    /// GuestFS API: inotify_init()
     pub fn inotify_init(&mut self, maxevents: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -28,7 +28,7 @@ impl Guestfs {
 
     /// Add inotify watch
     ///
-    /// Compatible with libguestfs g.inotify_add_watch()
+    /// GuestFS API: inotify_add_watch()
     pub fn inotify_add_watch(&mut self, path: &str, mask: i32) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -45,7 +45,7 @@ impl Guestfs {
 
     /// Remove inotify watch
     ///
-    /// Compatible with libguestfs g.inotify_rm_watch()
+    /// GuestFS API: inotify_rm_watch()
     pub fn inotify_rm_watch(&mut self, wd: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -59,7 +59,7 @@ impl Guestfs {
 
     /// Read inotify events
     ///
-    /// Compatible with libguestfs g.inotify_read()
+    /// GuestFS API: inotify_read()
     pub fn inotify_read(&mut self) -> Result<Vec<InotifyEvent>> {
         self.ensure_ready()?;
 
@@ -73,7 +73,7 @@ impl Guestfs {
 
     /// Get inotify file list
     ///
-    /// Compatible with libguestfs g.inotify_files()
+    /// GuestFS API: inotify_files()
     pub fn inotify_files(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -87,7 +87,7 @@ impl Guestfs {
 
     /// Close inotify
     ///
-    /// Compatible with libguestfs g.inotify_close()
+    /// GuestFS API: inotify_close()
     pub fn inotify_close(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

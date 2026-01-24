@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! NTFS filesystem operations compatible with libguestfs
+//! NTFS filesystem operations for disk image manipulation
 //!
 //! This implementation provides NTFS-specific functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Clone NTFS filesystem
     ///
-    /// Compatible with libguestfs g.ntfsclone_out()
+    /// GuestFS API: ntfsclone_out()
     pub fn ntfsclone_out(&mut self, device: &str, backupfile: &str, metadataonly: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -53,7 +53,7 @@ impl Guestfs {
 
     /// Restore NTFS from clone
     ///
-    /// Compatible with libguestfs g.ntfsclone_in()
+    /// GuestFS API: ntfsclone_in()
     pub fn ntfsclone_in(&mut self, backupfile: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -90,7 +90,7 @@ impl Guestfs {
 
     /// Fix NTFS filesystem
     ///
-    /// Compatible with libguestfs g.ntfsfix()
+    /// GuestFS API: ntfsfix()
     pub fn ntfsfix(&mut self, device: &str, clearbadsectors: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -162,7 +162,7 @@ impl Guestfs {
 
     /// Set NTFS master boot record
     ///
-    /// Compatible with libguestfs g.nr_mknod()
+    /// GuestFS API: nr_mknod()
     pub fn ntfs_set_label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 

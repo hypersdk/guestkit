@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Boot and bootloader operations compatible with libguestfs
+//! Boot and bootloader operations for disk image manipulation
 //!
 //! This implementation provides boot configuration access.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get bootloader type
     ///
-    /// Compatible with libguestfs g.get_bootloader()
+    /// GuestFS API: get_bootloader()
     pub fn get_bootloader(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -42,7 +42,7 @@ impl Guestfs {
 
     /// Get default kernel
     ///
-    /// Compatible with libguestfs g.get_default_kernel()
+    /// GuestFS API: get_default_kernel()
     pub fn get_default_kernel(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -79,7 +79,7 @@ impl Guestfs {
 
     /// List kernels
     ///
-    /// Compatible with libguestfs g.list_kernels()
+    /// GuestFS API: list_kernels()
     pub fn list_kernels(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -108,7 +108,7 @@ impl Guestfs {
 
     /// Get GRUB configuration
     ///
-    /// Compatible with libguestfs g.get_grub_config()
+    /// GuestFS API: get_grub_config()
     pub fn get_grub_config(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -132,7 +132,7 @@ impl Guestfs {
 
     /// Get initrd/initramfs for kernel
     ///
-    /// Compatible with libguestfs g.get_initrd()
+    /// GuestFS API: get_initrd()
     pub fn get_initrd(&mut self, kernel: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -165,7 +165,7 @@ impl Guestfs {
 
     /// Get kernel command line
     ///
-    /// Compatible with libguestfs g.get_cmdline()
+    /// GuestFS API: get_cmdline()
     pub fn get_cmdline(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -192,7 +192,7 @@ impl Guestfs {
 
     /// Check if running in UEFI mode
     ///
-    /// Compatible with libguestfs g.is_uefi()
+    /// GuestFS API: is_uefi()
     pub fn is_uefi(&mut self) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -228,7 +228,7 @@ impl Guestfs {
 
     /// Get EFI boot entries
     ///
-    /// Compatible with libguestfs g.list_efi_boot_entries()
+    /// GuestFS API: list_efi_boot_entries()
     pub fn list_efi_boot_entries(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -253,7 +253,7 @@ impl Guestfs {
 
     /// Get fstab entries
     ///
-    /// Compatible with libguestfs g.read_fstab()
+    /// GuestFS API: read_fstab()
     pub fn read_fstab(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -266,7 +266,7 @@ impl Guestfs {
 
     /// Get list of filesystems to mount at boot
     ///
-    /// Compatible with libguestfs g.list_fstab()
+    /// GuestFS API: list_fstab()
     pub fn list_fstab(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Mount operations compatible with libguestfs
+//! Mount operations for disk image manipulation
 //!
 //! This implementation uses qemu-nbd to export disk images as NBD devices,
 //! then mounts them using the kernel's filesystem drivers.
@@ -15,7 +15,7 @@ use std::fs;
 impl Guestfs {
     /// Mount a filesystem read-only
     ///
-    /// Compatible with libguestfs g.mount_ro()
+    /// GuestFS API: mount_ro()
     ///
     /// # Arguments
     ///
@@ -102,7 +102,7 @@ impl Guestfs {
 
     /// Mount a filesystem read-write
     ///
-    /// Compatible with libguestfs g.mount()
+    /// GuestFS API: mount()
     pub fn mount(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -130,7 +130,7 @@ impl Guestfs {
 
     /// Mount with specific options
     ///
-    /// Compatible with libguestfs g.mount_options()
+    /// GuestFS API: mount_options()
     pub fn mount_options(&mut self, options: &str, mountable: &str, mountpoint: &str) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: mount_options {} {} {}", options, mountable, mountpoint);
@@ -141,7 +141,7 @@ impl Guestfs {
 
     /// Mount with explicit VFS type
     ///
-    /// Compatible with libguestfs g.mount_vfs()
+    /// GuestFS API: mount_vfs()
     pub fn mount_vfs(&mut self, options: &str, vfstype: &str, mountable: &str, mountpoint: &str) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: mount_vfs {} {} {} {}", options, vfstype, mountable, mountpoint);
@@ -152,7 +152,7 @@ impl Guestfs {
 
     /// Unmount a filesystem
     ///
-    /// Compatible with libguestfs g.umount()
+    /// GuestFS API: umount()
     pub fn umount(&mut self, pathordevice: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -188,7 +188,7 @@ impl Guestfs {
 
     /// Unmount all filesystems
     ///
-    /// Compatible with libguestfs g.umount_all()
+    /// GuestFS API: umount_all()
     pub fn umount_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -218,7 +218,7 @@ impl Guestfs {
 
     /// Get list of mounted filesystems
     ///
-    /// Compatible with libguestfs g.mounts()
+    /// GuestFS API: mounts()
     pub fn mounts(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -227,7 +227,7 @@ impl Guestfs {
 
     /// Get mountpoints
     ///
-    /// Compatible with libguestfs g.mountpoints()
+    /// GuestFS API: mountpoints()
     pub fn mountpoints(&self) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -237,7 +237,7 @@ impl Guestfs {
 
     /// Create a mountpoint
     ///
-    /// Compatible with libguestfs g.mkmountpoint()
+    /// GuestFS API: mkmountpoint()
     pub fn mkmountpoint(&mut self, exemptpath: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -251,7 +251,7 @@ impl Guestfs {
 
     /// Remove a mountpoint
     ///
-    /// Compatible with libguestfs g.rmmountpoint()
+    /// GuestFS API: rmmountpoint()
     pub fn rmmountpoint(&mut self, exemptpath: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -265,7 +265,7 @@ impl Guestfs {
 
     /// Sync filesystems
     ///
-    /// Compatible with libguestfs g.sync()
+    /// GuestFS API: sync()
     pub fn sync(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

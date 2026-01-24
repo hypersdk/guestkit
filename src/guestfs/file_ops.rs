@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! File operations compatible with libguestfs
+//! File operations for disk image manipulation
 //!
 //! This implementation uses mounted filesystems (via NBD) to perform
 //! file operations using standard Rust file I/O.
@@ -73,7 +73,7 @@ impl Guestfs {
 
     /// Check if path is a file
     ///
-    /// Compatible with libguestfs g.is_file()
+    /// GuestFS API: is_file()
     pub fn is_file(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -87,7 +87,7 @@ impl Guestfs {
 
     /// Check if path is a directory
     ///
-    /// Compatible with libguestfs g.is_dir()
+    /// GuestFS API: is_dir()
     pub fn is_dir(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -101,7 +101,7 @@ impl Guestfs {
 
     /// Check if path exists
     ///
-    /// Compatible with libguestfs g.exists()
+    /// GuestFS API: exists()
     pub fn exists(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -115,7 +115,7 @@ impl Guestfs {
 
     /// Read file content as bytes
     ///
-    /// Compatible with libguestfs g.read_file()
+    /// GuestFS API: read_file()
     pub fn read_file(&mut self, path: &str) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -132,7 +132,7 @@ impl Guestfs {
 
     /// Read file as text
     ///
-    /// Compatible with libguestfs g.cat()
+    /// GuestFS API: cat()
     pub fn cat(&mut self, path: &str) -> Result<String> {
         let bytes = self.read_file(path)?;
         String::from_utf8(bytes)
@@ -141,7 +141,7 @@ impl Guestfs {
 
     /// Read file as lines
     ///
-    /// Compatible with libguestfs g.read_lines()
+    /// GuestFS API: read_lines()
     pub fn read_lines(&mut self, path: &str) -> Result<Vec<String>> {
         let content = self.cat(path)?;
         Ok(content.lines().map(|s| s.to_string()).collect())
@@ -149,7 +149,7 @@ impl Guestfs {
 
     /// Write content to file
     ///
-    /// Compatible with libguestfs g.write()
+    /// GuestFS API: write()
     pub fn write(&mut self, path: &str, content: &[u8]) -> Result<()> {
         self.ensure_ready()?;
 
@@ -165,7 +165,7 @@ impl Guestfs {
 
     /// Create directory
     ///
-    /// Compatible with libguestfs g.mkdir()
+    /// GuestFS API: mkdir()
     pub fn mkdir(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -181,7 +181,7 @@ impl Guestfs {
 
     /// Create directory with parents
     ///
-    /// Compatible with libguestfs g.mkdir_p()
+    /// GuestFS API: mkdir_p()
     pub fn mkdir_p(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -197,7 +197,7 @@ impl Guestfs {
 
     /// List directory contents
     ///
-    /// Compatible with libguestfs g.ls()
+    /// GuestFS API: ls()
     pub fn ls(&mut self, directory: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -225,7 +225,7 @@ impl Guestfs {
 
     /// List directory with long format
     ///
-    /// Compatible with libguestfs g.ll()
+    /// GuestFS API: ll()
     pub fn ll(&mut self, directory: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -254,7 +254,7 @@ impl Guestfs {
 
     /// Get file size
     ///
-    /// Compatible with libguestfs g.filesize()
+    /// GuestFS API: filesize()
     pub fn filesize(&mut self, file: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -272,7 +272,7 @@ impl Guestfs {
 
     /// Remove directory
     ///
-    /// Compatible with libguestfs g.rmdir()
+    /// GuestFS API: rmdir()
     pub fn rmdir(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -288,7 +288,7 @@ impl Guestfs {
 
     /// Touch a file (create empty or update timestamp)
     ///
-    /// Compatible with libguestfs g.touch()
+    /// GuestFS API: touch()
     pub fn touch(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -320,7 +320,7 @@ impl Guestfs {
 
     /// Change file permissions
     ///
-    /// Compatible with libguestfs g.chmod()
+    /// GuestFS API: chmod()
     pub fn chmod(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -349,7 +349,7 @@ impl Guestfs {
 
     /// Change file ownership
     ///
-    /// Compatible with libguestfs g.chown()
+    /// GuestFS API: chown()
     pub fn chown(&mut self, owner: i32, group: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -378,7 +378,7 @@ impl Guestfs {
 
     /// Resolve symlink to real path
     ///
-    /// Compatible with libguestfs g.realpath()
+    /// GuestFS API: realpath()
     pub fn realpath(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -416,7 +416,7 @@ impl Guestfs {
 
     /// Copy file
     ///
-    /// Compatible with libguestfs g.cp()
+    /// GuestFS API: cp()
     pub fn cp(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -436,7 +436,7 @@ impl Guestfs {
 
     /// Copy file preserving attributes
     ///
-    /// Compatible with libguestfs g.cp_a()
+    /// GuestFS API: cp_a()
     pub fn cp_a(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -468,7 +468,7 @@ impl Guestfs {
 
     /// Copy recursively
     ///
-    /// Compatible with libguestfs g.cp_r()
+    /// GuestFS API: cp_r()
     pub fn cp_r(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -500,7 +500,7 @@ impl Guestfs {
 
     /// Move/rename file
     ///
-    /// Compatible with libguestfs g.mv()
+    /// GuestFS API: mv()
     pub fn mv(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -518,7 +518,7 @@ impl Guestfs {
 
     /// Download file from guest to host
     ///
-    /// Compatible with libguestfs g.download()
+    /// GuestFS API: download()
     pub fn download(&mut self, remotefilename: &str, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -538,7 +538,7 @@ impl Guestfs {
 
     /// Upload file from host to guest
     ///
-    /// Compatible with libguestfs g.upload()
+    /// GuestFS API: upload()
     pub fn upload(&mut self, filename: &str, remotefilename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -558,7 +558,7 @@ impl Guestfs {
 
     /// Append content to file
     ///
-    /// Compatible with libguestfs g.write_append()
+    /// GuestFS API: write_append()
     pub fn write_append(&mut self, path: &str, content: &[u8]) -> Result<()> {
         self.ensure_ready()?;
 
@@ -582,7 +582,7 @@ impl Guestfs {
 
     /// Search file for pattern
     ///
-    /// Compatible with libguestfs g.grep()
+    /// GuestFS API: grep()
     pub fn grep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -606,7 +606,7 @@ impl Guestfs {
 
     /// Search file for pattern (extended regex)
     ///
-    /// Compatible with libguestfs g.egrep()
+    /// GuestFS API: egrep()
     pub fn egrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -630,7 +630,7 @@ impl Guestfs {
 
     /// Search file for fixed strings
     ///
-    /// Compatible with libguestfs g.fgrep()
+    /// GuestFS API: fgrep()
     pub fn fgrep(&mut self, pattern: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -654,7 +654,7 @@ impl Guestfs {
 
     /// Find files
     ///
-    /// Compatible with libguestfs g.find()
+    /// GuestFS API: find()
     pub fn find(&mut self, directory: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -728,7 +728,7 @@ impl Guestfs {
 
     /// Calculate disk usage
     ///
-    /// Compatible with libguestfs g.du()
+    /// GuestFS API: du()
     pub fn du(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -766,7 +766,7 @@ impl Guestfs {
 
     /// Remove a file
     ///
-    /// Compatible with libguestfs g.rm()
+    /// GuestFS API: rm()
     pub fn rm(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -790,7 +790,7 @@ impl Guestfs {
 
     /// Remove a file or directory recursively (force)
     ///
-    /// Compatible with libguestfs g.rm_rf()
+    /// GuestFS API: rm_rf()
     pub fn rm_rf(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

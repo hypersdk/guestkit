@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Hivex (Windows Registry) operations compatible with libguestfs
+//! Hivex (Windows Registry) operations for disk image manipulation
 //!
 //! This implementation provides Windows registry hive manipulation functionality.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Open Windows registry hive
     ///
-    /// Compatible with libguestfs g.hivex_open()
+    /// GuestFS API: hivex_open()
     pub fn hivex_open(&mut self, filename: &str, write: bool) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -43,7 +43,7 @@ impl Guestfs {
 
     /// Close Windows registry hive
     ///
-    /// Compatible with libguestfs g.hivex_close()
+    /// GuestFS API: hivex_close()
     pub fn hivex_close(&mut self, _handle: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -57,7 +57,7 @@ impl Guestfs {
 
     /// Get root node of registry hive
     ///
-    /// Compatible with libguestfs g.hivex_root()
+    /// GuestFS API: hivex_root()
     pub fn hivex_root(&mut self, handle: i64) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -71,7 +71,7 @@ impl Guestfs {
 
     /// Get node name
     ///
-    /// Compatible with libguestfs g.hivex_node_name()
+    /// GuestFS API: hivex_node_name()
     pub fn hivex_node_name(&mut self, _handle: i64, node: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -86,7 +86,7 @@ impl Guestfs {
 
     /// Get child nodes
     ///
-    /// Compatible with libguestfs g.hivex_node_children()
+    /// GuestFS API: hivex_node_children()
     pub fn hivex_node_children(&mut self, _handle: i64, _node: i64) -> Result<Vec<i64>> {
         self.ensure_ready()?;
 
@@ -100,7 +100,7 @@ impl Guestfs {
 
     /// Get node values
     ///
-    /// Compatible with libguestfs g.hivex_node_values()
+    /// GuestFS API: hivex_node_values()
     pub fn hivex_node_values(&mut self, _handle: i64, _node: i64) -> Result<Vec<i64>> {
         self.ensure_ready()?;
 
@@ -114,7 +114,7 @@ impl Guestfs {
 
     /// Get child node by name
     ///
-    /// Compatible with libguestfs g.hivex_node_get_child()
+    /// GuestFS API: hivex_node_get_child()
     pub fn hivex_node_get_child(&mut self, _handle: i64, _node: i64, name: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -128,7 +128,7 @@ impl Guestfs {
 
     /// Get value key
     ///
-    /// Compatible with libguestfs g.hivex_value_key()
+    /// GuestFS API: hivex_value_key()
     pub fn hivex_value_key(&mut self, _handle: i64, value: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -142,7 +142,7 @@ impl Guestfs {
 
     /// Get value type
     ///
-    /// Compatible with libguestfs g.hivex_value_type()
+    /// GuestFS API: hivex_value_type()
     pub fn hivex_value_type(&mut self, _handle: i64, _value: i64) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -156,7 +156,7 @@ impl Guestfs {
 
     /// Get value as string
     ///
-    /// Compatible with libguestfs g.hivex_value_string()
+    /// GuestFS API: hivex_value_string()
     pub fn hivex_value_string(&mut self, _handle: i64, value: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -170,7 +170,7 @@ impl Guestfs {
 
     /// Get value as integer
     ///
-    /// Compatible with libguestfs g.hivex_value_dword()
+    /// GuestFS API: hivex_value_dword()
     pub fn hivex_value_dword(&mut self, _handle: i64, _value: i64) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -184,7 +184,7 @@ impl Guestfs {
 
     /// Get value as binary data
     ///
-    /// Compatible with libguestfs g.hivex_value_value()
+    /// GuestFS API: hivex_value_value()
     pub fn hivex_value_value(&mut self, _handle: i64, _value: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -198,7 +198,7 @@ impl Guestfs {
 
     /// Commit changes to hive
     ///
-    /// Compatible with libguestfs g.hivex_commit()
+    /// GuestFS API: hivex_commit()
     pub fn hivex_commit(&mut self, _handle: i64, filename: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -212,7 +212,7 @@ impl Guestfs {
 
     /// Set node value
     ///
-    /// Compatible with libguestfs g.hivex_node_set_value()
+    /// GuestFS API: hivex_node_set_value()
     pub fn hivex_node_set_value(&mut self, _handle: i64, _node: i64,
                                  key: &str, _t: i64, _val: &[u8]) -> Result<()> {
         self.ensure_ready()?;
@@ -227,7 +227,7 @@ impl Guestfs {
 
     /// Add child node
     ///
-    /// Compatible with libguestfs g.hivex_node_add_child()
+    /// GuestFS API: hivex_node_add_child()
     pub fn hivex_node_add_child(&mut self, _handle: i64, _parent: i64, name: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -241,7 +241,7 @@ impl Guestfs {
 
     /// Delete node
     ///
-    /// Compatible with libguestfs g.hivex_node_delete_child()
+    /// GuestFS API: hivex_node_delete_child()
     pub fn hivex_node_delete_child(&mut self, _handle: i64, _node: i64) -> Result<()> {
         self.ensure_ready()?;
 

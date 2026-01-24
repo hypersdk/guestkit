@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Multipath device operations compatible with libguestfs
+//! Multipath device operations for disk image manipulation
 //!
 //! This implementation provides multipath device management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Canonicalize device name and check for multipath
     ///
-    /// Compatible with libguestfs g.canonical_device_name()
+    /// GuestFS API: canonical_device_name()
     pub fn is_multipath(&mut self, device: &str) -> Result<bool> {
         self.ensure_ready()?;
 

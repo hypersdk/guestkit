@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Sed-like file editing operations compatible with libguestfs
+//! Sed-like file editing operations for disk image manipulation
 //!
 //! This implementation provides in-place file editing functionality.
 
@@ -10,7 +10,7 @@ use regex::Regex;
 impl Guestfs {
     /// Edit file using sed-like expressions
     ///
-    /// Compatible with libguestfs g.sed()
+    /// GuestFS API: sed()
     pub fn sed(&mut self, expression: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -53,7 +53,7 @@ impl Guestfs {
 
     /// Edit file using sed expressions (from file)
     ///
-    /// Compatible with libguestfs g.sed_file()
+    /// GuestFS API: sed_file()
     pub fn sed_file(&mut self, sedfile: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

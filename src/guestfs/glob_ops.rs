@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Glob and wildcard operations compatible with libguestfs
+//! Glob and wildcard operations for disk image manipulation
 //!
 //! This implementation provides glob pattern matching functionality.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Expand glob pattern
     ///
-    /// Compatible with libguestfs g.glob_expand()
+    /// GuestFS API: glob_expand()
     pub fn glob_expand(&mut self, pattern: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -103,7 +103,7 @@ impl Guestfs {
 
     /// Match files against pattern
     ///
-    /// Compatible with libguestfs g.grep_impl()
+    /// GuestFS API: grep_impl()
     pub fn grep_lines(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -127,7 +127,7 @@ impl Guestfs {
 
     /// Read directory entries
     ///
-    /// Compatible with libguestfs g.readdir()
+    /// GuestFS API: readdir()
     pub fn readdir(&mut self, dir: &str) -> Result<Vec<(String, u8)>> {
         self.ensure_ready()?;
 
@@ -163,7 +163,7 @@ impl Guestfs {
 
     /// Case insensitive path lookup
     ///
-    /// Compatible with libguestfs g.case_sensitive_path()
+    /// GuestFS API: case_sensitive_path()
     pub fn case_sensitive_path(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -202,7 +202,7 @@ impl Guestfs {
 
     /// List extended attributes with values
     ///
-    /// Compatible with libguestfs g.lxattrlist()
+    /// GuestFS API: lxattrlist()
     pub fn lxattrlist(&mut self, path: &str, names: &[&str]) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

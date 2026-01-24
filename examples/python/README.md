@@ -7,24 +7,33 @@ This directory contains example scripts demonstrating the GuestKit Python bindin
 ### System Requirements
 
 - Python 3.6 or later
-- libguestfs and Python bindings installed
+- GuestKit with Python bindings built
+- QEMU tools (qemu-img, qemu-nbd)
 - Root/sudo access (required for most operations)
 
 ### Installation
 
-**Ubuntu/Debian:**
+**Build GuestKit with Python bindings:**
 ```bash
-sudo apt-get install libguestfs-dev libguestfs-tools python3-guestfs
+# Clone and build
+git clone https://github.com/ssahani/guestkit
+cd guestkit
+cargo build --release --features python
+
+# Install Python module
+pip install .
 ```
 
-**Fedora/RHEL/CentOS:**
+**Install system dependencies:**
 ```bash
-sudo dnf install libguestfs-devel libguestfs-tools python3-libguestfs
-```
+# Ubuntu/Debian
+sudo apt-get install qemu-utils
 
-**Arch Linux:**
-```bash
-sudo pacman -S libguestfs python-libguestfs
+# Fedora/RHEL/CentOS
+sudo dnf install qemu-img
+
+# Arch Linux
+sudo pacman -S qemu
 ```
 
 ## Examples Overview
@@ -338,7 +347,7 @@ Size: 1024 MB
 **Solution:** Install Python bindings:
 ```bash
 sudo apt-get install python3-guestfs  # Ubuntu/Debian
-sudo dnf install python3-libguestfs   # Fedora/RHEL
+sudo dnf install python3-GuestKit   # Fedora/RHEL
 ```
 
 **Problem:** `RuntimeError: permission denied`
@@ -351,7 +360,7 @@ sudo python3 script.py image.img
 **Problem:** `RuntimeError: appliance failed to start`
 
 **Solutions:**
-1. Check libguestfs is installed
+1. Check GuestKit is installed
 2. Ensure virtualization (KVM) is available
 3. Check permissions on disk image file
 
@@ -421,7 +430,7 @@ elif g.is_dir(path):
 - **Rust Ergonomic API Guide:** `docs/ERGONOMIC_API.md`
 - **Migration Guide:** `docs/MIGRATION_GUIDE.md`
 - **Main README:** `README.md`
-- **libguestfs Documentation:** https://libguestfs.org/
+- **GuestKit Documentation:** https://GuestKit.org/
 
 ## Quick Reference
 

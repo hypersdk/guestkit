@@ -102,6 +102,255 @@ OS #1
 
 ---
 
+### `diff` - Compare Two Disk Images
+
+Compare two disk images to identify configuration changes, package differences, service changes, and more.
+
+**Usage:**
+```bash
+guestkit diff [OPTIONS] <IMAGE1> <IMAGE2>
+```
+
+**Options:**
+- `-o, --output <FORMAT>` - Output format: text (default), json, yaml
+- `-v, --verbose` - Verbose output
+
+**Examples:**
+```bash
+# Compare two versions of a VM
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2
+
+# JSON output for automation
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output json
+
+# YAML output
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output yaml
+```
+
+**Output:**
+```
+=== OS Differences ===
+  hostname: fedora-server → fedora-prod
+  package_count: 1247 → 1250
+
+=== Package Differences ===
+  Added (3):
+    + kernel: 6.6.8-200.fc39
+    + nginx-1.24.0
+    + certbot-2.7.4
+
+  Removed (1):
+    - apache2-2.4.57
+
+=== Service Differences ===
+  Enabled:
+    + nginx.service
+  Disabled:
+    - apache2.service
+
+=== User Differences ===
+  Added: webadmin
+
+=== Network Differences ===
+  eth0_ip: 192.168.1.100 → 192.168.1.150
+
+=== Configuration Differences ===
+  timezone: America/New_York → Europe/London
+```
+
+**JSON Output:**
+```json
+{
+  "os_changes": [
+    {
+      "field": "hostname",
+      "old_value": "fedora-server",
+      "new_value": "fedora-prod"
+    }
+  ],
+  "package_changes": {
+    "added": ["kernel: 6.6.8-200.fc39", "nginx-1.24.0"],
+    "removed": ["apache2-2.4.57"],
+    "updated": []
+  },
+  "service_changes": {
+    "enabled": ["nginx.service"],
+    "disabled": ["apache2.service"]
+  },
+  "user_changes": {
+    "added": ["webadmin"],
+    "removed": []
+  },
+  "network_changes": [
+    {
+      "field": "eth0_ip",
+      "old_value": "192.168.1.100",
+      "new_value": "192.168.1.150"
+    }
+  ],
+  "config_changes": []
+}
+```
+
+**Use Cases:**
+- Track configuration drift between VM snapshots
+- Verify migration changes
+- Audit updates and modifications
+- Generate change reports for compliance
+
+---
+
+### `compare` - Batch VM Comparison
+
+Compare multiple VMs against a baseline to identify deviations and ensure consistency.
+
+**Usage:**
+```bash
+guestkit compare <BASELINE> <IMAGES>...
+```
+
+**Options:**
+- `-v, --verbose` - Verbose output
+
+**Examples:**
+```bash
+# Compare production VMs against golden image
+sudo guestkit compare golden-image.qcow2 prod-vm1.qcow2 prod-vm2.qcow2 prod-vm3.qcow2
+
+# Compare all VMs in a directory
+sudo guestkit compare baseline.qcow2 /var/lib/libvirt/images/*.qcow2
+```
+
+**Output:**
+```
+=== Comparison Report ===
+Baseline: golden-image.qcow2
+
+Comparing 3 VM(s):
+  prod-vm1.qcow2
+  prod-vm2.qcow2
+  prod-vm3.qcow2
+
+=== Summary ===
+                    Baseline    prod-vm1    prod-vm2    prod-vm3
+OS Version          39.0        39.0        40.0 ⚠     39.0
+Hostname            baseline    web1        web2        db1
+Package Count       1247        1250        1248        1189 ⚠
+SSH Root Login      no          no          YES ⚠       no
+Firewall            enabled     enabled     DISABLED ⚠  enabled
+
+=== Compliance Issues ===
+prod-vm2:
+  ⚠ OS Version: 40.0 (expected: 39.0)
+  ⚠ SSH root login: enabled (should be disabled)
+  ⚠ Firewall: disabled (should be enabled)
+
+prod-vm3:
+  ⚠ Package count: 1189 (58 fewer than baseline)
+
+=== Recommendations ===
+- Review prod-vm2 configuration (3 issues detected)
+- Investigate missing packages on prod-vm3
+```
+
+**Use Cases:**
+- Validate VM fleet consistency
+- Detect configuration drift across multiple VMs
+- Compliance auditing against golden images
+- Quality assurance for VM templates
+
+---
+
+### Inspection Profiles
+
+Use specialized profiles for focused inspection:
+
+**Available Profiles:**
+- `security` - Security audit and hardening recommendations
+- `migration` - Migration planning and compatibility analysis
+- `performance` - Performance tuning opportunities
+
+**Usage:**
+```bash
+guestkit inspect [OPTIONS] --profile <PROFILE> <IMAGE>
+```
+
+**Security Profile Example:**
+```bash
+sudo guestkit inspect --profile security webserver.qcow2
+```
+
+**Output:**
+```
+Profile: Security Audit
+
+━━━ SSH Configuration ━━━
+  ✗ PermitRootLogin: yes (CRITICAL - should be 'no')
+  ✓ PasswordAuthentication: no
+  ✓ SSH Port: 22
+
+━━━ User Security ━━━
+  ⚠ Multiple UID 0 Users: 2 users with UID 0 detected
+  ✓ Disabled Logins: 15 system accounts properly disabled
+
+━━━ Firewall ━━━
+  ✗ Firewall Status: disabled (CRITICAL)
+
+━━━ Mandatory Access Control ━━━
+  ⚠ SELinux: permissive (should be enforcing)
+
+━━━ Services ━━━
+  ⚠ Risky Services: telnet detected (HIGH RISK)
+  ✓ SSH: properly configured
+
+━━━ SSL/TLS Certificates ━━━
+  ℹ Certificates: 3 certificate(s) found in /etc/ssl/certs
+
+Overall Risk Level: HIGH
+Critical Issues: 2
+Warnings: 3
+```
+
+**Migration Profile Example:**
+```bash
+sudo guestkit inspect --profile migration old-server.qcow2 --output json > migration-plan.json
+```
+
+**Performance Profile Example:**
+```bash
+sudo guestkit inspect --profile performance database.qcow2
+```
+
+**Output:**
+```
+Profile: Performance Tuning
+
+━━━ Kernel Parameters ━━━
+  ℹ Kernel Parameters: 127 parameters configured
+  ⚠ vm.swappiness: Not configured (consider setting to 10)
+  ℹ net.core.somaxconn: 4096
+
+━━━ Swap Configuration ━━━
+  ℹ Swap Devices: 1 swap device(s): /dev/sda3
+  ✓ Swappiness: vm.swappiness = 10
+
+━━━ Disk I/O Configuration ━━━
+  ℹ Filesystem Mounts: 4 mount points in fstab
+  ℹ /: /dev/mapper/vg0-root (ext4) - check for noatime, nodiratime options
+
+━━━ Network Tuning ━━━
+  ⚠ net.core.rmem_max: Not tuned (consider optimizing for high-throughput)
+  ℹ eth0: DHCP configuration
+
+━━━ Services & Resource Usage ━━━
+  ℹ Enabled Services: 42 services enabled (review for unnecessary services)
+  ℹ postgresql: Resource-intensive service detected - ensure proper allocation
+
+Review tuning opportunities to optimize system performance.
+```
+
+---
+
 ### `filesystems` - List Storage
 
 List all devices, partitions, and filesystems in a disk image.
@@ -371,7 +620,7 @@ sudo guestctl inspect --json disk.img | jq '{
 ## Requirements
 
 - **Root/sudo access** - Most operations require root privileges
-- **libguestfs** - System dependencies (qemu-img, etc.)
+- **System tools** - QEMU tools (qemu-img, qemu-nbd) for disk operations
 - **Disk formats** - Supports QCOW2, VMDK, RAW, VDI, VHD, and more
 
 ---

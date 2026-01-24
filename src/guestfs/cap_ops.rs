@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Linux capabilities operations compatible with libguestfs
+//! Linux capabilities operations for disk image manipulation
 //!
 //! This implementation provides file capabilities management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get file capabilities
     ///
-    /// Compatible with libguestfs g.cap_get_file()
+    /// GuestFS API: cap_get_file()
     pub fn cap_get_file(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -44,7 +44,7 @@ impl Guestfs {
 
     /// Set file capabilities
     ///
-    /// Compatible with libguestfs g.cap_set_file()
+    /// GuestFS API: cap_set_file()
     pub fn cap_set_file(&mut self, path: &str, cap: &str) -> Result<()> {
         self.ensure_ready()?;
 

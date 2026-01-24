@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! File attribute operations compatible with libguestfs
+//! File attribute operations for disk image manipulation
 //!
 //! This implementation provides extended file attribute functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Set extended attribute
     ///
-    /// Compatible with libguestfs g.setxattr()
+    /// GuestFS API: setxattr()
     pub fn setxattr(&mut self, xattr: &str, val: &str, vallen: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -41,7 +41,7 @@ impl Guestfs {
 
     /// Remove extended attribute
     ///
-    /// Compatible with libguestfs g.removexattr()
+    /// GuestFS API: removexattr()
     pub fn removexattr(&mut self, xattr: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

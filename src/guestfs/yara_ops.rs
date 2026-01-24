@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! YARA malware scanning operations compatible with libguestfs
+//! YARA malware scanning operations for disk image manipulation
 //!
 //! This implementation provides YARA rule-based file scanning functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Load YARA rules
     ///
-    /// Compatible with libguestfs g.yara_load()
+    /// GuestFS API: yara_load()
     pub fn yara_load(&mut self, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -29,7 +29,7 @@ impl Guestfs {
 
     /// Scan file with YARA rules
     ///
-    /// Compatible with libguestfs g.yara_scan()
+    /// GuestFS API: yara_scan()
     pub fn yara_scan(&mut self, path: &str) -> Result<Vec<YaraDetection>> {
         self.ensure_ready()?;
 
@@ -46,7 +46,7 @@ impl Guestfs {
 
     /// Destroy YARA rules
     ///
-    /// Compatible with libguestfs g.yara_destroy()
+    /// GuestFS API: yara_destroy()
     pub fn yara_destroy(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

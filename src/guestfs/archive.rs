@@ -11,7 +11,7 @@ use std::process::Command;
 impl Guestfs {
     /// Extract tar archive into directory
     ///
-    /// Compatible with libguestfs g.tar_in()
+    /// GuestFS API: tar_in()
     ///
     /// # Arguments
     ///
@@ -79,7 +79,7 @@ impl Guestfs {
 
     /// Create tar archive from directory
     ///
-    /// Compatible with libguestfs g.tar_out()
+    /// GuestFS API: tar_out()
     pub fn tar_out<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P) -> Result<()> {
         self.ensure_ready()?;
 
@@ -127,7 +127,7 @@ impl Guestfs {
 
     /// Extract compressed tar archive
     ///
-    /// Compatible with libguestfs g.tgz_in()
+    /// GuestFS API: tgz_in()
     pub fn tgz_in<P: AsRef<Path>>(&mut self, tarball: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -179,7 +179,7 @@ impl Guestfs {
 
     /// Create compressed tar archive
     ///
-    /// Compatible with libguestfs g.tgz_out()
+    /// GuestFS API: tgz_out()
     pub fn tgz_out<P: AsRef<Path>>(&mut self, directory: &str, tarball: P) -> Result<()> {
         self.ensure_ready()?;
 
@@ -227,7 +227,7 @@ impl Guestfs {
 
     /// Extract tar with options
     ///
-    /// Compatible with libguestfs g.tar_in_opts()
+    /// GuestFS API: tar_in_opts()
     pub fn tar_in_opts<P: AsRef<Path>>(&mut self, tarfile: P, directory: &str, compress: Option<&str>, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -290,7 +290,7 @@ impl Guestfs {
 
     /// Create tar with options
     ///
-    /// Compatible with libguestfs g.tar_out_opts()
+    /// GuestFS API: tar_out_opts()
     pub fn tar_out_opts<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P, compress: Option<&str>, _numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -360,7 +360,7 @@ impl Guestfs {
 
     /// Extract CPIO archive into directory
     ///
-    /// Compatible with libguestfs g.cpio_in()
+    /// GuestFS API: cpio_in()
     pub fn cpio_in<P: AsRef<Path>>(&mut self, cpiofile: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -427,7 +427,7 @@ impl Guestfs {
 
     /// Create cpio archive
     ///
-    /// Compatible with libguestfs g.cpio_out()
+    /// GuestFS API: cpio_out()
     pub fn cpio_out<P: AsRef<Path>>(&mut self, directory: &str, cpiofile: P, format: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Template and cloning operations compatible with libguestfs
+//! Template and cloning operations for disk image manipulation
 //!
 //! This implementation provides VM template and cloning functionality.
 
