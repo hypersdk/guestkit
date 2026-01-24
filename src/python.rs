@@ -954,6 +954,7 @@ impl Guestfs {
     }
 
     /// Exit context manager
+    #[pyo3(signature = (_exc_type=None, _exc_value=None, _traceback=None))]
     fn __exit__(
         &mut self,
         _exc_type: Option<&Bound<'_, PyAny>>,
