@@ -1,9 +1,11 @@
 # guestctl
 
-A pure Rust toolkit for disk image inspection and manipulation. Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
+A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emoji-enhanced output**. Inspect VM disks in seconds without booting them. Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+
+**🎨 New:** Beautiful terminal output with emojis and color coding makes VM inspection actually enjoyable!
 
 ## Features
 
@@ -87,7 +89,13 @@ A pure Rust toolkit for disk image inspection and manipulation. Designed to work
 
 ### Advanced CLI Features (guestctl)
 
-- 📊 **Multiple Output Formats** - JSON, YAML, CSV, and plain text for automation and scripting
+- 🎨 **Beautiful Visual Output** - Emoji-enhanced terminal output with color coding for easy scanning
+  - 💾 Block devices with icons and visual hierarchy
+  - 🐧 OS detection with distribution-specific icons (Linux, Windows, FreeBSD)
+  - 🔴 Package manager icons (RPM, DEB, Pacman)
+  - 🌐 Network configuration display
+  - Smart color coding: green (active), red (issues), gray (unknown)
+- 📊 **Multiple Output Formats** - JSON, YAML, CSV, and beautiful plain text for automation and scripting
 - 🎯 **Inspection Profiles** - Specialized analysis modes:
   - **Security Profile** - SSH hardening, firewall status, user security, SELinux/AppArmor, risk scoring
   - **Migration Profile** - Complete inventory for VM migration planning
@@ -114,14 +122,58 @@ cargo install --path .
 
 ### CLI Tool
 
-GuestCtl is a powerful command-line tool for inspecting and manipulating VM disk images without mounting them.
+GuestCtl is a powerful command-line tool for inspecting and manipulating VM disk images without mounting them. Features **beautiful emoji-enhanced output** with color coding for better readability.
+
+**Example - Inspect a VMware Photon OS disk (5 seconds):**
+```bash
+sudo guestctl inspect photon.vmdk
+```
+
+**Output:**
+```
+💾 Block Devices
+────────────────────────────────────────────────────────────
+  ▪ /dev/sda 8589934592 bytes (8.59 GB)
+    • Read-only: yes
+
+🗂  Partitions
+────────────────────────────────────────────────────────────
+  📦 /dev/sda3
+    • Size:   8574189056 bytes (8.57 GB)
+
+📁 Filesystems
+────────────────────────────────────────────────────────────
+  🐧 /dev/sda3 ext4
+    • UUID:  311182bd-f262-4081-8a2d-56624799dbad
+
+🖥️  Operating Systems
+────────────────────────────────────────────────────────────
+    🐧 Type:         linux
+    📦 Distribution: photon
+    🏷️ Product:      VMware Photon OS/Linux 5.0
+    🏠 Hostname:     photon-2e2948360ed5
+    🔴 Packages:     rpm
+    ⚡ Init system:  systemd
+    💾 Disk usage:   15.1% (5.15 TB used / 34.14 TB total)
+    🐧 Kernel:       vmlinuz-6.1.10-11.ph5
+```
+
+**Key Features:**
+- 🎨 **Color-coded output** - Visual hierarchy with emojis and colors
+- ⚡ **Fast** - Complete OS detection in ~5 seconds
+- 🔒 **Safe** - Read-only by default
+- 🌐 **Network detection** - Automatic network config parsing
+- 📊 **Multiple formats** - Pretty terminal, JSON, HTML, YAML
 
 **Basic Operations:**
 ```bash
-# Inspect a disk image
-sudo guestctl inspect ubuntu.qcow2
+# Inspect with beautiful output
+sudo guestctl inspect photon.vmdk
 
-# List filesystems and partitions
+# JSON output for scripting
+sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+
+# List filesystems
 sudo guestctl filesystems ubuntu.qcow2
 
 # List installed packages
@@ -135,9 +187,6 @@ sudo guestctl list ubuntu.qcow2 /etc
 
 # Extract a file
 sudo guestctl extract ubuntu.qcow2 /etc/passwd ./passwd
-
-# JSON output for scripting
-sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
 ```
 
 **Advanced Features:**
