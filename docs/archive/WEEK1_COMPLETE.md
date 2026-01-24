@@ -1,25 +1,25 @@
-# Week 1 Complete: GuestCtl CLI Tool ✅
+# Week 1 Complete: GuestKit CLI Tool ✅
 
 ## Summary
 
-Successfully implemented the **GuestCtl CLI tool** - a full-featured command-line interface for disk image inspection and manipulation. This completes **Week 1** of the Quick Wins implementation plan.
+Successfully implemented the **GuestKit CLI tool** - a full-featured command-line interface for disk image inspection and manipulation. This completes **Week 1** of the Quick Wins implementation plan.
 
 ---
 
 ## What We Built
 
-### 1. **GuestCtl CLI Tool** (`guestctl`)
+### 1. **GuestKit CLI Tool** (`guestkit`)
 
 A production-ready command-line tool with 6 major commands:
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `inspect` | OS detection and information | `guestctl inspect ubuntu.qcow2` |
-| `filesystems` | List devices, partitions, LVM | `guestctl filesystems ubuntu.qcow2` |
-| `packages` | List installed software | `guestctl packages --filter nginx` |
-| `cp` | Copy files from disk images | `guestctl cp disk.img:/etc/passwd ./` |
-| `ls` | List directories | `guestctl ls disk.img /etc` |
-| `cat` | Read files | `guestctl cat disk.img /etc/hostname` |
+| `inspect` | OS detection and information | `guestkit inspect ubuntu.qcow2` |
+| `filesystems` | List devices, partitions, LVM | `guestkit filesystems ubuntu.qcow2` |
+| `packages` | List installed software | `guestkit packages --filter nginx` |
+| `cp` | Copy files from disk images | `guestkit cp disk.img:/etc/passwd ./` |
+| `ls` | List directories | `guestkit ls disk.img /etc` |
+| `cat` | Read files | `guestkit cat disk.img /etc/hostname` |
 
 **Key Features:**
 - ✅ JSON output for all commands (scripting-friendly)
@@ -34,7 +34,7 @@ A production-ready command-line tool with 6 major commands:
 ## Files Created
 
 ### Source Code
-- **`src/bin/guestctl.rs`** (600+ lines) - Complete CLI implementation
+- **`src/bin/guestkit.rs`** (600+ lines) - Complete CLI implementation
   - Command parsing with clap
   - All 6 commands fully implemented
   - JSON and human-readable output
@@ -65,7 +65,7 @@ A production-ready command-line tool with 6 major commands:
 
 ### Configuration
 - **`Cargo.toml`** - Updated binary configuration
-  - Binary renamed to `guestctl`
+  - Binary renamed to `guestkit`
   - All dependencies already present
 
 ### Updated
@@ -108,7 +108,7 @@ Compilation errors: 0 ✅
 ### 1. Quick Inspection
 
 ```bash
-$ sudo guestctl inspect ubuntu.qcow2
+$ sudo guestkit inspect ubuntu.qcow2
 
 === Disk Image: ubuntu.qcow2 ===
 
@@ -128,15 +128,15 @@ OS #1
 
 ```bash
 # Get OS type
-$ sudo guestctl inspect --json ubuntu.qcow2 | jq -r '.operating_systems[0].type'
+$ sudo guestkit inspect --json ubuntu.qcow2 | jq -r '.operating_systems[0].type'
 linux
 
 # Get hostname
-$ sudo guestctl inspect --json ubuntu.qcow2 | jq -r '.operating_systems[0].hostname'
+$ sudo guestkit inspect --json ubuntu.qcow2 | jq -r '.operating_systems[0].hostname'
 webserver-01
 
 # Count packages
-$ sudo guestctl packages --json ubuntu.qcow2 | jq '.total'
+$ sudo guestkit packages --json ubuntu.qcow2 | jq '.total'
 1847
 ```
 
@@ -144,18 +144,18 @@ $ sudo guestctl packages --json ubuntu.qcow2 | jq '.total'
 
 ```bash
 # List directory
-$ sudo guestctl ls ubuntu.qcow2 /etc
+$ sudo guestkit ls ubuntu.qcow2 /etc
 passwd
 hostname
 hosts
 ...
 
 # Read file
-$ sudo guestctl cat ubuntu.qcow2 /etc/hostname
+$ sudo guestkit cat ubuntu.qcow2 /etc/hostname
 webserver-01
 
 # Copy file
-$ sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
+$ sudo guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
 ✓ Copied ubuntu.qcow2:/etc/passwd -> ./passwd
 ```
 
@@ -163,7 +163,7 @@ $ sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
 
 ```bash
 # List all packages
-$ sudo guestctl packages ubuntu.qcow2
+$ sudo guestkit packages ubuntu.qcow2
 
 Found 1847 package(s)
 
@@ -174,7 +174,7 @@ apache2                                  2.4.52               1ubuntu4
 ...
 
 # Find specific packages
-$ sudo guestctl packages --filter nginx ubuntu.qcow2
+$ sudo guestkit packages --filter nginx ubuntu.qcow2
 
 Found 3 package(s)
 
@@ -199,12 +199,12 @@ for disk in /var/lib/libvirt/images/*.qcow2; do
     echo "=== $(basename $disk) ==="
 
     # Get OS info
-    info=$(sudo guestctl inspect --json "$disk")
+    info=$(sudo guestkit inspect --json "$disk")
     hostname=$(echo "$info" | jq -r '.operating_systems[0].hostname // "unknown"')
     distro=$(echo "$info" | jq -r '.operating_systems[0].distro // "unknown"')
 
     # Count packages
-    pkg_count=$(sudo guestctl packages --json "$disk" | jq '.total')
+    pkg_count=$(sudo guestkit packages --json "$disk" | jq '.total')
 
     echo "Hostname: $hostname"
     echo "OS: $distro"
@@ -221,7 +221,7 @@ done
   hosts: localhost
   tasks:
     - name: Get OS information
-      shell: guestctl inspect --json /var/lib/libvirt/images/vm.qcow2
+      shell: guestkit inspect --json /var/lib/libvirt/images/vm.qcow2
       register: vm_info
       become: yes
 
@@ -366,10 +366,10 @@ done
 
 ### Marketing Opportunities
 
-- **Blog post**: "Introducing GuestCtl: A Modern CLI for Disk Image Inspection"
+- **Blog post**: "Introducing GuestKit: A Modern CLI for Disk Image Inspection"
 - **Demo video**: Show 6 commands in action
 - **Reddit post**: r/rust, r/linux, r/devops
-- **Tweet**: "GuestCtl - inspect VM disks without mounting them"
+- **Tweet**: "GuestKit - inspect VM disks without mounting them"
 
 ---
 
@@ -377,7 +377,7 @@ done
 
 ✅ **Week 1: COMPLETE**
 
-The GuestCtl CLI tool is **production-ready** and provides immediate value to users. It's:
+The GuestKit CLI tool is **production-ready** and provides immediate value to users. It's:
 
 - **Usable** - Simple, intuitive commands
 - **Scriptable** - JSON output, good exit codes

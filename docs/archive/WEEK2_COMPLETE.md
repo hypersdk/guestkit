@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully implemented **progress reporting** and **enhanced error diagnostics** for GuestCtl. This completes **Week 2** of the Quick Wins implementation plan.
+Successfully implemented **progress reporting** and **enhanced error diagnostics** for GuestKit. This completes **Week 2** of the Quick Wins implementation plan.
 
 ---
 
@@ -49,12 +49,12 @@ Error: No operating systems detected in ubuntu.qcow2
 
 Possible reasons:
   • Disk is not bootable
-  • Disk is encrypted (check with: guestctl filesystems)
+  • Disk is encrypted (check with: guestkit filesystems)
   • Unsupported OS type
   • Corrupted disk image
 
 Try:
-  guestctl filesystems ubuntu.qcow2
+  guestkit filesystems ubuntu.qcow2
 ```
 
 ---
@@ -79,7 +79,7 @@ Try:
 
 ### CLI Enhancements
 
-**Updated `src/bin/guestctl.rs`:**
+**Updated `src/bin/guestkit.rs`:**
 - Added progress spinners to `cmd_inspect`
 - Added progress spinners to `cmd_packages`
 - Progress updates for each operation stage
@@ -141,7 +141,7 @@ return Err(DiagnosticError::no_os_detected(disk.display().to_string()).into());
 ### Before Week 2
 
 ```bash
-$ sudo guestctl inspect ubuntu.qcow2
+$ sudo guestkit inspect ubuntu.qcow2
 [Long pause - users don't know what's happening]
 === Disk Image: ubuntu.qcow2 ===
 ...
@@ -157,7 +157,7 @@ $ sudo guestctl inspect ubuntu.qcow2
 ### After Week 2
 
 ```bash
-$ sudo guestctl inspect ubuntu.qcow2
+$ sudo guestkit inspect ubuntu.qcow2
 ⠹ Loading disk image...
 ⠸ Launching appliance...
 ⠼ Inspecting operating systems...
@@ -213,7 +213,7 @@ Possible reasons:
   • Corrupted disk image
 
 Try:
-  guestctl filesystems empty.img
+  guestkit filesystems empty.img
 ```
 
 ---
@@ -233,12 +233,12 @@ Error: No operating systems detected in ubuntu.qcow2
 
 Possible reasons:
   • Disk is not bootable
-  • Disk is encrypted (check with: guestctl filesystems)
+  • Disk is encrypted (check with: guestkit filesystems)
   • Unsupported OS type
   • Corrupted disk image
 
 Try:
-  guestctl filesystems ubuntu.qcow2
+  guestkit filesystems ubuntu.qcow2
 ```
 
 ### 2. Appliance Launch Failed
@@ -254,12 +254,12 @@ Error: Failed to launch guestfs appliance
 
 Common causes:
   1. KVM not available - check: ls -l /dev/kvm
-  2. Insufficient permissions - try: sudo guestctl ...
+  2. Insufficient permissions - try: sudo guestkit ...
   3. Corrupted disk image
   4. QEMU not installed
 
 Debug:
-  Run with: guestctl -v inspect ubuntu.qcow2
+  Run with: guestkit -v inspect ubuntu.qcow2
 ```
 
 ### 3. File Not Found
@@ -274,7 +274,7 @@ Error: File not found: /etc/missing
 Error: File not found: /etc/missing
 
 Verify the file exists:
-  guestctl ls ubuntu.qcow2 /etc
+  guestkit ls ubuntu.qcow2 /etc
 
 Note: Paths are case-sensitive
 ```
@@ -293,7 +293,7 @@ Error: Permission denied
 Most operations require root privileges.
 
 Run with sudo:
-  sudo guestctl inspect ubuntu.qcow2
+  sudo guestkit inspect ubuntu.qcow2
 ```
 
 ---
@@ -393,7 +393,7 @@ if access_denied {
 
 ```yaml
 - name: Inspect VM disk
-  command: guestctl inspect --json {{ disk_path }}
+  command: guestkit inspect --json {{ disk_path }}
   register: result
   failed_when: result.rc != 0
   # Error output now includes helpful diagnostics
@@ -407,7 +407,7 @@ if access_denied {
 
 for disk in *.qcow2; do
     echo "Processing $disk..."
-    sudo guestctl inspect "$disk"  # Shows progress spinner
+    sudo guestkit inspect "$disk"  # Shows progress spinner
 done
 ```
 
@@ -508,7 +508,7 @@ fn bench_inspect_os(c: &mut Criterion) {
 ### Code Statistics
 
 - **New modules:** 2 (progress, diagnostics)
-- **Modified files:** 3 (guestctl.rs, core/mod.rs, Cargo.toml)
+- **Modified files:** 3 (guestkit.rs, core/mod.rs, Cargo.toml)
 - **Lines added:** 520
 - **Tests added:** 6
 - **Dependencies added:** 2 (indicatif, miette)

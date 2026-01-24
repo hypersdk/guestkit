@@ -21,7 +21,7 @@ Successfully completed the **Quick Wins** sprint, transforming GuestKit from a l
 
 ## Week-by-Week Progress
 
-### Week 1: CLI Tool (guestctl) ✅
+### Week 1: CLI Tool (guestkit) ✅
 
 **Goal:** Command-line interface for disk image operations
 
@@ -83,26 +83,26 @@ Successfully completed the **Quick Wins** sprint, transforming GuestKit from a l
 
 ## Complete Feature List
 
-### CLI Tool (guestctl)
+### CLI Tool (guestkit)
 
 ```bash
 # OS Inspection
-guestctl inspect disk.img                    # Human-readable
-guestctl inspect --json disk.img             # JSON for scripts
+guestkit inspect disk.img                    # Human-readable
+guestkit inspect --json disk.img             # JSON for scripts
 
 # Storage
-guestctl filesystems disk.img                # List devices
-guestctl filesystems --detailed disk.img     # With UUIDs
+guestkit filesystems disk.img                # List devices
+guestkit filesystems --detailed disk.img     # With UUIDs
 
 # Packages
-guestctl packages disk.img                   # All packages
-guestctl packages --filter nginx disk.img    # Filtered
-guestctl packages --json disk.img           # JSON output
+guestkit packages disk.img                   # All packages
+guestkit packages --filter nginx disk.img    # Filtered
+guestkit packages --json disk.img           # JSON output
 
 # Files
-guestctl ls disk.img /etc                    # List directory
-guestctl cat disk.img /etc/hostname          # Read file
-guestctl cp disk.img:/etc/passwd ./passwd    # Copy file
+guestkit ls disk.img /etc                    # List directory
+guestkit cat disk.img /etc/hostname          # Read file
+guestkit cp disk.img:/etc/passwd ./passwd    # Copy file
 ```
 
 ### Progress System
@@ -128,7 +128,7 @@ Possible reasons:
   • Corrupted disk image
 
 Try:
-  guestctl filesystems empty.img
+  guestkit filesystems empty.img
 ```
 
 ### Benchmarks
@@ -176,7 +176,7 @@ Try:
 
 | Component | Lines | Description |
 |-----------|-------|-------------|
-| **CLI Tool** | 600 | Complete guestctl implementation |
+| **CLI Tool** | 600 | Complete guestkit implementation |
 | **Progress System** | 180 | Progress bars and spinners |
 | **Diagnostics** | 280 | Enhanced error messages |
 | **Benchmarks** | 400 | Performance testing suite |
@@ -268,7 +268,7 @@ fn main() -> Result<()> {
 **After Quick Wins:**
 ```bash
 # One command, no coding
-guestctl inspect disk.img
+guestkit inspect disk.img
 ```
 
 **Improvement:** 20+ lines of code → 1 command
@@ -286,11 +286,11 @@ Error: No operating systems detected in ubuntu.qcow2
 
 Possible reasons:
   • Disk is not bootable
-  • Disk is encrypted (check with: guestctl filesystems)
+  • Disk is encrypted (check with: guestkit filesystems)
   • Unsupported OS type
 
 Try:
-  guestctl filesystems ubuntu.qcow2
+  guestkit filesystems ubuntu.qcow2
 ```
 
 **Improvement:** Cryptic → Actionable
@@ -299,13 +299,13 @@ Try:
 
 **Before:**
 ```
-$ guestctl inspect disk.img
+$ guestkit inspect disk.img
 [Long pause - users think it's frozen]
 ```
 
 **After:**
 ```
-$ guestctl inspect disk.img
+$ guestkit inspect disk.img
 ⠹ Loading disk image...
 ⠸ Launching appliance...
 ⠼ Inspecting operating systems...
@@ -322,7 +322,7 @@ $ guestctl inspect disk.img
 
 ```bash
 # Build optimized CLI
-cargo build --bin guestctl --release
+cargo build --bin guestkit --release
 
 # Run benchmarks
 cargo bench --bench operations
@@ -331,7 +331,7 @@ cargo bench --bench operations
 open target/criterion/report/index.html
 
 # Test with real image
-sudo ./target/release/guestctl inspect ubuntu.qcow2
+sudo ./target/release/guestkit inspect ubuntu.qcow2
 ```
 
 ### CI/CD Feedback
@@ -441,7 +441,7 @@ Total time: 15-20 minutes
 - **Blog Post:** "Building a Modern CLI in 3 Weeks"
 - **Demo Video:** Show all 6 commands in action
 - **Reddit:** r/rust, r/linux, r/devops
-- **Twitter:** "guestctl - inspect VM disks without mounting"
+- **Twitter:** "guestkit - inspect VM disks without mounting"
 - **Hacker News:** "Pure Rust alternative to libguestfs tools"
 
 ---

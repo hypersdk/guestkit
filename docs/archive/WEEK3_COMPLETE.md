@@ -37,7 +37,7 @@ Automated testing against real OS images:
 - ✅ Ubuntu 20.04, 22.04, 24.04
 - ✅ Debian 12 (Bookworm)
 - ✅ Fedora 39
-- ✅ All major GuestCtl commands
+- ✅ All major GuestKit commands
 - ✅ JSON output validation
 - ✅ Error handling tests
 
@@ -290,20 +290,20 @@ cargo bench --bench operations
 
 ```bash
 # Build release binary
-cargo build --bin guestctl --release
+cargo build --bin guestkit --release
 
 # Test with Ubuntu image
-sudo ./target/release/guestctl inspect test-images/ubuntu-22.04.qcow2
-sudo ./target/release/guestctl filesystems test-images/ubuntu-22.04.qcow2
-sudo ./target/release/guestctl packages test-images/ubuntu-22.04.qcow2
+sudo ./target/release/guestkit inspect test-images/ubuntu-22.04.qcow2
+sudo ./target/release/guestkit filesystems test-images/ubuntu-22.04.qcow2
+sudo ./target/release/guestkit packages test-images/ubuntu-22.04.qcow2
 
 # Test JSON output
-sudo ./target/release/guestctl inspect --json test-images/ubuntu-22.04.qcow2 | jq '.'
+sudo ./target/release/guestkit inspect --json test-images/ubuntu-22.04.qcow2 | jq '.'
 
 # Test file operations
-sudo ./target/release/guestctl ls test-images/ubuntu-22.04.qcow2 /etc
-sudo ./target/release/guestctl cat test-images/ubuntu-22.04.qcow2 /etc/hostname
-sudo ./target/release/guestctl cp test-images/ubuntu-22.04.qcow2:/etc/passwd ./passwd
+sudo ./target/release/guestkit ls test-images/ubuntu-22.04.qcow2 /etc
+sudo ./target/release/guestkit cat test-images/ubuntu-22.04.qcow2 /etc/hostname
+sudo ./target/release/guestkit cp test-images/ubuntu-22.04.qcow2:/etc/passwd ./passwd
 ```
 
 ### Automated Testing

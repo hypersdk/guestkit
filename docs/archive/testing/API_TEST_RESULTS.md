@@ -23,30 +23,30 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 
 ### 1. **OS Inspection API** (`inspect`)
    - **Purpose**: Detect operating system type, architecture, partitions
-   - **Method**: `guestctl inspect <disk>`
+   - **Method**: `guestkit inspect <disk>`
    - **Success Rate**: 100% (8/8)
 
 ### 2. **Filesystem Listing API** (`filesystems`)
    - **Purpose**: List all filesystems and partitions
-   - **Method**: `guestctl filesystems <disk>`
+   - **Method**: `guestkit filesystems <disk>`
    - **Success Rate**: 100% (8/8)
 
 ### 3. **Package Listing API** (`packages`)
    - **Purpose**: List installed packages (requires mounting)
-   - **Method**: `guestctl packages <disk>`
+   - **Method**: `guestkit packages <disk>`
    - **Success Rate**: 100% (8/8)
    - **Note**: Requires full OS detection with mounting
 
 ### 4. **Directory Listing API** (`ls`)
    - **Purpose**: List files and directories in guest filesystem
-   - **Method**: `sudo guestctl ls <disk> <path>`
+   - **Method**: `sudo guestkit ls <disk> <path>`
    - **Success Rate**: 87.5% (7/8)
    - **Requirements**: Root privileges for mounting
    - **Known Issues**: Ubuntu Server 25.04 VDI mounting issue
 
 ### 5. **File Reading API** (`cat`)
    - **Purpose**: Read file contents from guest filesystem
-   - **Method**: `sudo guestctl cat <disk> <file>`
+   - **Method**: `sudo guestkit cat <disk> <file>`
    - **Success Rate**: 62.5% (5/8)
    - **Requirements**: Root privileges for mounting
    - **Note**: Files must exist in OS (e.g., /etc/os-release not on Windows)
@@ -137,7 +137,7 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 
 ### Basic Inspection
 ```bash
-$ guestctl inspect disk.qcow2
+$ guestkit inspect disk.qcow2
 
 === Disk Image: disk.qcow2 ===
 
@@ -153,7 +153,7 @@ OS #1
 
 ### List Filesystems
 ```bash
-$ guestctl filesystems disk.qcow2
+$ guestkit filesystems disk.qcow2
 
 === Devices ===
 /dev/sda
@@ -166,7 +166,7 @@ $ guestctl filesystems disk.qcow2
 
 ### List Files (requires sudo)
 ```bash
-$ sudo guestctl ls disk.qcow2 /
+$ sudo guestkit ls disk.qcow2 /
 
 bin
 boot
@@ -179,7 +179,7 @@ lib
 
 ### Read File (requires sudo)
 ```bash
-$ sudo guestctl cat disk.qcow2 /etc/os-release
+$ sudo guestkit cat disk.qcow2 /etc/os-release
 
 NAME="VMware Photon OS"
 VERSION="5.0"
