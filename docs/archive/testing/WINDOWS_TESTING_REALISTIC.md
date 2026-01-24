@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the comprehensive Windows disk image testing infrastructure for GuestKit. These tests create production-quality Windows images with complete system configurations including registry simulation, Windows services, and authentic directory structures for multiple Windows versions.
+This document describes the comprehensive Windows disk image testing infrastructure for GuestCtl. These tests create production-quality Windows images with complete system configurations including registry simulation, Windows services, and authentic directory structures for multiple Windows versions.
 
 ## What Makes These Tests "Realistic"
 

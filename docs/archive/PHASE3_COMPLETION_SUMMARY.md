@@ -10,7 +10,7 @@
 
 🎉 **100% Core libguestfs API Coverage**
 
-GuestKit now implements ALL 145 core libguestfs APIs, making it a fully-featured pure Rust alternative to libguestfs for the most common disk image manipulation operations.
+GuestCtl now implements ALL 145 core libguestfs APIs, making it a fully-featured pure Rust alternative to libguestfs for the most common disk image manipulation operations.
 
 ---
 
@@ -285,7 +285,7 @@ New functions rely on system tools:
 
 ## Acknowledgments
 
-This milestone represents the completion of Phase 3 and achievement of 100% core libguestfs API compatibility. GuestKit is now a production-ready pure Rust alternative for the most common disk image manipulation tasks.
+This milestone represents the completion of Phase 3 and achievement of 100% core libguestfs API compatibility. GuestCtl is now a production-ready pure Rust alternative for the most common disk image manipulation tasks.
 
 **Phase 3 Duration**: Q1 2026
 **Total Commits**: 45
@@ -300,4 +300,4 @@ This milestone represents the completion of Phase 3 and achievement of 100% core
 ✅ **100% Core API Coverage: ACHIEVED**
 ✅ **Production Ready: YES**
 
-GuestKit v0.3.0 is ready for release!
+GuestCtl v0.3.0 is ready for release!

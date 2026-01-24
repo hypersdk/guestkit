@@ -1,6 +1,6 @@
-# GuestKit CLI Guide
+# GuestCtl CLI Guide
 
-`guestkit` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
+`guestctl` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
 
 ## Installation
 
@@ -9,7 +9,7 @@
 cargo build --release
 
 # Binary location
-./target/release/guestkit
+./target/release/guestctl
 
 # Install globally (optional)
 cargo install --path .
@@ -19,22 +19,22 @@ cargo install --path .
 
 ```bash
 # Inspect a disk image
-sudo guestkit inspect ubuntu.qcow2
+sudo guestctl inspect ubuntu.qcow2
 
 # List filesystems
-sudo guestkit filesystems ubuntu.qcow2
+sudo guestctl filesystems ubuntu.qcow2
 
 # List packages
-sudo guestkit packages ubuntu.qcow2
+sudo guestctl packages ubuntu.qcow2
 
 # Copy a file
-sudo guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
+sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
 
 # List directory
-sudo guestkit ls ubuntu.qcow2 /etc
+sudo guestctl ls ubuntu.qcow2 /etc
 
 # Read file
-sudo guestkit cat ubuntu.qcow2 /etc/hostname
+sudo guestctl cat ubuntu.qcow2 /etc/hostname
 ```
 
 ## Commands
@@ -45,7 +45,7 @@ Detect and display operating system information from a disk image.
 
 **Usage:**
 ```bash
-guestkit inspect [OPTIONS] <DISK>
+guestctl inspect [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -54,10 +54,10 @@ guestkit inspect [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # Human-readable output
-sudo guestkit inspect ubuntu.qcow2
+sudo guestctl inspect ubuntu.qcow2
 
 # JSON output for jq processing
-sudo guestkit inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
 ```
 
 **Output:**
@@ -108,7 +108,7 @@ Compare two disk images to identify configuration changes, package differences, 
 
 **Usage:**
 ```bash
-guestkit diff [OPTIONS] <IMAGE1> <IMAGE2>
+guestctl diff [OPTIONS] <IMAGE1> <IMAGE2>
 ```
 
 **Options:**
@@ -118,13 +118,13 @@ guestkit diff [OPTIONS] <IMAGE1> <IMAGE2>
 **Examples:**
 ```bash
 # Compare two versions of a VM
-sudo guestkit diff vm-before.qcow2 vm-after.qcow2
+sudo guestctl diff vm-before.qcow2 vm-after.qcow2
 
 # JSON output for automation
-sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output json
+sudo guestctl diff vm-before.qcow2 vm-after.qcow2 --output json
 
 # YAML output
-sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output yaml
+sudo guestctl diff vm-before.qcow2 vm-after.qcow2 --output yaml
 ```
 
 **Output:**
@@ -206,7 +206,7 @@ Compare multiple VMs against a baseline to identify deviations and ensure consis
 
 **Usage:**
 ```bash
-guestkit compare <BASELINE> <IMAGES>...
+guestctl compare <BASELINE> <IMAGES>...
 ```
 
 **Options:**
@@ -215,10 +215,10 @@ guestkit compare <BASELINE> <IMAGES>...
 **Examples:**
 ```bash
 # Compare production VMs against golden image
-sudo guestkit compare golden-image.qcow2 prod-vm1.qcow2 prod-vm2.qcow2 prod-vm3.qcow2
+sudo guestctl compare golden-image.qcow2 prod-vm1.qcow2 prod-vm2.qcow2 prod-vm3.qcow2
 
 # Compare all VMs in a directory
-sudo guestkit compare baseline.qcow2 /var/lib/libvirt/images/*.qcow2
+sudo guestctl compare baseline.qcow2 /var/lib/libvirt/images/*.qcow2
 ```
 
 **Output:**
@@ -272,12 +272,12 @@ Use specialized profiles for focused inspection:
 
 **Usage:**
 ```bash
-guestkit inspect [OPTIONS] --profile <PROFILE> <IMAGE>
+guestctl inspect [OPTIONS] --profile <PROFILE> <IMAGE>
 ```
 
 **Security Profile Example:**
 ```bash
-sudo guestkit inspect --profile security webserver.qcow2
+sudo guestctl inspect --profile security webserver.qcow2
 ```
 
 **Output:**
@@ -313,12 +313,12 @@ Warnings: 3
 
 **Migration Profile Example:**
 ```bash
-sudo guestkit inspect --profile migration old-server.qcow2 --output json > migration-plan.json
+sudo guestctl inspect --profile migration old-server.qcow2 --output json > migration-plan.json
 ```
 
 **Performance Profile Example:**
 ```bash
-sudo guestkit inspect --profile performance database.qcow2
+sudo guestctl inspect --profile performance database.qcow2
 ```
 
 **Output:**
@@ -357,7 +357,7 @@ List all devices, partitions, and filesystems in a disk image.
 
 **Usage:**
 ```bash
-guestkit filesystems [OPTIONS] <DISK>
+guestctl filesystems [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -366,10 +366,10 @@ guestkit filesystems [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # Basic listing
-sudo guestkit filesystems ubuntu.qcow2
+sudo guestctl filesystems ubuntu.qcow2
 
 # Detailed information
-sudo guestkit filesystems --detailed ubuntu.qcow2
+sudo guestctl filesystems --detailed ubuntu.qcow2
 ```
 
 **Output:**
@@ -406,7 +406,7 @@ List all installed packages from a disk image.
 
 **Usage:**
 ```bash
-guestkit packages [OPTIONS] <DISK>
+guestctl packages [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -417,16 +417,16 @@ guestkit packages [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # List all packages
-sudo guestkit packages ubuntu.qcow2
+sudo guestctl packages ubuntu.qcow2
 
 # Find nginx packages
-sudo guestkit packages --filter nginx ubuntu.qcow2
+sudo guestctl packages --filter nginx ubuntu.qcow2
 
 # Show first 20 packages
-sudo guestkit packages --limit 20 ubuntu.qcow2
+sudo guestctl packages --limit 20 ubuntu.qcow2
 
 # JSON output
-sudo guestkit packages --json ubuntu.qcow2 | jq '.packages[] | select(.name | contains("kernel"))'
+sudo guestctl packages --json ubuntu.qcow2 | jq '.packages[] | select(.name | contains("kernel"))'
 ```
 
 **Output:**
@@ -449,7 +449,7 @@ Copy files from a disk image to the local filesystem.
 
 **Usage:**
 ```bash
-guestkit cp <SOURCE> <DEST>
+guestctl cp <SOURCE> <DEST>
 ```
 
 **Source Format:** `disk.img:/path/to/file`
@@ -457,13 +457,13 @@ guestkit cp <SOURCE> <DEST>
 **Examples:**
 ```bash
 # Copy passwd file
-sudo guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
+sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
 
 # Copy nginx config
-sudo guestkit cp ubuntu.qcow2:/etc/nginx/nginx.conf ./nginx.conf
+sudo guestctl cp ubuntu.qcow2:/etc/nginx/nginx.conf ./nginx.conf
 
 # Copy log file
-sudo guestkit cp ubuntu.qcow2:/var/log/syslog ./syslog
+sudo guestctl cp ubuntu.qcow2:/var/log/syslog ./syslog
 ```
 
 **Output:**
@@ -479,7 +479,7 @@ List files and directories inside a disk image.
 
 **Usage:**
 ```bash
-guestkit ls [OPTIONS] <DISK> [PATH]
+guestctl ls [OPTIONS] <DISK> [PATH]
 ```
 
 **Options:**
@@ -488,13 +488,13 @@ guestkit ls [OPTIONS] <DISK> [PATH]
 **Examples:**
 ```bash
 # List root directory
-sudo guestkit ls ubuntu.qcow2 /
+sudo guestctl ls ubuntu.qcow2 /
 
 # List /etc
-sudo guestkit ls ubuntu.qcow2 /etc
+sudo guestctl ls ubuntu.qcow2 /etc
 
 # Long format
-sudo guestkit ls --long ubuntu.qcow2 /etc
+sudo guestctl ls --long ubuntu.qcow2 /etc
 ```
 
 **Output (basic):**
@@ -525,27 +525,27 @@ Display the contents of a file from a disk image.
 
 **Usage:**
 ```bash
-guestkit cat <DISK> <PATH>
+guestctl cat <DISK> <PATH>
 ```
 
 **Examples:**
 ```bash
 # Read hostname
-sudo guestkit cat ubuntu.qcow2 /etc/hostname
+sudo guestctl cat ubuntu.qcow2 /etc/hostname
 
 # Read OS release
-sudo guestkit cat ubuntu.qcow2 /etc/os-release
+sudo guestctl cat ubuntu.qcow2 /etc/os-release
 
 # Read systemd service
-sudo guestkit cat ubuntu.qcow2 /etc/systemd/system/myapp.service
+sudo guestctl cat ubuntu.qcow2 /etc/systemd/system/myapp.service
 ```
 
 **Output:**
 ```
-$ sudo guestkit cat ubuntu.qcow2 /etc/hostname
+$ sudo guestctl cat ubuntu.qcow2 /etc/hostname
 webserver-01
 
-$ sudo guestkit cat ubuntu.qcow2 /etc/os-release
+$ sudo guestctl cat ubuntu.qcow2 /etc/os-release
 NAME="Ubuntu"
 VERSION="22.04 LTS (Jammy Jellyfish)"
 ID=ubuntu
@@ -563,8 +563,8 @@ Enable detailed logging for debugging.
 
 ```bash
 # Any command with verbose output
-sudo guestkit -v inspect ubuntu.qcow2
-sudo guestkit --verbose filesystems ubuntu.qcow2
+sudo guestctl -v inspect ubuntu.qcow2
+sudo guestctl --verbose filesystems ubuntu.qcow2
 ```
 
 **Verbose Output:**
@@ -586,16 +586,16 @@ Many commands support `--json` output for easy parsing with `jq`:
 
 ```bash
 # Get OS type
-sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].type'
+sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].type'
 
 # Get hostname
-sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].hostname'
+sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].hostname'
 
 # Count packages
-sudo guestkit packages --json disk.img | jq '.total'
+sudo guestctl packages --json disk.img | jq '.total'
 
 # Filter packages by name
-sudo guestkit packages --json disk.img | jq '.packages[] | select(.name | contains("python"))'
+sudo guestctl packages --json disk.img | jq '.packages[] | select(.name | contains("python"))'
 ```
 
 ### Batch processing:
@@ -604,11 +604,11 @@ sudo guestkit packages --json disk.img | jq '.packages[] | select(.name | contai
 # Inspect multiple disks
 for disk in *.qcow2; do
     echo "=== $disk ==="
-    sudo guestkit inspect --json "$disk" | jq -r '.operating_systems[0].distro'
+    sudo guestctl inspect --json "$disk" | jq -r '.operating_systems[0].distro'
 done
 
 # Generate report
-sudo guestkit inspect --json disk.img | jq '{
+sudo guestctl inspect --json disk.img | jq '{
     hostname: .operating_systems[0].hostname,
     os: .operating_systems[0].distro,
     version: .operating_systems[0].version
@@ -631,36 +631,36 @@ sudo guestkit inspect --json disk.img | jq '{
 
 ```bash
 # Check OS version before deploying VM
-sudo guestkit inspect --json template.qcow2 | jq -r '.operating_systems[0].version'
+sudo guestctl inspect --json template.qcow2 | jq -r '.operating_systems[0].version'
 
 # Verify hostname is set correctly
-sudo guestkit cat template.qcow2 /etc/hostname
+sudo guestctl cat template.qcow2 /etc/hostname
 ```
 
 ### 2. Security Audit
 
 ```bash
 # List all installed packages
-sudo guestkit packages disk.img > installed-packages.txt
+sudo guestctl packages disk.img > installed-packages.txt
 
 # Check for specific vulnerable packages
-sudo guestkit packages --filter openssl disk.img
+sudo guestctl packages --filter openssl disk.img
 
 # Extract SSH keys
-sudo guestkit cp disk.img:/root/.ssh/authorized_keys ./authorized_keys
+sudo guestctl cp disk.img:/root/.ssh/authorized_keys ./authorized_keys
 ```
 
 ### 3. Troubleshooting
 
 ```bash
 # Check system logs without booting VM
-sudo guestkit cat disk.img /var/log/syslog > syslog.txt
+sudo guestctl cat disk.img /var/log/syslog > syslog.txt
 
 # List running services configuration
-sudo guestkit ls --long disk.img /etc/systemd/system
+sudo guestctl ls --long disk.img /etc/systemd/system
 
 # Extract config files for analysis
-sudo guestkit cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
+sudo guestctl cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
 ```
 
 ### 4. Inventory Management
@@ -668,9 +668,9 @@ sudo guestkit cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
 ```bash
 # Generate inventory report
 for vm in /var/lib/libvirt/images/*.qcow2; do
-    hostname=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].hostname')
-    distro=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].distro')
-    version=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].version')
+    hostname=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].hostname')
+    distro=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].distro')
+    version=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].version')
     echo "$vm,$hostname,$distro,$version"
 done > vm-inventory.csv
 ```
@@ -679,10 +679,10 @@ done > vm-inventory.csv
 
 ```bash
 # Verify backup contains expected files
-sudo guestkit ls backup.img /home/user/important-data
+sudo guestctl ls backup.img /home/user/important-data
 
 # Extract specific files from backup
-sudo guestkit cp backup.img:/home/user/document.pdf ./recovered-document.pdf
+sudo guestctl cp backup.img:/home/user/document.pdf ./recovered-document.pdf
 ```
 
 ---
@@ -699,10 +699,10 @@ When scripting, always use `--json` output and parse with `jq`:
 
 ```bash
 # Good: Robust parsing
-distro=$(sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].distro')
+distro=$(sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].distro')
 
 # Bad: Fragile text parsing
-distro=$(sudo guestkit inspect disk.img | grep "Distribution:" | cut -d: -f2)
+distro=$(sudo guestctl inspect disk.img | grep "Distribution:" | cut -d: -f2)
 ```
 
 ### 3. Filter Before Limiting
@@ -711,10 +711,10 @@ When working with packages, filter first, then limit:
 
 ```bash
 # Good: Get all kernel packages
-sudo guestkit packages --filter kernel disk.img
+sudo guestctl packages --filter kernel disk.img
 
 # Less useful: Random 20 packages
-sudo guestkit packages --limit 20 disk.img
+sudo guestctl packages --limit 20 disk.img
 ```
 
 ### 4. Check for Errors
@@ -722,7 +722,7 @@ sudo guestkit packages --limit 20 disk.img
 Always check exit codes in scripts:
 
 ```bash
-if sudo guestkit inspect disk.img > /dev/null 2>&1; then
+if sudo guestctl inspect disk.img > /dev/null 2>&1; then
     echo "Disk is valid"
 else
     echo "Error: Invalid disk image"
@@ -740,7 +740,7 @@ fi
 
 **Solution:** Run with sudo:
 ```bash
-sudo guestkit inspect disk.img
+sudo guestctl inspect disk.img
 ```
 
 ### Appliance Failed to Launch
@@ -756,7 +756,7 @@ sudo guestkit inspect disk.img
 
 2. Enable verbose mode to see details:
    ```bash
-   sudo guestkit -v inspect disk.img
+   sudo guestctl -v inspect disk.img
    ```
 
 3. Ensure qemu-img is installed:
@@ -777,7 +777,7 @@ sudo guestkit inspect disk.img
 **Check:**
 ```bash
 # Check filesystem types
-sudo guestkit filesystems disk.img
+sudo guestctl filesystems disk.img
 
 # Verify disk is readable
 qemu-img info disk.img
@@ -790,12 +790,12 @@ qemu-img info disk.img
 **Solutions:**
 1. Verify file exists:
    ```bash
-   sudo guestkit ls disk.img /path/to
+   sudo guestctl ls disk.img /path/to
    ```
 
 2. Check filesystem is mounted:
    ```bash
-   sudo guestkit -v cat disk.img /path/to/file
+   sudo guestctl -v cat disk.img /path/to/file
    ```
 
 ---
@@ -808,7 +808,7 @@ JSON parsing is faster than human-readable output for large datasets:
 
 ```bash
 # Faster for 1000+ packages
-sudo guestkit packages --json disk.img | jq '.total'
+sudo guestctl packages --json disk.img | jq '.total'
 ```
 
 ### 2. Limit Results Early
@@ -817,7 +817,7 @@ Use `--limit` to avoid processing unnecessary data:
 
 ```bash
 # Only need 10 results
-sudo guestkit packages --limit 10 disk.img
+sudo guestctl packages --limit 10 disk.img
 ```
 
 ### 3. Filter Efficiently
@@ -825,7 +825,7 @@ sudo guestkit packages --limit 10 disk.img
 Combine filter and limit for best performance:
 
 ```bash
-sudo guestkit packages --filter nginx --limit 5 disk.img
+sudo guestctl packages --filter nginx --limit 5 disk.img
 ```
 
 ---
@@ -840,7 +840,7 @@ sudo guestkit packages --filter nginx --limit 5 disk.img
   hosts: localhost
   tasks:
     - name: Get OS information
-      shell: guestkit inspect --json /var/lib/libvirt/images/vm.qcow2
+      shell: guestctl inspect --json /var/lib/libvirt/images/vm.qcow2
       register: vm_info
       become: yes
 
@@ -864,13 +864,13 @@ for disk in /var/lib/libvirt/images/*.qcow2; do
     echo "Auditing: $disk"
 
     # Get OS info
-    info=$(sudo guestkit inspect --json "$disk")
+    info=$(sudo guestctl inspect --json "$disk")
 
     hostname=$(echo "$info" | jq -r '.operating_systems[0].hostname // "unknown"')
     distro=$(echo "$info" | jq -r '.operating_systems[0].distro // "unknown"')
 
     # Count packages
-    pkg_count=$(sudo guestkit packages --json "$disk" | jq '.total')
+    pkg_count=$(sudo guestctl packages --json "$disk" | jq '.total')
 
     echo "  Hostname: $hostname"
     echo "  OS: $distro"
@@ -883,11 +883,11 @@ done
 
 ## See Also
 
-- **[Python Bindings](PYTHON_BINDINGS.md)** - Use GuestKit from Python
+- **[Python Bindings](PYTHON_BINDINGS.md)** - Use GuestCtl from Python
 - **[Ergonomic API](ERGONOMIC_API.md)** - Type-safe Rust API
 - **[Quick Wins](QUICK_WINS.md)** - Implementation guide
 - **[Enhancement Roadmap](ENHANCEMENT_ROADMAP.md)** - Future features
 
 ---
 
-**Built with GuestKit** 🚀
+**Built with GuestCtl** 🚀

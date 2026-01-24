@@ -1,8 +1,8 @@
-# GuestKit Development Roadmap
+# GuestCtl Development Roadmap
 
 ## Vision
 
-Transform GuestKit into the **premier disk image manipulation toolkit** - faster, more ergonomic, and more powerful than libguestfs, with cloud-native features and a thriving ecosystem.
+Transform GuestCtl into the **premier disk image manipulation toolkit** - faster, more ergonomic, and more powerful than libguestfs, with cloud-native features and a thriving ecosystem.
 
 ---
 
@@ -22,10 +22,10 @@ Transform GuestKit into the **premier disk image manipulation toolkit** - faster
 **Goal:** Immediate usability improvements that transform the developer experience.
 
 ### Week 1: CLI Tool
-- `guestkit inspect` - Inspect disk images
-- `guestkit filesystems` - List partitions
-- `guestkit packages` - List installed packages
-- `guestkit cp` - Copy files from disk images
+- `guestctl inspect` - Inspect disk images
+- `guestctl filesystems` - List partitions
+- `guestctl packages` - List installed packages
+- `guestctl cp` - Copy files from disk images
 - JSON output for scripting
 
 ### Week 2: UX Enhancements

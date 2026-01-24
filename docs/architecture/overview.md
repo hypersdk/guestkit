@@ -1,10 +1,10 @@
-# guestkit Architecture
+# guestctl Architecture
 
 Complete **Pure Rust** implementation for guest VM operations.
 
 ## Overview
 
-**guestkit** is a modern Rust library providing:
+**guestctl** is a modern Rust library providing:
 - **Disk format conversion** (qemu-img wrapper)
 - **Pure Rust disk image reading** (qcow2, raw, vmdk detection)
 - **Pure Rust partition table parsing** (MBR, GPT)
@@ -23,7 +23,7 @@ Complete **Pure Rust** implementation for guest VM operations.
 ┌─────────────────────────────────────────────────────────┐
 │                    Applications                          │
 │  ┌───────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ guestkit CLI  │  │ hyper2kvm    │  │ Custom Apps  │ │
+│  │ guestctl CLI  │  │ hyper2kvm    │  │ Custom Apps  │ │
 │  └───────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
                              │
@@ -65,7 +65,7 @@ Complete **Pure Rust** implementation for guest VM operations.
 
 ### `src/core/` - Core Utilities
 
-**Purpose:** Fundamental types and utilities used throughout guestkit
+**Purpose:** Fundamental types and utilities used throughout guestctl
 
 **Files:**
 - `error.rs` - Error types using thiserror
@@ -119,7 +119,7 @@ pub struct GuestIdentity {
 
 **Example:**
 ```rust
-use guestkit::disk::DiskReader;
+use guestctl::disk::DiskReader;
 
 let mut reader = DiskReader::open("/path/to/disk.qcow2")?;
 println!("Format: {:?}", reader.format());
@@ -138,7 +138,7 @@ reader.read_exact_at(0, &mut buffer)?; // Read MBR
 
 **Example:**
 ```rust
-use guestkit::disk::PartitionTable;
+use guestctl::disk::PartitionTable;
 
 let partition_table = PartitionTable::parse(&mut reader)?;
 for partition in partition_table.partitions() {
@@ -167,7 +167,7 @@ for partition in partition_table.partitions() {
 
 **Example:**
 ```rust
-use guestkit::disk::FileSystem;
+use guestctl::disk::FileSystem;
 
 let fs = FileSystem::detect(&mut reader, &partition)?;
 println!("Filesystem: {:?}", fs.fs_type());
@@ -199,7 +199,7 @@ Each filesystem has a unique signature (magic bytes) at specific offsets:
 
 **Example:**
 ```rust
-use guestkit::converters::DiskConverter;
+use guestctl::converters::DiskConverter;
 
 let converter = DiskConverter::new();
 let result = converter.convert(
@@ -237,7 +237,7 @@ let result = converter.convert(
 
 **Example:**
 ```rust
-use guestkit::detectors::GuestDetector;
+use guestctl::detectors::GuestDetector;
 
 let detector = GuestDetector::new();
 let guest = detector.detect_from_image("/path/to/disk.qcow2")?;
@@ -264,9 +264,9 @@ maturin develop --features python-bindings
 
 **Usage:**
 ```python
-import guestkit_py
+import guestctl_py
 
-converter = guestkit_py.DiskConverter()
+converter = guestctl_py.DiskConverter()
 result = converter.convert(
     source="/path/to/vm.vmdk",
     output="/path/to/vm.qcow2",
@@ -394,7 +394,7 @@ mod tests {
 ```python
 # integration/tests/test_integration.py
 def test_version_command():
-    result = subprocess.run([guestkit_path, "version"], ...)
+    result = subprocess.run([guestctl_path, "version"], ...)
     assert result.returncode == 0
 ```
 
@@ -406,7 +406,7 @@ def test_version_command():
 /// # Examples
 ///
 /// ```no_run
-/// use guestkit::DiskConverter;
+/// use guestctl::DiskConverter;
 /// let converter = DiskConverter::new();
 /// let result = converter.convert(...)?;
 /// ```
@@ -443,21 +443,21 @@ pub async fn convert_async(...) -> Result<ConversionResult> {
 
 **Option 1: Python Subprocess**
 ```python
-from guestkit_wrapper import GuestkitWrapper
+from guestctl_wrapper import GuestkitWrapper
 wrapper = GuestkitWrapper()
 result = wrapper.convert(source, output, compress=True)
 ```
 
 **Option 2: PyO3 Native (Recommended)**
 ```python
-import guestkit_py
-converter = guestkit_py.DiskConverter()
+import guestctl_py
+converter = guestctl_py.DiskConverter()
 result = converter.convert(source, output, "qcow2", compress=True)
 ```
 
 **Option 3: Rust Library**
 ```rust
-use guestkit::DiskConverter;
+use guestctl::DiskConverter;
 let result = converter.convert(source, output, "qcow2", true, true)?;
 ```
 

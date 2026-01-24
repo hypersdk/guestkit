@@ -21,7 +21,7 @@ impl GuestDetector {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestkit::detectors::GuestDetector;
+    /// use guestctl::detectors::GuestDetector;
     /// use std::path::Path;
     ///
     /// let detector = GuestDetector::new();

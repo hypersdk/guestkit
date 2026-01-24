@@ -1,4 +1,4 @@
-# GuestKit - Quick Priorities
+# GuestCtl - Quick Priorities
 
 **Last Updated:** 2026-01-24
 **Status:** Ready for Next Phase
@@ -18,13 +18,13 @@
    maturin build --release --features python-bindings
 
 2. Test locally:
-   pip install target/wheels/guestkit-*.whl
+   pip install target/wheels/guestctl-*.whl
 
 3. Publish to TestPyPI:
    maturin upload --repository testpypi target/wheels/*
 
 4. Test from TestPyPI:
-   pip install --index-url https://test.pypi.org/simple/ guestkit
+   pip install --index-url https://test.pypi.org/simple/ guestctl
 
 5. Publish to PyPI:
    git tag v0.3.0
@@ -32,8 +32,8 @@
    # GitHub Actions will auto-publish
 
 6. Verify:
-   pip install guestkit
-   python -c "from guestkit import Guestfs; print('Success!')"
+   pip install guestctl
+   python -c "from guestctl import Guestfs; print('Success!')"
 
 7. Announce:
    - Twitter
@@ -42,7 +42,7 @@
    - Update README with installation instructions
 ```
 
-**Success Metric:** `pip install guestkit` works globally
+**Success Metric:** `pip install guestctl` works globally
 
 ---
 
@@ -278,13 +278,13 @@
 ## 🤔 DECISIONS NEEDED
 
 ### This Week
-- [ ] PyPI package name: "guestkit" (confirm available)
+- [ ] PyPI package name: "guestctl" (confirm available)
 - [ ] Version number: 0.3.0 or 1.0.0?
 - [ ] License confirmation: LGPL-3.0-or-later
 - [ ] Support channels: GitHub Issues only or add Discord?
 
 **Recommendations:**
-- **Package name:** guestkit (simple, clear)
+- **Package name:** guestctl (simple, clear)
 - **Version:** 0.3.0 (save 1.0 for Q4 2026)
 - **License:** Keep LGPL-3.0-or-later
 - **Support:** GitHub Issues for now, Discord later

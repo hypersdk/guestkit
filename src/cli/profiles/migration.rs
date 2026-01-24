@@ -3,7 +3,7 @@
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection};
 use anyhow::Result;
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 
 pub struct MigrationProfile;
 

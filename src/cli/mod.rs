@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! CLI module for guestkit
+//! CLI module for guestctl
 
 pub mod batch;
 pub mod cache;

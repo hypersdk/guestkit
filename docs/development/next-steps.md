@@ -1,4 +1,4 @@
-# GuestKit - Next Enhancement Plan
+# GuestCtl - Next Enhancement Plan
 
 **Date:** 2026-01-24
 **Current Version:** 0.3.0
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-GuestKit has reached a major milestone with the completion of the Interactive Mode (REPL) and PyPI publishing infrastructure. The project now has:
+GuestCtl has reached a major milestone with the completion of the Interactive Mode (REPL) and PyPI publishing infrastructure. The project now has:
 
 - ✅ **578/594 libguestfs APIs** implemented (97.4% coverage)
 - ✅ **Interactive REPL** with 20+ commands
@@ -108,7 +108,7 @@ The next phase focuses on **distribution, polish, and ecosystem integration**.
 ```
 
 **Success Metrics:**
-- ✅ `pip install guestkit` works
+- ✅ `pip install guestctl` works
 - ✅ 100+ downloads in first week
 - ✅ Listed on PyPI with proper metadata
 - ✅ Documentation updated everywhere
@@ -147,10 +147,10 @@ dpkg-buildpackage -us -uc
 # Effort: 1-2 days
 # Target: Fedora 39, 40, RHEL 9
 
-guestkit.spec
+guestctl.spec
 
 # Build command
-rpmbuild -ba guestkit.spec
+rpmbuild -ba guestctl.spec
 ```
 
 #### Arch Linux (AUR)
@@ -280,10 +280,10 @@ download /etc/fstab ./fstab
 EOF
 
 # Execute script
-guestkit script disk.qcow2 inspect.gk
+guestctl script disk.qcow2 inspect.gk
 
 # With error handling
-guestkit script --fail-fast disk.qcow2 inspect.gk
+guestctl script --fail-fast disk.qcow2 inspect.gk
 ```
 
 **Implementation:**
@@ -320,9 +320,9 @@ pub fn run_script(&mut self, script_path: &str) -> Result<()> {
 
 **Features:**
 ```bash
-guestkit> packages python > python_packages.txt
-guestkit> ls /etc >> file_list.txt
-guestkit> find '*.log' | tee logs.txt
+guestctl> packages python > python_packages.txt
+guestctl> ls /etc >> file_list.txt
+guestctl> find '*.log' | tee logs.txt
 ```
 
 ---
@@ -339,9 +339,9 @@ guestkit> find '*.log' | tee logs.txt
 - History search (Ctrl+R)
 
 ```rust
-// Save to ~/.guestkit/history/<disk_hash>.txt
+// Save to ~/.guestctl/history/<disk_hash>.txt
 let history_file = format!(
-    "{}/.guestkit/history/{}.txt",
+    "{}/.guestctl/history/{}.txt",
     env::var("HOME")?,
     disk_hash
 );
@@ -476,10 +476,10 @@ graph TD
 **Tools:**
 ```bash
 # CPU profiling
-cargo flamegraph --bin guestkit -- inspect disk.qcow2
+cargo flamegraph --bin guestctl -- inspect disk.qcow2
 
 # Memory profiling
-heaptrack guestkit inspect disk.qcow2
+heaptrack guestctl inspect disk.qcow2
 
 # Benchmarking
 cargo bench
@@ -566,16 +566,16 @@ packages
 **Support:**
 ```bash
 # AWS S3
-guestkit inspect s3://bucket/disk.qcow2
+guestctl inspect s3://bucket/disk.qcow2
 
 # Azure Blob Storage
-guestkit inspect az://storage/disk.vhd
+guestctl inspect az://storage/disk.vhd
 
 # Google Cloud Storage
-guestkit inspect gs://bucket/disk.vmdk
+guestctl inspect gs://bucket/disk.vmdk
 
 # HTTP/HTTPS
-guestkit inspect https://example.com/disk.img
+guestctl inspect https://example.com/disk.img
 ```
 
 **Implementation:**
@@ -602,7 +602,7 @@ guestkit inspect https://example.com/disk.img
 use axum::{Router, Json};
 
 // Start API server
-guestkit serve --port 8080
+guestctl serve --port 8080
 
 // Endpoints
 POST   /api/v1/inspect
@@ -629,7 +629,7 @@ DELETE /api/v1/cache/{disk_id}
 **Usage:**
 ```yaml
 - name: Inspect VM disk
-  guestkit_inspect:
+  guestctl_inspect:
     path: /var/lib/libvirt/images/vm.qcow2
     profile: security
     export: json
@@ -701,7 +701,7 @@ paths = ["/etc/ssh/sshd_config"]
 EOF
 
 # Check compliance
-guestkit check-compliance --baseline baseline.toml disk.qcow2
+guestctl check-compliance --baseline baseline.toml disk.qcow2
 ```
 
 ---
@@ -734,13 +734,13 @@ guestkit check-compliance --baseline baseline.toml disk.qcow2
 **Features:**
 ```bash
 # Verify backup can boot
-guestkit verify-backup --bootable backup.qcow2
+guestctl verify-backup --bootable backup.qcow2
 
 # Compare with source
-guestkit verify-backup --compare source.qcow2 backup.qcow2
+guestctl verify-backup --compare source.qcow2 backup.qcow2
 
 # Scheduled verification
-guestkit verify-backup --schedule weekly backup.qcow2
+guestctl verify-backup --schedule weekly backup.qcow2
 ```
 
 ---
@@ -923,7 +923,7 @@ guestkit verify-backup --schedule weekly backup.qcow2
 ### Day 3: Package Infrastructure
 1. Create debian/ directory structure
 2. Test .deb package build
-3. Create guestkit.spec for RPM
+3. Create guestctl.spec for RPM
 
 ### Day 4-5: Interactive Mode Polish
 1. Implement tab completion
@@ -956,7 +956,7 @@ guestkit verify-backup --schedule weekly backup.qcow2
 
 ## Conclusion
 
-GuestKit is at an inflection point. With the interactive mode complete and PyPI infrastructure ready, the path to widespread adoption is clear:
+GuestCtl is at an inflection point. With the interactive mode complete and PyPI infrastructure ready, the path to widespread adoption is clear:
 
 1. **Immediate (This Week):** Publish to PyPI
 2. **Short-term (Month 1):** Polish and distribute

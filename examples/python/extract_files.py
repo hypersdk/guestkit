@@ -8,7 +8,7 @@ without booting the VM.
 
 import sys
 import os
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def extract_file(g, guest_path, local_path):
     """Extract a single file from guest to local filesystem"""

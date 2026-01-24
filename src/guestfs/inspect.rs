@@ -30,7 +30,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestkit::guestfs::Guestfs;
+    /// use guestctl::guestfs::Guestfs;
     ///
     /// let mut g = Guestfs::new().unwrap();
     /// g.add_drive_ro("/path/to/disk.qcow2").unwrap();

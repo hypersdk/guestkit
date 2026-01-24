@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Core utilities and types for guestkit
+//! Core utilities and types for guestctl
 
 pub mod diagnostics;
 pub mod error;

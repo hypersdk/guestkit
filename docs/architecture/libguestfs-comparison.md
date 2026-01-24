@@ -1,10 +1,10 @@
 # LibGuestFS API Comparison
 
-Complete comparison between libguestfs (733 functions) and guestkit implementation.
+Complete comparison between libguestfs (733 functions) and guestctl implementation.
 
 ## Statistics
 
-| Category | LibGuestFS | GuestKit | Coverage |
+| Category | LibGuestFS | GuestCtl | Coverage |
 |----------|-----------|----------|----------|
 | **Total Core Functions** | 733 | 85 | 11.6% |
 | **Fully Working** | 733 | 35 | 4.8% |
@@ -352,14 +352,14 @@ LibGuestFS is a **massive** library with 733 core functions covering:
 - Malware scanning (YARA)
 - Btrfs/ZFS advanced features
 
-**GuestKit current status:**
+**GuestCtl current status:**
 - ✅ Excellent foundation (85 APIs, 35 working)
 - ✅ Perfect for inspection/detection
 - ⚠️ Needs Phase 1-3 for full hyper2kvm support
 - ⚠️ Full parity would take 6-12 months
 
 **For hyper2kvm integration:**
-- Use guestkit for fast inspection (no root needed)
+- Use guestctl for fast inspection (no root needed)
 - Implement Phase 1 (30 critical functions) for most operations
 - Fall back to libguestfs for specialized needs
 

@@ -1,4 +1,4 @@
-# GuestKit Enhanced Inspection - Implementation Summary
+# GuestCtl Enhanced Inspection - Implementation Summary
 
 ## ✅ Completed Enhancements
 

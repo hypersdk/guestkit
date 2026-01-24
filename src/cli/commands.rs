@@ -4,8 +4,8 @@
 use super::formatters::*;
 use super::profiles::{FindingStatus, ProfileReport};
 use anyhow::{Context, Result};
-use guestkit::core::ProgressReporter;
-use guestkit::Guestfs;
+use guestctl::core::ProgressReporter;
+use guestctl::Guestfs;
 use std::path::PathBuf;
 
 /// Collect inspection data into a structured report
@@ -1746,8 +1746,8 @@ fn inspect_single_image(
 
 /// List filesystems and partitions
 pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Result<()> {
-    use guestkit::core::ProgressReporter;
-    use guestkit::Guestfs;
+    use guestctl::core::ProgressReporter;
+    use guestctl::Guestfs;
     use owo_colors::OwoColorize;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
@@ -1903,8 +1903,8 @@ pub fn list_packages(
     json_output: bool,
     verbose: bool,
 ) -> Result<()> {
-    use guestkit::core::ProgressReporter;
-    use guestkit::Guestfs;
+    use guestctl::core::ProgressReporter;
+    use guestctl::Guestfs;
     use serde_json::json;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
@@ -2047,8 +2047,8 @@ pub fn list_packages(
 
 /// Read and display file content from disk image
 pub fn cat_file(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
-    use guestkit::core::ProgressReporter;
-    use guestkit::Guestfs;
+    use guestctl::core::ProgressReporter;
+    use guestctl::Guestfs;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
 

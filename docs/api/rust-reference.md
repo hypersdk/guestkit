@@ -1,6 +1,6 @@
-# GuestKit API Reference
+# GuestCtl API Reference
 
-Complete API reference for guestkit v0.2.0 - a pure Rust implementation of libguestfs-compatible APIs.
+Complete API reference for guestctl v0.2.0 - a pure Rust implementation of libguestfs-compatible APIs.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ Complete API reference for guestkit v0.2.0 - a pure Rust implementation of libgu
 ### Creating a GuestFS Handle
 
 ```rust
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -901,7 +901,7 @@ fn process_vm(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 ## Complete Example
 
 ```rust
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize

@@ -1,6 +1,6 @@
 # PyPI Publishing Guide
 
-This guide explains how to publish GuestKit to PyPI (Python Package Index).
+This guide explains how to publish GuestCtl to PyPI (Python Package Index).
 
 ## Prerequisites
 
@@ -25,14 +25,14 @@ Generate API tokens for automated publishing:
 **For PyPI:**
 1. Go to https://pypi.org/manage/account/token/
 2. Create a new API token
-3. Name it "guestkit-github-actions"
-4. Select scope: "Entire account" (or "Project: guestkit" after first upload)
+3. Name it "guestctl-github-actions"
+4. Select scope: "Entire account" (or "Project: guestctl" after first upload)
 5. Copy the token (starts with `pypi-`)
 
 **For TestPyPI:**
 1. Go to https://test.pypi.org/manage/account/token/
 2. Create a new API token
-3. Name it "guestkit-github-actions-test"
+3. Name it "guestctl-github-actions-test"
 4. Copy the token
 
 ### 3. Configure GitHub Secrets
@@ -43,9 +43,9 @@ Generate API tokens for automated publishing:
 
 1. Go to https://pypi.org/manage/account/publishing/
 2. Add a new publisher:
-   - **PyPI Project Name:** guestkit
+   - **PyPI Project Name:** guestctl
    - **Owner:** ssahani
-   - **Repository name:** guestkit
+   - **Repository name:** guestctl
    - **Workflow name:** build-wheels.yml
    - **Environment name:** pypi
 
@@ -89,13 +89,13 @@ python3 -m venv test-env
 source test-env/bin/activate
 
 # Install from the wheel
-pip install target/wheels/guestkit-*.whl
+pip install target/wheels/guestctl-*.whl
 
 # Test import
-python -c "from guestkit import Guestfs; print('Success!')"
+python -c "from guestctl import Guestfs; print('Success!')"
 
 # Test context manager
-python -c "from guestkit import Guestfs; g = Guestfs(); print('Context manager works!')"
+python -c "from guestctl import Guestfs; g = Guestfs(); print('Context manager works!')"
 
 # Deactivate
 deactivate
@@ -108,22 +108,22 @@ rm -rf test-env
 # Python 3.8
 python3.8 -m venv test-env-38
 source test-env-38/bin/activate
-pip install target/wheels/guestkit-*.whl
-python -c "from guestkit import Guestfs"
+pip install target/wheels/guestctl-*.whl
+python -c "from guestctl import Guestfs"
 deactivate
 
 # Python 3.11
 python3.11 -m venv test-env-311
 source test-env-311/bin/activate
-pip install target/wheels/guestkit-*.whl
-python -c "from guestkit import Guestfs"
+pip install target/wheels/guestctl-*.whl
+python -c "from guestctl import Guestfs"
 deactivate
 
 # Python 3.12
 python3.12 -m venv test-env-312
 source test-env-312/bin/activate
-pip install target/wheels/guestkit-*.whl
-python -c "from guestkit import Guestfs"
+pip install target/wheels/guestctl-*.whl
+python -c "from guestctl import Guestfs"
 deactivate
 ```
 
@@ -163,10 +163,10 @@ python3 -m venv test-testpypi
 source test-testpypi/bin/activate
 
 # Install from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple guestkit
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple guestctl
 
 # Test it works
-python -c "from guestkit import Guestfs; print('TestPyPI install successful!')"
+python -c "from guestctl import Guestfs; print('TestPyPI install successful!')"
 
 deactivate
 rm -rf test-testpypi
@@ -229,7 +229,7 @@ twine upload target/wheels/*
 
 ### 1. Check PyPI Page
 
-Visit https://pypi.org/project/guestkit/ and verify:
+Visit https://pypi.org/project/guestctl/ and verify:
 - ✅ Correct version is listed
 - ✅ Description renders correctly
 - ✅ All wheels are present (Linux x86_64, aarch64, macOS x86_64, aarch64)
@@ -245,14 +245,14 @@ python3 -m venv verify-env
 source verify-env/bin/activate
 
 # Install from PyPI
-pip install guestkit
+pip install guestctl
 
 # Verify it works
-python -c "from guestkit import Guestfs; print('PyPI installation successful!')"
-python -c "from guestkit import DiskConverter; print('DiskConverter available!')"
+python -c "from guestctl import Guestfs; print('PyPI installation successful!')"
+python -c "from guestctl import DiskConverter; print('DiskConverter available!')"
 
 # Check version
-pip show guestkit
+pip show guestctl
 
 deactivate
 rm -rf verify-env
@@ -320,7 +320,7 @@ maturin build --release --features python-bindings
 
 ### Upload Fails: "File already exists"
 
-**Error:** "File already exists: guestkit-0.3.0-*.whl"
+**Error:** "File already exists: guestctl-0.3.0-*.whl"
 
 **Solution:** You can't re-upload the same version. Either:
 - Use `--skip-existing` flag
@@ -334,12 +334,12 @@ maturin build --release --features python-bindings
 1. Make sure you built with `--features python-bindings`
 2. Check the wheel contains the binary module:
    ```bash
-   unzip -l target/wheels/guestkit-*.whl | grep .so
+   unzip -l target/wheels/guestctl-*.whl | grep .so
    ```
 3. Reinstall:
    ```bash
-   pip uninstall guestkit
-   pip install --no-cache-dir guestkit
+   pip uninstall guestctl
+   pip install --no-cache-dir guestctl
    ```
 
 ### Trusted Publishing Not Working
@@ -411,7 +411,7 @@ If you encounter issues:
 1. Check workflow logs in GitHub Actions
 2. Review PyPI project page for errors
 3. Test locally first with the commands above
-4. File an issue at https://github.com/ssahani/guestkit/issues
+4. File an issue at https://github.com/ssahani/guestctl/issues
 
 ## Additional Resources
 
@@ -424,4 +424,4 @@ If you encounter issues:
 ---
 
 **Last Updated:** 2026-01-24
-**Maintained By:** GuestKit Team
+**Maintained By:** GuestCtl Team

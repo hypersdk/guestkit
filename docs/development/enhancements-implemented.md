@@ -1,6 +1,6 @@
 # Enhancements Implemented
 
-This document lists all the enhancements that have been successfully implemented in GuestKit.
+This document lists all the enhancements that have been successfully implemented in GuestCtl.
 
 ## ✅ Quick Wins Completed (All 5 Done!)
 
@@ -43,7 +43,7 @@ with Guestfs() as g:
 **Impact:** High - Better IDE support and developer experience
 
 **What Changed:**
-- Created `guestkit.pyi` stub file with complete type annotations
+- Created `guestctl.pyi` stub file with complete type annotations
 - All 58 Guestfs methods have type hints
 - All 3 DiskConverter methods have type hints
 - Full autocomplete in VS Code, PyCharm, and other IDEs
@@ -64,7 +64,7 @@ class Guestfs:
 - ✅ Catch errors before runtime
 
 **Files Created:**
-- `guestkit.pyi` - Type stub file with 300+ lines
+- `guestctl.pyi` - Type stub file with 300+ lines
 
 **Files Modified:**
 - `pyproject.toml` - Include type stub in package
@@ -83,9 +83,9 @@ class Guestfs:
 **Usage:**
 ```bash
 # Generate completion for your shell
-guestkit completion bash > /etc/bash_completion.d/guestkit
-guestkit completion zsh > ~/.zsh/completion/_guestkit
-guestkit completion fish > ~/.config/fish/completions/guestkit.fish
+guestctl completion bash > /etc/bash_completion.d/guestctl
+guestctl completion zsh > ~/.zsh/completion/_guestctl
+guestctl completion fish > ~/.config/fish/completions/guestctl.fish
 ```
 
 **Features:**
@@ -144,7 +144,7 @@ progress.finish_with_message("Complete!");
 
 **Available Functions:**
 ```rust
-use guestkit::cli::output::colors::*;
+use guestctl::cli::output::colors::*;
 
 success("Operation completed!");       // Green ✓
 error("Failed to mount");              // Red ✗
@@ -191,7 +191,7 @@ emphasis("Important!");               // Bold bright white
 
 ### Lines of Code Added
 - Python bindings: +35 lines (`__enter__`/`__exit__`)
-- Type hints: +300 lines (`guestkit.pyi`)
+- Type hints: +300 lines (`guestctl.pyi`)
 - Shell completion: +25 lines (Command + Shell enum)
 - Colorized output: +150 lines (colors module)
 - **Total:** ~510 lines of new code
@@ -200,7 +200,7 @@ emphasis("Important!");               // Bold bright white
 - `clap_complete = "4.5"` (shell completion)
 
 ### Files Created
-1. `guestkit.pyi` - Type stub file
+1. `guestctl.pyi` - Type stub file
 2. `test_enhancements.py` - Test script
 
 ### Files Modified
@@ -239,12 +239,12 @@ emphasis("Important!");               // Bold bright white
 ## 🚀 What's Next
 
 ### Immediate Opportunities (1-2 days each)
-1. **PyPI Publication** - Make `pip install guestkit` work
+1. **PyPI Publication** - Make `pip install guestctl` work
 2. **Async Python API** - Non-blocking operations
 3. **Interactive CLI Mode** - REPL for exploration
 
 ### Medium Term (1 week each)
-1. **REST API Server** - Remote access to guestkit
+1. **REST API Server** - Remote access to guestctl
 2. **Ansible Module** - Infrastructure automation
 3. **Container Images** - Docker/Podman support
 
@@ -259,7 +259,7 @@ emphasis("Important!");               // Bold bright white
 
 **1. Python Context Manager:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:
     print("It works!")
@@ -273,20 +273,20 @@ mypy your_script.py  # Should show proper types
 
 **3. Shell Completion:**
 ```bash
-guestkit completion bash | head -20
-guestkit completion zsh | head -20
-guestkit completion fish | head -20
+guestctl completion bash | head -20
+guestctl completion zsh | head -20
+guestctl completion fish | head -20
 ```
 
 **4. Progress Bars:**
 ```bash
-guestkit inspect disk.img  # See spinner in action
+guestctl inspect disk.img  # See spinner in action
 ```
 
 **5. Colorized Output:**
 ```bash
-guestkit --version  # See colored output
-guestkit --help     # See colored help
+guestctl --version  # See colored output
+guestctl --help     # See colored help
 ```
 
 ### Automated Tests

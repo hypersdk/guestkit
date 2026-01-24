@@ -19,8 +19,8 @@ impl Guestfs {
             eprintln!("guestfs: version_info");
         }
 
-        // Return guestkit version
-        Ok((0, 1, 0, "guestkit".to_string()))
+        // Return guestctl version
+        Ok((0, 1, 0, "guestctl".to_string()))
     }
 
     /// Get default QEMU binary

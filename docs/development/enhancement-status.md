@@ -47,7 +47,7 @@ with Guestfs() as g:
 - **Impact:** High - IDE autocomplete and type checking
 
 **What Changed:**
-- Created `guestkit.pyi` with 300+ lines of type annotations
+- Created `guestctl.pyi` with 300+ lines of type annotations
 - Full IDE support in VS Code, PyCharm, etc.
 - Works with mypy for type checking
 
@@ -59,9 +59,9 @@ with Guestfs() as g:
 **What Changed:**
 ```bash
 # Generate completions
-guestkit completion bash > /etc/bash_completion.d/guestkit
-guestkit completion zsh > ~/.zsh/completion/_guestkit
-guestkit completion fish > ~/.config/fish/completions/guestkit.fish
+guestctl completion bash > /etc/bash_completion.d/guestctl
+guestctl completion zsh > ~/.zsh/completion/_guestctl
+guestctl completion fish > ~/.config/fish/completions/guestctl.fish
 ```
 
 ### 4. Progress Bars ✅
@@ -83,7 +83,7 @@ guestkit completion fish > ~/.config/fish/completions/guestkit.fish
 
 - **Total Time:** ~4 hours
 - **Lines Added:** ~510 lines
-- **Files Created:** 2 (guestkit.pyi, test script)
+- **Files Created:** 2 (guestctl.pyi, test script)
 - **Files Modified:** 5
 - **Tests:** All passing ✅
 - **Backward Compatibility:** 100% maintained
@@ -99,7 +99,7 @@ These are the next priority implementations with the biggest impact.
 **Why It's Next:**
 - Biggest adoption barrier is "hard to install"
 - Currently requires: git clone, cargo build, maturin develop
-- After PyPI: `pip install guestkit` - done!
+- After PyPI: `pip install guestctl` - done!
 - Enables all other Python enhancements
 
 **Effort:** 1-2 days
@@ -119,11 +119,11 @@ These are the next priority implementations with the biggest impact.
 **Expected Outcome:**
 ```bash
 # Users can do this
-pip install guestkit
+pip install guestctl
 
 # Instead of this
-git clone https://github.com/ssahani/guestkit
-cd guestkit
+git clone https://github.com/ssahani/guestctl
+cd guestctl
 cargo build --release
 maturin develop
 ```
@@ -192,15 +192,15 @@ async def inspect_multiple_vms(disks):
 
 **Expected Outcome:**
 ```bash
-$ guestkit interactive disk.img
+$ guestctl interactive disk.img
 Loaded disk.img
-guestkit> inspect
+guestctl> inspect
 OS: Ubuntu 22.04
 
-guestkit> cat /etc/hostname
+guestctl> cat /etc/hostname
 ubuntu-server
 
-guestkit> help
+guestctl> help
 Available commands: ...
 ```
 
@@ -233,13 +233,13 @@ Available commands: ...
 **Expected Outcome:**
 ```bash
 # Debian/Ubuntu
-sudo apt install guestkit
+sudo apt install guestctl
 
 # Fedora/RHEL
-sudo dnf install guestkit
+sudo dnf install guestctl
 
 # Arch Linux
-yay -S guestkit
+yay -S guestctl
 ```
 
 **Success Metrics:**
@@ -268,7 +268,7 @@ yay -S guestkit
 - [ ] Automate deployment
 
 **Expected Outcome:**
-- Professional documentation site at https://ssahani.github.io/guestkit/
+- Professional documentation site at https://ssahani.github.io/guestctl/
 - Searchable API reference
 - Code examples with syntax highlighting
 

@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 try:
-    from guestkit import AsyncGuestfs
+    from guestctl import AsyncGuestfs
 except ImportError:
-    print("Error: guestkit not installed")
-    print("Install with: pip install guestkit")
+    print("Error: guestctl not installed")
+    print("Install with: pip install guestctl")
     print("Or build from source: maturin develop --features python-bindings")
     exit(1)
 
@@ -310,5 +310,5 @@ if __name__ == "__main__":
 
     print("\n✅ Example completed!")
     print("\nFor more information:")
-    print("  - Documentation: https://github.com/ssahani/guestkit")
-    print("  - Python API: https://github.com/ssahani/guestkit/tree/main/docs/api")
+    print("  - Documentation: https://github.com/ssahani/guestctl")
+    print("  - Python API: https://github.com/ssahani/guestctl/tree/main/docs/api")

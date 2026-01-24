@@ -83,7 +83,7 @@ impl NbdDevice {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestkit::disk::nbd::NbdDevice;
+    /// use guestctl::disk::nbd::NbdDevice;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut nbd = NbdDevice::new()?;

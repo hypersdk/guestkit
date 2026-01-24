@@ -2,7 +2,7 @@
 
 ## Summary
 
-A fully-featured interactive REPL (Read-Eval-Print Loop) has been successfully implemented for GuestKit, providing a powerful shell-like interface for exploring VM disk images.
+A fully-featured interactive REPL (Read-Eval-Print Loop) has been successfully implemented for GuestCtl, providing a powerful shell-like interface for exploring VM disk images.
 
 ## What Was Implemented
 
@@ -58,9 +58,9 @@ A fully-featured interactive REPL (Read-Eval-Print Loop) has been successfully i
 
 **Usage:**
 ```bash
-guestkit interactive disk.qcow2
+guestctl interactive disk.qcow2
 # or short alias
-guestkit repl disk.qcow2
+guestctl repl disk.qcow2
 ```
 
 ### User Experience Features
@@ -98,18 +98,18 @@ guestkit repl disk.qcow2
 ### Before (Standard Mode)
 ```bash
 # Each command launches appliance
-guestkit list disk.qcow2 /etc      # ~5 seconds
-guestkit cat disk.qcow2 /etc/hosts # ~5 seconds
-guestkit list disk.qcow2 /var      # ~5 seconds
+guestctl list disk.qcow2 /etc      # ~5 seconds
+guestctl cat disk.qcow2 /etc/hosts # ~5 seconds
+guestctl list disk.qcow2 /var      # ~5 seconds
 # Total: ~15 seconds for 3 commands
 ```
 
 ### After (Interactive Mode)
 ```bash
-guestkit interactive disk.qcow2    # ~5 seconds (once)
-guestkit> ls /etc                  # <0.1 seconds
-guestkit> cat /etc/hosts           # <0.1 seconds
-guestkit> ls /var                  # <0.1 seconds
+guestctl interactive disk.qcow2    # ~5 seconds (once)
+guestctl> ls /etc                  # <0.1 seconds
+guestctl> cat /etc/hosts           # <0.1 seconds
+guestctl> ls /var                  # <0.1 seconds
 # Total: ~5 seconds for 3 commands
 ```
 
@@ -158,9 +158,9 @@ guestkit> ls /var                  # <0.1 seconds
 ## Example Session
 
 ```bash
-$ guestkit interactive ubuntu-22.04.qcow2
+$ guestctl interactive ubuntu-22.04.qcow2
 
-Initializing GuestKit Interactive Mode...
+Initializing GuestCtl Interactive Mode...
 
   → Loading disk: ubuntu-22.04.qcow2
   → Launching appliance...
@@ -170,7 +170,7 @@ Initializing GuestKit Interactive Mode...
 
 Ready! Type 'help' for commands, 'exit' to quit.
 
-guestkit> info
+guestctl> info
 
 Disk Information:
   Path: ubuntu-22.04.qcow2
@@ -182,18 +182,18 @@ Operating System:
   Hostname: web-server
   Architecture: x86_64
 
-guestkit> filesystems
+guestctl> filesystems
 
 Available Filesystems:
 
   /dev/sda1 ext4
   /dev/sda2 swap
 
-guestkit> mount /dev/sda1 /
+guestctl> mount /dev/sda1 /
 
 ✓ Mounted /dev/sda1 at /
 
-guestkit> ls /etc | head -5
+guestctl> ls /etc | head -5
 
   hostname
   hosts
@@ -201,14 +201,14 @@ guestkit> ls /etc | head -5
   passwd
   shadow
 
-guestkit> packages nginx
+guestctl> packages nginx
 
   nginx 1.18.0 High performance web server
   nginx-common 1.18.0 Common files for nginx
 
 2 packages total
 
-guestkit> services | head -3
+guestctl> services | head -3
 
 Enabled Services:
 
@@ -216,7 +216,7 @@ Enabled Services:
   ▶ ssh.service
   ▶ systemd-resolved.service
 
-guestkit> users
+guestctl> users
 
 User Accounts:
 
@@ -226,7 +226,7 @@ User Accounts:
 
 3 users
 
-guestkit> network
+guestctl> network
 
 Network Interfaces:
 
@@ -237,7 +237,7 @@ DNS Servers:
   8.8.8.8
   8.8.4.4
 
-guestkit> find '*.log' | head -5
+guestctl> find '*.log' | head -5
 
   /var/log/syslog
   /var/log/kern.log
@@ -245,11 +245,11 @@ guestkit> find '*.log' | head -5
   /var/log/nginx/access.log
   /var/log/nginx/error.log
 
-guestkit> download /etc/hostname ./hostname.txt
+guestctl> download /etc/hostname ./hostname.txt
 
 ✓ Downloaded /etc/hostname to ./hostname.txt
 
-guestkit> exit
+guestctl> exit
 Goodbye!
 ```
 
@@ -298,37 +298,37 @@ Goodbye!
 
 ### 1. Troubleshooting Boot Issues
 ```bash
-guestkit interactive broken-vm.qcow2
-guestkit> mount /dev/sda1 /
-guestkit> cat /etc/fstab  # Check mounts
-guestkit> cat /var/log/kern.log  # Check kernel log
-guestkit> services  # Check what's enabled
+guestctl interactive broken-vm.qcow2
+guestctl> mount /dev/sda1 /
+guestctl> cat /etc/fstab  # Check mounts
+guestctl> cat /var/log/kern.log  # Check kernel log
+guestctl> services  # Check what's enabled
 ```
 
 ### 2. Security Audit
 ```bash
-guestkit interactive server.qcow2
-guestkit> users  # Check all users
-guestkit> services  # Check enabled services
-guestkit> packages  # Review installed software
-guestkit> cat /etc/ssh/sshd_config  # Check SSH config
+guestctl interactive server.qcow2
+guestctl> users  # Check all users
+guestctl> services  # Check enabled services
+guestctl> packages  # Review installed software
+guestctl> cat /etc/ssh/sshd_config  # Check SSH config
 ```
 
 ### 3. Configuration Extraction
 ```bash
-guestkit interactive web-server.qcow2
-guestkit> find '*nginx*conf'
-guestkit> download /etc/nginx/nginx.conf ./nginx.conf
-guestkit> download /etc/nginx/sites-enabled/default ./default
+guestctl interactive web-server.qcow2
+guestctl> find '*nginx*conf'
+guestctl> download /etc/nginx/nginx.conf ./nginx.conf
+guestctl> download /etc/nginx/sites-enabled/default ./default
 ```
 
 ### 4. System Inventory
 ```bash
-guestkit interactive unknown-vm.qcow2
-guestkit> info  # What is it?
-guestkit> packages | head -50  # What's installed?
-guestkit> services  # What's running?
-guestkit> network  # Network config?
+guestctl interactive unknown-vm.qcow2
+guestctl> info  # What is it?
+guestctl> packages | head -50  # What's installed?
+guestctl> services  # What's running?
+guestctl> network  # Network config?
 ```
 
 ## Future Enhancements
@@ -411,7 +411,7 @@ All commands tested with:
 
 ## Comparison with libguestfs
 
-| Feature | libguestfs (guestfish) | GuestKit Interactive |
+| Feature | libguestfs (guestfish) | GuestCtl Interactive |
 |---------|------------------------|----------------------|
 | Language | C | Rust |
 | REPL | Yes | Yes ✅ |
@@ -442,7 +442,7 @@ All commands tested with:
   services, users, network, and more
 - **Colorized Output**: Beautiful colored terminal output
 - **Aliases**: repl, fs, pkg, svc, net, dl, cls shortcuts
-- **Usage**: `guestkit interactive disk.qcow2`
+- **Usage**: `guestctl interactive disk.qcow2`
 ```
 
 ## Files Summary
@@ -477,7 +477,7 @@ All commands tested with:
 
 ## Conclusion
 
-The Interactive CLI Mode is a **major feature addition** that significantly improves the user experience for VM disk exploration. It transforms GuestKit from a single-shot command tool into a powerful interactive exploration environment.
+The Interactive CLI Mode is a **major feature addition** that significantly improves the user experience for VM disk exploration. It transforms GuestCtl from a single-shot command tool into a powerful interactive exploration environment.
 
 **Key Achievements:**
 - 🚀 3-10x performance improvement for multi-command workflows

@@ -2,7 +2,7 @@
 
 ## Overview
 
-GuestKit's comprehensive tests require privileged operations because they:
+GuestCtl's comprehensive tests require privileged operations because they:
 1. Connect disk images to NBD (Network Block Device) devices using `qemu-nbd`
 2. Create partition tables on block devices
 3. Mount filesystems

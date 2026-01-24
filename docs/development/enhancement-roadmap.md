@@ -1,6 +1,6 @@
-# GuestKit Enhancement Roadmap
+# GuestCtl Enhancement Roadmap
 
-This document outlines potential enhancements to make GuestKit even more powerful and user-friendly.
+This document outlines potential enhancements to make GuestCtl even more powerful and user-friendly.
 
 ## Table of Contents
 
@@ -61,10 +61,10 @@ impl Guestfs {
 **Impact:** Better IDE support and code completion
 **Effort:** Low (4-6 hours)
 
-Create `guestkit.pyi` stub file:
+Create `guestctl.pyi` stub file:
 
 ```python
-# guestkit.pyi
+# guestctl.pyi
 from typing import List, Dict, Optional
 
 class Guestfs:
@@ -116,9 +116,9 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 ```bash
 # Generate completion scripts
-guestkit completion bash > /etc/bash_completion.d/guestkit
-guestkit completion zsh > ~/.zsh/completion/_guestkit
-guestkit completion fish > ~/.config/fish/completions/guestkit.fish
+guestctl completion bash > /etc/bash_completion.d/guestctl
+guestctl completion zsh > ~/.zsh/completion/_guestctl
+guestctl completion fish > ~/.config/fish/completions/guestctl.fish
 ```
 
 ---
@@ -131,7 +131,7 @@ guestkit completion fish > ~/.config/fish/completions/guestkit.fish
 
 ```python
 import asyncio
-from guestkit import AsyncGuestfs
+from guestctl import AsyncGuestfs
 
 async def inspect_multiple_vms():
     async with AsyncGuestfs() as g:
@@ -194,7 +194,7 @@ kernel_packages = apps_df[apps_df['app_name'].str.contains('kernel')]
 
 ```python
 # Rich display in Jupyter
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 g = Guestfs()
 g.add_drive_ro("disk.img")
@@ -237,23 +237,23 @@ for app in g.iter_applications(root):
 **Effort:** Medium (1-2 days)
 
 ```bash
-$ guestkit interactive disk.img
+$ guestctl interactive disk.img
 
-guestkit> inspect
+guestctl> inspect
 OS Type: linux
 Distribution: ubuntu
 Version: 22.04
 
-guestkit> mount /
+guestctl> mount /
 Mounted successfully
 
-guestkit> ls /etc
+guestctl> ls /etc
 [list of files]
 
-guestkit> cat /etc/hostname
+guestctl> cat /etc/hostname
 ubuntu-server
 
-guestkit> help
+guestctl> help
 Available commands: inspect, mount, ls, cat, download, ...
 ```
 
@@ -269,10 +269,10 @@ Available commands: inspect, mount, ls, cat, download, ...
 
 ```bash
 # Watch and re-inspect when disk changes
-guestkit inspect --watch disk.qcow2
+guestctl inspect --watch disk.qcow2
 
 # Auto-refresh every 5 seconds
-guestkit inspect --watch --interval 5 disk.qcow2
+guestctl inspect --watch --interval 5 disk.qcow2
 ```
 
 ### 3. Query Language
@@ -281,13 +281,13 @@ guestkit inspect --watch --interval 5 disk.qcow2
 
 ```bash
 # JQ-style queries
-guestkit query disk.img "select(.packages[] | select(.name | contains('kernel')))"
+guestctl query disk.img "select(.packages[] | select(.name | contains('kernel')))"
 
 # Find all files modified in last 24 hours
-guestkit query disk.img "files | where(.mtime > now - 1d)"
+guestctl query disk.img "files | where(.mtime > now - 1d)"
 
 # Get total disk usage by directory
-guestkit query disk.img "du / | group_by(.dir) | sum(.size)"
+guestctl query disk.img "du / | group_by(.dir) | sum(.size)"
 ```
 
 ### 4. Diff Enhancements
@@ -298,16 +298,16 @@ guestkit query disk.img "du / | group_by(.dir) | sum(.size)"
 # Currently basic diff, enhance with:
 
 # Side-by-side comparison
-guestkit diff --side-by-side vm1.img vm2.img
+guestctl diff --side-by-side vm1.img vm2.img
 
 # Ignore certain differences
-guestkit diff --ignore-packages --ignore-kernel vm1.img vm2.img
+guestctl diff --ignore-packages --ignore-kernel vm1.img vm2.img
 
 # Output as patch
-guestkit diff --format=patch vm1.img vm2.img > changes.patch
+guestctl diff --format=patch vm1.img vm2.img > changes.patch
 
 # Diff against baseline
-guestkit diff --baseline=golden.img vm1.img vm2.img vm3.img
+guestctl diff --baseline=golden.img vm1.img vm2.img vm3.img
 ```
 
 ### 5. Template Support
@@ -316,18 +316,18 @@ guestkit diff --baseline=golden.img vm1.img vm2.img vm3.img
 
 ```bash
 # Create template
-guestkit template create security-audit \
+guestctl template create security-audit \
   --profile security \
   --export html \
   --include-packages \
   --check-ssh-config
 
 # Apply template
-guestkit apply security-audit disk1.img disk2.img
+guestctl apply security-audit disk1.img disk2.img
 
 # Template library
-guestkit template list
-guestkit template show security-audit
+guestctl template list
+guestctl template show security-audit
 ```
 
 ---
@@ -340,10 +340,10 @@ guestkit template show security-audit
 
 ```bash
 # Current: sequential
-for disk in *.img; do guestkit inspect $disk; done
+for disk in *.img; do guestctl inspect $disk; done
 
 # Enhanced: parallel
-guestkit batch inspect --parallel 4 *.img
+guestctl batch inspect --parallel 4 *.img
 
 # Or use rayon internally
 ```
@@ -359,10 +359,10 @@ guestkit batch inspect --parallel 4 *.img
 
 ```bash
 # First run: full inspection (slow)
-guestkit inspect --cache disk.img
+guestctl inspect --cache disk.img
 
 # Subsequent runs: only check changes (fast)
-guestkit inspect --cache --incremental disk.img
+guestctl inspect --cache --incremental disk.img
 ```
 
 **Features:**
@@ -563,7 +563,7 @@ python scripts/generate_python_docs.py
 
 ```bash
 # Users can install via pip
-pip install guestkit
+pip install guestctl
 
 # No need to compile Rust
 ```
@@ -602,10 +602,10 @@ pip install guestkit
 FROM rust:latest
 COPY . /app
 RUN cargo build --release
-ENTRYPOINT ["guestkit"]
+ENTRYPOINT ["guestctl"]
 
 # Users can run
-docker run ghcr.io/ssahani/guestkit inspect disk.img
+docker run ghcr.io/ssahani/guestctl inspect disk.img
 ```
 
 **Variants:**
@@ -632,10 +632,10 @@ docker run ghcr.io/ssahani/guestkit inspect disk.img
 
 ```bash
 # Install as cargo subcommand
-cargo install cargo-guestkit
+cargo install cargo-guestctl
 
 # Use via cargo
-cargo guestkit inspect disk.img
+cargo guestctl inspect disk.img
 ```
 
 ---
@@ -648,13 +648,13 @@ cargo guestkit inspect disk.img
 
 ```rust
 // AWS support
-guestkit inspect s3://bucket/disk.vmdk
+guestctl inspect s3://bucket/disk.vmdk
 
 // Azure support
-guestkit inspect az://storage/disk.vhd
+guestctl inspect az://storage/disk.vhd
 
 // GCP support
-guestkit inspect gs://bucket/disk.qcow2
+guestctl inspect gs://bucket/disk.qcow2
 ```
 
 **Implementation:**
@@ -669,13 +669,13 @@ guestkit inspect gs://bucket/disk.qcow2
 
 ```bash
 # Inspect PXE configuration
-guestkit inspect-pxe disk.img
+guestctl inspect-pxe disk.img
 
 # Check initramfs
-guestkit inspect-initrd /boot/initrd.img
+guestctl inspect-initrd /boot/initrd.img
 
 # Analyze boot chain
-guestkit boot-chain disk.img
+guestctl boot-chain disk.img
 ```
 
 ### 3. Malware Scanning
@@ -684,13 +684,13 @@ guestkit boot-chain disk.img
 
 ```bash
 # Scan with YARA rules
-guestkit scan --rules malware.yar disk.img
+guestctl scan --rules malware.yar disk.img
 
 # ClamAV integration
-guestkit scan --clamav disk.img
+guestctl scan --clamav disk.img
 
 # Custom signatures
-guestkit scan --signatures custom.db disk.img
+guestctl scan --signatures custom.db disk.img
 ```
 
 ### 4. Configuration Drift Detection
@@ -710,7 +710,7 @@ forbidden = ["telnet", "rsh"]
 EOF
 
 # Check compliance
-guestkit check-config --expected expected.toml disk.img
+guestctl check-config --expected expected.toml disk.img
 ```
 
 ### 5. Backup Integration
@@ -719,13 +719,13 @@ guestkit check-config --expected expected.toml disk.img
 
 ```bash
 # Verify backup integrity
-guestkit verify-backup backup.img
+guestctl verify-backup backup.img
 
 # Compare with source
-guestkit verify-backup --compare source.img backup.img
+guestctl verify-backup --compare source.img backup.img
 
 # Schedule verification
-guestkit verify-backup --schedule daily backup.img
+guestctl verify-backup --schedule daily backup.img
 ```
 
 ---
@@ -739,7 +739,7 @@ guestkit verify-backup --schedule daily backup.img
 ```yaml
 # Ansible playbook
 - name: Inspect VM disk
-  guestkit_inspect:
+  guestctl_inspect:
     path: /var/lib/libvirt/images/vm.qcow2
     profile: security
   register: inspection
@@ -756,13 +756,13 @@ guestkit verify-backup --schedule daily backup.img
 
 ```hcl
 # Terraform
-data "guestkit_inspection" "vm" {
+data "guestctl_inspection" "vm" {
   disk_path = "/path/to/disk.img"
 }
 
 resource "aws_instance" "server" {
   # Use inspection data
-  instance_type = data.guestkit_inspection.vm.recommended_size
+  instance_type = data.guestctl_inspection.vm.recommended_size
 }
 ```
 
@@ -772,7 +772,7 @@ resource "aws_instance" "server" {
 
 ```rust
 // REST API server
-guestkit serve --port 8080
+guestctl serve --port 8080
 
 // Clients can call
 POST /api/v1/inspect
@@ -786,7 +786,7 @@ GET  /api/v1/packages/{disk_id}
 
 ```bash
 # Trigger webhook on inspection complete
-guestkit inspect --webhook https://api.example.com/hook disk.img
+guestctl inspect --webhook https://api.example.com/hook disk.img
 
 # Webhook payload includes full inspection data
 ```
@@ -797,9 +797,9 @@ guestkit inspect --webhook https://api.example.com/hook disk.img
 
 ```rust
 // Export metrics
-guestkit_disk_size_bytes{disk="vm1.img"} 10737418240
-guestkit_packages_total{disk="vm1.img"} 1847
-guestkit_inspection_duration_seconds{disk="vm1.img"} 5.2
+guestctl_disk_size_bytes{disk="vm1.img"} 10737418240
+guestctl_packages_total{disk="vm1.img"} 1847
+guestctl_inspection_duration_seconds{disk="vm1.img"} 5.2
 ```
 
 ---
@@ -856,7 +856,7 @@ git cliff --output CHANGELOG.md
 
 ```rust
 // Allow external plugins
-guestkit plugin install custom-analyzer
+guestctl plugin install custom-analyzer
 
 // Plugin API
 pub trait GuestkitPlugin {
@@ -968,6 +968,6 @@ pub trait GuestkitPlugin {
 
 ## Conclusion
 
-This roadmap provides a comprehensive path to enhance GuestKit. Start with quick wins to build momentum, then tackle larger features based on user feedback and priorities.
+This roadmap provides a comprehensive path to enhance GuestCtl. Start with quick wins to build momentum, then tackle larger features based on user feedback and priorities.
 
 **Remember:** User feedback should drive priorities. Listen to your users and focus on what they need most!

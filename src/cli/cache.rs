@@ -28,7 +28,7 @@ impl InspectionCache {
             .or_else(|_| std::env::var("USERPROFILE"))
             .context("Could not determine home directory")?;
 
-        Ok(PathBuf::from(home).join(".cache").join("guestkit"))
+        Ok(PathBuf::from(home).join(".cache").join("guestctl"))
     }
 
     /// Generate cache key for a disk image

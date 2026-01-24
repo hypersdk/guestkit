@@ -1,4 +1,4 @@
-# GuestKit Improvements Log
+# GuestCtl Improvements Log
 
 **Goal:** Perfect everything before publishing to PyPI
 
@@ -20,11 +20,11 @@
 
 **How to Use:**
 ```bash
-guestkit interactive disk.qcow2
+guestctl interactive disk.qcow2
 
-guestkit> hel<TAB>    # Completes to "help"
-guestkit> file<TAB>   # Shows "filesystems"
-guestkit> pac<TAB>    # Completes to "packages"
+guestctl> hel<TAB>    # Completes to "help"
+guestctl> file<TAB>   # Shows "filesystems"
+guestctl> pac<TAB>    # Completes to "packages"
 ```
 
 **Files Changed:**
@@ -90,16 +90,16 @@ guestkit> pac<TAB>    # Completes to "packages"
 **How to Use:**
 ```bash
 # Run a batch script
-guestkit script disk.qcow2 inspect.gk
+guestctl script disk.qcow2 inspect.gk
 
 # Fail-fast mode (stop on first error)
-guestkit script disk.qcow2 inspect.gk --fail-fast
+guestctl script disk.qcow2 inspect.gk --fail-fast
 
 # Use the batch alias
-guestkit batch disk.qcow2 security-audit.gk
+guestctl batch disk.qcow2 security-audit.gk
 
 # With verbose output
-guestkit -v script disk.qcow2 inspect.gk
+guestctl -v script disk.qcow2 inspect.gk
 ```
 
 **Example Script:**
@@ -164,10 +164,10 @@ umount /
 **How to Use:**
 ```bash
 # Export to enhanced HTML
-guestkit inspect vm.qcow2 --export html --export-output report.html
+guestctl inspect vm.qcow2 --export html --export-output report.html
 
 # With security profile
-guestkit inspect vm.qcow2 --profile security \
+guestctl inspect vm.qcow2 --profile security \
   --export html --export-output security-report.html
 ```
 
@@ -207,13 +207,13 @@ guestkit inspect vm.qcow2 --profile security \
 **Features:**
 - 📜 Automatic history persistence
 - 🔍 Full rustyline search support (Ctrl+R)
-- 📁 Per-disk history files (~/.guestkit/history/)
+- 📁 Per-disk history files (~/.guestctl/history/)
 - ↑/↓ Navigate through command history
 - 💾 Silent save on exit
 - 🔒 Private per-user storage
 
 **How It Works:**
-- History stored in: `~/.guestkit/history/guestkit-{hash}.history`
+- History stored in: `~/.guestctl/history/guestctl-{hash}.history`
 - Hash computed from disk path (unique per disk)
 - Automatically loads on interactive mode start
 - Automatically saves on exit (explicit exit, Ctrl+D, or error)
@@ -221,15 +221,15 @@ guestkit inspect vm.qcow2 --profile security \
 **Usage:**
 ```bash
 # First session
-guestkit interactive vm.qcow2
-guestkit> mount /dev/sda1 /
-guestkit> packages
-guestkit> services
-guestkit> exit
+guestctl interactive vm.qcow2
+guestctl> mount /dev/sda1 /
+guestctl> packages
+guestctl> services
+guestctl> exit
 
 # Later session - history preserved!
-guestkit interactive vm.qcow2
-guestkit> # Press ↑ to see previous commands
+guestctl interactive vm.qcow2
+guestctl> # Press ↑ to see previous commands
 ```
 
 **User Experience Improvements:**
@@ -310,7 +310,7 @@ Suggestion: Did you mean: packages, pkg?
 **Usage Example:**
 ```bash
 # Interactive mode
-guestkit> pac
+guestctl> pac
 Error: Unknown command: 'pac'
 Suggestion: Did you mean: packages, pkg?
 
@@ -356,7 +356,7 @@ Suggestion: Usage: mount <device> <mountpoint>
 
 **Auto-Fixed Issues:**
 - 32+ automatic clippy fixes applied in bin
-- 8 fixes in guestkit binary
+- 8 fixes in guestctl binary
 - Numerous style improvements across codebase
 
 **Manual Fixes:**
@@ -555,7 +555,7 @@ The remaining 9 lib warnings are all intentional helper methods in the guestfs m
 **Features:**
 - ✅ Save command history across sessions
 - ✅ Per-disk history files
-- ✅ Stored in ~/.guestkit/history/
+- ✅ Stored in ~/.guestctl/history/
 - ✅ Ctrl+R history search (via rustyline)
 - ✅ Auto-load on start
 - ✅ Auto-save on exit
@@ -685,7 +685,7 @@ cargo build
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin build --release --features python-bindings
 ```
 
-**Output:** `target/wheels/guestkit-0.3.0-cp314-cp314-manylinux_2_39_x86_64.whl`
+**Output:** `target/wheels/guestctl-0.3.0-cp314-cp314-manylinux_2_39_x86_64.whl`
 
 ---
 

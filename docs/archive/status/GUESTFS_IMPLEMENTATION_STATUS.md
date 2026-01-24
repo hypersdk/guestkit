@@ -1,10 +1,10 @@
 # GuestFS Implementation Status
 
-This document outlines the implementation status of libguestfs-compatible APIs in guestkit.
+This document outlines the implementation status of libguestfs-compatible APIs in guestctl.
 
 ## Summary
 
-**guestkit** provides a **pure Rust** implementation of libguestfs-compatible APIs. The implementation is structured in layers:
+**guestctl** provides a **pure Rust** implementation of libguestfs-compatible APIs. The implementation is structured in layers:
 
 1. **Low-level disk access** (✅ COMPLETE) - Read disk images, parse partitions, detect filesystems
 2. **High-level inspection** (✅ COMPLETE) - OS detection, filesystem properties
@@ -940,7 +940,7 @@ Total: 91 tests passing
 
 ## Comparison with libguestfs
 
-| Feature | libguestfs | guestkit |
+| Feature | libguestfs | guestctl |
 |---------|-----------|----------|
 | **Total functions** | 733 | 115 (22.6% coverage) |
 | **Working functions** | 733 | 70+ (61% of defined) |

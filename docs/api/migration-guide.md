@@ -43,7 +43,7 @@ g.mkfs("xfs", "/dev/sda3", None, Some("data"), None, None)?;
 
 **After:**
 ```rust
-use guestkit::guestfs::FilesystemType;
+use guestctl::guestfs::FilesystemType;
 
 g.mkfs("/dev/sda1")
     .ext4()
@@ -79,7 +79,7 @@ g.part_init("/dev/sda", "gpt")?;  // Could typo as "GPT", "Gpt", etc.
 
 **After:**
 ```rust
-use guestkit::guestfs::PartitionTableType;
+use guestctl::guestfs::PartitionTableType;
 
 g.part_init("/dev/sda", PartitionTableType::Gpt.as_str())?;
 ```
@@ -111,7 +111,7 @@ for root in &roots {
 
 **After:**
 ```rust
-use guestkit::guestfs::{OsType, Distro};
+use guestctl::guestfs::{OsType, Distro};
 
 let roots = g.inspect_os()?;
 for root in &roots {

@@ -13,7 +13,7 @@ Example:
 """
 
 import sys
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def main():
     if len(sys.argv) < 2:

@@ -11,7 +11,7 @@ This example demonstrates how to:
 import sys
 import os
 import tempfile
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def main():
     if len(sys.argv) < 2:
@@ -86,7 +86,7 @@ def main():
 
         try:
             # Create test directory in guest
-            test_dir = "/tmp/guestkit-test"
+            test_dir = "/tmp/guestctl-test"
             if not g.is_dir(test_dir):
                 g.mkdir_p(test_dir)
                 print(f"  Created {test_dir}")

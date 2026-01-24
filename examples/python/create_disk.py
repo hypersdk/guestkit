@@ -14,7 +14,7 @@ Example:
 
 import sys
 import os
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def create_basic_disk(output_path, size_mb=1024):
     """Create a basic disk with GPT partition table and ext4 filesystem."""

@@ -25,7 +25,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestkit::guestfs::Guestfs;
+    /// use guestctl::guestfs::Guestfs;
     ///
     /// let mut g = Guestfs::new()?;
     /// g.add_drive_ro("/path/to/disk.qcow2")?;
@@ -56,7 +56,7 @@ impl Guestfs {
 
         // Create mount root if needed
         if self.mount_root.is_none() {
-            let tmpdir = std::env::temp_dir().join(format!("guestkit-{}", std::process::id()));
+            let tmpdir = std::env::temp_dir().join(format!("guestctl-{}", std::process::id()));
             fs::create_dir_all(&tmpdir)
                 .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
             self.mount_root = Some(tmpdir);

@@ -55,7 +55,7 @@ pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
     Ok(vec![WindowsApp {
         name: "Registry Hive Detected".to_string(),
         version: "Parsing not yet implemented".to_string(),
-        publisher: "guestkit".to_string(),
+        publisher: "guestctl".to_string(),
         install_location: None,
     }])
 }

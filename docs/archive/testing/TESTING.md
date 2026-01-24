@@ -1,6 +1,6 @@
-# GuestKit Testing Guide
+# GuestCtl Testing Guide
 
-This document describes how to run tests for GuestKit, including both Rust and Python tests.
+This document describes how to run tests for GuestCtl, including both Rust and Python tests.
 
 ## Table of Contents
 
@@ -118,7 +118,7 @@ pip install pytest
 pytest tests/test_python_bindings.py -v
 
 # Run specific test
-pytest tests/test_python_bindings.py::test_import_guestkit -v
+pytest tests/test_python_bindings.py::test_import_guestctl -v
 
 # Run with detailed output
 pytest tests/test_python_bindings.py -vv
@@ -169,7 +169,7 @@ Example output:
 platform linux -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0
 collected 16 items
 
-tests/test_python_bindings.py::test_import_guestkit PASSED               [  6%]
+tests/test_python_bindings.py::test_import_guestctl PASSED               [  6%]
 tests/test_python_bindings.py::test_import_classes PASSED                [ 12%]
 tests/test_python_bindings.py::test_guestfs_creation PASSED              [ 18%]
 tests/test_python_bindings.py::test_guestfs_methods_exist PASSED         [ 25%]
@@ -197,7 +197,7 @@ tests/test_python_bindings.py::TestDiskConverter::test_detect_format_nonexistent
 
 ```bash
 # Test CLI with real disk
-sudo ./target/release/guestkit inspect /path/to/vm.qcow2
+sudo ./target/release/guestctl inspect /path/to/vm.qcow2
 
 # Test Python bindings
 cd examples/python
@@ -208,13 +208,13 @@ sudo python3 test_bindings.py /path/to/vm.qcow2
 
 ```bash
 # QCOW2
-sudo ./target/release/guestkit inspect disk.qcow2
+sudo ./target/release/guestctl inspect disk.qcow2
 
 # VMDK
-sudo ./target/release/guestkit inspect disk.vmdk
+sudo ./target/release/guestctl inspect disk.vmdk
 
 # RAW
-sudo ./target/release/guestkit inspect disk.img
+sudo ./target/release/guestctl inspect disk.img
 ```
 
 ## Test Coverage
@@ -239,7 +239,7 @@ firefox coverage/index.html
 pip install pytest-cov
 
 # Run tests with coverage
-pytest tests/test_python_bindings.py --cov=guestkit --cov-report=html
+pytest tests/test_python_bindings.py --cov=guestctl --cov-report=html
 
 # View coverage
 firefox htmlcov/index.html
@@ -279,7 +279,7 @@ mod tests {
 ```python
 def test_feature():
     """Test description"""
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     # Arrange
     g = Guestfs()
@@ -346,7 +346,7 @@ jobs:
 sudo -E cargo test
 ```
 
-**Problem:** Python tests can't import guestkit
+**Problem:** Python tests can't import guestctl
 
 **Solution:** Make sure Python bindings are built:
 ```bash

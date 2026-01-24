@@ -45,10 +45,10 @@ with Guestfs() as g:
 
 ### 2. Python Type Hints (1-2 hours)
 
-**File:** `guestkit.pyi` (create new)
+**File:** `guestctl.pyi` (create new)
 
 ```python
-"""Type stubs for guestkit"""
+"""Type stubs for guestctl"""
 from typing import List, Dict, Any, Optional
 
 __version__: str
@@ -157,7 +157,7 @@ class DiskConverter:
 **Add to pyproject.toml:**
 ```toml
 [tool.maturin]
-include = ["guestkit.pyi"]
+include = ["guestctl.pyi"]
 ```
 
 ---
@@ -197,11 +197,11 @@ pub enum Shell {
 Commands::Completion { shell } => {
     let mut cmd = Cli::command();
     match shell {
-        Shell::Bash => generate(Bash, &mut cmd, "guestkit", &mut io::stdout()),
-        Shell::Zsh => generate(Zsh, &mut cmd, "guestkit", &mut io::stdout()),
-        Shell::Fish => generate(Fish, &mut cmd, "guestkit", &mut io::stdout()),
-        Shell::PowerShell => generate(PowerShell, &mut cmd, "guestkit", &mut io::stdout()),
-        Shell::Elvish => generate(Elvish, &mut cmd, "guestkit", &mut io::stdout()),
+        Shell::Bash => generate(Bash, &mut cmd, "guestctl", &mut io::stdout()),
+        Shell::Zsh => generate(Zsh, &mut cmd, "guestctl", &mut io::stdout()),
+        Shell::Fish => generate(Fish, &mut cmd, "guestctl", &mut io::stdout()),
+        Shell::PowerShell => generate(PowerShell, &mut cmd, "guestctl", &mut io::stdout()),
+        Shell::Elvish => generate(Elvish, &mut cmd, "guestctl", &mut io::stdout()),
     }
 }
 ```
@@ -214,9 +214,9 @@ clap_complete = "4.5"
 **Usage:**
 ```bash
 # Generate and install
-guestkit completion bash > /etc/bash_completion.d/guestkit
-guestkit completion zsh > ~/.zsh/completion/_guestkit
-guestkit completion fish > ~/.config/fish/completions/guestkit.fish
+guestctl completion bash > /etc/bash_completion.d/guestctl
+guestctl completion zsh > ~/.zsh/completion/_guestctl
+guestctl completion fish > ~/.config/fish/completions/guestctl.fish
 ```
 
 ---
@@ -457,7 +457,7 @@ impl AsyncGuestfs {
 
 // In lib.rs or python.rs module registration
 #[pymodule]
-fn guestkit(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn guestctl(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Guestfs>()?;
     m.add_class::<AsyncGuestfs>()?;  // Add async class
     m.add_class::<DiskConverter>()?;
@@ -474,7 +474,7 @@ pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }
 **Usage:**
 ```python
 import asyncio
-from guestkit import AsyncGuestfs
+from guestctl import AsyncGuestfs
 
 async def inspect_vm(disk_path):
     async with AsyncGuestfs() as g:
@@ -505,7 +505,7 @@ echo "Testing Python enhancements..."
 
 # Test context manager
 python3 << 'EOF'
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:
     print("✓ Context manager works")
@@ -513,7 +513,7 @@ EOF
 
 # Test type hints (requires mypy)
 echo "
-from guestkit import Guestfs
+from guestctl import Guestfs
 g = Guestfs()
 g.add_drive_ro('/path/to/disk.img')
 " > test_types.py
@@ -523,7 +523,7 @@ if command -v mypy &> /dev/null; then
 fi
 
 # Test completion
-./target/release/guestkit completion bash > /tmp/completion.bash
+./target/release/guestctl completion bash > /tmp/completion.bash
 [ -s /tmp/completion.bash ] && echo "✓ Shell completion works"
 
 echo "All tests passed!"
@@ -566,7 +566,7 @@ echo "All tests passed!"
 ⏳ Progress bars for long operations
 
 ## Installation
-pip install --upgrade guestkit
+pip install --upgrade guestctl
 
 ## Breaking Changes
 None - fully backward compatible!

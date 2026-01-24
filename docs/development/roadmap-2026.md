@@ -1,6 +1,6 @@
-# GuestKit 2026 Roadmap
+# GuestCtl 2026 Roadmap
 
-**Vision:** Make GuestKit the industry-standard tool for VM disk inspection and manipulation
+**Vision:** Make GuestCtl the industry-standard tool for VM disk inspection and manipulation
 
 ---
 
@@ -347,7 +347,7 @@
 ## Call to Action
 
 ### For Users
-1. **Try it:** `pip install guestkit` (coming this week!)
+1. **Try it:** `pip install guestctl` (coming this week!)
 2. **Report issues:** Help us improve
 3. **Share feedback:** What features do you need?
 4. **Spread the word:** Star on GitHub, share on social media
@@ -406,7 +406,7 @@
 
 ---
 
-**Let's make 2026 the year of GuestKit! 🚀**
+**Let's make 2026 the year of GuestCtl! 🚀**
 
 **Next Milestone:** PyPI Publication (Week of Jan 27, 2026)
 **First Checkpoint:** End of January Review

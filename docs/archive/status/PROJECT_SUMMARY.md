@@ -1,4 +1,4 @@
-# GuestKit Project - Complete Status Summary
+# GuestCtl Project - Complete Status Summary
 
 ## 📊 Current State (After Latest Updates)
 
@@ -119,7 +119,7 @@ See `QUICK_ENHANCEMENTS.md` for detailed implementation:
 5. **Colorized Output** - Better readability
 
 ### High Priority (1-3 Days Each)
-1. **PyPI Publication** - Easy `pip install guestkit`
+1. **PyPI Publication** - Easy `pip install guestctl`
 2. **Async Python API** - Non-blocking operations
 3. **Interactive CLI Mode** - REPL for exploration
 4. **Parallel Processing** - Faster multi-VM inspection
@@ -137,7 +137,7 @@ See `QUICK_ENHANCEMENTS.md` for detailed implementation:
 ### Rust CLI
 ```bash
 cargo build --release
-./target/release/guestkit inspect disk.img
+./target/release/guestctl inspect disk.img
 ```
 
 ### Python Bindings
@@ -180,7 +180,7 @@ sudo python3 test_bindings.py /path/to/disk.img
 - **Test Coverage:** Good
 
 ### Community
-- **Repository:** github.com/ssahani/guestkit
+- **Repository:** github.com/ssahani/guestctl
 - **License:** LGPL-3.0-or-later
 - **Language:** Rust + Python
 - **Status:** Active development
@@ -246,7 +246,7 @@ sudo python3 test_bindings.py /path/to/disk.img
 **For End Users:**
 ```bash
 ./build_python.sh
-python3 -c "import guestkit; print(guestkit.__version__)"
+python3 -c "import guestctl; print(guestctl.__version__)"
 ```
 
 **For Contributors:**
@@ -257,7 +257,7 @@ python3 -c "import guestkit; print(guestkit.__version__)"
 
 **For Integrators:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:  # Use context manager (TODO)
     g.add_drive_ro("disk.img")

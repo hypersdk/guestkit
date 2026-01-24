@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Common types for guestkit
+//! Common types for guestctl
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

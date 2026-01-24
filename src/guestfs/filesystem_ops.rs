@@ -9,11 +9,11 @@ use crate::core::Result;
 /// # Examples
 ///
 /// ```no_run
-/// # use guestkit::Guestfs;
+/// # use guestctl::Guestfs;
 /// # let mut g = Guestfs::new()?;
 /// // Create ext4 filesystem with label
 /// g.mkfs("/dev/sda1")
-///     .fstype(guestkit::guestfs::FilesystemType::Ext4)
+///     .fstype(guestctl::guestfs::FilesystemType::Ext4)
 ///     .label("rootfs")
 ///     .blocksize(4096)
 ///     .create()?;
@@ -141,7 +141,7 @@ impl<'a> MkfsBuilder<'a> {
 /// # Examples
 ///
 /// ```no_run
-/// # use guestkit::Guestfs;
+/// # use guestctl::Guestfs;
 /// # let mut g = Guestfs::new()?;
 /// // Mount with BTRFS subvolume
 /// g.mount_with("/dev/sda1", "/")
@@ -216,7 +216,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// # let mut g = Guestfs::new()?;
     /// g.mkfs("/dev/sda1")
     ///     .ext4()
@@ -234,7 +234,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// # let mut g = Guestfs::new()?;
     /// g.mount_with("/dev/sda1", "/")
     ///     .subvolume("@")

@@ -1,6 +1,6 @@
-# GuestKit Python API Reference
+# GuestCtl Python API Reference
 
-Complete API reference for GuestKit Python bindings.
+Complete API reference for GuestCtl Python bindings.
 
 ## Table of Contents
 
@@ -19,19 +19,19 @@ Complete API reference for GuestKit Python bindings.
 pip install maturin
 
 # Build and install in development mode
-cd /path/to/guestkit
+cd /path/to/guestctl
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --features python-bindings
 
 # Or build wheel for distribution
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin build --release --features python-bindings
-pip install target/wheels/guestkit-*.whl
+pip install target/wheels/guestctl-*.whl
 ```
 
 ### Verify Installation
 
 ```python
-import guestkit
-print(guestkit.__version__)  # Should print "0.3.0"
+import guestctl
+print(guestctl.__version__)  # Should print "0.3.0"
 ```
 
 ## Guestfs Class
@@ -50,7 +50,7 @@ Create a new GuestFS handle.
 
 **Example:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 g = Guestfs()
 ```
@@ -985,7 +985,7 @@ Create a new disk converter instance.
 
 **Example:**
 ```python
-from guestkit import DiskConverter
+from guestctl import DiskConverter
 
 converter = DiskConverter()
 ```
@@ -1075,7 +1075,7 @@ print(f"Virtual size: {info.get('virtual-size')}")
 
 ```python
 #!/usr/bin/env python3
-from guestkit import Guestfs
+from guestctl import Guestfs
 import sys
 
 def main():
@@ -1121,7 +1121,7 @@ if __name__ == "__main__":
 
 ```python
 #!/usr/bin/env python3
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def extract_configs(disk_path, output_dir):
     import os
@@ -1167,7 +1167,7 @@ extract_configs("vm.qcow2", "./configs")
 
 ```python
 #!/usr/bin/env python3
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def list_packages(disk_path):
     g = Guestfs()
@@ -1209,4 +1209,4 @@ list_packages("ubuntu.qcow2")
 
 ---
 
-**GuestKit Python Bindings** - Powerful VM disk image manipulation from Python 🐍
+**GuestCtl Python Bindings** - Powerful VM disk image manipulation from Python 🐍

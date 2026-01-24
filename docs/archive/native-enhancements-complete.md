@@ -45,9 +45,9 @@ Significant enhancements have been made to the native Rust project, focusing on 
 
 **Usage:**
 ```bash
-guestkit interactive disk.qcow2
+guestctl interactive disk.qcow2
 # or
-guestkit repl disk.qcow2
+guestctl repl disk.qcow2
 ```
 
 **Benefits:**
@@ -70,8 +70,8 @@ guestkit repl disk.qcow2
 
 **Usage:**
 ```bash
-guestkit completion bash > /etc/bash_completion.d/guestkit
-guestkit completion zsh > ~/.zsh/completion/_guestkit
+guestctl completion bash > /etc/bash_completion.d/guestctl
+guestctl completion zsh > ~/.zsh/completion/_guestctl
 ```
 
 **Files Modified:**
@@ -157,22 +157,22 @@ guestkit completion zsh > ~/.zsh/completion/_guestkit
 **Before (Standard Mode):**
 ```bash
 # 5 commands = 5 appliance launches
-guestkit list disk.qcow2 /etc        # ~5s
-guestkit cat disk.qcow2 /etc/hosts   # ~5s
-guestkit list disk.qcow2 /var/log    # ~5s
-guestkit --packages disk.qcow2        # ~5s
-guestkit --services disk.qcow2        # ~5s
+guestctl list disk.qcow2 /etc        # ~5s
+guestctl cat disk.qcow2 /etc/hosts   # ~5s
+guestctl list disk.qcow2 /var/log    # ~5s
+guestctl --packages disk.qcow2        # ~5s
+guestctl --services disk.qcow2        # ~5s
 # Total: ~25 seconds
 ```
 
 **After (Interactive Mode):**
 ```bash
-guestkit interactive disk.qcow2      # ~5s (once)
-guestkit> ls /etc                    # <0.1s
-guestkit> cat /etc/hosts             # <0.1s
-guestkit> ls /var/log                # <0.1s
-guestkit> packages                   # <0.5s
-guestkit> services                   # <0.5s
+guestctl interactive disk.qcow2      # ~5s (once)
+guestctl> ls /etc                    # <0.1s
+guestctl> cat /etc/hosts             # <0.1s
+guestctl> ls /var/log                # <0.1s
+guestctl> packages                   # <0.5s
+guestctl> services                   # <0.5s
 # Total: ~6 seconds
 ```
 
@@ -224,44 +224,44 @@ guestkit> services                   # <0.5s
 
 ### 1. Rapid Troubleshooting
 ```bash
-guestkit interactive broken-vm.qcow2
-guestkit> info                    # What is it?
-guestkit> filesystems             # What filesystems?
-guestkit> mount /dev/sda1 /       # Mount it
-guestkit> cat /etc/fstab          # Check config
-guestkit> find '/var/log/kern*'   # Find logs
-guestkit> cat /var/log/kern.log   # Read log
-guestkit> download /var/log/kern.log ./kern.log
+guestctl interactive broken-vm.qcow2
+guestctl> info                    # What is it?
+guestctl> filesystems             # What filesystems?
+guestctl> mount /dev/sda1 /       # Mount it
+guestctl> cat /etc/fstab          # Check config
+guestctl> find '/var/log/kern*'   # Find logs
+guestctl> cat /var/log/kern.log   # Read log
+guestctl> download /var/log/kern.log ./kern.log
 ```
 
 ### 2. Security Audit
 ```bash
-guestkit interactive server.qcow2
-guestkit> info
-guestkit> users
-guestkit> services
-guestkit> packages | grep -i backdoor
-guestkit> find '*.sh'
-guestkit> cat /etc/ssh/sshd_config
+guestctl interactive server.qcow2
+guestctl> info
+guestctl> users
+guestctl> services
+guestctl> packages | grep -i backdoor
+guestctl> find '*.sh'
+guestctl> cat /etc/ssh/sshd_config
 ```
 
 ### 3. Configuration Extraction
 ```bash
-guestkit interactive web-server.qcow2
-guestkit> mount /dev/sda1 /
-guestkit> find '*nginx*conf'
-guestkit> download /etc/nginx/nginx.conf ./
-guestkit> download /etc/nginx/sites-enabled/default ./
+guestctl interactive web-server.qcow2
+guestctl> mount /dev/sda1 /
+guestctl> find '*nginx*conf'
+guestctl> download /etc/nginx/nginx.conf ./
+guestctl> download /etc/nginx/sites-enabled/default ./
 ```
 
 ### 4. System Inventory
 ```bash
-guestkit interactive unknown-vm.qcow2
-guestkit> info
-guestkit> packages | head -100
-guestkit> services
-guestkit> users
-guestkit> network
+guestctl interactive unknown-vm.qcow2
+guestctl> info
+guestctl> packages | head -100
+guestctl> services
+guestctl> users
+guestctl> network
 ```
 
 ## Documentation
@@ -306,7 +306,7 @@ guestkit> network
 $ cargo build --release
 
    Compiling rustyline v14.0.0
-   Compiling guestkit v0.3.0
+   Compiling guestctl v0.3.0
     Finished `release` profile [optimized] target(s)
 
 ✅ Build successful
@@ -403,7 +403,7 @@ $ cargo build --release
 
 ## Comparison with libguestfs
 
-| Feature | libguestfs (guestfish) | GuestKit |
+| Feature | libguestfs (guestfish) | GuestCtl |
 |---------|------------------------|----------|
 | Language | C | Rust ✅ |
 | Interactive Mode | Yes | Yes ✅ |
@@ -417,7 +417,7 @@ $ cargo build --release
 
 ## Conclusion
 
-The native Rust enhancements significantly improve GuestKit's usability and performance, particularly for exploratory workflows and system administration tasks. The Interactive Mode is a **game-changing feature** that transforms the user experience.
+The native Rust enhancements significantly improve GuestCtl's usability and performance, particularly for exploratory workflows and system administration tasks. The Interactive Mode is a **game-changing feature** that transforms the user experience.
 
 ### Key Achievements
 - 🚀 **Interactive REPL** - Natural exploration workflow

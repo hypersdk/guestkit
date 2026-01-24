@@ -32,7 +32,7 @@ impl Default for RetryConfig {
 /// # Examples
 ///
 /// ```no_run
-/// use guestkit::core::retry::{retry_with_backoff, RetryConfig};
+/// use guestctl::core::retry::{retry_with_backoff, RetryConfig};
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {

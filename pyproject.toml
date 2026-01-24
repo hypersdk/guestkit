@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "guestkit"
+name = "guestctl"
 version = "0.3.0"
 description = "Pure Rust toolkit for VM disk image inspection and manipulation - Python bindings"
 readme = "README.md"
@@ -35,16 +35,16 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ssahani/guestkit"
-Repository = "https://github.com/ssahani/guestkit"
-Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
-"Bug Tracker" = "https://github.com/ssahani/guestkit/issues"
-Changelog = "https://github.com/ssahani/guestkit/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/ssahani/guestctl"
+Repository = "https://github.com/ssahani/guestctl"
+Documentation = "https://github.com/ssahani/guestctl/tree/main/docs"
+"Bug Tracker" = "https://github.com/ssahani/guestctl/issues"
+Changelog = "https://github.com/ssahani/guestctl/blob/main/CHANGELOG.md"
 
 [tool.maturin]
 features = ["python-bindings"]
-module-name = "guestkit"
-include = ["guestkit.pyi"]
+module-name = "guestctl"
+include = ["guestctl.pyi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

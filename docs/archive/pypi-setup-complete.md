@@ -1,6 +1,6 @@
 # PyPI Publication Setup - Complete! ✅
 
-This document summarizes the PyPI publication setup that has been implemented for GuestKit.
+This document summarizes the PyPI publication setup that has been implemented for GuestCtl.
 
 ## What Was Implemented
 
@@ -94,7 +94,7 @@ git push origin v0.3.0
 #    - Runs tests
 #    - Publishes to PyPI
 #
-# 4. Package is live at https://pypi.org/project/guestkit/
+# 4. Package is live at https://pypi.org/project/guestctl/
 ```
 
 **Option 2: Manual Trigger**
@@ -135,18 +135,18 @@ twine upload --repository testpypi target/wheels/*
 # Test installation
 pip install --index-url https://test.pypi.org/simple/ \
            --extra-index-url https://pypi.org/simple \
-           guestkit
+           guestctl
 
 # Verify
-python -c "from guestkit import Guestfs; print('Success!')"
+python -c "from guestctl import Guestfs; print('Success!')"
 ```
 
 ## What Users Can Now Do
 
-After publishing, users can install GuestKit simply with:
+After publishing, users can install GuestCtl simply with:
 
 ```bash
-pip install guestkit
+pip install guestctl
 ```
 
 **No more:**
@@ -155,7 +155,7 @@ pip install guestkit
 - ❌ Maturin development mode
 
 **Just:**
-- ✅ `pip install guestkit`
+- ✅ `pip install guestctl`
 - ✅ Done!
 
 ## Supported Platforms
@@ -184,7 +184,7 @@ The workflow uses PyPI's Trusted Publishing feature:
 
 To enable:
 1. Go to https://pypi.org/manage/account/publishing/
-2. Add publisher for: `ssahani/guestkit` repository
+2. Add publisher for: `ssahani/guestctl` repository
 3. Workflow: `build-wheels.yml`
 4. Environment: `pypi`
 
@@ -217,7 +217,7 @@ If Trusted Publishing doesn't work, you can use API tokens:
 - [ ] Push tag: `git push origin v0.3.0`
 - [ ] Monitor GitHub Actions
 - [ ] Verify on PyPI
-- [ ] Test installation: `pip install guestkit`
+- [ ] Test installation: `pip install guestctl`
 
 ### 5. Announce
 - [ ] Update README with installation instructions
@@ -256,8 +256,8 @@ Common issues:
 ### After Publishing:
 
 **Immediate:**
-- ✅ Package appears on https://pypi.org/project/guestkit/
-- ✅ `pip install guestkit` works
+- ✅ Package appears on https://pypi.org/project/guestctl/
+- ✅ `pip install guestctl` works
 - ✅ All platform wheels available
 
 **Week 1:**
@@ -296,7 +296,7 @@ Questions or issues with PyPI publication?
 1. Check `docs/guides/PYPI_PUBLISHING.md`
 2. Review GitHub Actions logs
 3. Test locally with `scripts/test_pypi_build.sh`
-4. File issue at https://github.com/ssahani/guestkit/issues
+4. File issue at https://github.com/ssahani/guestctl/issues
 
 ---
 
