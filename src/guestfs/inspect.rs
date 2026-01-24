@@ -335,6 +335,7 @@ pub struct Application {
 
 /// Parsed /etc/os-release information
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct OsRelease {
     pub id: String,
     pub pretty_name: String,

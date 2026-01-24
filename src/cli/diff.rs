@@ -2,7 +2,6 @@
 //! VM comparison and diff functionality
 
 use super::formatters::InspectionReport;
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -305,6 +304,7 @@ impl InspectionDiff {
     }
 
     /// Check if diff is empty (no changes)
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.os_changes.is_empty()
             && self.package_changes.added.is_empty()

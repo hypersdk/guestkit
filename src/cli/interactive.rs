@@ -10,7 +10,6 @@ use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::validate::Validator;
 use rustyline::{Context as RustyContext, Editor, Helper, Result as RustyResult};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 

@@ -6,7 +6,6 @@
 //! registry parsing in future versions.
 
 use crate::core::{Error, Result};
-use std::fs::File;
 use std::path::Path;
 
 /// Windows application information

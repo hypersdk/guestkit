@@ -86,6 +86,7 @@ pub struct ProfileReport {
 /// Trait for inspection profiles
 pub trait InspectionProfile {
     /// Get profile name
+    #[allow(dead_code)]
     fn name(&self) -> &str;
 
     /// Get profile description
@@ -106,6 +107,7 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
 }
 
 /// List available profiles
+#[allow(dead_code)]
 pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
     vec![
         ("security", "Security posture assessment and hardening recommendations"),
