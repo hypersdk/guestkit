@@ -4,6 +4,7 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![Crates.io](https://img.shields.io/crates/v/guestctl.svg)](https://crates.io/crates/guestctl)
 [![PyPI](https://img.shields.io/pypi/v/guestctl.svg)](https://pypi.org/project/guestctl/)
 [![Downloads](https://pepy.tech/badge/guestctl)](https://pepy.tech/project/guestctl)
 
@@ -13,9 +14,14 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 
 ### Installation
 
-**Python Package (Recommended):**
+**Python Package (Recommended for Python users):**
 ```bash
 pip install guestctl
+```
+
+**Rust Crate (Recommended for Rust developers):**
+```bash
+cargo install guestctl
 ```
 
 **From Source:**
