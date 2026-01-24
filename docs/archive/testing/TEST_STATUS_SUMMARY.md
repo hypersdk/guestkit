@@ -2,7 +2,7 @@
 
 ## Overview
 
-GuestKit has comprehensive test coverage across multiple testing layers. This document provides a complete status of all tests.
+GuestCtl has comprehensive test coverage across multiple testing layers. This document provides a complete status of all tests.
 
 ## Test Categories
 

@@ -23,12 +23,12 @@ def test_module_import():
     print("=" * 70)
 
     try:
-        import guestkit
+        import guestctl
         print(f"✓ GuestKit module imported successfully")
-        print(f"  Version: {guestkit.__version__}")
+        print(f"  Version: {guestctl.__version__}")
         return True
     except ImportError as e:
-        print(f"✗ Failed to import guestkit: {e}")
+        print(f"✗ Failed to import guestctl: {e}")
         print("\n  Installation steps:")
         print("    pip install maturin")
         print("    PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --features python-bindings")
@@ -41,7 +41,7 @@ def test_guestfs_creation():
     print("=" * 70)
 
     try:
-        from guestkit import Guestfs
+        from guestctl import Guestfs
         g = Guestfs()
         print("✓ Guestfs handle created successfully")
         g.shutdown()
@@ -56,7 +56,7 @@ def test_disk_inspection(disk_path):
     print("TEST 3: Disk Inspection")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -131,7 +131,7 @@ def test_device_operations(disk_path):
     print("TEST 4: Device Operations")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -181,7 +181,7 @@ def test_mount_and_files(disk_path):
     print("TEST 5: Mount and File Operations")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -259,7 +259,7 @@ def test_package_listing(disk_path):
     print("TEST 6: Package Listing")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -323,7 +323,7 @@ def test_filesystem_stats(disk_path):
     print("TEST 7: Filesystem Statistics")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -399,7 +399,7 @@ def test_lvm_operations(disk_path):
     print("TEST 8: LVM Operations")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -445,7 +445,7 @@ def test_checksum(disk_path):
     print("TEST 9: Checksum Operations")
     print("=" * 70)
 
-    from guestkit import Guestfs
+    from guestctl import Guestfs
 
     g = Guestfs()
     success = True
@@ -501,7 +501,7 @@ def test_disk_converter():
     print("=" * 70)
 
     try:
-        from guestkit import DiskConverter
+        from guestctl import DiskConverter
         converter = DiskConverter()
         print("  ✓ DiskConverter created successfully")
         return True

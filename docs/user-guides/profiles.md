@@ -1,6 +1,6 @@
 # Inspection Profiles Guide
 
-GuestKit provides specialized inspection profiles for focused VM analysis. Each profile targets specific use cases and provides tailored output.
+GuestCtl provides specialized inspection profiles for focused VM analysis. Each profile targets specific use cases and provides tailored output.
 
 ## Table of Contents
 
@@ -33,13 +33,13 @@ Audit VM security configuration and identify risks.
 
 ```bash
 # Basic security audit
-guestkit inspect vm.qcow2 --profile security
+guestctl inspect vm.qcow2 --profile security
 
 # JSON output for automation
-guestkit inspect vm.qcow2 --profile security --output json
+guestctl inspect vm.qcow2 --profile security --output json
 
 # Export as HTML report
-guestkit inspect vm.qcow2 --profile security --export html --export-output security-audit.html
+guestctl inspect vm.qcow2 --profile security --export html --export-output security-audit.html
 ```
 
 ### What It Checks
@@ -107,7 +107,7 @@ Overall Risk: HIGH
 ```bash
 # Run security audit on all VMs and save JSON results
 for vm in prod-*.qcow2; do
-    guestkit inspect "$vm" --profile security --output json > "audit-$(basename $vm .qcow2).json"
+    guestctl inspect "$vm" --profile security --output json > "audit-$(basename $vm .qcow2).json"
 done
 
 # Extract critical findings
@@ -122,13 +122,13 @@ Generate comprehensive inventory for VM migration planning.
 
 ```bash
 # Migration inventory
-guestkit inspect vm.qcow2 --profile migration
+guestctl inspect vm.qcow2 --profile migration
 
 # Export as JSON for migration tools
-guestkit inspect vm.qcow2 --profile migration --output json > migration-plan.json
+guestctl inspect vm.qcow2 --profile migration --output json > migration-plan.json
 
 # Export as Markdown for documentation
-guestkit inspect vm.qcow2 --profile migration --export markdown --export-output migration-checklist.md
+guestctl inspect vm.qcow2 --profile migration --export markdown --export-output migration-checklist.md
 ```
 
 ### What It Captures
@@ -231,15 +231,15 @@ guestkit inspect vm.qcow2 --profile migration --export markdown --export-output 
 
 ```bash
 # 1. Inventory source VM
-guestkit inspect source-vm.qcow2 --profile migration --output json > source-inventory.json
+guestctl inspect source-vm.qcow2 --profile migration --output json > source-inventory.json
 
 # 2. Compare source and target environments
-guestkit inspect source-vm.qcow2 --profile migration > source.txt
-guestkit inspect target-vm.qcow2 --profile migration > target.txt
+guestctl inspect source-vm.qcow2 --profile migration > source.txt
+guestctl inspect target-vm.qcow2 --profile migration > target.txt
 diff source.txt target.txt
 
 # 3. Generate migration checklist
-guestkit inspect source-vm.qcow2 --profile migration --export markdown --export-output migration-checklist.md
+guestctl inspect source-vm.qcow2 --profile migration --export markdown --export-output migration-checklist.md
 ```
 
 ## Performance Profile
@@ -250,10 +250,10 @@ Identify performance tuning opportunities and potential bottlenecks.
 
 ```bash
 # Performance analysis
-guestkit inspect vm.qcow2 --profile performance
+guestctl inspect vm.qcow2 --profile performance
 
 # JSON output for monitoring systems
-guestkit inspect vm.qcow2 --profile performance --output json > perf-baseline.json
+guestctl inspect vm.qcow2 --profile performance --output json > perf-baseline.json
 ```
 
 ### What It Analyzes
@@ -321,13 +321,13 @@ guestkit inspect vm.qcow2 --profile performance --output json > perf-baseline.js
 
 ```bash
 # 1. Establish baseline
-guestkit inspect vm.qcow2 --profile performance > baseline-perf.txt
+guestctl inspect vm.qcow2 --profile performance > baseline-perf.txt
 
 # 2. Apply tuning changes to VM
 # (manual VM configuration)
 
 # 3. Re-inspect to verify changes
-guestkit inspect vm-tuned.qcow2 --profile performance > tuned-perf.txt
+guestctl inspect vm-tuned.qcow2 --profile performance > tuned-perf.txt
 
 # 4. Compare before/after
 diff baseline-perf.txt tuned-perf.txt
@@ -338,7 +338,7 @@ diff baseline-perf.txt tuned-perf.txt
 ### Command-Line Syntax
 
 ```bash
-guestkit inspect <IMAGE> --profile <PROFILE_NAME> [OPTIONS]
+guestctl inspect <IMAGE> --profile <PROFILE_NAME> [OPTIONS]
 ```
 
 **Available profiles:**
@@ -352,23 +352,23 @@ guestkit inspect <IMAGE> --profile <PROFILE_NAME> [OPTIONS]
 
 ```bash
 # JSON output
-guestkit inspect vm.qcow2 --profile security --output json
+guestctl inspect vm.qcow2 --profile security --output json
 
 # YAML output
-guestkit inspect vm.qcow2 --profile migration --output yaml
+guestctl inspect vm.qcow2 --profile migration --output yaml
 
 # Default text output (human-readable)
-guestkit inspect vm.qcow2 --profile performance
+guestctl inspect vm.qcow2 --profile performance
 ```
 
 #### Export Formats
 
 ```bash
 # HTML report
-guestkit inspect vm.qcow2 --profile security --export html --export-output report.html
+guestctl inspect vm.qcow2 --profile security --export html --export-output report.html
 
 # Markdown documentation
-guestkit inspect vm.qcow2 --profile migration --export markdown --export-output inventory.md
+guestctl inspect vm.qcow2 --profile migration --export markdown --export-output inventory.md
 ```
 
 #### Caching
@@ -377,10 +377,10 @@ guestkit inspect vm.qcow2 --profile migration --export markdown --export-output 
 
 ```bash
 # This will warn and skip profile
-guestkit inspect vm.qcow2 --profile security --cache
+guestctl inspect vm.qcow2 --profile security --cache
 
 # Use --cache-refresh to run profile with caching
-guestkit inspect vm.qcow2 --profile security --cache --cache-refresh
+guestctl inspect vm.qcow2 --profile security --cache --cache-refresh
 ```
 
 ## Output Formats
@@ -487,11 +487,11 @@ for vm in prod-*.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
     # Run security audit
-    guestkit inspect "$vm" --profile security \
+    guestctl inspect "$vm" --profile security \
         --export html --export-output "$REPORT_DIR/$NAME-audit.html"
 
     # Also save JSON for trending
-    guestkit inspect "$vm" --profile security --output json > "$REPORT_DIR/$NAME-audit.json"
+    guestctl inspect "$vm" --profile security --output json > "$REPORT_DIR/$NAME-audit.json"
 
     # Extract risk level
     RISK=$(jq -r '.risk_level' "$REPORT_DIR/$NAME-audit.json")
@@ -511,11 +511,11 @@ SOURCE="legacy-app.qcow2"
 TARGET_ENV="aws"
 
 # Generate complete inventory
-guestkit inspect "$SOURCE" --profile migration \
+guestctl inspect "$SOURCE" --profile migration \
     --export markdown --export-output "migration-checklist-$TARGET_ENV.md"
 
 # Extract package list for compatibility check
-guestkit inspect "$SOURCE" --profile migration --output json | \
+guestctl inspect "$SOURCE" --profile migration --output json | \
     jq -r '.sections[] | select(.title == "Package Inventory") | .findings[] | "\(.label): \(.value)"' \
     > packages-to-migrate.txt
 
@@ -535,7 +535,7 @@ mkdir -p "$BASELINE_DIR"
 for vm in *.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
-    guestkit inspect "$vm" --profile performance --output json \
+    guestctl inspect "$vm" --profile performance --output json \
         > "$BASELINE_DIR/$NAME-perf.json"
 
     # Extract swappiness value

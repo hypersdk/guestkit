@@ -1,15 +1,15 @@
-# LinkedIn Post - GuestKit Demo (With Real Output)
+# LinkedIn Post - GuestCtl Demo (With Real Output)
 
 ## Post 1: The Power Demo (Recommended)
 
 🔍 **Ever needed to inspect a VM disk without booting it?**
 
-Here's what I just built: **GuestKit** - a Rust-powered VM inspection tool that analyzes disk images in seconds.
+Here's what I just built: **GuestCtl** - a Rust-powered VM inspection tool that analyzes disk images in seconds.
 
 Watch this magic happen:
 
 ```bash
-$ sudo guestkit inspect photon.vmdk
+$ sudo guestctl inspect photon.vmdk
 
 ══════════════════════════════════════════════════════════════════════
 📀 Disk Image: ../hyper2kvm/photon.vmdk
@@ -87,12 +87,12 @@ Who else is tired of booting VMs just to check what's inside? 💬
 
 **"Zero-boot VM inspection? Yes, it's possible."**
 
-Just shipped **GuestKit** - a Rust tool that reads VM disks without booting them.
+Just shipped **GuestCtl** - a Rust tool that reads VM disks without booting them.
 
 Here's a real example inspecting a VMware Photon OS disk:
 
 ```
-$ guestkit inspect photon.vmdk
+$ guestctl inspect photon.vmdk
 ══════════════════════════════════════════
 📀 Disk: photon.vmdk
 ✓ Found 1 operating system
@@ -114,19 +114,19 @@ Init: systemd
 **What you can do:**
 ```bash
 # List all filesystems
-guestkit filesystems disk.vmdk
+guestctl filesystems disk.vmdk
 
 # Extract configuration
-guestkit cat disk.vmdk /etc/ssh/sshd_config
+guestctl cat disk.vmdk /etc/ssh/sshd_config
 
 # Get package inventory
-guestkit packages disk.vmdk
+guestctl packages disk.vmdk
 
 # Interactive exploration
-guestkit interactive disk.vmdk
+guestctl interactive disk.vmdk
 
 # Batch automation
-guestkit script disk.vmdk audit.gk
+guestctl script disk.vmdk audit.gk
 ```
 
 **Why this matters:**
@@ -174,7 +174,7 @@ Traditional approach:
 **The Solution I Built:**
 
 ```bash
-$ guestkit inspect-batch *.vmdk --parallel 8
+$ guestctl inspect-batch *.vmdk --parallel 8
 
 Processing 50 VMs...
 ✓ 50/50 complete in 8 minutes
@@ -183,7 +183,7 @@ Processing 50 VMs...
 **Here's what it looks like in action:**
 
 ```
-$ guestkit inspect photon.vmdk
+$ guestctl inspect photon.vmdk
 
 ✓ Found VMware Photon OS/Linux 5.0
   Kernel: 6.18.5-200.fc43.x86_64
@@ -232,7 +232,7 @@ What's your VM inspection pain point?
 
 **One command. 5 seconds. Complete OS profile.**
 
-Just built **GuestKit** - a tool that reads VM disk images without booting them.
+Just built **GuestCtl** - a tool that reads VM disk images without booting them.
 
 **What you're seeing:**
 - OS: VMware Photon OS/Linux 5.0
@@ -259,13 +259,13 @@ All extracted from a `.vmdk` file. No VM boot required.
 **Try it yourself:**
 ```bash
 # Basic inspection
-guestkit inspect vm.vmdk
+guestctl inspect vm.vmdk
 
 # Interactive mode
-guestkit interactive vm.vmdk
+guestctl interactive vm.vmdk
 
 # Batch processing
-guestkit inspect-batch *.vmdk
+guestctl inspect-batch *.vmdk
 ```
 
 Open source. Production-ready. Coming to PyPI.
@@ -283,7 +283,7 @@ What would you inspect first? 👀
 Stop booting VMs just to check what OS they're running.
 
 ```bash
-$ guestkit inspect disk.vmdk
+$ guestctl inspect disk.vmdk
 ```
 
 Instant OS detection, package info, and system details.

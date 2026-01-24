@@ -2,7 +2,7 @@
 
 ## Overview
 
-guestkit now includes comprehensive libguestfs FFI bindings and PyO3 Python bindings for seamless integration with hyper2kvm.
+guestctl now includes comprehensive libguestfs FFI bindings and PyO3 Python bindings for seamless integration with hyper2kvm.
 
 ## Features Implemented
 
@@ -66,7 +66,7 @@ pip install maturin
 ### 1. Rust FFI Bindings
 
 ```rust
-use guestkit::ffi::Guestfs;
+use guestctl::ffi::Guestfs;
 
 fn main() -> anyhow::Result<()> {
     // Create guestfs handle
@@ -95,7 +95,7 @@ fn main() -> anyhow::Result<()> {
 ### 2. Guest Detector
 
 ```rust
-use guestkit::detectors::GuestDetector;
+use guestctl::detectors::GuestDetector;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -123,7 +123,7 @@ fn main() -> anyhow::Result<()> {
 pip install maturin
 
 # Build Python module
-cd ~/tt/guestkit
+cd ~/tt/guestctl
 maturin develop --features python-bindings
 
 # Or build wheel
@@ -133,10 +133,10 @@ maturin build --release --features python-bindings
 #### Using in Python
 
 ```python
-import guestkit_py
+import guestctl_py
 
 # Create converter
-converter = guestkit_py.DiskConverter()
+converter = guestctl_py.DiskConverter()
 
 # Convert disk
 result = converter.convert(
@@ -168,8 +168,8 @@ print(f"Virtual size: {info['virtual-size']}")
 #### Option 1: Python Subprocess Wrapper (Already Implemented)
 
 ```python
-# integration/python/guestkit_wrapper.py
-from guestkit_wrapper import GuestkitWrapper
+# integration/python/guestctl_wrapper.py
+from guestctl_wrapper import GuestkitWrapper
 
 wrapper = GuestkitWrapper()
 result = wrapper.convert(source, output, compress=True)
@@ -179,16 +179,16 @@ result = wrapper.convert(source, output, compress=True)
 
 ```python
 # Much faster - no subprocess overhead!
-import guestkit_py
+import guestctl_py
 
-converter = guestkit_py.DiskConverter()
+converter = guestctl_py.DiskConverter()
 result = converter.convert(source, output, "qcow2", compress=True)
 ```
 
 #### Option 3: Rust Library (For Rust hyper2kvm components)
 
 ```rust
-use guestkit::DiskConverter;
+use guestctl::DiskConverter;
 
 let converter = DiskConverter::new();
 let result = converter.convert(source, output, "qcow2", true, true)?;
@@ -196,7 +196,7 @@ let result = converter.convert(source, output, "qcow2", true, true)?;
 
 ## API Reference
 
-### FFI Module (`guestkit::ffi`)
+### FFI Module (`guestctl::ffi`)
 
 #### `Guestfs` Class
 
@@ -219,7 +219,7 @@ let result = converter.convert(source, output, "qcow2", true, true)?;
 | `is_dir(path)` | Check if directory |
 | `inspect_image(path)` | Full guest detection |
 
-### Detectors Module (`guestkit::detectors`)
+### Detectors Module (`guestctl::detectors`)
 
 #### `GuestDetector` Class
 
@@ -237,7 +237,7 @@ Returns `GuestIdentity`:
 - `init_system`: systemd, sysvinit, etc.
 - `distro`: Distribution name
 
-### Python Module (`guestkit_py`)
+### Python Module (`guestctl_py`)
 
 #### `DiskConverter` Class
 
@@ -259,7 +259,7 @@ See examples in:
 
 ```rust
 // examples/detect_guest.rs
-use guestkit::detectors::GuestDetector;
+use guestctl::detectors::GuestDetector;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -293,11 +293,11 @@ fn main() -> anyhow::Result<()> {
 
 ```python
 # examples/python_native.py
-import guestkit_py
+import guestctl_py
 
 def main():
     # Create converter
-    converter = guestkit_py.DiskConverter()
+    converter = guestctl_py.DiskConverter()
 
     # Convert with native Python module (no subprocess!)
     result = converter.convert(
@@ -331,7 +331,7 @@ cargo test --features ffi-bindings,guest-inspect
 
 # Test Python bindings
 maturin develop --features python-bindings
-python3 -c "import guestkit_py; print(guestkit_py.__version__)"
+python3 -c "import guestctl_py; print(guestctl_py.__version__)"
 ```
 
 ## Performance Comparison
@@ -340,8 +340,8 @@ python3 -c "import guestkit_py; print(guestkit_py.__version__)"
 
 | Method | Speed | Memory | Overhead |
 |--------|-------|--------|----------|
-| Subprocess (`guestkit_wrapper.py`) | Fast | Low | ~10ms spawn |
-| PyO3 (`guestkit_py`) | **Fastest** | **Lowest** | **0ms** |
+| Subprocess (`guestctl_wrapper.py`) | Fast | Low | ~10ms spawn |
+| PyO3 (`guestctl_py`) | **Fastest** | **Lowest** | **0ms** |
 
 PyO3 bindings are ~10x faster for small operations due to zero subprocess overhead.
 
@@ -404,7 +404,7 @@ cargo build --features ffi-bindings,guest-inspect
 
 2. **Integrate with hyper2kvm:**
    ```python
-   import guestkit_py
+   import guestctl_py
    # Use native module instead of subprocess
    ```
 

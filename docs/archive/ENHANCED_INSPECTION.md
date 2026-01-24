@@ -1,6 +1,6 @@
 # Enhanced Guest Inspection Features
 
-This document describes all the comprehensive inspection enhancements added to GuestKit, making it a powerful tool for deep VM and disk image analysis comparable to guestfish and virt-inspector.
+This document describes all the comprehensive inspection enhancements added to GuestCtl, making it a powerful tool for deep VM and disk image analysis comparable to guestfish and virt-inspector.
 
 ## 🎯 Overview
 
@@ -163,13 +163,13 @@ When running with `--verbose` or `-v` flag, the inspection provides extensive lo
 
 ```bash
 # Basic inspection
-guestkit inspect disk.qcow2
+guestctl inspect disk.qcow2
 
 # Verbose inspection with detailed logging
-guestkit inspect disk.qcow2 --verbose
+guestctl inspect disk.qcow2 --verbose
 
 # Short form
-guestkit inspect disk.qcow2 -v
+guestctl inspect disk.qcow2 -v
 ```
 
 ## 🔧 Example Output
@@ -284,7 +284,7 @@ guestkit inspect disk.qcow2 -v
 All inspection functions are available programmatically:
 
 ```rust
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 
 let mut g = Guestfs::new()?;
 g.add_drive_ro("/path/to/disk.qcow2")?;

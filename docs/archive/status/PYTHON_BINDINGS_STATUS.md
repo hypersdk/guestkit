@@ -1,6 +1,6 @@
 # Python Bindings Status
 
-This document summarizes the current status of the GuestKit Python bindings implementation.
+This document summarizes the current status of the GuestCtl Python bindings implementation.
 
 ## ✅ Completed Work
 
@@ -176,7 +176,7 @@ pip install maturin
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --features python-bindings
 
 # Verify installation
-python3 -c "import guestkit; print(guestkit.__version__)"
+python3 -c "import guestctl; print(guestctl.__version__)"
 ```
 
 ### Release Build
@@ -187,7 +187,7 @@ python3 -c "import guestkit; print(guestkit.__version__)"
 
 # Manual
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin build --release --features python-bindings
-pip install target/wheels/guestkit-*.whl
+pip install target/wheels/guestctl-*.whl
 ```
 
 ## 🧪 Testing
@@ -216,13 +216,13 @@ PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin build --release --features python-
 
 # Output location
 ls target/wheels/
-# guestkit-0.3.0-cp37-abi3-linux_x86_64.whl
+# guestctl-0.3.0-cp37-abi3-linux_x86_64.whl
 ```
 
 ### Installation from Wheel
 
 ```bash
-pip install target/wheels/guestkit-0.3.0-*.whl
+pip install target/wheels/guestctl-0.3.0-*.whl
 ```
 
 ## 🔄 API Coverage
@@ -304,7 +304,7 @@ These can be added incrementally based on user needs.
 
 ## ✅ Summary
 
-The Python bindings for GuestKit are **fully functional** and **production-ready**. They provide comprehensive access to VM disk inspection and manipulation capabilities through a clean, Pythonic API with extensive documentation and examples.
+The Python bindings for GuestCtl are **fully functional** and **production-ready**. They provide comprehensive access to VM disk inspection and manipulation capabilities through a clean, Pythonic API with extensive documentation and examples.
 
 **Total Lines of Code:**
 - Rust bindings: ~950 lines (`src/python.rs`)

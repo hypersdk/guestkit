@@ -1,6 +1,6 @@
-# GuestKit Quick Wins - High Impact, Low Effort
+# GuestCtl Quick Wins - High Impact, Low Effort
 
-This document outlines the highest-value enhancements that can be implemented quickly (1-2 weeks each) to significantly improve GuestKit.
+This document outlines the highest-value enhancements that can be implemented quickly (1-2 weeks each) to significantly improve GuestCtl.
 
 ## Priority 1: CLI Tool (⚡ Highest Impact)
 
@@ -11,16 +11,16 @@ This document outlines the highest-value enhancements that can be implemented qu
 
 ### Implementation
 
-Create `src/bin/guestkit.rs`:
+Create `src/bin/guestctl.rs`:
 
 ```rust
 use clap::{Parser, Subcommand};
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 use std::path::PathBuf;
 use anyhow::Result;
 
 #[derive(Parser)]
-#[command(name = "guestkit", version, about = "Inspect and manipulate disk images")]
+#[command(name = "guestctl", version, about = "Inspect and manipulate disk images")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -242,7 +242,7 @@ fn cmd_cp(source: String, dest: PathBuf) -> Result<()> {
 
 fn cmd_shell(disk: PathBuf) -> Result<()> {
     println!("Interactive shell not yet implemented");
-    println!("Use: guestkit inspect {} | guestkit cp {} | etc.", disk.display(), disk.display());
+    println!("Use: guestctl inspect {} | guestctl cp {} | etc.", disk.display(), disk.display());
     Ok(())
 }
 ```
@@ -251,8 +251,8 @@ Update `Cargo.toml`:
 
 ```toml
 [[bin]]
-name = "guestkit"
-path = "src/bin/guestkit.rs"
+name = "guestctl"
+path = "src/bin/guestctl.rs"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
@@ -264,22 +264,22 @@ anyhow = "1.0"
 
 ```bash
 # Inspect disk
-guestkit inspect ubuntu.qcow2
+guestctl inspect ubuntu.qcow2
 
 # JSON output for scripting
-guestkit inspect ubuntu.qcow2 --json | jq '.os_info[0].distro'
+guestctl inspect ubuntu.qcow2 --json | jq '.os_info[0].distro'
 
 # List filesystems
-guestkit filesystems ubuntu.qcow2
+guestctl filesystems ubuntu.qcow2
 
 # List all packages
-guestkit packages ubuntu.qcow2
+guestctl packages ubuntu.qcow2
 
 # Find specific package
-guestkit packages ubuntu.qcow2 --filter nginx
+guestctl packages ubuntu.qcow2 --filter nginx
 
 # Copy file from disk
-guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
+guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
 ```
 
 ---
@@ -417,7 +417,7 @@ use thiserror::Error;
 pub enum GuestkitError {
     #[error("Failed to mount {device} at {mountpoint}")]
     #[diagnostic(
-        code(guestkit::mount::failed),
+        code(guestctl::mount::failed),
         help("Try checking the filesystem type with vfs_type(\"{device}\")")
     )]
     MountFailed {
@@ -429,7 +429,7 @@ pub enum GuestkitError {
 
     #[error("No operating systems detected in {disk}")]
     #[diagnostic(
-        code(guestkit::inspect::no_os),
+        code(guestctl::inspect::no_os),
         help("The disk might be:\n  1. Not bootable\n  2. Encrypted (check with is_luks())\n  3. Using an unsupported OS\n  4. Corrupted")
     )]
     NoOsDetected {
@@ -438,7 +438,7 @@ pub enum GuestkitError {
 
     #[error("Appliance failed to launch")]
     #[diagnostic(
-        code(guestkit::launch::failed),
+        code(guestctl::launch::failed),
         help("Common causes:\n  1. No disk images added (use add_drive())\n  2. KVM not available (check /dev/kvm permissions)\n  3. Insufficient memory\n\nEnable verbose mode to see detailed errors:\n  g.set_verbose(true)")
     )]
     LaunchFailed {
@@ -448,7 +448,7 @@ pub enum GuestkitError {
 
     #[error("File not found: {path}")]
     #[diagnostic(
-        code(guestkit::file::not_found),
+        code(guestctl::file::not_found),
         help("Make sure:\n  1. The filesystem is mounted\n  2. The path is correct (case-sensitive)\n  3. Check with is_file(\"{path}\") or is_dir(\"{path}\")")
     )]
     FileNotFound {
@@ -533,7 +533,7 @@ Create `benches/operations.rs`:
 
 ```rust
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 use std::path::PathBuf;
 
 fn bench_inspect_os(c: &mut Criterion) {
@@ -705,7 +705,7 @@ jobs:
 Create `tests/integration_ubuntu.rs`:
 
 ```rust
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 use std::env;
 
 fn get_test_image() -> String {

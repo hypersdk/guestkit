@@ -2,7 +2,7 @@
 
 ## Summary
 
-Significant Python binding enhancements have been implemented for GuestKit, including PyPI publication setup and a fully-prepared async API waiting only on upstream dependency support.
+Significant Python binding enhancements have been implemented for GuestCtl, including PyPI publication setup and a fully-prepared async API waiting only on upstream dependency support.
 
 ## What Was Implemented
 
@@ -34,7 +34,7 @@ git push origin v0.3.0
 **After Publishing:**
 ```bash
 # Users can install with:
-pip install guestkit
+pip install guestctl
 ```
 
 **Files Created:**
@@ -82,11 +82,11 @@ pip install guestkit
 - Clean async/await syntax
 
 **Why Not Enabled:**
-pyo3-asyncio currently only supports PyO3 0.21, but GuestKit uses PyO3 0.22 for Python 3.13+ support.
+pyo3-asyncio currently only supports PyO3 0.21, but GuestCtl uses PyO3 0.22 for Python 3.13+ support.
 
 **To Enable (when dependency updated):**
 1. Uncomment code in `src/python.rs` (lines 964-1226)
-2. Uncomment type hints in `guestkit.pyi` (lines 323-444)
+2. Uncomment type hints in `guestctl.pyi` (lines 323-444)
 3. Uncomment dependency in `Cargo.toml` (line 73)
 4. Rebuild and test
 5. Done in ~5 minutes!
@@ -97,7 +97,7 @@ pyo3-asyncio currently only supports PyO3 0.21, but GuestKit uses PyO3 0.22 for 
 
 **Files Modified:**
 - `src/python.rs` - AsyncGuestfs implementation (commented)
-- `guestkit.pyi` - Async type hints (commented)
+- `guestctl.pyi` - Async type hints (commented)
 - `Cargo.toml` - Dependency ready (commented)
 - `CHANGELOG.md` - Status documented
 
@@ -142,7 +142,7 @@ pyo3-asyncio currently only supports PyO3 0.21, but GuestKit uses PyO3 0.22 for 
 
 **1. Sync API with Context Manager:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:
     g.add_drive_ro("disk.qcow2")
@@ -154,7 +154,7 @@ with Guestfs() as g:
 
 **2. Type Hints & IDE Support:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 g: Guestfs = Guestfs()  # Full autocomplete!
 roots: List[str] = g.inspect_os()  # Type checking works
@@ -179,7 +179,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 **1. Async/Await (when pyo3-asyncio updates):**
 ```python
 import asyncio
-from guestkit import AsyncGuestfs
+from guestctl import AsyncGuestfs
 
 async def inspect_multiple(disks):
     async with AsyncGuestfs() as g:
@@ -192,7 +192,7 @@ asyncio.run(inspect_multiple(disk_list))
 
 **2. pip install (after PyPI publication):**
 ```bash
-pip install guestkit  # That's it!
+pip install guestctl  # That's it!
 ```
 
 ## Testing
@@ -262,8 +262,8 @@ git push origin v0.3.0
 
 **2. Test Installation:**
 ```bash
-pip install guestkit
-python -c "from guestkit import Guestfs; print('Success!')"
+pip install guestctl
+python -c "from guestctl import Guestfs; print('Success!')"
 ```
 
 ### Soon (When pyo3-asyncio Updates):
@@ -327,7 +327,7 @@ git push origin v0.4.0
 - Sequential only: No parallelism support
 
 ### After These Enhancements:
-- Installation: `pip install guestkit` (ready to publish)
+- Installation: `pip install guestctl` (ready to publish)
 - Python API: Context manager with auto-cleanup ✅
 - Type hints: Full IDE support ✅
 - Parallelism: Threading now, async soon ✅
@@ -357,7 +357,7 @@ git push origin v0.4.0
 1. `Cargo.toml`
 2. `pyproject.toml`
 3. `src/python.rs`
-4. `guestkit.pyi`
+4. `guestctl.pyi`
 5. `CHANGELOG.md`
 6. `docs/README.md`
 7. `README.md`

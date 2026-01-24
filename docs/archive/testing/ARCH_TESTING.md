@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the realistic Arch Linux disk image testing infrastructure for GuestKit. These tests create production-quality Arch Linux images with BTRFS subvolumes and modern systemd-boot configuration to validate guestfs APIs in realistic scenarios.
+This document describes the realistic Arch Linux disk image testing infrastructure for GuestCtl. These tests create production-quality Arch Linux images with BTRFS subvolumes and modern systemd-boot configuration to validate guestfs APIs in realistic scenarios.
 
 ## What Makes These Tests "Realistic"
 

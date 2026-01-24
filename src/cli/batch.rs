@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Batch script execution for guestkit CLI
+//! Batch script execution for guestctl CLI
 
 use super::errors::errors;
 use anyhow::{Context, Result};
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 use owo_colors::OwoColorize;
 use std::collections::HashMap;
 use std::fs;

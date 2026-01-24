@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! guestkit CLI - Guest VM toolkit
+//! guestctl CLI - Guest VM toolkit
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, shells};
-use guestkit::{converters::DiskConverter, VERSION};
+use guestctl::{converters::DiskConverter, VERSION};
 use std::io;
 use std::path::PathBuf;
 
 mod cli;
 use cli::commands::*;
 
-/// guestkit - Guest VM toolkit for disk inspection and manipulation
+/// guestctl - Guest VM toolkit for disk inspection and manipulation
 #[derive(Parser)]
-#[command(name = "guestkit")]
+#[command(name = "guestctl")]
 #[command(version = VERSION)]
 #[command(about = "Guest VM toolkit for disk inspection and manipulation", long_about = None)]
 struct Cli {
@@ -500,10 +500,10 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::Version => {
-            println!("guestkit {}", VERSION);
+            println!("guestctl {}", VERSION);
             println!("A modern VM disk inspection and manipulation toolkit");
             println!();
-            println!("Project: https://github.com/ssahani/guestkit");
+            println!("Project: https://github.com/ssahani/guestctl");
             println!("License: LGPL-3.0-or-later");
         }
 
@@ -526,13 +526,13 @@ fn main() -> anyhow::Result<()> {
         Commands::Completion { shell } => {
             let mut cmd = Cli::command();
             match shell {
-                Shell::Bash => generate(shells::Bash, &mut cmd, "guestkit", &mut io::stdout()),
-                Shell::Zsh => generate(shells::Zsh, &mut cmd, "guestkit", &mut io::stdout()),
-                Shell::Fish => generate(shells::Fish, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::Bash => generate(shells::Bash, &mut cmd, "guestctl", &mut io::stdout()),
+                Shell::Zsh => generate(shells::Zsh, &mut cmd, "guestctl", &mut io::stdout()),
+                Shell::Fish => generate(shells::Fish, &mut cmd, "guestctl", &mut io::stdout()),
                 Shell::PowerShell => {
-                    generate(shells::PowerShell, &mut cmd, "guestkit", &mut io::stdout())
+                    generate(shells::PowerShell, &mut cmd, "guestctl", &mut io::stdout())
                 }
-                Shell::Elvish => generate(shells::Elvish, &mut cmd, "guestkit", &mut io::stdout()),
+                Shell::Elvish => generate(shells::Elvish, &mut cmd, "guestctl", &mut io::stdout()),
             }
         }
     }

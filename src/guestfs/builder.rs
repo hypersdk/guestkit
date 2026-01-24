@@ -11,7 +11,7 @@ use std::path::Path;
 /// # Examples
 ///
 /// ```no_run
-/// use guestkit::Guestfs;
+/// use guestctl::Guestfs;
 ///
 /// let mut guest = Guestfs::builder()
 ///     .add_drive("disk.img")
@@ -58,7 +58,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .verbose(true)
     ///     .build()?;
@@ -74,7 +74,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .trace(true)
     ///     .build()?;
@@ -114,7 +114,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .add_drive("disk.img")
     ///     .build()?;
@@ -134,7 +134,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .add_drive_ro("template.img")
     ///     .build()?;
@@ -154,7 +154,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .add_drive_with_format("disk.qcow2", "qcow2")
     ///     .build()?;
@@ -178,7 +178,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let guest = Guestfs::builder()
     ///     .add_drives(&["disk1.img", "disk2.img"])
     ///     .build()?;
@@ -223,7 +223,7 @@ impl GuestfsBuilder {
     /// # Examples
     ///
     /// ```no_run
-    /// # use guestkit::Guestfs;
+    /// # use guestctl::Guestfs;
     /// let mut guest = Guestfs::builder()
     ///     .add_drive("disk.img")
     ///     .build_and_launch()?;
@@ -242,7 +242,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestkit::Guestfs;
+    /// use guestctl::Guestfs;
     ///
     /// let mut guest = Guestfs::builder()
     ///     .add_drive("disk.img")

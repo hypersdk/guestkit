@@ -1,4 +1,4 @@
-# guestkit
+# guestctl
 
 A pure Rust toolkit for disk image inspection and manipulation. Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
 
@@ -85,7 +85,7 @@ A pure Rust toolkit for disk image inspection and manipulation. Designed to work
 - ⚡ **Retry Logic** - Built-in exponential backoff for reliable operations
 - 🔌 **Extensible** - Modular architecture for easy extension
 
-### Advanced CLI Features (guestkit)
+### Advanced CLI Features (guestctl)
 
 - 📊 **Multiple Output Formats** - JSON, YAML, CSV, and plain text for automation and scripting
 - 🎯 **Inspection Profiles** - Specialized analysis modes:
@@ -106,79 +106,79 @@ A pure Rust toolkit for disk image inspection and manipulation. Designed to work
 sudo dnf install qemu-img
 
 # From source
-git clone https://github.com/ssahani/guestkit
-cd guestkit
+git clone https://github.com/ssahani/guestctl
+cd guestctl
 cargo build --release
 cargo install --path .
 ```
 
 ### CLI Tool
 
-GuestKit is a powerful command-line tool for inspecting and manipulating VM disk images without mounting them.
+GuestCtl is a powerful command-line tool for inspecting and manipulating VM disk images without mounting them.
 
 **Basic Operations:**
 ```bash
 # Inspect a disk image
-sudo guestkit inspect ubuntu.qcow2
+sudo guestctl inspect ubuntu.qcow2
 
 # List filesystems and partitions
-sudo guestkit filesystems ubuntu.qcow2
+sudo guestctl filesystems ubuntu.qcow2
 
 # List installed packages
-sudo guestkit packages ubuntu.qcow2
+sudo guestctl packages ubuntu.qcow2
 
 # Read a file
-sudo guestkit cat ubuntu.qcow2 /etc/hostname
+sudo guestctl cat ubuntu.qcow2 /etc/hostname
 
 # List directory contents
-sudo guestkit list ubuntu.qcow2 /etc
+sudo guestctl list ubuntu.qcow2 /etc
 
 # Extract a file
-sudo guestkit extract ubuntu.qcow2 /etc/passwd ./passwd
+sudo guestctl extract ubuntu.qcow2 /etc/passwd ./passwd
 
 # JSON output for scripting
-sudo guestkit inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
 ```
 
 **Advanced Features:**
 
 ```bash
 # Basic inspection
-guestkit inspect vm.qcow2
+guestctl inspect vm.qcow2
 
 # JSON output for automation
-guestkit inspect vm.qcow2 --output json | jq '.os.hostname'
+guestctl inspect vm.qcow2 --output json | jq '.os.hostname'
 
 # Security audit profile
-guestkit inspect vm.qcow2 --profile security
+guestctl inspect vm.qcow2 --profile security
 
 # Migration planning profile
-guestkit inspect vm.qcow2 --profile migration --output json
+guestctl inspect vm.qcow2 --profile migration --output json
 
 # Performance tuning profile
-guestkit inspect vm.qcow2 --profile performance
+guestctl inspect vm.qcow2 --profile performance
 
 # Compare two VMs
-guestkit diff vm-before.qcow2 vm-after.qcow2
+guestctl diff vm-before.qcow2 vm-after.qcow2
 
 # Compare multiple VMs against baseline
-guestkit compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
+guestctl compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
 
 # Export HTML report
-guestkit inspect vm.qcow2 --export html --export-output report.html
+guestctl inspect vm.qcow2 --export html --export-output report.html
 
 # Export Markdown inventory
-guestkit inspect vm.qcow2 --export markdown --export-output inventory.md
+guestctl inspect vm.qcow2 --export markdown --export-output inventory.md
 
 # Use caching for faster repeated inspections
-guestkit inspect vm.qcow2 --cache  # First run: ~30s, subsequent: <0.5s
+guestctl inspect vm.qcow2 --cache  # First run: ~30s, subsequent: <0.5s
 
 # Batch inspect multiple VMs in parallel
-guestkit inspect-batch *.qcow2 --parallel 4 --cache
+guestctl inspect-batch *.qcow2 --parallel 4 --cache
 
 # Cache management
-guestkit cache-stats
-guestkit cache-clear
+guestctl cache-stats
+guestctl cache-clear
 ```
 
 **Available Commands:**
@@ -209,7 +209,7 @@ guestkit cache-clear
 #### Library (GuestFS API)
 
 ```rust
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create handle
@@ -250,10 +250,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #### Ergonomic Rust API (Recommended)
 
-GuestKit provides modern Rust patterns for better type safety and ergonomics:
+GuestCtl provides modern Rust patterns for better type safety and ergonomics:
 
 ```rust
-use guestkit::guestfs::{Guestfs, FilesystemType, OsType, Distro};
+use guestctl::guestfs::{Guestfs, FilesystemType, OsType, Distro};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Builder pattern for configuration
@@ -304,7 +304,7 @@ See [`docs/ERGONOMIC_API.md`](docs/ERGONOMIC_API.md) and [`docs/MIGRATION_GUIDE.
 
 #### Python Bindings
 
-GuestKit provides native Python bindings via PyO3 for seamless integration with Python workflows.
+GuestCtl provides native Python bindings via PyO3 for seamless integration with Python workflows.
 
 **Installation:**
 ```bash
@@ -318,12 +318,12 @@ pip install maturin
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --features python-bindings
 
 # Verify installation
-python3 -c "import guestkit; print(guestkit.__version__)"
+python3 -c "import guestctl; print(guestctl.__version__)"
 ```
 
 **Basic Example:**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 # Create handle and configure
 g = Guestfs()
@@ -381,7 +381,7 @@ g.shutdown()
 ## Project Structure
 
 ```
-guestkit/
+guestctl/
 ├── Cargo.toml
 ├── README.md
 ├── ARCHITECTURE.md                    # Architecture documentation
@@ -584,7 +584,7 @@ cargo run --example detect_format
 | Metric | Count | Percentage |
 |--------|-------|------------|
 | **LibGuestFS functions** | 733 | 100% |
-| **GuestKit APIs defined** | 364 | 49.7% |
+| **GuestCtl APIs defined** | 364 | 49.7% |
 | **Fully working** | 349 | 47.6% |
 | **API-only (needs impl)** | 15 | 2.0% |
 
@@ -614,10 +614,10 @@ See [LIBGUESTFS_COMPARISON.md](LIBGUESTFS_COMPARISON.md) for:
 
 ## Integration with hyper2kvm
 
-guestkit is designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm):
+guestctl is designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm):
 
 ```rust
-use guestkit::guestfs::Guestfs;
+use guestctl::guestfs::Guestfs;
 
 // Simple, intuitive API
 let mut g = Guestfs::new()?;
@@ -658,7 +658,7 @@ sudo apt install qemu-utils
 sudo pacman -S qemu
 ```
 
-**Note:** guestkit is a pure Rust implementation with no C library dependencies!
+**Note:** guestctl is a pure Rust implementation with no C library dependencies!
 
 ### Rust Dependencies
 
@@ -746,7 +746,7 @@ cargo doc --no-deps --open
 
 ## Cargo Features
 
-guestkit uses Cargo features for optional functionality:
+guestctl uses Cargo features for optional functionality:
 
 - **`disk-ops`** (default) - Disk operation utilities
 - **`guest-inspect`** (default) - Guest OS inspection
@@ -754,10 +754,10 @@ guestkit uses Cargo features for optional functionality:
 
 ```toml
 [dependencies]
-guestkit = { version = "0.1", features = ["guest-inspect"] }
+guestctl = { version = "0.1", features = ["guest-inspect"] }
 
 # With Python bindings
-guestkit = { version = "0.1", features = ["python-bindings"] }
+guestctl = { version = "0.1", features = ["python-bindings"] }
 ```
 
 Build with Python bindings:
@@ -837,8 +837,8 @@ See [LICENSE](LICENSE) for full license text.
 
 ## Support
 
-- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
-- **Documentation**: [API docs](https://docs.rs/guestkit)
+- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestctl/issues)
+- **Documentation**: [API docs](https://docs.rs/guestctl)
 - **Examples**: See [`examples/`](examples/) directory
 
 ## Related Projects

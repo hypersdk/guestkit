@@ -1,6 +1,6 @@
 # Enhanced HTML Export Guide
 
-GuestKit now generates professional, interactive HTML reports with modern features for VM inspection results.
+GuestCtl now generates professional, interactive HTML reports with modern features for VM inspection results.
 
 ## Features
 
@@ -47,20 +47,20 @@ GuestKit now generates professional, interactive HTML reports with modern featur
 
 ```bash
 # Export inspection results to HTML
-guestkit inspect vm.qcow2 --export html --export-output report.html
+guestctl inspect vm.qcow2 --export html --export-output report.html
 
 # With caching for faster subsequent exports
-guestkit inspect vm.qcow2 --export html --export-output report.html --cache
+guestctl inspect vm.qcow2 --export html --export-output report.html --cache
 ```
 
 ### Advanced Usage
 
 ```bash
 # Inspect with profile and export to HTML
-guestkit inspect vm.qcow2 --profile security --export html --export-output security-report.html
+guestctl inspect vm.qcow2 --profile security --export html --export-output security-report.html
 
 # Batch inspection with HTML export
-guestkit inspect-batch vm*.qcow2 --parallel 4 --cache --output json > results.json
+guestctl inspect-batch vm*.qcow2 --parallel 4 --cache --output json > results.json
 # Then convert individual results to HTML
 ```
 
@@ -167,7 +167,7 @@ Charts are powered by Chart.js v4.4.0 from CDN:
 ### Security Audit Report
 ```bash
 # Generate comprehensive security audit
-guestkit inspect production-vm.qcow2 \
+guestctl inspect production-vm.qcow2 \
   --profile security \
   --export html \
   --export-output security-audit-2026-01-24.html \
@@ -178,7 +178,7 @@ guestkit inspect production-vm.qcow2 \
 ```bash
 # Inspect multiple VMs
 for vm in web*.qcow2; do
-  guestkit inspect "$vm" \
+  guestctl inspect "$vm" \
     --export html \
     --export-output "reports/$(basename $vm .qcow2)-report.html"
 done
@@ -189,7 +189,7 @@ done
 # GitHub Actions example
 - name: Inspect VM Image
   run: |
-    guestkit inspect build/image.qcow2 \
+    guestctl inspect build/image.qcow2 \
       --export html \
       --export-output inspection-report.html
 
@@ -248,9 +248,9 @@ Planned features:
 ## Support
 
 For issues or feature requests:
-- GitHub: https://github.com/ssahani/guestkit/issues
+- GitHub: https://github.com/ssahani/guestctl/issues
 - Documentation: See docs/OUTPUT_FORMATS.md
 
 ---
 
-**Generated with GuestKit v0.3.0** - Pure Rust VM Inspection Toolkit
+**Generated with GuestCtl v0.3.0** - Pure Rust VM Inspection Toolkit

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the realistic Debian disk image testing infrastructure for GuestKit. These tests create production-quality Debian images with complete system configurations including LVM layouts to validate guestfs APIs in realistic scenarios.
+This document describes the realistic Debian disk image testing infrastructure for GuestCtl. These tests create production-quality Debian images with complete system configurations including LVM layouts to validate guestfs APIs in realistic scenarios.
 
 ## What Makes These Tests "Realistic"
 

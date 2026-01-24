@@ -1,6 +1,6 @@
-# guestkit - Project Complete ✅
+# guestctl - Project Complete ✅
 
-**Location:** `~/tt/guestkit/`
+**Location:** `~/tt/guestctl/`
 **Status:** All tests passing, ready for integration with hyper2kvm
 **Version:** 0.1.0
 
@@ -11,7 +11,7 @@ A **Rust-based guest VM toolkit** inspired by libguestfs, designed to work with 
 ## Quick Verification
 
 ```bash
-cd ~/tt/guestkit
+cd ~/tt/guestctl
 
 # Run all tests (should all pass)
 cargo test                                    # Unit tests
@@ -26,7 +26,7 @@ cargo run --example retry_example
 ## Project Structure
 
 ```
-~/tt/guestkit/
+~/tt/guestctl/
 ├── src/                  # Rust source code
 │   ├── core/             # Error handling, retry logic, types
 │   ├── converters/       # Disk format conversion
@@ -56,7 +56,7 @@ cargo run --example retry_example
 
 ```python
 # In hyper2kvm code
-from guestkit_wrapper import GuestkitWrapper
+from guestctl_wrapper import GuestkitWrapper
 
 wrapper = GuestkitWrapper()
 result = wrapper.convert(

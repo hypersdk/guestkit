@@ -1,10 +1,10 @@
-# GuestKit API Comprehensive Test Results
+# GuestCtl API Comprehensive Test Results
 
 ## Test Date: 2026-01-24
 
 ## Overview
 
-Comprehensive testing of all GuestKit APIs across multiple disk image formats:
+Comprehensive testing of all GuestCtl APIs across multiple disk image formats:
 - **QCOW2** (QEMU Copy-On-Write v2)
 - **VMDK** (VMware Virtual Disk)
 - **VDI** (VirtualBox Disk Image)
@@ -13,7 +13,7 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 ## Test Environment
 
 - **Platform**: Linux 6.18.5-200.fc43.x86_64
-- **GuestKit Version**: 0.3.0
+- **GuestCtl Version**: 0.3.0
 - **Test Images**: 8 different VM disk images
 - **Operating Systems Tested**:
   - Linux: Photon OS, Ubuntu, Fedora, Arch Linux
@@ -23,30 +23,30 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 
 ### 1. **OS Inspection API** (`inspect`)
    - **Purpose**: Detect operating system type, architecture, partitions
-   - **Method**: `guestkit inspect <disk>`
+   - **Method**: `guestctl inspect <disk>`
    - **Success Rate**: 100% (8/8)
 
 ### 2. **Filesystem Listing API** (`filesystems`)
    - **Purpose**: List all filesystems and partitions
-   - **Method**: `guestkit filesystems <disk>`
+   - **Method**: `guestctl filesystems <disk>`
    - **Success Rate**: 100% (8/8)
 
 ### 3. **Package Listing API** (`packages`)
    - **Purpose**: List installed packages (requires mounting)
-   - **Method**: `guestkit packages <disk>`
+   - **Method**: `guestctl packages <disk>`
    - **Success Rate**: 100% (8/8)
    - **Note**: Requires full OS detection with mounting
 
 ### 4. **Directory Listing API** (`ls`)
    - **Purpose**: List files and directories in guest filesystem
-   - **Method**: `sudo guestkit ls <disk> <path>`
+   - **Method**: `sudo guestctl ls <disk> <path>`
    - **Success Rate**: 87.5% (7/8)
    - **Requirements**: Root privileges for mounting
    - **Known Issues**: Ubuntu Server 25.04 VDI mounting issue
 
 ### 5. **File Reading API** (`cat`)
    - **Purpose**: Read file contents from guest filesystem
-   - **Method**: `sudo guestkit cat <disk> <file>`
+   - **Method**: `sudo guestctl cat <disk> <file>`
    - **Success Rate**: 62.5% (5/8)
    - **Requirements**: Root privileges for mounting
    - **Note**: Files must exist in OS (e.g., /etc/os-release not on Windows)
@@ -129,7 +129,7 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 - Read-only mounting by default
 
 ### Filesystem Mounting
-- Temporary mount points in /tmp/guestkit-*
+- Temporary mount points in /tmp/guestctl-*
 - Automatic cleanup on shutdown
 - Support for multiple mountpoints per disk
 
@@ -137,7 +137,7 @@ Comprehensive testing of all GuestKit APIs across multiple disk image formats:
 
 ### Basic Inspection
 ```bash
-$ guestkit inspect disk.qcow2
+$ guestctl inspect disk.qcow2
 
 === Disk Image: disk.qcow2 ===
 
@@ -153,7 +153,7 @@ OS #1
 
 ### List Filesystems
 ```bash
-$ guestkit filesystems disk.qcow2
+$ guestctl filesystems disk.qcow2
 
 === Devices ===
 /dev/sda
@@ -166,7 +166,7 @@ $ guestkit filesystems disk.qcow2
 
 ### List Files (requires sudo)
 ```bash
-$ sudo guestkit ls disk.qcow2 /
+$ sudo guestctl ls disk.qcow2 /
 
 bin
 boot
@@ -179,7 +179,7 @@ lib
 
 ### Read File (requires sudo)
 ```bash
-$ sudo guestkit cat disk.qcow2 /etc/os-release
+$ sudo guestctl cat disk.qcow2 /etc/os-release
 
 NAME="VMware Photon OS"
 VERSION="5.0"
@@ -206,7 +206,7 @@ PRETTY_NAME="VMware Photon OS/Linux"
 
 ## Conclusion
 
-GuestKit successfully provides comprehensive disk image inspection capabilities across all major VM formats. The API is robust, with 87.5% overall success rate across diverse test cases. Core inspection and filesystem detection work perfectly without elevated privileges, while file operations work reliably with sudo access.
+GuestCtl successfully provides comprehensive disk image inspection capabilities across all major VM formats. The API is robust, with 87.5% overall success rate across diverse test cases. Core inspection and filesystem detection work perfectly without elevated privileges, while file operations work reliably with sudo access.
 
 ### Key Achievements
 - ✅ Multi-format support (QCOW2, VMDK, VDI, VHD)

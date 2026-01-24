@@ -1,7 +1,7 @@
-# guestkit - Implementation Complete ✅
+# guestctl - Implementation Complete ✅
 
-**Project:** guestkit
-**Location:** `~/tt/guestkit/`
+**Project:** guestctl
+**Location:** `~/tt/guestctl/`
 **Status:** ✅ **PRODUCTION READY**
 **Version:** 0.1.0
 
@@ -36,7 +36,7 @@
   - Init system (systemd, sysvinit, etc.)
 
 ### 4. PyO3 Python Bindings (`--features python-bindings`)
-- ✅ **Native Python module** (guestkit_py)
+- ✅ **Native Python module** (guestctl_py)
 - ✅ **DiskConverter class** for Python
 - ✅ **Zero subprocess overhead**
 - ✅ **Type-safe** Python dictionaries
@@ -86,7 +86,7 @@
 ## 📁 Project Structure
 
 ```
-~/tt/guestkit/
+~/tt/guestctl/
 ├── Cargo.toml                         # Rust project configuration
 ├── README.md                          # Main documentation
 ├── QUICKSTART.md                      # Quick start guide
@@ -129,7 +129,7 @@
 ├── integration/                       # Python integration
 │   ├── README.md                      # Integration guide
 │   ├── python/
-│   │   └── guestkit_wrapper.py        # Python subprocess wrapper
+│   │   └── guestctl_wrapper.py        # Python subprocess wrapper
 │   └── tests/
 │       └── test_integration.py        # Integration tests (5 tests)
 │
@@ -148,7 +148,7 @@
 ### 1. Rust Library (Disk Conversion)
 
 ```rust
-use guestkit::converters::DiskConverter;
+use guestctl::converters::DiskConverter;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -169,7 +169,7 @@ fn main() -> anyhow::Result<()> {
 ### 2. Rust Library (Guest Detection with libguestfs)
 
 ```rust
-use guestkit::detectors::GuestDetector;
+use guestctl::detectors::GuestDetector;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -187,7 +187,7 @@ fn main() -> anyhow::Result<()> {
 ### 3. Python Subprocess Wrapper
 
 ```python
-from guestkit_wrapper import GuestkitWrapper
+from guestctl_wrapper import GuestkitWrapper
 
 wrapper = GuestkitWrapper()
 result = wrapper.convert(
@@ -203,9 +203,9 @@ if result.success:
 ### 4. Python Native Module (PyO3)
 
 ```python
-import guestkit_py
+import guestctl_py
 
-converter = guestkit_py.DiskConverter()
+converter = guestctl_py.DiskConverter()
 result = converter.convert(
     source="/path/to/vm.vmdk",
     output="/path/to/vm.qcow2",
@@ -221,16 +221,16 @@ if result["success"]:
 
 ```bash
 # Convert disk
-guestkit convert --source vm.vmdk --output vm.qcow2 --compress
+guestctl convert --source vm.vmdk --output vm.qcow2 --compress
 
 # Detect format
-guestkit detect --image disk.img
+guestctl detect --image disk.img
 
 # Get disk info
-guestkit info --image disk.img
+guestctl info --image disk.img
 
 # Show version
-guestkit version
+guestctl version
 ```
 
 ---
@@ -272,7 +272,7 @@ maturin develop --features python-bindings
 maturin build --release --features python-bindings
 
 # Install wheel
-pip install target/wheels/guestkit_py-*.whl
+pip install target/wheels/guestctl_py-*.whl
 ```
 
 ---
@@ -282,7 +282,7 @@ pip install target/wheels/guestkit_py-*.whl
 ### Run All Tests
 
 ```bash
-cd ~/tt/guestkit
+cd ~/tt/guestctl
 
 # Rust tests (9/9 passing)
 cargo test
@@ -333,7 +333,7 @@ cargo run -- version
 
 ```python
 # In hyper2kvm
-from guestkit_wrapper import GuestkitWrapper
+from guestctl_wrapper import GuestkitWrapper
 
 wrapper = GuestkitWrapper()
 result = wrapper.convert(source, output, compress=True)
@@ -346,9 +346,9 @@ result = wrapper.convert(source, output, compress=True)
 
 ```python
 # In hyper2kvm
-import guestkit_py
+import guestctl_py
 
-converter = guestkit_py.DiskConverter()
+converter = guestctl_py.DiskConverter()
 result = converter.convert(source, output, "qcow2", compress=True)
 ```
 
@@ -358,7 +358,7 @@ result = converter.convert(source, output, "qcow2", compress=True)
 ### Option 3: Rust Library (For future Rust hyper2kvm components)
 
 ```rust
-use guestkit::DiskConverter;
+use guestctl::DiskConverter;
 
 let converter = DiskConverter::new();
 let result = converter.convert(source, output, "qcow2", true, true)?;
@@ -385,7 +385,7 @@ cargo publish
 maturin build --release --features python-bindings
 
 # Wheel will be in target/wheels/
-pip install target/wheels/guestkit_py-*.whl
+pip install target/wheels/guestctl_py-*.whl
 ```
 
 ### Binary Distribution
@@ -394,7 +394,7 @@ pip install target/wheels/guestkit_py-*.whl
 # Build optimized binary
 cargo build --release
 
-# Binary at: target/release/guestkit
+# Binary at: target/release/guestctl
 # Copy to /usr/local/bin or distribute
 ```
 
@@ -437,7 +437,7 @@ cargo build --release
 
 ## 🏆 Summary
 
-**guestkit v0.1.0** is complete and production-ready:
+**guestctl v0.1.0** is complete and production-ready:
 
 ✅ **Full Rust library** with disk operations
 ✅ **libguestfs FFI bindings** for guest detection
@@ -453,13 +453,13 @@ cargo build --release
 ### Git Status
 
 ```bash
-cd ~/tt/guestkit
+cd ~/tt/guestctl
 git log --oneline -5
 ```
 
 ```
 8e6c5c0 Add libguestfs FFI bindings and PyO3 Python bindings
-35c3917 Initial commit: guestkit v0.1.0
+35c3917 Initial commit: guestctl v0.1.0
 ```
 
 ### Ready to Push

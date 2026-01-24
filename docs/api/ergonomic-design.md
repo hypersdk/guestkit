@@ -1,6 +1,6 @@
-## Ergonomic, Type-Safe Rust API for GuestKit
+## Ergonomic, Type-Safe Rust API for GuestCtl
 
-This document describes the improved GuestKit API that leverages Rust's type system and ergonomic patterns to provide a safer, more pleasant development experience.
+This document describes the improved GuestCtl API that leverages Rust's type system and ergonomic patterns to provide a safer, more pleasant development experience.
 
 ## Design Philosophy
 
@@ -64,7 +64,7 @@ g.mkfs("etx4", "/dev/sda2", None, None, None, None)?;  // Typo! Won't catch unti
 
 **Fluent API** (enum-based):
 ```rust
-use guestkit::guestfs::FilesystemType;
+use guestctl::guestfs::FilesystemType;
 
 // Type-safe - compiler catches typos!
 g.mkfs("/dev/sda1")
@@ -161,7 +161,7 @@ for root in &roots {
 
 **Fluent API** (enums):
 ```rust
-use guestkit::guestfs::{OsType, Distro, PackageManager};
+use guestctl::guestfs::{OsType, Distro, PackageManager};
 
 let roots = g.inspect_os()?;
 for root in &roots {
@@ -208,7 +208,7 @@ g.part_init("/dev/sda", "gpt")?;  // String - could type "GPT", "Gpt", etc.
 
 **Fluent API**:
 ```rust
-use guestkit::guestfs::PartitionTableType;
+use guestctl::guestfs::PartitionTableType;
 
 g.part_init("/dev/sda", PartitionTableType::Gpt.as_str())?;
 // Or:
@@ -221,12 +221,12 @@ g.part_init("/dev/sda", PartitionTableType::Mbr.as_str())?;
 
 **Old:**
 ```rust
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 ```
 
 **New:**
 ```rust
-use guestkit::guestfs::{
+use guestctl::guestfs::{
     Guestfs,              // Main handle
     FilesystemType,       // Type-safe filesystems
     PartitionTableType,   // Type-safe partition tables
@@ -433,7 +433,7 @@ Planned improvements for future versions:
 
 ## Conclusion
 
-The modern GuestKit API provides:
+The modern GuestCtl API provides:
 
 - ✅ **Type Safety**: Catch errors at compile time
 - ✅ **Ergonomics**: Fluent, self-documenting APIs

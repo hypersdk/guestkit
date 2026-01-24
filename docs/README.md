@@ -1,12 +1,12 @@
-# GuestKit Documentation
+# GuestCtl Documentation
 
-Welcome to the GuestKit documentation! This directory contains all project documentation organized by category.
+Welcome to the GuestCtl documentation! This directory contains all project documentation organized by category.
 
 ## 📚 Documentation Structure
 
 ### 🎯 [User Guides](user-guides/) - User-Facing Documentation
 
-Start here if you're learning to use GuestKit!
+Start here if you're learning to use GuestCtl!
 
 - **[Getting Started](user-guides/getting-started.md)** - Quick start guide
 - **[CLI Guide](user-guides/cli-guide.md)** - Command-line interface usage
@@ -36,17 +36,17 @@ Complete API documentation for developers.
 
 ### 🏗️ [Architecture](architecture/) - Technical Documentation
 
-Understand how GuestKit works internally.
+Understand how GuestCtl works internally.
 
 - **[Overview](architecture/overview.md)** - System architecture
-- **[Comparison Guide](architecture/comparison-guide.md)** - GuestKit vs alternatives
+- **[Comparison Guide](architecture/comparison-guide.md)** - GuestCtl vs alternatives
 - **[Performance](architecture/performance.md)** - Performance characteristics
 - **[UX Design](architecture/ux-design.md)** - User experience decisions
 - **[libguestfs Comparison](architecture/libguestfs-comparison.md)** - Detailed comparison
 
 ### 🔧 [Development](development/) - Contributor Documentation
 
-For contributors and developers extending GuestKit.
+For contributors and developers extending GuestCtl.
 
 - **[Roadmap 2026](development/roadmap-2026.md)** - Project roadmap and future plans
 - **[Improvements Log](development/improvements-log.md)** - Recent improvements and enhancements
@@ -130,20 +130,20 @@ All documentation follows these standards:
 Found an issue or want to improve documentation?
 
 1. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines
-2. Submit issues at [GitHub Issues](https://github.com/ssahani/guestkit/issues)
+2. Submit issues at [GitHub Issues](https://github.com/ssahani/guestctl/issues)
 3. Submit PRs for documentation improvements
 
 ## 📧 Support
 
-- **Issues:** https://github.com/ssahani/guestkit/issues
-- **Discussions:** https://github.com/ssahani/guestkit/discussions
+- **Issues:** https://github.com/ssahani/guestctl/issues
+- **Discussions:** https://github.com/ssahani/guestctl/discussions
 - **Email:** ssahani@gmail.com
 
 ## External Resources
 
-- **Project Repository:** [GitHub](https://github.com/ssahani/guestkit)
-- **PyPI Package:** [guestkit on PyPI](https://pypi.org/project/guestkit/) (coming soon)
-- **Crates.io:** [guestkit on crates.io](https://crates.io/crates/guestkit)
+- **Project Repository:** [GitHub](https://github.com/ssahani/guestctl)
+- **PyPI Package:** [guestctl on PyPI](https://pypi.org/project/guestctl/) (coming soon)
+- **Crates.io:** [guestctl on crates.io](https://crates.io/crates/guestctl)
 
 ---
 

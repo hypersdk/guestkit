@@ -5,7 +5,7 @@
 
 ## Overview
 
-The GuestKit documentation has been reorganized into a clearer, more intuitive structure. All documentation is now properly categorized and uses consistent lowercase naming with hyphens.
+The GuestCtl documentation has been reorganized into a clearer, more intuitive structure. All documentation is now properly categorized and uses consistent lowercase naming with hyphens.
 
 ## New Structure
 

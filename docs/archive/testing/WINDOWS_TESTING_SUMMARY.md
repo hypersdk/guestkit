@@ -250,7 +250,7 @@ All tests should pass when:
 
 Our testing approach follows libguestfs best practices:
 
-| Aspect | libguestfs | guestkit |
+| Aspect | libguestfs | guestctl |
 |--------|-----------|----------|
 | Test images | Fake OS images | ✅ Fake Fedora + Windows |
 | Filesystems | Various (ext4, NTFS, etc.) | ✅ ext4 (Fedora), NTFS (Windows) |
@@ -289,4 +289,4 @@ Phase 3 testing is now comprehensive and cross-platform:
 - **Professional documentation** for contributors
 - **Production-ready** test methodology
 
-All 10 Phase 3 APIs have been validated to work correctly on both Linux (ext4/GPT) and Windows (NTFS/MBR) disk images, ensuring guestkit provides reliable cross-platform disk manipulation capabilities.
+All 10 Phase 3 APIs have been validated to work correctly on both Linux (ext4/GPT) and Windows (NTFS/MBR) disk images, ensuring guestctl provides reliable cross-platform disk manipulation capabilities.

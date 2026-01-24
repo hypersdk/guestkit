@@ -1,6 +1,6 @@
 # Performance Tuning Guide
 
-This guide helps you optimize guestkit for maximum performance in your use case.
+This guide helps you optimize guestctl for maximum performance in your use case.
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ g.set_verbose(true);   // ✗ Adds overhead
 
 ```bash
 # qcow2 is faster than raw for large sparse images
-guestkit convert disk.raw --output disk.qcow2 --format qcow2 --compress
+guestctl convert disk.raw --output disk.qcow2 --format qcow2 --compress
 ```
 
 ### 4. Batch Operations Instead of Loops
@@ -114,7 +114,7 @@ disk_creation/100MB    time:   [245.32 ms 248.91 ms 252.84 ms]
 
 ```rust
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 
 fn bench_my_operation(c: &mut Criterion) {
     c.bench_function("my_operation", |b| {
@@ -155,19 +155,19 @@ criterion_main!(benches);
 
 ```bash
 # Convert to qcow2 with compression
-guestkit convert input.vmdk \
+guestctl convert input.vmdk \
   --output output.qcow2 \
   --format qcow2 \
   --compress
 
 # Flatten snapshot chains (improves read performance)
-guestkit convert input.qcow2 \
+guestctl convert input.qcow2 \
   --output output.qcow2 \
   --format qcow2 \
   --flatten
 
 # Combine both
-guestkit convert input.vmdk \
+guestctl convert input.vmdk \
   --output output.qcow2 \
   --format qcow2 \
   --compress \
@@ -430,10 +430,10 @@ let content = g.cat("/large-file")?;  // May OOM on large files
 
 ```bash
 # Watch memory usage during operations
-watch -n 1 'ps aux | grep guestkit | grep -v grep'
+watch -n 1 'ps aux | grep guestctl | grep -v grep'
 
 # Profile memory with valgrind
-valgrind --tool=massif target/release/guestkit inspect disk.img
+valgrind --tool=massif target/release/guestctl inspect disk.img
 ```
 
 ### Memory Limits
@@ -442,7 +442,7 @@ valgrind --tool=massif target/release/guestkit inspect disk.img
 // Set resource limits in code
 use std::os::unix::process::CommandExt;
 
-std::process::Command::new("guestkit")
+std::process::Command::new("guestctl")
     .pre_exec(|| {
         // Limit memory to 512MB
         unsafe {
@@ -597,7 +597,7 @@ Set up alerts for:
 ## Example: Optimized Batch Processing
 
 ```rust
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 use std::time::Instant;
 use rayon::prelude::*;
 
@@ -644,7 +644,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Further Reading
 
-- [Benchmarking Guide](https://github.com/ssahani/guestkit/tree/main/benches)
+- [Benchmarking Guide](https://github.com/ssahani/guestctl/tree/main/benches)
 - [Troubleshooting Guide](TROUBLESHOOTING.md)
 - [API Reference](../API_REFERENCE.md)
 - [Examples](../examples/)

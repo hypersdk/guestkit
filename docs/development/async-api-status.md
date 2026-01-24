@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Async Python API for GuestKit has been **fully designed and implemented** but is currently **disabled** due to a dependency compatibility issue.
+The Async Python API for GuestCtl has been **fully designed and implemented** but is currently **disabled** due to a dependency compatibility issue.
 
 ## Current Status: ⏳ Pending Dependencies
 
@@ -16,7 +16,7 @@ The Async Python API for GuestKit has been **fully designed and implemented** bu
    - Non-blocking operations for concurrent VM inspection
 
 2. **Type Hints**
-   - Location: `guestkit.pyi` (lines 323-444, currently commented out)
+   - Location: `guestctl.pyi` (lines 323-444, currently commented out)
    - Complete `.pyi` stub file with async method signatures
    - IDE autocomplete support ready
    - mypy type checking ready
@@ -99,7 +99,7 @@ python-bindings = ["pyo3", "pyo3-asyncio-0-21"]
 - Remove `*/` at line 1226
 - Uncomment line 1233: `m.add_class::<AsyncGuestfs>()?;`
 
-**Step 4:** Uncomment type hints in `guestkit.pyi`
+**Step 4:** Uncomment type hints in `guestctl.pyi`
 - Remove `"""` at lines 325 and 444
 
 **Step 5:** Build and test
@@ -129,7 +129,7 @@ While async is pending, users can still:
 
 1. **Use sync API with context manager**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:
     g.add_drive_ro("disk.qcow2")
@@ -140,7 +140,7 @@ with Guestfs() as g:
 2. **Use threading for parallelism**
 ```python
 from concurrent.futures import ThreadPoolExecutor
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def inspect_vm(disk):
     with Guestfs() as g:
@@ -155,7 +155,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 3. **Use multiprocessing**
 ```python
 from multiprocessing import Pool
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def inspect_vm(disk):
     with Guestfs() as g:
@@ -208,7 +208,7 @@ async fn inspect_os(&self) -> PyResult<Vec<String>> {
 
 ```python
 import asyncio
-from guestkit import AsyncGuestfs
+from guestctl import AsyncGuestfs
 
 async def inspect_multiple(disks):
     tasks = []
@@ -228,7 +228,7 @@ results = asyncio.run(inspect_multiple(disk_list))
 
 ### Ready to Enable
 - `src/python.rs` - AsyncGuestfs implementation (commented)
-- `guestkit.pyi` - Async type hints (commented)
+- `guestctl.pyi` - Async type hints (commented)
 - `Cargo.toml` - Dependency ready (commented)
 
 ### Working Examples
@@ -266,7 +266,7 @@ Until async is available, recommend this pattern:
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 def inspect_vm(disk_path):
     with Guestfs() as g:
@@ -308,7 +308,7 @@ All implementation work is complete:
 
 **Expected Timeline:**
 - Dependency update: 1-3 months (typical for PyO3 ecosystem)
-- Enable in GuestKit: 5 minutes (uncomment code)
+- Enable in GuestCtl: 5 minutes (uncomment code)
 - Testing: 1 hour
 - Release: Same day
 

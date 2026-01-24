@@ -1,12 +1,12 @@
-# LinkedIn Post - GuestKit
+# LinkedIn Post - GuestCtl
 
 ## Post 1: Main Announcement (Recommended)
 
-🚀 Excited to share what I've been building: **GuestKit** - A modern Rust-based VM disk inspection tool that's about to change how we analyze virtual machine images!
+🚀 Excited to share what I've been building: **GuestCtl** - A modern Rust-based VM disk inspection tool that's about to change how we analyze virtual machine images!
 
 Think of it as your Swiss Army knife for VM forensics, security audits, and system inspection - without ever booting the VM.
 
-**What makes GuestKit special?**
+**What makes GuestCtl special?**
 
 ✨ **Lightning-Fast Performance** - Built in Rust for speed and safety
 🎯 **Multiple Inspection Profiles** - Security, Performance, Migration planning
@@ -36,9 +36,9 @@ Coming soon to PyPI! 🎉
 
 Want to inspect a VM disk? Just:
 ```bash
-guestkit inspect vm.qcow2
-guestkit interactive vm.qcow2
-guestkit script vm.qcow2 audit.gk --export html
+guestctl inspect vm.qcow2
+guestctl interactive vm.qcow2
+guestctl script vm.qcow2 audit.gk --export html
 ```
 
 Built with: #Rust #Python #DevOps #Security #CloudComputing #OpenSource
@@ -49,9 +49,9 @@ What VM inspection challenges are you facing? I'd love to hear your thoughts! �
 
 ## Post 2: Technical Deep Dive (Alternative)
 
-🔧 **Building GuestKit: A Technical Journey**
+🔧 **Building GuestCtl: A Technical Journey**
 
-After months of development, I'm thrilled to share the technical accomplishments behind GuestKit - a high-performance VM disk inspection tool written in Rust.
+After months of development, I'm thrilled to share the technical accomplishments behind GuestCtl - a high-performance VM disk inspection tool written in Rust.
 
 **The Stack:**
 - Core: Rust with libguestfs bindings
@@ -111,7 +111,7 @@ Thoughts on VM inspection workflows? What features would you find most valuable?
 
 ## Post 3: Short & Punchy (For Quick Engagement)
 
-🎯 Built something cool: **GuestKit** - inspect VM disks without booting them!
+🎯 Built something cool: **GuestCtl** - inspect VM disks without booting them!
 
 Security audits? ✅
 Migration planning? ✅
@@ -132,16 +132,16 @@ What would you inspect first?
 
 ## Post 4: Feature Showcase (Visual-Friendly)
 
-🔍 **GuestKit Feature Showcase**
+🔍 **GuestCtl Feature Showcase**
 
-Ever needed to inspect a VM without booting it? Here's what GuestKit can do in seconds:
+Ever needed to inspect a VM without booting it? Here's what GuestCtl can do in seconds:
 
 **1️⃣ Interactive Exploration**
 ```
-guestkit interactive vm.qcow2
-guestkit> packages | grep apache
-guestkit> cat /etc/ssh/sshd_config
-guestkit> services --enabled
+guestctl interactive vm.qcow2
+guestctl> packages | grep apache
+guestctl> cat /etc/ssh/sshd_config
+guestctl> services --enabled
 ```
 
 **2️⃣ Automated Audits**
@@ -163,7 +163,7 @@ HTML exports with:
 
 **4️⃣ Python Integration**
 ```python
-from guestkit import Guestfs
+from guestctl import Guestfs
 
 with Guestfs() as g:
     g.add_drive_ro("vm.qcow2")
@@ -173,7 +173,7 @@ with Guestfs() as g:
 
 **5️⃣ Smart Assistance**
 ```
-guestkit> pac
+guestctl> pac
 Error: Unknown command: 'pac'
 Suggestion: Did you mean: packages, pkg?
 ```
@@ -188,7 +188,7 @@ Launching on PyPI soon! Who wants early access? 🎉
 
 ## Post 5: The Journey (Storytelling Approach)
 
-**From Problem to Solution: The GuestKit Story**
+**From Problem to Solution: The GuestCtl Story**
 
 3 months ago, I faced a problem: How do you safely inspect potentially compromised VMs in a cloud environment without booting them?
 

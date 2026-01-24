@@ -1,18 +1,18 @@
-# guestkit Quick Start Guide
+# guestctl Quick Start Guide
 
 ## Project Overview
 
-**guestkit** is a Rust library and CLI tool for guest VM disk manipulation, designed to work with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
+**guestctl** is a Rust library and CLI tool for guest VM disk manipulation, designed to work with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
 
 ### Location
 ```
-~/tt/guestkit/
+~/tt/guestctl/
 ```
 
 ## Building
 
 ```bash
-cd ~/tt/guestkit
+cd ~/tt/guestctl
 
 # Build the project
 cargo build
@@ -53,13 +53,13 @@ cargo run -- -v convert --source vm.vmdk --output vm.qcow2
 
 ```toml
 [dependencies]
-guestkit = { path = "~/tt/guestkit" }
+guestctl = { path = "~/tt/guestctl" }
 ```
 
 ### Example Code
 
 ```rust
-use guestkit::converters::DiskConverter;
+use guestctl::converters::DiskConverter;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -106,10 +106,10 @@ cargo run --example retry_example
 
 ## Integration with hyper2kvm
 
-To use guestkit in hyper2kvm:
+To use guestctl in hyper2kvm:
 
-1. **Update hyper2kvm to use guestkit for disk operations**
-2. **Replace Python qemu-img calls with guestkit Rust calls**
+1. **Update hyper2kvm to use guestctl for disk operations**
+2. **Replace Python qemu-img calls with guestctl Rust calls**
 3. **Benefit from memory safety and performance**
 
 Example integration:
@@ -118,9 +118,9 @@ Example integration:
 # In hyper2kvm
 import subprocess
 
-# Call guestkit from Python
+# Call guestctl from Python
 result = subprocess.run([
-    "guestkit", "convert",
+    "guestctl", "convert",
     "--source", source_path,
     "--output", output_path,
     "--compress"
@@ -134,7 +134,7 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 fn convert_disk(source: String, output: String) -> PyResult<()> {
-    // Call guestkit converter
+    // Call guestctl converter
     Ok(())
 }
 ```
@@ -144,7 +144,7 @@ fn convert_disk(source: String, output: String) -> PyResult<()> {
 ### Project Structure
 
 ```
-guestkit/
+guestctl/
 ├── Cargo.toml          # Project configuration
 ├── src/
 │   ├── lib.rs          # Library entry point

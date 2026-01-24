@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the realistic Ubuntu disk image testing infrastructure for GuestKit. These tests create production-quality Ubuntu images with complete system configurations to validate guestfs APIs in realistic scenarios.
+This document describes the realistic Ubuntu disk image testing infrastructure for GuestCtl. These tests create production-quality Ubuntu images with complete system configurations to validate guestfs APIs in realistic scenarios.
 
 ## What Makes These Tests "Realistic"
 

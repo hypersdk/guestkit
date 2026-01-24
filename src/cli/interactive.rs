@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Interactive REPL mode for guestkit CLI
+//! Interactive REPL mode for guestctl CLI
 
 use super::errors::errors;
 use anyhow::{Context, Result};
-use guestkit::Guestfs;
+use guestctl::Guestfs;
 use owo_colors::OwoColorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -17,11 +17,11 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-/// Get the history directory path (~/.guestkit/history/)
+/// Get the history directory path (~/.guestctl/history/)
 fn get_history_dir() -> Result<PathBuf> {
     let home =
         dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
-    let history_dir = home.join(".guestkit").join("history");
+    let history_dir = home.join(".guestctl").join("history");
 
     // Create directory if it doesn't exist
     if !history_dir.exists() {
@@ -46,7 +46,7 @@ fn get_history_file(disk_path: &Path) -> Result<PathBuf> {
     disk_path.to_string_lossy().hash(&mut hasher);
     let hash = hasher.finish();
 
-    let filename = format!("guestkit-{:x}.history", hash);
+    let filename = format!("guestctl-{:x}.history", hash);
     Ok(history_dir.join(filename))
 }
 
@@ -223,7 +223,7 @@ impl InteractiveSession {
     /// Run the interactive session
     pub fn run(&mut self) -> Result<()> {
         loop {
-            let prompt = format!("{}> ", "guestkit".bright_cyan().bold());
+            let prompt = format!("{}> ", "guestctl".bright_cyan().bold());
 
             match self.editor.readline(&prompt) {
                 Ok(line) => {

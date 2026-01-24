@@ -1,8 +1,8 @@
-# guestkit Test Report
+# guestctl Test Report
 
 **Date:** 2026-01-23
 **Version:** 0.1.0
-**Location:** `~/tt/guestkit/`
+**Location:** `~/tt/guestctl/`
 **Status:** ✅ ALL TESTS PASSING
 
 ## Test Summary
@@ -77,14 +77,14 @@ $ cargo build
 ```
 ✅ **Status:** Successful
 ✅ **Time:** ~2 seconds
-✅ **Binary:** `target/debug/guestkit`
+✅ **Binary:** `target/debug/guestctl`
 
 ### Release Build
 ```bash
 $ cargo build --release
 ```
 ✅ **Status:** Successful
-✅ **Binary:** `target/release/guestkit`
+✅ **Binary:** `target/release/guestctl`
 ✅ **Optimized:** Yes (LTO enabled)
 
 ## Code Quality
@@ -130,7 +130,7 @@ $ cargo doc --no-deps
 ## Integration with hyper2kvm
 
 ### Ready for Integration
-✅ **Python Wrapper:** `integration/python/guestkit_wrapper.py`
+✅ **Python Wrapper:** `integration/python/guestctl_wrapper.py`
 ✅ **Documentation:** `integration/README.md`
 ✅ **Tests:** All passing
 ✅ **CLI:** Production-ready
@@ -140,20 +140,20 @@ $ cargo doc --no-deps
 1. **Option 1: Subprocess (Ready Now)**
    ```python
    import subprocess
-   subprocess.run(["guestkit", "convert", "--source", "vm.vmdk", "--output", "vm.qcow2"])
+   subprocess.run(["guestctl", "convert", "--source", "vm.vmdk", "--output", "vm.qcow2"])
    ```
 
 2. **Option 2: Python Wrapper (Ready Now)**
    ```python
-   from guestkit_wrapper import GuestkitWrapper
+   from guestctl_wrapper import GuestkitWrapper
    wrapper = GuestkitWrapper()
    result = wrapper.convert("vm.vmdk", "vm.qcow2", compress=True)
    ```
 
 3. **Option 3: PyO3 Native (Future)**
    ```python
-   import guestkit_py
-   guestkit_py.convert("vm.vmdk", "vm.qcow2", compress=True)
+   import guestctl_py
+   guestctl_py.convert("vm.vmdk", "vm.qcow2", compress=True)
    ```
 
 ## Performance
@@ -191,7 +191,7 @@ $ cargo doc --no-deps
 ## File Structure
 
 ```
-guestkit/
+guestctl/
 ├── Cargo.toml                    ✅ Complete
 ├── README.md                     ✅ Complete
 ├── QUICKSTART.md                 ✅ Complete
@@ -217,7 +217,7 @@ guestkit/
 ├── integration/                  ✅ Complete
 │   ├── README.md                 ✅ Integration guide
 │   ├── python/
-│   │   └── guestkit_wrapper.py   ✅ Python wrapper
+│   │   └── guestctl_wrapper.py   ✅ Python wrapper
 │   └── tests/
 │       └── test_integration.py   ✅ Integration tests (5 tests)
 └── tests/                        ⏳ Future unit tests
@@ -246,7 +246,7 @@ None. All tests passing.
 ### Merge Path
 
 1. **Immediate Use (Recommended)**
-   - Install guestkit: `cargo install --path .`
+   - Install guestctl: `cargo install --path .`
    - Use Python wrapper in hyper2kvm
    - Replace qemu-img subprocess calls
 
@@ -259,8 +259,8 @@ None. All tests passing.
 ## Commands to Verify
 
 ```bash
-# Navigate to guestkit
-cd ~/tt/guestkit
+# Navigate to guestctl
+cd ~/tt/guestctl
 
 # Run all tests
 cargo test                                    # ✅ 9/9 pass
@@ -284,9 +284,9 @@ cargo doc --no-deps                           # ✅ Success
 
 ## Conclusion
 
-**guestkit v0.1.0 is production-ready** for integration with hyper2kvm.
+**guestctl v0.1.0 is production-ready** for integration with hyper2kvm.
 
-All tests pass, code quality is verified, and integration path is clear. The Python wrapper provides a clean interface for hyper2kvm to use guestkit's high-performance disk operations.
+All tests pass, code quality is verified, and integration path is clear. The Python wrapper provides a clean interface for hyper2kvm to use guestctl's high-performance disk operations.
 
 **Recommendation:** ✅ APPROVED FOR MERGE
 

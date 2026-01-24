@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! # guestkit
+//! # guestctl
 //!
 //! A Guest VM toolkit for disk inspection and manipulation, inspired by libguestfs.
 //!
@@ -13,7 +13,7 @@
 //! ## Quick Start
 //!
 //! ```no_run
-//! use guestkit::converters::DiskConverter;
+//! use guestctl::converters::DiskConverter;
 //! use std::path::Path;
 //!
 //! let converter = DiskConverter::new();
@@ -33,7 +33,7 @@
 //!
 //! ## Architecture
 //!
-//! guestkit is organized into focused modules:
+//! guestctl is organized into focused modules:
 //!
 //! - `core` - Error types, retry logic, common types
 //! - `converters` - Disk format conversion

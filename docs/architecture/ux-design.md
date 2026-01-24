@@ -1,4 +1,4 @@
-# GuestKit CLI UX Improvements
+# GuestCtl CLI UX Improvements
 
 ## Overview
 
@@ -125,7 +125,7 @@ The inspect command now organizes information into logical sections similar to s
 
 #### Before
 ```bash
-$ guestkit inspect disk.qcow2 -v
+$ guestctl inspect disk.qcow2 -v
 guestfs: read_file /etc/os-release
 guestfs: read_file /usr/lib/os-release
 guestfs: is_file /etc/hostname
@@ -145,7 +145,7 @@ guestfs: shutdown complete
 
 #### After (with `-v`)
 ```bash
-$ guestkit inspect disk.qcow2 -v
+$ guestctl inspect disk.qcow2 -v
 ══════════════════════════════════════════════════════════════════════
 📀 Disk Image: disk.qcow2
 ══════════════════════════════════════════════════════════════════════
@@ -208,22 +208,22 @@ unicode-width = "0.1"     # Text width calculations
 
 ### Basic Inspection
 ```bash
-$ guestkit inspect ubuntu.qcow2
+$ guestctl inspect ubuntu.qcow2
 ```
 
 ### Detailed Filesystems
 ```bash
-$ guestkit filesystems rhel.qcow2 --detailed
+$ guestctl filesystems rhel.qcow2 --detailed
 ```
 
 ### Verbose Mode (High-Level)
 ```bash
-$ guestkit inspect photon.qcow2 -v
+$ guestctl inspect photon.qcow2 -v
 ```
 
 ### Trace Mode (Full Debug)
 ```bash
-$ guestkit inspect disk.qcow2 --trace
+$ guestctl inspect disk.qcow2 --trace
 ```
 
 ## Design Principles
