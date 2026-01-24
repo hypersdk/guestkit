@@ -377,9 +377,9 @@ g.shutdown()
 - [`examples/python/test_bindings.py`](examples/python/test_bindings.py) - Comprehensive test suite
 
 **Full Documentation:**
-- [`docs/PYTHON_BINDINGS.md`](docs/PYTHON_BINDINGS.md) - Comprehensive Python guide
-- [`docs/PYTHON_API_REFERENCE.md`](docs/PYTHON_API_REFERENCE.md) - Complete API reference with 100+ methods
-- [`PYTHON_BINDINGS_STATUS.md`](PYTHON_BINDINGS_STATUS.md) - Implementation status and build instructions
+- [`docs/guides/PYTHON_BINDINGS.md`](docs/guides/PYTHON_BINDINGS.md) - Comprehensive Python guide
+- [`docs/api/PYTHON_API_REFERENCE.md`](docs/api/PYTHON_API_REFERENCE.md) - Complete API reference with 100+ methods
+- [`docs/status/PYTHON_BINDINGS_STATUS.md`](docs/status/PYTHON_BINDINGS_STATUS.md) - Implementation status and build instructions
 
 **Python API Coverage:**
 - 58 Guestfs methods covering OS inspection, file operations, device management, LVM, archives, and more
@@ -488,22 +488,39 @@ guestkit/
 │       ├── archive_example.py         # Archive operations
 │       ├── extract_files.py           # File extraction
 │       └── README.md                  # Python examples guide
-├── docs/                              # Documentation
-│   ├── PYTHON_BINDINGS.md             # Python guide
-│   ├── PYTHON_API_REFERENCE.md        # Python API reference
-│   ├── OUTPUT_FORMATS.md              # CLI output formats
-│   ├── PROFILES_GUIDE.md              # Inspection profiles
-│   ├── EXPORT_GUIDE.md                # Report export guide
-│   └── COMPARISON_GUIDE.md            # VM comparison guide
+├── docs/                              # Documentation (organized)
+│   ├── README.md                      # Documentation index
+│   ├── guides/                        # User guides
+│   ├── api/                           # API documentation
+│   ├── architecture/                  # Architecture docs
+│   ├── development/                   # Contributor docs
+│   ├── testing/                       # Testing docs
+│   ├── status/                        # Implementation status
+│   └── archive/                       # Historical docs
 ├── pyproject.toml                     # Python package config
 ├── build_python.sh                    # Python build script
-├── PYTHON_BINDINGS_STATUS.md          # Python implementation status
 └── tests/                             # Integration tests
 ```
 
+## Documentation
+
+📚 **Complete documentation is organized in [`docs/`](docs/)**
+
+**Quick Links:**
+- 🚀 **[Quick Start](docs/guides/QUICKSTART.md)** - Get started in minutes
+- 📖 **[CLI Guide](docs/guides/CLI_GUIDE.md)** - Command-line usage
+- 🐍 **[Python Guide](docs/guides/PYTHON_BINDINGS.md)** - Python API guide
+- 🔍 **[API Reference](docs/api/PYTHON_API_REFERENCE.md)** - Complete Python API
+- 🏗️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - System architecture
+- 🧪 **[Testing Guide](docs/testing/TESTING.md)** - How to test
+- 📊 **[Project Status](docs/status/PROJECT_SUMMARY.md)** - Implementation status
+- 🚀 **[Enhancement Roadmap](docs/development/ENHANCEMENT_ROADMAP.md)** - Future plans
+
+See **[docs/README.md](docs/README.md)** for complete documentation index.
+
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
+See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for detailed architecture documentation.
 
 ### Core Modules
 
@@ -721,7 +738,7 @@ sudo python3 test_bindings.py /path/to/disk.img
 
 **Note on Permissions:** Some tests require root access for mounting disk images.
 
-See [docs/TESTING.md](docs/TESTING.md) for complete testing documentation.
+See [docs/testing/TESTING.md](docs/testing/TESTING.md) for complete testing documentation.
 
 ### Code Quality
 
