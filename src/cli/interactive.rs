@@ -4,15 +4,77 @@
 use anyhow::{Context, Result};
 use guestkit::Guestfs;
 use owo_colors::OwoColorize;
+use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
-use rustyline::{DefaultEditor, Result as RustyResult};
+use rustyline::highlight::Highlighter;
+use rustyline::hint::Hinter;
+use rustyline::validate::Validator;
+use rustyline::{Context as RustyContext, Editor, Helper, Result as RustyResult};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+/// Helper for rustyline completion
+struct GuestkitHelper;
+
+impl Helper for GuestkitHelper {}
+impl Hinter for GuestkitHelper {
+    type Hint = String;
+}
+impl Highlighter for GuestkitHelper {}
+impl Validator for GuestkitHelper {}
+
+impl Completer for GuestkitHelper {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        _ctx: &RustyContext<'_>,
+    ) -> RustyResult<(usize, Vec<Pair>)> {
+        let before_cursor = &line[..pos];
+        let parts: Vec<&str> = before_cursor.split_whitespace().collect();
+
+        // Command completion
+        if parts.is_empty() || (parts.len() == 1 && !before_cursor.ends_with(' ')) {
+            let commands = vec![
+                "help", "info", "filesystems", "fs", "mount", "umount", "unmount",
+                "mounts", "ls", "cat", "head", "find", "stat", "download", "dl",
+                "packages", "pkg", "services", "svc", "users", "network", "net",
+                "clear", "cls", "exit", "quit", "q",
+            ];
+
+            let prefix = parts.last().unwrap_or(&"");
+            let matches: Vec<Pair> = commands
+                .iter()
+                .filter(|cmd| cmd.starts_with(prefix))
+                .map(|cmd| Pair {
+                    display: cmd.to_string(),
+                    replacement: cmd.to_string(),
+                })
+                .collect();
+
+            let start = if parts.is_empty() {
+                0
+            } else {
+                before_cursor.len() - prefix.len()
+            };
+
+            return Ok((start, matches));
+        }
+
+        // Future: Path completion would go here
+        // For now, just command completion is implemented
+
+        Ok((0, vec![]))
+    }
+}
 
 /// Interactive session state
 pub struct InteractiveSession {
     handle: Guestfs,
-    editor: DefaultEditor,
+    editor: Editor<GuestkitHelper, rustyline::history::DefaultHistory>,
     disk_path: PathBuf,
     mounted: HashMap<String, String>, // device -> mountpoint
     current_root: Option<String>,
@@ -63,12 +125,14 @@ impl InteractiveSession {
             }
         }
 
-        // Create editor with history
-        let editor = DefaultEditor::new()
+        // Create editor with tab completion
+        let mut editor = Editor::new()
             .context("Failed to create line editor")?;
+        editor.set_helper(Some(GuestkitHelper));
 
         println!();
         println!("{}", "Ready! Type 'help' for commands, 'exit' to quit.".bright_green());
+        println!("{}",  "Tip: Press TAB for command completion".dimmed());
         println!();
 
         Ok(Self {
