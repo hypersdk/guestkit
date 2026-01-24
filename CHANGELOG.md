@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-01-24
 
+### Added - Interactive CLI Mode 🎯
+- **REPL Mode**: Full-featured interactive shell for disk exploration
+- **Persistent Session**: Launch appliance once, run multiple commands
+- **Command History**: Up/down arrows to navigate command history
+- **Auto-Inspection**: Automatically detects and displays OS on startup
+- **20+ Commands**: info, filesystems, mount, ls, cat, find, packages, services, users, network, and more
+- **Colorized Output**: Beautiful colored terminal output
+- **Tab Completion Ready**: Structure in place for command completion
+- **Aliases**: `repl`, `fs`, `pkg`, `svc`, `net`, `dl`, `cls` shortcuts
+- **Usage**: `guestkit interactive disk.qcow2` or `guestkit repl disk.qcow2`
+
+### Added - Async Python API (Prepared, Pending Dependencies) ⏳
+- **AsyncGuestfs Class**: Complete async implementation prepared (commented out)
+- **Type Hints**: Full async type stub definitions ready
+- **Examples**: Comprehensive async inspection examples
+- **Status**: Waiting for pyo3-asyncio to support PyO3 0.22+ (currently only supports 0.21)
+- **Ready to Enable**: Once dependency is updated, just uncomment code and rebuild
+
+### Added - PyPI Publication Setup 📦
+- **GitHub Actions Workflow**: Automated wheel building for Linux (x86_64, aarch64) and macOS (x86_64, aarch64)
+- **PyPI Publishing**: Complete setup for publishing to PyPI via Trusted Publishing (OIDC)
+- **PyPI Publishing Guide**: Comprehensive documentation at `docs/guides/PYPI_PUBLISHING.md`
+- **Test Script**: `scripts/test_pypi_build.sh` for local build verification
+- **Enhanced Metadata**: Updated `pyproject.toml` with complete PyPI metadata
+  - Added Python 3.13 support
+  - Added macOS platform classifier
+  - Added Changelog URL
+  - Minimum Python version: 3.8
+
 ### Added - Quick Win Enhancements ✨
 - **Python Context Manager**: `with Guestfs() as g:` for automatic cleanup
 - **Python Type Hints**: Complete `.pyi` stub file (300+ lines) for IDE autocomplete and mypy support
@@ -29,7 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - Documentation
 - `docs/README.md` - Complete documentation index with navigation guide
-- `ENHANCEMENTS_IMPLEMENTED.md` - Summary of all implemented enhancements (moved to docs/development/)
+- `docs/guides/PYPI_PUBLISHING.md` - Comprehensive PyPI publishing guide
+- `docs/development/NEXT_ENHANCEMENTS.md` - Detailed guides for next 5 priority features
+- `docs/development/ENHANCEMENT_STATUS.md` - Current status and roadmap tracker
+- `docs/development/ENHANCEMENTS_IMPLEMENTED.md` - Summary of all implemented enhancements
 - Enhanced `README.md` with Documentation section and quick links
 - Test scripts for enhancements verification
 

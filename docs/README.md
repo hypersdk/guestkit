@@ -9,6 +9,7 @@ Welcome to the GuestKit documentation! This directory contains all project docum
 Start here if you're learning to use GuestKit!
 
 - **[CLI Guide](guides/CLI_GUIDE.md)** - Command-line interface usage
+- **[Interactive Mode](guides/INTERACTIVE_MODE.md)** - REPL for disk exploration
 - **[Python Bindings](guides/PYTHON_BINDINGS.md)** - Python API guide
 - **[Quick Start](guides/QUICKSTART.md)** - Get started quickly
 - **[Output Formats](guides/OUTPUT_FORMATS.md)** - JSON, YAML, CSV output
@@ -16,6 +17,7 @@ Start here if you're learning to use GuestKit!
 - **[Export Guide](guides/EXPORT_GUIDE.md)** - HTML and Markdown report export
 - **[Comparison Guide](guides/COMPARISON_GUIDE.md)** - VM comparison and diff
 - **[Quick Reference](guides/INSPECTION_QUICK_REF.md)** - Quick command reference
+- **[PyPI Publishing](guides/PYPI_PUBLISHING.md)** - How to publish to PyPI
 - **[Troubleshooting](guides/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ### 📖 [API Documentation](api/) - API References
@@ -40,6 +42,8 @@ Understand how GuestKit works internally.
 
 For contributors and developers extending GuestKit.
 
+- **[Enhancement Status](development/ENHANCEMENT_STATUS.md)** - Current enhancement status and priorities
+- **[Next Enhancements](development/NEXT_ENHANCEMENTS.md)** - Detailed guides for next priority features
 - **[Enhancement Roadmap](development/ENHANCEMENT_ROADMAP.md)** - Future enhancements (100+ ideas)
 - **[Quick Enhancements](development/QUICK_ENHANCEMENTS.md)** - Quick wins to implement
 - **[Enhancements Implemented](development/ENHANCEMENTS_IMPLEMENTED.md)** - What's been done
@@ -101,9 +105,10 @@ Superseded or historical documents for reference.
 3. [Ergonomic API Guide](api/ERGONOMIC_API.md)
 
 ### Contributors
-1. [Enhancement Roadmap](development/ENHANCEMENT_ROADMAP.md)
-2. [Quick Enhancements](development/QUICK_ENHANCEMENTS.md)
-3. [Testing Guide](testing/TESTING.md)
+1. [Enhancement Status](development/ENHANCEMENT_STATUS.md)
+2. [Next Enhancements](development/NEXT_ENHANCEMENTS.md)
+3. [Enhancement Roadmap](development/ENHANCEMENT_ROADMAP.md)
+4. [Testing Guide](testing/TESTING.md)
 
 ### System Administrators
 1. [CLI Guide](guides/CLI_GUIDE.md)

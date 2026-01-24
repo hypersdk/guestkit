@@ -32,6 +32,7 @@ indicatif = "0.17"
 miette = { version = "7.0", features = ["fancy"] }
 owo-colors = "4.0"
 unicode-width = "0.1"
+rustyline = "14.0"
 
 # Utilities
 rand = "0.8"
@@ -69,6 +70,8 @@ sha2 = "0.10"
 
 # PyO3 for Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+# Async support - waiting for pyo3-asyncio to support PyO3 0.22
+# pyo3-asyncio-0-21 = { version = "0.21", features = ["tokio-runtime"], optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
