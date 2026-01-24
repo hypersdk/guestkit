@@ -35,41 +35,84 @@ impl NbdDevice {
         })
     }
 
+    /// Check if NBD module is loaded
+    fn is_nbd_module_loaded() -> bool {
+        if let Ok(output) = Command::new("lsmod").output() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return stdout.lines().any(|line| line.starts_with("nbd "));
+        }
+        false
+    }
+
+    /// Try to load NBD kernel module
+    fn load_nbd_module() -> Result<()> {
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("modprobe");
+            sudo_cmd
+        } else {
+            Command::new("modprobe")
+        };
+
+        let output = cmd
+            .arg("nbd")
+            .arg("max_part=16")
+            .output()
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to execute modprobe: {}", e))
+            })?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!(
+                "Failed to load NBD module: {}. Try manually: sudo modprobe nbd max_part=16",
+                stderr
+            )));
+        }
+
+        // Wait a bit for devices to appear
+        thread::sleep(Duration::from_millis(500));
+
+        Ok(())
+    }
+
+    /// Check if NBD device is in use by checking for qemu-nbd process
+    fn is_nbd_device_in_use(device_num: u32) -> bool {
+        // Check if there's a qemu-nbd process using this device
+        if let Ok(output) = Command::new("pgrep")
+            .arg("-f")
+            .arg(format!("qemu-nbd.*nbd{}", device_num))
+            .output()
+        {
+            return output.status.success() && !output.stdout.is_empty();
+        }
+        false
+    }
+
     /// Find an available NBD device
     fn find_available_device() -> Result<PathBuf> {
+        // First, check if NBD module is loaded
+        if !Self::is_nbd_module_loaded() {
+            eprintln!("NBD kernel module not loaded. Attempting to load...");
+            Self::load_nbd_module()?;
+            eprintln!("NBD module loaded successfully.");
+        }
+
         // Try /dev/nbd0 through /dev/nbd15
         for i in 0..16 {
             let device = PathBuf::from(format!("/dev/nbd{}", i));
             if device.exists() {
-                // Check if device is in use by checking its size
-                let device_str = device.to_str().ok_or_else(|| {
-                    Error::InvalidFormat(format!(
-                        "Device path contains invalid Unicode: {:?}",
-                        device
-                    ))
-                })?;
-
-                if let Ok(output) = Command::new("lsblk")
-                    .arg("-b") // Show sizes in bytes
-                    .arg("-n") // No headings
-                    .arg("-o")
-                    .arg("SIZE")
-                    .arg(device_str)
-                    .output()
-                {
-                    // If size is 0, device is not connected
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    if let Ok(size) = stdout.trim().parse::<u64>() {
-                        if size == 0 {
-                            return Ok(device);
-                        }
-                    }
+                // Check if device is actually in use by qemu-nbd
+                if !Self::is_nbd_device_in_use(i) {
+                    return Ok(device);
                 }
             }
         }
 
         Err(Error::NotFound(
-            "No available NBD devices found. Load nbd kernel module with: sudo modprobe nbd max_part=8".to_string()
+            "No available NBD devices found. All 16 NBD devices are in use. Try disconnecting unused devices with: for i in {0..15}; do sudo qemu-nbd --disconnect /dev/nbd$i; done".to_string()
         ))
     }
 
