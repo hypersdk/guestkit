@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-01-24
+
+### Added - Quick Win Enhancements ✨
+- **Python Context Manager**: `with Guestfs() as g:` for automatic cleanup
+- **Python Type Hints**: Complete `.pyi` stub file (300+ lines) for IDE autocomplete and mypy support
+- **Shell Completion**: Support for Bash, Zsh, Fish, PowerShell, Elvish via `guestkit completion`
+- **Colorized Output**: 15+ color helper functions with status indicators (✓, ✗, ⚠, ℹ, ▶, ■)
+- **Enhanced Documentation**: Organized all docs into structured directories
+
+### Changed - Documentation Organization 📚
+- Reorganized all documentation into `docs/` with clear subdirectories:
+  - `docs/guides/` - User-facing guides (CLI, Python, Quick Start, etc.)
+  - `docs/api/` - API documentation (Python API, Rust API, Migration Guide)
+  - `docs/architecture/` - Architecture and technical docs
+  - `docs/development/` - Contributor documentation (Roadmap, Enhancements)
+  - `docs/testing/` - Testing guides and reports
+  - `docs/status/` - Implementation status and project summaries
+  - `docs/archive/` - Historical/superseded documentation
+- Created comprehensive `docs/README.md` as documentation index
+- Updated all documentation links in README.md
+- Root directory now only contains essential files (README, CHANGELOG, CONTRIBUTING, SECURITY)
+
+### Added - Documentation
+- `docs/README.md` - Complete documentation index with navigation guide
+- `ENHANCEMENTS_IMPLEMENTED.md` - Summary of all implemented enhancements (moved to docs/development/)
+- Enhanced `README.md` with Documentation section and quick links
+- Test scripts for enhancements verification
+
+### Fixed
+- PyO3 compatibility with Python 3.14 via `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1`
+- Type stub file inclusion in maturin builds
+
 ## [0.3.0] - 2026-01-23 - Quick Wins Sprint Complete ✅
 
 ### Added - CLI Tool (guestctl)
