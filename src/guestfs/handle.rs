@@ -303,6 +303,7 @@ impl Guestfs {
     }
 
     /// Get reader reference (internal)
+    #[allow(dead_code)]
     pub(crate) fn reader_mut(&mut self) -> Result<&mut DiskReader> {
         self.reader
             .as_mut()
@@ -326,6 +327,7 @@ impl Guestfs {
     }
 
     /// Get mutable NBD device reference safely (internal)
+    #[allow(dead_code)]
     pub(crate) fn nbd_device_mut(&mut self) -> Result<&mut NbdDevice> {
         self.nbd_device.as_mut().ok_or_else(|| {
             Error::InvalidState(
@@ -335,6 +337,7 @@ impl Guestfs {
     }
 
     /// Convert path to string safely (internal)
+    #[allow(dead_code)]
     pub(crate) fn path_to_string(path: &Path) -> Result<String> {
         path.to_str()
             .ok_or_else(|| {
@@ -354,6 +357,7 @@ impl Guestfs {
     }
 
     /// Decode bytes to UTF-8 string according to policy (internal)
+    #[allow(dead_code)]
     pub(crate) fn decode_utf8(&self, bytes: &[u8]) -> Result<String> {
         match self.utf8_policy {
             Utf8Policy::Strict => String::from_utf8(bytes.to_vec())
