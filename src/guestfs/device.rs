@@ -179,7 +179,9 @@ impl Guestfs {
     pub fn blockdev_getsize64(&self, device: &str) -> Result<i64> {
         self.ensure_ready()?;
 
-        if device.contains("sda") && !device.contains("sda") {
+        let partition_num = self.parse_device_name(device)?;
+
+        if partition_num == 0 {
             // Whole device
             let reader = self
                 .reader
@@ -188,7 +190,6 @@ impl Guestfs {
             Ok(reader.size() as i64)
         } else {
             // Partition - calculate from partition table
-            let partition_num = self.parse_device_name(device)?;
             let partition_table = self.partition_table()?;
 
             let partition = partition_table
