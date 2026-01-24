@@ -4,8 +4,78 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![PyPI](https://img.shields.io/pypi/v/guestctl.svg)](https://pypi.org/project/guestctl/)
+[![Downloads](https://pepy.tech/badge/guestctl)](https://pepy.tech/project/guestctl)
 
 **🎨 New:** Beautiful terminal output with emojis and color coding makes VM inspection actually enjoyable!
+
+## 🚀 Quick Start
+
+### Installation
+
+**Python Package (Recommended):**
+```bash
+pip install guestctl
+```
+
+**From Source:**
+```bash
+git clone https://github.com/ssahani/guestkit
+cd guestkit
+cargo build --release
+```
+
+### Usage
+
+**Inspect a VM disk:**
+```bash
+guestctl inspect vm.qcow2
+```
+
+**Output:**
+```
+💾 Block Devices
+────────────────────────────────────────────────────────────
+  ▪ /dev/sda 8589934592 bytes (8.59 GB)
+
+🖥️  Operating Systems
+────────────────────────────────────────────────────────────
+    🐧 Type:         linux
+    📦 Distribution: ubuntu
+    🏷️ Product:      Ubuntu 22.04 LTS
+    🏠 Hostname:     webserver-prod
+    ⚡ Init system:  systemd
+
+    💻 Language Runtimes
+    ────────────────────────────────────────────────────────
+      🐍 python3
+      🟢 Node.js
+
+    🐳 Container Runtimes
+    ────────────────────────────────────────────────────────
+      🐳 Docker
+```
+
+**Interactive mode:**
+```bash
+guestctl interactive vm.qcow2
+```
+
+**Python API:**
+```python
+from guestctl import Guestfs
+
+with Guestfs() as g:
+    g.add_drive("disk.qcow2")
+    g.launch()
+
+    roots = g.inspect_os()
+    for root in roots:
+        print(f"OS: {g.inspect_get_distro(root)}")
+        users = g.inspect_users(root)
+        for user in users:
+            print(f"User: {user.username}")
+```
 
 ## Features
 
