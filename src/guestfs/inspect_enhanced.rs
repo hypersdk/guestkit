@@ -108,7 +108,9 @@ impl Guestfs {
         }
 
         if !was_mounted {
-            self.umount("/").ok();
+            if !was_mounted {
+                self.umount("/").ok();
+            }
         }
         Ok(interfaces)
     }
@@ -199,7 +201,9 @@ impl Guestfs {
         }
 
         if !was_mounted {
-            self.umount("/").ok();
+            if !was_mounted {
+                self.umount("/").ok();
+            }
         }
         Ok(dns_servers)
     }
@@ -208,8 +212,11 @@ impl Guestfs {
     pub fn inspect_users(&mut self, root: &str) -> Result<Vec<UserAccount>> {
         let mut users = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(users);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(users);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/passwd") {
@@ -227,7 +234,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(users)
     }
 
@@ -235,8 +244,11 @@ impl Guestfs {
     pub fn inspect_ssh_config(&mut self, root: &str) -> Result<HashMap<String, String>> {
         let mut config = HashMap::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(config);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(config);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/ssh/sshd_config") {
@@ -251,14 +263,19 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(config)
     }
 
     /// Check SELinux status
     pub fn inspect_selinux(&mut self, root: &str) -> Result<String> {
-        if self.mount(root, "/").is_err() {
-            return Ok("unknown".to_string());
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok("unknown".to_string());
+            }
         }
 
         let status = if let Ok(content) = self.cat("/etc/selinux/config") {
@@ -274,7 +291,9 @@ impl Guestfs {
             "disabled".to_string()
         };
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(status)
     }
 
@@ -282,8 +301,11 @@ impl Guestfs {
     pub fn inspect_systemd_services(&mut self, root: &str) -> Result<Vec<SystemService>> {
         let mut services = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(services);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(services);
+            }
         }
 
         // Check for enabled services in /etc/systemd/system
@@ -297,14 +319,19 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(services)
     }
 
     /// Get timezone information
     pub fn inspect_timezone(&mut self, root: &str) -> Result<String> {
-        if self.mount(root, "/").is_err() {
-            return Ok("unknown".to_string());
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok("unknown".to_string());
+            }
         }
 
         let timezone = if let Ok(content) = self.cat("/etc/timezone") {
@@ -323,14 +350,19 @@ impl Guestfs {
             "unknown".to_string()
         };
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(timezone)
     }
 
     /// Get locale information
     pub fn inspect_locale(&mut self, root: &str) -> Result<String> {
-        if self.mount(root, "/").is_err() {
-            return Ok("unknown".to_string());
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok("unknown".to_string());
+            }
         }
 
         let locale = if let Ok(content) = self.cat("/etc/locale.conf") {
@@ -360,7 +392,9 @@ impl Guestfs {
             "unknown".to_string()
         };
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(locale)
     }
 
@@ -390,14 +424,19 @@ impl Guestfs {
 
     /// Detect cloud-init
     pub fn inspect_cloud_init(&mut self, root: &str) -> Result<bool> {
-        if self.mount(root, "/").is_err() {
-            return Ok(false);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(false);
+            }
         }
 
         let has_cloud_init = self.exists("/etc/cloud/cloud.cfg").unwrap_or(false)
             || self.exists("/usr/bin/cloud-init").unwrap_or(false);
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(has_cloud_init)
     }
 
@@ -405,8 +444,11 @@ impl Guestfs {
     pub fn inspect_runtimes(&mut self, root: &str) -> Result<HashMap<String, String>> {
         let mut runtimes = HashMap::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(runtimes);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(runtimes);
+            }
         }
 
         // Python
@@ -443,7 +485,9 @@ impl Guestfs {
             runtimes.insert("perl".to_string(), "installed".to_string());
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(runtimes)
     }
 
@@ -451,8 +495,11 @@ impl Guestfs {
     pub fn inspect_container_runtimes(&mut self, root: &str) -> Result<Vec<String>> {
         let mut runtimes = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(runtimes);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(runtimes);
+            }
         }
 
         if self.exists("/usr/bin/docker").unwrap_or(false) {
@@ -473,7 +520,9 @@ impl Guestfs {
             runtimes.push("cri-o".to_string());
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(runtimes)
     }
 
@@ -481,8 +530,11 @@ impl Guestfs {
     pub fn inspect_cron(&mut self, root: &str) -> Result<Vec<String>> {
         let mut cron_jobs = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(cron_jobs);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(cron_jobs);
+            }
         }
 
         // System crontab
@@ -514,7 +566,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(cron_jobs)
     }
 
@@ -522,8 +576,11 @@ impl Guestfs {
     pub fn inspect_systemd_timers(&mut self, root: &str) -> Result<Vec<String>> {
         let mut timers = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(timers);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(timers);
+            }
         }
 
         if let Ok(links) = self.ls("/etc/systemd/system/timers.target.wants") {
@@ -533,7 +590,9 @@ impl Guestfs {
                 .collect();
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(timers)
     }
 
@@ -541,8 +600,11 @@ impl Guestfs {
     pub fn inspect_certificates(&mut self, root: &str) -> Result<Vec<String>> {
         let mut certs = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(certs);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(certs);
+            }
         }
 
         // Common certificate locations
@@ -557,7 +619,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(certs)
     }
 
@@ -565,8 +629,11 @@ impl Guestfs {
     pub fn inspect_kernel_params(&mut self, root: &str) -> Result<HashMap<String, String>> {
         let mut params = HashMap::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(params);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(params);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/sysctl.conf") {
@@ -581,7 +648,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(params)
     }
 
@@ -589,8 +658,11 @@ impl Guestfs {
     pub fn inspect_vm_tools(&mut self, root: &str) -> Result<Vec<String>> {
         let mut tools = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(tools);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(tools);
+            }
         }
 
         // VMware Tools
@@ -617,7 +689,9 @@ impl Guestfs {
             tools.push("hyper-v-tools".to_string());
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(tools)
     }
 
@@ -630,8 +704,11 @@ impl Guestfs {
             kernel_cmdline: String::new(),
         };
 
-        if self.mount(root, "/").is_err() {
-            return Ok(config);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(config);
+            }
         }
 
         // Check GRUB2
@@ -655,7 +732,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(config)
     }
 
@@ -663,8 +742,11 @@ impl Guestfs {
     pub fn inspect_swap(&mut self, root: &str) -> Result<Vec<String>> {
         let mut swap_devices = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(swap_devices);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(swap_devices);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/fstab") {
@@ -682,7 +764,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(swap_devices)
     }
 
@@ -690,8 +774,11 @@ impl Guestfs {
     pub fn inspect_fstab(&mut self, root: &str) -> Result<Vec<(String, String, String)>> {
         let mut mounts = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(mounts);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(mounts);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/fstab") {
@@ -711,7 +798,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(mounts)
     }
 
@@ -721,8 +810,11 @@ impl Guestfs {
     pub fn inspect_windows_software(&mut self, root: &str) -> Result<Vec<WindowsApplication>> {
         let mut applications = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(applications);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(applications);
+            }
         }
 
         // Get SOFTWARE registry hive path
@@ -746,7 +838,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(applications)
     }
 
@@ -754,8 +848,11 @@ impl Guestfs {
     pub fn inspect_windows_services(&mut self, root: &str) -> Result<Vec<WindowsService>> {
         let mut services = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(services);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(services);
+            }
         }
 
         let systemroot = self
@@ -777,7 +874,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(services)
     }
 
@@ -785,8 +884,11 @@ impl Guestfs {
     pub fn inspect_windows_network(&mut self, root: &str) -> Result<Vec<WindowsNetworkAdapter>> {
         let mut adapters = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(adapters);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(adapters);
+            }
         }
 
         let systemroot = self
@@ -812,7 +914,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(adapters)
     }
 
@@ -820,8 +924,11 @@ impl Guestfs {
     pub fn inspect_windows_updates(&mut self, root: &str) -> Result<Vec<WindowsUpdate>> {
         let mut updates = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(updates);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(updates);
+            }
         }
 
         let systemroot = self
@@ -894,7 +1001,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(updates)
     }
 
@@ -907,8 +1016,11 @@ impl Guestfs {
     ) -> Result<Vec<WindowsEventLogEntry>> {
         let mut events = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(events);
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(events);
+            }
         }
 
         let systemroot = self
@@ -934,7 +1046,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(events)
     }
 

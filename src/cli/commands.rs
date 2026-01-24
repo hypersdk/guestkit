@@ -939,20 +939,6 @@ pub fn inspect_image(
                     })
                     .collect();
 
-                if !regular_users.is_empty() {
-                    println!("\n    === User Accounts ===");
-                    println!("      Regular users: {}", regular_users.len());
-                    for user in regular_users.iter().take(10) {
-                        println!(
-                            "        {} (uid: {}, home: {})",
-                            user.username, user.uid, user.home
-                        );
-                    }
-                    if regular_users.len() > 10 {
-                        println!("        ... and {} more", regular_users.len() - 10);
-                    }
-                }
-
                 let system_users: Vec<_> = users
                     .iter()
                     .filter(|u| {
@@ -960,7 +946,30 @@ pub fn inspect_image(
                         uid > 0 && uid < 1000
                     })
                     .collect();
-                println!("      System users: {}", system_users.len());
+
+                if !regular_users.is_empty() || !system_users.is_empty() {
+                    println!();
+                    println!("    {}", "👥 User Accounts".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
+
+                    if !regular_users.is_empty() {
+                        println!("      {} Regular users: {}", "👤".yellow(), regular_users.len().to_string().bright_white().bold());
+                        for user in regular_users.iter().take(10) {
+                            println!("        {} {} {} {} {}",
+                                "•".bright_black(),
+                                user.username.bright_white().bold(),
+                                format!("(uid: {})", user.uid).bright_black(),
+                                "→".bright_black(),
+                                user.home.bright_black()
+                            );
+                        }
+                        if regular_users.len() > 10 {
+                            println!("        {} and {} more...", "•".bright_black(), (regular_users.len() - 10).to_string().bright_black());
+                        }
+                    }
+
+                    println!("      {} System users: {}", "⚙️".bright_black(), system_users.len().to_string().bright_black());
+                }
             }
 
             // SSH Configuration
@@ -969,15 +978,25 @@ pub fn inspect_image(
             }
             if let Ok(ssh_config) = g.inspect_ssh_config(root) {
                 if !ssh_config.is_empty() {
-                    println!("\n    === SSH Configuration ===");
+                    println!();
+                    println!("    {}", "🔐 SSH Configuration".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
                     if let Some(port) = ssh_config.get("Port") {
-                        println!("      Port: {}", port);
+                        println!("      {} Port: {}", "•".bright_black(), port.bright_white().bold());
                     }
                     if let Some(permit_root) = ssh_config.get("PermitRootLogin") {
-                        println!("      PermitRootLogin: {}", permit_root);
+                        if permit_root == "yes" {
+                            println!("      {} PermitRootLogin: {}", "•".bright_black(), permit_root.red());
+                        } else {
+                            println!("      {} PermitRootLogin: {}", "•".bright_black(), permit_root.green());
+                        }
                     }
                     if let Some(password_auth) = ssh_config.get("PasswordAuthentication") {
-                        println!("      PasswordAuthentication: {}", password_auth);
+                        if password_auth == "no" {
+                            println!("      {} PasswordAuth: {}", "•".bright_black(), password_auth.green());
+                        } else {
+                            println!("      {} PasswordAuth: {}", "•".bright_black(), password_auth.yellow());
+                        }
                     }
                 }
             }
@@ -988,13 +1007,15 @@ pub fn inspect_image(
             }
             if let Ok(services) = g.inspect_systemd_services(root) {
                 if !services.is_empty() {
-                    println!("\n    === Systemd Services ===");
-                    println!("      Enabled services: {}", services.len());
+                    println!();
+                    println!("    {}", "⚙️  Systemd Services".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
+                    println!("      {} Enabled: {}", "✓".green(), services.len().to_string().bright_white().bold());
                     for service in services.iter().take(15) {
-                        println!("        {}", service.name);
+                        println!("        {} {}", "•".bright_black(), service.name.bright_white());
                     }
                     if services.len() > 15 {
-                        println!("        ... and {} more", services.len() - 15);
+                        println!("        {} and {} more...", "•".bright_black(), (services.len() - 15).to_string().bright_black());
                     }
                 }
             }
@@ -1005,9 +1026,22 @@ pub fn inspect_image(
             }
             if let Ok(runtimes) = g.inspect_runtimes(root) {
                 if !runtimes.is_empty() {
-                    println!("\n    === Language Runtimes ===");
-                    for (runtime, version) in &runtimes {
-                        println!("      {}: {}", runtime, version);
+                    println!();
+                    println!("    {}", "💻 Language Runtimes".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
+
+                    // Define icons for each runtime
+                    for (runtime, _version) in &runtimes {
+                        let (icon, name) = match runtime.as_str() {
+                            "python3" | "python" | "python2" => ("🐍", runtime.as_str()),
+                            "node" | "nodejs" => ("🟢", "Node.js"),
+                            "java" => ("☕", "Java"),
+                            "ruby" => ("💎", "Ruby"),
+                            "go" => ("🔷", "Go"),
+                            "perl" => ("🐪", "Perl"),
+                            _ => ("📦", runtime.as_str()),
+                        };
+                        println!("      {} {}", icon, name.bright_white().bold());
                     }
                 }
             }
@@ -1018,9 +1052,18 @@ pub fn inspect_image(
             }
             if let Ok(container_runtimes) = g.inspect_container_runtimes(root) {
                 if !container_runtimes.is_empty() {
-                    println!("\n    === Container Runtimes ===");
+                    println!();
+                    println!("    {}", "🐳 Container Runtimes".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
                     for runtime in &container_runtimes {
-                        println!("      {}", runtime);
+                        let (icon, name) = match runtime.as_str() {
+                            "docker" => ("🐳", "Docker"),
+                            "podman" => ("🦭", "Podman"),
+                            "containerd" => ("📦", "containerd"),
+                            "cri-o" => ("🔷", "CRI-O"),
+                            _ => ("📦", runtime.as_str()),
+                        };
+                        println!("      {} {}", icon, name.bright_white().bold());
                     }
                 }
             }
@@ -1034,21 +1077,17 @@ pub fn inspect_image(
                     || !lvm_info.volume_groups.is_empty()
                     || !lvm_info.logical_volumes.is_empty()
                 {
-                    println!("\n    === LVM Configuration ===");
+                    println!();
+                    println!("    {}", "💾 LVM Configuration".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
                     if !lvm_info.physical_volumes.is_empty() {
-                        println!(
-                            "      Physical Volumes: {}",
-                            lvm_info.physical_volumes.join(", ")
-                        );
+                        println!("      {} Physical Volumes: {}", "🔷".bright_blue(), lvm_info.physical_volumes.join(", ").bright_white());
                     }
                     if !lvm_info.volume_groups.is_empty() {
-                        println!("      Volume Groups: {}", lvm_info.volume_groups.join(", "));
+                        println!("      {} Volume Groups: {}", "📦".yellow(), lvm_info.volume_groups.join(", ").bright_white().bold());
                     }
                     if !lvm_info.logical_volumes.is_empty() {
-                        println!(
-                            "      Logical Volumes: {}",
-                            lvm_info.logical_volumes.join(", ")
-                        );
+                        println!("      {} Logical Volumes: {}", "💿".bright_cyan(), lvm_info.logical_volumes.join(", ").bright_white());
                     }
                 }
             }
