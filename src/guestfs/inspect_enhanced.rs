@@ -64,8 +64,12 @@ impl Guestfs {
     pub fn inspect_network(&mut self, root: &str) -> Result<Vec<NetworkInterface>> {
         let mut interfaces = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(interfaces);
+        // Try to mount if not already mounted
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(interfaces);
+            }
         }
 
         // Try different network configuration locations
@@ -103,7 +107,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(interfaces)
     }
 
@@ -173,8 +179,12 @@ impl Guestfs {
     pub fn inspect_dns(&mut self, root: &str) -> Result<Vec<String>> {
         let mut dns_servers = Vec::new();
 
-        if self.mount(root, "/").is_err() {
-            return Ok(dns_servers);
+        // Try to mount if not already mounted
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            if self.mount_ro(root, "/").is_err() {
+                return Ok(dns_servers);
+            }
         }
 
         if let Ok(content) = self.cat("/etc/resolv.conf") {
@@ -188,7 +198,9 @@ impl Guestfs {
             }
         }
 
-        self.umount("/").ok();
+        if !was_mounted {
+            self.umount("/").ok();
+        }
         Ok(dns_servers)
     }
 

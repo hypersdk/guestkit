@@ -900,23 +900,29 @@ pub fn inspect_image(
             }
             if let Ok(interfaces) = g.inspect_network(root) {
                 if !interfaces.is_empty() {
-                    println!("\n    === Network Configuration ===");
+                    println!();
+                    println!("    {}", "🌐 Network Configuration".bright_yellow().bold());
+                    println!("    {}", "─".repeat(56).bright_black());
                     for iface in &interfaces {
-                        println!("      Interface: {}", iface.name);
+                        println!("      {} Interface: {}", "📡".yellow(), iface.name.bright_white().bold());
                         if !iface.ip_address.is_empty() {
-                            println!("        IP: {}", iface.ip_address.join(", "));
+                            println!("        {} IP:   {}", "•".bright_black(), iface.ip_address.join(", ").bright_white());
                         }
                         if !iface.mac_address.is_empty() {
-                            println!("        MAC: {}", iface.mac_address);
+                            println!("        {} MAC:  {}", "•".bright_black(), iface.mac_address.bright_black());
                         }
-                        println!("        DHCP: {}", if iface.dhcp { "yes" } else { "no" });
+                        if iface.dhcp {
+                            println!("        {} DHCP: {}", "•".bright_black(), "yes".green().bold());
+                        } else {
+                            println!("        {} DHCP: {}", "•".bright_black(), "no".bright_black());
+                        }
                     }
                 }
             }
 
             if let Ok(dns_servers) = g.inspect_dns(root) {
                 if !dns_servers.is_empty() {
-                    println!("      DNS Servers: {}", dns_servers.join(", "));
+                    println!("      {} DNS:  {}", "🌐".yellow(), dns_servers.join(", ").bright_white().bold());
                 }
             }
 
