@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-01-24
+## [Unreleased]
+
+## [0.3.0] - 2026-01-25
+
+### Added - Comprehensive System Inspection 🔍
+- **👥 User Accounts**: Regular and system user detection with UID filtering
+- **🔐 SSH Configuration**: Port, PermitRootLogin, PasswordAuthentication with security-aware colors
+- **⚙️ Systemd Services**: Enabled services listing with checkmark icons
+- **💻 Language Runtimes**: Auto-detection for Python, Node.js, Java, Ruby, Go, Perl with language-specific emojis
+- **🐳 Container Runtimes**: Docker, Podman, containerd, CRI-O detection with platform icons
+- **💾 LVM Configuration**: Physical/logical volumes, volume groups inspection
+- **⚙️ System Configuration**: Timezone, locale, SELinux, cloud-init, VM tools detection
+- **🌐 Network Configuration**: Enhanced interface details with DNS servers and DHCP status
+
+### Added - Beautiful Visual Output 🎨
+- **Emoji Icons**: Comprehensive emoji system for visual scanning (💾🗂📁🖥️👥🔐⚙️💻🐳)
+- **Color Coding**: Security-aware colors (green=secure, red=insecure, yellow=warning)
+- **Hierarchical Display**: Clean sections with separators for better readability
+- **Language Icons**: 🐍 Python, ☕ Java, 🟢 Node.js, 💎 Ruby, 🔷 Go, 🐪 Perl
+- **Container Icons**: 🐳 Docker, 🦭 Podman, 📦 containerd, 🔷 CRI-O
+
+### Fixed - Read-Only Disk Support 🔧
+- **Mount Operations**: Fixed all inspection functions to use `mount_ro()` instead of `mount()`
+- **Mount State Tracking**: Proper mount/unmount state management to prevent double operations
+- **Read-Only Compatibility**: All OS detection now works correctly on read-only disk images
 
 ### Added - Interactive CLI Mode 🎯
 - **REPL Mode**: Full-featured interactive shell for disk exploration
