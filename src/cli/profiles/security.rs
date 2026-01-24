@@ -17,25 +17,20 @@ impl InspectionProfile for SecurityProfile {
     }
 
     fn inspect(&self, g: &mut Guestfs, root: &str) -> Result<ProfileReport> {
-        let mut sections = Vec::new();
-
-        // Section 1: SSH Configuration
-        sections.push(self.audit_ssh(g, root));
-
-        // Section 2: User Security
-        sections.push(self.audit_users(g, root));
-
-        // Section 3: Firewall & Network Security
-        sections.push(self.audit_firewall(g, root));
-
-        // Section 4: Mandatory Access Control (SELinux/AppArmor)
-        sections.push(self.audit_mac(g, root));
-
-        // Section 5: Services Security
-        sections.push(self.audit_services(g, root));
-
-        // Section 6: SSL/TLS Certificates
-        sections.push(self.audit_certificates(g, root));
+        let sections = vec![
+            // Section 1: SSH Configuration
+            self.audit_ssh(g, root),
+            // Section 2: User Security
+            self.audit_users(g, root),
+            // Section 3: Firewall & Network Security
+            self.audit_firewall(g, root),
+            // Section 4: Mandatory Access Control (SELinux/AppArmor)
+            self.audit_mac(g, root),
+            // Section 5: Services Security
+            self.audit_services(g, root),
+            // Section 6: SSL/TLS Certificates
+            self.audit_certificates(g, root),
+        ];
 
         // Calculate overall risk
         let overall_risk = self.calculate_risk(&sections);
@@ -136,10 +131,7 @@ impl SecurityProfile {
 
         if let Ok(users) = g.inspect_users(root) {
             // Count users with UID 0 (root equivalents)
-            let root_users: Vec<_> = users
-                .iter()
-                .filter(|u| u.uid == "0")
-                .collect();
+            let root_users: Vec<_> = users.iter().filter(|u| u.uid == "0").collect();
 
             if root_users.len() > 1 {
                 findings.push(Finding {
@@ -148,7 +140,12 @@ impl SecurityProfile {
                     message: format!(
                         "{} users with UID 0: {}",
                         root_users.len(),
-                        root_users.iter().map(|u| &u.username).cloned().collect::<Vec<_>>().join(", ")
+                        root_users
+                            .iter()
+                            .map(|u| &u.username)
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     ),
                     risk_level: Some(RiskLevel::High),
                 });
@@ -296,7 +293,10 @@ impl SecurityProfile {
                         findings.push(Finding {
                             item: format!("{} Service", risky),
                             status: FindingStatus::Fail,
-                            message: format!("{} is enabled (HIGH RISK - unencrypted)", service.name),
+                            message: format!(
+                                "{} is enabled (HIGH RISK - unencrypted)",
+                                service.name
+                            ),
                             risk_level: Some(RiskLevel::High),
                         });
                     }

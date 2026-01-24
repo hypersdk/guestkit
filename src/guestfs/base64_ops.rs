@@ -18,19 +18,18 @@ impl Guestfs {
         }
 
         // Read base64 content from host file
-        let base64_content = std::fs::read_to_string(base64file)
-            .map_err(|e| Error::Io(e))?;
+        let base64_content = std::fs::read_to_string(base64file).map_err(Error::Io)?;
 
         // Decode base64
         let decoded = base64::Engine::decode(
             &base64::engine::general_purpose::STANDARD,
-            base64_content.trim()
-        ).map_err(|e| Error::InvalidFormat(format!("Base64 decode failed: {}", e)))?;
+            base64_content.trim(),
+        )
+        .map_err(|e| Error::InvalidFormat(format!("Base64 decode failed: {}", e)))?;
 
         // Write decoded content to guest file
         let host_path = self.resolve_guest_path(filename)?;
-        std::fs::write(&host_path, decoded)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&host_path, decoded).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -47,18 +46,13 @@ impl Guestfs {
 
         // Read guest file content
         let host_path = self.resolve_guest_path(filename)?;
-        let content = std::fs::read(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let content = std::fs::read(&host_path).map_err(Error::Io)?;
 
         // Encode to base64
-        let encoded = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            &content
-        );
+        let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &content);
 
         // Write base64 content to host file
-        std::fs::write(base64file, encoded)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(base64file, encoded).map_err(Error::Io)?;
 
         Ok(())
     }

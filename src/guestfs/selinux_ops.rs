@@ -87,7 +87,8 @@ impl Guestfs {
 
         cmd.arg(&host_path);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute restorecon: {}", e)))?;
 
         if !output.status.success() {

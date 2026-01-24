@@ -27,9 +27,7 @@ pub enum DiagnosticError {
         code(guestctl::inspect::no_os),
         help("Possible reasons:\n  • Disk is not bootable\n  • Disk is encrypted (check with: guestctl filesystems)\n  • Unsupported OS type\n  • Corrupted disk image\n\nTry:\n  guestctl filesystems {disk}")
     )]
-    NoOsDetected {
-        disk: String,
-    },
+    NoOsDetected { disk: String },
 
     /// Appliance failed to launch
     #[error("Failed to launch guestfs appliance")]
@@ -85,9 +83,7 @@ pub enum DiagnosticError {
         code(guestctl::disk::not_found),
         help("Check:\n  • File path is correct\n  • File exists: ls -l {disk}\n  • You have read permissions")
     )]
-    DiskNotFound {
-        disk: String,
-    },
+    DiskNotFound { disk: String },
 
     /// Invalid disk format
     #[error("Invalid or unsupported disk format: {disk}")]
@@ -107,10 +103,7 @@ pub enum DiagnosticError {
         code(guestctl::permission::denied),
         help("Most operations require root privileges.\n\nRun with sudo:\n  sudo guestctl {command} {disk}")
     )]
-    PermissionDenied {
-        command: String,
-        disk: String,
-    },
+    PermissionDenied { command: String, disk: String },
 
     /// Generic error with context
     #[error("{message}")]
@@ -124,7 +117,12 @@ pub enum DiagnosticError {
 
 impl DiagnosticError {
     /// Create a mount failed error
-    pub fn mount_failed(device: impl Into<String>, mountpoint: impl Into<String>, disk: impl Into<String>, source: anyhow::Error) -> Self {
+    pub fn mount_failed(
+        device: impl Into<String>,
+        mountpoint: impl Into<String>,
+        disk: impl Into<String>,
+        source: anyhow::Error,
+    ) -> Self {
         Self::MountFailed {
             device: device.into(),
             mountpoint: mountpoint.into(),
@@ -135,9 +133,7 @@ impl DiagnosticError {
 
     /// Create a no OS detected error
     pub fn no_os_detected(disk: impl Into<String>) -> Self {
-        Self::NoOsDetected {
-            disk: disk.into(),
-        }
+        Self::NoOsDetected { disk: disk.into() }
     }
 
     /// Create a launch failed error
@@ -190,9 +186,7 @@ impl DiagnosticError {
 
     /// Create a disk not found error
     pub fn disk_not_found(disk: impl Into<String>) -> Self {
-        Self::DiskNotFound {
-            disk: disk.into(),
-        }
+        Self::DiskNotFound { disk: disk.into() }
     }
 
     /// Create an invalid disk format error

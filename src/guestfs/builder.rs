@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Builder pattern for creating Guestfs handles with fluent API
 
-use super::Guestfs;
 use super::handle::DriveConfig;
+use super::Guestfs;
 use crate::core::Result;
 use std::path::Path;
 
@@ -212,11 +212,7 @@ impl GuestfsBuilder {
 
         // Add all configured drives
         for drive in self.drives {
-            guestfs.add_drive_opts(
-                drive.path,
-                drive.readonly,
-                drive.format.as_deref(),
-            )?;
+            guestfs.add_drive_opts(drive.path, drive.readonly, drive.format.as_deref())?;
         }
 
         Ok(guestfs)

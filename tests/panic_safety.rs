@@ -25,7 +25,10 @@ fn test_partition_table_not_loaded() {
 
     // list_partitions requires partition table to be loaded
     let result = g.list_partitions();
-    assert!(result.is_err(), "Should return error when partition table not loaded");
+    assert!(
+        result.is_err(),
+        "Should return error when partition table not loaded"
+    );
 
     // list_devices should still work (doesn't need partition table)
     let result = g.list_devices();
@@ -53,8 +56,8 @@ fn test_operations_without_drives() {
     // Verify we're in error or config state, not panicked
     let state = g.state();
     assert!(
-        state == &guestkit::guestfs::handle::GuestfsState::Error("No drives added".to_string()) ||
-        state == &guestkit::guestfs::handle::GuestfsState::Config
+        state == &guestkit::guestfs::handle::GuestfsState::Error("No drives added".to_string())
+            || state == &guestkit::guestfs::handle::GuestfsState::Config
     );
 }
 
@@ -68,7 +71,10 @@ fn test_invalid_utf8_strict_mode() {
 
     // Should return error, not panic
     let result = g.decode_utf8(&invalid_utf8);
-    assert!(result.is_err(), "Should return error for invalid UTF-8 in strict mode");
+    assert!(
+        result.is_err(),
+        "Should return error for invalid UTF-8 in strict mode"
+    );
 }
 
 #[test]
@@ -81,7 +87,10 @@ fn test_invalid_utf8_lossy_mode() {
 
     // Should succeed with replacement characters
     let result = g.decode_utf8(&invalid_utf8);
-    assert!(result.is_ok(), "Should succeed in lossy mode with replacements");
+    assert!(
+        result.is_ok(),
+        "Should succeed in lossy mode with replacements"
+    );
 }
 
 #[test]
@@ -117,7 +126,10 @@ fn test_operations_after_error_state() {
 
     // Further operations should handle error state gracefully
     let result = g.list_partitions();
-    assert!(result.is_err(), "Operations in error state should return error");
+    assert!(
+        result.is_err(),
+        "Operations in error state should return error"
+    );
 }
 
 #[test]
@@ -186,8 +198,8 @@ fn test_partition_number_validation_boundary() {
 
 #[test]
 fn test_empty_string_handling() {
-    use guestkit::guestfs::validation::Validator;
     use guestkit::guestfs::security_utils::PathValidator;
+    use guestkit::guestfs::validation::Validator;
 
     // Empty strings should be handled gracefully, not panic
     assert!(PathValidator::validate_fs_path("").is_err());

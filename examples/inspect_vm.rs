@@ -56,7 +56,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let part_num = g.part_to_partnum(partition)?;
             if let Some(p) = part_list.iter().find(|p| p.part_num == part_num as i32) {
                 println!("  Start: {} bytes", p.part_start);
-                println!("  Size: {} bytes ({:.2} GB)", p.part_size, p.part_size as f64 / 1e9);
+                println!(
+                    "  Size: {} bytes ({:.2} GB)",
+                    p.part_size,
+                    p.part_size as f64 / 1e9
+                );
             }
         }
     }
@@ -94,7 +98,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Distro: {}", g.inspect_get_distro(root)?);
             println!("  Product: {}", g.inspect_get_product_name(root)?);
             println!("  Arch: {}", g.inspect_get_arch(root)?);
-            println!("  Version: {}.{}",
+            println!(
+                "  Version: {}.{}",
                 g.inspect_get_major_version(root)?,
                 g.inspect_get_minor_version(root)?
             );

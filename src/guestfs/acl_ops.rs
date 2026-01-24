@@ -30,13 +30,17 @@ impl Guestfs {
                 cmd.arg("--default");
             }
             _ => {
-                return Err(Error::InvalidFormat(format!("Invalid ACL type: {}", acltype)));
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid ACL type: {}",
+                    acltype
+                )));
             }
         }
 
         cmd.arg(&host_path);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute getfacl: {}", e)))?;
 
         if !output.status.success() {
@@ -63,8 +67,7 @@ impl Guestfs {
 
         // Write ACL to temporary file
         let temp_acl = format!("/tmp/guestfs-acl-{}.txt", std::process::id());
-        std::fs::write(&temp_acl, acl)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&temp_acl, acl).map_err(Error::Io)?;
 
         let mut cmd = Command::new("setfacl");
 
@@ -77,17 +80,19 @@ impl Guestfs {
             }
             _ => {
                 std::fs::remove_file(&temp_acl).ok();
-                return Err(Error::InvalidFormat(format!("Invalid ACL type: {}", acltype)));
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid ACL type: {}",
+                    acltype
+                )));
             }
         }
 
         cmd.arg(&host_path);
 
-        let output = cmd.output()
-            .map_err(|e| {
-                std::fs::remove_file(&temp_acl).ok();
-                Error::CommandFailed(format!("Failed to execute setfacl: {}", e))
-            })?;
+        let output = cmd.output().map_err(|e| {
+            std::fs::remove_file(&temp_acl).ok();
+            Error::CommandFailed(format!("Failed to execute setfacl: {}", e))
+        })?;
 
         std::fs::remove_file(&temp_acl).ok();
 
@@ -243,12 +248,12 @@ impl Guestfs {
 
         // Write to temporary file
         let temp_acl = format!("/tmp/guestfs-acl-copy-{}.txt", std::process::id());
-        std::fs::write(&temp_acl, &output.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(&temp_acl, &output.stdout).map_err(Error::Io)?;
 
         // Apply to destination
         let output = Command::new("setfacl")
-            .arg("--set-file").arg(&temp_acl)
+            .arg("--set-file")
+            .arg(&temp_acl)
             .arg(&host_dest)
             .output()
             .map_err(|e| {

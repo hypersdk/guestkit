@@ -40,8 +40,8 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n  Setting up partition table...");
     g.part_init("/dev/sda", "gpt")?;
-    g.part_add("/dev/sda", "primary", 2048, 206847)?;      // ~100MB boot
-    g.part_add("/dev/sda", "primary", 206848, -2048)?;     // ~100MB root
+    g.part_add("/dev/sda", "primary", 2048, 206847)?; // ~100MB boot
+    g.part_add("/dev/sda", "primary", 206848, -2048)?; // ~100MB root
 
     // Test 3: Testing part_set_parttype() (Phase 3 API)
     println!("\n[3/10] Testing part_set_parttype()...");
@@ -65,10 +65,27 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
     // Create Fedora-like directory structure
     println!("\n  Creating directory structure...");
     for dir in &[
-        "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64",
-        "/mnt", "/opt", "/proc", "/root", "/run", "/sbin", "/srv",
-        "/sys", "/tmp", "/usr", "/var",
-        "/etc/sysconfig", "/var/log", "/var/lib",
+        "/bin",
+        "/boot",
+        "/dev",
+        "/etc",
+        "/home",
+        "/lib",
+        "/lib64",
+        "/mnt",
+        "/opt",
+        "/proc",
+        "/root",
+        "/run",
+        "/sbin",
+        "/srv",
+        "/sys",
+        "/tmp",
+        "/usr",
+        "/var",
+        "/etc/sysconfig",
+        "/var/log",
+        "/var/lib",
     ] {
         g.mkdir_p(dir)?;
     }
@@ -77,10 +94,16 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n  Creating Fedora release files...");
     g.write("/etc/fedora-release", b"Fedora release 40 (Forty)\n")?;
     g.write("/etc/redhat-release", b"Fedora release 40 (Forty)\n")?;
-    g.write("/etc/os-release", b"NAME=Fedora\nVERSION=\"40 (Forty)\"\nID=fedora\nVERSION_ID=40\n")?;
+    g.write(
+        "/etc/os-release",
+        b"NAME=Fedora\nVERSION=\"40 (Forty)\"\nID=fedora\nVERSION_ID=40\n",
+    )?;
 
     // Create /etc/fstab
-    g.write("/etc/fstab", b"LABEL=root / ext4 defaults 0 1\nLABEL=boot /boot ext4 defaults 0 2\n")?;
+    g.write(
+        "/etc/fstab",
+        b"LABEL=root / ext4 defaults 0 1\nLABEL=boot /boot ext4 defaults 0 2\n",
+    )?;
 
     // Create /etc/hostname
     g.write("/etc/hostname", b"fedora-test.localdomain\n")?;
@@ -112,7 +135,10 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
     println!("  stat size: {} (target file)", stat_result.size);
 
     // The sizes should be different (link metadata vs file content)
-    assert_ne!(lstat_result.size, stat_result.size, "lstat and stat should differ for symlinks");
+    assert_ne!(
+        lstat_result.size, stat_result.size,
+        "lstat and stat should differ for symlinks"
+    );
     println!("  ✓ lstat() correctly doesn't follow symlink");
 
     // Create directory for removal testing
@@ -232,7 +258,10 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                println!("  ⚠ CPIO extraction failed (cpio may not be available): {}", e);
+                println!(
+                    "  ⚠ CPIO extraction failed (cpio may not be available): {}",
+                    e
+                );
             }
         }
 

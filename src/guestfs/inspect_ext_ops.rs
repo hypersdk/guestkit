@@ -22,7 +22,12 @@ impl Guestfs {
         if let Ok(content) = self.cat(&os_release_path) {
             for line in content.lines() {
                 if line.starts_with("VARIANT=") {
-                    return Ok(line.split('=').nth(1).unwrap_or("").trim_matches('"').to_string());
+                    return Ok(line
+                        .split('=')
+                        .nth(1)
+                        .unwrap_or("")
+                        .trim_matches('"')
+                        .to_string());
                 }
             }
         }
@@ -102,7 +107,12 @@ impl Guestfs {
         if let Ok(content) = self.cat(&os_release_path) {
             for line in content.lines() {
                 if line.starts_with("ID=") {
-                    return Ok(line.split('=').nth(1).unwrap_or("").trim_matches('"').to_string());
+                    return Ok(line
+                        .split('=')
+                        .nth(1)
+                        .unwrap_or("")
+                        .trim_matches('"')
+                        .to_string());
                 }
             }
         }
@@ -120,7 +130,10 @@ impl Guestfs {
     /// List applications (version 2)
     ///
     /// Enhanced version of inspect_list_applications
-    pub fn inspect_list_applications2(&mut self, root: &str) -> Result<Vec<(String, String, String)>> {
+    pub fn inspect_list_applications2(
+        &mut self,
+        root: &str,
+    ) -> Result<Vec<(String, String, String)>> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -140,7 +153,11 @@ impl Guestfs {
                         // Parse package string (format: name-version-release)
                         let parts: Vec<&str> = pkg.rsplitn(3, '-').collect();
                         if parts.len() >= 3 {
-                            apps.push((parts[2].to_string(), parts[1].to_string(), parts[0].to_string()));
+                            apps.push((
+                                parts[2].to_string(),
+                                parts[1].to_string(),
+                                parts[0].to_string(),
+                            ));
                         } else if parts.len() >= 2 {
                             apps.push((parts[1].to_string(), parts[0].to_string(), String::new()));
                         } else {
@@ -184,18 +201,30 @@ impl Guestfs {
         let tool = match pkg_format.as_str() {
             "rpm" => {
                 // Check which tool is available (check tdnf first for Photon OS)
-                if self.exists(&format!("{}/usr/bin/tdnf", root)).unwrap_or(false) {
+                if self
+                    .exists(&format!("{}/usr/bin/tdnf", root))
+                    .unwrap_or(false)
+                {
                     "tdnf"
-                } else if self.exists(&format!("{}/usr/bin/dnf", root)).unwrap_or(false) {
+                } else if self
+                    .exists(&format!("{}/usr/bin/dnf", root))
+                    .unwrap_or(false)
+                {
                     "dnf"
-                } else if self.exists(&format!("{}/usr/bin/yum", root)).unwrap_or(false) {
+                } else if self
+                    .exists(&format!("{}/usr/bin/yum", root))
+                    .unwrap_or(false)
+                {
                     "yum"
                 } else {
                     "rpm"
                 }
             }
             "deb" => {
-                if self.exists(&format!("{}/usr/bin/apt", root)).unwrap_or(false) {
+                if self
+                    .exists(&format!("{}/usr/bin/apt", root))
+                    .unwrap_or(false)
+                {
                     "apt"
                 } else {
                     "dpkg"
@@ -214,18 +243,29 @@ impl Guestfs {
     /// Already exists as get_init_system, adding alias for inspection
     pub fn inspect_get_init_system(&mut self, root: &str) -> Result<String> {
         // Check for systemd
-        if self.exists(&format!("{}/run/systemd/system", root)).unwrap_or(false) ||
-           self.exists(&format!("{}/usr/lib/systemd/systemd", root)).unwrap_or(false) {
+        if self
+            .exists(&format!("{}/run/systemd/system", root))
+            .unwrap_or(false)
+            || self
+                .exists(&format!("{}/usr/lib/systemd/systemd", root))
+                .unwrap_or(false)
+        {
             return Ok("systemd".to_string());
         }
 
         // Check for upstart
-        if self.exists(&format!("{}/sbin/initctl", root)).unwrap_or(false) {
+        if self
+            .exists(&format!("{}/sbin/initctl", root))
+            .unwrap_or(false)
+        {
             return Ok("upstart".to_string());
         }
 
         // Check for sysvinit
-        if self.exists(&format!("{}/etc/inittab", root)).unwrap_or(false) {
+        if self
+            .exists(&format!("{}/etc/inittab", root))
+            .unwrap_or(false)
+        {
             return Ok("sysvinit".to_string());
         }
 

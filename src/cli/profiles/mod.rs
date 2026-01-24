@@ -5,13 +5,13 @@ use anyhow::Result;
 use guestkit::Guestfs;
 use serde::{Deserialize, Serialize};
 
-pub mod security;
 pub mod migration;
 pub mod performance;
+pub mod security;
 
-pub use security::SecurityProfile;
 pub use migration::MigrationProfile;
 pub use performance::PerformanceProfile;
+pub use security::SecurityProfile;
 
 /// Risk level for security findings
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -110,8 +110,14 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
 #[allow(dead_code)]
 pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("security", "Security posture assessment and hardening recommendations"),
+        (
+            "security",
+            "Security posture assessment and hardening recommendations",
+        ),
         ("migration", "Migration planning and compatibility analysis"),
-        ("performance", "Performance tuning opportunities and bottleneck detection"),
+        (
+            "performance",
+            "Performance tuning opportunities and bottleneck detection",
+        ),
     ]
 }

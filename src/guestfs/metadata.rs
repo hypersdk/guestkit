@@ -38,8 +38,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         self.metadata_to_stat(&metadata)
     }
@@ -55,8 +54,7 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let metadata = fs::symlink_metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::symlink_metadata(&host_path).map_err(Error::Io)?;
 
         self.metadata_to_stat(&metadata)
     }
@@ -118,14 +116,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.ino())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("Inode numbers not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "Inode numbers not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -144,15 +143,13 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.atime())
         }
 
         #[cfg(not(unix))]
         {
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(|e| Error::Io(e))?;
             if let Ok(accessed) = metadata.accessed() {
                 if let Ok(duration) = accessed.duration_since(std::time::UNIX_EPOCH) {
                     return Ok(duration.as_secs() as i64);
@@ -177,21 +174,21 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.mtime())
         }
 
         #[cfg(not(unix))]
         {
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(|e| Error::Io(e))?;
             if let Ok(modified) = metadata.modified() {
                 if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
                     return Ok(duration.as_secs() as i64);
                 }
             }
-            Err(Error::Unsupported("Modification time not available".to_string()))
+            Err(Error::Unsupported(
+                "Modification time not available".to_string(),
+            ))
         }
     }
 
@@ -210,14 +207,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.ctime())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("Change time not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "Change time not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -236,14 +234,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.uid())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("UID not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "UID not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -262,14 +261,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.gid())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("GID not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "GID not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -285,8 +285,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         #[cfg(unix)]
         {
@@ -320,8 +319,7 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.nlink())
         }
 
@@ -346,14 +344,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.dev())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("Device ID not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "Device ID not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -372,14 +371,15 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.rdev())
         }
 
         #[cfg(not(unix))]
         {
-            Err(Error::Unsupported("Device type not supported on this platform".to_string()))
+            Err(Error::Unsupported(
+                "Device type not supported on this platform".to_string(),
+            ))
         }
     }
 
@@ -398,16 +398,14 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.blocks())
         }
 
         #[cfg(not(unix))]
         {
             // Approximate from file size
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(|e| Error::Io(e))?;
             Ok((metadata.len() + 511) / 512) // Round up to 512-byte blocks
         }
     }
@@ -427,8 +425,7 @@ impl Guestfs {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            let metadata = fs::metadata(&host_path)
-                .map_err(|e| Error::Io(e))?;
+            let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
             Ok(metadata.blksize())
         }
 
@@ -450,8 +447,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         #[cfg(unix)]
         {
@@ -477,8 +473,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         #[cfg(unix)]
         {
@@ -504,8 +499,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         #[cfg(unix)]
         {
@@ -531,8 +525,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let metadata = fs::metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
 
         #[cfg(unix)]
         {
@@ -559,8 +552,7 @@ impl Guestfs {
         let host_path = self.resolve_guest_path(path)?;
 
         // Use symlink_metadata to not follow symlinks
-        let metadata = fs::symlink_metadata(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let metadata = fs::symlink_metadata(&host_path).map_err(Error::Io)?;
 
         Ok(metadata.file_type().is_symlink())
     }

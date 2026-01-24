@@ -11,17 +11,28 @@ impl Guestfs {
     /// Create a partition on a device
     ///
     /// GuestFS API: part_add()
-    pub fn part_add(&mut self, device: &str, prlogex: &str, startsect: i64, endsect: i64) -> Result<()> {
+    pub fn part_add(
+        &mut self,
+        device: &str,
+        prlogex: &str,
+        startsect: i64,
+        endsect: i64,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: part_add {} {} {} {}", device, prlogex, startsect, endsect);
+            eprintln!(
+                "guestfs: part_add {} {} {} {}",
+                device, prlogex, startsect, endsect
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
         // Get NBD device
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         // Use parted to add partition
@@ -29,7 +40,12 @@ impl Guestfs {
             "primary" | "p" => "primary",
             "logical" | "l" => "logical",
             "extended" | "e" => "extended",
-            _ => return Err(Error::InvalidFormat(format!("Invalid partition type: {}", prlogex))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid partition type: {}",
+                    prlogex
+                )))
+            }
         };
 
         let output = Command::new("parted")
@@ -64,7 +80,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("parted")
@@ -97,13 +115,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let label = match parttype {
             "gpt" => "gpt",
             "msdos" | "mbr" => "msdos",
-            _ => return Err(Error::InvalidFormat(format!("Invalid partition table type: {}", parttype))),
+            _ => {
+                return Err(Error::InvalidFormat(format!(
+                    "Invalid partition table type: {}",
+                    parttype
+                )))
+            }
         };
 
         let output = Command::new("parted")
@@ -141,7 +166,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("parted")
@@ -170,12 +197,17 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: part_set_bootable {} {} {}", device, partnum, bootable);
+            eprintln!(
+                "guestfs: part_set_bootable {} {} {}",
+                device, partnum, bootable
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let flag_val = if bootable { "on" } else { "off" };
@@ -212,7 +244,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("parted")
@@ -241,12 +275,17 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: part_set_mbr_id {} {} {:x}", device, partnum, idbyte);
+            eprintln!(
+                "guestfs: part_set_mbr_id {} {} {:x}",
+                device, partnum, idbyte
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("sfdisk")
@@ -279,7 +318,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("sgdisk")
@@ -321,7 +362,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device = self.nbd_device.as_ref()
+        let nbd_device = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
 
         let output = Command::new("sgdisk")

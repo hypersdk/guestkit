@@ -9,7 +9,7 @@
 //! Usage:
 //!   sudo cargo run --example create_disk_fluent
 
-use guestkit::guestfs::{Guestfs, FilesystemType, PartitionTableType};
+use guestkit::guestfs::{FilesystemType, Guestfs, PartitionTableType};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,9 +24,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create guest using builder pattern - fluent and type-safe!
     println!("[1/8] Creating guest with builder pattern...");
     let mut guest = Guestfs::builder()
-        .verbose(false)                    // Control output
-        .autosync(true)                    // Auto-sync on close
-        .identifier("fluent-example")      // Give it a name
+        .verbose(false) // Control output
+        .autosync(true) // Auto-sync on close
+        .identifier("fluent-example") // Give it a name
         .build()?;
 
     // Create sparse disk image
@@ -62,14 +62,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("[6/8] Creating filesystems...");
 
     // VFAT for EFI - fluent builder makes it clear
-    guest.mkfs("/dev/sda1")
-        .vfat()                      // Type-safe filesystem type
-        .label("EFI")                // Clear parameter names
+    guest
+        .mkfs("/dev/sda1")
+        .vfat() // Type-safe filesystem type
+        .label("EFI") // Clear parameter names
         .create()?;
 
     // BTRFS for root - demonstrates different filesystem
-    guest.mkfs("/dev/sda2")
-        .btrfs()                     // Another type-safe option
+    guest
+        .mkfs("/dev/sda2")
+        .btrfs() // Another type-safe option
         .label("rootfs")
         .create()?;
 
@@ -88,28 +90,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Write configuration files
     guest.write("/etc/hostname", b"fluent-example\n")?;
-    guest.write("/etc/fstab",
+    guest.write(
+        "/etc/fstab",
         b"/dev/sda2 / btrfs defaults 0 0\n\
-          /dev/sda1 /boot/efi vfat umask=0077 0 1\n")?;
+          /dev/sda1 /boot/efi vfat umask=0077 0 1\n",
+    )?;
 
-    guest.write("/etc/os-release",
+    guest.write(
+        "/etc/os-release",
         b"NAME=\"Example Linux\"\n\
           VERSION=\"1.0\"\n\
           ID=example\n\
-          PRETTY_NAME=\"Example Linux (Fluent API Demo)\"\n")?;
+          PRETTY_NAME=\"Example Linux (Fluent API Demo)\"\n",
+    )?;
 
     // Create some test files
-    guest.write("/home/README.txt",
+    guest.write(
+        "/home/README.txt",
         b"This disk was created using GuestKit's fluent API!\n\n\
           Key features demonstrated:\n\
           - Builder pattern for guest creation\n\
           - Type-safe filesystem enums (VFAT, BTRFS, etc.)\n\
           - Self-documenting fluent methods\n\
-          - Compile-time safety\n")?;
+          - Compile-time safety\n",
+    )?;
 
     // Verify what we created
     println!("\n--- Verification ---");
-    println!("Hostname: {}", String::from_utf8_lossy(&guest.read_file("/etc/hostname")?).trim());
+    println!(
+        "Hostname: {}",
+        String::from_utf8_lossy(&guest.read_file("/etc/hostname")?).trim()
+    );
     println!("Root filesystem: {}", guest.vfs_type("/dev/sda2")?);
     println!("EFI filesystem: {}", guest.vfs_type("/dev/sda1")?);
 

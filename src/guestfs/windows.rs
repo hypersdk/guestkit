@@ -19,12 +19,7 @@ impl Guestfs {
         }
 
         // Check common Windows systemroot locations
-        let common_paths = vec![
-            "/Windows",
-            "/WINDOWS",
-            "/windows",
-            "/WinNT",
-        ];
+        let common_paths = vec!["/Windows", "/WINDOWS", "/windows", "/WinNT"];
 
         for path in common_paths {
             if self.exists(path)? {

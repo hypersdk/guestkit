@@ -44,8 +44,8 @@
 //! - `orchestrator` - Pipeline orchestration
 //! - `cli` - Command-line interface
 
-pub mod core;
 pub mod converters;
+pub mod core;
 pub mod disk;
 pub mod guestfs;
 
@@ -62,10 +62,10 @@ pub mod orchestrator;
 pub mod python;
 
 // Re-exports for convenience
-pub use core::{Error, Result, RetryConfig};
-pub use core::types::*;
 pub use converters::DiskConverter;
-pub use disk::{DiskReader, PartitionTable, FileSystem};
+pub use core::types::*;
+pub use core::{Error, Result, RetryConfig};
+pub use disk::{DiskReader, FileSystem, PartitionTable};
 pub use guestfs::Guestfs;
 
 #[cfg(feature = "guest-inspect")]

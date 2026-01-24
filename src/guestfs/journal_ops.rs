@@ -134,7 +134,8 @@ impl Guestfs {
         let host_dir = self.resolve_guest_path(directory)?;
 
         let output_file = Command::new("journalctl")
-            .arg("-D").arg(&host_dir)
+            .arg("-D")
+            .arg(&host_dir)
             .arg("--output=export")
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute journalctl: {}", e)))?;
@@ -146,8 +147,7 @@ impl Guestfs {
             )));
         }
 
-        std::fs::write(output, output_file.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(output, output_file.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -165,9 +165,11 @@ impl Guestfs {
         let host_dir = self.resolve_guest_path(directory)?;
 
         let output = Command::new("journalctl")
-            .arg("-D").arg(&host_dir)
+            .arg("-D")
+            .arg(&host_dir)
             .arg("--output=json")
-            .arg("-n").arg(lines.to_string())
+            .arg("-n")
+            .arg(lines.to_string())
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute journalctl: {}", e)))?;
 
@@ -194,7 +196,8 @@ impl Guestfs {
         let host_dir = self.resolve_guest_path(directory)?;
 
         let output = Command::new("journalctl")
-            .arg("-D").arg(&host_dir)
+            .arg("-D")
+            .arg(&host_dir)
             .arg("--verify")
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute journalctl: {}", e)))?;

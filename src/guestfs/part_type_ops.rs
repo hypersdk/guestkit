@@ -20,7 +20,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -62,7 +64,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -95,7 +99,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -131,16 +137,26 @@ impl Guestfs {
     /// Set partition attributes (GPT)
     ///
     /// GuestFS API: part_set_gpt_attributes()
-    pub fn part_set_gpt_attributes(&mut self, device: &str, partnum: i32, attributes: i64) -> Result<()> {
+    pub fn part_set_gpt_attributes(
+        &mut self,
+        device: &str,
+        partnum: i32,
+        attributes: i64,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: part_set_gpt_attributes {} {} {}", device, partnum, attributes);
+            eprintln!(
+                "guestfs: part_set_gpt_attributes {} {} {}",
+                device, partnum, attributes
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -173,7 +189,9 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
@@ -203,7 +221,12 @@ impl Guestfs {
     /// Set MBR partition ID
     ///
     /// Already exists as part_set_mbr_id, adding extended version
-    pub fn part_set_mbr_part_type(&mut self, device: &str, partnum: i32, idbyte: i32) -> Result<()> {
+    pub fn part_set_mbr_part_type(
+        &mut self,
+        device: &str,
+        partnum: i32,
+        idbyte: i32,
+    ) -> Result<()> {
         self.part_set_mbr_id(device, partnum, idbyte)
     }
 }

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Output formatting utilities for CLI
 
+use owo_colors::OwoColorize;
 use serde::Serialize;
 use std::fmt;
-use owo_colors::OwoColorize;
 
 /// Output format options
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum OutputFormat {
     Human,
     Json,
@@ -14,6 +15,7 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
+    #[allow(dead_code)]
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "json" => OutputFormat::Json,
@@ -24,7 +26,11 @@ impl OutputFormat {
 }
 
 /// Format output based on format type
-pub fn format_output<T: Serialize + std::fmt::Debug>(data: &T, format: OutputFormat) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub fn format_output<T: Serialize + std::fmt::Debug>(
+    data: &T,
+    format: OutputFormat,
+) -> Result<String, Box<dyn std::error::Error>> {
     match format {
         OutputFormat::Json => Ok(serde_json::to_string_pretty(data)?),
         OutputFormat::Yaml => Ok(serde_yaml::to_string(data)?),
@@ -33,6 +39,7 @@ pub fn format_output<T: Serialize + std::fmt::Debug>(data: &T, format: OutputFor
 }
 
 /// Pretty print size in human readable format
+#[allow(dead_code)]
 pub fn format_size(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
@@ -53,6 +60,7 @@ pub fn format_size(bytes: u64) -> String {
 }
 
 /// Format duration in human readable format
+#[allow(dead_code)]
 pub fn format_duration(secs: f64) -> String {
     if secs >= 60.0 {
         let mins = (secs / 60.0).floor();
@@ -64,12 +72,14 @@ pub fn format_duration(secs: f64) -> String {
 }
 
 /// Table formatter for aligned output
+#[allow(dead_code)]
 pub struct Table {
     headers: Vec<String>,
     rows: Vec<Vec<String>>,
 }
 
 impl Table {
+    #[allow(dead_code)]
     pub fn new(headers: Vec<String>) -> Self {
         Self {
             headers,
@@ -77,10 +87,12 @@ impl Table {
         }
     }
 
+    #[allow(dead_code)]
     pub fn add_row(&mut self, row: Vec<String>) {
         self.rows.push(row);
     }
 
+    #[allow(dead_code)]
     pub fn print(&self) {
         if self.headers.is_empty() {
             return;
@@ -122,6 +134,7 @@ impl Table {
 }
 
 /// Progress indicator for long operations
+#[allow(dead_code)]
 pub struct ProgressBar {
     total: u64,
     current: u64,
@@ -129,6 +142,7 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
+    #[allow(dead_code)]
     pub fn new(total: u64) -> Self {
         Self {
             total,
@@ -137,17 +151,20 @@ impl ProgressBar {
         }
     }
 
+    #[allow(dead_code)]
     pub fn update(&mut self, current: u64) {
         self.current = current;
         self.draw();
     }
 
+    #[allow(dead_code)]
     pub fn finish(&mut self) {
         self.current = self.total;
         self.draw();
         println!();
     }
 
+    #[allow(dead_code)]
     fn draw(&self) {
         let percentage = if self.total > 0 {
             (self.current as f64 / self.total as f64 * 100.0) as u8
@@ -163,10 +180,12 @@ impl ProgressBar {
 
         let empty = self.width - filled;
 
-        print!("\r[{}{}] {}%",
-               "=".repeat(filled),
-               " ".repeat(empty),
-               percentage);
+        print!(
+            "\r[{}{}] {}%",
+            "=".repeat(filled),
+            " ".repeat(empty),
+            percentage
+        );
 
         use std::io::Write;
         std::io::stdout().flush().ok();

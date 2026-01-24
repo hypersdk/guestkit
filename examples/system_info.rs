@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let disk_path = &args[1];
 
-    println!("=== GuestKit System Information ===" );
+    println!("=== GuestKit System Information ===");
     println!("Image: {}\n", disk_path);
 
     // Create GuestFS handle using builder pattern
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match g.get_osinfo() {
         Ok(osinfo) => {
             println!("{}", osinfo);
-        },
+        }
         Err(e) => println!("Error: {}", e),
     }
 
@@ -113,11 +113,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 println!("      {}", line);
                             }
                         }
-                    },
+                    }
                     Err(_) => println!("    (No configuration found)"),
                 }
             }
-        },
+        }
         Err(e) => println!("Error listing interfaces: {}", e),
     }
 
@@ -130,7 +130,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  {}", server);
                 }
             }
-        },
+        }
         Err(e) => println!("\nDNS: Error - {}", e),
     }
 
@@ -150,7 +150,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  ... and {} more", packages.len() - 10);
                 }
             }
-        },
+        }
         Err(_) => {}
     }
 
@@ -167,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  ... and {} more", packages.len() - 10);
                 }
             }
-        },
+        }
         Err(_) => {}
     }
 
@@ -183,7 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if users.len() > 10 {
                 println!("  ... and {} more", users.len() - 10);
             }
-        },
+        }
         Err(e) => println!("Error listing users: {}", e),
     }
 
@@ -196,7 +196,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if groups.len() > 10 {
                 println!("  ... and {} more", groups.len() - 10);
             }
-        },
+        }
         Err(e) => println!("Error listing groups: {}", e),
     }
 
@@ -212,7 +212,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if units.len() > 10 {
                 println!("  ... and {} more", units.len() - 10);
             }
-        },
+        }
         Err(e) => println!("Error: {}", e),
     }
 
@@ -221,7 +221,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match g.df_h() {
         Ok(df_output) => {
             println!("{}", df_output);
-        },
+        }
         Err(e) => println!("Error: {}", e),
     }
 

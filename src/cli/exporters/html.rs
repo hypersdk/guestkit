@@ -61,11 +61,23 @@ pub struct InspectionReportTemplate {
 
 /// Generate HTML report from inspection data
 pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
-    let vm_name = report.os.hostname.clone().unwrap_or_else(|| "Unknown".to_string());
+    let vm_name = report
+        .os
+        .hostname
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    let os_type = report.os.os_type.clone().unwrap_or_else(|| "Unknown".to_string());
-    let distro = report.os.distribution.clone().unwrap_or_else(|| "Unknown".to_string());
+    let os_type = report
+        .os
+        .os_type
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
+    let distro = report
+        .os
+        .distribution
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
 
     let version = if let Some(ref v) = report.os.version {
         format!("{}.{}", v.major, v.minor)
@@ -73,20 +85,42 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
         "Unknown".to_string()
     };
 
-    let arch = report.os.architecture.clone().unwrap_or_else(|| "Unknown".to_string());
-    let hostname = report.os.hostname.clone().unwrap_or_else(|| "Unknown".to_string());
-    let product_name = report.os.product_name.clone().unwrap_or_else(|| "Unknown".to_string());
-    let package_format = report.os.package_format.clone().unwrap_or_else(|| "Unknown".to_string());
-    let package_manager = report.os.package_manager.clone().unwrap_or_else(|| "Unknown".to_string());
+    let arch = report
+        .os
+        .architecture
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
+    let hostname = report
+        .os
+        .hostname
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
+    let product_name = report
+        .os
+        .product_name
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
+    let package_format = report
+        .os
+        .package_format
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
+    let package_manager = report
+        .os
+        .package_manager
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
 
     // Convert packages
     let packages: Vec<PackageInfo> = if let Some(ref pkg_section) = report.packages {
-        // Take first 100 packages for HTML display
-        pkg_section.kernels.iter()
+        // Take kernels for HTML display
+        pkg_section
+            .kernels
+            .iter()
             .take(100)
             .map(|k| PackageInfo {
                 name: k.clone(),
-                version: "kernel".to_string(),
+                version: format!("{} package", pkg_section.format),
             })
             .collect()
     } else {
@@ -95,7 +129,9 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
 
     // Convert services
     let services: Vec<ServiceInfo> = if let Some(ref svc_section) = report.services {
-        svc_section.enabled_services.iter()
+        svc_section
+            .enabled_services
+            .iter()
             .map(|s| ServiceInfo {
                 name: s.name.clone(),
                 state: s.state.clone(),
@@ -107,7 +143,9 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
 
     // Convert users
     let users: Vec<UserInfo> = if let Some(ref user_section) = report.users {
-        user_section.regular_users.iter()
+        user_section
+            .regular_users
+            .iter()
             .map(|u| UserInfo {
                 username: u.username.clone(),
                 uid: u.uid.clone(),
@@ -121,7 +159,8 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
     // Convert network interfaces
     let network: Vec<NetworkInfo> = if let Some(ref net_section) = report.network {
         if let Some(ref interfaces) = net_section.interfaces {
-            interfaces.iter()
+            interfaces
+                .iter()
                 .map(|i| NetworkInfo {
                     name: i.name.clone(),
                     ip: i.ip_address.join(", "),

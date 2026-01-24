@@ -9,7 +9,11 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
     let mut md = String::new();
 
     // Header
-    let vm_name = report.os.hostname.clone().unwrap_or_else(|| "Unknown".to_string());
+    let vm_name = report
+        .os
+        .hostname
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     md.push_str(&format!("# VM Inspection Report: {}\n\n", vm_name));
@@ -28,7 +32,10 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
     }
 
     if let Some(ref version) = report.os.version {
-        md.push_str(&format!("- **Version:** {}.{}\n", version.major, version.minor));
+        md.push_str(&format!(
+            "- **Version:** {}.{}\n",
+            version.major, version.minor
+        ));
     }
 
     if let Some(ref arch) = report.os.architecture {
@@ -51,11 +58,11 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
         md.push_str(&format!("- **Package Management:** {}\n", pkg_mgmt));
     }
 
-    md.push_str("\n");
+    md.push('\n');
 
     // Packages
     if let Some(ref packages) = report.packages {
-        md.push_str(&format!("## Packages\n\n"));
+        md.push_str("## Packages\n\n");
         md.push_str(&format!("**Total Packages:** {}\n\n", packages.count));
 
         if !packages.kernels.is_empty() {
@@ -63,14 +70,17 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
             for kernel in &packages.kernels {
                 md.push_str(&format!("- {}\n", kernel));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
     }
 
     // Services
     if let Some(ref services) = report.services {
         md.push_str("## Services\n\n");
-        md.push_str(&format!("**Enabled Services:** {}\n\n", services.enabled_services.len()));
+        md.push_str(&format!(
+            "**Enabled Services:** {}\n\n",
+            services.enabled_services.len()
+        ));
 
         if !services.enabled_services.is_empty() {
             md.push_str("| Service | State |\n");
@@ -81,18 +91,27 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
             }
 
             if services.enabled_services.len() > 50 {
-                md.push_str(&format!("\n*...and {} more services*\n", services.enabled_services.len() - 50));
+                md.push_str(&format!(
+                    "\n*...and {} more services*\n",
+                    services.enabled_services.len() - 50
+                ));
             }
 
-            md.push_str("\n");
+            md.push('\n');
         }
     }
 
     // Users
     if let Some(ref users) = report.users {
         md.push_str("## User Accounts\n\n");
-        md.push_str(&format!("**Regular Users:** {}\n", users.regular_users.len()));
-        md.push_str(&format!("**System Accounts:** {}\n\n", users.system_users_count));
+        md.push_str(&format!(
+            "**Regular Users:** {}\n",
+            users.regular_users.len()
+        ));
+        md.push_str(&format!(
+            "**System Accounts:** {}\n\n",
+            users.system_users_count
+        ));
 
         if !users.regular_users.is_empty() {
             md.push_str("### Regular Users\n\n");
@@ -100,10 +119,13 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
             md.push_str("|----------|-----|----------------|\n");
 
             for user in &users.regular_users {
-                md.push_str(&format!("| {} | {} | {} |\n", user.username, user.uid, user.home));
+                md.push_str(&format!(
+                    "| {} | {} | {} |\n",
+                    user.username, user.uid, user.home
+                ));
             }
 
-            md.push_str("\n");
+            md.push('\n');
         }
     }
 
@@ -119,7 +141,8 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
 
             for iface in interfaces {
                 let dhcp = if iface.dhcp { "Yes" } else { "No" };
-                md.push_str(&format!("| {} | {} | {} | {} |\n",
+                md.push_str(&format!(
+                    "| {} | {} | {} | {} |\n",
                     iface.name,
                     iface.ip_address.join(", "),
                     iface.mac_address,
@@ -127,7 +150,7 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
                 ));
             }
 
-            md.push_str("\n");
+            md.push('\n');
         }
 
         if let Some(ref dns) = network.dns_servers {
@@ -136,10 +159,9 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
                 for server in dns {
                     md.push_str(&format!("- {}\n", server));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
         }
-
     }
 
     // Filesystems
@@ -152,14 +174,13 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
             md.push_str("|--------|-------------|------------------|\n");
 
             for fs in fstab_mounts {
-                md.push_str(&format!("| {} | {} | {} |\n",
-                    fs.device,
-                    fs.mountpoint,
-                    fs.fstype
+                md.push_str(&format!(
+                    "| {} | {} | {} |\n",
+                    fs.device, fs.mountpoint, fs.fstype
                 ));
             }
 
-            md.push_str("\n");
+            md.push('\n');
         }
     }
 
@@ -173,7 +194,7 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
                 for pv in &lvm.physical_volumes {
                     md.push_str(&format!("- {}\n", pv));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
 
             if !lvm.volume_groups.is_empty() {
@@ -181,7 +202,7 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
                 for vg in &lvm.volume_groups {
                     md.push_str(&format!("- {}\n", vg));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
 
             if !lvm.logical_volumes.is_empty() {
@@ -189,7 +210,7 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
                 for lv in &lvm.logical_volumes {
                     md.push_str(&format!("- {}\n", lv));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
         }
     }
@@ -206,8 +227,7 @@ pub fn generate_markdown_report(report: &InspectionReport) -> Result<String> {
             md.push_str(&format!("- **SELinux:** {}\n", selinux));
         }
 
-
-        md.push_str("\n");
+        md.push('\n');
     }
 
     // Footer

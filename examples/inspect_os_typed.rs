@@ -9,7 +9,7 @@
 //! Usage:
 //!   sudo cargo run --example inspect_os_typed <disk-image>
 
-use guestkit::guestfs::{Guestfs, OsType, Distro, PackageManager};
+use guestkit::guestfs::{Distro, Guestfs, OsType, PackageManager};
 use std::env;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

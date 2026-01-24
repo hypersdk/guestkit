@@ -108,9 +108,8 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let link_target = fs::read_link(&host_path).map_err(|e| {
-            Error::NotFound(format!("Failed to read symlink {}: {}", path, e))
-        })?;
+        let link_target = fs::read_link(&host_path)
+            .map_err(|e| Error::NotFound(format!("Failed to read symlink {}: {}", path, e)))?;
 
         Ok(link_target.to_string_lossy().to_string())
     }
@@ -129,15 +128,14 @@ impl Guestfs {
 
         #[cfg(unix)]
         {
-            std::os::unix::fs::symlink(target, &linkname_path).map_err(|e| {
-                Error::CommandFailed(format!("Failed to create symlink: {}", e))
-            })?;
+            std::os::unix::fs::symlink(target, &linkname_path)
+                .map_err(|e| Error::CommandFailed(format!("Failed to create symlink: {}", e)))?;
         }
 
         #[cfg(not(unix))]
         {
             return Err(Error::Unsupported(
-                "Symbolic links are only supported on Unix systems".to_string()
+                "Symbolic links are only supported on Unix systems".to_string(),
             ));
         }
 
@@ -157,9 +155,8 @@ impl Guestfs {
         let target_path = self.resolve_guest_path(target)?;
         let linkname_path = self.resolve_guest_path(linkname)?;
 
-        fs::hard_link(&target_path, &linkname_path).map_err(|e| {
-            Error::CommandFailed(format!("Failed to create hard link: {}", e))
-        })
+        fs::hard_link(&target_path, &linkname_path)
+            .map_err(|e| Error::CommandFailed(format!("Failed to create hard link: {}", e)))
     }
 
     /// Create hard link (forced)
@@ -255,13 +252,7 @@ impl Guestfs {
         let attrs: Vec<String> = stdout
             .lines()
             .filter(|line| line.contains('='))
-            .map(|line| {
-                line.split('=')
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .to_string()
-            })
+            .map(|line| line.split('=').next().unwrap_or("").trim().to_string())
             .collect();
 
         Ok(attrs)
@@ -293,11 +284,7 @@ impl Guestfs {
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Parse lsattr output (format: "flags filename")
-        let attrs = stdout
-            .split_whitespace()
-            .next()
-            .unwrap_or("")
-            .to_string();
+        let attrs = stdout.split_whitespace().next().unwrap_or("").to_string();
 
         Ok(attrs)
     }

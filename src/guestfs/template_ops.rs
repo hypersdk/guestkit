@@ -60,8 +60,12 @@ impl Guestfs {
     /// Apply template variables
     ///
     /// Additional functionality for template processing
-    pub fn apply_template(&mut self, template_file: &str, output_file: &str,
-                          variables: &[(String, String)]) -> Result<()> {
+    pub fn apply_template(
+        &mut self,
+        template_file: &str,
+        output_file: &str,
+        variables: &[(String, String)],
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -118,7 +122,10 @@ impl Guestfs {
         if let Some(ip) = ip_address {
             // This is simplified - real implementation would update specific network config
             let network_config = format!("IPADDR={}\n", ip);
-            let _ = self.write("/etc/sysconfig/network-scripts/ifcfg-eth0", network_config.as_bytes());
+            let _ = self.write(
+                "/etc/sysconfig/network-scripts/ifcfg-eth0",
+                network_config.as_bytes(),
+            );
         }
 
         // Generate new SSH host keys

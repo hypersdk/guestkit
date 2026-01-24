@@ -57,15 +57,17 @@ impl Guestfs {
             let device_name = format!("/dev/sda{}", partition.number);
 
             // Try to detect filesystem
-            let reader = self.reader.as_mut()
+            let reader = self
+                .reader
+                .as_mut()
                 .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
             if let Ok(fs) = FileSystem::detect(reader, partition) {
                 // Check if this looks like a root filesystem
                 match fs.fs_type() {
-                    crate::disk::FileSystemType::Ext |
-                    crate::disk::FileSystemType::Xfs |
-                    crate::disk::FileSystemType::Btrfs |
-                    crate::disk::FileSystemType::Ntfs => {
+                    crate::disk::FileSystemType::Ext
+                    | crate::disk::FileSystemType::Xfs
+                    | crate::disk::FileSystemType::Btrfs
+                    | crate::disk::FileSystemType::Ntfs => {
                         // This could be a root partition
                         roots.push(device_name);
                     }
@@ -89,7 +91,8 @@ impl Guestfs {
         // Clone partition to avoid borrow checker issues
         let partition = {
             let partition_table = self.partition_table()?;
-            partition_table.partitions()
+            partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
@@ -97,15 +100,17 @@ impl Guestfs {
         };
 
         // Detect filesystem
-        let reader = self.reader.as_mut()
+        let reader = self
+            .reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
         match fs.fs_type() {
             crate::disk::FileSystemType::Ntfs => Ok("windows".to_string()),
-            crate::disk::FileSystemType::Ext |
-            crate::disk::FileSystemType::Xfs |
-            crate::disk::FileSystemType::Btrfs => Ok("linux".to_string()),
+            crate::disk::FileSystemType::Ext
+            | crate::disk::FileSystemType::Xfs
+            | crate::disk::FileSystemType::Btrfs => Ok("linux".to_string()),
             _ => Ok("unknown".to_string()),
         }
     }
@@ -126,7 +131,8 @@ impl Guestfs {
         // Clone partition to avoid borrow checker issues
         let partition = {
             let partition_table = self.partition_table()?;
-            partition_table.partitions()
+            partition_table
+                .partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
@@ -134,7 +140,9 @@ impl Guestfs {
         };
 
         // Detect filesystem
-        let reader = self.reader.as_mut()
+        let reader = self
+            .reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
@@ -168,7 +176,8 @@ impl Guestfs {
             self.mount(root, "/").ok();
         }
 
-        let os_release_content = self.cat("/etc/os-release")
+        let os_release_content = self
+            .cat("/etc/os-release")
             .or_else(|_| self.cat("/usr/lib/os-release"))?;
 
         if !was_mounted {
@@ -255,7 +264,8 @@ impl Guestfs {
             self.mount(root, "/").ok();
         }
 
-        let hostname = self.cat("/etc/hostname")
+        let hostname = self
+            .cat("/etc/hostname")
             .map(|content| content.trim().to_string())
             .unwrap_or_else(|_| "localhost".to_string());
 
@@ -383,7 +393,7 @@ impl OsRelease {
         // Parse version into major.minor
         let (version_major, version_minor) = if !version_id.is_empty() {
             let parts: Vec<&str> = version_id.split('.').collect();
-            let major = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+            let major = parts.first().and_then(|s| s.parse().ok()).unwrap_or(0);
             let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
             (major, minor)
         } else {

@@ -15,7 +15,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("Usage: {} <disk-image> [luks-passphrase]", args[0]);
-        eprintln!("Example: sudo {} /path/to/encrypted-vm.qcow2 mypassword", args[0]);
+        eprintln!(
+            "Example: sudo {} /path/to/encrypted-vm.qcow2 mypassword",
+            args[0]
+        );
         eprintln!("\n⚠️  Requires sudo/root, cryptsetup, and lvm2 packages");
         std::process::exit(1);
     }
@@ -69,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Closing LUKS device...");
                 g.luks_close("cryptroot")?;
                 println!("✓ LUKS device closed");
-            },
+            }
             Err(e) => {
                 println!("✗ Failed to open LUKS device: {}", e);
                 println!("  (This is normal if the passphrase is incorrect)");
@@ -130,7 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("\nDeactivating volume groups...");
                         g.vg_activate_all(false)?;
                         println!("✓ Volume groups deactivated");
-                    },
+                    }
                     Err(e) => {
                         println!("✗ Failed to activate VGs: {}", e);
                         println!("  (This is normal if no VGs exist)");
@@ -139,7 +142,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 println!("\nNo LVM volume groups found");
             }
-        },
+        }
         Err(e) => {
             println!("✗ VG scan failed: {}", e);
             println!("  (This is normal if no LVM is present)");

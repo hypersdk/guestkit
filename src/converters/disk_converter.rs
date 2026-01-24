@@ -2,10 +2,10 @@
 //! Disk format converter using qemu-img
 
 use crate::core::{ConversionResult, DiskFormat, Error, Result};
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-use serde_json::Value;
 
 /// Disk format converter
 pub struct DiskConverter {
@@ -90,8 +90,7 @@ impl DiskConverter {
         log::debug!("Executing: {:?}", cmd);
         match cmd.output() {
             Ok(output) if output.status.success() => {
-                let metadata = std::fs::metadata(output_path)
-                    .map_err(|e| Error::Io(e))?;
+                let metadata = std::fs::metadata(output_path).map_err(Error::Io)?;
                 let duration = start.elapsed().as_secs_f64();
 
                 log::info!(

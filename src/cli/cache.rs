@@ -2,11 +2,11 @@
 //! Inspection result caching
 
 use crate::cli::formatters::InspectionReport;
-use anyhow::{Result, Context};
-use std::path::{Path, PathBuf};
+use anyhow::{Context, Result};
+use sha2::{Digest, Sha256};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use sha2::{Sha256, Digest};
 
 /// Cache manager for inspection results
 pub struct InspectionCache {
@@ -41,7 +41,8 @@ impl InspectionCache {
         let metadata = fs::metadata(&abs_path)
             .with_context(|| format!("Could not read metadata: {}", abs_path.display()))?;
 
-        let mtime = metadata.modified()
+        let mtime = metadata
+            .modified()
             .unwrap_or(SystemTime::UNIX_EPOCH)
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
@@ -69,11 +70,10 @@ impl InspectionCache {
         }
 
         // Read cached result
-        let content = fs::read_to_string(&cache_file)
-            .context("Failed to read cache file")?;
+        let content = fs::read_to_string(&cache_file).context("Failed to read cache file")?;
 
-        let report: InspectionReport = serde_json::from_str(&content)
-            .context("Failed to parse cached inspection report")?;
+        let report: InspectionReport =
+            serde_json::from_str(&content).context("Failed to parse cached inspection report")?;
 
         log::debug!("Cache hit for {}", image_path.display());
         Ok(Some(report))

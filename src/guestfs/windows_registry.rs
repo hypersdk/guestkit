@@ -263,11 +263,11 @@ pub fn parse_evtx_file(evtx_path: &Path, _limit: usize) -> Result<Vec<WindowsEve
     }
 
     // Get file metadata
-    let metadata = std::fs::metadata(evtx_path)
-        .map_err(|e| Error::Io(e))?;
+    let metadata = std::fs::metadata(evtx_path).map_err(Error::Io)?;
 
     let file_size = metadata.len();
-    let channel_name = evtx_path.file_stem()
+    let channel_name = evtx_path
+        .file_stem()
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown");
 

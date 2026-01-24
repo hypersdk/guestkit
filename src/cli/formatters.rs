@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Output formatters for inspection results
 
-use guestkit::guestfs::inspect_enhanced::*;
 use anyhow::Result;
+use guestkit::guestfs::inspect_enhanced::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -236,6 +236,7 @@ pub struct CsvFormatter {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum CsvDataType {
     Users,
     Services,
@@ -249,9 +250,9 @@ impl OutputFormatter for CsvFormatter {
         match self.data_type {
             CsvDataType::Users => {
                 if let Some(users) = &report.users {
-                    wtr.write_record(&["username", "uid", "gid", "home", "shell"])?;
+                    wtr.write_record(["username", "uid", "gid", "home", "shell"])?;
                     for user in &users.regular_users {
-                        wtr.write_record(&[
+                        wtr.write_record([
                             &user.username,
                             &user.uid,
                             &user.gid,
@@ -263,9 +264,9 @@ impl OutputFormatter for CsvFormatter {
             }
             CsvDataType::Services => {
                 if let Some(services) = &report.services {
-                    wtr.write_record(&["name", "enabled", "state"])?;
+                    wtr.write_record(["name", "enabled", "state"])?;
                     for service in &services.enabled_services {
-                        wtr.write_record(&[
+                        wtr.write_record([
                             &service.name,
                             &service.enabled.to_string(),
                             &service.state,
@@ -275,9 +276,9 @@ impl OutputFormatter for CsvFormatter {
             }
             CsvDataType::Packages => {
                 if let Some(packages) = &report.packages {
-                    wtr.write_record(&["kernel_version", "format", "total_count"])?;
+                    wtr.write_record(["kernel_version", "format", "total_count"])?;
                     for kernel in &packages.kernels {
-                        wtr.write_record(&[kernel, &packages.format, &packages.count.to_string()])?;
+                        wtr.write_record([kernel, &packages.format, &packages.count.to_string()])?;
                     }
                 }
             }

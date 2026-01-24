@@ -28,29 +28,41 @@ struct UbuntuVersion {
 fn ubuntu_presets() -> HashMap<&'static str, UbuntuVersion> {
     let mut presets = HashMap::new();
 
-    presets.insert("10.10", UbuntuVersion {
-        codename: "maverick",
-        description: "Ubuntu 10.10 (Maverick Meerkat)",
-        root_fs: "ext2",
-    });
+    presets.insert(
+        "10.10",
+        UbuntuVersion {
+            codename: "maverick",
+            description: "Ubuntu 10.10 (Maverick Meerkat)",
+            root_fs: "ext2",
+        },
+    );
 
-    presets.insert("20.04", UbuntuVersion {
-        codename: "focal",
-        description: "Ubuntu 20.04 LTS (Focal Fossa)",
-        root_fs: "ext4",
-    });
+    presets.insert(
+        "20.04",
+        UbuntuVersion {
+            codename: "focal",
+            description: "Ubuntu 20.04 LTS (Focal Fossa)",
+            root_fs: "ext4",
+        },
+    );
 
-    presets.insert("22.04", UbuntuVersion {
-        codename: "jammy",
-        description: "Ubuntu 22.04 LTS (Jammy Jellyfish)",
-        root_fs: "ext4",
-    });
+    presets.insert(
+        "22.04",
+        UbuntuVersion {
+            codename: "jammy",
+            description: "Ubuntu 22.04 LTS (Jammy Jellyfish)",
+            root_fs: "ext4",
+        },
+    );
 
-    presets.insert("24.04", UbuntuVersion {
-        codename: "noble",
-        description: "Ubuntu 24.04 LTS (Noble Numbat)",
-        root_fs: "xfs",
-    });
+    presets.insert(
+        "24.04",
+        UbuntuVersion {
+            codename: "noble",
+            description: "Ubuntu 24.04 LTS (Noble Numbat)",
+            root_fs: "xfs",
+        },
+    );
 
     presets
 }
@@ -93,8 +105,7 @@ fn make_os_release(version: &str) -> String {
          BUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\n\
          PRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\n\
          UBUNTU_CODENAME={}\n",
-        metadata.description, version, metadata.codename,
-        metadata.description, metadata.codename
+        metadata.description, version, metadata.codename, metadata.description, metadata.codename
     )
 }
 
@@ -186,7 +197,8 @@ fn make_dpkg_status() -> String {
      Architecture: amd64\n\
      Version: 6.5.0-35.35~22.04.1\n\
      Description: Linux kernel image for version 6.5.0 on 64 bit x86 SMP\n\
-     \n".to_string()
+     \n"
+    .to_string()
 }
 
 fn make_ssh_service() -> String {
@@ -211,7 +223,8 @@ fn make_ssh_service() -> String {
      \n\
      [Install]\n\
      WantedBy=multi-user.target\n\
-     Alias=sshd.service\n".to_string()
+     Alias=sshd.service\n"
+        .to_string()
 }
 
 fn make_networking_service() -> String {
@@ -281,7 +294,8 @@ fn make_grub_config() -> String {
          set root='hd0,gpt2'\n\
          linux /boot/vmlinuz-6.5.0-35-generic root=/dev/sda2 ro recovery nomodeset\n\
          initrd /boot/initrd.img-6.5.0-35-generic\n\
-     }\n".to_string()
+     }\n"
+    .to_string()
 }
 
 fn make_apt_sources(codename: &str) -> String {
@@ -301,10 +315,17 @@ fn make_apt_sources(codename: &str) -> String {
          deb http://security.ubuntu.com/ubuntu/ {}-security main restricted\n\
          deb http://security.ubuntu.com/ubuntu/ {}-security universe\n\
          deb http://security.ubuntu.com/ubuntu/ {}-security multiverse\n",
-        codename, codename, codename, codename,
-        codename, codename, codename,
         codename,
-        codename, codename, codename
+        codename,
+        codename,
+        codename,
+        codename,
+        codename,
+        codename,
+        codename,
+        codename,
+        codename,
+        codename
     )
 }
 
@@ -315,7 +336,10 @@ fn cleanup() {
 fn create_realistic_ubuntu_image(version: &str) -> Result<(), Box<dyn std::error::Error>> {
     cleanup();
 
-    println!("\n=== Creating Realistic Ubuntu {} EFI Disk Image ===", version);
+    println!(
+        "\n=== Creating Realistic Ubuntu {} EFI Disk Image ===",
+        version
+    );
 
     let presets = ubuntu_presets();
     let metadata = presets.get(version).unwrap_or(&UbuntuVersion {
@@ -363,17 +387,40 @@ fn create_realistic_ubuntu_image(version: &str) -> Result<(), Box<dyn std::error
     println!("\n[5/15] Creating Ubuntu directory structure...");
     // FHS directory structure
     for dir in &[
-        "/bin", "/sbin", "/lib", "/lib64",
-        "/usr", "/usr/bin", "/usr/sbin", "/usr/lib", "/usr/local",
-        "/etc", "/etc/systemd", "/etc/systemd/system",
+        "/bin",
+        "/sbin",
+        "/lib",
+        "/lib64",
+        "/usr",
+        "/usr/bin",
+        "/usr/sbin",
+        "/usr/lib",
+        "/usr/local",
+        "/etc",
+        "/etc/systemd",
+        "/etc/systemd/system",
         "/etc/systemd/system/multi-user.target.wants",
-        "/etc/default", "/etc/apt", "/etc/apt/sources.list.d",
-        "/var", "/var/lib", "/var/lib/dpkg", "/var/log",
-        "/home", "/root",
-        "/boot", "/boot/grub", "/boot/efi/EFI", "/boot/efi/EFI/ubuntu",
-        "/tmp", "/run",
-        "/lib/systemd", "/lib/systemd/system",
-        "/opt", "/srv", "/mnt", "/media",
+        "/etc/default",
+        "/etc/apt",
+        "/etc/apt/sources.list.d",
+        "/var",
+        "/var/lib",
+        "/var/lib/dpkg",
+        "/var/log",
+        "/home",
+        "/root",
+        "/boot",
+        "/boot/grub",
+        "/boot/efi/EFI",
+        "/boot/efi/EFI/ubuntu",
+        "/tmp",
+        "/run",
+        "/lib/systemd",
+        "/lib/systemd/system",
+        "/opt",
+        "/srv",
+        "/mnt",
+        "/media",
     ] {
         g.mkdir_p(dir)?;
     }
@@ -394,28 +441,46 @@ fn create_realistic_ubuntu_image(version: &str) -> Result<(), Box<dyn std::error
 
     println!("\n[8/15] Creating systemd units...");
     // SSH service
-    g.write("/lib/systemd/system/ssh.service", make_ssh_service().as_bytes())?;
-    g.ln_s("../../../lib/systemd/system/ssh.service",
-           "/etc/systemd/system/multi-user.target.wants/ssh.service")?;
+    g.write(
+        "/lib/systemd/system/ssh.service",
+        make_ssh_service().as_bytes(),
+    )?;
+    g.ln_s(
+        "../../../lib/systemd/system/ssh.service",
+        "/etc/systemd/system/multi-user.target.wants/ssh.service",
+    )?;
 
     // Networking service
-    g.write("/lib/systemd/system/networking.service", make_networking_service().as_bytes())?;
-    g.ln_s("../../../lib/systemd/system/networking.service",
-           "/etc/systemd/system/multi-user.target.wants/networking.service")?;
+    g.write(
+        "/lib/systemd/system/networking.service",
+        make_networking_service().as_bytes(),
+    )?;
+    g.ln_s(
+        "../../../lib/systemd/system/networking.service",
+        "/etc/systemd/system/multi-user.target.wants/networking.service",
+    )?;
 
     // Journal service
-    g.write("/lib/systemd/system/systemd-journald.service", make_systemd_journald_service().as_bytes())?;
+    g.write(
+        "/lib/systemd/system/systemd-journald.service",
+        make_systemd_journald_service().as_bytes(),
+    )?;
 
     // Multi-user target
     g.write("/lib/systemd/system/multi-user.target",
             b"[Unit]\nDescription=Multi-User System\nDocumentation=man:systemd.special(7)\nRequires=basic.target\nConflicts=rescue.service rescue.target\nAfter=basic.target rescue.service rescue.target\nAllowIsolate=yes\n")?;
-    g.ln_s("/lib/systemd/system/multi-user.target",
-           "/etc/systemd/system/default.target")?;
+    g.ln_s(
+        "/lib/systemd/system/multi-user.target",
+        "/etc/systemd/system/default.target",
+    )?;
 
     println!("  ✓ Systemd units created (ssh, networking, journald)");
 
     println!("\n[9/15] Creating APT sources list...");
-    g.write("/etc/apt/sources.list", make_apt_sources(metadata.codename).as_bytes())?;
+    g.write(
+        "/etc/apt/sources.list",
+        make_apt_sources(metadata.codename).as_bytes(),
+    )?;
     println!("  ✓ APT sources configured for {}", metadata.codename);
 
     println!("\n[10/15] Creating GRUB configuration...");
@@ -432,36 +497,47 @@ fn create_realistic_ubuntu_image(version: &str) -> Result<(), Box<dyn std::error
     println!("  ✓ Fake kernel files created");
 
     println!("\n[12/15] Creating network configuration...");
-    g.write("/etc/network/interfaces",
-            b"# interfaces(5) file used by ifup(8) and ifdown(8)\n\
+    g.write(
+        "/etc/network/interfaces",
+        b"# interfaces(5) file used by ifup(8) and ifdown(8)\n\
               auto lo\n\
               iface lo inet loopback\n\
               \n\
               auto enp0s3\n\
-              iface enp0s3 inet dhcp\n")?;
-    g.write("/etc/resolv.conf", b"nameserver 8.8.8.8\nnameserver 8.8.4.4\n")?;
+              iface enp0s3 inet dhcp\n",
+    )?;
+    g.write(
+        "/etc/resolv.conf",
+        b"nameserver 8.8.8.8\nnameserver 8.8.4.4\n",
+    )?;
     println!("  ✓ Network configuration created");
 
     println!("\n[13/15] Creating user accounts...");
-    g.write("/etc/passwd",
-            b"root:x:0:0:root:/root:/bin/bash\n\
+    g.write(
+        "/etc/passwd",
+        b"root:x:0:0:root:/root:/bin/bash\n\
               daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n\
               bin:x:2:2:bin:/bin:/usr/sbin/nologin\n\
               sys:x:3:3:sys:/dev:/usr/sbin/nologin\n\
-              ubuntu:x:1000:1000:Ubuntu User:/home/ubuntu:/bin/bash\n")?;
-    g.write("/etc/group",
-            b"root:x:0:\n\
+              ubuntu:x:1000:1000:Ubuntu User:/home/ubuntu:/bin/bash\n",
+    )?;
+    g.write(
+        "/etc/group",
+        b"root:x:0:\n\
               daemon:x:1:\n\
               bin:x:2:\n\
               sys:x:3:\n\
               sudo:x:27:ubuntu\n\
-              ubuntu:x:1000:\n")?;
-    g.write("/etc/shadow",
-            b"root:!:19000:0:99999:7:::\n\
+              ubuntu:x:1000:\n",
+    )?;
+    g.write(
+        "/etc/shadow",
+        b"root:!:19000:0:99999:7:::\n\
               daemon:*:19000:0:99999:7:::\n\
               bin:*:19000:0:99999:7:::\n\
               sys:*:19000:0:99999:7:::\n\
-              ubuntu:!:19000:0:99999:7:::\n")?;
+              ubuntu:!:19000:0:99999:7:::\n",
+    )?;
     g.mkdir_p("/home/ubuntu")?;
     println!("  ✓ User accounts created (root, ubuntu)");
 
@@ -504,7 +580,10 @@ fn create_realistic_ubuntu_image(version: &str) -> Result<(), Box<dyn std::error
 
     println!("\n=== Ubuntu {} Image Created Successfully! ===", version);
     println!("  Image: {}", DISK_PATH);
-    println!("  Size: {:.2} GB", DISK_SIZE as f64 / 1024.0 / 1024.0 / 1024.0);
+    println!(
+        "  Size: {:.2} GB",
+        DISK_SIZE as f64 / 1024.0 / 1024.0 / 1024.0
+    );
     println!("  Filesystem: {}", metadata.root_fs);
     println!("  Codename: {}", metadata.codename);
     println!("  Description: {}", metadata.description);

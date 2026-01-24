@@ -33,6 +33,7 @@ miette = { version = "7.0", features = ["fancy"] }
 owo-colors = "4.0"
 unicode-width = "0.1"
 rustyline = "14.0"
+dirs = "5.0"
 
 # Utilities
 rand = "0.8"

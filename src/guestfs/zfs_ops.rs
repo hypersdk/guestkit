@@ -27,7 +27,8 @@ impl Guestfs {
 
         cmd.arg(name);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute zfs: {}", e)))?;
 
         if !output.status.success() {
@@ -59,7 +60,8 @@ impl Guestfs {
 
         cmd.arg(name);
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute zfs: {}", e)))?;
 
         if !output.status.success() {
@@ -98,10 +100,7 @@ impl Guestfs {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        let filesystems: Vec<String> = output_str
-            .lines()
-            .map(|s| s.trim().to_string())
-            .collect();
+        let filesystems: Vec<String> = output_str.lines().map(|s| s.trim().to_string()).collect();
 
         Ok(filesystems)
     }
@@ -265,8 +264,7 @@ impl Guestfs {
             )));
         }
 
-        std::fs::write(filename, output.stdout)
-            .map_err(|e| Error::Io(e))?;
+        std::fs::write(filename, output.stdout).map_err(Error::Io)?;
 
         Ok(())
     }
@@ -281,24 +279,24 @@ impl Guestfs {
             eprintln!("guestfs: zfs_receive {} {}", name, filename);
         }
 
-        let stream = std::fs::read(filename)
-            .map_err(|e| Error::Io(e))?;
+        let stream = std::fs::read(filename).map_err(Error::Io)?;
 
         let mut cmd = Command::new("zfs");
         cmd.arg("receive")
-           .arg(name)
-           .stdin(std::process::Stdio::piped());
+            .arg(name)
+            .stdin(std::process::Stdio::piped());
 
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute zfs: {}", e)))?;
 
         use std::io::Write;
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(&stream)
-                .map_err(|e| Error::Io(e))?;
+            stdin.write_all(&stream).map_err(Error::Io)?;
         }
 
-        let output = child.wait_with_output()
+        let output = child
+            .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for zfs: {}", e)))?;
 
         if !output.status.success() {

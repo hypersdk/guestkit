@@ -6,7 +6,7 @@
 use crate::core::{Error, Result};
 use crate::guestfs::Guestfs;
 use std::fs::File;
-use std::io::{Read, Write, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 impl Guestfs {
     /// Read from file at offset
@@ -20,15 +20,13 @@ impl Guestfs {
         }
 
         let host_path = self.resolve_guest_path(path)?;
-        let mut file = File::open(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let mut file = File::open(&host_path).map_err(Error::Io)?;
 
         file.seek(SeekFrom::Start(offset as u64))
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         let mut buffer = vec![0u8; count as usize];
-        let bytes_read = file.read(&mut buffer)
-            .map_err(|e| Error::Io(e))?;
+        let bytes_read = file.read(&mut buffer).map_err(Error::Io)?;
 
         buffer.truncate(bytes_read);
         Ok(buffer)
@@ -46,19 +44,19 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
-        let mut file = File::open(nbd_device_path)
-            .map_err(|e| Error::Io(e))?;
+        let mut file = File::open(nbd_device_path).map_err(Error::Io)?;
 
         file.seek(SeekFrom::Start(offset as u64))
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         let mut buffer = vec![0u8; count as usize];
-        let bytes_read = file.read(&mut buffer)
-            .map_err(|e| Error::Io(e))?;
+        let bytes_read = file.read(&mut buffer).map_err(Error::Io)?;
 
         buffer.truncate(bytes_read);
         Ok(buffer)
@@ -71,20 +69,24 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: pwrite {} {} bytes at {}", path, content.len(), offset);
+            eprintln!(
+                "guestfs: pwrite {} {} bytes at {}",
+                path,
+                content.len(),
+                offset
+            );
         }
 
         let host_path = self.resolve_guest_path(path)?;
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .open(&host_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         file.seek(SeekFrom::Start(offset as u64))
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
-        let bytes_written = file.write(content)
-            .map_err(|e| Error::Io(e))?;
+        let bytes_written = file.write(content).map_err(Error::Io)?;
 
         Ok(bytes_written as i32)
     }
@@ -96,25 +98,31 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: pwrite_device {} {} bytes at {}", device, content.len(), offset);
+            eprintln!(
+                "guestfs: pwrite_device {} {} bytes at {}",
+                device,
+                content.len(),
+                offset
+            );
         }
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_device_path = self.nbd_device.as_ref()
+        let nbd_device_path = self
+            .nbd_device
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?
             .device_path();
 
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .open(nbd_device_path)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
         file.seek(SeekFrom::Start(offset as u64))
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
-        let bytes_written = file.write(content)
-            .map_err(|e| Error::Io(e))?;
+        let bytes_written = file.write(content).map_err(Error::Io)?;
 
         Ok(bytes_written as i32)
     }

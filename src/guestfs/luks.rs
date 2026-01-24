@@ -69,23 +69,25 @@ impl Guestfs {
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| Error::CommandFailed(format!(
-                "Failed to run cryptsetup: {}. Is cryptsetup installed? Requires sudo/root.",
-                e
-            )))?;
+            .map_err(|e| {
+                Error::CommandFailed(format!(
+                    "Failed to run cryptsetup: {}. Is cryptsetup installed? Requires sudo/root.",
+                    e
+                ))
+            })?;
 
         // Write key to stdin
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
-            stdin.write_all(key.as_bytes()).map_err(|e| {
-                Error::CommandFailed(format!("Failed to write key: {}", e))
-            })?;
+            stdin
+                .write_all(key.as_bytes())
+                .map_err(|e| Error::CommandFailed(format!("Failed to write key: {}", e)))?;
         }
 
         // Wait for command to complete
-        let output = child.wait_with_output().map_err(|e| {
-            Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e))
-        })?;
+        let output = child
+            .wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -141,19 +143,22 @@ impl Guestfs {
         // Write key to stdin
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
-            stdin.write_all(key.as_bytes()).map_err(|e| {
-                Error::CommandFailed(format!("Failed to write key: {}", e))
-            })?;
+            stdin
+                .write_all(key.as_bytes())
+                .map_err(|e| Error::CommandFailed(format!("Failed to write key: {}", e)))?;
         }
 
         // Wait for command to complete
-        let output = child.wait_with_output().map_err(|e| {
-            Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e))
-        })?;
+        let output = child
+            .wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LUKS open failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LUKS open failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -197,7 +202,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LUKS close failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LUKS close failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -218,14 +226,17 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: luks_format {} [key hidden] slot {}", device, keyslot);
+            eprintln!(
+                "guestfs: luks_format {} [key hidden] slot {}",
+                device, keyslot
+            );
         }
 
         // Check if drive is readonly
         if let Some(drive) = self.drives.first() {
             if drive.readonly {
                 return Err(Error::PermissionDenied(
-                    "Cannot format LUKS on read-only drive".to_string()
+                    "Cannot format LUKS on read-only drive".to_string(),
                 ));
             }
         }
@@ -258,19 +269,22 @@ impl Guestfs {
         // Write key to stdin
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
-            stdin.write_all(key.as_bytes()).map_err(|e| {
-                Error::CommandFailed(format!("Failed to write key: {}", e))
-            })?;
+            stdin
+                .write_all(key.as_bytes())
+                .map_err(|e| Error::CommandFailed(format!("Failed to write key: {}", e)))?;
         }
 
         // Wait for command to complete
-        let output = child.wait_with_output().map_err(|e| {
-            Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e))
-        })?;
+        let output = child
+            .wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LUKS format failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LUKS format failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -286,11 +300,20 @@ impl Guestfs {
     /// * `key` - Existing passphrase
     /// * `newkey` - New passphrase to add
     /// * `keyslot` - Key slot for new key (0-7)
-    pub fn luks_add_key(&mut self, device: &str, key: &str, newkey: &str, keyslot: i32) -> Result<()> {
+    pub fn luks_add_key(
+        &mut self,
+        device: &str,
+        key: &str,
+        newkey: &str,
+        keyslot: i32,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: luks_add_key {} [keys hidden] slot {}", device, keyslot);
+            eprintln!(
+                "guestfs: luks_add_key {} [keys hidden] slot {}",
+                device, keyslot
+            );
         }
 
         // Ensure NBD device is set up
@@ -321,25 +344,28 @@ impl Guestfs {
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
             // First the existing key, then the new key
-            stdin.write_all(key.as_bytes()).map_err(|e| {
-                Error::CommandFailed(format!("Failed to write key: {}", e))
-            })?;
-            stdin.write_all(b"\n").map_err(|e| {
-                Error::CommandFailed(format!("Failed to write newline: {}", e))
-            })?;
-            stdin.write_all(newkey.as_bytes()).map_err(|e| {
-                Error::CommandFailed(format!("Failed to write new key: {}", e))
-            })?;
+            stdin
+                .write_all(key.as_bytes())
+                .map_err(|e| Error::CommandFailed(format!("Failed to write key: {}", e)))?;
+            stdin
+                .write_all(b"\n")
+                .map_err(|e| Error::CommandFailed(format!("Failed to write newline: {}", e)))?;
+            stdin
+                .write_all(newkey.as_bytes())
+                .map_err(|e| Error::CommandFailed(format!("Failed to write new key: {}", e)))?;
         }
 
         // Wait for command to complete
-        let output = child.wait_with_output().map_err(|e| {
-            Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e))
-        })?;
+        let output = child
+            .wait_with_output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to wait for cryptsetup: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LUKS add key failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LUKS add key failed: {}",
+                stderr
+            )));
         }
 
         Ok(())
@@ -384,7 +410,10 @@ impl Guestfs {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!("LUKS UUID failed: {}", stderr)));
+            return Err(Error::CommandFailed(format!(
+                "LUKS UUID failed: {}",
+                stderr
+            )));
         }
 
         let uuid = String::from_utf8_lossy(&output.stdout).trim().to_string();

@@ -4,8 +4,8 @@
 //! This implementation provides bcache (block cache) management functionality.
 
 use crate::core::{Error, Result};
-use crate::guestfs::Guestfs;
 use crate::guestfs::security_utils::PathValidator;
+use crate::guestfs::Guestfs;
 use std::process::Command;
 
 impl Guestfs {
@@ -21,13 +21,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("make-bcache")
             .arg("-B")
@@ -57,13 +64,20 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition = if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-            let nbd_device = self.nbd_device.as_ref()
-                .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-            format!("{}p{}", nbd_device.device_path().display(), partition_number)
-        } else {
-            return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-        };
+        let nbd_partition =
+            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
+                let nbd_device = self
+                    .nbd_device
+                    .as_ref()
+                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
+                format!(
+                    "{}p{}",
+                    nbd_device.device_path().display(),
+                    partition_number
+                )
+            } else {
+                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
+            };
 
         let output = Command::new("make-bcache")
             .arg("-C")
@@ -96,11 +110,12 @@ impl Guestfs {
 
         // Write directly to sysfs instead of using shell command
         let register_path = "/sys/fs/bcache/register";
-        std::fs::write(register_path, device)
-            .map_err(|e| Error::CommandFailed(format!(
+        std::fs::write(register_path, device).map_err(|e| {
+            Error::CommandFailed(format!(
                 "Failed to register bcache device {}: {}",
                 device, e
-            )))?;
+            ))
+        })?;
 
         Ok(())
     }
@@ -125,11 +140,9 @@ impl Guestfs {
 
         // Write directly to sysfs instead of using shell command
         let stop_path = format!("/sys/block/{}/bcache/stop", bcache_name);
-        std::fs::write(&stop_path, "1")
-            .map_err(|e| Error::CommandFailed(format!(
-                "Failed to stop bcache device {}: {}",
-                device, e
-            )))?;
+        std::fs::write(&stop_path, "1").map_err(|e| {
+            Error::CommandFailed(format!("Failed to stop bcache device {}: {}", device, e))
+        })?;
 
         Ok(())
     }
@@ -160,10 +173,7 @@ impl Guestfs {
         for stat_file in stat_files {
             let path = format!("{}/{}", stats_dir, stat_file);
             if let Ok(value) = std::fs::read_to_string(&path) {
-                stats.push((
-                    stat_file.to_string(),
-                    value.trim().to_string()
-                ));
+                stats.push((stat_file.to_string(), value.trim().to_string()));
             }
         }
 

@@ -11,8 +11,13 @@ impl Guestfs {
     /// Create SquashFS filesystem
     ///
     /// GuestFS API: mksquashfs()
-    pub fn mksquashfs(&mut self, path: &str, filename: &str, compress: Option<&str>,
-                      excludes: &[&str]) -> Result<()> {
+    pub fn mksquashfs(
+        &mut self,
+        path: &str,
+        filename: &str,
+        compress: Option<&str>,
+        excludes: &[&str],
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
@@ -32,7 +37,8 @@ impl Guestfs {
             cmd.arg("-e").arg(exclude);
         }
 
-        let output = cmd.output()
+        let output = cmd
+            .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mksquashfs: {}", e)))?;
 
         if !output.status.success() {
@@ -58,7 +64,8 @@ impl Guestfs {
         let host_dest = self.resolve_guest_path(dest)?;
 
         let output = Command::new("unsquashfs")
-            .arg("-d").arg(&host_dest)
+            .arg("-d")
+            .arg(&host_dest)
             .arg(filename)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute unsquashfs: {}", e)))?;
@@ -101,10 +108,7 @@ impl Guestfs {
 
         for line in output_str.lines() {
             if let Some((key, value)) = line.split_once(':') {
-                info.push((
-                    key.trim().to_string(),
-                    value.trim().to_string()
-                ));
+                info.push((key.trim().to_string(), value.trim().to_string()));
             }
         }
 

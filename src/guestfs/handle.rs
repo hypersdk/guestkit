@@ -2,9 +2,9 @@
 //! Main GuestFS handle implementation
 
 use crate::core::{Error, Result};
-use crate::disk::{DiskReader, PartitionTable, NbdDevice};
-use std::path::{Path, PathBuf};
+use crate::disk::{DiskReader, NbdDevice, PartitionTable};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// GuestFS handle state
@@ -45,7 +45,7 @@ pub struct ResourceLimits {
 impl Default for ResourceLimits {
     fn default() -> Self {
         Self {
-            max_file_size: Some(100 * 1024 * 1024), // 100MB
+            max_file_size: Some(100 * 1024 * 1024),            // 100MB
             operation_timeout: Some(Duration::from_secs(300)), // 5 minutes
             max_path_length: 4096,
         }
@@ -63,7 +63,7 @@ pub struct Guestfs {
     pub(crate) partition_table: Option<PartitionTable>,
     pub(crate) nbd_device: Option<NbdDevice>,
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
-    pub(crate) mount_root: Option<PathBuf>, // Temporary mount directory
+    pub(crate) mount_root: Option<PathBuf>,      // Temporary mount directory
     pub(crate) identifier: Option<String>,
     pub(crate) autosync: bool,
     pub(crate) selinux: bool,
@@ -141,7 +141,7 @@ impl Guestfs {
     ) -> Result<()> {
         if self.state != GuestfsState::Config {
             return Err(Error::InvalidState(
-                "Cannot add drives after launch".to_string()
+                "Cannot add drives after launch".to_string(),
             ));
         }
 
@@ -158,14 +158,13 @@ impl Guestfs {
     pub fn launch(&mut self) -> Result<()> {
         if self.state != GuestfsState::Config {
             return Err(Error::InvalidState(format!(
-                "Cannot launch from state: {:?}", self.state
+                "Cannot launch from state: {:?}",
+                self.state
             )));
         }
 
         if self.drives.is_empty() {
-            return Err(Error::InvalidState(
-                "No drives added".to_string()
-            ));
+            return Err(Error::InvalidState("No drives added".to_string()));
         }
 
         // Transition to Launching state
@@ -190,7 +189,8 @@ impl Guestfs {
 
                 // Read partitions from the NBD device
                 let reader = DiskReader::open(nbd.device_path())?;
-                let partition_table = PartitionTable::parse(&mut DiskReader::open(nbd.device_path())?)?;
+                let partition_table =
+                    PartitionTable::parse(&mut DiskReader::open(nbd.device_path())?)?;
 
                 self.reader = Some(reader);
                 self.partition_table = Some(partition_table);
@@ -228,7 +228,12 @@ impl Guestfs {
     fn needs_nbd_for_format(path: &Path) -> bool {
         path.extension()
             .and_then(|ext| ext.to_str())
-            .map(|ext| matches!(ext.to_lowercase().as_str(), "qcow2" | "vmdk" | "vdi" | "vhd" | "vpc"))
+            .map(|ext| {
+                matches!(
+                    ext.to_lowercase().as_str(),
+                    "qcow2" | "vmdk" | "vdi" | "vhd" | "vpc"
+                )
+            })
             .unwrap_or(false)
     }
 
@@ -299,38 +304,42 @@ impl Guestfs {
 
     /// Get reader reference (internal)
     pub(crate) fn reader_mut(&mut self) -> Result<&mut DiskReader> {
-        self.reader.as_mut()
+        self.reader
+            .as_mut()
             .ok_or_else(|| Error::InvalidState("Not launched".to_string()))
     }
 
     /// Get partition table reference (internal)
     pub(crate) fn partition_table(&self) -> Result<&PartitionTable> {
-        self.partition_table.as_ref()
+        self.partition_table
+            .as_ref()
             .ok_or_else(|| Error::InvalidState("Not launched".to_string()))
     }
 
     /// Get NBD device reference safely (internal)
     pub(crate) fn nbd_device(&self) -> Result<&NbdDevice> {
-        self.nbd_device.as_ref()
-            .ok_or_else(|| Error::InvalidState(
-                "NBD device not initialized. Call setup_nbd_if_needed() first.".to_string()
-            ))
+        self.nbd_device.as_ref().ok_or_else(|| {
+            Error::InvalidState(
+                "NBD device not initialized. Call setup_nbd_if_needed() first.".to_string(),
+            )
+        })
     }
 
     /// Get mutable NBD device reference safely (internal)
     pub(crate) fn nbd_device_mut(&mut self) -> Result<&mut NbdDevice> {
-        self.nbd_device.as_mut()
-            .ok_or_else(|| Error::InvalidState(
-                "NBD device not initialized. Call setup_nbd_if_needed() first.".to_string()
-            ))
+        self.nbd_device.as_mut().ok_or_else(|| {
+            Error::InvalidState(
+                "NBD device not initialized. Call setup_nbd_if_needed() first.".to_string(),
+            )
+        })
     }
 
     /// Convert path to string safely (internal)
     pub(crate) fn path_to_string(path: &Path) -> Result<String> {
         path.to_str()
-            .ok_or_else(|| Error::InvalidFormat(
-                format!("Path contains invalid Unicode: {:?}", path)
-            ))
+            .ok_or_else(|| {
+                Error::InvalidFormat(format!("Path contains invalid Unicode: {:?}", path))
+            })
             .map(|s| s.to_string())
     }
 
@@ -383,7 +392,8 @@ impl Guestfs {
         if path.len() > self.resource_limits.max_path_length {
             return Err(Error::InvalidOperation(format!(
                 "Path length {} exceeds limit {}",
-                path.len(), self.resource_limits.max_path_length
+                path.len(),
+                self.resource_limits.max_path_length
             )));
         }
         Ok(())
@@ -393,7 +403,7 @@ impl Guestfs {
     pub(crate) fn ensure_ready(&self) -> Result<()> {
         if self.state != GuestfsState::Ready {
             return Err(Error::InvalidState(
-                "Handle not ready (call launch first)".to_string()
+                "Handle not ready (call launch first)".to_string(),
             ));
         }
         Ok(())
@@ -427,7 +437,8 @@ impl Guestfs {
                 if num_str.is_empty() {
                     return Ok(0); // Whole device (no partition number)
                 }
-                return num_str.parse::<u32>()
+                return num_str
+                    .parse::<u32>()
                     .map_err(|_| Error::InvalidFormat(format!("Invalid device: {}", device)));
             }
         }
@@ -445,9 +456,10 @@ impl Guestfs {
         }
 
         // Get first drive
-        let drive = self.drives.first().ok_or_else(|| {
-            Error::InvalidState("No drives added".to_string())
-        })?;
+        let drive = self
+            .drives
+            .first()
+            .ok_or_else(|| Error::InvalidState("No drives added".to_string()))?;
 
         // Create and connect NBD device
         let mut nbd = NbdDevice::new()?;

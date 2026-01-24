@@ -26,8 +26,7 @@ impl Guestfs {
 
         let host_path = self.resolve_guest_path(path)?;
 
-        let target = std::fs::read_link(&host_path)
-            .map_err(|e| Error::Io(e))?;
+        let target = std::fs::read_link(&host_path).map_err(Error::Io)?;
 
         Ok(target.to_string_lossy().to_string())
     }
@@ -45,7 +44,11 @@ impl Guestfs {
         let host_path = self.resolve_guest_path(directory)?;
         let mut links = Vec::new();
 
-        fn scan_directory(path: &std::path::Path, links: &mut Vec<String>, base: &std::path::Path) -> std::io::Result<()> {
+        fn scan_directory(
+            path: &std::path::Path,
+            links: &mut Vec<String>,
+            base: &std::path::Path,
+        ) -> std::io::Result<()> {
             if path.is_dir() {
                 for entry in std::fs::read_dir(path)? {
                     let entry = entry?;
@@ -65,8 +68,7 @@ impl Guestfs {
             Ok(())
         }
 
-        scan_directory(&host_path, &mut links, &host_path)
-            .map_err(|e| Error::Io(e))?;
+        scan_directory(&host_path, &mut links, &host_path).map_err(Error::Io)?;
 
         Ok(links)
     }
@@ -92,13 +94,14 @@ impl Guestfs {
 
         #[cfg(unix)]
         {
-            std::os::unix::fs::symlink(target, &link_path)
-                .map_err(|e| Error::Io(e))?;
+            std::os::unix::fs::symlink(target, &link_path).map_err(Error::Io)?;
         }
 
         #[cfg(not(unix))]
         {
-            return Err(Error::NotSupported("Symbolic links not supported on this platform".to_string()));
+            return Err(Error::NotSupported(
+                "Symbolic links not supported on this platform".to_string(),
+            ));
         }
 
         Ok(())
@@ -115,7 +118,10 @@ impl Guestfs {
         }
 
         if !self.is_symlink(path)? {
-            return Err(Error::InvalidFormat(format!("{} is not a symbolic link", path)));
+            return Err(Error::InvalidFormat(format!(
+                "{} is not a symbolic link",
+                path
+            )));
         }
 
         self.rm(path)
@@ -132,7 +138,10 @@ impl Guestfs {
         }
 
         if !self.is_symlink(src)? {
-            return Err(Error::InvalidFormat(format!("{} is not a symbolic link", src)));
+            return Err(Error::InvalidFormat(format!(
+                "{} is not a symbolic link",
+                src
+            )));
         }
 
         let target = self.readlink(src)?;

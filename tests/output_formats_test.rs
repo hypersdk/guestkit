@@ -41,7 +41,7 @@ fn test_cli_accepts_yaml_flag() {
     let mut cmd = Command::cargo_bin("guestkit").unwrap();
     cmd.arg("inspect")
         .arg("nonexistent.qcow2")
-        .arg("-o")  // Test short form
+        .arg("-o") // Test short form
         .arg("yaml");
 
     let output = cmd.output().expect("Failed to execute command");

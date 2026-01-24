@@ -19,8 +19,7 @@ impl DiskReader {
     /// Open a disk image
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path_ref = path.as_ref();
-        let mut file = File::open(path_ref)
-            .map_err(|e| Error::Io(e))?;
+        let mut file = File::open(path_ref).map_err(Error::Io)?;
 
         // Detect format by reading magic bytes
         let format = Self::detect_format(&mut file)?;
@@ -39,7 +38,7 @@ impl DiskReader {
                     libc::ioctl(
                         file.as_raw_fd(),
                         BLKGETSIZE64 as _,
-                        &mut size_bytes as *mut u64
+                        &mut size_bytes as *mut u64,
                     )
                 };
 
@@ -53,20 +52,16 @@ impl DiskReader {
             {
                 // Fallback for non-Linux: try seeking (might not work)
                 use std::io::{Seek, SeekFrom};
-                file.seek(SeekFrom::End(0))
-                    .map_err(|e| Error::Io(e))?
+                file.seek(SeekFrom::End(0)).map_err(|e| Error::Io(e))?
             }
         } else {
             // For regular files, use metadata
-            file.metadata()
-                .map_err(|e| Error::Io(e))?
-                .len()
+            file.metadata().map_err(Error::Io)?.len()
         };
 
         // Reset to start
         use std::io::{Seek, SeekFrom};
-        file.seek(SeekFrom::Start(0))
-            .map_err(|e| Error::Io(e))?;
+        file.seek(SeekFrom::Start(0)).map_err(Error::Io)?;
 
         Ok(Self { file, format, size })
     }
@@ -86,13 +81,11 @@ impl DiskReader {
     /// Detect disk image format from magic bytes
     fn detect_format(file: &mut File) -> Result<DiskFormat> {
         let mut magic = [0u8; 4];
-        file.seek(SeekFrom::Start(0))
-            .map_err(|e| Error::Io(e))?;
+        file.seek(SeekFrom::Start(0)).map_err(Error::Io)?;
 
         // Use read() instead of read_exact() for block devices
         // Block devices might not fill the entire buffer
-        let bytes_read = file.read(&mut magic)
-            .map_err(|e| Error::Io(e))?;
+        let bytes_read = file.read(&mut magic).map_err(Error::Io)?;
 
         if bytes_read < 4 {
             // Not enough data to detect format, assume raw
@@ -119,10 +112,10 @@ impl DiskReader {
 
     /// Read bytes at offset
     pub fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<usize> {
-        self.file.seek(SeekFrom::Start(offset))
-            .map_err(|e| Error::Io(e))?;
-        self.file.read(buf)
-            .map_err(|e| Error::Io(e))
+        self.file
+            .seek(SeekFrom::Start(offset))
+            .map_err(Error::Io)?;
+        self.file.read(buf).map_err(Error::Io)
     }
 
     /// Get disk format
@@ -137,8 +130,9 @@ impl DiskReader {
 
     /// Read exact bytes at offset
     pub fn read_exact_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        self.file.seek(SeekFrom::Start(offset))
-            .map_err(|e| Error::Io(e))?;
+        self.file
+            .seek(SeekFrom::Start(offset))
+            .map_err(Error::Io)?;
 
         // For block devices, we might need to read in chunks
         let mut total_read = 0;
@@ -147,8 +141,12 @@ impl DiskReader {
                 Ok(0) => {
                     return Err(Error::Io(std::io::Error::new(
                         std::io::ErrorKind::UnexpectedEof,
-                        format!("Failed to read {} bytes at offset {}, only got {} bytes",
-                                buf.len(), offset, total_read)
+                        format!(
+                            "Failed to read {} bytes at offset {}, only got {} bytes",
+                            buf.len(),
+                            offset,
+                            total_read
+                        ),
                     )));
                 }
                 Ok(n) => total_read += n,

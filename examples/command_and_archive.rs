@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for line in output.lines() {
                 println!("   {}", line);
             }
-        },
+        }
         Err(e) => println!("   Error: {}", e),
     }
 
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for line in output.lines() {
                 println!("   {}", line);
             }
-        },
+        }
         Err(e) => println!("   Error: {} (normal for offline VM)", e),
     }
 
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if lines.len() > 5 {
                 println!("   ... and {} more", lines.len() - 5);
             }
-        },
+        }
         Err(e) => println!("   Error: {}", e),
     }
 
@@ -113,9 +113,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(_) => {
             if archive_path.exists() {
                 let size = std::fs::metadata(&archive_path)?.len();
-                println!("   ✓ Created: {} ({:.2} MB)", archive_path.display(), size as f64 / 1e6);
+                println!(
+                    "   ✓ Created: {} ({:.2} MB)",
+                    archive_path.display(),
+                    size as f64 / 1e6
+                );
             }
-        },
+        }
         Err(e) => println!("   ✗ Error: {}", e),
     }
 
@@ -124,7 +128,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(_) => {
             if compressed_path.exists() {
                 let size = std::fs::metadata(&compressed_path)?.len();
-                println!("   ✓ Created: {} ({:.2} MB)", compressed_path.display(), size as f64 / 1e6);
+                println!(
+                    "   ✓ Created: {} ({:.2} MB)",
+                    compressed_path.display(),
+                    size as f64 / 1e6
+                );
 
                 // Compare sizes
                 if archive_path.exists() {
@@ -133,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("   Compression ratio: {:.1}%", ratio);
                 }
             }
-        },
+        }
         Err(e) => println!("   ✗ Error: {}", e),
     }
 

@@ -4,116 +4,116 @@ Welcome to the GuestKit documentation! This directory contains all project docum
 
 ## 📚 Documentation Structure
 
-### 🎯 [Guides](guides/) - User-Facing Documentation
+### 🎯 [User Guides](user-guides/) - User-Facing Documentation
 
 Start here if you're learning to use GuestKit!
 
-- **[CLI Guide](guides/CLI_GUIDE.md)** - Command-line interface usage
-- **[Interactive Mode](guides/INTERACTIVE_MODE.md)** - REPL for disk exploration
-- **[Python Bindings](guides/PYTHON_BINDINGS.md)** - Python API guide
-- **[Quick Start](guides/QUICKSTART.md)** - Get started quickly
-- **[Output Formats](guides/OUTPUT_FORMATS.md)** - JSON, YAML, CSV output
-- **[Inspection Profiles](guides/PROFILES_GUIDE.md)** - Security, migration, performance profiles
-- **[Export Guide](guides/EXPORT_GUIDE.md)** - HTML and Markdown report export
-- **[Comparison Guide](guides/COMPARISON_GUIDE.md)** - VM comparison and diff
-- **[Quick Reference](guides/INSPECTION_QUICK_REF.md)** - Quick command reference
-- **[PyPI Publishing](guides/PYPI_PUBLISHING.md)** - How to publish to PyPI
-- **[Troubleshooting](guides/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Getting Started](user-guides/getting-started.md)** - Quick start guide
+- **[CLI Guide](user-guides/cli-guide.md)** - Command-line interface usage
+- **[Interactive Mode](user-guides/interactive-mode.md)** - REPL for disk exploration
+- **[Python Bindings](user-guides/python-bindings.md)** - Python API guide
+- **[Profiles](user-guides/profiles.md)** - Security, migration, performance profiles
+- **[Quick Reference](user-guides/quick-reference.md)** - Quick command reference
+- **[Troubleshooting](user-guides/troubleshooting.md)** - Common issues and solutions
+
+### ⚡ [Features](features/) - Feature Documentation
+
+Deep dives into specific features.
+
+- **[Export Formats](features/export-formats.md)** - HTML and Markdown report export
+- **[Output Formats](features/output-formats.md)** - JSON, YAML, CSV output
+- **[HTML Export](features/html-export.md)** - Interactive HTML reports with charts
+- **[History Persistence](features/history-persistence.md)** - Command history across sessions
 
 ### 📖 [API Documentation](api/) - API References
 
 Complete API documentation for developers.
 
-- **[Python API Reference](api/PYTHON_API_REFERENCE.md)** - Complete Python API (100+ methods)
-- **[Rust API Reference](api/API_REFERENCE.md)** - Rust API documentation
-- **[Ergonomic API](api/ERGONOMIC_API.md)** - Type-safe Rust API guide
-- **[Migration Guide](api/MIGRATION_GUIDE.md)** - Migrating from libguestfs
+- **[Python API Reference](api/python-reference.md)** - Complete Python API (100+ methods)
+- **[Rust API Reference](api/rust-reference.md)** - Rust API documentation
+- **[Ergonomic Design](api/ergonomic-design.md)** - Type-safe Rust API guide
+- **[Migration Guide](api/migration-guide.md)** - Migrating from libguestfs
 
 ### 🏗️ [Architecture](architecture/) - Technical Documentation
 
 Understand how GuestKit works internally.
 
-- **[Architecture Overview](architecture/ARCHITECTURE.md)** - System architecture
-- **[libguestfs Comparison](architecture/LIBGUESTFS_COMPARISON.md)** - vs libguestfs
-- **[Performance](architecture/PERFORMANCE.md)** - Performance characteristics
-- **[UX Improvements](architecture/UX_IMPROVEMENTS.md)** - User experience enhancements
+- **[Overview](architecture/overview.md)** - System architecture
+- **[Comparison Guide](architecture/comparison-guide.md)** - GuestKit vs alternatives
+- **[Performance](architecture/performance.md)** - Performance characteristics
+- **[UX Design](architecture/ux-design.md)** - User experience decisions
+- **[libguestfs Comparison](architecture/libguestfs-comparison.md)** - Detailed comparison
 
 ### 🔧 [Development](development/) - Contributor Documentation
 
 For contributors and developers extending GuestKit.
 
-- **[Enhancement Status](development/ENHANCEMENT_STATUS.md)** - Current enhancement status and priorities
-- **[Next Enhancements](development/NEXT_ENHANCEMENTS.md)** - Detailed guides for next priority features
-- **[Enhancement Roadmap](development/ENHANCEMENT_ROADMAP.md)** - Future enhancements (100+ ideas)
-- **[Quick Enhancements](development/QUICK_ENHANCEMENTS.md)** - Quick wins to implement
-- **[Enhancements Implemented](development/ENHANCEMENTS_IMPLEMENTED.md)** - What's been done
-- **[Roadmap](development/ROADMAP.md)** - Project roadmap
-- **[Missing APIs](development/MISSING_APIS.md)** - APIs not yet implemented
+- **[Roadmap 2026](development/roadmap-2026.md)** - Project roadmap and future plans
+- **[Improvements Log](development/improvements-log.md)** - Recent improvements and enhancements
+- **[Publishing](development/publishing.md)** - PyPI publishing process
+- **[Next Steps](development/next-steps.md)** - Upcoming priorities
+- **[Enhancement Roadmap](development/enhancement-roadmap.md)** - Future enhancements (100+ ideas)
+- **[Quick Enhancements](development/quick-enhancements.md)** - Quick wins to implement
+- **[Enhancements Implemented](development/enhancements-implemented.md)** - What's been done
+- **[Missing APIs](development/missing-apis.md)** - APIs not yet implemented
 
-### 🧪 [Testing](testing/) - Testing Documentation
+### 🎨 [Marketing](marketing/) - Community & Promotion
 
-Testing guides and reports.
+Marketing materials and community engagement.
 
-- **[Testing Guide](testing/TESTING.md)** - How to run tests
-- **[Phase 3 Testing](testing/PHASE3_TESTING.md)** - Comprehensive test suite
-- **[Testing Permissions](testing/TESTING_PERMISSIONS.md)** - Permission requirements
-- **[Test Reports](testing/TEST_REPORT.md)** - Test results
-- **[API Test Results](testing/API_TEST_RESULTS.md)** - API test coverage
-- **[Test Status](testing/TEST_STATUS_SUMMARY.md)** - Current test status
-
-**Distribution-Specific Testing:**
-- [Ubuntu Testing](testing/UBUNTU_TESTING.md)
-- [Debian Testing](testing/DEBIAN_TESTING.md)
-- [Arch Linux Testing](testing/ARCH_TESTING.md)
-- [Windows Testing](testing/WINDOWS_TESTING_REALISTIC.md)
-- [Windows Test Summary](testing/WINDOWS_TESTING_SUMMARY.md)
-
-### 📊 [Status](status/) - Implementation Status
-
-Track implementation progress and project status.
-
-- **[Project Summary](status/PROJECT_SUMMARY.md)** - Complete project overview
-- **[Implementation Status](status/GUESTFS_IMPLEMENTATION_STATUS.md)** - 578 functions, 97.4% coverage
-- **[Python Bindings Status](status/PYTHON_BINDINGS_STATUS.md)** - Python implementation status
-- **[libguestfs Implementation](status/LIBGUESTFS_IMPLEMENTATION.md)** - libguestfs API coverage
-- **[Implementation Complete](status/IMPLEMENTATION_COMPLETE.md)** - Completion summary
+- **[LinkedIn Post](marketing/linkedin-post.md)** - Social media announcements and templates
 
 ### 📦 [Archive](archive/) - Historical Documentation
 
-Superseded or historical documents for reference.
+Historical documents for reference.
 
-- Previous completion summaries
-- Old quick wins documentation
-- Weekly completion reports
-- Historical enhancement summaries
+- **[Testing](archive/testing/)** - Historical test reports and results
+- **[Status](archive/status/)** - Implementation status tracking
+- **[Completions](archive/)** - Phase completion summaries
+- **[Enhancements](archive/)** - Historical enhancement documentation
 
 ## 🚀 Quick Navigation
 
 ### New Users
-1. Read [Quick Start](guides/QUICKSTART.md)
-2. Check [CLI Guide](guides/CLI_GUIDE.md)
-3. Try [Python Bindings](guides/PYTHON_BINDINGS.md)
+1. Read [Getting Started](user-guides/getting-started.md)
+2. Check [CLI Guide](user-guides/cli-guide.md)
+3. Try [Interactive Mode](user-guides/interactive-mode.md)
 
 ### Python Developers
-1. [Python Bindings Guide](guides/PYTHON_BINDINGS.md)
-2. [Python API Reference](api/PYTHON_API_REFERENCE.md)
+1. [Python Bindings Guide](user-guides/python-bindings.md)
+2. [Python API Reference](api/python-reference.md)
 3. [Python Examples](../examples/python/)
 
 ### Rust Developers
-1. [Architecture Overview](architecture/ARCHITECTURE.md)
-2. [API Reference](api/API_REFERENCE.md)
-3. [Ergonomic API Guide](api/ERGONOMIC_API.md)
+1. [Architecture Overview](architecture/overview.md)
+2. [Rust API Reference](api/rust-reference.md)
+3. [Ergonomic Design](api/ergonomic-design.md)
 
 ### Contributors
-1. [Enhancement Status](development/ENHANCEMENT_STATUS.md)
-2. [Next Enhancements](development/NEXT_ENHANCEMENTS.md)
-3. [Enhancement Roadmap](development/ENHANCEMENT_ROADMAP.md)
-4. [Testing Guide](testing/TESTING.md)
+1. [Improvements Log](development/improvements-log.md)
+2. [Roadmap 2026](development/roadmap-2026.md)
+3. [Enhancement Roadmap](development/enhancement-roadmap.md)
 
 ### System Administrators
-1. [CLI Guide](guides/CLI_GUIDE.md)
-2. [Inspection Profiles](guides/PROFILES_GUIDE.md)
-3. [Comparison Guide](guides/COMPARISON_GUIDE.md)
+1. [CLI Guide](user-guides/cli-guide.md)
+2. [Profiles](user-guides/profiles.md)
+3. [Export Formats](features/export-formats.md)
+
+## 🔍 Common Tasks
+
+### I want to...
+
+- **Get started quickly** → [Getting Started](user-guides/getting-started.md)
+- **Use from command line** → [CLI Guide](user-guides/cli-guide.md)
+- **Use interactively** → [Interactive Mode](user-guides/interactive-mode.md)
+- **Use from Python** → [Python Bindings](user-guides/python-bindings.md)
+- **Do security audits** → [Profiles](user-guides/profiles.md)
+- **Export HTML reports** → [HTML Export](features/html-export.md)
+- **Export data (JSON/CSV)** → [Output Formats](features/output-formats.md)
+- **Understand architecture** → [Architecture Overview](architecture/overview.md)
+- **Compare with alternatives** → [Comparison Guide](architecture/comparison-guide.md)
+- **Contribute code** → [Development](development/)
+- **Fix issues** → [Troubleshooting](user-guides/troubleshooting.md)
 
 ## 📝 Documentation Standards
 
@@ -123,14 +123,7 @@ All documentation follows these standards:
 - **Code Examples:** Tested and working
 - **Updates:** Keep in sync with code changes
 - **Links:** Use relative links within documentation
-
-## 🔍 Search Tips
-
-- **CLI Usage:** See [guides/CLI_GUIDE.md](guides/CLI_GUIDE.md)
-- **Python API:** See [api/PYTHON_API_REFERENCE.md](api/PYTHON_API_REFERENCE.md)
-- **Architecture:** See [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md)
-- **Testing:** See [testing/TESTING.md](testing/TESTING.md)
-- **Status:** See [status/PROJECT_SUMMARY.md](status/PROJECT_SUMMARY.md)
+- **Structure:** Clear hierarchy with consistent naming
 
 ## 🤝 Contributing to Documentation
 
@@ -145,6 +138,12 @@ Found an issue or want to improve documentation?
 - **Issues:** https://github.com/ssahani/guestkit/issues
 - **Discussions:** https://github.com/ssahani/guestkit/discussions
 - **Email:** ssahani@gmail.com
+
+## External Resources
+
+- **Project Repository:** [GitHub](https://github.com/ssahani/guestkit)
+- **PyPI Package:** [guestkit on PyPI](https://pypi.org/project/guestkit/) (coming soon)
+- **Crates.io:** [guestkit on crates.io](https://crates.io/crates/guestkit)
 
 ---
 

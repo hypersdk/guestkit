@@ -39,8 +39,8 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n  Setting up partition table...");
     g.part_init("/dev/sda", "mbr")?;
-    g.part_add("/dev/sda", "primary", 2048, 104447)?;     // ~50MB System Reserved
-    g.part_add("/dev/sda", "primary", 104448, -2048)?;    // ~150MB C: drive
+    g.part_add("/dev/sda", "primary", 2048, 104447)?; // ~50MB System Reserved
+    g.part_add("/dev/sda", "primary", 104448, -2048)?; // ~150MB C: drive
 
     // Test 3: Testing part_set_parttype() (Phase 3 API)
     println!("\n[3/10] Testing part_set_parttype()...");
@@ -88,11 +88,16 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n  Creating Windows system files...");
 
     // Create version information
-    g.write("/Windows/System32/version.txt",
-        b"Windows 11 Pro\r\nVersion 23H2 (OS Build 22631.4169)\r\n")?;
+    g.write(
+        "/Windows/System32/version.txt",
+        b"Windows 11 Pro\r\nVersion 23H2 (OS Build 22631.4169)\r\n",
+    )?;
 
     // Create fake registry hives (just markers)
-    g.write("/Windows/System32/config/SOFTWARE", b"FAKE_REGISTRY_HIVE\x00")?;
+    g.write(
+        "/Windows/System32/config/SOFTWARE",
+        b"FAKE_REGISTRY_HIVE\x00",
+    )?;
     g.write("/Windows/System32/config/SYSTEM", b"FAKE_REGISTRY_HIVE\x00")?;
     g.write("/Windows/System32/config/SAM", b"FAKE_REGISTRY_HIVE\x00")?;
 
@@ -110,12 +115,18 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create some Windows-specific test files
     println!("\n  Creating Windows test files...");
-    g.write("/Users/Administrator/Desktop/test.txt", b"Windows test file\r\n")?;
+    g.write(
+        "/Users/Administrator/Desktop/test.txt",
+        b"Windows test file\r\n",
+    )?;
     g.write("/Temp/temporary.log", b"Temporary log data\r\n")?;
     g.write("/ProgramData/settings.ini", b"[Settings]\r\nkey=value\r\n")?;
 
     // Create a symbolic link (even on NTFS)
-    g.ln_s("/Users/Administrator/Desktop/test.txt", "/Users/Administrator/Desktop/shortcut.lnk")?;
+    g.ln_s(
+        "/Users/Administrator/Desktop/test.txt",
+        "/Users/Administrator/Desktop/shortcut.lnk",
+    )?;
 
     // Test 5: Testing lstat() on symlink (Phase 3 API)
     println!("\n[5/10] Testing lstat() on symbolic link...");
@@ -127,7 +138,10 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
     println!("  stat size: {} (target file)", stat_result.size);
 
     // The sizes should be different (link metadata vs file content)
-    assert_ne!(lstat_result.size, stat_result.size, "lstat and stat should differ for symlinks");
+    assert_ne!(
+        lstat_result.size, stat_result.size,
+        "lstat and stat should differ for symlinks"
+    );
     println!("  ✓ lstat() correctly doesn't follow symlink");
 
     // Create directory for removal testing (Windows paths)
@@ -166,8 +180,14 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
     // Create a CPIO archive for testing
     println!("\n  Creating test CPIO archive...");
     g.mkdir_p("/Users/Administrator/archive-source")?;
-    g.write("/Users/Administrator/archive-source/document1.txt", b"Document 1\r\n")?;
-    g.write("/Users/Administrator/archive-source/document2.txt", b"Document 2\r\n")?;
+    g.write(
+        "/Users/Administrator/archive-source/document1.txt",
+        b"Document 1\r\n",
+    )?;
+    g.write(
+        "/Users/Administrator/archive-source/document2.txt",
+        b"Document 2\r\n",
+    )?;
 
     // Unmount and shutdown
     g.umount("/")?;
@@ -240,14 +260,21 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  ✓ CPIO archive extracted successfully");
 
                 // Verify extracted files
-                if g4.exists("/Users/Administrator/Downloads/extracted/cpio-test-windows/file1.txt")? {
-                    let content = g4.cat("/Users/Administrator/Downloads/extracted/cpio-test-windows/file1.txt")?;
+                if g4.exists(
+                    "/Users/Administrator/Downloads/extracted/cpio-test-windows/file1.txt",
+                )? {
+                    let content = g4.cat(
+                        "/Users/Administrator/Downloads/extracted/cpio-test-windows/file1.txt",
+                    )?;
                     println!("  Extracted file content: {}", content.trim());
                     println!("  ✓ CPIO extraction verified");
                 }
             }
             Err(e) => {
-                println!("  ⚠ CPIO extraction failed (cpio may not be available): {}", e);
+                println!(
+                    "  ⚠ CPIO extraction failed (cpio may not be available): {}",
+                    e
+                );
             }
         }
 
@@ -303,12 +330,18 @@ fn test_windows_stat_vs_lstat() -> Result<(), Box<dyn std::error::Error>> {
 
     // stat() should follow the symlink
     let stat_result = g.stat("/Windows/System32/link.dll")?;
-    println!("stat(/Windows/System32/link.dll) size: {}", stat_result.size);
+    println!(
+        "stat(/Windows/System32/link.dll) size: {}",
+        stat_result.size
+    );
     assert_eq!(stat_result.size, 19); // "Fake DLL content\r\n"
 
     // lstat() should NOT follow the symlink
     let lstat_result = g.lstat("/Windows/System32/link.dll")?;
-    println!("lstat(/Windows/System32/link.dll) size: {}", lstat_result.size);
+    println!(
+        "lstat(/Windows/System32/link.dll) size: {}",
+        lstat_result.size
+    );
     assert_ne!(lstat_result.size, 19); // Should be link metadata size
 
     g.shutdown()?;
@@ -420,7 +453,8 @@ fn test_windows_long_paths() -> Result<(), Box<dyn std::error::Error>> {
     g.mount("/dev/sda1", "/")?;
 
     // Create a deeply nested path (Windows style)
-    let long_path = "/Program Files/Microsoft/Windows/Application Data/Local Settings/Temporary Files/Cache";
+    let long_path =
+        "/Program Files/Microsoft/Windows/Application Data/Local Settings/Temporary Files/Cache";
     g.mkdir_p(long_path)?;
 
     let test_file = format!("{}/data.tmp", long_path);

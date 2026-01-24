@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Retry logic with exponential backoff
 
+use rand::Rng;
 use std::time::Duration;
 use tokio::time::sleep;
-use rand::Rng;
 
 /// Configuration for retry behavior
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ where
                 // Calculate delay with exponential backoff
                 let delay_secs = (config.initial_delay.as_secs_f64()
                     * config.exponential_base.powi((attempt - 1) as i32))
-                    .min(config.max_delay.as_secs_f64());
+                .min(config.max_delay.as_secs_f64());
 
                 let mut delay = Duration::from_secs_f64(delay_secs);
 

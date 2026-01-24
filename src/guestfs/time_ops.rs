@@ -136,11 +136,19 @@ impl Guestfs {
     /// Find files modified within time range
     ///
     /// Additional functionality for time-based queries
-    pub fn find_by_mtime(&mut self, directory: &str, start_time: i64, end_time: i64) -> Result<Vec<String>> {
+    pub fn find_by_mtime(
+        &mut self,
+        directory: &str,
+        start_time: i64,
+        end_time: i64,
+    ) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: find_by_mtime {} {} {}", directory, start_time, end_time);
+            eprintln!(
+                "guestfs: find_by_mtime {} {} {}",
+                directory, start_time, end_time
+            );
         }
 
         let files = self.find(directory)?;

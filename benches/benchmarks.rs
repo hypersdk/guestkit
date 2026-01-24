@@ -3,7 +3,7 @@
 //!
 //! Run with: cargo bench
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use guestkit::Guestfs;
 use std::fs;
 
@@ -25,7 +25,8 @@ fn bench_disk_creation(c: &mut Criterion) {
             b.iter(|| {
                 let path = format!("/tmp/bench_disk_{}mb.img", size);
                 let mut g = Guestfs::new().unwrap();
-                g.disk_create(&path, "raw", black_box(size * 1024 * 1024)).unwrap();
+                g.disk_create(&path, "raw", black_box(size * 1024 * 1024))
+                    .unwrap();
                 cleanup_disk(&path);
             });
         });
@@ -126,7 +127,8 @@ fn bench_file_operations(c: &mut Criterion) {
         g.add_drive_ro(disk_path).unwrap();
         g.launch().unwrap();
         g.mount("/dev/sda1", "/").unwrap();
-        g.write("/read_test.txt", b"Test content for reading").unwrap();
+        g.write("/read_test.txt", b"Test content for reading")
+            .unwrap();
         g.umount("/").unwrap();
         g.shutdown().unwrap();
     }
@@ -201,7 +203,13 @@ fn bench_checksum_operations(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("checksum");
 
-    for (name, file) in [("small", "/small.dat"), ("medium", "/medium.dat"), ("large", "/large.dat")].iter() {
+    for (name, file) in [
+        ("small", "/small.dat"),
+        ("medium", "/medium.dat"),
+        ("large", "/large.dat"),
+    ]
+    .iter()
+    {
         for algo in ["md5", "sha256"].iter() {
             group.bench_function(format!("{}_{}", algo, name), |b| {
                 b.iter(|| {
@@ -239,7 +247,8 @@ fn bench_archive_operations(c: &mut Criterion) {
     // Create test directory structure
     g.mkdir_p("/data").unwrap();
     for i in 0..10 {
-        g.write(&format!("/data/file{}.txt", i), &vec![b'X'; 10 * 1024]).unwrap();
+        g.write(&format!("/data/file{}.txt", i), &vec![b'X'; 10 * 1024])
+            .unwrap();
     }
 
     g.umount("/").unwrap();

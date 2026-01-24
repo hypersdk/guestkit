@@ -97,7 +97,11 @@ impl Guestfs {
         let mut attrs = Vec::new();
 
         for line in output_str.lines() {
-            if line.starts_with("user.") || line.starts_with("security.") || line.starts_with("system.") || line.starts_with("trusted.") {
+            if line.starts_with("user.")
+                || line.starts_with("security.")
+                || line.starts_with("system.")
+                || line.starts_with("trusted.")
+            {
                 if let Some(attr_name) = line.split('=').next() {
                     attrs.push(attr_name.to_string());
                 }
@@ -117,8 +121,8 @@ impl Guestfs {
             eprintln!("guestfs: copy_xattrs {} {}", src, dest);
         }
 
-        let src_path = self.resolve_guest_path(src)?;
-        let dest_path = self.resolve_guest_path(dest)?;
+        let _src_path = self.resolve_guest_path(src)?;
+        let _dest_path = self.resolve_guest_path(dest)?;
 
         // Get all xattrs from source
         let xattrs = self.listxattrs(src)?;
