@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! DD and copy operations compatible with libguestfs
+//! DD and copy operations for disk image manipulation
 //!
 //! This implementation provides dd-style copy operations.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Copy from source to destination
     ///
-    /// Compatible with libguestfs g.dd()
+    /// GuestFS API: dd()
     pub fn dd(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -83,7 +83,7 @@ impl Guestfs {
 
     /// Zero blocks on device
     ///
-    /// Compatible with libguestfs g.zero_device()
+    /// GuestFS API: zero_device()
     pub fn zero_device(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -110,14 +110,14 @@ impl Guestfs {
 
     /// Zero N bytes on device
     ///
-    /// Compatible with libguestfs g.zero()
+    /// GuestFS API: zero()
     pub fn zero(&mut self, device: &str) -> Result<()> {
         self.zero_device(device)
     }
 
     /// Zero with free space
     ///
-    /// Compatible with libguestfs g.zero_free_space()
+    /// GuestFS API: zero_free_space()
     pub fn zero_free_space_extended(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 

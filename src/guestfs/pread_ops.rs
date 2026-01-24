@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Positional read/write operations compatible with libguestfs
+//! Positional read/write operations for disk image manipulation
 //!
 //! This implementation provides pread/pwrite functionality.
 
@@ -11,7 +11,7 @@ use std::io::{Read, Write, Seek, SeekFrom};
 impl Guestfs {
     /// Read from file at offset
     ///
-    /// Compatible with libguestfs g.pread()
+    /// GuestFS API: pread()
     pub fn pread(&mut self, path: &str, count: i32, offset: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -36,7 +36,7 @@ impl Guestfs {
 
     /// Read from device at offset
     ///
-    /// Compatible with libguestfs g.pread_device()
+    /// GuestFS API: pread_device()
     pub fn pread_device(&mut self, device: &str, count: i32, offset: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -66,7 +66,7 @@ impl Guestfs {
 
     /// Write to file at offset
     ///
-    /// Compatible with libguestfs g.pwrite()
+    /// GuestFS API: pwrite()
     pub fn pwrite(&mut self, path: &str, content: &[u8], offset: i64) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -91,7 +91,7 @@ impl Guestfs {
 
     /// Write to device at offset
     ///
-    /// Compatible with libguestfs g.pwrite_device()
+    /// GuestFS API: pwrite_device()
     pub fn pwrite_device(&mut self, device: &str, content: &[u8], offset: i64) -> Result<i32> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Advanced disk operations compatible with libguestfs
+//! Advanced disk operations for disk image manipulation
 //!
 //! This implementation provides disk-level operations.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create swap partition
     ///
-    /// Compatible with libguestfs g.mkswap()
+    /// GuestFS API: mkswap()
     pub fn mkswap(&mut self, device: &str, label: Option<&str>, uuid: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -59,7 +59,7 @@ impl Guestfs {
 
     /// Enable swap
     ///
-    /// Compatible with libguestfs g.swapon_device()
+    /// GuestFS API: swapon_device()
     pub fn swapon_device(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -95,7 +95,7 @@ impl Guestfs {
 
     /// Disable swap
     ///
-    /// Compatible with libguestfs g.swapoff_device()
+    /// GuestFS API: swapoff_device()
     pub fn swapoff_device(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -131,7 +131,7 @@ impl Guestfs {
 
     /// Get hexdump of file
     ///
-    /// Compatible with libguestfs g.hexdump()
+    /// GuestFS API: hexdump()
     pub fn hexdump(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -159,7 +159,7 @@ impl Guestfs {
 
     /// Get printable strings from file
     ///
-    /// Compatible with libguestfs g.strings()
+    /// GuestFS API: strings()
     pub fn strings(&mut self, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -187,7 +187,7 @@ impl Guestfs {
 
     /// Get printable strings from file (with encoding)
     ///
-    /// Compatible with libguestfs g.strings_e()
+    /// GuestFS API: strings_e()
     pub fn strings_e(&mut self, encoding: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -225,7 +225,7 @@ impl Guestfs {
 
     /// Fill device with pattern
     ///
-    /// Compatible with libguestfs g.fill()
+    /// GuestFS API: fill()
     pub fn fill(&mut self, c: i32, len: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -244,7 +244,7 @@ impl Guestfs {
 
     /// Fill device with pattern from source
     ///
-    /// Compatible with libguestfs g.fill_pattern()
+    /// GuestFS API: fill_pattern()
     pub fn fill_pattern(&mut self, pattern: &str, len: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -271,7 +271,7 @@ impl Guestfs {
 
     /// Fill directory with empty files
     ///
-    /// Compatible with libguestfs g.fill_dir()
+    /// GuestFS API: fill_dir()
     pub fn fill_dir(&mut self, dir: &str, nr: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -290,7 +290,7 @@ impl Guestfs {
 
     /// Get disk identifier
     ///
-    /// Compatible with libguestfs g.disk_identifier()
+    /// GuestFS API: disk_identifier()
     pub fn disk_identifier(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -329,7 +329,7 @@ impl Guestfs {
 
     /// Scrub device
     ///
-    /// Compatible with libguestfs g.scrub_device()
+    /// GuestFS API: scrub_device()
     pub fn scrub_device(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -369,7 +369,7 @@ impl Guestfs {
 
     /// Scrub file
     ///
-    /// Compatible with libguestfs g.scrub_file()
+    /// GuestFS API: scrub_file()
     pub fn scrub_file(&mut self, file: &str) -> Result<()> {
         self.ensure_ready()?;
 

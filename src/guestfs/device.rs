@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Device and filesystem operations compatible with libguestfs
+//! Device and filesystem operations for disk image manipulation
 
 use crate::core::{Error, Result};
 use crate::disk::FileSystem;
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 impl Guestfs {
     /// List all block devices
     ///
-    /// Compatible with libguestfs g.list_devices()
+    /// GuestFS API: list_devices()
     pub fn list_devices(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -24,7 +24,7 @@ impl Guestfs {
 
     /// List all partitions
     ///
-    /// Compatible with libguestfs g.list_partitions()
+    /// GuestFS API: list_partitions()
     pub fn list_partitions(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -40,7 +40,7 @@ impl Guestfs {
 
     /// List all filesystems detected
     ///
-    /// Compatible with libguestfs g.list_filesystems()
+    /// GuestFS API: list_filesystems()
     pub fn list_filesystems(&mut self) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -76,7 +76,7 @@ impl Guestfs {
 
     /// Get filesystem type
     ///
-    /// Compatible with libguestfs g.vfs_type()
+    /// GuestFS API: vfs_type()
     pub fn vfs_type(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -110,7 +110,7 @@ impl Guestfs {
 
     /// Get filesystem label
     ///
-    /// Compatible with libguestfs g.vfs_label()
+    /// GuestFS API: vfs_label()
     pub fn vfs_label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -137,7 +137,7 @@ impl Guestfs {
 
     /// Get filesystem UUID
     ///
-    /// Compatible with libguestfs g.vfs_uuid()
+    /// GuestFS API: vfs_uuid()
     pub fn vfs_uuid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -189,14 +189,14 @@ impl Guestfs {
 
     /// Get block device size in 512-byte sectors
     ///
-    /// Compatible with libguestfs g.blockdev_getsz()
+    /// GuestFS API: blockdev_getsz()
     pub fn blockdev_getsz(&self, device: &str) -> Result<i64> {
         Ok(self.blockdev_getsize64(device)? / 512)
     }
 
     /// Get canonical device name
     ///
-    /// Compatible with libguestfs g.canonical_device_name()
+    /// GuestFS API: canonical_device_name()
     pub fn canonical_device_name(&self, device: &str) -> Result<String> {
         // Normalize device names
         let device = device.trim_start_matches("/dev/");
@@ -213,7 +213,7 @@ impl Guestfs {
 
     /// Get device index
     ///
-    /// Compatible with libguestfs g.device_index()
+    /// GuestFS API: device_index()
     pub fn device_index(&self, device: &str) -> Result<i32> {
         let canonical = self.canonical_device_name(device)?;
 
@@ -229,7 +229,7 @@ impl Guestfs {
 
     /// Check if device name refers to whole device (not partition)
     ///
-    /// Compatible with libguestfs g.is_whole_device()
+    /// GuestFS API: is_whole_device()
     pub fn is_whole_device(&self, device: &str) -> Result<bool> {
         // Whole devices end with just a letter (e.g., /dev/sda)
         // Partitions have numbers (e.g., /dev/sda1)

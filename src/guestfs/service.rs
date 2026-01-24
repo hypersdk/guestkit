@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Service and daemon management operations compatible with libguestfs
+//! Service and daemon management operations for disk image manipulation
 //!
 //! This implementation provides service management access.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Check if service is enabled
     ///
-    /// Compatible with libguestfs g.is_service_enabled()
+    /// GuestFS API: is_service_enabled()
     pub fn is_service_enabled(&mut self, service: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// List enabled services
     ///
-    /// Compatible with libguestfs g.list_enabled_services()
+    /// GuestFS API: list_enabled_services()
     pub fn list_enabled_services(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -93,7 +93,7 @@ impl Guestfs {
 
     /// List disabled services
     ///
-    /// Compatible with libguestfs g.list_disabled_services()
+    /// GuestFS API: list_disabled_services()
     pub fn list_disabled_services(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -131,7 +131,7 @@ impl Guestfs {
 
     /// Get service status
     ///
-    /// Compatible with libguestfs g.get_service_status()
+    /// GuestFS API: get_service_status()
     pub fn get_service_status(&mut self, service: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -149,7 +149,7 @@ impl Guestfs {
 
     /// List running services
     ///
-    /// Compatible with libguestfs g.list_services()
+    /// GuestFS API: list_services()
     pub fn list_services(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -163,7 +163,7 @@ impl Guestfs {
 
     /// Get init system type
     ///
-    /// Compatible with libguestfs g.get_init_system()
+    /// GuestFS API: get_init_system()
     pub fn get_init_system(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -191,7 +191,7 @@ impl Guestfs {
 
     /// List cron jobs
     ///
-    /// Compatible with libguestfs g.list_cron_jobs()
+    /// GuestFS API: list_cron_jobs()
     pub fn list_cron_jobs(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -249,7 +249,7 @@ impl Guestfs {
 
     /// Get process list snapshot
     ///
-    /// Compatible with libguestfs g.list_processes()
+    /// GuestFS API: list_processes()
     pub fn list_processes(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

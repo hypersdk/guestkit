@@ -23,6 +23,7 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+csv = "1.3"
 
 # CLI
 clap = { version = "4", features = ["derive", "cargo"] }
@@ -51,6 +52,19 @@ base64 = "0.22"
 
 # Unix system calls for privilege checking
 libc = "0.2"
+
+# Windows registry parsing (pure Rust)
+nt_hive2 = "3.0"
+
+# Windows event log parsing (pure Rust)
+# evtx = { version = "0.8", default-features = false }
+# TODO: Add evtx crate when log feature conflicts are resolved
+
+# Report generation and export
+askama = "0.12"
+
+# Hashing for cache keys
+sha2 = "0.10"
 
 # PyO3 for Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }

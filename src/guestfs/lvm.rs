@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! LVM (Logical Volume Manager) operations compatible with libguestfs
+//! LVM (Logical Volume Manager) operations for disk image manipulation
 //!
 //! This implementation uses LVM command-line tools (lvm2 package).
 //!
@@ -33,7 +33,7 @@ pub struct LV {
 impl Guestfs {
     /// Scan for LVM volume groups
     ///
-    /// Compatible with libguestfs g.vgscan()
+    /// GuestFS API: vgscan()
     pub fn vgscan(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -68,7 +68,7 @@ impl Guestfs {
 
     /// Activate all LVM volume groups
     ///
-    /// Compatible with libguestfs g.vg_activate_all()
+    /// GuestFS API: vg_activate_all()
     pub fn vg_activate_all(&mut self, activate: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -100,7 +100,7 @@ impl Guestfs {
 
     /// Activate a specific volume group
     ///
-    /// Compatible with libguestfs g.vg_activate()
+    /// GuestFS API: vg_activate()
     pub fn vg_activate(&mut self, activate: bool, volgroups: &[&str]) -> Result<()> {
         self.ensure_ready()?;
 
@@ -134,7 +134,7 @@ impl Guestfs {
 
     /// Create a logical volume
     ///
-    /// Compatible with libguestfs g.lvcreate()
+    /// GuestFS API: lvcreate()
     ///
     /// # Arguments
     ///
@@ -177,7 +177,7 @@ impl Guestfs {
 
     /// Remove a logical volume
     ///
-    /// Compatible with libguestfs g.lvremove()
+    /// GuestFS API: lvremove()
     ///
     /// # Arguments
     ///
@@ -206,7 +206,7 @@ impl Guestfs {
 
     /// List logical volumes with full details
     ///
-    /// Compatible with libguestfs g.lvs_full()
+    /// GuestFS API: lvs_full()
     pub fn lvs_full(&self) -> Result<Vec<LV>> {
         self.ensure_ready()?;
 
@@ -274,7 +274,7 @@ impl Guestfs {
 
     /// List logical volumes (simple)
     ///
-    /// Compatible with libguestfs g.lvs()
+    /// GuestFS API: lvs()
     pub fn lvs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -307,7 +307,7 @@ impl Guestfs {
 
     /// List volume groups
     ///
-    /// Compatible with libguestfs g.vgs()
+    /// GuestFS API: vgs()
     pub fn vgs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -340,7 +340,7 @@ impl Guestfs {
 
     /// List physical volumes
     ///
-    /// Compatible with libguestfs g.pvs()
+    /// GuestFS API: pvs()
     pub fn pvs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

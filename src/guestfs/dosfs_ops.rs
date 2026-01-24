@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! DOS/FAT filesystem operations compatible with libguestfs
+//! DOS/FAT filesystem operations for disk image manipulation
 //!
 //! This implementation provides FAT filesystem management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Set FAT filesystem label
     ///
-    /// Compatible with libguestfs g.set_label()
+    /// GuestFS API: set_label()
     pub fn set_dos_label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -46,7 +46,7 @@ impl Guestfs {
 
     /// Get FAT filesystem label
     ///
-    /// Compatible with libguestfs g.vfs_label()
+    /// GuestFS API: vfs_label()
     pub fn get_dos_label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -81,7 +81,7 @@ impl Guestfs {
 
     /// Check FAT filesystem
     ///
-    /// Compatible with libguestfs g.fsck()
+    /// GuestFS API: fsck()
     pub fn fsck_dos(&mut self, device: &str, correct: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -118,7 +118,7 @@ impl Guestfs {
 
     /// Create FAT filesystem
     ///
-    /// Compatible with libguestfs g.mkfs()
+    /// GuestFS API: mkfs()
     pub fn mkfs_dos(&mut self, device: &str, fat_bits: i32) -> Result<()> {
         self.ensure_ready()?;
 

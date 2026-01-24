@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! JFS (Journaled File System) operations compatible with libguestfs
+//! JFS (Journaled File System) operations for disk image manipulation
 //!
 //! This implementation provides JFS filesystem management functionality.
 

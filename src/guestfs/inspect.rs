@@ -25,7 +25,7 @@ impl Guestfs {
     /// Inspect operating systems in the disk image
     ///
     /// Returns a list of root devices where operating systems were found.
-    /// Compatible with libguestfs g.inspect_os()
+    /// GuestFS API: inspect_os()
     ///
     /// # Examples
     ///
@@ -79,7 +79,7 @@ impl Guestfs {
 
     /// Get the type of operating system
     ///
-    /// Compatible with libguestfs g.inspect_get_type()
+    /// GuestFS API: inspect_get_type()
     pub fn inspect_get_type(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -112,7 +112,7 @@ impl Guestfs {
 
     /// Get the distribution name
     ///
-    /// Compatible with libguestfs g.inspect_get_distro()
+    /// GuestFS API: inspect_get_distro()
     pub fn inspect_get_distro(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -180,7 +180,7 @@ impl Guestfs {
 
     /// Get the product name
     ///
-    /// Compatible with libguestfs g.inspect_get_product_name()
+    /// GuestFS API: inspect_get_product_name()
     pub fn inspect_get_product_name(&mut self, root: &str) -> Result<String> {
         // Try to get from /etc/os-release first
         if let Ok(os_release) = self.read_os_release(root) {
@@ -209,7 +209,7 @@ impl Guestfs {
 
     /// Get the architecture
     ///
-    /// Compatible with libguestfs g.inspect_get_arch()
+    /// GuestFS API: inspect_get_arch()
     pub fn inspect_get_arch(&mut self, _root: &str) -> Result<String> {
         self.ensure_ready()?;
         // For now, assume x86_64 (TODO: detect from ELF binaries or PE headers)
@@ -218,7 +218,7 @@ impl Guestfs {
 
     /// Get the major version number
     ///
-    /// Compatible with libguestfs g.inspect_get_major_version()
+    /// GuestFS API: inspect_get_major_version()
     pub fn inspect_get_major_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -231,7 +231,7 @@ impl Guestfs {
 
     /// Get the minor version number
     ///
-    /// Compatible with libguestfs g.inspect_get_minor_version()
+    /// GuestFS API: inspect_get_minor_version()
     pub fn inspect_get_minor_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -244,7 +244,7 @@ impl Guestfs {
 
     /// Get the hostname
     ///
-    /// Compatible with libguestfs g.inspect_get_hostname()
+    /// GuestFS API: inspect_get_hostname()
     pub fn inspect_get_hostname(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -268,7 +268,7 @@ impl Guestfs {
 
     /// Get the package format (rpm, deb, etc.)
     ///
-    /// Compatible with libguestfs g.inspect_get_package_format()
+    /// GuestFS API: inspect_get_package_format()
     pub fn inspect_get_package_format(&mut self, root: &str) -> Result<String> {
         let distro = self.inspect_get_distro(root)?;
 
@@ -281,7 +281,7 @@ impl Guestfs {
 
     /// Get mountpoints for the root device
     ///
-    /// Compatible with libguestfs g.inspect_get_mountpoints()
+    /// GuestFS API: inspect_get_mountpoints()
     pub fn inspect_get_mountpoints(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -298,7 +298,7 @@ impl Guestfs {
 
     /// List installed applications
     ///
-    /// Compatible with libguestfs g.inspect_list_applications()
+    /// GuestFS API: inspect_list_applications()
     pub fn inspect_list_applications(&mut self, _root: &str) -> Result<Vec<Application>> {
         self.ensure_ready()?;
 
@@ -310,7 +310,7 @@ impl Guestfs {
 
     /// Check if this is a live CD/USB
     ///
-    /// Compatible with libguestfs g.inspect_is_live()
+    /// GuestFS API: inspect_is_live()
     pub fn inspect_is_live(&mut self, _root: &str) -> Result<bool> {
         self.ensure_ready()?;
         // TODO: Check for live indicators

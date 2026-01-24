@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended filesystem (ext2/3/4) operations compatible with libguestfs
+//! Extended filesystem (ext2/3/4) operations for disk image manipulation
 //!
 //! This implementation provides ext-specific functionality.
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! NILFS2 (log-structured filesystem) operations compatible with libguestfs
+//! NILFS2 (log-structured filesystem) operations for disk image manipulation
 //!
 //! This implementation provides NILFS2 filesystem management functionality.
 

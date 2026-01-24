@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! ZFS operations compatible with libguestfs
+//! ZFS operations for disk image manipulation
 //!
 //! This implementation provides ZFS filesystem management functionality.
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! SMART disk monitoring operations compatible with libguestfs
+//! SMART disk monitoring operations for disk image manipulation
 //!
 //! This implementation provides SMART disk health monitoring functionality.
 

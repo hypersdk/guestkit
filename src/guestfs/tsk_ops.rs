@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! TSK (The Sleuth Kit) forensics operations compatible with libguestfs
+//! TSK (The Sleuth Kit) forensics operations for disk image manipulation
 //!
 //! This implementation provides forensic analysis functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Download deleted file using TSK
     ///
-    /// Compatible with libguestfs g.download_inode()
+    /// GuestFS API: download_inode()
     pub fn download_inode(&mut self, device: &str, inode: i64, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -49,7 +49,7 @@ impl Guestfs {
 
     /// List filesystem with TSK
     ///
-    /// Compatible with libguestfs g.filesystem_walk()
+    /// GuestFS API: filesystem_walk()
     pub fn filesystem_walk(&mut self, device: &str) -> Result<Vec<TskDirent>> {
         self.ensure_ready()?;
 

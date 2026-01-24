@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Package management operations compatible with libguestfs
+//! Package management operations for disk image manipulation
 //!
 //! This implementation provides package inspection capabilities.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// List Debian packages
     ///
-    /// Compatible with libguestfs g.dpkg_list()
+    /// GuestFS API: dpkg_list()
     pub fn dpkg_list(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -47,7 +47,7 @@ impl Guestfs {
 
     /// List RPM packages
     ///
-    /// Compatible with libguestfs g.rpm_list()
+    /// GuestFS API: rpm_list()
     pub fn rpm_list(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -76,7 +76,7 @@ impl Guestfs {
 
     /// Get package info
     ///
-    /// Compatible with libguestfs g.get_package_info()
+    /// GuestFS API: get_package_info()
     pub fn get_package_info(&mut self, package: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -121,7 +121,7 @@ impl Guestfs {
 
     /// Check if package is installed
     ///
-    /// Compatible with libguestfs g.is_package_installed()
+    /// GuestFS API: is_package_installed()
     pub fn is_package_installed(&mut self, package: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -150,7 +150,7 @@ impl Guestfs {
 
     /// List package files
     ///
-    /// Compatible with libguestfs g.package_files()
+    /// GuestFS API: package_files()
     pub fn package_files(&mut self, package: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

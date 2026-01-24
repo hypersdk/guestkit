@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! ReiserFS operations compatible with libguestfs
+//! ReiserFS operations for disk image manipulation
 //!
 //! This implementation provides ReiserFS filesystem management functionality.
 

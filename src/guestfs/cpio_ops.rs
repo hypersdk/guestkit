@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! CPIO archive operations compatible with libguestfs
+//! CPIO archive operations for disk image manipulation
 //!
 //! This implementation provides CPIO archive creation and extraction.
 

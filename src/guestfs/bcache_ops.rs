@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Bcache operations compatible with libguestfs
+//! Bcache operations for disk image manipulation
 //!
 //! This implementation provides bcache (block cache) management functionality.
 

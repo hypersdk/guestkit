@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended partition type operations compatible with libguestfs
+//! Extended partition type operations for disk image manipulation
 //!
 //! This implementation provides partition type identification and management.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Get partition type GUID (GPT)
     ///
-    /// Compatible with libguestfs g.part_get_gpt_type()
+    /// GuestFS API: part_get_gpt_type()
     pub fn part_get_gpt_type(&mut self, device: &str, partnum: i32) -> Result<String> {
         self.ensure_ready()?;
 
@@ -52,7 +52,7 @@ impl Guestfs {
 
     /// Set partition type GUID (GPT)
     ///
-    /// Compatible with libguestfs g.part_set_gpt_type()
+    /// GuestFS API: part_set_gpt_type()
     pub fn part_set_gpt_type(&mut self, device: &str, partnum: i32, guid: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -85,7 +85,7 @@ impl Guestfs {
 
     /// Get partition attributes (GPT)
     ///
-    /// Compatible with libguestfs g.part_get_gpt_attributes()
+    /// GuestFS API: part_get_gpt_attributes()
     pub fn part_get_gpt_attributes(&mut self, device: &str, partnum: i32) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -130,7 +130,7 @@ impl Guestfs {
 
     /// Set partition attributes (GPT)
     ///
-    /// Compatible with libguestfs g.part_set_gpt_attributes()
+    /// GuestFS API: part_set_gpt_attributes()
     pub fn part_set_gpt_attributes(&mut self, device: &str, partnum: i32, attributes: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -163,7 +163,7 @@ impl Guestfs {
 
     /// Expand GPT to fill disk
     ///
-    /// Compatible with libguestfs g.part_expand_gpt()
+    /// GuestFS API: part_expand_gpt()
     pub fn part_expand_gpt(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 

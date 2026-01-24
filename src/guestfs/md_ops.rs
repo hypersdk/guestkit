@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! MD/RAID operations compatible with libguestfs
+//! MD/RAID operations for disk image manipulation
 //!
 //! This implementation provides software RAID management functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create RAID array
     ///
-    /// Compatible with libguestfs g.md_create()
+    /// GuestFS API: md_create()
     pub fn md_create(&mut self, name: &str, devices: &[&str], missingbitmap: i64,
                      nrdevices: i32, spare: i32, chunk: i64, level: &str) -> Result<()> {
         self.ensure_ready()?;
@@ -65,7 +65,7 @@ impl Guestfs {
 
     /// Stop RAID array
     ///
-    /// Compatible with libguestfs g.md_stop()
+    /// GuestFS API: md_stop()
     pub fn md_stop(&mut self, md: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -91,7 +91,7 @@ impl Guestfs {
 
     /// Get RAID array details
     ///
-    /// Compatible with libguestfs g.md_detail()
+    /// GuestFS API: md_detail()
     pub fn md_detail(&mut self, md: &str) -> Result<Vec<(String, String)>> {
         self.ensure_ready()?;
 
@@ -129,7 +129,7 @@ impl Guestfs {
 
     /// List MD devices
     ///
-    /// Compatible with libguestfs g.list_md_devices()
+    /// GuestFS API: list_md_devices()
     pub fn list_md_devices(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -163,7 +163,7 @@ impl Guestfs {
 
     /// Get MD array stat
     ///
-    /// Compatible with libguestfs g.md_stat()
+    /// GuestFS API: md_stat()
     pub fn md_stat(&mut self, md: &str) -> Result<Vec<(String, i64)>> {
         self.ensure_ready()?;
 

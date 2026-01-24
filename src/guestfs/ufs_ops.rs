@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! UFS (Unix File System) operations compatible with libguestfs
+//! UFS (Unix File System) operations for disk image manipulation
 //!
 //! This implementation provides UFS filesystem inspection functionality.
 

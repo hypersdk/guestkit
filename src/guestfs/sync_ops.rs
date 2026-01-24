@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Synchronization operations compatible with libguestfs
+//! Synchronization operations for disk image manipulation
 //!
 //! This implementation provides file synchronization functionality.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Synchronize filesystem (already exists as sync, adding extended version)
     ///
-    /// Compatible with libguestfs g.sync()
+    /// GuestFS API: sync()
     pub fn sync_all(&mut self) -> Result<()> {
         self.sync()
     }
@@ -23,7 +23,7 @@ impl Guestfs {
 
     /// Drop caches
     ///
-    /// Compatible with libguestfs g.drop_caches()
+    /// GuestFS API: drop_caches()
     pub fn drop_caches(&mut self, whattodrop: i32) -> Result<()> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! XFS filesystem operations compatible with libguestfs
+//! XFS filesystem operations for disk image manipulation
 //!
 //! This implementation provides XFS-specific functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Repair XFS filesystem
     ///
-    /// Compatible with libguestfs g.xfs_repair()
+    /// GuestFS API: xfs_repair()
     pub fn xfs_repair(&mut self, device: &str, forcelogzero: bool, nomodify: bool) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -48,7 +48,7 @@ impl Guestfs {
 
     /// Get XFS filesystem info
     ///
-    /// Compatible with libguestfs g.xfs_info()
+    /// GuestFS API: xfs_info()
     pub fn xfs_info(&mut self, pathordevice: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -91,7 +91,7 @@ impl Guestfs {
 
     /// Admin XFS filesystem
     ///
-    /// Compatible with libguestfs g.xfs_admin()
+    /// GuestFS API: xfs_admin()
     pub fn xfs_admin(&mut self, device: &str, extunwritten: bool, imgfile: bool, v2log: bool,
                       projid32bit: bool, lazycounter: bool, label: Option<&str>, uuid: Option<&str>) -> Result<i32> {
         self.ensure_ready()?;
@@ -146,7 +146,7 @@ impl Guestfs {
 
     /// Get XFS inode count
     ///
-    /// Compatible with libguestfs g.xfs_db()
+    /// GuestFS API: xfs_db()
     pub fn xfs_db(&mut self, device: &str, command: &str) -> Result<String> {
         self.ensure_ready()?;
 

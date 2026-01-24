@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Partition management operations compatible with libguestfs
+//! Partition management operations for disk image manipulation
 //!
 //! This implementation provides partition creation, deletion, and modification.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create a partition on a device
     ///
-    /// Compatible with libguestfs g.part_add()
+    /// GuestFS API: part_add()
     pub fn part_add(&mut self, device: &str, prlogex: &str, startsect: i64, endsect: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -54,7 +54,7 @@ impl Guestfs {
 
     /// Delete a partition
     ///
-    /// Compatible with libguestfs g.part_del()
+    /// GuestFS API: part_del()
     pub fn part_del(&mut self, device: &str, partnum: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -87,7 +87,7 @@ impl Guestfs {
 
     /// Initialize partition table
     ///
-    /// Compatible with libguestfs g.part_init()
+    /// GuestFS API: part_init()
     pub fn part_init(&mut self, device: &str, parttype: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -131,7 +131,7 @@ impl Guestfs {
 
     /// Resize a partition
     ///
-    /// Compatible with libguestfs g.part_resize()
+    /// GuestFS API: part_resize()
     pub fn part_resize(&mut self, device: &str, partnum: i32, endsect: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -165,7 +165,7 @@ impl Guestfs {
 
     /// Set partition bootable flag
     ///
-    /// Compatible with libguestfs g.part_set_bootable()
+    /// GuestFS API: part_set_bootable()
     pub fn part_set_bootable(&mut self, device: &str, partnum: i32, bootable: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -202,7 +202,7 @@ impl Guestfs {
 
     /// Set partition name (GPT only)
     ///
-    /// Compatible with libguestfs g.part_set_name()
+    /// GuestFS API: part_set_name()
     pub fn part_set_name(&mut self, device: &str, partnum: i32, name: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -236,7 +236,7 @@ impl Guestfs {
 
     /// Set MBR partition type
     ///
-    /// Compatible with libguestfs g.part_set_mbr_id()
+    /// GuestFS API: part_set_mbr_id()
     pub fn part_set_mbr_id(&mut self, device: &str, partnum: i32, idbyte: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -269,7 +269,7 @@ impl Guestfs {
 
     /// Get partition disk geometry
     ///
-    /// Compatible with libguestfs g.part_get_disk_guid()
+    /// GuestFS API: part_get_disk_guid()
     pub fn part_get_disk_guid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -311,7 +311,7 @@ impl Guestfs {
 
     /// Get partition GUID (GPT only)
     ///
-    /// Compatible with libguestfs g.part_get_gpt_guid()
+    /// GuestFS API: part_get_gpt_guid()
     pub fn part_get_gpt_guid(&mut self, device: &str, partnum: i32) -> Result<String> {
         self.ensure_ready()?;
 

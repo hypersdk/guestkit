@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended link operations compatible with libguestfs
+//! Extended link operations for disk image manipulation
 //!
 //! This implementation provides symbolic and hard link management.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Read link target (already exists as readlink, adding extended version)
     ///
-    /// Compatible with libguestfs g.readlink()
+    /// GuestFS API: readlink()
     pub fn read_link(&mut self, path: &str) -> Result<String> {
         self.readlink(path)
     }

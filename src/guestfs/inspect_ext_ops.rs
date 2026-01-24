@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended inspection operations compatible with libguestfs
+//! Extended inspection operations for disk image manipulation
 //!
 //! This implementation provides additional OS inspection functionality.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get operating system product variant
     ///
-    /// Compatible with libguestfs g.inspect_get_product_variant()
+    /// GuestFS API: inspect_get_product_variant()
     pub fn inspect_get_product_variant(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -39,7 +39,7 @@ impl Guestfs {
 
     /// Get format of OS
     ///
-    /// Compatible with libguestfs g.inspect_get_format()
+    /// GuestFS API: inspect_get_format()
     pub fn inspect_get_format(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -59,7 +59,7 @@ impl Guestfs {
 
     /// Check if multipart OS
     ///
-    /// Compatible with libguestfs g.inspect_is_multipart()
+    /// GuestFS API: inspect_is_multipart()
     pub fn inspect_is_multipart(&mut self, root: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -75,7 +75,7 @@ impl Guestfs {
 
     /// Check if NetInstall
     ///
-    /// Compatible with libguestfs g.inspect_is_netinst()
+    /// GuestFS API: inspect_is_netinst()
     pub fn inspect_is_netinst(&mut self, root: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -89,7 +89,7 @@ impl Guestfs {
 
     /// Get OSInfo ID
     ///
-    /// Compatible with libguestfs g.inspect_get_osinfo()
+    /// GuestFS API: inspect_get_osinfo()
     pub fn inspect_get_osinfo_id(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 

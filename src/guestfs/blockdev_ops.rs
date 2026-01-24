@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Block device operations compatible with libguestfs
+//! Block device operations for disk image manipulation
 //!
 //! This implementation provides block device manipulation functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Set block device to read-only
     ///
-    /// Compatible with libguestfs g.blockdev_setro()
+    /// GuestFS API: blockdev_setro()
     pub fn blockdev_setro(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -42,7 +42,7 @@ impl Guestfs {
 
     /// Set block device to read-write
     ///
-    /// Compatible with libguestfs g.blockdev_setrw()
+    /// GuestFS API: blockdev_setrw()
     pub fn blockdev_setrw(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -74,7 +74,7 @@ impl Guestfs {
 
     /// Get read-only status of block device
     ///
-    /// Compatible with libguestfs g.blockdev_getro()
+    /// GuestFS API: blockdev_getro()
     pub fn blockdev_getro(&mut self, device: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -107,7 +107,7 @@ impl Guestfs {
 
     /// Flush block device buffers
     ///
-    /// Compatible with libguestfs g.blockdev_flushbufs()
+    /// GuestFS API: blockdev_flushbufs()
     pub fn blockdev_flushbufs(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -139,7 +139,7 @@ impl Guestfs {
 
     /// Reread partition table
     ///
-    /// Compatible with libguestfs g.blockdev_rereadpt()
+    /// GuestFS API: blockdev_rereadpt()
     pub fn blockdev_rereadpt(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -171,7 +171,7 @@ impl Guestfs {
 
     /// Get block size of device
     ///
-    /// Compatible with libguestfs g.blockdev_getbsz()
+    /// GuestFS API: blockdev_getbsz()
     pub fn blockdev_getbsz(&mut self, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -205,7 +205,7 @@ impl Guestfs {
 
     /// Set block size of device
     ///
-    /// Compatible with libguestfs g.blockdev_setbsz()
+    /// GuestFS API: blockdev_setbsz()
     pub fn blockdev_setbsz(&mut self, device: &str, blocksize: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -238,14 +238,14 @@ impl Guestfs {
 
     /// Get sector count of device
     ///
-    /// Compatible with libguestfs g.blockdev_getsz() - already exists but for completeness
+    /// GuestFS API: blockdev_getsz() - already exists but for completeness
     pub fn blockdev_getsectors(&mut self, device: &str) -> Result<i64> {
         self.blockdev_getsz(device)
     }
 
     /// Get sector size of device
     ///
-    /// Compatible with libguestfs g.blockdev_getss()
+    /// GuestFS API: blockdev_getss()
     pub fn blockdev_getss(&mut self, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 

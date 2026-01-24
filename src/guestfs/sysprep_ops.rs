@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! SysPrep operations compatible with libguestfs
+//! SysPrep operations for disk image manipulation
 //!
 //! This implementation provides Windows VM preparation functionality (removing unique data).
 

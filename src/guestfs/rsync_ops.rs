@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Rsync operations compatible with libguestfs
+//! Rsync operations for disk image manipulation
 //!
 //! This implementation provides rsync-based file synchronization functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Synchronize files using rsync (from guest)
     ///
-    /// Compatible with libguestfs g.rsync_out()
+    /// GuestFS API: rsync_out()
     pub fn rsync_out(&mut self, src: &str, dest: &str, archive: bool,
                      deletedest: bool) -> Result<()> {
         self.ensure_ready()?;
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// Synchronize files using rsync (to guest)
     ///
-    /// Compatible with libguestfs g.rsync_in()
+    /// GuestFS API: rsync_in()
     pub fn rsync_in(&mut self, src: &str, dest: &str, archive: bool,
                     deletedest: bool) -> Result<()> {
         self.ensure_ready()?;

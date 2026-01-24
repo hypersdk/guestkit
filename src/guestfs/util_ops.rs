@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Additional utility operations compatible with libguestfs
+//! Additional utility operations for disk image manipulation
 //!
 //! This implementation provides miscellaneous utility functionality.
 
@@ -11,7 +11,7 @@ impl Guestfs {
 
     /// Get library version
     ///
-    /// Compatible with libguestfs g.version()
+    /// GuestFS API: version()
     pub fn version_info(&mut self) -> Result<(i64, i64, i64, String)> {
         self.ensure_ready()?;
 
@@ -25,7 +25,7 @@ impl Guestfs {
 
     /// Get default QEMU binary
     ///
-    /// Compatible with libguestfs g.get_qemu()
+    /// GuestFS API: get_qemu()
     pub fn get_qemu(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// Get current umask
     ///
-    /// Compatible with libguestfs g.umask()
+    /// GuestFS API: umask()
     pub fn get_umask(&mut self) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -77,7 +77,7 @@ impl Guestfs {
 
     /// Get file major/minor device numbers
     ///
-    /// Compatible with libguestfs g.stat()
+    /// GuestFS API: stat()
     pub fn stat_device(&mut self, path: &str) -> Result<(i64, i64)> {
         self.ensure_ready()?;
 

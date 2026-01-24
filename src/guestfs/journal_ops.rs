@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Systemd journal operations compatible with libguestfs
+//! Systemd journal operations for disk image manipulation
 //!
 //! This implementation provides systemd journal reading functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Open systemd journal
     ///
-    /// Compatible with libguestfs g.journal_open()
+    /// GuestFS API: journal_open()
     pub fn journal_open(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -26,7 +26,7 @@ impl Guestfs {
 
     /// Close systemd journal
     ///
-    /// Compatible with libguestfs g.journal_close()
+    /// GuestFS API: journal_close()
     pub fn journal_close(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -39,7 +39,7 @@ impl Guestfs {
 
     /// Get systemd journal entries
     ///
-    /// Compatible with libguestfs g.journal_get()
+    /// GuestFS API: journal_get()
     pub fn journal_get(&mut self) -> Result<Vec<(String, String)>> {
         self.ensure_ready()?;
 
@@ -53,7 +53,7 @@ impl Guestfs {
 
     /// Move to next journal entry
     ///
-    /// Compatible with libguestfs g.journal_next()
+    /// GuestFS API: journal_next()
     pub fn journal_next(&mut self) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -67,7 +67,7 @@ impl Guestfs {
 
     /// Skip journal entries
     ///
-    /// Compatible with libguestfs g.journal_skip()
+    /// GuestFS API: journal_skip()
     pub fn journal_skip(&mut self, skip: i64) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -81,7 +81,7 @@ impl Guestfs {
 
     /// Get realtime timestamp from journal
     ///
-    /// Compatible with libguestfs g.journal_get_realtime_usec()
+    /// GuestFS API: journal_get_realtime_usec()
     pub fn journal_get_realtime_usec(&mut self) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -95,7 +95,7 @@ impl Guestfs {
 
     /// Get journal data threshold
     ///
-    /// Compatible with libguestfs g.journal_get_data_threshold()
+    /// GuestFS API: journal_get_data_threshold()
     pub fn journal_get_data_threshold(&mut self) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -109,7 +109,7 @@ impl Guestfs {
 
     /// Set journal data threshold
     ///
-    /// Compatible with libguestfs g.journal_set_data_threshold()
+    /// GuestFS API: journal_set_data_threshold()
     pub fn journal_set_data_threshold(&mut self, threshold: i64) -> Result<()> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Virt operations compatible with libguestfs virt-* tools
+//! Virt operations for disk image manipulation virt-* tools
 //!
 //! This implementation provides equivalents to virt-* command-line tools.
 

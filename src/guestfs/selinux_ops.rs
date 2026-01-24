@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! SELinux operations compatible with libguestfs
+//! SELinux operations for disk image manipulation
 //!
 //! This implementation provides SELinux context management functionality.
 
@@ -69,7 +69,7 @@ impl Guestfs {
 
     /// Restore SELinux contexts recursively
     ///
-    /// Compatible with libguestfs g.restorecon()
+    /// GuestFS API: restorecon()
     pub fn restorecon(&mut self, path: &str, recursive: bool) -> Result<()> {
         self.ensure_ready()?;
 

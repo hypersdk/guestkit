@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Extended ownership and permissions operations compatible with libguestfs
+//! Extended ownership and permissions operations for disk image manipulation
 //!
 //! This implementation provides comprehensive file ownership management.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Change ownership recursively
     ///
-    /// Compatible with libguestfs g.chown_recursive()
+    /// GuestFS API: chown_recursive()
     pub fn chown_recursive(&mut self, owner: i32, group: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -49,7 +49,7 @@ impl Guestfs {
 
     /// Change permissions recursively
     ///
-    /// Compatible with libguestfs g.chmod_recursive()
+    /// GuestFS API: chmod_recursive()
     pub fn chmod_recursive(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

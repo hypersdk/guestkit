@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Filesystem operations compatible with libguestfs
+//! Filesystem operations for disk image manipulation
 //!
 //! This implementation provides filesystem creation and management.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create a filesystem
     ///
-    /// Compatible with libguestfs g.mkfs()
+    /// GuestFS API: mkfs()
     pub fn mkfs(&mut self, fstype: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -64,7 +64,7 @@ impl Guestfs {
 
     /// Create a filesystem with options
     ///
-    /// Compatible with libguestfs g.mkfs_opts()
+    /// GuestFS API: mkfs_opts()
     pub fn mkfs_opts(
         &mut self,
         fstype: &str,
@@ -202,7 +202,7 @@ impl Guestfs {
 
     /// Run filesystem check and repair
     ///
-    /// Compatible with libguestfs g.fsck()
+    /// GuestFS API: fsck()
     pub fn fsck(&mut self, fstype: &str, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -247,7 +247,7 @@ impl Guestfs {
 
     /// Zero free space on filesystem
     ///
-    /// Compatible with libguestfs g.zerofree()
+    /// GuestFS API: zerofree()
     pub fn zerofree(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -286,7 +286,7 @@ impl Guestfs {
 
     /// Trim free space on filesystem
     ///
-    /// Compatible with libguestfs g.fstrim()
+    /// GuestFS API: fstrim()
     pub fn fstrim(&mut self, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -322,7 +322,7 @@ impl Guestfs {
 
     /// Get filesystem statistics
     ///
-    /// Compatible with libguestfs g.df()
+    /// GuestFS API: df()
     pub fn df(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -352,7 +352,7 @@ impl Guestfs {
 
     /// Get filesystem statistics in human-readable format
     ///
-    /// Compatible with libguestfs g.df_h()
+    /// GuestFS API: df_h()
     pub fn df_h(&mut self) -> Result<String> {
         self.df()
     }

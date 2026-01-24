@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! System configuration operations compatible with libguestfs
+//! System configuration operations for disk image manipulation
 //!
 //! This implementation provides system-level configuration access.
 
@@ -10,7 +10,7 @@ use std::fs;
 impl Guestfs {
     /// Get timezone
     ///
-    /// Compatible with libguestfs g.get_timezone()
+    /// GuestFS API: get_timezone()
     pub fn get_timezone(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -44,7 +44,7 @@ impl Guestfs {
 
     /// Set timezone
     ///
-    /// Compatible with libguestfs g.set_timezone()
+    /// GuestFS API: set_timezone()
     pub fn set_timezone(&mut self, timezone: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -72,7 +72,7 @@ impl Guestfs {
 
     /// Get system locale
     ///
-    /// Compatible with libguestfs g.get_locale()
+    /// GuestFS API: get_locale()
     pub fn get_locale(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -107,7 +107,7 @@ impl Guestfs {
 
     /// Set system locale
     ///
-    /// Compatible with libguestfs g.set_locale()
+    /// GuestFS API: set_locale()
     pub fn set_locale(&mut self, locale: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -127,7 +127,7 @@ impl Guestfs {
 
     /// Get OS version
     ///
-    /// Compatible with libguestfs g.get_osinfo()
+    /// GuestFS API: get_osinfo()
     pub fn get_osinfo(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -162,7 +162,7 @@ impl Guestfs {
 
     /// Get kernel version
     ///
-    /// Compatible with libguestfs g.get_kernel_version()
+    /// GuestFS API: get_kernel_version()
     pub fn get_kernel_version(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -192,7 +192,7 @@ impl Guestfs {
 
     /// Get system uptime
     ///
-    /// Compatible with libguestfs g.get_uptime()
+    /// GuestFS API: get_uptime()
     pub fn get_uptime(&mut self) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -207,7 +207,7 @@ impl Guestfs {
 
     /// Get machine ID
     ///
-    /// Compatible with libguestfs g.get_machine_id()
+    /// GuestFS API: get_machine_id()
     pub fn get_machine_id(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -232,7 +232,7 @@ impl Guestfs {
 
     /// Get systemd units
     ///
-    /// Compatible with libguestfs g.list_systemd_units()
+    /// GuestFS API: list_systemd_units()
     pub fn list_systemd_units(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -272,7 +272,7 @@ impl Guestfs {
 
     /// Get environment variables
     ///
-    /// Compatible with libguestfs g.get_environment()
+    /// GuestFS API: get_environment()
     pub fn get_environment(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -298,7 +298,7 @@ impl Guestfs {
 
     /// Get system users
     ///
-    /// Compatible with libguestfs g.list_users()
+    /// GuestFS API: list_users()
     pub fn list_users(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -322,7 +322,7 @@ impl Guestfs {
 
     /// Get system groups
     ///
-    /// Compatible with libguestfs g.list_groups()
+    /// GuestFS API: list_groups()
     pub fn list_groups(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! SquashFS operations compatible with libguestfs
+//! SquashFS operations for disk image manipulation
 //!
 //! This implementation provides SquashFS filesystem creation and manipulation.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create SquashFS filesystem
     ///
-    /// Compatible with libguestfs g.mksquashfs()
+    /// GuestFS API: mksquashfs()
     pub fn mksquashfs(&mut self, path: &str, filename: &str, compress: Option<&str>,
                       excludes: &[&str]) -> Result<()> {
         self.ensure_ready()?;

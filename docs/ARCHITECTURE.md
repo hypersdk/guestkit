@@ -16,7 +16,7 @@ This document provides a deep dive into the guestkit architecture, design decisi
 
 ## Overview
 
-guestkit is a pure Rust implementation of libguestfs-compatible APIs for disk image inspection and manipulation. It follows a layered architecture designed for:
+guestkit is a pure Rust implementation of guestfs APIs for disk image inspection and manipulation. It follows a layered architecture designed for:
 
 - **Safety**: Memory-safe Rust prevents common vulnerabilities
 - **Performance**: Zero-cost abstractions and efficient I/O
@@ -265,7 +265,7 @@ if file_size > MMAP_THRESHOLD {
 
 ### GuestFS Module (`src/guestfs/`)
 
-**Purpose:** libguestfs-compatible API implementation
+**Purpose:** guestfs API implementation
 
 **Structure:** 84 specialized modules, each focused on specific functionality:
 
@@ -404,7 +404,7 @@ Example: Reading a file from a disk image
 
 **Trade-offs:**
 - Some operations still call external tools (qemu-img, cryptsetup)
-- Not 100% API compatible with libguestfs
+- Not 100% API 
 - Smaller ecosystem than C
 
 ### Why Not FFI to libguestfs?

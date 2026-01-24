@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Network and hostname operations compatible with libguestfs
+//! Network and hostname operations for disk image manipulation
 //!
 //! This implementation provides network configuration access.
 
@@ -9,7 +9,7 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get hostname
     ///
-    /// Compatible with libguestfs g.get_hostname()
+    /// GuestFS API: get_hostname()
     pub fn get_hostname(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -37,7 +37,7 @@ impl Guestfs {
 
     /// Set hostname
     ///
-    /// Compatible with libguestfs g.set_hostname()
+    /// GuestFS API: set_hostname()
     pub fn set_hostname(&mut self, hostname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -78,7 +78,7 @@ impl Guestfs {
 
     /// Get network interfaces
     ///
-    /// Compatible with libguestfs g.list_network_interfaces()
+    /// GuestFS API: list_network_interfaces()
     pub fn list_network_interfaces(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -105,7 +105,7 @@ impl Guestfs {
 
     /// Ping host
     ///
-    /// Compatible with libguestfs g.ping_daemon()
+    /// GuestFS API: ping_daemon()
     pub fn ping_daemon(&self) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -119,7 +119,7 @@ impl Guestfs {
 
     /// Get network configuration for interface
     ///
-    /// Compatible with libguestfs g.get_network_config()
+    /// GuestFS API: get_network_config()
     pub fn get_network_config(&mut self, interface: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -168,7 +168,7 @@ impl Guestfs {
 
     /// Read /etc/hosts file
     ///
-    /// Compatible with libguestfs g.read_etc_hosts()
+    /// GuestFS API: read_etc_hosts()
     pub fn read_etc_hosts(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -181,7 +181,7 @@ impl Guestfs {
 
     /// Get DNS servers
     ///
-    /// Compatible with libguestfs g.get_dns()
+    /// GuestFS API: get_dns()
     pub fn get_dns(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

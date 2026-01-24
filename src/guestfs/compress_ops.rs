@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Compression operations compatible with libguestfs
+//! Compression operations for disk image manipulation
 //!
 //! This implementation provides file compression and decompression functionality.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Compress file with gzip
     ///
-    /// Compatible with libguestfs g.compress_out()
+    /// GuestFS API: compress_out()
     pub fn compress_out(&mut self, ctype: &str, file: &str, output: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -51,7 +51,7 @@ impl Guestfs {
 
     /// Decompress file
     ///
-    /// Compatible with libguestfs g.compress_device_out()
+    /// GuestFS API: compress_device_out()
     pub fn compress_device_out(&mut self, ctype: &str, device: &str, output: &str) -> Result<()> {
         self.ensure_ready()?;
 

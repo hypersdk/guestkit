@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Disk image management operations compatible with libguestfs
+//! Disk image management operations for disk image manipulation
 //!
 //! This implementation provides disk image operations.
 
@@ -10,7 +10,7 @@ use std::process::Command;
 impl Guestfs {
     /// Create empty disk image
     ///
-    /// Compatible with libguestfs g.disk_create()
+    /// GuestFS API: disk_create()
     pub fn disk_create(&mut self, filename: &str, format: &str, size: i64) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: disk_create {} {} {}", filename, format, size);
@@ -37,7 +37,7 @@ impl Guestfs {
 
     /// Get disk image format
     ///
-    /// Compatible with libguestfs g.disk_format()
+    /// GuestFS API: disk_format()
     pub fn disk_format(&mut self, filename: &str) -> Result<String> {
         if self.verbose {
             eprintln!("guestfs: disk_format {}", filename);
@@ -73,7 +73,7 @@ impl Guestfs {
 
     /// Check if disk has backing file
     ///
-    /// Compatible with libguestfs g.disk_has_backing_file()
+    /// GuestFS API: disk_has_backing_file()
     pub fn disk_has_backing_file(&mut self, filename: &str) -> Result<bool> {
         if self.verbose {
             eprintln!("guestfs: disk_has_backing_file {}", filename);
@@ -100,7 +100,7 @@ impl Guestfs {
 
     /// Get virtual size of disk image
     ///
-    /// Compatible with libguestfs g.disk_virtual_size()
+    /// GuestFS API: disk_virtual_size()
     pub fn disk_virtual_size(&mut self, filename: &str) -> Result<i64> {
         if self.verbose {
             eprintln!("guestfs: disk_virtual_size {}", filename);
@@ -137,7 +137,7 @@ impl Guestfs {
 
     /// Resize disk image
     ///
-    /// Compatible with libguestfs g.disk_resize()
+    /// GuestFS API: disk_resize()
     pub fn disk_resize(&mut self, filename: &str, size: i64) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: disk_resize {} {}", filename, size);
@@ -162,7 +162,7 @@ impl Guestfs {
 
     /// Zero unused blocks in disk image
     ///
-    /// Compatible with libguestfs g.zero_free_space()
+    /// GuestFS API: zero_free_space()
     pub fn zero_free_space(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -191,7 +191,7 @@ impl Guestfs {
 
     /// Sparsify disk image
     ///
-    /// Compatible with libguestfs g.sparsify()
+    /// GuestFS API: sparsify()
     pub fn sparsify(&mut self, input: &str, output: &str) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: sparsify {} {}", input, output);
@@ -217,7 +217,7 @@ impl Guestfs {
 
     /// Convert disk image format
     ///
-    /// Compatible with libguestfs g.disk_convert()
+    /// GuestFS API: disk_convert()
     pub fn disk_convert(&mut self, input: &str, output: &str, output_format: &str) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: disk_convert {} {} {}", input, output, output_format);
@@ -244,7 +244,7 @@ impl Guestfs {
 
     /// Check and repair disk image
     ///
-    /// Compatible with libguestfs g.disk_check()
+    /// GuestFS API: disk_check()
     pub fn disk_check(&mut self, filename: &str) -> Result<String> {
         if self.verbose {
             eprintln!("guestfs: disk_check {}", filename);
@@ -262,7 +262,7 @@ impl Guestfs {
 
     /// Get snapshot list
     ///
-    /// Compatible with libguestfs g.disk_snapshot_list()
+    /// GuestFS API: disk_snapshot_list()
     pub fn disk_snapshot_list(&mut self, filename: &str) -> Result<Vec<String>> {
         if self.verbose {
             eprintln!("guestfs: disk_snapshot_list {}", filename);

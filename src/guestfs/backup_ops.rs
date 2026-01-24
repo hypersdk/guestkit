@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Backup and restore operations compatible with libguestfs
+//! Backup and restore operations for disk image manipulation
 //!
 //! This implementation provides file and directory backup functionality.
 
