@@ -83,13 +83,45 @@ with Guestfs() as g:
             print(f"User: {user.username}")
 ```
 
+## 💿 Supported Disk Formats
+
+guestctl automatically detects your disk format and uses the optimal mounting method:
+
+### 🔄 Loop Device (Primary) - Built into Linux Kernel
+**Formats:** RAW, IMG, ISO
+**Advantages:** ✅ No kernel modules needed ✅ Faster setup ✅ More reliable
+**Use case:** Cloud images, raw disks, ISO files
+
+### 🌐 NBD Device (Fallback) - Advanced Format Support
+**Formats:** QCOW2, VMDK, VDI, VHD
+**Advantages:** ✅ Compressed formats ✅ Snapshots ✅ Auto-loads NBD module
+**Use case:** QEMU/KVM, VMware, VirtualBox, Hyper-V images
+
+```bash
+# Loop device used automatically (fast path)
+guestctl inspect disk.raw
+guestctl inspect ubuntu.img
+guestctl inspect debian.iso
+
+# NBD device used automatically (advanced formats)
+guestctl inspect vm.qcow2
+guestctl inspect windows.vmdk
+guestctl inspect virtualbox.vdi
+```
+
+**💡 Pro Tip:** Convert QCOW2 to RAW for faster repeated inspections:
+```bash
+qemu-img convert -O raw vm.qcow2 vm.raw
+guestctl inspect vm.raw  # Now uses loop device!
+```
+
 ## Features
 
 - 🦀 **Ergonomic Rust API** - Type-safe enums, builder patterns, and fluent interfaces for modern Rust idioms
 - 🔍 **Comprehensive API** - 578 disk image manipulation functions (563 fully implemented, 15 API-defined) - **97.4% implementation coverage**
 - 🦀 **Pure Rust** - No C dependencies for core library, memory safe, high performance
 - ⚡ **Compile-Time Safety** - Type-safe filesystems, OS detection, and partition tables prevent runtime errors
-- 💿 **Disk Format Support** - QCOW2, VMDK, RAW detection via magic bytes
+- 💿 **Disk Format Support** - RAW/IMG/ISO via loop devices (default), QCOW2/VMDK/VDI/VHD via NBD (automatic)
 - 📊 **Partition Tables** - MBR and GPT parsing, partition creation/deletion/resizing
 - 🗂️ **Filesystem Operations** - Mount/unmount, create (mkfs), check (fsck), tune, trim, resize
 - 🔎 **OS Inspection** - Detect OS type, distro, version, architecture, hostname

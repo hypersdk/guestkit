@@ -90,20 +90,59 @@ g.add_drive_ro("/path/to/disk.img")?;
 g.launch()?;  // ← Required before operations
 ```
 
+### Loop Device Issues
+
+**Symptoms:**
+```
+Error: losetup failed: permission denied
+Error: No free loop devices
+```
+
+**Solutions:**
+
+1. **Permission denied** - Run with sudo:
+   ```bash
+   sudo guestctl inspect disk.raw
+   ```
+
+2. **No free loop devices** - Check and clean up:
+   ```bash
+   # Check current loop devices
+   losetup -a
+
+   # Disconnect all unused
+   sudo losetup -D
+
+   # Or increase max loop devices
+   sudo modprobe loop max_loop=16
+   ```
+
+3. **losetup not found** - Install util-linux:
+   ```bash
+   # Fedora/RHEL
+   sudo dnf install util-linux
+
+   # Ubuntu/Debian
+   sudo apt-get install util-linux
+   ```
+
+**Note:** Loop devices are used by default for RAW/IMG/ISO files. They're built into the Linux kernel and should always be available.
+
 ### NBD Mount Fails
 
 **Symptoms:**
 ```
 Error: Failed to mount NBD device
-modprobe: ERROR: could not insert 'nbd'
+Error: No available NBD devices found
 ```
 
 **Solution:**
-Load the NBD kernel module:
+
+guestctl automatically loads the NBD module, but if that fails:
 
 ```bash
-# Load NBD module
-sudo modprobe nbd
+# Manual module load
+sudo modprobe nbd max_part=16
 
 # Make it persistent
 echo "nbd" | sudo tee /etc/modules-load.d/nbd.conf
@@ -111,6 +150,28 @@ echo "nbd" | sudo tee /etc/modules-load.d/nbd.conf
 # Verify
 lsmod | grep nbd
 ```
+
+**Clean up stuck NBD devices:**
+```bash
+# Disconnect all NBD devices
+for i in {0..15}; do
+    sudo qemu-nbd --disconnect /dev/nbd$i 2>/dev/null
+done
+
+# If still stuck, reboot
+sudo reboot
+```
+
+**Install qemu-nbd if missing:**
+```bash
+# Fedora/RHEL
+sudo dnf install qemu-img
+
+# Ubuntu/Debian
+sudo apt-get install qemu-utils
+```
+
+**Note:** NBD is only used for QCOW2/VMDK/VDI/VHD formats. Use RAW format for simpler setup.
 
 ### Permission Denied Errors
 
