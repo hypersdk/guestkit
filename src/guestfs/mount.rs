@@ -95,6 +95,9 @@ impl Guestfs {
         // Check if we need sudo for mount
         let need_sudo = unsafe { libc::geteuid() } != 0;
 
+        // Detect filesystem type to use appropriate mount options
+        let fs_type = self.vfs_type(&mountable).unwrap_or_else(|_| "ext4".to_string());
+
         // Build mount command
         let mut cmd = if need_sudo {
             let mut sudo_cmd = Command::new("sudo");
@@ -104,11 +107,18 @@ impl Guestfs {
             Command::new("mount")
         };
 
-        // Use noload option for ext* filesystems to prevent journal updates on read-only mounts
-        // This avoids I/O errors during unmount when the device is being disconnected
+        // Use filesystem-specific mount options
+        // For ext* filesystems: use noload to prevent journal updates on read-only mounts
+        // For btrfs and others: just use ro
+        let mount_opts = if fs_type.starts_with("ext") {
+            "ro,noload"
+        } else {
+            "ro"
+        };
+
         let output = cmd
             .arg("-o")
-            .arg("ro,noload")
+            .arg(mount_opts)
             .arg(&device_partition)
             .arg(&actual_mountpoint)
             .output()

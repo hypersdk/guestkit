@@ -126,6 +126,11 @@ impl Guestfs {
             return Ok(os_release.id);
         }
 
+        // Try legacy release files as fallback
+        if let Ok(distro) = self.detect_from_release_files(root) {
+            return Ok(distro);
+        }
+
         let partition_num = self.parse_device_name(root)?;
 
         // Clone partition to avoid borrow checker issues
@@ -185,6 +190,63 @@ impl Guestfs {
         }
 
         OsRelease::parse(&os_release_content)
+    }
+
+    /// Detect distribution from legacy release files
+    fn detect_from_release_files(&mut self, root: &str) -> Result<String> {
+        // Try to mount the root partition first
+        let was_mounted = self.mounted.contains_key("/");
+
+        if !was_mounted {
+            // Try to mount root temporarily (read-only for inspection)
+            self.mount_ro(root, "/")?;
+        }
+
+        // Check for distro-specific release files
+        let distro = if self.exists("/etc/arch-release").unwrap_or(false) {
+            "arch".to_string()
+        } else if self.exists("/usr/bin/pacman").unwrap_or(false)
+                  && self.exists("/etc/pacman.conf").unwrap_or(false) {
+            "arch".to_string()
+        } else if self.exists("/etc/redhat-release").unwrap_or(false) {
+            // Read the file to determine exact distro
+            if let Ok(content) = self.cat("/etc/redhat-release") {
+                if content.to_lowercase().contains("fedora") {
+                    "fedora".to_string()
+                } else if content.to_lowercase().contains("centos") {
+                    "centos".to_string()
+                } else if content.to_lowercase().contains("red hat") {
+                    "rhel".to_string()
+                } else {
+                    "unknown".to_string()
+                }
+            } else {
+                "unknown".to_string()
+            }
+        } else if self.exists("/etc/debian_version").unwrap_or(false) {
+            // Could be Debian or Ubuntu
+            if self.exists("/etc/lsb-release").unwrap_or(false) {
+                if let Ok(content) = self.cat("/etc/lsb-release") {
+                    if content.contains("Ubuntu") {
+                        "ubuntu".to_string()
+                    } else {
+                        "debian".to_string()
+                    }
+                } else {
+                    "debian".to_string()
+                }
+            } else {
+                "debian".to_string()
+            }
+        } else {
+            return Err(Error::NotFound("No release files found".to_string()));
+        };
+
+        if !was_mounted {
+            self.umount("/").ok();
+        }
+
+        Ok(distro)
     }
 
     /// Get the product name
@@ -285,6 +347,7 @@ impl Guestfs {
         match distro.as_str() {
             "fedora" | "rhel" | "centos" | "photon" => Ok("rpm".to_string()),
             "ubuntu" | "debian" => Ok("deb".to_string()),
+            "arch" | "archlinux" | "manjaro" => Ok("pacman".to_string()),
             _ => Ok("unknown".to_string()),
         }
     }
