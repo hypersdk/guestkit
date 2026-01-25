@@ -67,6 +67,7 @@ pub struct Guestfs {
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
     pub(crate) mount_root: Option<PathBuf>,      // Temporary mount directory
     pub(crate) lazy_unmount_used: bool,          // Track if lazy unmount was needed
+    pub(crate) activated_vgs: Vec<String>,       // Track activated LVM volume groups for cleanup
     pub(crate) identifier: Option<String>,
     pub(crate) autosync: bool,
     pub(crate) selinux: bool,
@@ -107,6 +108,7 @@ impl Guestfs {
             mounted: HashMap::new(),
             mount_root: None,
             lazy_unmount_used: false,
+            activated_vgs: Vec::new(),
             identifier: None,
             autosync: true,
             selinux: false,
@@ -331,6 +333,45 @@ impl Guestfs {
                     }
                 }
             }
+        }
+
+        // Step 1.5: Deactivate LVM volume groups
+        // This must happen after unmount but before NBD/loop disconnect
+        if !self.activated_vgs.is_empty() {
+            if self.trace {
+                eprintln!("guestfs: deactivating {} LVM volume group(s)", self.activated_vgs.len());
+            }
+
+            for vg in &self.activated_vgs {
+                if self.trace {
+                    eprintln!("guestfs: deactivating volume group {}", vg);
+                }
+
+                let output = std::process::Command::new("vgchange")
+                    .arg("-an")
+                    .arg(vg)
+                    .output();
+
+                match output {
+                    Ok(out) if out.status.success() => {
+                        if self.trace {
+                            eprintln!("guestfs: volume group {} deactivated", vg);
+                        }
+                    }
+                    Ok(out) => {
+                        eprintln!(
+                            "Warning: failed to deactivate volume group {}: {}",
+                            vg,
+                            String::from_utf8_lossy(&out.stderr)
+                        );
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: failed to run vgchange for {}: {}", vg, e);
+                    }
+                }
+            }
+
+            self.activated_vgs.clear();
         }
 
         // Step 2: Disconnect loop device

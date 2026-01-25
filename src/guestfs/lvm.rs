@@ -80,6 +80,17 @@ impl Guestfs {
             eprintln!("guestfs: vg_activate_all {}", activate);
         }
 
+        // If activating, record VGs for cleanup
+        if activate {
+            if let Ok(vgs) = self.vgs() {
+                for vg in vgs {
+                    if !self.activated_vgs.contains(&vg) {
+                        self.activated_vgs.push(vg);
+                    }
+                }
+            }
+        }
+
         // Run vgchange to activate/deactivate all VGs
         let output = Command::new("vgchange")
             .arg("-a")
