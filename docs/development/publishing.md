@@ -411,7 +411,7 @@ If you encounter issues:
 1. Check workflow logs in GitHub Actions
 2. Review PyPI project page for errors
 3. Test locally first with the commands above
-4. File an issue at https://github.com/ssahani/guestctl/issues
+4. File an issue at https://github.com/ssahani/guestkit/issues
 
 ## Additional Resources
 

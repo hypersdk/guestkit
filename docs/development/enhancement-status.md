@@ -122,7 +122,7 @@ These are the next priority implementations with the biggest impact.
 pip install guestctl
 
 # Instead of this
-git clone https://github.com/ssahani/guestctl
+git clone https://github.com/ssahani/guestkit
 cd guestctl
 cargo build --release
 maturin develop

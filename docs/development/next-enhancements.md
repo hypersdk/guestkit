@@ -27,7 +27,7 @@ These enhancements build on the foundation and deliver significant value to user
 
 Currently users must:
 ```bash
-git clone https://github.com/ssahani/guestctl
+git clone https://github.com/ssahani/guestkit
 cd guestctl
 cargo build --release
 maturin develop
@@ -74,11 +74,11 @@ classifiers = [
 keywords = ["libguestfs", "vm", "disk", "qcow2", "inspection", "virtual-machine"]
 
 [project.urls]
-Homepage = "https://github.com/ssahani/guestctl"
-Documentation = "https://github.com/ssahani/guestctl/tree/main/docs"
-Repository = "https://github.com/ssahani/guestctl"
-Issues = "https://github.com/ssahani/guestctl/issues"
-Changelog = "https://github.com/ssahani/guestctl/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/ssahani/guestkit"
+Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
+Repository = "https://github.com/ssahani/guestkit"
+Issues = "https://github.com/ssahani/guestkit/issues"
+Changelog = "https://github.com/ssahani/guestkit/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -849,7 +849,7 @@ Priority: optional
 Maintainer: Susant Sahani <ssahani@gmail.com>
 Build-Depends: debhelper-compat (= 13), cargo, rustc (>= 1.70)
 Standards-Version: 4.6.0
-Homepage: https://github.com/ssahani/guestctl
+Homepage: https://github.com/ssahani/guestkit
 
 Package: guestctl
 Architecture: any
@@ -890,7 +890,7 @@ Release:        1%{?dist}
 Summary:        Modern VM disk inspection and manipulation tool
 
 License:        LGPL-3.0-or-later
-URL:            https://github.com/ssahani/guestctl
+URL:            https://github.com/ssahani/guestkit
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  rust >= 1.70
@@ -935,11 +935,11 @@ pkgver=0.3.0
 pkgrel=1
 pkgdesc="Modern VM disk inspection and manipulation tool"
 arch=('x86_64' 'aarch64')
-url="https://github.com/ssahani/guestctl"
+url="https://github.com/ssahani/guestkit"
 license=('LGPL3')
 depends=()
 makedepends=('rust' 'cargo')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/ssahani/guestctl/archive/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/ssahani/guestkit/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
@@ -1043,7 +1043,7 @@ site_author: Susant Sahani
 site_url: https://ssahani.github.io/guestctl/
 
 repo_name: ssahani/guestctl
-repo_url: https://github.com/ssahani/guestctl
+repo_url: https://github.com/ssahani/guestkit
 
 theme:
   name: material
