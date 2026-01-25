@@ -246,28 +246,82 @@ impl Guestfs {
         }
 
         if self.trace {
-            eprintln!("guestfs: shutdown");
+            eprintln!("guestfs: shutdown - starting cleanup");
         }
 
-        // Unmount all filesystems
-        let _ = self.umount_all();
+        // Step 1: Unmount all filesystems FIRST (before disconnecting devices)
+        if !self.mounted.is_empty() {
+            if self.trace {
+                eprintln!("guestfs: unmounting {} filesystem(s)", self.mounted.len());
+            }
+            match self.umount_all() {
+                Ok(_) => {
+                    if self.trace {
+                        eprintln!("guestfs: all filesystems unmounted successfully");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Warning: umount_all failed: {}. Continuing with cleanup.", e);
+                }
+            }
+        }
 
-        // Disconnect loop device
+        // Step 2: Disconnect loop device
         if let Some(mut loop_dev) = self.loop_device.take() {
-            let _ = loop_dev.disconnect();
+            if self.trace {
+                eprintln!("guestfs: disconnecting loop device");
+            }
+            match loop_dev.disconnect() {
+                Ok(_) => {
+                    if self.trace {
+                        eprintln!("guestfs: loop device disconnected");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Warning: loop device disconnect failed: {}", e);
+                }
+            }
         }
 
-        // Disconnect NBD device
+        // Step 3: Disconnect NBD device
         if let Some(mut nbd) = self.nbd_device.take() {
-            let _ = nbd.disconnect();
+            if self.trace {
+                eprintln!("guestfs: disconnecting NBD device");
+            }
+            match nbd.disconnect() {
+                Ok(_) => {
+                    if self.trace {
+                        eprintln!("guestfs: NBD device disconnected");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Warning: NBD device disconnect failed: {}", e);
+                }
+            }
         }
 
-        // Clean up mount root
+        // Step 4: Clean up mount root directory
         if let Some(mount_root) = self.mount_root.take() {
-            let _ = std::fs::remove_dir_all(&mount_root);
+            if self.trace {
+                eprintln!("guestfs: removing mount root: {}", mount_root.display());
+            }
+            match std::fs::remove_dir_all(&mount_root) {
+                Ok(_) => {
+                    if self.trace {
+                        eprintln!("guestfs: mount root removed");
+                    }
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: failed to remove mount root {}: {}",
+                        mount_root.display(),
+                        e
+                    );
+                }
+            }
         }
 
-        // Clean up resources
+        // Step 5: Clean up resources
         self.reader = None;
         self.partition_table = None;
         self.state = GuestfsState::Closed;
