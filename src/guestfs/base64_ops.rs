@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Encode file content to base64
     ///
-    /// Compatible with libguestfs g.base64_in()
     pub fn base64_in(&mut self, base64file: &str, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -36,7 +35,6 @@ impl Guestfs {
 
     /// Decode file content from base64
     ///
-    /// Compatible with libguestfs g.base64_out()
     pub fn base64_out(&mut self, filename: &str, base64file: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -1,6 +1,6 @@
 # GuestCtl API Reference
 
-Complete API reference for guestctl v0.2.0 - a pure Rust implementation of libguestfs-compatible APIs.
+Complete API reference for guestctl v0.2.0 - a pure Rust implementation of -compatible APIs.
 
 ## Table of Contents
 

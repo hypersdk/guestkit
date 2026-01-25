@@ -590,7 +590,7 @@ The remaining 9 lib warnings are all intentional helper methods in the guestfs m
 - Test inspection speed
 - Test cache performance
 - Track memory usage
-- Compare with libguestfs
+- Compare with 
 
 ### Low Priority (Can Defer)
 

@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Clone NTFS filesystem
     ///
-    /// GuestFS API: ntfsclone_out()
     pub fn ntfsclone_out(
         &mut self,
         device: &str,
@@ -69,7 +68,6 @@ impl Guestfs {
 
     /// Restore NTFS from clone
     ///
-    /// GuestFS API: ntfsclone_in()
     pub fn ntfsclone_in(&mut self, backupfile: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -114,7 +112,6 @@ impl Guestfs {
 
     /// Fix NTFS filesystem
     ///
-    /// GuestFS API: ntfsfix()
     pub fn ntfsfix(&mut self, device: &str, clearbadsectors: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -163,7 +160,6 @@ impl Guestfs {
 
     /// Get NTFS volume information
     ///
-    /// Compatible with libguestfs g.ntfs_3g_probe()
     pub fn ntfs_3g_probe(&mut self, rw: bool, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -201,7 +197,6 @@ impl Guestfs {
 
     /// Set NTFS master boot record
     ///
-    /// GuestFS API: nr_mknod()
     pub fn ntfs_set_label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// List LDM volumes
     ///
-    /// GuestFS API: ldmtool_diskgroup_volumes()
     pub fn ldmtool_diskgroup_volumes(&mut self, diskgroup: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// List LDM disk groups
     ///
-    /// GuestFS API: ldmtool_diskgroup_name()
     pub fn ldmtool_diskgroup_name(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -82,7 +80,6 @@ impl Guestfs {
 
     /// List LDM disks
     ///
-    /// GuestFS API: ldmtool_diskgroup_disks()
     pub fn ldmtool_diskgroup_disks(&mut self, diskgroup: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -116,7 +113,6 @@ impl Guestfs {
 
     /// Scan for LDM volumes
     ///
-    /// GuestFS API: ldmtool_scan()
     pub fn ldmtool_scan(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -148,7 +144,6 @@ impl Guestfs {
 
     /// Remove all LDM volumes
     ///
-    /// GuestFS API: ldmtool_remove_all()
     pub fn ldmtool_remove_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -174,7 +169,6 @@ impl Guestfs {
 
     /// Create LDM device nodes
     ///
-    /// GuestFS API: ldmtool_create_all()
     pub fn ldmtool_create_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -200,7 +194,6 @@ impl Guestfs {
 
     /// Get LDM volume type
     ///
-    /// GuestFS API: ldmtool_volume_type()
     pub fn ldmtool_volume_type(&mut self, diskgroup: &str, volume: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -239,7 +232,6 @@ impl Guestfs {
 
     /// Get LDM volume hint
     ///
-    /// GuestFS API: ldmtool_volume_hint()
     pub fn ldmtool_volume_hint(&mut self, diskgroup: &str, volume: &str) -> Result<String> {
         self.ensure_ready()?;
 

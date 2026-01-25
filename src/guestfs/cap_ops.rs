@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Get file capabilities
     ///
-    /// GuestFS API: cap_get_file()
     pub fn cap_get_file(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// Set file capabilities
     ///
-    /// GuestFS API: cap_set_file()
     pub fn cap_set_file(&mut self, path: &str, cap: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -72,7 +70,6 @@ impl Guestfs {
 
     /// List all files with capabilities
     ///
-    /// Additional functionality beyond libguestfs
     pub fn cap_list_files(&mut self, directory: &str) -> Result<Vec<(String, String)>> {
         self.ensure_ready()?;
 
@@ -106,7 +103,6 @@ impl Guestfs {
 
     /// Remove file capabilities
     ///
-    /// Additional functionality beyond libguestfs
     pub fn cap_remove_file(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

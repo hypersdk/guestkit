@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Open Windows registry hive
     ///
-    /// GuestFS API: hivex_open()
     pub fn hivex_open(&mut self, filename: &str, write: bool) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -45,7 +44,6 @@ impl Guestfs {
 
     /// Close Windows registry hive
     ///
-    /// GuestFS API: hivex_close()
     pub fn hivex_close(&mut self, _handle: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -59,7 +57,6 @@ impl Guestfs {
 
     /// Get root node of registry hive
     ///
-    /// GuestFS API: hivex_root()
     pub fn hivex_root(&mut self, handle: i64) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -73,7 +70,6 @@ impl Guestfs {
 
     /// Get node name
     ///
-    /// GuestFS API: hivex_node_name()
     pub fn hivex_node_name(&mut self, _handle: i64, node: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -88,7 +84,6 @@ impl Guestfs {
 
     /// Get child nodes
     ///
-    /// GuestFS API: hivex_node_children()
     pub fn hivex_node_children(&mut self, _handle: i64, _node: i64) -> Result<Vec<i64>> {
         self.ensure_ready()?;
 
@@ -102,7 +97,6 @@ impl Guestfs {
 
     /// Get node values
     ///
-    /// GuestFS API: hivex_node_values()
     pub fn hivex_node_values(&mut self, _handle: i64, _node: i64) -> Result<Vec<i64>> {
         self.ensure_ready()?;
 
@@ -116,7 +110,6 @@ impl Guestfs {
 
     /// Get child node by name
     ///
-    /// GuestFS API: hivex_node_get_child()
     pub fn hivex_node_get_child(&mut self, _handle: i64, _node: i64, name: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -130,7 +123,6 @@ impl Guestfs {
 
     /// Get value key
     ///
-    /// GuestFS API: hivex_value_key()
     pub fn hivex_value_key(&mut self, _handle: i64, value: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -144,7 +136,6 @@ impl Guestfs {
 
     /// Get value type
     ///
-    /// GuestFS API: hivex_value_type()
     pub fn hivex_value_type(&mut self, _handle: i64, _value: i64) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -158,7 +149,6 @@ impl Guestfs {
 
     /// Get value as string
     ///
-    /// GuestFS API: hivex_value_string()
     pub fn hivex_value_string(&mut self, _handle: i64, value: i64) -> Result<String> {
         self.ensure_ready()?;
 
@@ -172,7 +162,6 @@ impl Guestfs {
 
     /// Get value as integer
     ///
-    /// GuestFS API: hivex_value_dword()
     pub fn hivex_value_dword(&mut self, _handle: i64, _value: i64) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -186,7 +175,6 @@ impl Guestfs {
 
     /// Get value as binary data
     ///
-    /// GuestFS API: hivex_value_value()
     pub fn hivex_value_value(&mut self, _handle: i64, _value: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -200,7 +188,6 @@ impl Guestfs {
 
     /// Commit changes to hive
     ///
-    /// GuestFS API: hivex_commit()
     pub fn hivex_commit(&mut self, _handle: i64, filename: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -214,7 +201,6 @@ impl Guestfs {
 
     /// Set node value
     ///
-    /// GuestFS API: hivex_node_set_value()
     pub fn hivex_node_set_value(
         &mut self,
         _handle: i64,
@@ -235,7 +221,6 @@ impl Guestfs {
 
     /// Add child node
     ///
-    /// GuestFS API: hivex_node_add_child()
     pub fn hivex_node_add_child(&mut self, _handle: i64, _parent: i64, name: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -249,7 +234,6 @@ impl Guestfs {
 
     /// Delete node
     ///
-    /// GuestFS API: hivex_node_delete_child()
     pub fn hivex_node_delete_child(&mut self, _handle: i64, _node: i64) -> Result<()> {
         self.ensure_ready()?;
 

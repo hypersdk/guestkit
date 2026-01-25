@@ -13,7 +13,6 @@ use std::process::Command;
 impl Guestfs {
     /// Execute a command in the guest
     ///
-    /// GuestFS API: command()
     ///
     /// # Arguments
     ///
@@ -87,7 +86,6 @@ impl Guestfs {
 
     /// Execute a command and return output as lines
     ///
-    /// GuestFS API: command_lines()
     pub fn command_lines(&mut self, arguments: &[&str]) -> Result<Vec<String>> {
         let output = self.command(arguments)?;
         Ok(output.lines().map(|s| s.to_string()).collect())
@@ -95,7 +93,6 @@ impl Guestfs {
 
     /// Execute a shell command
     ///
-    /// GuestFS API: sh()
     ///
     /// # Examples
     ///
@@ -113,7 +110,6 @@ impl Guestfs {
 
     /// Execute a shell command and return output as lines
     ///
-    /// GuestFS API: sh_lines()
     pub fn sh_lines(&mut self, command: &str) -> Result<Vec<String>> {
         let output = self.sh(command)?;
         Ok(output.lines().map(|s| s.to_string()).collect())

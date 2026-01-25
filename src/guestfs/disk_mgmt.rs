@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create empty disk image
     ///
-    /// GuestFS API: disk_create()
     pub fn disk_create(&mut self, filename: &str, format: &str, size: i64) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: disk_create {} {} {}", filename, format, size);
@@ -37,7 +36,6 @@ impl Guestfs {
 
     /// Get disk image format
     ///
-    /// GuestFS API: disk_format()
     pub fn disk_format(&mut self, filename: &str) -> Result<String> {
         if self.verbose {
             eprintln!("guestfs: disk_format {}", filename);
@@ -75,7 +73,6 @@ impl Guestfs {
 
     /// Check if disk has backing file
     ///
-    /// GuestFS API: disk_has_backing_file()
     pub fn disk_has_backing_file(&mut self, filename: &str) -> Result<bool> {
         if self.verbose {
             eprintln!("guestfs: disk_has_backing_file {}", filename);
@@ -102,7 +99,6 @@ impl Guestfs {
 
     /// Get virtual size of disk image
     ///
-    /// GuestFS API: disk_virtual_size()
     pub fn disk_virtual_size(&mut self, filename: &str) -> Result<i64> {
         if self.verbose {
             eprintln!("guestfs: disk_virtual_size {}", filename);
@@ -141,7 +137,6 @@ impl Guestfs {
 
     /// Resize disk image
     ///
-    /// GuestFS API: disk_resize()
     pub fn disk_resize(&mut self, filename: &str, size: i64) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: disk_resize {} {}", filename, size);
@@ -166,7 +161,6 @@ impl Guestfs {
 
     /// Zero unused blocks in disk image
     ///
-    /// GuestFS API: zero_free_space()
     pub fn zero_free_space(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -195,7 +189,6 @@ impl Guestfs {
 
     /// Sparsify disk image
     ///
-    /// GuestFS API: sparsify()
     pub fn sparsify(&mut self, input: &str, output: &str) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: sparsify {} {}", input, output);
@@ -221,7 +214,6 @@ impl Guestfs {
 
     /// Convert disk image format
     ///
-    /// GuestFS API: disk_convert()
     pub fn disk_convert(&mut self, input: &str, output: &str, output_format: &str) -> Result<()> {
         if self.verbose {
             eprintln!(
@@ -251,7 +243,6 @@ impl Guestfs {
 
     /// Check and repair disk image
     ///
-    /// GuestFS API: disk_check()
     pub fn disk_check(&mut self, filename: &str) -> Result<String> {
         if self.verbose {
             eprintln!("guestfs: disk_check {}", filename);
@@ -269,7 +260,6 @@ impl Guestfs {
 
     /// Get snapshot list
     ///
-    /// GuestFS API: disk_snapshot_list()
     pub fn disk_snapshot_list(&mut self, filename: &str) -> Result<Vec<String>> {
         if self.verbose {
             eprintln!("guestfs: disk_snapshot_list {}", filename);

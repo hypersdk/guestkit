@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create ISO image from directory
     ///
-    /// GuestFS API: mkisofs()
     pub fn mkisofs(&mut self, iso_file: &str, source_dir: &str, volid: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -47,7 +46,6 @@ impl Guestfs {
 
     /// List files in ISO image
     ///
-    /// GuestFS API: isoinfo()
     pub fn isoinfo(&mut self, iso_file: &str) -> Result<Vec<String>> {
         if self.verbose {
             eprintln!("guestfs: isoinfo {}", iso_file);
@@ -79,7 +77,6 @@ impl Guestfs {
 
     /// Get ISO volume identifier
     ///
-    /// GuestFS API: isoinfo_device()
     pub fn isoinfo_device(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -134,7 +131,6 @@ impl Guestfs {
 
     /// Mount ISO file as loop device
     ///
-    /// GuestFS API: mount_loop()
     pub fn mount_loop(&mut self, file: &str, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
 

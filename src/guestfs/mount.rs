@@ -15,7 +15,6 @@ use std::process::Command;
 impl Guestfs {
     /// Mount a filesystem read-only
     ///
-    /// GuestFS API: mount_ro()
     ///
     /// # Arguments
     ///
@@ -149,7 +148,6 @@ impl Guestfs {
 
     /// Mount a filesystem read-write
     ///
-    /// GuestFS API: mount()
     pub fn mount(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -178,7 +176,6 @@ impl Guestfs {
 
     /// Mount with specific options
     ///
-    /// GuestFS API: mount_options()
     pub fn mount_options(
         &mut self,
         options: &str,
@@ -197,7 +194,6 @@ impl Guestfs {
 
     /// Mount with explicit VFS type
     ///
-    /// GuestFS API: mount_vfs()
     pub fn mount_vfs(
         &mut self,
         options: &str,
@@ -217,7 +213,6 @@ impl Guestfs {
 
     /// Unmount a filesystem
     ///
-    /// GuestFS API: umount()
     pub fn umount(&mut self, pathordevice: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -281,7 +276,6 @@ impl Guestfs {
 
     /// Unmount all filesystems
     ///
-    /// GuestFS API: umount_all()
     pub fn umount_all(&mut self) -> Result<()> {
         // Don't check ensure_ready() - we need to unmount even during shutdown
         if self.trace {
@@ -428,7 +422,6 @@ impl Guestfs {
 
     /// Get list of mounted filesystems
     ///
-    /// GuestFS API: mounts()
     pub fn mounts(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -437,7 +430,6 @@ impl Guestfs {
 
     /// Get mountpoints
     ///
-    /// GuestFS API: mountpoints()
     pub fn mountpoints(&self) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -447,7 +439,6 @@ impl Guestfs {
 
     /// Create a mountpoint
     ///
-    /// GuestFS API: mkmountpoint()
     pub fn mkmountpoint(&mut self, exemptpath: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -461,7 +452,6 @@ impl Guestfs {
 
     /// Remove a mountpoint
     ///
-    /// GuestFS API: rmmountpoint()
     pub fn rmmountpoint(&mut self, exemptpath: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -475,7 +465,6 @@ impl Guestfs {
 
     /// Sync filesystems
     ///
-    /// GuestFS API: sync()
     pub fn sync(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

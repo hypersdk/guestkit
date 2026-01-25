@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Canonicalize device name and check for multipath
     ///
-    /// GuestFS API: canonical_device_name()
     pub fn is_multipath(&mut self, device: &str) -> Result<bool> {
         self.ensure_ready()?;
 

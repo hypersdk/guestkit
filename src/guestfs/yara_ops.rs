@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Load YARA rules
     ///
-    /// GuestFS API: yara_load()
     pub fn yara_load(&mut self, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -32,7 +31,6 @@ impl Guestfs {
 
     /// Scan file with YARA rules
     ///
-    /// GuestFS API: yara_scan()
     pub fn yara_scan(&mut self, path: &str) -> Result<Vec<YaraDetection>> {
         self.ensure_ready()?;
 
@@ -49,7 +47,6 @@ impl Guestfs {
 
     /// Destroy YARA rules
     ///
-    /// GuestFS API: yara_destroy()
     pub fn yara_destroy(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

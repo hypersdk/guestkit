@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// List Debian packages
     ///
-    /// GuestFS API: dpkg_list()
     pub fn dpkg_list(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -47,7 +46,6 @@ impl Guestfs {
 
     /// List RPM packages
     ///
-    /// GuestFS API: rpm_list()
     pub fn rpm_list(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -76,7 +74,6 @@ impl Guestfs {
 
     /// Get package info
     ///
-    /// GuestFS API: get_package_info()
     pub fn get_package_info(&mut self, package: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -118,7 +115,6 @@ impl Guestfs {
 
     /// Check if package is installed
     ///
-    /// GuestFS API: is_package_installed()
     pub fn is_package_installed(&mut self, package: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -143,7 +139,6 @@ impl Guestfs {
 
     /// List package files
     ///
-    /// GuestFS API: package_files()
     pub fn package_files(&mut self, package: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

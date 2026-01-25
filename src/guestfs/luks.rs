@@ -12,7 +12,6 @@ use std::process::Command;
 impl Guestfs {
     /// Open a LUKS encrypted device
     ///
-    /// GuestFS API: luks_open()
     ///
     /// # Arguments
     ///
@@ -106,7 +105,6 @@ impl Guestfs {
 
     /// Open a LUKS encrypted device (read-only)
     ///
-    /// GuestFS API: luks_open_ro()
     pub fn luks_open_ro(&mut self, device: &str, key: &str, mapname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -166,7 +164,6 @@ impl Guestfs {
 
     /// Close a LUKS encrypted device
     ///
-    /// GuestFS API: luks_close()
     ///
     /// # Arguments
     ///
@@ -213,7 +210,6 @@ impl Guestfs {
 
     /// Format a device as LUKS
     ///
-    /// GuestFS API: luks_format()
     ///
     /// **WARNING**: This will destroy all data on the device!
     ///
@@ -292,7 +288,6 @@ impl Guestfs {
 
     /// Add a key to a LUKS device
     ///
-    /// GuestFS API: luks_add_key()
     ///
     /// # Arguments
     ///
@@ -373,7 +368,6 @@ impl Guestfs {
 
     /// Get UUID of LUKS device
     ///
-    /// GuestFS API: luks_uuid()
     ///
     /// # Arguments
     ///

@@ -548,7 +548,7 @@ python scripts/generate_python_docs.py
 **Effort:** Low (2-3 hours)
 
 **Compare with:**
-- libguestfs (feature comparison)
+-  (feature comparison)
 - virt-tools (performance comparison)
 - Manual mounting (safety comparison)
 - Cloud provider tools

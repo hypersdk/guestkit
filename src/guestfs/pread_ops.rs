@@ -11,7 +11,6 @@ use std::io::{Read, Seek, SeekFrom, Write};
 impl Guestfs {
     /// Read from file at offset
     ///
-    /// GuestFS API: pread()
     pub fn pread(&mut self, path: &str, count: i32, offset: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -34,7 +33,6 @@ impl Guestfs {
 
     /// Read from device at offset
     ///
-    /// GuestFS API: pread_device()
     pub fn pread_device(&mut self, device: &str, count: i32, offset: i64) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -64,7 +62,6 @@ impl Guestfs {
 
     /// Write to file at offset
     ///
-    /// GuestFS API: pwrite()
     pub fn pwrite(&mut self, path: &str, content: &[u8], offset: i64) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -93,7 +90,6 @@ impl Guestfs {
 
     /// Write to device at offset
     ///
-    /// GuestFS API: pwrite_device()
     pub fn pwrite_device(&mut self, device: &str, content: &[u8], offset: i64) -> Result<i32> {
         self.ensure_ready()?;
 

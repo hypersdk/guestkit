@@ -71,7 +71,7 @@ classifiers = [
     "Topic :: System :: Systems Administration",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["libguestfs", "vm", "disk", "qcow2", "inspection", "virtual-machine"]
+keywords = ["", "vm", "disk", "qcow2", "inspection", "virtual-machine"]
 
 [project.urls]
 Homepage = "https://github.com/ssahani/guestkit"
@@ -857,7 +857,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Modern VM disk inspection and manipulation tool
  GuestCtl is a Rust-based tool for inspecting and manipulating
  virtual machine disk images without mounting them. It provides
- a safe, fast alternative to libguestfs.
+ a safe, fast alternative to .
 ```
 
 `debian/rules`:
@@ -1096,7 +1096,7 @@ nav:
     - Rust API: api/API_REFERENCE.md
   - Architecture:
     - Overview: architecture/ARCHITECTURE.md
-    - vs libguestfs: architecture/LIBGUESTFS_COMPARISON.md
+    - vs : architecture/_COMPARISON.md
   - Development:
     - Contributing: CONTRIBUTING.md
     - Roadmap: development/ROADMAP.md

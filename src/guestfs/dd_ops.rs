@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Copy from source to destination
     ///
-    /// GuestFS API: dd()
     pub fn dd(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -94,7 +93,6 @@ impl Guestfs {
 
     /// Zero blocks on device
     ///
-    /// GuestFS API: zero_device()
     pub fn zero_device(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -123,14 +121,12 @@ impl Guestfs {
 
     /// Zero N bytes on device
     ///
-    /// GuestFS API: zero()
     pub fn zero(&mut self, device: &str) -> Result<()> {
         self.zero_device(device)
     }
 
     /// Zero with free space
     ///
-    /// GuestFS API: zero_free_space()
     pub fn zero_free_space_extended(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 

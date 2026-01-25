@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Get SELinux context
     ///
-    /// GuestFS API: getcon()
     pub fn getcon(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -37,7 +36,6 @@ impl Guestfs {
 
     /// Set SELinux context
     ///
-    /// GuestFS API: setcon()
     pub fn setcon(&mut self, context: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -68,7 +66,6 @@ impl Guestfs {
 
     /// Get SELinux context of a file
     ///
-    /// GuestFS API: lgetxattr() for security.selinux
     pub fn getxattr_selinux(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -86,7 +83,6 @@ impl Guestfs {
 
     /// Set SELinux context of a file
     ///
-    /// GuestFS API: setxattr() for security.selinux
     pub fn setxattr_selinux(&mut self, path: &str, context: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -117,7 +113,6 @@ impl Guestfs {
 
     /// Restore SELinux contexts
     ///
-    /// GuestFS API: selinux_relabel()
     pub fn selinux_relabel(&mut self, specfile: &str, path: &str, force: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -160,7 +155,6 @@ impl Guestfs {
 
     /// Get AppArmor profile
     ///
-    /// GuestFS API: get_apparmor_profile()
     pub fn get_apparmor_profile(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -186,7 +180,6 @@ impl Guestfs {
 
     /// Get file capabilities
     ///
-    /// GuestFS API: getcap()
     pub fn getcap(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -216,7 +209,6 @@ impl Guestfs {
 
     /// Set file capabilities
     ///
-    /// GuestFS API: setcap()
     pub fn setcap(&mut self, cap: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -244,7 +236,6 @@ impl Guestfs {
 
     /// Get file ACL
     ///
-    /// GuestFS API: getfacl()
     pub fn getfacl(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -271,7 +262,6 @@ impl Guestfs {
 
     /// Set file ACL
     ///
-    /// GuestFS API: setfacl()
     pub fn setfacl(&mut self, mode: &str, path: &str, acl: &str) -> Result<()> {
         self.ensure_ready()?;
 

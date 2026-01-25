@@ -34,7 +34,7 @@ pub enum FilesystemType {
 }
 
 impl FilesystemType {
-    /// Get the string representation for libguestfs
+    /// Get the string representation
     pub fn as_str(&self) -> &'static str {
         match self {
             FilesystemType::Ext2 => "ext2",

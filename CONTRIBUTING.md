@@ -405,13 +405,13 @@ cargo test
 cargo check
 ```
 
-### libguestfs Compatibility
+###  Compatibility
 
-When implementing libguestfs-compatible APIs:
+When implementing -compatible APIs:
 
 1. **Match function signatures** as closely as possible
 2. **Use same parameter names** for clarity
-3. **Preserve behavior** - match libguestfs semantics
+3. **Preserve behavior** - match  semantics
 4. **Document differences** - note any deviations
 
 ### Error Handling
@@ -439,7 +439,7 @@ Err(Error::InvalidInput(format!("Invalid device: {}", device)))
 - [API Reference](API_REFERENCE.md) - Complete API documentation
 - [Implementation Status](GUESTFS_IMPLEMENTATION_STATUS.md) - Current status
 - [Examples](examples/) - Example programs
-- [libguestfs documentation](https://libguestfs.org/guestfs.3.html) - Upstream reference
+- [ documentation](https://.org/guestfs.3.html) - Upstream reference
 
 ## Questions?
 

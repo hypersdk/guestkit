@@ -16,7 +16,6 @@ pub struct PartInfo {
 impl Guestfs {
     /// Get partition list
     ///
-    /// GuestFS API: part_list()
     pub fn part_list(&self, device: &str) -> Result<Vec<PartInfo>> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// Get partition table type (mbr or gpt)
     ///
-    /// GuestFS API: part_get_parttype()
     pub fn part_get_parttype(&self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -68,7 +66,6 @@ impl Guestfs {
     /// WARNING: This operation is DESTRUCTIVE and will erase all existing partitions
     /// on the device. Use with caution.
     ///
-    /// GuestFS API: part_set_parttype()
     pub fn part_set_parttype(&mut self, device: &str, parttype: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -82,7 +79,7 @@ impl Guestfs {
             ));
         }
 
-        // Convert libguestfs names to parted names
+        // Convert partition type names to parted format
         let parted_type = match parttype {
             "msdos" | "mbr" => "msdos",
             "gpt" => "gpt",
@@ -113,7 +110,6 @@ impl Guestfs {
 
     /// Get bootable flag for partition
     ///
-    /// GuestFS API: part_get_bootable()
     pub fn part_get_bootable(&self, device: &str, partnum: i32) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -136,7 +132,6 @@ impl Guestfs {
 
     /// Get MBR partition type ID
     ///
-    /// GuestFS API: part_get_mbr_id()
     pub fn part_get_mbr_id(&self, device: &str, partnum: i32) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -169,7 +164,6 @@ impl Guestfs {
 
     /// Convert partition device to parent device
     ///
-    /// GuestFS API: part_to_dev()
     pub fn part_to_dev(&self, partition: &str) -> Result<String> {
         // Strip partition number from device name
         // /dev/sda1 -> /dev/sda
@@ -187,7 +181,6 @@ impl Guestfs {
 
     /// Get partition number from partition device
     ///
-    /// GuestFS API: part_to_partnum()
     pub fn part_to_partnum(&self, partition: &str) -> Result<i32> {
         // Extract partition number from device name
         // /dev/sda1 -> 1
@@ -216,7 +209,6 @@ impl Guestfs {
 
     /// Get partition name (GPT partition label)
     ///
-    /// GuestFS API: part_get_name()
     pub fn part_get_name(&mut self, device: &str, partnum: i32) -> Result<String> {
         self.ensure_ready()?;
 

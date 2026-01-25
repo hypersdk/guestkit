@@ -10,7 +10,6 @@ use std::fs;
 impl Guestfs {
     /// Get timezone
     ///
-    /// GuestFS API: get_timezone()
     pub fn get_timezone(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// Set timezone
     ///
-    /// GuestFS API: set_timezone()
     pub fn set_timezone(&mut self, timezone: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -72,7 +70,6 @@ impl Guestfs {
 
     /// Get system locale
     ///
-    /// GuestFS API: get_locale()
     pub fn get_locale(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -107,7 +104,6 @@ impl Guestfs {
 
     /// Set system locale
     ///
-    /// GuestFS API: set_locale()
     pub fn set_locale(&mut self, locale: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -127,7 +123,6 @@ impl Guestfs {
 
     /// Get OS version
     ///
-    /// GuestFS API: get_osinfo()
     pub fn get_osinfo(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -162,7 +157,6 @@ impl Guestfs {
 
     /// Get kernel version
     ///
-    /// GuestFS API: get_kernel_version()
     pub fn get_kernel_version(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -194,7 +188,6 @@ impl Guestfs {
 
     /// Get system uptime
     ///
-    /// GuestFS API: get_uptime()
     pub fn get_uptime(&mut self) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -209,7 +202,6 @@ impl Guestfs {
 
     /// Get machine ID
     ///
-    /// GuestFS API: get_machine_id()
     pub fn get_machine_id(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -234,7 +226,6 @@ impl Guestfs {
 
     /// Get systemd units
     ///
-    /// GuestFS API: list_systemd_units()
     pub fn list_systemd_units(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -273,7 +264,6 @@ impl Guestfs {
 
     /// Get environment variables
     ///
-    /// GuestFS API: get_environment()
     pub fn get_environment(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -299,7 +289,6 @@ impl Guestfs {
 
     /// Get system users
     ///
-    /// GuestFS API: list_users()
     pub fn list_users(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -323,7 +312,6 @@ impl Guestfs {
 
     /// Get system groups
     ///
-    /// GuestFS API: list_groups()
     pub fn list_groups(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

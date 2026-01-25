@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get bootloader type
     ///
-    /// GuestFS API: get_bootloader()
     pub fn get_bootloader(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -42,7 +41,6 @@ impl Guestfs {
 
     /// Get default kernel
     ///
-    /// GuestFS API: get_default_kernel()
     pub fn get_default_kernel(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -79,7 +77,6 @@ impl Guestfs {
 
     /// List kernels
     ///
-    /// GuestFS API: list_kernels()
     pub fn list_kernels(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -108,7 +105,6 @@ impl Guestfs {
 
     /// Get GRUB configuration
     ///
-    /// GuestFS API: get_grub_config()
     pub fn get_grub_config(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -132,7 +128,6 @@ impl Guestfs {
 
     /// Get initrd/initramfs for kernel
     ///
-    /// GuestFS API: get_initrd()
     pub fn get_initrd(&mut self, kernel: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -165,7 +160,6 @@ impl Guestfs {
 
     /// Get kernel command line
     ///
-    /// GuestFS API: get_cmdline()
     pub fn get_cmdline(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -192,7 +186,6 @@ impl Guestfs {
 
     /// Check if running in UEFI mode
     ///
-    /// GuestFS API: is_uefi()
     pub fn is_uefi(&mut self) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -228,7 +221,6 @@ impl Guestfs {
 
     /// Get EFI boot entries
     ///
-    /// GuestFS API: list_efi_boot_entries()
     pub fn list_efi_boot_entries(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -253,7 +245,6 @@ impl Guestfs {
 
     /// Get fstab entries
     ///
-    /// GuestFS API: read_fstab()
     pub fn read_fstab(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -266,7 +257,6 @@ impl Guestfs {
 
     /// Get list of filesystems to mount at boot
     ///
-    /// GuestFS API: list_fstab()
     pub fn list_fstab(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

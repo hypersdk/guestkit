@@ -10,7 +10,7 @@
 
 GuestCtl has reached a major milestone with the completion of the Interactive Mode (REPL) and PyPI publishing infrastructure. The project now has:
 
-- ✅ **578/594 libguestfs APIs** implemented (97.4% coverage)
+- ✅ **578/594  APIs** implemented (97.4% coverage)
 - ✅ **Interactive REPL** with 20+ commands
 - ✅ **PyPI infrastructure** ready to publish
 - ✅ **Async Python API** prepared (waiting for pyo3-asyncio 0.22)

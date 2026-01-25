@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create Btrfs subvolume
     ///
-    /// GuestFS API: btrfs_subvolume_create()
     pub fn btrfs_subvolume_create(&mut self, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -39,7 +38,6 @@ impl Guestfs {
 
     /// Delete Btrfs subvolume
     ///
-    /// GuestFS API: btrfs_subvolume_delete()
     pub fn btrfs_subvolume_delete(&mut self, subvolume: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -68,7 +66,6 @@ impl Guestfs {
 
     /// List Btrfs subvolumes
     ///
-    /// GuestFS API: btrfs_subvolume_list()
     pub fn btrfs_subvolume_list(&mut self, fs: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -104,7 +101,6 @@ impl Guestfs {
 
     /// Create Btrfs snapshot
     ///
-    /// GuestFS API: btrfs_subvolume_snapshot()
     pub fn btrfs_subvolume_snapshot(&mut self, source: &str, dest: &str, ro: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -143,7 +139,6 @@ impl Guestfs {
 
     /// Set Btrfs subvolume as default
     ///
-    /// GuestFS API: btrfs_subvolume_set_default()
     pub fn btrfs_subvolume_set_default(&mut self, id: i64, fs: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -173,7 +168,6 @@ impl Guestfs {
 
     /// Get Btrfs default subvolume ID
     ///
-    /// GuestFS API: btrfs_subvolume_get_default()
     pub fn btrfs_subvolume_get_default(&mut self, fs: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -217,7 +211,6 @@ impl Guestfs {
 
     /// Show Btrfs subvolume info
     ///
-    /// GuestFS API: btrfs_subvolume_show()
     pub fn btrfs_subvolume_show(&mut self, subvolume: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -246,7 +239,6 @@ impl Guestfs {
 
     /// Balance Btrfs filesystem
     ///
-    /// GuestFS API: btrfs_balance()
     pub fn btrfs_balance(&mut self, fs: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -275,7 +267,6 @@ impl Guestfs {
 
     /// Scrub Btrfs filesystem
     ///
-    /// GuestFS API: btrfs_scrub()
     pub fn btrfs_scrub(&mut self, fs: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -305,7 +296,6 @@ impl Guestfs {
 
     /// Check Btrfs filesystem
     ///
-    /// GuestFS API: btrfs_filesystem_show()
     pub fn btrfs_filesystem_show(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -349,7 +339,6 @@ impl Guestfs {
 
     /// Defragment Btrfs filesystem
     ///
-    /// GuestFS API: btrfs_filesystem_defragment()
     pub fn btrfs_filesystem_defragment(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -379,7 +368,6 @@ impl Guestfs {
 
     /// Sync Btrfs filesystem
     ///
-    /// GuestFS API: btrfs_filesystem_sync()
     pub fn btrfs_filesystem_sync(&mut self, fs: &str) -> Result<()> {
         self.ensure_ready()?;
 

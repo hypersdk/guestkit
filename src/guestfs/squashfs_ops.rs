@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create SquashFS filesystem
     ///
-    /// GuestFS API: mksquashfs()
     pub fn mksquashfs(
         &mut self,
         path: &str,

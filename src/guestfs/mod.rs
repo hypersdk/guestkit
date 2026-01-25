@@ -2,7 +2,7 @@
 //! Pure Rust implementation of GuestFS-compatible API
 //!
 //! This module provides a GuestFS-compatible API implemented entirely in Rust,
-//! allowing disk image inspection and manipulation without libguestfs.
+//! allowing disk image inspection and manipulation .
 
 pub mod acl_ops;
 pub mod archive;

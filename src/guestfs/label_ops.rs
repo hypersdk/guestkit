@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Set filesystem label (generic)
     ///
-    /// GuestFS API: set_label()
     pub fn set_label(&mut self, mountable: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -84,7 +83,6 @@ impl Guestfs {
 
     /// Set filesystem UUID (generic)
     ///
-    /// GuestFS API: set_uuid()
     pub fn set_uuid(&mut self, device: &str, uuid: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -110,7 +108,6 @@ impl Guestfs {
 
     /// Set random UUID
     ///
-    /// GuestFS API: set_uuid_random()
     pub fn set_uuid_random(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -125,14 +122,12 @@ impl Guestfs {
 
     /// Get filesystem label (generic, already exists as vfs_label but add alias)
     ///
-    /// GuestFS API: get_label()
     pub fn get_label(&mut self, mountable: &str) -> Result<String> {
         self.vfs_label(mountable)
     }
 
     /// Get filesystem UUID (generic, already exists as vfs_uuid but add alias)
     ///
-    /// GuestFS API: get_uuid()
     pub fn get_uuid(&mut self, device: &str) -> Result<String> {
         self.vfs_uuid(device)
     }

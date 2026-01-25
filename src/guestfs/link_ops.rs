@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Read link target (already exists as readlink, adding extended version)
     ///
-    /// GuestFS API: readlink()
     pub fn read_link(&mut self, path: &str) -> Result<String> {
         self.readlink(path)
     }

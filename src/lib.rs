@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! # guestctl
 //!
-//! A Guest VM toolkit for disk inspection and manipulation, inspired by libguestfs.
+//! A Guest VM toolkit for disk inspection and manipulation.
 //!
 //! ## Features
 //!

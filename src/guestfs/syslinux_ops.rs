@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Install syslinux bootloader
     ///
-    /// GuestFS API: syslinux()
     pub fn syslinux(&mut self, device: &str, directory: Option<&str>) -> Result<()> {
         self.ensure_ready()?;
 
@@ -59,7 +58,6 @@ impl Guestfs {
 
     /// Install extlinux bootloader
     ///
-    /// GuestFS API: extlinux()
     pub fn extlinux(&mut self, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 

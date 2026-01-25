@@ -32,7 +32,7 @@ Complete API documentation for developers.
 - **[Python API Reference](api/python-reference.md)** - Complete Python API (100+ methods)
 - **[Rust API Reference](api/rust-reference.md)** - Rust API documentation
 - **[Ergonomic Design](api/ergonomic-design.md)** - Type-safe Rust API guide
-- **[Migration Guide](api/migration-guide.md)** - Migrating from libguestfs
+- **[Migration Guide](api/migration-guide.md)** - Migrating from 
 
 ### 🏗️ [Architecture](architecture/) - Technical Documentation
 
@@ -42,7 +42,7 @@ Understand how GuestCtl works internally.
 - **[Comparison Guide](architecture/comparison-guide.md)** - GuestCtl vs alternatives
 - **[Performance](architecture/performance.md)** - Performance characteristics
 - **[UX Design](architecture/ux-design.md)** - User experience decisions
-- **[libguestfs Comparison](architecture/libguestfs-comparison.md)** - Detailed comparison
+- **[ Comparison](architecture/-comparison.md)** - Detailed comparison
 
 ### 🔧 [Development](development/) - Contributor Documentation
 

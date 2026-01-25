@@ -10,7 +10,6 @@ use std::collections::HashMap;
 impl Guestfs {
     /// Get Windows systemroot
     ///
-    /// GuestFS API: inspect_get_windows_systemroot()
     pub fn inspect_get_windows_systemroot(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -33,7 +32,6 @@ impl Guestfs {
 
     /// Get Windows current control set
     ///
-    /// GuestFS API: inspect_get_windows_current_control_set()
     pub fn inspect_get_windows_current_control_set(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -48,7 +46,6 @@ impl Guestfs {
 
     /// List Windows drivers
     ///
-    /// GuestFS API: inspect_list_windows_drivers()
     pub fn inspect_list_windows_drivers(&mut self, root: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -76,7 +73,6 @@ impl Guestfs {
 
     /// Get Windows software hive path
     ///
-    /// GuestFS API: inspect_get_windows_software_hive()
     pub fn inspect_get_windows_software_hive(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -96,7 +92,6 @@ impl Guestfs {
 
     /// Get Windows system hive path
     ///
-    /// GuestFS API: inspect_get_windows_system_hive()
     pub fn inspect_get_windows_system_hive(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -116,7 +111,6 @@ impl Guestfs {
 
     /// Check if Windows is hibernated
     ///
-    /// GuestFS API: is_windows_hibernated()
     pub fn is_windows_hibernated(&mut self) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -137,7 +131,6 @@ impl Guestfs {
 
     /// Map Windows drive letters
     ///
-    /// GuestFS API: inspect_get_drive_mappings()
     pub fn inspect_get_drive_mappings(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -156,7 +149,6 @@ impl Guestfs {
 
     /// Get Windows version from product name
     ///
-    /// GuestFS API: inspect_get_windows_version()
     pub fn inspect_get_windows_version(&mut self, root: &str) -> Result<(i32, i32)> {
         self.ensure_ready()?;
 
@@ -193,7 +185,6 @@ impl Guestfs {
 
     /// Download registry hive
     ///
-    /// GuestFS API: download_hive()
     pub fn download_hive(&mut self, hive_path: &str, local_path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -207,7 +198,6 @@ impl Guestfs {
 
     /// Upload registry hive
     ///
-    /// GuestFS API: upload_hive()
     pub fn upload_hive(&mut self, local_path: &str, hive_path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -221,7 +211,6 @@ impl Guestfs {
 
     /// Get icon from Windows executable
     ///
-    /// GuestFS API: inspect_get_icon()
     pub fn inspect_get_icon(&mut self, root: &str) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -236,7 +225,6 @@ impl Guestfs {
 
     /// Detect if system uses UEFI
     ///
-    /// GuestFS API: is_efi_system()
     pub fn is_efi_system(&mut self) -> Result<bool> {
         self.ensure_ready()?;
 

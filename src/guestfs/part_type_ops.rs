@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Get partition type GUID (GPT)
     ///
-    /// GuestFS API: part_get_gpt_type()
     pub fn part_get_gpt_type(&mut self, device: &str, partnum: i32) -> Result<String> {
         self.ensure_ready()?;
 
@@ -54,7 +53,6 @@ impl Guestfs {
 
     /// Set partition type GUID (GPT)
     ///
-    /// GuestFS API: part_set_gpt_type()
     pub fn part_set_gpt_type(&mut self, device: &str, partnum: i32, guid: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -89,7 +87,6 @@ impl Guestfs {
 
     /// Get partition attributes (GPT)
     ///
-    /// GuestFS API: part_get_gpt_attributes()
     pub fn part_get_gpt_attributes(&mut self, device: &str, partnum: i32) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -136,7 +133,6 @@ impl Guestfs {
 
     /// Set partition attributes (GPT)
     ///
-    /// GuestFS API: part_set_gpt_attributes()
     pub fn part_set_gpt_attributes(
         &mut self,
         device: &str,
@@ -179,7 +175,6 @@ impl Guestfs {
 
     /// Expand GPT to fill disk
     ///
-    /// GuestFS API: part_expand_gpt()
     pub fn part_expand_gpt(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 

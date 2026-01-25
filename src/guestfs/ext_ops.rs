@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Set ext2/3/4 filesystem UUID
     ///
-    /// Compatible with libguestfs g.set_e2uuid()
     pub fn set_e2uuid(&mut self, device: &str, uuid: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -54,7 +53,6 @@ impl Guestfs {
 
     /// Set ext2/3/4 filesystem label
     ///
-    /// Compatible with libguestfs g.set_e2label()
     pub fn set_e2label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -98,7 +96,6 @@ impl Guestfs {
 
     /// Get ext2/3/4 UUID
     ///
-    /// Compatible with libguestfs g.get_e2uuid()
     pub fn get_e2uuid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -112,7 +109,6 @@ impl Guestfs {
 
     /// Get ext2/3/4 label
     ///
-    /// Compatible with libguestfs g.get_e2label()
     pub fn get_e2label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -126,7 +122,6 @@ impl Guestfs {
 
     /// Dump ext2/3/4 filesystem
     ///
-    /// Compatible with libguestfs g.dump_ext2()
     pub fn dump_ext2(&mut self, device: &str, backupfile: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -171,7 +166,6 @@ impl Guestfs {
 
     /// Restore ext2/3/4 filesystem
     ///
-    /// Compatible with libguestfs g.restore_ext2()
     pub fn restore_ext2(&mut self, backupfile: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -216,7 +210,6 @@ impl Guestfs {
 
     /// Tune ext2/3/4 generation number
     ///
-    /// Compatible with libguestfs g.set_e2generation()
     pub fn set_e2generation(&mut self, file: &str, generation: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -244,7 +237,6 @@ impl Guestfs {
 
     /// Get ext2/3/4 generation number
     ///
-    /// Compatible with libguestfs g.get_e2generation()
     pub fn get_e2generation(&mut self, file: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -273,7 +265,6 @@ impl Guestfs {
 
     /// Run e2fsck
     ///
-    /// Compatible with libguestfs g.e2fsck()
     pub fn e2fsck(&mut self, device: &str, correct: bool, forceall: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -322,7 +313,6 @@ impl Guestfs {
 
     /// Run mke2fs with options
     ///
-    /// Compatible with libguestfs g.mke2fs()
     pub fn mke2fs(
         &mut self,
         device: &str,

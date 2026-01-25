@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Initialize inotify
     ///
-    /// GuestFS API: inotify_init()
     pub fn inotify_init(&mut self, maxevents: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -30,7 +29,6 @@ impl Guestfs {
 
     /// Add inotify watch
     ///
-    /// GuestFS API: inotify_add_watch()
     pub fn inotify_add_watch(&mut self, path: &str, mask: i32) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -47,7 +45,6 @@ impl Guestfs {
 
     /// Remove inotify watch
     ///
-    /// GuestFS API: inotify_rm_watch()
     pub fn inotify_rm_watch(&mut self, wd: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -61,7 +58,6 @@ impl Guestfs {
 
     /// Read inotify events
     ///
-    /// GuestFS API: inotify_read()
     pub fn inotify_read(&mut self) -> Result<Vec<InotifyEvent>> {
         self.ensure_ready()?;
 
@@ -75,7 +71,6 @@ impl Guestfs {
 
     /// Get inotify file list
     ///
-    /// GuestFS API: inotify_files()
     pub fn inotify_files(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -89,7 +84,6 @@ impl Guestfs {
 
     /// Close inotify
     ///
-    /// GuestFS API: inotify_close()
     pub fn inotify_close(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

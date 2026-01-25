@@ -11,7 +11,6 @@ impl Guestfs {
 
     /// Get library version
     ///
-    /// GuestFS API: version()
     pub fn version_info(&mut self) -> Result<(i64, i64, i64, String)> {
         self.ensure_ready()?;
 
@@ -25,7 +24,6 @@ impl Guestfs {
 
     /// Get default QEMU binary
     ///
-    /// GuestFS API: get_qemu()
     pub fn get_qemu(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -51,7 +49,6 @@ impl Guestfs {
 
     /// Get current umask
     ///
-    /// GuestFS API: umask()
     pub fn get_umask(&mut self) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -76,7 +73,6 @@ impl Guestfs {
 
     /// Get file major/minor device numbers
     ///
-    /// GuestFS API: stat()
     pub fn stat_device(&mut self, path: &str) -> Result<(i64, i64)> {
         self.ensure_ready()?;
 

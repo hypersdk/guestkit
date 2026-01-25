@@ -119,30 +119,26 @@ impl Guestfs {
         })
     }
 
-    /// Create a new GuestFS handle (libguestfs compatibility alias)
+    /// Create a new GuestFS handle 
     ///
-    /// GuestFS API: create()
     pub fn create() -> Result<Self> {
         Self::new()
     }
 
     /// Add a drive in read-write mode
     ///
-    /// GuestFS API: add_drive()
     pub fn add_drive<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         self.add_drive_opts(path, false, None)
     }
 
     /// Add a drive in read-only mode
     ///
-    /// GuestFS API: add_drive_ro()
     pub fn add_drive_ro<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         self.add_drive_opts(path, true, None)
     }
 
     /// Add a drive with options
     ///
-    /// GuestFS API: add_drive_opts()
     pub fn add_drive_opts<P: AsRef<Path>>(
         &mut self,
         path: P,

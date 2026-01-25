@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create RAID array
     ///
-    /// GuestFS API: md_create()
     pub fn md_create(
         &mut self,
         name: &str,
@@ -82,7 +81,6 @@ impl Guestfs {
 
     /// Stop RAID array
     ///
-    /// GuestFS API: md_stop()
     pub fn md_stop(&mut self, md: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -108,7 +106,6 @@ impl Guestfs {
 
     /// Get RAID array details
     ///
-    /// GuestFS API: md_detail()
     pub fn md_detail(&mut self, md: &str) -> Result<Vec<(String, String)>> {
         self.ensure_ready()?;
 
@@ -143,7 +140,6 @@ impl Guestfs {
 
     /// List MD devices
     ///
-    /// GuestFS API: list_md_devices()
     pub fn list_md_devices(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -173,7 +169,6 @@ impl Guestfs {
 
     /// Get MD array stat
     ///
-    /// GuestFS API: md_stat()
     pub fn md_stat(&mut self, md: &str) -> Result<Vec<(String, i64)>> {
         self.ensure_ready()?;
 

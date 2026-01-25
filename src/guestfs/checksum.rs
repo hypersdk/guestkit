@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Calculate MD5 checksum of a file
     ///
-    /// GuestFS API: checksum()
     pub fn checksum(&mut self, csumtype: &str, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -62,7 +61,6 @@ impl Guestfs {
 
     /// Calculate checksum of a device
     ///
-    /// GuestFS API: checksum_device()
     pub fn checksum_device(&mut self, csumtype: &str, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -124,14 +122,12 @@ impl Guestfs {
 
     /// Read first N bytes of a file
     ///
-    /// GuestFS API: head()
     pub fn head(&mut self, path: &str) -> Result<Vec<String>> {
         self.head_n(10, path)
     }
 
     /// Read first N lines of a file
     ///
-    /// GuestFS API: head_n()
     pub fn head_n(&mut self, nrlines: i32, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -161,14 +157,12 @@ impl Guestfs {
 
     /// Read last 10 lines of a file
     ///
-    /// GuestFS API: tail()
     pub fn tail(&mut self, path: &str) -> Result<Vec<String>> {
         self.tail_n(10, path)
     }
 
     /// Read last N lines of a file
     ///
-    /// GuestFS API: tail_n()
     pub fn tail_n(&mut self, nrlines: i32, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -198,7 +192,6 @@ impl Guestfs {
 
     /// Search compressed file for pattern
     ///
-    /// GuestFS API: zgrep()
     pub fn zgrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -221,7 +214,6 @@ impl Guestfs {
 
     /// Search compressed file for pattern (extended regex)
     ///
-    /// GuestFS API: zegrep()
     pub fn zegrep(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -244,7 +236,6 @@ impl Guestfs {
 
     /// Search compressed file for fixed strings
     ///
-    /// GuestFS API: zfgrep()
     pub fn zfgrep(&mut self, pattern: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

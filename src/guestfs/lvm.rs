@@ -33,7 +33,6 @@ pub struct LV {
 impl Guestfs {
     /// Scan for LVM volume groups
     ///
-    /// GuestFS API: vgscan()
     pub fn vgscan(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -70,7 +69,6 @@ impl Guestfs {
 
     /// Activate all LVM volume groups
     ///
-    /// GuestFS API: vg_activate_all()
     pub fn vg_activate_all(&mut self, activate: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -113,7 +111,6 @@ impl Guestfs {
 
     /// Activate a specific volume group
     ///
-    /// GuestFS API: vg_activate()
     pub fn vg_activate(&mut self, activate: bool, volgroups: &[&str]) -> Result<()> {
         self.ensure_ready()?;
 
@@ -150,7 +147,6 @@ impl Guestfs {
 
     /// Create a logical volume
     ///
-    /// GuestFS API: lvcreate()
     ///
     /// # Arguments
     ///
@@ -193,7 +189,6 @@ impl Guestfs {
 
     /// Remove a logical volume
     ///
-    /// GuestFS API: lvremove()
     ///
     /// # Arguments
     ///
@@ -222,7 +217,6 @@ impl Guestfs {
 
     /// List logical volumes with full details
     ///
-    /// GuestFS API: lvs_full()
     pub fn lvs_full(&self) -> Result<Vec<LV>> {
         self.ensure_ready()?;
 
@@ -293,7 +287,6 @@ impl Guestfs {
 
     /// List logical volumes (simple)
     ///
-    /// GuestFS API: lvs()
     pub fn lvs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -326,7 +319,6 @@ impl Guestfs {
 
     /// List volume groups
     ///
-    /// GuestFS API: vgs()
     pub fn vgs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -359,7 +351,6 @@ impl Guestfs {
 
     /// List physical volumes
     ///
-    /// GuestFS API: pvs()
     pub fn pvs(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Set block device to read-only
     ///
-    /// GuestFS API: blockdev_setro()
     pub fn blockdev_setro(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// Set block device to read-write
     ///
-    /// GuestFS API: blockdev_setrw()
     pub fn blockdev_setrw(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -78,7 +76,6 @@ impl Guestfs {
 
     /// Get read-only status of block device
     ///
-    /// GuestFS API: blockdev_getro()
     pub fn blockdev_getro(&mut self, device: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -113,7 +110,6 @@ impl Guestfs {
 
     /// Flush block device buffers
     ///
-    /// GuestFS API: blockdev_flushbufs()
     pub fn blockdev_flushbufs(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -147,7 +143,6 @@ impl Guestfs {
 
     /// Reread partition table
     ///
-    /// GuestFS API: blockdev_rereadpt()
     pub fn blockdev_rereadpt(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -181,7 +176,6 @@ impl Guestfs {
 
     /// Get block size of device
     ///
-    /// GuestFS API: blockdev_getbsz()
     pub fn blockdev_getbsz(&mut self, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -219,7 +213,6 @@ impl Guestfs {
 
     /// Set block size of device
     ///
-    /// GuestFS API: blockdev_setbsz()
     pub fn blockdev_setbsz(&mut self, device: &str, blocksize: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -254,14 +247,12 @@ impl Guestfs {
 
     /// Get sector count of device
     ///
-    /// GuestFS API: blockdev_getsz() - already exists but for completeness
     pub fn blockdev_getsectors(&mut self, device: &str) -> Result<i64> {
         self.blockdev_getsz(device)
     }
 
     /// Get sector size of device
     ///
-    /// GuestFS API: blockdev_getss()
     pub fn blockdev_getss(&mut self, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 

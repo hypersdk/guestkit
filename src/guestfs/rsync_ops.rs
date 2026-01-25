@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Synchronize files using rsync (from guest)
     ///
-    /// GuestFS API: rsync_out()
     pub fn rsync_out(
         &mut self,
         src: &str,
@@ -56,7 +55,6 @@ impl Guestfs {
 
     /// Synchronize files using rsync (to guest)
     ///
-    /// GuestFS API: rsync_in()
     pub fn rsync_in(
         &mut self,
         src: &str,
