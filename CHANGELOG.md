@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Loop Device Support 🔄
+- **Loop Device Primary**: Loop devices (losetup) now used as primary mounting method for RAW/IMG/ISO formats
+- **Built-in Support**: No kernel module loading required for common disk formats
+- **NBD Fallback**: NBD remains available for QCOW2/VMDK/VDI/VHD formats
+- **Auto-Detection**: Automatic format detection based on file extension
+- **Better Reliability**: Eliminates NBD dependency for typical use cases
+- **Cleaner Architecture**: Separate LoopDevice and NbdDevice implementations with proper cleanup
+
 ## [0.3.0] - 2026-01-25
 
 ### Added - Comprehensive System Inspection 🔍
