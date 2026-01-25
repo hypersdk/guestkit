@@ -130,18 +130,18 @@ All documentation follows these standards:
 Found an issue or want to improve documentation?
 
 1. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines
-2. Submit issues at [GitHub Issues](https://github.com/ssahani/guestctl/issues)
+2. Submit issues at [GitHub Issues](https://github.com/ssahani/guestkit/issues)
 3. Submit PRs for documentation improvements
 
 ## 📧 Support
 
-- **Issues:** https://github.com/ssahani/guestctl/issues
-- **Discussions:** https://github.com/ssahani/guestctl/discussions
+- **Issues:** https://github.com/ssahani/guestkit/issues
+- **Discussions:** https://github.com/ssahani/guestkit/discussions
 - **Email:** ssahani@gmail.com
 
 ## External Resources
 
-- **Project Repository:** [GitHub](https://github.com/ssahani/guestctl)
+- **Project Repository:** [GitHub](https://github.com/ssahani/guestkit)
 - **PyPI Package:** [guestctl on PyPI](https://pypi.org/project/guestctl/) (coming soon)
 - **Crates.io:** [guestctl on crates.io](https://crates.io/crates/guestctl)
 

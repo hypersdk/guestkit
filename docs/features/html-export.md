@@ -248,7 +248,7 @@ Planned features:
 ## Support
 
 For issues or feature requests:
-- GitHub: https://github.com/ssahani/guestctl/issues
+- GitHub: https://github.com/ssahani/guestkit/issues
 - Documentation: See docs/OUTPUT_FORMATS.md
 
 ---

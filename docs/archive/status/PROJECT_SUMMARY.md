@@ -180,7 +180,7 @@ sudo python3 test_bindings.py /path/to/disk.img
 - **Test Coverage:** Good
 
 ### Community
-- **Repository:** github.com/ssahani/guestctl
+- **Repository:** github.com/ssahani/guestkit
 - **License:** LGPL-3.0-or-later
 - **Language:** Rust + Python
 - **Status:** Active development

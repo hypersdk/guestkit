@@ -624,7 +624,7 @@ GuestCtl uses a sophisticated but elegant approach:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Clone and build
-git clone https://github.com/ssahani/guestctl.git
+git clone https://github.com/ssahani/guestkit.git
 cd guestctl
 cargo build --release
 
@@ -790,7 +790,7 @@ GuestCtl is open source (LGPL-3.0-or-later) and welcomes contributions!
 - Write tutorials and guides
 - Share your use cases
 
-**GitHub:** https://github.com/ssahani/guestctl
+**GitHub:** https://github.com/ssahani/guestkit
 
 ## Conclusion
 
@@ -817,7 +817,7 @@ GuestCtl gives you the power to inspect VMs **without the boot wait**.
 
 ```bash
 # Install
-cargo install --git https://github.com/ssahani/guestctl
+cargo install --git https://github.com/ssahani/guestkit
 
 # Inspect your first VM
 guestctl inspect your-vm.qcow2
@@ -845,9 +845,9 @@ The future of VM inspection is here. No booting required.
 Built by systems engineers who were tired of waiting for VMs to boot just to check what's inside them. Written in Rust because we believe tools should be fast, safe, and reliable.
 
 **Follow the project:**
-- GitHub: https://github.com/ssahani/guestctl
+- GitHub: https://github.com/ssahani/guestkit
 - PyPI: Coming soon
-- Documentation: https://github.com/ssahani/guestctl/docs
+- Documentation: https://github.com/ssahani/guestkit/docs
 
 ---
 

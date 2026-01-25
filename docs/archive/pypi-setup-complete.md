@@ -296,7 +296,7 @@ Questions or issues with PyPI publication?
 1. Check `docs/guides/PYPI_PUBLISHING.md`
 2. Review GitHub Actions logs
 3. Test locally with `scripts/test_pypi_build.sh`
-4. File issue at https://github.com/ssahani/guestctl/issues
+4. File issue at https://github.com/ssahani/guestkit/issues
 
 ---
 

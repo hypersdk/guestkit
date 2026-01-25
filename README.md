@@ -190,7 +190,7 @@ with Guestfs() as g:
 sudo dnf install qemu-img
 
 # From source
-git clone https://github.com/ssahani/guestctl
+git clone https://github.com/ssahani/guestkit
 cd guestctl
 cargo build --release
 cargo install --path .
@@ -962,7 +962,7 @@ See [LICENSE](LICENSE) for full license text.
 
 ## Support
 
-- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestctl/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
 - **Documentation**: [API docs](https://docs.rs/guestctl)
 - **Examples**: See [`examples/`](examples/) directory
 

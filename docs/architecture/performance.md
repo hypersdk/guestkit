@@ -644,7 +644,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Further Reading
 
-- [Benchmarking Guide](https://github.com/ssahani/guestctl/tree/main/benches)
+- [Benchmarking Guide](https://github.com/ssahani/guestkit/tree/main/benches)
 - [Troubleshooting Guide](TROUBLESHOOTING.md)
 - [API Reference](../API_REFERENCE.md)
 - [Examples](../examples/)
