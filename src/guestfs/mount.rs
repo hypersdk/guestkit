@@ -40,18 +40,31 @@ impl Guestfs {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        // Ensure NBD device is set up
-        self.setup_nbd_if_needed()?;
-
         // Parse device name to get partition number
         let partition_num = self.parse_device_name(mountable)?;
 
-        // Get NBD partition device path
-        let nbd = self.nbd_device()?;
-        let nbd_partition = if partition_num > 0 {
-            nbd.partition_path(partition_num)
+        // Get the actual device path (loop or NBD)
+        let device_partition = if let Some(loop_dev) = &self.loop_device {
+            // Using loop device
+            if partition_num > 0 {
+                loop_dev.partition_path(partition_num)
+                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+            } else {
+                loop_dev.device_path()
+                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                    .to_path_buf()
+            }
+        } else if let Some(nbd) = &self.nbd_device {
+            // Using NBD device
+            if partition_num > 0 {
+                nbd.partition_path(partition_num)
+            } else {
+                nbd.device_path().to_path_buf()
+            }
         } else {
-            nbd.device_path().to_path_buf()
+            return Err(Error::InvalidState(
+                "No block device available (neither loop nor NBD)".to_string(),
+            ));
         };
 
         // Create mount root if needed
@@ -77,11 +90,22 @@ impl Guestfs {
         fs::create_dir_all(&actual_mountpoint)
             .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
 
-        // Mount using system mount command
-        let output = Command::new("mount")
+        // Check if we need sudo for mount
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Build mount command
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("mount");
+            sudo_cmd
+        } else {
+            Command::new("mount")
+        };
+
+        let output = cmd
             .arg("-o")
             .arg("ro")
-            .arg(&nbd_partition)
+            .arg(&device_partition)
             .arg(&actual_mountpoint)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
@@ -189,17 +213,43 @@ impl Guestfs {
             .map(|(dev, mp)| (dev.clone(), mp.clone()))
             .collect();
 
+        if to_unmount.is_empty() {
+            return Err(Error::NotFound(format!(
+                "No filesystem mounted at {}",
+                pathordevice
+            )));
+        }
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
         // Unmount each
         for (dev, mountpoint) in to_unmount {
-            // Execute umount command
-            let output = Command::new("umount")
+            if self.trace {
+                eprintln!("guestfs: unmounting {} ({})", dev, mountpoint);
+            }
+
+            // Build umount command
+            let mut cmd = if need_sudo {
+                let mut sudo_cmd = Command::new("sudo");
+                sudo_cmd.arg("umount");
+                sudo_cmd
+            } else {
+                Command::new("umount")
+            };
+
+            let output = cmd
                 .arg(&mountpoint)
                 .output()
                 .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                eprintln!("Warning: umount failed: {}", stderr);
+                return Err(Error::CommandFailed(format!("umount failed: {}", stderr)));
+            }
+
+            if self.trace {
+                eprintln!("guestfs: successfully unmounted {}", mountpoint);
             }
 
             // Remove from tracking
@@ -213,17 +263,37 @@ impl Guestfs {
     ///
     /// GuestFS API: umount_all()
     pub fn umount_all(&mut self) -> Result<()> {
-        self.ensure_ready()?;
-
+        // Don't check ensure_ready() - we need to unmount even during shutdown
         if self.trace {
             eprintln!("guestfs: umount_all");
         }
+
+        // If no mounts, nothing to do
+        if self.mounted.is_empty() {
+            return Ok(());
+        }
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
 
         // Unmount all in reverse order (to handle nested mounts)
         let mountpoints: Vec<String> = self.mounted.values().cloned().collect();
 
         for mountpoint in mountpoints.iter().rev() {
-            let output = Command::new("umount")
+            if self.trace {
+                eprintln!("guestfs: unmounting {}", mountpoint);
+            }
+
+            // Build umount command
+            let mut cmd = if need_sudo {
+                let mut sudo_cmd = Command::new("sudo");
+                sudo_cmd.arg("umount");
+                sudo_cmd
+            } else {
+                Command::new("umount")
+            };
+
+            let output = cmd
                 .arg(mountpoint)
                 .output()
                 .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
@@ -231,6 +301,9 @@ impl Guestfs {
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 eprintln!("Warning: umount {} failed: {}", mountpoint, stderr);
+                // Continue trying to unmount other filesystems
+            } else if self.trace {
+                eprintln!("guestfs: successfully unmounted {}", mountpoint);
             }
         }
 
