@@ -2,7 +2,7 @@
 //! Main GuestFS handle implementation
 
 use crate::core::{Error, Result};
-use crate::disk::{DiskReader, NbdDevice, PartitionTable};
+use crate::disk::{DiskReader, LoopDevice, NbdDevice, PartitionTable};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -62,6 +62,7 @@ pub struct Guestfs {
     pub(crate) reader: Option<DiskReader>,
     pub(crate) partition_table: Option<PartitionTable>,
     pub(crate) nbd_device: Option<NbdDevice>,
+    pub(crate) loop_device: Option<LoopDevice>,
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
     pub(crate) mount_root: Option<PathBuf>,      // Temporary mount directory
     pub(crate) identifier: Option<String>,
@@ -99,6 +100,7 @@ impl Guestfs {
             reader: None,
             partition_table: None,
             nbd_device: None,
+            loop_device: None,
             mounted: HashMap::new(),
             mount_root: None,
             identifier: None,
@@ -175,13 +177,32 @@ impl Guestfs {
 
         // Attempt to launch - if any error occurs, move to Error state
         let result: Result<()> = (|| {
-            // Check if we need NBD for non-raw formats (qcow2, vmdk, etc.)
-            let needs_nbd = Self::needs_nbd_for_format(&drive.path);
+            // Strategy: Try loop device first (no kernel module needed), fall back to NBD
+            let use_loop_device = LoopDevice::is_format_supported(&drive.path);
 
-            if needs_nbd {
-                // Use NBD to expose the disk image as a block device
+            if use_loop_device {
+                // Use loop device for RAW/IMG/ISO formats (built into Linux kernel)
                 if self.trace {
-                    eprintln!("guestfs: using NBD for non-raw disk format");
+                    eprintln!("guestfs: using loop device for raw disk format");
+                }
+
+                let mut loop_dev = LoopDevice::new()?;
+                loop_dev.connect(&drive.path, drive.readonly)?;
+
+                let device_path = loop_dev.device_path()
+                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?;
+
+                // Read partitions from the loop device
+                let reader = DiskReader::open(device_path)?;
+                let partition_table = PartitionTable::parse(&mut DiskReader::open(device_path)?)?;
+
+                self.reader = Some(reader);
+                self.partition_table = Some(partition_table);
+                self.loop_device = Some(loop_dev);
+            } else {
+                // Use NBD for QCOW2/VMDK/VDI/VHD formats
+                if self.trace {
+                    eprintln!("guestfs: using NBD for qcow2/vmdk/vdi/vhd disk format");
                 }
 
                 let mut nbd = NbdDevice::new()?;
@@ -195,13 +216,6 @@ impl Guestfs {
                 self.reader = Some(reader);
                 self.partition_table = Some(partition_table);
                 self.nbd_device = Some(nbd);
-            } else {
-                // Direct access for raw format
-                let reader = DiskReader::open(&drive.path)?;
-                let partition_table = PartitionTable::parse(&mut DiskReader::open(&drive.path)?)?;
-
-                self.reader = Some(reader);
-                self.partition_table = Some(partition_table);
             }
 
             Ok(())
@@ -224,18 +238,6 @@ impl Guestfs {
         }
     }
 
-    /// Check if a disk file needs NBD based on its format
-    fn needs_nbd_for_format(path: &Path) -> bool {
-        path.extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| {
-                matches!(
-                    ext.to_lowercase().as_str(),
-                    "qcow2" | "vmdk" | "vdi" | "vhd" | "vpc"
-                )
-            })
-            .unwrap_or(false)
-    }
 
     /// Shutdown the guestfs handle
     pub fn shutdown(&mut self) -> Result<()> {
@@ -249,6 +251,11 @@ impl Guestfs {
 
         // Unmount all filesystems
         let _ = self.umount_all();
+
+        // Disconnect loop device
+        if let Some(mut loop_dev) = self.loop_device.take() {
+            let _ = loop_dev.disconnect();
+        }
 
         // Disconnect NBD device
         if let Some(mut nbd) = self.nbd_device.take() {
