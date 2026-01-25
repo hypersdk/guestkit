@@ -5,11 +5,13 @@
 //! parsing partition tables, and detecting filesystems.
 
 pub mod filesystem;
+pub mod loop_device;
 pub mod nbd;
 pub mod partition;
 pub mod reader;
 
 pub use filesystem::{FileSystem, FileSystemType};
+pub use loop_device::LoopDevice;
 pub use nbd::NbdDevice;
 pub use partition::{Partition, PartitionTable, PartitionType};
 pub use reader::DiskReader;
