@@ -37,6 +37,62 @@ sudo guestctl ls ubuntu.qcow2 /etc
 sudo guestctl cat ubuntu.qcow2 /etc/hostname
 ```
 
+## Supported Disk Formats
+
+guestctl automatically detects disk image formats and uses the optimal mounting method:
+
+### Loop Device (Primary) - Default for Common Formats
+
+**Formats:** RAW, IMG, ISO
+**Performance:** Fast (~100ms setup)
+**Dependencies:** None (built into Linux kernel)
+
+```bash
+# These use loop device automatically (fast path)
+guestctl inspect disk.raw
+guestctl inspect ubuntu-22.04.img
+guestctl inspect debian.iso
+```
+
+### NBD Device (Fallback) - For Advanced Formats
+
+**Formats:** QCOW2, VMDK, VDI, VHD
+**Performance:** Slower (~500ms setup)
+**Dependencies:** NBD module (auto-loaded), qemu-nbd
+
+```bash
+# These use NBD device automatically (advanced formats)
+guestctl inspect vm.qcow2
+guestctl inspect windows.vmdk
+guestctl inspect virtualbox.vdi
+```
+
+### Format Conversion Tips
+
+For better performance with repeated inspections, convert QCOW2 to RAW:
+
+```bash
+# Convert once
+qemu-img convert -O raw vm.qcow2 vm.raw
+
+# Inspect multiple times (fast)
+guestctl inspect vm.raw
+guestctl packages vm.raw
+guestctl filesystems vm.raw
+```
+
+### Verbose Mode
+
+Use `--trace` to see which method is being used:
+
+```bash
+guestctl --trace inspect disk.raw
+# Output: "guestfs: using loop device for raw disk format"
+
+guestctl --trace inspect disk.qcow2
+# Output: "guestfs: using NBD for qcow2/vmdk/vdi/vhd disk format"
+```
+
 ## Commands
 
 ### `inspect` - OS Information

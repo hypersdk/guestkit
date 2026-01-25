@@ -184,6 +184,91 @@ Each filesystem has a unique signature (magic bytes) at specific offsets:
 - XFS: "XFSB" at offset 0
 - Btrfs: "_BHRfS_M" at offset 65536+64
 
+#### `disk/loop_device.rs` - Loop Device Management (Primary)
+
+**Purpose:** Mount disk images as block devices using Linux loop devices (built-in)
+
+**Features:**
+- Automatic loop device allocation (`losetup -f`)
+- Partition scanning (`--partscan`)
+- Read-only and read-write modes
+- Automatic sudo handling
+- Device cleanup on drop
+
+**Supported Formats:**
+- RAW - Raw disk images
+- IMG - Disk image files
+- ISO - ISO 9660 images
+- Block devices
+
+**Advantages:**
+- ✅ Built into Linux kernel (no module loading)
+- ✅ Faster setup (~100ms)
+- ✅ More reliable
+- ✅ No external dependencies
+
+**Example:**
+```rust
+use guestctl::disk::LoopDevice;
+
+let mut loop_dev = LoopDevice::new()?;
+loop_dev.connect("/path/to/disk.raw", true)?; // read-only
+
+if let Some(device_path) = loop_dev.device_path() {
+    println!("Loop device: {}", device_path.display());
+    // Access partitions: /dev/loop0p1, /dev/loop0p2, etc.
+}
+// Automatically disconnected on drop
+```
+
+#### `disk/nbd.rs` - NBD Device Management (Fallback)
+
+**Purpose:** Mount advanced disk formats using qemu-nbd (Network Block Device)
+
+**Features:**
+- Automatic NBD module loading
+- Support for compressed formats
+- Snapshot/incremental disk support
+- Format auto-detection
+- Device cleanup on drop
+
+**Supported Formats:**
+- QCOW2 - QEMU Copy-On-Write v2
+- VMDK - VMware Virtual Disk
+- VDI - VirtualBox Disk Image
+- VHD/VPC - Hyper-V Virtual Hard Disk
+
+**Requirements:**
+- NBD kernel module (auto-loaded)
+- qemu-nbd tool
+
+**Example:**
+```rust
+use guestctl::disk::NbdDevice;
+
+let mut nbd = NbdDevice::new()?;
+nbd.connect("/path/to/disk.qcow2", true)?; // read-only
+
+println!("NBD device: {}", nbd.device_path().display());
+// Access partitions: /dev/nbd0p1, /dev/nbd0p2, etc.
+// Automatically disconnected on drop
+```
+
+**Automatic Strategy Selection:**
+
+The `Guestfs::launch()` method automatically selects the optimal strategy:
+
+```rust
+// Strategy: Loop device first (fast path), NBD fallback (advanced formats)
+if LoopDevice::is_format_supported(&drive.path) {
+    // RAW/IMG/ISO → Use loop device (no modules needed)
+    use_loop_device();
+} else {
+    // QCOW2/VMDK/VDI/VHD → Use NBD (auto-load module)
+    use_nbd_device();
+}
+```
+
 ### `src/converters/` - Disk Format Conversion
 
 **Purpose:** Convert disk images between formats using qemu-img
