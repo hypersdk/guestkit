@@ -73,6 +73,7 @@ pub struct Guestfs {
     pub(crate) selinux: bool,
     pub(crate) utf8_policy: Utf8Policy,
     pub(crate) resource_limits: ResourceLimits,
+    pub(crate) windows_version_cache: HashMap<String, (String, String, String)>, // Cache for Windows registry data (root -> (product, version, edition))
 }
 
 /// Drive configuration
@@ -114,6 +115,7 @@ impl Guestfs {
             selinux: false,
             utf8_policy: Utf8Policy::Lossy,
             resource_limits: ResourceLimits::default(),
+            windows_version_cache: HashMap::new(),
         })
     }
 
