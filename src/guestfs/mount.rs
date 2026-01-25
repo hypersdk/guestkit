@@ -40,31 +40,37 @@ impl Guestfs {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        // Parse device name to get partition number
-        let partition_num = self.parse_device_name(mountable)?;
-
-        // Get the actual device path (loop or NBD)
-        let device_partition = if let Some(loop_dev) = &self.loop_device {
-            // Using loop device
-            if partition_num > 0 {
-                loop_dev.partition_path(partition_num)
-                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
-            } else {
-                loop_dev.device_path()
-                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
-                    .to_path_buf()
-            }
-        } else if let Some(nbd) = &self.nbd_device {
-            // Using NBD device
-            if partition_num > 0 {
-                nbd.partition_path(partition_num)
-            } else {
-                nbd.device_path().to_path_buf()
-            }
+        // Determine the actual device path to mount
+        let device_partition = if mountable.starts_with("/dev/mapper/") {
+            // LVM logical volume - use the path directly
+            std::path::PathBuf::from(mountable)
         } else {
-            return Err(Error::InvalidState(
-                "No block device available (neither loop nor NBD)".to_string(),
-            ));
+            // Parse device name to get partition number
+            let partition_num = self.parse_device_name(mountable)?;
+
+            // Get the actual device path (loop or NBD)
+            if let Some(loop_dev) = &self.loop_device {
+                // Using loop device
+                if partition_num > 0 {
+                    loop_dev.partition_path(partition_num)
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                } else {
+                    loop_dev.device_path()
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                        .to_path_buf()
+                }
+            } else if let Some(nbd) = &self.nbd_device {
+                // Using NBD device
+                if partition_num > 0 {
+                    nbd.partition_path(partition_num)
+                } else {
+                    nbd.device_path().to_path_buf()
+                }
+            } else {
+                return Err(Error::InvalidState(
+                    "No block device available (neither loop nor NBD)".to_string(),
+                ));
+            }
         };
 
         // Create mount root if needed

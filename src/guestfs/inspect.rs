@@ -46,6 +46,18 @@ impl Guestfs {
 
         let mut roots = Vec::new();
 
+        // Try to scan and activate LVM volumes
+        // This is needed for RHEL/CentOS/Fedora/Ubuntu VMs that use LVM
+        if self.vgscan().is_ok() {
+            if let Err(e) = self.vg_activate_all(true) {
+                if self.debug {
+                    eprintln!("[DEBUG] Failed to activate LVM volumes: {}", e);
+                }
+            } else if self.verbose {
+                eprintln!("guestfs: LVM volumes activated");
+            }
+        }
+
         // Clone partition data to avoid borrow checker issues
         let partitions: Vec<_> = {
             let partition_table = self.partition_table()?;
@@ -72,6 +84,27 @@ impl Guestfs {
                         roots.push(device_name);
                     }
                     _ => {}
+                }
+            }
+        }
+
+        // Also check for LVM logical volumes
+        if let Ok(lvs) = self.lvs() {
+            for lv_path in lvs {
+                // Filter out swap volumes and empty paths
+                if lv_path.is_empty() || lv_path.contains("swap") {
+                    continue;
+                }
+
+                // Check if this LVM volume has a filesystem that could be root
+                // Prioritize volumes named 'root' or 'system'
+                let lv_name = lv_path.to_lowercase();
+                if lv_name.contains("root") || lv_name.contains("system") {
+                    // Insert at beginning for priority
+                    roots.insert(0, lv_path);
+                } else if !lv_name.contains("home") && !lv_name.contains("var") && !lv_name.contains("tmp") {
+                    // Other volumes that aren't obviously data partitions
+                    roots.push(lv_path);
                 }
             }
         }
@@ -199,7 +232,12 @@ impl Guestfs {
 
         if !was_mounted {
             // Try to mount root temporarily (read-only for inspection)
-            self.mount_ro(root, "/")?;
+            if let Err(e) = self.mount_ro(root, "/") {
+                if self.debug {
+                    eprintln!("[DEBUG] Failed to mount {} for release file detection: {}", root, e);
+                }
+                return Err(Error::NotFound(format!("Cannot mount root: {}", e)));
+            }
         }
 
         // Check for distro-specific release files

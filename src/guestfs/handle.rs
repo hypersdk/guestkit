@@ -666,6 +666,12 @@ impl Guestfs {
             return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
         }
 
+        // Handle LVM logical volumes (/dev/mapper/*, /dev/vg_name/lv_name)
+        if device.starts_with("/dev/mapper/") || (device.contains('/') && device.matches('/').count() >= 3) {
+            // LVM devices don't have partition numbers - they are complete volumes
+            return Ok(0);
+        }
+
         // Support multiple device patterns
         let patterns = [
             "/dev/sda",
@@ -687,7 +693,7 @@ impl Guestfs {
         }
 
         Err(Error::InvalidFormat(format!(
-            "Unsupported device pattern: {}. Supported: /dev/{{sd,vd,hd,xvd}}a*, /dev/nvme0n1p*",
+            "Unsupported device pattern: {}. Supported: /dev/{{sd,vd,hd,xvd}}a*, /dev/nvme0n1p*, /dev/mapper/*",
             device
         )))
     }
