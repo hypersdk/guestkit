@@ -595,8 +595,39 @@ pub fn inspect_image(
         return Ok(());
     }
 
-    // Otherwise, use traditional text output
-    println!("\n{}", "🖥️  Operating Systems".bright_yellow().bold());
+    // Otherwise, use traditional text output with killer UX
+
+    // Print Quick Summary first
+    if !roots.is_empty() {
+        println!("\n╭─────────────────────────────────────────────────────────╮");
+        println!("│ {} {}", "✨ Quick Summary".bright_cyan().bold(), " ".repeat(38));
+        println!("╰─────────────────────────────────────────────────────────╯");
+
+        for root in &roots {
+            if let Ok(ostype) = g.inspect_get_type(root) {
+                let os_icon = match ostype.as_str() {
+                    "linux" => "🐧",
+                    "windows" => "🪟",
+                    "freebsd" => "👿",
+                    _ => "💻",
+                };
+
+                let product = g.inspect_get_product_name(root).unwrap_or_else(|_| "Unknown".to_string());
+                let distro = g.inspect_get_distro(root).unwrap_or_else(|_| "unknown".to_string());
+                let major = g.inspect_get_major_version(root).unwrap_or(0);
+                let minor = g.inspect_get_minor_version(root).unwrap_or(0);
+
+                print!("  {} {} ", os_icon, product.bright_green().bold());
+                if major > 0 || minor > 0 {
+                    print!("{} ", format!("v{}.{}", major, minor).bright_white());
+                }
+                println!("({})", distro.bright_yellow());
+            }
+        }
+        println!();
+    }
+
+    println!("{}", "🖥️  Operating Systems".bright_yellow().bold());
     println!("{}", "─".repeat(60).bright_black());
 
     if roots.is_empty() {
@@ -629,22 +660,22 @@ pub fn inspect_image(
                     eprintln!("[VERBOSE] Distribution: {}", distro);
                 }
                 if distro == "unknown" {
-                    println!("    {} Distribution: {}", "📦".yellow(), distro.bright_black());
+                    println!("    {} Distribution: {}", "📦".bright_black(), distro.bright_black());
                 } else {
-                    println!("    {} Distribution: {}", "📦".yellow(), distro.bright_white().bold());
+                    println!("    {} Distribution: {}", "📦".green(), distro.bright_green().bold());
                 }
             }
             if let Ok(product) = g.inspect_get_product_name(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Product name: {}", product);
                 }
-                println!("    {} Product:      {}", "🏷️".yellow(), product.bright_white());
+                println!("    {} Product:      {}", "🏷️".green(), product.bright_green().bold());
             }
             if let Ok(arch) = g.inspect_get_arch(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Architecture: {}", arch);
                 }
-                println!("    {} Architecture: {}", "⚙️".yellow(), arch.bright_white().bold());
+                println!("    {} Architecture: {}", "⚙️".cyan(), arch.bright_cyan().bold());
             }
             if let Ok(major) = g.inspect_get_major_version(root) {
                 if let Ok(minor) = g.inspect_get_minor_version(root) {
@@ -653,9 +684,9 @@ pub fn inspect_image(
                     }
                     let version = format!("{}.{}", major, minor);
                     if version == "0.0" {
-                        println!("    {} Version:      {}", "🔢".yellow(), version.bright_black());
+                        println!("    {} Version:      {}", "🔢".bright_black(), version.bright_black());
                     } else {
-                        println!("    {} Version:      {}", "🔢".yellow(), version.bright_white().bold());
+                        println!("    {} Version:      {}", "🔢".green(), version.bright_green().bold());
                     }
                 }
             }
@@ -664,9 +695,9 @@ pub fn inspect_image(
                     eprintln!("[VERBOSE] Hostname: {}", hostname);
                 }
                 if hostname == "localhost" {
-                    println!("    {} Hostname:     {}", "🏠".yellow(), hostname.bright_black());
+                    println!("    {} Hostname:     {}", "🏠".bright_black(), hostname.bright_black());
                 } else {
-                    println!("    {} Hostname:     {}", "🏠".yellow(), hostname.bright_white().bold());
+                    println!("    {} Hostname:     {}", "🏠".blue(), hostname.bright_blue().bold());
                 }
             }
             if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
@@ -682,7 +713,7 @@ pub fn inspect_image(
                 if pkg_fmt == "unknown" {
                     println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_black());
                 } else {
-                    println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_white().bold());
+                    println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_magenta().bold());
                 }
             }
 
@@ -692,9 +723,9 @@ pub fn inspect_image(
             }
             if let Ok(init) = g.inspect_get_init_system(root) {
                 if init == "unknown" {
-                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_black());
+                    println!("    {} Init system:  {}", "⚡".bright_black(), init.bright_black());
                 } else {
-                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_white().bold());
+                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_yellow().bold());
                 }
             }
 
