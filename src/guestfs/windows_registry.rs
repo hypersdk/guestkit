@@ -106,8 +106,12 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
 
 /// Get Windows version from SOFTWARE hive
 ///
-/// TODO: Full implementation using nt_hive2 SubPath API
+/// Returns (product_name, version, edition)
+/// Reads from SOFTWARE\Microsoft\Windows NT\CurrentVersion
 pub fn get_windows_version(hive_path: &Path) -> Result<(String, String, String)> {
+    use nt_hive2::{Hive, HiveParseMode};
+    use std::fs::File;
+
     // Verify hive exists
     if !hive_path.exists() {
         return Err(Error::NotFound(format!(
@@ -116,12 +120,103 @@ pub fn get_windows_version(hive_path: &Path) -> Result<(String, String, String)>
         )));
     }
 
-    // TODO: Implement version extraction from registry
-    Ok((
-        "Windows".to_string(),
-        "Unknown".to_string(),
-        "Unknown".to_string(),
-    ))
+    // Read hive file
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {}", e)))?;
+
+    // Parse hive
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
+
+    // Navigate to CurrentVersion key
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
+
+    // Path: Microsoft\Windows NT\CurrentVersion
+    // Navigate step by step
+    let microsoft_key = root_key
+        .subkey("Microsoft", &mut hive)
+        .map_err(|e| Error::CommandFailed(format!("Failed to find Microsoft key: {:?}", e)))?
+        .ok_or_else(|| Error::NotFound("Microsoft key not found".to_string()))?;
+
+    let windows_nt_key = microsoft_key
+        .borrow()
+        .subkey("Windows NT", &mut hive)
+        .map_err(|e| Error::CommandFailed(format!("Failed to find Windows NT key: {:?}", e)))?
+        .ok_or_else(|| Error::NotFound("Windows NT key not found".to_string()))?;
+
+    let current_version_key = windows_nt_key
+        .borrow()
+        .subkey("CurrentVersion", &mut hive)
+        .map_err(|e| Error::CommandFailed(format!("Failed to find CurrentVersion key: {:?}", e)))?
+        .ok_or_else(|| Error::NotFound("CurrentVersion key not found".to_string()))?;
+
+    // Read values
+    let mut product_name = String::from("Windows");
+    let mut version = String::from("Unknown");
+    let mut edition = String::from("Unknown");
+    let mut build = String::new();
+    let mut major_version = String::new();
+    let mut minor_version = String::new();
+
+    // Get all values from the CurrentVersion key
+    let key_ref = current_version_key.borrow();
+    let values = key_ref.values();
+
+    // Iterate through values to find the ones we need
+    for kv in values {
+        // Get value name
+        let name = kv.name();
+
+        match name.as_ref() {
+            "ProductName" => {
+                // Read string value (e.g., "Windows 10 Pro", "Windows 11 Home")
+                use nt_hive2::RegistryValue;
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    product_name = data.clone();
+                }
+            }
+            "EditionID" => {
+                // Read string value (e.g., "Professional", "Home", "Enterprise")
+                use nt_hive2::RegistryValue;
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    edition = data.clone();
+                }
+            }
+            "CurrentBuild" => {
+                // Read string value (e.g., "19045", "22631")
+                use nt_hive2::RegistryValue;
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    build = data.clone();
+                }
+            }
+            "CurrentMajorVersionNumber" => {
+                // Read DWORD value
+                use nt_hive2::RegistryValue;
+                if let RegistryValue::RegDWord(data) = kv.value() {
+                    major_version = data.to_string();
+                }
+            }
+            "CurrentMinorVersionNumber" => {
+                // Read DWORD value
+                use nt_hive2::RegistryValue;
+                if let RegistryValue::RegDWord(data) = kv.value() {
+                    minor_version = data.to_string();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Construct version string
+    if !major_version.is_empty() && !build.is_empty() {
+        version = format!("{}.{}.{}", major_version, minor_version, build);
+    } else if !build.is_empty() {
+        version = build;
+    }
+
+    Ok((product_name, version, edition))
 }
 
 /// Windows update/hotfix information

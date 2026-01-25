@@ -154,7 +154,17 @@ impl Guestfs {
     pub fn inspect_get_distro(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
-        // Try to read /etc/os-release first
+        let os_type = self.inspect_get_type(root)?;
+
+        // Handle Windows - return edition
+        if os_type == "windows" {
+            if let Ok((_, _, edition)) = self.read_windows_version(root) {
+                return Ok(edition);
+            }
+            return Ok("unknown".to_string());
+        }
+
+        // Try to read /etc/os-release first for Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.id);
         }
@@ -225,6 +235,63 @@ impl Guestfs {
         OsRelease::parse(&os_release_content)
     }
 
+    /// Read Windows version from registry
+    fn read_windows_version(&mut self, root: &str) -> Result<(String, String, String)> {
+        use crate::guestfs::windows_registry::get_windows_version;
+
+        // Check cache first
+        if let Some(cached) = self.windows_version_cache.get(root) {
+            if self.verbose || self.debug {
+                eprintln!("[DEBUG] Using cached Windows version for {}", root);
+            }
+            return Ok(cached.clone());
+        }
+
+        // Try to mount the root partition first
+        let was_mounted = self.mounted.contains_key("/");
+
+        if !was_mounted {
+            // Try to mount root temporarily (read-only for inspection)
+            self.mount_ro(root, "/")?;
+        }
+
+        // Get SOFTWARE hive path
+        let mount_root = self
+            .mount_root
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No mount root".to_string()))?;
+
+        // Try common Windows registry hive locations
+        let hive_paths = [
+            mount_root.join("Windows/System32/config/SOFTWARE"),
+            mount_root.join("WINDOWS/System32/config/SOFTWARE"),
+            mount_root.join("windows/system32/config/SOFTWARE"),
+            mount_root.join("WinNT/System32/config/SOFTWARE"),
+        ];
+
+        let mut result = Err(Error::NotFound("SOFTWARE hive not found".to_string()));
+
+        for hive_path in &hive_paths {
+            if hive_path.exists() {
+                result = get_windows_version(hive_path);
+                if result.is_ok() {
+                    break;
+                }
+            }
+        }
+
+        // Cache the result if successful
+        if let Ok(ref data) = result {
+            self.windows_version_cache.insert(root.to_string(), data.clone());
+        }
+
+        if !was_mounted {
+            self.umount("/").ok();
+        }
+
+        result
+    }
+
     /// Detect distribution from legacy release files
     fn detect_from_release_files(&mut self, root: &str) -> Result<String> {
         // Try to mount the root partition first
@@ -291,17 +358,24 @@ impl Guestfs {
     ///
     /// GuestFS API: inspect_get_product_name()
     pub fn inspect_get_product_name(&mut self, root: &str) -> Result<String> {
-        // Try to get from /etc/os-release first
+        let os_type = self.inspect_get_type(root)?;
+
+        // Handle Windows via registry
+        if os_type == "windows" {
+            if let Ok((product_name, _, _)) = self.read_windows_version(root) {
+                return Ok(product_name);
+            }
+            return Ok("Windows".to_string());
+        }
+
+        // Try to get from /etc/os-release first for Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.pretty_name);
         }
 
-        let os_type = self.inspect_get_type(root)?;
         let distro = self.inspect_get_distro(root)?;
 
-        if os_type == "windows" {
-            Ok("Windows".to_string())
-        } else if os_type == "linux" {
+        if os_type == "linux" {
             match distro.as_str() {
                 "fedora" => Ok("Fedora Linux".to_string()),
                 "ubuntu" => Ok("Ubuntu".to_string()),
@@ -331,6 +405,22 @@ impl Guestfs {
     pub fn inspect_get_major_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
+        let os_type = self.inspect_get_type(root)?;
+
+        // Handle Windows
+        if os_type == "windows" {
+            if let Ok((_, version, _)) = self.read_windows_version(root) {
+                // Parse version string like "10.0.19045" or "11.0.22631"
+                if let Some(major_str) = version.split('.').next() {
+                    if let Ok(major) = major_str.parse::<i32>() {
+                        return Ok(major);
+                    }
+                }
+            }
+            return Ok(0);
+        }
+
+        // Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.version_major);
         }
@@ -344,6 +434,23 @@ impl Guestfs {
     pub fn inspect_get_minor_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
+        let os_type = self.inspect_get_type(root)?;
+
+        // Handle Windows
+        if os_type == "windows" {
+            if let Ok((_, version, _)) = self.read_windows_version(root) {
+                // Parse version string like "10.0.19045" or "11.0.22631"
+                let parts: Vec<&str> = version.split('.').collect();
+                if parts.len() >= 2 {
+                    if let Ok(minor) = parts[1].parse::<i32>() {
+                        return Ok(minor);
+                    }
+                }
+            }
+            return Ok(0);
+        }
+
+        // Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.version_minor);
         }
