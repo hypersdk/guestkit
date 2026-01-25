@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Set extended attribute
     ///
-    /// GuestFS API: setxattr()
     pub fn setxattr(&mut self, xattr: &str, val: &str, vallen: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -41,7 +40,6 @@ impl Guestfs {
 
     /// Remove extended attribute
     ///
-    /// GuestFS API: removexattr()
     pub fn removexattr(&mut self, xattr: &str, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Remove bash history
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_bash_history(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -32,7 +31,6 @@ impl Guestfs {
 
     /// Remove SSH host keys
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_ssh_hostkeys(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -58,7 +56,6 @@ impl Guestfs {
 
     /// Remove network configuration
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_net_hwaddr(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -90,7 +87,6 @@ impl Guestfs {
 
     /// Remove machine ID
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_machine_id(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -113,7 +109,6 @@ impl Guestfs {
 
     /// Remove log files
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_logfiles(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -139,7 +134,6 @@ impl Guestfs {
 
     /// Remove temporary files
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_tmp_files(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -168,7 +162,6 @@ impl Guestfs {
 
     /// Remove package manager cache
     ///
-    /// Compatible with libguestfs virt-sysprep operations
     pub fn sysprep_package_cache(&mut self) -> Result<()> {
         self.ensure_ready()?;
 
@@ -196,7 +189,6 @@ impl Guestfs {
 
     /// Run all sysprep operations
     ///
-    /// Compatible with libguestfs virt-sysprep
     pub fn sysprep_all(&mut self) -> Result<()> {
         self.ensure_ready()?;
 

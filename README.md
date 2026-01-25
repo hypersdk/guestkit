@@ -363,7 +363,7 @@ guestctl cache-clear
 
 ### Basic Usage
 
-#### Library (GuestFS API)
+#### Library (API)
 
 ```rust
 use guestctl::guestfs::Guestfs;
@@ -734,40 +734,17 @@ cargo run --example convert_disk
 cargo run --example detect_format
 ```
 
-## API Coverage
+## Implementation Details
 
-### Statistics
+**Pure Rust**: No C dependencies, memory safe
 
-| Metric | Count | Percentage |
-|--------|-------|------------|
-| **LibGuestFS functions** | 733 | 100% |
-| **GuestCtl APIs defined** | 364 | 49.7% |
-| **Fully working** | 349 | 47.6% |
-| **API-only (needs impl)** | 15 | 2.0% |
-
-### Comparison with LibGuestFS
-
-See [LIBGUESTFS_COMPARISON.md](LIBGUESTFS_COMPARISON.md) for:
-- Complete function-by-function comparison
-- What's implemented vs what's missing
-- Implementation phases and timeline
-- Recommendations for full compatibility
-
-### Implementation Strategy
-
-**Current**: Pure Rust implementation without C dependencies
-
-**Working**:
-- ✅ Disk format detection (magic bytes)
+**Working Features**:
+- ✅ Disk format detection and conversion
 - ✅ Partition table parsing (MBR, GPT)
-- ✅ Filesystem detection (superblock analysis)
-- ✅ OS inspection (35 functions)
-
-**Planned (Phase 1)**:
-- 🔄 NBD mounting (qemu-nbd integration)
-- 🔄 File I/O via NBD mount
-- 🔄 Command execution via chroot
-- 🔄 Archive operations (tar, tgz)
+- ✅ Filesystem detection and mounting
+- ✅ OS inspection (Linux and Windows)
+- ✅ LVM support
+- ✅ Windows registry parsing
 
 ## Integration with hyper2kvm
 

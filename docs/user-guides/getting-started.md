@@ -179,7 +179,7 @@ RUST_LOG=debug cargo test -- --nocapture
 
 ## Next Steps
 
-1. **Implement guest OS detection** (libguestfs FFI)
+1. **Implement guest OS detection** ( FFI)
 2. **Add async disk operations**
 3. **Create Python bindings** (PyO3)
 4. **Integrate with hyper2kvm**

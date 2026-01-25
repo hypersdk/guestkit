@@ -11,7 +11,6 @@ use std::process::Command;
 impl Guestfs {
     /// Get file type
     ///
-    /// GuestFS API: file()
     pub fn file(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -39,7 +38,6 @@ impl Guestfs {
 
     /// Get file architecture
     ///
-    /// GuestFS API: file_architecture()
     pub fn file_architecture(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -98,7 +96,6 @@ impl Guestfs {
 
     /// Read symbolic link
     ///
-    /// GuestFS API: readlink()
     pub fn readlink(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -116,7 +113,6 @@ impl Guestfs {
 
     /// Create symbolic link
     ///
-    /// GuestFS API: ln_s()
     pub fn ln_s(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -144,7 +140,6 @@ impl Guestfs {
 
     /// Create hard link
     ///
-    /// GuestFS API: ln()
     pub fn ln(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -161,7 +156,6 @@ impl Guestfs {
 
     /// Create hard link (forced)
     ///
-    /// GuestFS API: ln_f()
     pub fn ln_f(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -178,7 +172,6 @@ impl Guestfs {
 
     /// Create symbolic link (forced)
     ///
-    /// GuestFS API: ln_sf()
     pub fn ln_sf(&mut self, target: &str, linkname: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -195,7 +188,6 @@ impl Guestfs {
 
     /// Get extended attribute
     ///
-    /// GuestFS API: getxattr()
     pub fn getxattr(&mut self, path: &str, name: &str) -> Result<Vec<u8>> {
         self.ensure_ready()?;
 
@@ -225,7 +217,6 @@ impl Guestfs {
 
     /// List extended attributes
     ///
-    /// GuestFS API: lgetxattrs()
     pub fn lgetxattrs(&mut self, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -260,7 +251,6 @@ impl Guestfs {
 
     /// Get file flags
     ///
-    /// Compatible with libguestfs g.get_e2attrs()
     pub fn get_e2attrs(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -291,7 +281,6 @@ impl Guestfs {
 
     /// Set file flags
     ///
-    /// Compatible with libguestfs g.set_e2attrs()
     pub fn set_e2attrs(&mut self, path: &str, attrs: &str, clear: bool) -> Result<()> {
         self.ensure_ready()?;
 

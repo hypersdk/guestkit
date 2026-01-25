@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Get POSIX ACL
     ///
-    /// GuestFS API: acl_get_file()
     pub fn acl_get_file(&mut self, path: &str, acltype: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -55,7 +54,6 @@ impl Guestfs {
 
     /// Set POSIX ACL
     ///
-    /// GuestFS API: acl_set_file()
     pub fn acl_set_file(&mut self, path: &str, acltype: &str, acl: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -108,7 +106,6 @@ impl Guestfs {
 
     /// Delete POSIX ACL
     ///
-    /// GuestFS API: acl_delete_def_file()
     pub fn acl_delete_def_file(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -136,7 +133,6 @@ impl Guestfs {
 
     /// Remove all ACLs
     ///
-    /// Additional functionality beyond libguestfs
     pub fn acl_remove_all(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -164,7 +160,6 @@ impl Guestfs {
 
     /// Set ACL entry
     ///
-    /// Additional functionality beyond libguestfs
     pub fn acl_set_entry(&mut self, path: &str, entry: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -193,7 +188,6 @@ impl Guestfs {
 
     /// Remove ACL entry
     ///
-    /// Additional functionality beyond libguestfs
     pub fn acl_remove_entry(&mut self, path: &str, entry: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -222,7 +216,6 @@ impl Guestfs {
 
     /// Copy ACL from one file to another
     ///
-    /// Additional functionality beyond libguestfs
     pub fn acl_copy(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Install GRUB bootloader
     ///
-    /// GuestFS API: grub_install()
     pub fn grub_install(&mut self, root: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 

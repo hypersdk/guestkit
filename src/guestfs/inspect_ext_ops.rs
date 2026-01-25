@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get operating system product variant
     ///
-    /// GuestFS API: inspect_get_product_variant()
     pub fn inspect_get_product_variant(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -44,7 +43,6 @@ impl Guestfs {
 
     /// Get format of OS
     ///
-    /// GuestFS API: inspect_get_format()
     pub fn inspect_get_format(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -64,7 +62,6 @@ impl Guestfs {
 
     /// Check if multipart OS
     ///
-    /// GuestFS API: inspect_is_multipart()
     pub fn inspect_is_multipart(&mut self, root: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -80,7 +77,6 @@ impl Guestfs {
 
     /// Check if NetInstall
     ///
-    /// GuestFS API: inspect_is_netinst()
     pub fn inspect_is_netinst(&mut self, root: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -94,7 +90,6 @@ impl Guestfs {
 
     /// Get OSInfo ID
     ///
-    /// GuestFS API: inspect_get_osinfo()
     pub fn inspect_get_osinfo_id(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 

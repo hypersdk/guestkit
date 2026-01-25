@@ -29,7 +29,6 @@ pub struct Stat {
 impl Guestfs {
     /// Get file or directory status
     ///
-    /// GuestFS API: stat()
     pub fn stat(&mut self, path: &str) -> Result<Stat> {
         self.ensure_ready()?;
 
@@ -45,7 +44,6 @@ impl Guestfs {
 
     /// Get symbolic link status (don't follow links)
     ///
-    /// GuestFS API: lstat()
     pub fn lstat(&mut self, path: &str) -> Result<Stat> {
         self.ensure_ready()?;
 
@@ -103,7 +101,6 @@ impl Guestfs {
 
     /// Get file inode number
     ///
-    /// GuestFS API: inotify_files()
     pub fn get_inode(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -130,7 +127,6 @@ impl Guestfs {
 
     /// Get file access time
     ///
-    /// GuestFS API: lstatns() - access time
     pub fn get_atime(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -161,7 +157,6 @@ impl Guestfs {
 
     /// Get file modification time
     ///
-    /// GuestFS API: lstatns() - modification time
     pub fn get_mtime(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -194,7 +189,6 @@ impl Guestfs {
 
     /// Get file change time
     ///
-    /// GuestFS API: lstatns() - change time
     pub fn get_ctime(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -221,7 +215,6 @@ impl Guestfs {
 
     /// Get file UID
     ///
-    /// GuestFS API: lstatns() - UID
     pub fn get_uid(&mut self, path: &str) -> Result<u32> {
         self.ensure_ready()?;
 
@@ -248,7 +241,6 @@ impl Guestfs {
 
     /// Get file GID
     ///
-    /// GuestFS API: lstatns() - GID
     pub fn get_gid(&mut self, path: &str) -> Result<u32> {
         self.ensure_ready()?;
 
@@ -275,7 +267,6 @@ impl Guestfs {
 
     /// Get file mode (permissions)
     ///
-    /// GuestFS API: lstatns() - mode
     pub fn get_mode(&mut self, path: &str) -> Result<u32> {
         self.ensure_ready()?;
 
@@ -306,7 +297,6 @@ impl Guestfs {
 
     /// Get number of hard links
     ///
-    /// GuestFS API: lstatns() - nlink
     pub fn get_nlink(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -331,7 +321,6 @@ impl Guestfs {
 
     /// Get device ID
     ///
-    /// GuestFS API: lstatns() - dev
     pub fn get_dev(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -358,7 +347,6 @@ impl Guestfs {
 
     /// Get device type for special files
     ///
-    /// GuestFS API: lstatns() - rdev
     pub fn get_rdev(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -385,7 +373,6 @@ impl Guestfs {
 
     /// Get block count
     ///
-    /// GuestFS API: lstatns() - blocks
     pub fn get_blocks(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -412,7 +399,6 @@ impl Guestfs {
 
     /// Get block size
     ///
-    /// GuestFS API: lstatns() - blksize
     pub fn get_blksize(&mut self, path: &str) -> Result<u64> {
         self.ensure_ready()?;
 
@@ -437,7 +423,6 @@ impl Guestfs {
 
     /// Check if path is socket
     ///
-    /// GuestFS API: is_socket()
     pub fn is_socket(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -463,7 +448,6 @@ impl Guestfs {
 
     /// Check if path is FIFO (named pipe)
     ///
-    /// GuestFS API: is_fifo()
     pub fn is_fifo(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -489,7 +473,6 @@ impl Guestfs {
 
     /// Check if path is block device
     ///
-    /// GuestFS API: is_blockdev()
     pub fn is_blockdev(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -515,7 +498,6 @@ impl Guestfs {
 
     /// Check if path is character device
     ///
-    /// GuestFS API: is_chardev()
     pub fn is_chardev(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -541,7 +523,6 @@ impl Guestfs {
 
     /// Check if path is symbolic link
     ///
-    /// GuestFS API: is_symlink()
     pub fn is_symlink(&mut self, path: &str) -> Result<bool> {
         self.ensure_ready()?;
 

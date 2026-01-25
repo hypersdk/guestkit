@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create a partition on a device
     ///
-    /// GuestFS API: part_add()
     pub fn part_add(
         &mut self,
         device: &str,
@@ -70,7 +69,6 @@ impl Guestfs {
 
     /// Delete a partition
     ///
-    /// GuestFS API: part_del()
     pub fn part_del(&mut self, device: &str, partnum: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -105,7 +103,6 @@ impl Guestfs {
 
     /// Initialize partition table
     ///
-    /// GuestFS API: part_init()
     pub fn part_init(&mut self, device: &str, parttype: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -156,7 +153,6 @@ impl Guestfs {
 
     /// Resize a partition
     ///
-    /// GuestFS API: part_resize()
     pub fn part_resize(&mut self, device: &str, partnum: i32, endsect: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -192,7 +188,6 @@ impl Guestfs {
 
     /// Set partition bootable flag
     ///
-    /// GuestFS API: part_set_bootable()
     pub fn part_set_bootable(&mut self, device: &str, partnum: i32, bootable: bool) -> Result<()> {
         self.ensure_ready()?;
 
@@ -234,7 +229,6 @@ impl Guestfs {
 
     /// Set partition name (GPT only)
     ///
-    /// GuestFS API: part_set_name()
     pub fn part_set_name(&mut self, device: &str, partnum: i32, name: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -270,7 +264,6 @@ impl Guestfs {
 
     /// Set MBR partition type
     ///
-    /// GuestFS API: part_set_mbr_id()
     pub fn part_set_mbr_id(&mut self, device: &str, partnum: i32, idbyte: i32) -> Result<()> {
         self.ensure_ready()?;
 
@@ -308,7 +301,6 @@ impl Guestfs {
 
     /// Get partition disk geometry
     ///
-    /// GuestFS API: part_get_disk_guid()
     pub fn part_get_disk_guid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -352,7 +344,6 @@ impl Guestfs {
 
     /// Get partition GUID (GPT only)
     ///
-    /// GuestFS API: part_get_gpt_guid()
     pub fn part_get_gpt_guid(&mut self, device: &str, partnum: i32) -> Result<String> {
         self.ensure_ready()?;
 

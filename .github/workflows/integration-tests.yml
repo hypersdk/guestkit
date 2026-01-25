@@ -56,7 +56,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libguestfs-tools \
+            -tools \
             qemu-kvm \
             qemu-utils \
             libvirt-daemon-system \
@@ -220,7 +220,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libguestfs-tools qemu-kvm
+          sudo apt-get install -y -tools qemu-kvm
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1

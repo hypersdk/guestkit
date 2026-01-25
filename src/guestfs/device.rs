@@ -9,7 +9,6 @@ use std::collections::HashMap;
 impl Guestfs {
     /// List all block devices
     ///
-    /// GuestFS API: list_devices()
     pub fn list_devices(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -24,7 +23,6 @@ impl Guestfs {
 
     /// List all partitions
     ///
-    /// GuestFS API: list_partitions()
     pub fn list_partitions(&self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -40,7 +38,6 @@ impl Guestfs {
 
     /// List all filesystems detected
     ///
-    /// GuestFS API: list_filesystems()
     pub fn list_filesystems(&mut self) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
@@ -78,7 +75,6 @@ impl Guestfs {
 
     /// Get filesystem type
     ///
-    /// GuestFS API: vfs_type()
     pub fn vfs_type(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -115,7 +111,6 @@ impl Guestfs {
 
     /// Get filesystem label
     ///
-    /// GuestFS API: vfs_label()
     pub fn vfs_label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -145,7 +140,6 @@ impl Guestfs {
 
     /// Get filesystem UUID
     ///
-    /// GuestFS API: vfs_uuid()
     pub fn vfs_uuid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -175,7 +169,6 @@ impl Guestfs {
 
     /// Get block device size in bytes
     ///
-    /// Compatible with libguestfs g.blockdev_getsize64()
     pub fn blockdev_getsize64(&self, device: &str) -> Result<i64> {
         self.ensure_ready()?;
 
@@ -204,14 +197,12 @@ impl Guestfs {
 
     /// Get block device size in 512-byte sectors
     ///
-    /// GuestFS API: blockdev_getsz()
     pub fn blockdev_getsz(&self, device: &str) -> Result<i64> {
         Ok(self.blockdev_getsize64(device)? / 512)
     }
 
     /// Get canonical device name
     ///
-    /// GuestFS API: canonical_device_name()
     pub fn canonical_device_name(&self, device: &str) -> Result<String> {
         // Normalize device names
         let device = device.trim_start_matches("/dev/");
@@ -228,7 +219,6 @@ impl Guestfs {
 
     /// Get device index
     ///
-    /// GuestFS API: device_index()
     pub fn device_index(&self, device: &str) -> Result<i32> {
         let canonical = self.canonical_device_name(device)?;
 
@@ -247,7 +237,6 @@ impl Guestfs {
 
     /// Check if device name refers to whole device (not partition)
     ///
-    /// GuestFS API: is_whole_device()
     pub fn is_whole_device(&self, device: &str) -> Result<bool> {
         // Whole devices end with just a letter (e.g., /dev/sda)
         // Partitions have numbers (e.g., /dev/sda1)

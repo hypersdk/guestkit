@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Expand glob pattern
     ///
-    /// GuestFS API: glob_expand()
     pub fn glob_expand(&mut self, pattern: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -53,7 +52,6 @@ impl Guestfs {
 
     /// List files matching pattern
     ///
-    /// Compatible with libguestfs g.ls0()
     pub fn ls0(&mut self, dir: &str, filenames: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -79,7 +77,6 @@ impl Guestfs {
 
     /// Recursive file listing
     ///
-    /// Compatible with libguestfs g.find0()
     pub fn find0_impl(&mut self, directory: &str, files: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -104,7 +101,6 @@ impl Guestfs {
 
     /// Match files against pattern
     ///
-    /// GuestFS API: grep_impl()
     pub fn grep_lines(&mut self, regex: &str, path: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -128,7 +124,6 @@ impl Guestfs {
 
     /// Read directory entries
     ///
-    /// GuestFS API: readdir()
     pub fn readdir(&mut self, dir: &str) -> Result<Vec<(String, u8)>> {
         self.ensure_ready()?;
 
@@ -164,7 +159,6 @@ impl Guestfs {
 
     /// Case insensitive path lookup
     ///
-    /// GuestFS API: case_sensitive_path()
     pub fn case_sensitive_path(&mut self, path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -206,7 +200,6 @@ impl Guestfs {
 
     /// List extended attributes with values
     ///
-    /// GuestFS API: lxattrlist()
     pub fn lxattrlist(&mut self, path: &str, names: &[&str]) -> Result<Vec<String>> {
         self.ensure_ready()?;
 

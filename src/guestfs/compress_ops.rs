@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Compress file with gzip
     ///
-    /// GuestFS API: compress_out()
     pub fn compress_out(&mut self, ctype: &str, file: &str, output: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -57,7 +56,6 @@ impl Guestfs {
 
     /// Decompress file
     ///
-    /// GuestFS API: compress_device_out()
     pub fn compress_device_out(&mut self, ctype: &str, device: &str, output: &str) -> Result<()> {
         self.ensure_ready()?;
 

@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create device node
     ///
-    /// GuestFS API: mknod()
     pub fn mknod(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -53,7 +52,6 @@ impl Guestfs {
 
     /// Create block device node
     ///
-    /// GuestFS API: mknod_b()
     pub fn mknod_b(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -71,7 +69,6 @@ impl Guestfs {
 
     /// Create character device node
     ///
-    /// GuestFS API: mknod_c()
     pub fn mknod_c(&mut self, mode: i32, devmajor: i32, devminor: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -89,7 +86,6 @@ impl Guestfs {
 
     /// Create FIFO (named pipe)
     ///
-    /// GuestFS API: mkfifo()
     pub fn mkfifo(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -118,7 +114,6 @@ impl Guestfs {
 
     /// Create temporary directory
     ///
-    /// GuestFS API: mkdtemp()
     pub fn mkdtemp(&mut self, tmpl: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -147,7 +142,6 @@ impl Guestfs {
 
     /// Create temporary file
     ///
-    /// GuestFS API: mktemp()
     pub fn mktemp(&mut self, tmpl: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -175,7 +169,6 @@ impl Guestfs {
 
     /// Truncate file to zero size
     ///
-    /// GuestFS API: truncate()
     pub fn truncate(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -196,7 +189,6 @@ impl Guestfs {
 
     /// Truncate file to specific size
     ///
-    /// GuestFS API: truncate_size()
     pub fn truncate_size(&mut self, path: &str, size: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -218,7 +210,6 @@ impl Guestfs {
 
     /// Change file timestamps
     ///
-    /// GuestFS API: utimens()
     pub fn utimens(
         &mut self,
         path: &str,
@@ -262,7 +253,6 @@ impl Guestfs {
 
     /// Synchronize file data to disk
     ///
-    /// GuestFS API: fsync()
     pub fn fsync(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

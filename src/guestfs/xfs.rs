@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Repair XFS filesystem
     ///
-    /// GuestFS API: xfs_repair()
     pub fn xfs_repair(&mut self, device: &str, forcelogzero: bool, nomodify: bool) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -59,7 +58,6 @@ impl Guestfs {
 
     /// Get XFS filesystem info
     ///
-    /// GuestFS API: xfs_info()
     pub fn xfs_info(&mut self, pathordevice: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -112,7 +110,6 @@ impl Guestfs {
 
     /// Admin XFS filesystem
     ///
-    /// GuestFS API: xfs_admin()
     pub fn xfs_admin(
         &mut self,
         device: &str,
@@ -184,7 +181,6 @@ impl Guestfs {
 
     /// Get XFS inode count
     ///
-    /// GuestFS API: xfs_db()
     pub fn xfs_db(&mut self, device: &str, command: &str) -> Result<String> {
         self.ensure_ready()?;
 

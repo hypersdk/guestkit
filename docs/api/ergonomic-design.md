@@ -6,7 +6,7 @@ This document describes the improved GuestCtl API that leverages Rust's type sys
 
 ###  **Why Improve?**
 
-The original libguestfs C API was designed in 2009 for C programs. While functional, it doesn't take advantage of modern Rust features:
+The original  C API was designed in 2009 for C programs. While functional, it doesn't take advantage of modern Rust features:
 
 **Problems with C-style API:**
 - ❌ String-based everything (easy to make typos)

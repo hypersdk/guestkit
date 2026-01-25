@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Synchronize filesystem (already exists as sync, adding extended version)
     ///
-    /// GuestFS API: sync()
     pub fn sync_all(&mut self) -> Result<()> {
         self.sync()
     }
@@ -23,7 +22,6 @@ impl Guestfs {
 
     /// Drop caches
     ///
-    /// GuestFS API: drop_caches()
     pub fn drop_caches(&mut self, whattodrop: i32) -> Result<()> {
         self.ensure_ready()?;
 

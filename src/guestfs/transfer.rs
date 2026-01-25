@@ -11,7 +11,6 @@ use std::io::{Read, Seek, SeekFrom, Write};
 impl Guestfs {
     /// Download file with offset
     ///
-    /// GuestFS API: download_offset()
     pub fn download_offset(
         &mut self,
         remote: &str,
@@ -52,7 +51,6 @@ impl Guestfs {
 
     /// Upload file with offset
     ///
-    /// GuestFS API: upload_offset()
     pub fn upload_offset(&mut self, local: &str, remote: &str, offset: i64) -> Result<()> {
         self.ensure_ready()?;
 
@@ -88,7 +86,6 @@ impl Guestfs {
 
     /// Copy file between locations in guest
     ///
-    /// GuestFS API: copy_file_to_file()
     pub fn copy_file_to_file(
         &mut self,
         src: &str,
@@ -137,7 +134,6 @@ impl Guestfs {
 
     /// Copy device to device
     ///
-    /// GuestFS API: copy_device_to_device()
     pub fn copy_device_to_device(
         &mut self,
         src: &str,
@@ -203,7 +199,6 @@ impl Guestfs {
 
     /// Copy file to device
     ///
-    /// GuestFS API: copy_file_to_device()
     pub fn copy_file_to_device(
         &mut self,
         src: &str,
@@ -266,7 +261,6 @@ impl Guestfs {
 
     /// Copy device to file
     ///
-    /// GuestFS API: copy_device_to_file()
     pub fn copy_device_to_file(
         &mut self,
         src: &str,
@@ -327,7 +321,6 @@ impl Guestfs {
 
     /// Compare two files
     ///
-    /// GuestFS API: compare()
     pub fn compare(&mut self, file1: &str, file2: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -356,7 +349,6 @@ impl Guestfs {
 
     /// Get size of file or device
     ///
-    /// GuestFS API: part_get_size()
     pub fn get_size(&mut self, path: &str) -> Result<i64> {
         self.ensure_ready()?;
 

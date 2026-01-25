@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Download deleted file using TSK
     ///
-    /// GuestFS API: download_inode()
     pub fn download_inode(&mut self, device: &str, inode: i64, filename: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -55,7 +54,6 @@ impl Guestfs {
 
     /// List filesystem with TSK
     ///
-    /// GuestFS API: filesystem_walk()
     pub fn filesystem_walk(&mut self, device: &str) -> Result<Vec<TskDirent>> {
         self.ensure_ready()?;
 

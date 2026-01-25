@@ -223,7 +223,7 @@
 ### Easy Improvements (1-2 hours each)
 1. **Add more examples** to docs/guides/
 2. **Create video demo** of interactive mode
-3. **Write blog post** about Rust+libguestfs
+3. **Write blog post** about Rust+
 4. **Add badges** to README (PyPI, docs, build status)
 5. **Create Twitter account** for announcements
 6. **Setup GitHub Discussions** for community

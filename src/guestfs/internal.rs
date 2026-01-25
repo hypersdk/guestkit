@@ -10,7 +10,6 @@ use std::collections::HashMap;
 impl Guestfs {
     /// Get internal state for debugging
     ///
-    /// GuestFS API: internal_test()
     pub fn internal_test(
         &mut self,
         str: &str,
@@ -36,7 +35,6 @@ impl Guestfs {
 
     /// Test only parameters
     ///
-    /// GuestFS API: internal_test_only_optargs()
     pub fn internal_test_only_optargs(&mut self, test: i32) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: internal_test_only_optargs {}", test);
@@ -47,7 +45,6 @@ impl Guestfs {
 
     /// Get free disk space
     ///
-    /// GuestFS API: statvfs()
     pub fn statvfs(&mut self, path: &str) -> Result<HashMap<String, i64>> {
         self.ensure_ready()?;
 
@@ -97,7 +94,6 @@ impl Guestfs {
 
     /// Get max number of disks
     ///
-    /// GuestFS API: max_disks()
     pub fn max_disks(&self) -> Result<i32> {
         // Return a reasonable maximum
         Ok(255)
@@ -105,14 +101,12 @@ impl Guestfs {
 
     /// Get number of devices
     ///
-    /// GuestFS API: nr_devices()
     pub fn nr_devices(&self) -> Result<i32> {
         Ok(self.drives.len() as i32)
     }
 
     /// Canonical device name
     ///
-    /// GuestFS API: device_name()
     pub fn device_name(&self, index: i32) -> Result<String> {
         if index < 0 || index >= self.drives.len() as i32 {
             return Err(Error::InvalidFormat("Invalid device index".to_string()));
@@ -125,7 +119,6 @@ impl Guestfs {
 
     /// Parse environment variable
     ///
-    /// GuestFS API: parse_environment()
     pub fn parse_environment(&mut self) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: parse_environment");
@@ -149,7 +142,6 @@ impl Guestfs {
 
     /// Parse environment list
     ///
-    /// GuestFS API: parse_environment_list()
     pub fn parse_environment_list(&mut self, environment: &[&str]) -> Result<()> {
         if self.verbose {
             eprintln!("guestfs: parse_environment_list {:?}", environment);
@@ -170,7 +162,6 @@ impl Guestfs {
 
     /// Get state
     ///
-    /// GuestFS API: get_state()
     pub fn get_state(&self) -> Result<i32> {
         use crate::guestfs::handle::GuestfsState;
 
@@ -185,7 +176,6 @@ impl Guestfs {
 
     /// Check if config
     ///
-    /// GuestFS API: is_config()
     pub fn is_config(&self) -> Result<bool> {
         use crate::guestfs::handle::GuestfsState;
         Ok(matches!(self.state, GuestfsState::Config))
@@ -193,7 +183,6 @@ impl Guestfs {
 
     /// Check if launching
     ///
-    /// GuestFS API: is_launching()
     pub fn is_launching(&self) -> Result<bool> {
         // We don't have a separate launching state in our implementation
         Ok(false)
@@ -201,7 +190,6 @@ impl Guestfs {
 
     /// Check if ready
     ///
-    /// GuestFS API: is_ready()
     pub fn is_ready(&self) -> Result<bool> {
         use crate::guestfs::handle::GuestfsState;
         Ok(matches!(self.state, GuestfsState::Ready))
@@ -209,7 +197,6 @@ impl Guestfs {
 
     /// Check if busy
     ///
-    /// GuestFS API: is_busy()
     pub fn is_busy(&self) -> Result<bool> {
         // For this implementation, we're never truly "busy"
         // since operations are synchronous
@@ -218,7 +205,6 @@ impl Guestfs {
 
     /// Get PID (not applicable for NBD backend)
     ///
-    /// GuestFS API: get_pid()
     pub fn get_pid(&self) -> Result<i32> {
         // Return 0 since we don't run a separate daemon process
         Ok(0)
@@ -226,7 +212,6 @@ impl Guestfs {
 
     /// User cancel (not implemented for sync operations)
     ///
-    /// GuestFS API: user_cancel()
     pub fn user_cancel(&mut self) -> Result<()> {
         // No-op for synchronous operations
         Ok(())

@@ -691,12 +691,12 @@ for disk in disks.chunks(10) {
 }
 ```
 
-### Q: What's the difference between guestctl and libguestfs?
+### Q: What's the difference between guestctl and ?
 
-**A:** guestctl is a pure Rust implementation inspired by libguestfs:
+**A:** guestctl is a pure Rust implementation inspired by :
 - **Pros:** Memory safe, no C dependencies, better integration with Rust projects
 - **Cons:** Not 100% API compatible, some features still in development
-- **Coverage:** 76.8% of libguestfs APIs implemented
+- **Coverage:** 76.8% of  APIs implemented
 
 ---
 

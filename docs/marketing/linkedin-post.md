@@ -54,7 +54,7 @@ What VM inspection challenges are you facing? I'd love to hear your thoughts! �
 After months of development, I'm thrilled to share the technical accomplishments behind GuestCtl - a high-performance VM disk inspection tool written in Rust.
 
 **The Stack:**
-- Core: Rust with libguestfs bindings
+- Core: Rust with  bindings
 - Python: PyO3 for seamless Python integration
 - UI: Modern HTML5 with Chart.js, dark mode, responsive design
 - CLI: Interactive REPL with rustyline + tab completion
@@ -194,7 +194,7 @@ Launching on PyPI soon! Who wants early access? 🎉
 
 The options were:
 - Boot the VM (risky if compromised)
-- Manual libguestfs commands (tedious, error-prone)
+- Manual  commands (tedious, error-prone)
 - Build something better ✨
 
 I chose option 3.

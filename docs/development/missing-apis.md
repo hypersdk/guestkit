@@ -1,4 +1,4 @@
-# Missing Core libguestfs APIs - COMPLETE!
+# Missing Core  APIs - COMPLETE!
 
 Based on API coverage analysis, ALL core APIs are now implemented.
 

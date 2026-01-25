@@ -13,7 +13,6 @@ impl Guestfs {
 
     /// Check if SELinux is enabled in guest
     ///
-    /// Compatible with libguestfs inspection
     pub fn inspect_get_selinux_enabled(&mut self, root: &str) -> Result<bool> {
         self.ensure_ready()?;
 
@@ -42,7 +41,6 @@ impl Guestfs {
 
     /// Get SELinux policy type
     ///
-    /// Compatible with libguestfs inspection
     pub fn inspect_get_selinux_policy(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -69,7 +67,6 @@ impl Guestfs {
 
     /// Restore SELinux contexts recursively
     ///
-    /// GuestFS API: restorecon()
     pub fn restorecon(&mut self, path: &str, recursive: bool) -> Result<()> {
         self.ensure_ready()?;
 

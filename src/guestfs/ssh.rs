@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Get SSH host public keys
     ///
-    /// GuestFS API: get_ssh_host_keys()
     pub fn get_ssh_host_keys(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -36,7 +35,6 @@ impl Guestfs {
 
     /// List SSH authorized keys for user
     ///
-    /// GuestFS API: get_ssh_authorized_keys()
     pub fn get_ssh_authorized_keys(&mut self, user: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -68,7 +66,6 @@ impl Guestfs {
 
     /// Set SSH authorized keys for user
     ///
-    /// GuestFS API: set_ssh_authorized_keys()
     pub fn set_ssh_authorized_keys(&mut self, user: &str, keys: &[&str]) -> Result<()> {
         self.ensure_ready()?;
 
@@ -101,7 +98,6 @@ impl Guestfs {
 
     /// Get SSH server configuration
     ///
-    /// GuestFS API: get_sshd_config()
     pub fn get_sshd_config(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -114,7 +110,6 @@ impl Guestfs {
 
     /// List SSL certificates
     ///
-    /// GuestFS API: list_ssl_certificates()
     pub fn list_ssl_certificates(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -148,7 +143,6 @@ impl Guestfs {
 
     /// Get certificate info
     ///
-    /// GuestFS API: get_certificate_info()
     pub fn get_certificate_info(&mut self, cert_path: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -179,7 +173,6 @@ impl Guestfs {
 
     /// List private keys
     ///
-    /// GuestFS API: list_private_keys()
     pub fn list_private_keys(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -220,7 +213,6 @@ impl Guestfs {
 
     /// Get user SSH keys
     ///
-    /// GuestFS API: list_user_ssh_keys()
     pub fn list_user_ssh_keys(&mut self, user: &str) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
@@ -252,7 +244,6 @@ impl Guestfs {
 
     /// Get known hosts
     ///
-    /// GuestFS API: get_known_hosts()
     pub fn get_known_hosts(&mut self, user: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -275,7 +266,6 @@ impl Guestfs {
 
     /// Set known hosts
     ///
-    /// GuestFS API: set_known_hosts()
     pub fn set_known_hosts(&mut self, user: &str, content: &str) -> Result<()> {
         self.ensure_ready()?;
 

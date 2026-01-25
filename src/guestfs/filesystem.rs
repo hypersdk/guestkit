@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create a filesystem
     ///
-    /// GuestFS API: mkfs()
     pub fn mkfs(&mut self, fstype: &str, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -64,7 +63,6 @@ impl Guestfs {
 
     /// Create a filesystem with options
     ///
-    /// GuestFS API: mkfs_opts()
     pub fn mkfs_opts(
         &mut self,
         fstype: &str,
@@ -148,7 +146,6 @@ impl Guestfs {
 
     /// Set or get ext2/3/4 filesystem parameters
     ///
-    /// Compatible with libguestfs g.tune2fs()
     pub fn tune2fs(
         &mut self,
         device: &str,
@@ -208,7 +205,6 @@ impl Guestfs {
 
     /// Run filesystem check and repair
     ///
-    /// GuestFS API: fsck()
     pub fn fsck(&mut self, fstype: &str, device: &str) -> Result<i32> {
         self.ensure_ready()?;
 
@@ -253,7 +249,6 @@ impl Guestfs {
 
     /// Zero free space on filesystem
     ///
-    /// GuestFS API: zerofree()
     pub fn zerofree(&mut self, device: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -292,7 +287,6 @@ impl Guestfs {
 
     /// Trim free space on filesystem
     ///
-    /// GuestFS API: fstrim()
     pub fn fstrim(&mut self, mountpoint: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -331,7 +325,6 @@ impl Guestfs {
 
     /// Get filesystem statistics
     ///
-    /// GuestFS API: df()
     pub fn df(&mut self) -> Result<String> {
         self.ensure_ready()?;
 
@@ -363,7 +356,6 @@ impl Guestfs {
 
     /// Get filesystem statistics in human-readable format
     ///
-    /// GuestFS API: df_h()
     pub fn df_h(&mut self) -> Result<String> {
         self.df()
     }

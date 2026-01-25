@@ -11,7 +11,6 @@ use std::process::Command;
 impl Guestfs {
     /// Extract tar archive into directory
     ///
-    /// GuestFS API: tar_in()
     ///
     /// # Arguments
     ///
@@ -87,7 +86,6 @@ impl Guestfs {
 
     /// Create tar archive from directory
     ///
-    /// GuestFS API: tar_out()
     pub fn tar_out<P: AsRef<Path>>(&mut self, directory: &str, tarfile: P) -> Result<()> {
         self.ensure_ready()?;
 
@@ -143,7 +141,6 @@ impl Guestfs {
 
     /// Extract compressed tar archive
     ///
-    /// GuestFS API: tgz_in()
     pub fn tgz_in<P: AsRef<Path>>(&mut self, tarball: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -203,7 +200,6 @@ impl Guestfs {
 
     /// Create compressed tar archive
     ///
-    /// GuestFS API: tgz_out()
     pub fn tgz_out<P: AsRef<Path>>(&mut self, directory: &str, tarball: P) -> Result<()> {
         self.ensure_ready()?;
 
@@ -259,7 +255,6 @@ impl Guestfs {
 
     /// Extract tar with options
     ///
-    /// GuestFS API: tar_in_opts()
     pub fn tar_in_opts<P: AsRef<Path>>(
         &mut self,
         tarfile: P,
@@ -351,7 +346,6 @@ impl Guestfs {
 
     /// Create tar with options
     ///
-    /// GuestFS API: tar_out_opts()
     pub fn tar_out_opts<P: AsRef<Path>>(
         &mut self,
         directory: &str,
@@ -454,7 +448,6 @@ impl Guestfs {
 
     /// Extract CPIO archive into directory
     ///
-    /// GuestFS API: cpio_in()
     pub fn cpio_in<P: AsRef<Path>>(&mut self, cpiofile: P, directory: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -529,7 +522,6 @@ impl Guestfs {
 
     /// Create cpio archive
     ///
-    /// GuestFS API: cpio_out()
     pub fn cpio_out<P: AsRef<Path>>(
         &mut self,
         directory: &str,

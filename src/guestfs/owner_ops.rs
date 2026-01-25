@@ -9,7 +9,6 @@ use crate::guestfs::Guestfs;
 impl Guestfs {
     /// Change ownership recursively
     ///
-    /// GuestFS API: chown_recursive()
     pub fn chown_recursive(&mut self, owner: i32, group: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -48,7 +47,6 @@ impl Guestfs {
 
     /// Change permissions recursively
     ///
-    /// GuestFS API: chmod_recursive()
     pub fn chmod_recursive(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
 

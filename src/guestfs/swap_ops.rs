@@ -10,7 +10,6 @@ use std::process::Command;
 impl Guestfs {
     /// Create swap with label
     ///
-    /// GuestFS API: mkswap_opts()
     pub fn mkswap_opts(
         &mut self,
         device: &str,
@@ -68,7 +67,6 @@ impl Guestfs {
 
     /// Get swap label
     ///
-    /// GuestFS API: swap_get_label()
     pub fn swap_get_label(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -117,7 +115,6 @@ impl Guestfs {
 
     /// Get swap UUID
     ///
-    /// GuestFS API: swap_get_uuid()
     pub fn swap_get_uuid(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
@@ -166,7 +163,6 @@ impl Guestfs {
 
     /// Set swap label
     ///
-    /// GuestFS API: swap_set_label()
     pub fn swap_set_label(&mut self, device: &str, label: &str) -> Result<()> {
         self.ensure_ready()?;
 
@@ -210,7 +206,6 @@ impl Guestfs {
 
     /// Set swap UUID
     ///
-    /// GuestFS API: swap_set_uuid()
     pub fn swap_set_uuid(&mut self, device: &str, uuid: &str) -> Result<()> {
         self.ensure_ready()?;
 
