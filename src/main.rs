@@ -20,6 +20,10 @@ struct Cli {
     #[arg(short, long, global = true)]
     verbose: bool,
 
+    /// Debug output (show internal operations)
+    #[arg(short, long, global = true)]
+    debug: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -306,6 +310,11 @@ enum Shell {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
+    // Setup debug environment variable
+    if cli.debug {
+        std::env::set_var("GUESTCTL_DEBUG", "1");
+    }
+
     // Setup logging
     let log_level = if cli.verbose {
         log::LevelFilter::Debug
@@ -338,6 +347,7 @@ fn main() -> anyhow::Result<()> {
             inspect_image(
                 &image,
                 cli.verbose,
+                cli.debug,
                 output_format,
                 profile,
                 export,

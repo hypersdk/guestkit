@@ -324,6 +324,7 @@ fn print_inspection_report(
 pub fn inspect_image(
     image: &PathBuf,
     verbose: bool,
+    debug: bool,
     output_format: Option<OutputFormat>,
     profile: Option<String>,
     export_format: Option<String>,
@@ -365,6 +366,7 @@ pub fn inspect_image(
 
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
+    g.set_debug(debug);
 
     let progress = ProgressReporter::spinner(&format!("Inspecting: {}", image.display()));
 

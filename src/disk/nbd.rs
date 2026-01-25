@@ -7,9 +7,14 @@
 
 use crate::core::{Error, Result};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 use std::thread;
 use std::time::Duration;
+
+/// Check if debug mode is enabled
+fn is_debug_enabled() -> bool {
+    std::env::var("GUESTCTL_DEBUG").is_ok()
+}
 
 /// NBD device manager
 pub struct NbdDevice {
@@ -19,6 +24,8 @@ pub struct NbdDevice {
     image_path: PathBuf,
     /// Whether device is connected
     connected: bool,
+    /// qemu-nbd process handle
+    _qemu_nbd_process: Option<Child>,
 }
 
 impl NbdDevice {
@@ -32,6 +39,7 @@ impl NbdDevice {
             device_path,
             image_path: PathBuf::new(),
             connected: false,
+            _qemu_nbd_process: None,
         })
     }
 
@@ -78,16 +86,37 @@ impl NbdDevice {
         Ok(())
     }
 
-    /// Check if NBD device is in use by checking for qemu-nbd process
-    fn is_nbd_device_in_use(device_num: u32) -> bool {
-        // Check if there's a qemu-nbd process using this device
-        if let Ok(output) = Command::new("pgrep")
-            .arg("-f")
-            .arg(format!("qemu-nbd.*nbd{}", device_num))
-            .output()
-        {
-            return output.status.success() && !output.stdout.is_empty();
+    /// Check if NBD device is in use by checking if it's connected
+    fn is_nbd_device_in_use(device_path: &Path) -> bool {
+        // Extract device number from path (e.g., /dev/nbd0 -> 0)
+        let device_name = device_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+
+        // More reliable check: see if device has non-zero size (means it's connected to an image)
+        // This works even if the qemu-nbd process has died
+        let size_path = format!("/sys/block/{}/size", device_name);
+        if let Ok(size_str) = std::fs::read_to_string(&size_path) {
+            if let Ok(size) = size_str.trim().parse::<u64>() {
+                if size > 0 {
+                    return true;
+                }
+            }
         }
+
+        // Fallback: Check /sys/block/nbdX/pid for active connection
+        let pid_path = format!("/sys/block/{}/pid", device_name);
+        if let Ok(pid_str) = std::fs::read_to_string(&pid_path) {
+            if let Ok(pid) = pid_str.trim().parse::<i32>() {
+                if pid > 0 {
+                    // Check if the process is actually running
+                    let proc_path = format!("/proc/{}", pid);
+                    return std::path::Path::new(&proc_path).exists();
+                }
+            }
+        }
+
         false
     }
 
@@ -104,8 +133,8 @@ impl NbdDevice {
         for i in 0..16 {
             let device = PathBuf::from(format!("/dev/nbd{}", i));
             if device.exists() {
-                // Check if device is actually in use by qemu-nbd
-                if !Self::is_nbd_device_in_use(i) {
+                // Check if device is actually connected
+                if !Self::is_nbd_device_in_use(&device) {
                     return Ok(device);
                 }
             }
@@ -134,7 +163,7 @@ impl NbdDevice {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn connect<P: AsRef<Path>>(&mut self, image_path: P, read_only: bool) -> Result<()> {
+    pub fn connect<P: AsRef<Path>>(&mut self, image_path: P, _read_only: bool) -> Result<()> {
         if self.connected {
             return Err(Error::InvalidState(
                 "NBD device already connected".to_string(),
@@ -149,8 +178,49 @@ impl NbdDevice {
             )));
         }
 
+        // Check if the device is already in use (stale connection from previous run)
+        if Self::is_nbd_device_in_use(&self.device_path) {
+            eprintln!(
+                "Warning: NBD device {} is already in use. Attempting to disconnect...",
+                self.device_path.display()
+            );
+
+            // Try to disconnect the stale connection
+            let need_sudo = unsafe { libc::geteuid() } != 0;
+            let mut cmd = if need_sudo {
+                let mut sudo_cmd = Command::new("sudo");
+                sudo_cmd.arg("qemu-nbd");
+                sudo_cmd
+            } else {
+                Command::new("qemu-nbd")
+            };
+
+            let _ = cmd
+                .arg("--disconnect")
+                .arg(&self.device_path)
+                .output();
+
+            // Wait for disconnect to complete
+            thread::sleep(Duration::from_millis(500));
+
+            // Check again
+            if Self::is_nbd_device_in_use(&self.device_path) {
+                return Err(Error::InvalidState(format!(
+                    "NBD device {} is still in use after disconnect attempt. \
+                     Try manually: sudo qemu-nbd --disconnect {}",
+                    self.device_path.display(),
+                    self.device_path.display()
+                )));
+            }
+
+            eprintln!("Successfully disconnected stale NBD connection.");
+        }
+
         // Check if we need to use sudo (qemu-nbd --connect requires root)
         let need_sudo = unsafe { libc::geteuid() } != 0;
+        if is_debug_enabled() {
+            eprintln!("[DEBUG NBD] euid={}, need_sudo={}", unsafe { libc::geteuid() }, need_sudo);
+        }
 
         // Build qemu-nbd command
         let mut cmd = if need_sudo {
@@ -160,12 +230,6 @@ impl NbdDevice {
         } else {
             Command::new("qemu-nbd")
         };
-
-        cmd.arg("--connect").arg(&self.device_path).arg(image_path);
-
-        if read_only {
-            cmd.arg("--read-only");
-        }
 
         // Detect image format from extension
         let format = image_path
@@ -180,32 +244,97 @@ impl NbdDevice {
             })
             .unwrap_or("raw");
 
-        cmd.arg("--format").arg(format);
+        // Use short flags: -c instead of --connect, -f instead of --format
+        // This is important! Long flags cause qemu-nbd to exit immediately
+        cmd.arg("-c").arg(&self.device_path)
+            .arg("-f").arg(format);
 
-        // Capture output for debugging
-        let output = cmd.output().map_err(|e| {
+        // CRITICAL: Use -r (read-only) flag to prevent file locking issues
+        // This allows multiple qemu-nbd processes to access the same file
+        // (important when lazy unmount leaves a previous connection alive)
+        if _read_only {
+            cmd.arg("-r");
+        }
+
+        cmd.arg(image_path);
+
+        if is_debug_enabled() {
+            eprintln!("[DEBUG NBD] Command: {:?}", cmd);
+        }
+
+        // Don't redirect stdio - qemu-nbd needs it to stay alive
+        // cmd.stdin(Stdio::null())
+        //     .stdout(Stdio::null())
+        //     .stderr(Stdio::null());
+
+        // Spawn the process and keep it alive
+        let mut child = cmd.spawn().map_err(|e| {
             Error::CommandFailed(format!(
-                "Failed to execute qemu-nbd: {}. Is qemu-nbd installed?",
+                "Failed to spawn qemu-nbd: {}. Is qemu-nbd installed?",
                 e
             ))
         })?;
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Err(Error::CommandFailed(format!(
-                "qemu-nbd failed: stdout='{}', stderr='{}'. You may need sudo privileges.",
-                stdout, stderr
-            )));
+        if is_debug_enabled() {
+            eprintln!("[DEBUG NBD] Spawned process PID: {}", child.id());
         }
+        thread::sleep(Duration::from_millis(500));
 
-        self.image_path = image_path.to_path_buf();
-        self.connected = true;
+        // Check if process is still alive
+        // Note: qemu-nbd may exit after successfully connecting (daemonizes),
+        // so we need to check if the device is actually connected, not just if the process is running
+        let process_exited = match child.try_wait() {
+            Ok(Some(status)) => {
+                if is_debug_enabled() {
+                    eprintln!("[DEBUG NBD] qemu-nbd process exited with status: {}", status);
+                }
+                // Process exited - could be normal (daemonized) or an error
+                // We'll check if device is connected below
+                true
+            }
+            Ok(None) => {
+                if is_debug_enabled() {
+                    eprintln!("[DEBUG NBD] Process still running");
+                }
+                false
+            }
+            Err(e) => {
+                return Err(Error::CommandFailed(format!(
+                    "Failed to check qemu-nbd process status: {}", e
+                )));
+            }
+        };
 
-        // Wait for device to be ready
-        self.wait_for_device()?;
+        // Store the child process handle first (will be used or dropped)
+        self._qemu_nbd_process = Some(child);
 
-        Ok(())
+        // Wait for device to be ready - this verifies the connection actually worked
+        match self.wait_for_device() {
+            Ok(()) => {
+                // Device is ready - connection successful
+                self.image_path = image_path.to_path_buf();
+                self.connected = true;
+                Ok(())
+            }
+            Err(e) => {
+                // Device not ready - connection failed
+                self._qemu_nbd_process = None; // Drop the process handle
+
+                if process_exited {
+                    Err(Error::CommandFailed(format!(
+                        "qemu-nbd exited and device did not become ready. \
+                         Device {} may already be in use or the image may be corrupted. \
+                         Original error: {}. Try: sudo qemu-nbd --disconnect {}",
+                        self.device_path.display(), e, self.device_path.display()
+                    )))
+                } else {
+                    Err(Error::CommandFailed(format!(
+                        "Device did not become ready: {}. Try: sudo qemu-nbd --disconnect {}",
+                        e, self.device_path.display()
+                    )))
+                }
+            }
+        }
     }
 
     /// Wait for NBD device to become available
@@ -272,9 +401,62 @@ impl NbdDevice {
             );
         }
 
+        // Wait for device to be fully disconnected (verify it's no longer connected)
+        for i in 0..20 {
+            if !Self::is_nbd_device_in_use(&self.device_path) {
+                if is_debug_enabled() {
+                    eprintln!("[DEBUG NBD] Device {} disconnected after {} attempts", self.device_path.display(), i + 1);
+                }
+                self.connected = false;
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        // Device still appears connected after retries - force disconnect one more time
+        if is_debug_enabled() {
+            eprintln!(
+                "[DEBUG NBD] Device still connected after 2s, attempting force disconnect"
+            );
+        }
+
+        // Try one more disconnect with -d flag (detach)
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("qemu-nbd");
+            sudo_cmd
+        } else {
+            Command::new("qemu-nbd")
+        };
+
+        let _ = cmd.arg("-d").arg(&self.device_path).output();
+
+        // Final check
+        thread::sleep(Duration::from_millis(500));
+        if !Self::is_nbd_device_in_use(&self.device_path) {
+            if is_debug_enabled() {
+                eprintln!("[DEBUG NBD] Device {} disconnected after force disconnect", self.device_path.display());
+            }
+            self.connected = false;
+            return Ok(());
+        }
+
+        // Device is still connected - this is a real failure, don't mark as disconnected
+        eprintln!(
+            "Warning: NBD device {} may still be connected after disconnect attempts",
+            self.device_path.display()
+        );
+
+        // Still mark as disconnected so Drop doesn't retry infinitely, but this is a real error
         self.connected = false;
 
-        Ok(())
+        // Return an error to notify caller that cleanup failed
+        Err(Error::CommandFailed(format!(
+            "Failed to fully disconnect NBD device {}. Manual cleanup may be required: \
+             sudo qemu-nbd --disconnect {}",
+            self.device_path.display(),
+            self.device_path.display()
+        )))
     }
 
     /// Get NBD device path
