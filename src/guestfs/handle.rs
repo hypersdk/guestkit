@@ -57,6 +57,7 @@ pub struct Guestfs {
     pub(crate) state: GuestfsState,
     pub(crate) verbose: bool,
     pub(crate) trace: bool,
+    pub(crate) debug: bool,
     pub(crate) readonly: bool,
     pub(crate) drives: Vec<DriveConfig>,
     pub(crate) reader: Option<DiskReader>,
@@ -65,6 +66,7 @@ pub struct Guestfs {
     pub(crate) loop_device: Option<LoopDevice>,
     pub(crate) mounted: HashMap<String, String>, // device -> mountpoint
     pub(crate) mount_root: Option<PathBuf>,      // Temporary mount directory
+    pub(crate) lazy_unmount_used: bool,          // Track if lazy unmount was needed
     pub(crate) identifier: Option<String>,
     pub(crate) autosync: bool,
     pub(crate) selinux: bool,
@@ -95,6 +97,7 @@ impl Guestfs {
             state: GuestfsState::Config,
             verbose: false,
             trace: false,
+            debug: false,
             readonly: false,
             drives: Vec::new(),
             reader: None,
@@ -103,6 +106,7 @@ impl Guestfs {
             loop_device: None,
             mounted: HashMap::new(),
             mount_root: None,
+            lazy_unmount_used: false,
             identifier: None,
             autosync: true,
             selinux: false,
@@ -179,6 +183,9 @@ impl Guestfs {
         let result: Result<()> = (|| {
             // Strategy: Try loop device first (no kernel module needed), fall back to NBD
             let use_loop_device = LoopDevice::is_format_supported(&drive.path);
+            if self.debug {
+                eprintln!("[DEBUG] File: {}, use_loop_device: {}", drive.path.display(), use_loop_device);
+            }
 
             if use_loop_device {
                 // Use loop device for RAW/IMG/ISO formats (built into Linux kernel)
@@ -205,11 +212,23 @@ impl Guestfs {
                     eprintln!("guestfs: using NBD for qcow2/vmdk/vdi/vhd disk format");
                 }
 
+                if self.debug {
+                    eprintln!("[DEBUG] Creating NBD device...");
+                }
                 let mut nbd = NbdDevice::new()?;
+                if self.debug {
+                    eprintln!("[DEBUG] NBD device created: {}", nbd.device_path().display());
+                    eprintln!("[DEBUG] Connecting NBD to image: {}", drive.path.display());
+                }
                 nbd.connect(&drive.path, drive.readonly)?;
-
-                // Read partitions from the NBD device
+                if self.debug {
+                    eprintln!("[DEBUG] NBD connected successfully");
+                    eprintln!("[DEBUG] Opening DiskReader for NBD device: {}", nbd.device_path().display());
+                }
                 let reader = DiskReader::open(nbd.device_path())?;
+                if self.debug {
+                    eprintln!("[DEBUG] DiskReader opened successfully");
+                }
                 let partition_table =
                     PartitionTable::parse(&mut DiskReader::open(nbd.device_path())?)?;
 
@@ -249,11 +268,28 @@ impl Guestfs {
             eprintln!("guestfs: shutdown - starting cleanup");
         }
 
-        // Step 1: Unmount all filesystems FIRST (before disconnecting devices)
+        // Step 0: Close readers FIRST (they hold file descriptors to devices)
+        if self.trace {
+            eprintln!("guestfs: closing disk readers");
+        }
+        self.reader = None;
+        self.partition_table = None;
+
+        // Ensure all file descriptors are flushed and closed
+        // CRITICAL: Wait for kernel to release all filesystem references
+        // This is essential to avoid EBUSY during unmount
+        let _ = std::process::Command::new("sync").output();
+        if self.trace {
+            eprintln!("guestfs: waiting for kernel to release filesystem references...");
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+
+        // Step 1: Unmount all filesystems (before disconnecting devices)
         if !self.mounted.is_empty() {
             if self.trace {
                 eprintln!("guestfs: unmounting {} filesystem(s)", self.mounted.len());
             }
+
             match self.umount_all() {
                 Ok(_) => {
                     if self.trace {
@@ -262,6 +298,37 @@ impl Guestfs {
                 }
                 Err(e) => {
                     eprintln!("Warning: umount_all failed: {}. Continuing with cleanup.", e);
+                }
+            }
+
+            // CRITICAL: Verify unmount actually worked
+            // umount command can return success before kernel fully processes the unmount
+            if let Some(mount_root) = &self.mount_root {
+                for attempt in 1..=10 {
+                    let check = std::process::Command::new("findmnt")
+                        .arg("-R")
+                        .arg(mount_root)
+                        .output();
+
+                    if let Ok(output) = check {
+                        if output.stdout.is_empty() || !output.status.success() {
+                            // No mounts found - unmount completed
+                            if self.trace && attempt > 1 {
+                                eprintln!("guestfs: unmount verified after {} attempts", attempt);
+                            }
+                            break;
+                        }
+                    }
+
+                    if attempt < 10 {
+                        // Still mounted - wait and retry
+                        if self.trace {
+                            eprintln!("guestfs: waiting for unmount to complete (attempt {})", attempt);
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                    } else {
+                        eprintln!("Warning: Unmount verification failed after {} attempts. Filesystem may still be active.", attempt);
+                    }
                 }
             }
         }
@@ -284,10 +351,53 @@ impl Guestfs {
         }
 
         // Step 3: Disconnect NBD device
-        if let Some(mut nbd) = self.nbd_device.take() {
+        // CRITICAL: Do NOT disconnect NBD if lazy unmount was used!
+        // Lazy unmount means the filesystem is still active in the kernel,
+        // and disconnecting NBD will cause I/O errors when the kernel tries to access it.
+        if self.lazy_unmount_used {
+            if self.trace {
+                eprintln!("guestfs: skipping NBD disconnect because lazy unmount was used");
+            }
+
+            // Take the NBD device and intentionally leak it to prevent Drop from running
+            // This is the correct behavior - the kernel will clean it up when lazy unmount completes
+            if let Some(nbd) = self.nbd_device.take() {
+                let device_path = nbd.device_path().to_path_buf();
+                std::mem::forget(nbd); // Prevent Drop from trying to disconnect
+
+                eprintln!("Warning: NBD device {} cleanup deferred due to lazy unmount.", device_path.display());
+                eprintln!("The device will be freed automatically when the kernel releases all mount references.");
+                eprintln!("To check status: findmnt -R {} && lsblk {}",
+                    self.mount_root.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
+                    device_path.display());
+                eprintln!("To force cleanup after refs are gone: sudo qemu-nbd --disconnect {}", device_path.display());
+            }
+        } else if let Some(mut nbd) = self.nbd_device.take() {
             if self.trace {
                 eprintln!("guestfs: disconnecting NBD device");
             }
+
+            // Add diagnostic checks before disconnect
+            let device_path = nbd.device_path().to_path_buf();
+
+            // Check if device is actually still mounted
+            if let Some(mount_root) = &self.mount_root {
+                let findmnt_check = std::process::Command::new("findmnt")
+                    .arg("-R")
+                    .arg(mount_root)
+                    .output();
+
+                if let Ok(output) = findmnt_check {
+                    if !output.stdout.is_empty() && output.status.success() {
+                        eprintln!("Warning: Device {} still has active mounts:", device_path.display());
+                        eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+                        eprintln!("Skipping disconnect to avoid I/O errors.");
+                        std::mem::forget(nbd); // Don't disconnect - there are still mounts
+                        return Ok(());
+                    }
+                }
+            }
+
             match nbd.disconnect() {
                 Ok(_) => {
                     if self.trace {
@@ -302,9 +412,34 @@ impl Guestfs {
 
         // Step 4: Clean up mount root directory
         if let Some(mount_root) = self.mount_root.take() {
+            // If lazy unmount was used, skip directory cleanup - it will be cleaned up
+            // automatically when the lazy unmount completes
+            if self.lazy_unmount_used {
+                eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
+                eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
+                return Ok(());
+            }
+
             if self.trace {
                 eprintln!("guestfs: removing mount root: {}", mount_root.display());
             }
+
+            // Ensure all filesystem operations are complete before trying to remove
+            let _ = std::process::Command::new("sync").output();
+            std::thread::sleep(std::time::Duration::from_secs(1));
+
+            // Verify nothing is mounted under mount_root
+            if let Ok(output) = std::process::Command::new("mount").output() {
+                let mount_output = String::from_utf8_lossy(&output.stdout);
+                if mount_output.contains(&mount_root.to_string_lossy().to_string()) {
+                    eprintln!("Warning: mount_root {} still has active mounts (likely from lazy unmount)", mount_root.display());
+                    eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
+                    eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
+                    return Ok(());
+                }
+            }
+
+            // First try without sudo
             match std::fs::remove_dir_all(&mount_root) {
                 Ok(_) => {
                     if self.trace {
@@ -312,18 +447,51 @@ impl Guestfs {
                     }
                 }
                 Err(e) => {
-                    eprintln!(
-                        "Warning: failed to remove mount root {}: {}",
-                        mount_root.display(),
-                        e
-                    );
+                    // If permission denied or read-only, try with sudo
+                    if self.trace {
+                        eprintln!("guestfs: normal removal failed ({}), trying with sudo", e);
+                    }
+
+                    let need_sudo = unsafe { libc::geteuid() } != 0;
+                    let mut cmd = if need_sudo {
+                        let mut sudo_cmd = std::process::Command::new("sudo");
+                        sudo_cmd.arg("rm");
+                        sudo_cmd
+                    } else {
+                        std::process::Command::new("rm")
+                    };
+
+                    match cmd
+                        .arg("-rf")
+                        .arg(&mount_root)
+                        .output()
+                    {
+                        Ok(output) if output.status.success() => {
+                            if self.trace {
+                                eprintln!("guestfs: mount root removed with sudo");
+                            }
+                        }
+                        Ok(output) => {
+                            eprintln!(
+                                "Warning: failed to remove mount root {} with sudo: {}",
+                                mount_root.display(),
+                                String::from_utf8_lossy(&output.stderr)
+                            );
+                        }
+                        Err(e2) => {
+                            eprintln!(
+                                "Warning: failed to remove mount root {}: {} (sudo also failed: {})",
+                                mount_root.display(),
+                                e,
+                                e2
+                            );
+                        }
+                    }
                 }
             }
         }
 
-        // Step 5: Clean up resources
-        self.reader = None;
-        self.partition_table = None;
+        // Step 5: Final state transition
         self.state = GuestfsState::Closed;
 
         if self.trace {
@@ -356,6 +524,16 @@ impl Guestfs {
     /// Get trace mode
     pub fn get_trace(&self) -> bool {
         self.trace
+    }
+
+    /// Set debug mode
+    pub fn set_debug(&mut self, debug: bool) {
+        self.debug = debug;
+    }
+
+    /// Get debug mode
+    pub fn get_debug(&self) -> bool {
+        self.debug
     }
 
     /// Get current state

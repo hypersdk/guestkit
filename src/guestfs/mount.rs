@@ -69,10 +69,12 @@ impl Guestfs {
 
         // Create mount root if needed
         if self.mount_root.is_none() {
-            let tmpdir = std::env::temp_dir().join(format!("guestctl-{}", std::process::id()));
-            fs::create_dir_all(&tmpdir)
+            // Use /run instead of /tmp for runtime mounts (tmpfs, faster, auto-cleanup)
+            let mount_dir = std::path::PathBuf::from("/run")
+                .join(format!("guestctl-{}", std::process::id()));
+            fs::create_dir_all(&mount_dir)
                 .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
-            self.mount_root = Some(tmpdir);
+            self.mount_root = Some(mount_dir);
         }
 
         // Build actual mount path
@@ -102,9 +104,11 @@ impl Guestfs {
             Command::new("mount")
         };
 
+        // Use noload option for ext* filesystems to prevent journal updates on read-only mounts
+        // This avoids I/O errors during unmount when the device is being disconnected
         let output = cmd
             .arg("-o")
-            .arg("ro")
+            .arg("ro,noload")
             .arg(&device_partition)
             .arg(&actual_mountpoint)
             .output()
@@ -284,7 +288,22 @@ impl Guestfs {
                 eprintln!("guestfs: unmounting {}", mountpoint);
             }
 
-            // Build umount command
+            // Always check what's using the mountpoint before unmounting
+            // This helps diagnose unmount failures
+            let lsof_output = Command::new("lsof")
+                .arg(mountpoint)
+                .output();
+            let mut has_users = false;
+            if let Ok(out) = lsof_output {
+                if !out.stdout.is_empty() {
+                    has_users = true;
+                    if self.debug {
+                        eprintln!("guestfs: processes using {}:\n{}", mountpoint, String::from_utf8_lossy(&out.stdout));
+                    }
+                }
+            }
+
+            // Try recursive unmount first to handle stacked mounts from previous lazy unmounts
             let mut cmd = if need_sudo {
                 let mut sudo_cmd = Command::new("sudo");
                 sudo_cmd.arg("umount");
@@ -294,20 +313,99 @@ impl Guestfs {
             };
 
             let output = cmd
+                .arg("-R")  // Recursive unmount to handle stacked mounts from previous runs
                 .arg(mountpoint)
                 .output()
                 .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
 
+            if self.debug {
+                eprintln!("[DEBUG] umount {} exited with status: {}, stderr: {}",
+                    mountpoint,
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr));
+            }
+
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 eprintln!("Warning: umount {} failed: {}", mountpoint, stderr);
-                // Continue trying to unmount other filesystems
+
+                // If we detected processes using the mount, show a helpful message
+                if has_users {
+                    eprintln!("Note: The mount point has active users. Use 'lsof {}' to see what's using it.", mountpoint);
+                }
+
+                // Try force unmount
+                if self.trace {
+                    eprintln!("guestfs: trying force unmount for {}", mountpoint);
+                }
+
+                let mut force_cmd = if need_sudo {
+                    let mut sudo_cmd = Command::new("sudo");
+                    sudo_cmd.arg("umount");
+                    sudo_cmd
+                } else {
+                    Command::new("umount")
+                };
+
+                let force_output = force_cmd
+                    .arg("-f")
+                    .arg(mountpoint)
+                    .output();
+
+                match force_output {
+                    Ok(out) if out.status.success() => {
+                        if self.trace {
+                            eprintln!("guestfs: force unmount succeeded for {}", mountpoint);
+                        }
+                    }
+                    Ok(out) => {
+                        eprintln!("Warning: force umount also failed: {}", String::from_utf8_lossy(&out.stderr));
+
+                        // Last resort: lazy unmount
+                        if self.trace {
+                            eprintln!("guestfs: trying lazy unmount for {}", mountpoint);
+                        }
+
+                        let mut lazy_cmd = if need_sudo {
+                            let mut sudo_cmd = Command::new("sudo");
+                            sudo_cmd.arg("umount");
+                            sudo_cmd
+                        } else {
+                            Command::new("umount")
+                        };
+
+                        if let Ok(lazy_out) = lazy_cmd.arg("-l").arg(mountpoint).output() {
+                            if lazy_out.status.success() {
+                                eprintln!("Note: Used lazy unmount for {}. Filesystem is detached but may still be active in kernel.", mountpoint);
+                                if self.trace {
+                                    eprintln!("guestfs: lazy unmount succeeded for {}", mountpoint);
+                                }
+                                // Mark that we used lazy unmount - directory cleanup should be skipped
+                                self.lazy_unmount_used = true;
+                            } else {
+                                eprintln!("Warning: lazy unmount also failed for {}: {}",
+                                    mountpoint, String::from_utf8_lossy(&lazy_out.stderr));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: failed to execute force umount: {}", e);
+                    }
+                }
             } else if self.trace {
                 eprintln!("guestfs: successfully unmounted {}", mountpoint);
             }
         }
 
         self.mounted.clear();
+
+        // Sync filesystem to ensure all unmounts are complete
+        if let Err(e) = std::process::Command::new("sync").output() {
+            eprintln!("Warning: sync command failed: {}", e);
+        }
+
+        // Brief wait to ensure all filesystem operations are complete
+        std::thread::sleep(std::time::Duration::from_millis(200));
 
         Ok(())
     }
