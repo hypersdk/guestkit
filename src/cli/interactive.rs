@@ -74,6 +74,7 @@ impl Completer for GuestkitHelper {
 
         // Command completion
         if parts.is_empty() || (parts.len() == 1 && !before_cursor.ends_with(' ')) {
+            #[allow(unused_mut)]
             let mut commands = vec![
                 "help",
                 "info",
@@ -609,7 +610,7 @@ impl InteractiveSession {
             "selinux-audit" => self.cmd_selinux_audit(&parts[1..]),
             // Templates
             "template-save" => self.cmd_template_save(&parts[1..]),
-            #[cfg(feature = "ai")]
+            // AI Assistant
             "ai" => self.cmd_ai(&parts[1..]),
             _ => {
                 let available = vec![
