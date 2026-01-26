@@ -15,6 +15,22 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 - **💾 Smart LVM Cleanup** - Automatic volume group cleanup for reliable operations
 - **🔄 Loop Device Primary** - Built-in support for RAW/IMG/ISO without kernel modules
 
+**🚀 Recent Enhancements (Q1 2026):**
+- **🔧 Systemd Analysis Suite** - Comprehensive systemd inspection without running the VM
+  - `systemd-journal` - Analyze journal logs with filtering, statistics, and error detection
+  - `systemd-services` - Inspect services, dependencies, and generate Mermaid diagrams
+  - `systemd-boot` - Boot performance analysis with optimization recommendations
+- **📊 Enhanced Export Capabilities**
+  - PDF reports with professional layout and configurable paper sizes
+  - HTML reports with Chart.js visualizations and dark theme support
+  - Markdown reports with Mermaid diagrams (architecture, network, storage)
+  - Customizable template system with 8 built-in templates
+- **⚡ Performance Optimizations**
+  - Binary cache (bincode) - 5-10x faster serialization, 50-70% smaller files
+  - Parallel batch processing - 4-8x speedup for multiple disk inspections
+  - Memory optimization - Pre-allocated vectors for 2x faster allocations
+  - Cache enabled by default for instant repeated inspections
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -159,6 +175,11 @@ guestctl inspect vm.raw  # Now uses loop device!
 - 🥾 **Boot Configuration** - Bootloader detection, kernel management, UEFI support
 
 ### System Analysis
+- 🔧 **Systemd Analysis Suite** - Comprehensive systemd inspection without running the VM
+  - **Journal Analysis** - Read and analyze systemd journal logs with filtering and statistics
+  - **Service Analysis** - Inspect services, detect failures, analyze dependencies
+  - **Boot Performance** - Boot timing analysis with optimization recommendations
+  - **Mermaid Diagrams** - Visual dependency trees and boot timelines
 - 👤 **System Configuration** - Timezone, locale, users, groups, systemd units
 - 🌐 **Network Configuration** - Read hostname, DNS, interface config, DHCP status
 - 🔐 **SSH Configuration** - Analyze SSH settings with security recommendations
@@ -214,9 +235,17 @@ guestctl inspect vm.raw  # Now uses loop device!
   - **Migration Profile** - Complete inventory for VM migration planning
   - **Performance Profile** - System tuning opportunities and bottleneck detection
 - 🔄 **VM Comparison** - Diff two VMs or compare multiple VMs against a baseline
-- 📤 **Report Export** - HTML and Markdown report generation for documentation
-- ⚡ **Result Caching** - SHA256-based caching for instant repeated inspections (60x speedup)
-- 🚀 **Batch Processing** - Multi-threaded parallel inspection of multiple disk images
+- 📤 **Report Export** - Professional report generation for documentation and compliance
+  - **HTML Reports** - Interactive reports with Chart.js visualizations, responsive design, dark theme support
+  - **PDF Reports** - Professional layout with configurable paper sizes (A4, Letter, Legal)
+  - **Markdown Reports** - GitHub/GitLab compatible with Mermaid diagrams (architecture, network topology, storage hierarchy)
+  - **Template System** - Customizable reports with 8 built-in templates (minimal, standard, detailed)
+- 🔧 **Systemd Analysis Commands** - Deep systemd inspection for troubleshooting and optimization
+  - **systemd-journal** - Journal log analysis with filtering, error detection, and statistics
+  - **systemd-services** - Service inspection, dependency visualization, failed service detection
+  - **systemd-boot** - Boot performance analysis with slowest services and optimization recommendations
+- ⚡ **Result Caching** - Binary cache (bincode) for 5-10x faster repeated inspections, 50-70% smaller cache files
+- 🚀 **Batch Processing** - Parallel inspection with 4-8x speedup, configurable worker threads
 
 ## Quick Start
 
@@ -326,17 +355,47 @@ guestctl diff vm-before.qcow2 vm-after.qcow2
 # Compare multiple VMs against baseline
 guestctl compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
 
-# Export HTML report
+# Export HTML report with Chart.js visualizations
 guestctl inspect vm.qcow2 --export html --export-output report.html
 
-# Export Markdown inventory
+# Export PDF report with professional layout
+guestctl inspect vm.qcow2 --export pdf --export-output report.pdf
+
+# Export Markdown inventory with Mermaid diagrams
 guestctl inspect vm.qcow2 --export markdown --export-output inventory.md
 
-# Use caching for faster repeated inspections
-guestctl inspect vm.qcow2 --cache  # First run: ~30s, subsequent: <0.5s
+# Use custom template for export
+guestctl inspect vm.qcow2 --export markdown --template detailed --export-output full-report.md
 
-# Batch inspect multiple VMs in parallel
-guestctl inspect-batch *.qcow2 --parallel 4 --cache
+# Systemd journal analysis
+guestctl systemd-journal vm.qcow2                     # View all journal entries
+guestctl systemd-journal vm.qcow2 --errors            # Show only errors
+guestctl systemd-journal vm.qcow2 --warnings          # Show only warnings
+guestctl systemd-journal vm.qcow2 --stats             # Display statistics
+guestctl systemd-journal vm.qcow2 --unit sshd.service  # Filter by unit
+guestctl systemd-journal vm.qcow2 --priority 3 --limit 50  # Error level, max 50
+
+# Systemd service analysis
+guestctl systemd-services vm.qcow2                        # List all services
+guestctl systemd-services vm.qcow2 --failed               # Show only failed services
+guestctl systemd-services vm.qcow2 --service nginx.service  # Dependency tree
+guestctl systemd-services vm.qcow2 --service sshd.service --diagram  # Mermaid diagram
+guestctl systemd-services vm.qcow2 --output json         # JSON output
+
+# Systemd boot performance analysis
+guestctl systemd-boot vm.qcow2                      # Show boot timing and slowest services
+guestctl systemd-boot vm.qcow2 --recommendations    # Get optimization recommendations
+guestctl systemd-boot vm.qcow2 --summary            # Boot metrics summary
+guestctl systemd-boot vm.qcow2 --timeline > boot.md  # Generate boot timeline Mermaid diagram
+guestctl systemd-boot vm.qcow2 --top 20             # Show top 20 slowest services
+
+# Use caching for faster repeated inspections (enabled by default)
+guestctl inspect vm.qcow2  # First run: ~30s, subsequent: <0.5s with binary cache
+guestctl inspect vm.qcow2 --no-cache  # Disable cache
+guestctl inspect vm.qcow2 --cache-refresh  # Force refresh cache
+
+# Batch inspect multiple VMs in parallel (4-8x speedup)
+guestctl inspect-batch *.qcow2 --parallel 4
 
 # Cache management
 guestctl cache-stats
@@ -348,6 +407,9 @@ guestctl cache-clear
 - `diff` - Compare two disk images
 - `compare` - Compare multiple VMs against baseline
 - `inspect-batch` - Parallel batch inspection
+- `systemd-journal` - Analyze systemd journal logs
+- `systemd-services` - Inspect systemd services and dependencies
+- `systemd-boot` - Analyze boot performance and optimization
 - `list` - List files in disk image
 - `extract` - Extract files from disk image
 - `execute` - Execute commands in guest
@@ -662,11 +724,13 @@ guestctl/
 **Quick Links:**
 - 🚀 **[Quick Start](docs/guides/QUICKSTART.md)** - Get started in minutes
 - 📖 **[CLI Guide](docs/guides/CLI_GUIDE.md)** - Command-line usage
+- 🔧 **[Systemd Analysis](docs/systemd-analysis.md)** - Deep systemd inspection guide
 - 🐍 **[Python Guide](docs/guides/PYTHON_BINDINGS.md)** - Python API guide
 - 🔍 **[API Reference](docs/api/PYTHON_API_REFERENCE.md)** - Complete Python API
 - 🏗️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - System architecture
 - 🧪 **[Testing Guide](docs/testing/TESTING.md)** - How to test
 - 📊 **[Project Status](docs/status/PROJECT_SUMMARY.md)** - Implementation status
+- ⚡ **[Performance Baseline](docs/development/performance-baseline.md)** - Performance metrics and optimization guide
 - 🚀 **[Enhancement Roadmap](docs/development/ENHANCEMENT_ROADMAP.md)** - Future plans
 
 See **[docs/README.md](docs/README.md)** for complete documentation index.
