@@ -5,10 +5,12 @@ use anyhow::Result;
 use guestctl::Guestfs;
 use serde::{Deserialize, Serialize};
 
+pub mod compliance;
 pub mod migration;
 pub mod performance;
 pub mod security;
 
+pub use compliance::ComplianceProfile;
 pub use migration::MigrationProfile;
 pub use performance::PerformanceProfile;
 pub use security::SecurityProfile;
@@ -102,6 +104,7 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "security" => Some(Box::new(SecurityProfile)),
         "migration" => Some(Box::new(MigrationProfile)),
         "performance" => Some(Box::new(PerformanceProfile)),
+        "compliance" => Some(Box::new(ComplianceProfile)),
         _ => None,
     }
 }
@@ -118,6 +121,10 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         (
             "performance",
             "Performance tuning opportunities and bottleneck detection",
+        ),
+        (
+            "compliance",
+            "Regulatory compliance assessment (CIS, FIPS, HIPAA, PCI-DSS)",
         ),
     ]
 }

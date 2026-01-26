@@ -10,7 +10,8 @@ use guestctl::Guestfs;
 use std::path::Path;
 
 use crate::cli::profiles::{
-    InspectionProfile, MigrationProfile, PerformanceProfile, ProfileReport, SecurityProfile,
+    ComplianceProfile, InspectionProfile, MigrationProfile, PerformanceProfile, ProfileReport,
+    SecurityProfile,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,6 +133,7 @@ pub struct App {
     pub security_profile: Option<ProfileReport>,
     pub migration_profile: Option<ProfileReport>,
     pub performance_profile: Option<ProfileReport>,
+    pub compliance_profile: Option<ProfileReport>,
 }
 
 impl App {
@@ -219,6 +221,7 @@ impl App {
         let security_profile = SecurityProfile.inspect(&mut guestfs, root).ok();
         let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
         let performance_profile = PerformanceProfile.inspect(&mut guestfs, root).ok();
+        let compliance_profile = ComplianceProfile.inspect(&mut guestfs, root).ok();
 
         guestfs.shutdown()?;
 
@@ -262,6 +265,7 @@ impl App {
             security_profile,
             migration_profile,
             performance_profile,
+            compliance_profile,
         })
     }
 
@@ -481,6 +485,7 @@ impl App {
                     "security": self.security_profile.as_ref().and_then(|p| p.overall_risk),
                     "migration": self.migration_profile.as_ref().and_then(|p| p.overall_risk),
                     "performance": self.performance_profile.as_ref().and_then(|p| p.overall_risk),
+                    "compliance": self.compliance_profile.as_ref().and_then(|p| p.overall_risk),
                 }
             }),
             View::Network => json!({
@@ -518,6 +523,7 @@ impl App {
                     0 => self.security_profile.as_ref().map(|p| ("security", p)),
                     1 => self.migration_profile.as_ref().map(|p| ("migration", p)),
                     2 => self.performance_profile.as_ref().map(|p| ("performance", p)),
+                    3 => self.compliance_profile.as_ref().map(|p| ("compliance", p)),
                     _ => None,
                 };
 
@@ -538,11 +544,11 @@ impl App {
     }
 
     pub fn next_profile_tab(&mut self) {
-        self.selected_profile_tab = (self.selected_profile_tab + 1) % 3;
+        self.selected_profile_tab = (self.selected_profile_tab + 1) % 4;
     }
 
     pub fn previous_profile_tab(&mut self) {
-        self.selected_profile_tab = (self.selected_profile_tab + 2) % 3;
+        self.selected_profile_tab = (self.selected_profile_tab + 3) % 4;
     }
 
     pub fn get_current_profile_report(&self) -> Option<&ProfileReport> {
@@ -550,6 +556,7 @@ impl App {
             0 => self.security_profile.as_ref(),
             1 => self.migration_profile.as_ref(),
             2 => self.performance_profile.as_ref(),
+            3 => self.compliance_profile.as_ref(),
             _ => None,
         }
     }
