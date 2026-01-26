@@ -117,7 +117,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
                     KeyCode::Enter => {
-                        use app::{ExportFormat, ExportMode};
+                        use app::ExportMode;
 
                         if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();

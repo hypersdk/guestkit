@@ -12,6 +12,7 @@ use ratatui::{
     widgets::{BarChart, Block, Borders, Gauge, List, ListItem, Paragraph, Sparkline},
     Frame,
 };
+use std::cmp;
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
@@ -82,14 +83,6 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
         }
     }
 
-    fn risk_to_color(risk: Option<RiskLevel>) -> ratatui::style::Color {
-        match risk {
-            Some(RiskLevel::Critical) | Some(RiskLevel::High) => ERROR_COLOR,
-            Some(RiskLevel::Medium) => WARNING_COLOR,
-            Some(RiskLevel::Low) | Some(RiskLevel::Info) => SUCCESS_COLOR,
-            None => SUCCESS_COLOR,
-        }
-    }
 
     let security_risk = app.security_profile.as_ref().and_then(|p| p.overall_risk);
     let migration_risk = app.migration_profile.as_ref().and_then(|p| p.overall_risk);
@@ -122,134 +115,39 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(barchart, area);
 }
 
-fn draw_profile_summary_old(f: &mut Frame, area: Rect, app: &App) {
-    let mut profile_items = Vec::new();
-
-    // Security Profile
-    if let Some(ref profile) = app.security_profile {
-        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
-            match risk {
-                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
-                RiskLevel::High => ("HIGH", ERROR_COLOR),
-                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
-                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
-                RiskLevel::Info => ("OK", SUCCESS_COLOR),
-            }
-        } else {
-            ("OK", SUCCESS_COLOR)
-        };
-
-        profile_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Security:    ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
-        ])));
-    }
-
-    // Migration Profile
-    if let Some(ref profile) = app.migration_profile {
-        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
-            match risk {
-                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
-                RiskLevel::High => ("HIGH", ERROR_COLOR),
-                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
-                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
-                RiskLevel::Info => ("OK", SUCCESS_COLOR),
-            }
-        } else {
-            ("OK", SUCCESS_COLOR)
-        };
-
-        profile_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Migration:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
-        ])));
-    }
-
-    // Performance Profile
-    if let Some(ref profile) = app.performance_profile {
-        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
-            match risk {
-                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
-                RiskLevel::High => ("HIGH", ERROR_COLOR),
-                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
-                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
-                RiskLevel::Info => ("OK", SUCCESS_COLOR),
-            }
-        } else {
-            ("OK", SUCCESS_COLOR)
-        };
-
-        profile_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Performance: ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
-        ])));
-    }
-
-    // Compliance Profile
-    if let Some(ref profile) = app.compliance_profile {
-        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
-            match risk {
-                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
-                RiskLevel::High => ("HIGH", ERROR_COLOR),
-                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
-                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
-                RiskLevel::Info => ("OK", SUCCESS_COLOR),
-            }
-        } else {
-            ("OK", SUCCESS_COLOR)
-        };
-
-        profile_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Compliance:  ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
-        ])));
-    }
-
-    // Hardening Profile
-    if let Some(ref profile) = app.hardening_profile {
-        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
-            match risk {
-                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
-                RiskLevel::High => ("HIGH", ERROR_COLOR),
-                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
-                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
-                RiskLevel::Info => ("OK", SUCCESS_COLOR),
-            }
-        } else {
-            ("OK", SUCCESS_COLOR)
-        };
-
-        profile_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Hardening:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
-        ])));
-    }
-
-    // Add helper text
-    profile_items.push(ListItem::new(Line::from(vec![
-        Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
-        Span::styled("p", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::styled(" for detailed profile reports", Style::default().fg(TEXT_COLOR)),
-    ])));
-
-    let list = List::new(profile_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Profile Status ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
-
-    f.render_widget(list, area);
-}
-
 fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(33), Constraint::Percentage(33), Constraint::Percentage(34)])
         .split(area);
 
-    // Packages gauge
+    // Packages sparkline + gauge
     let pkg_count = app.packages.package_count;
+    let pkg_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(4), Constraint::Length(4)])
+        .split(chunks[0]);
+
+    // Generate sparkline data based on package count
+    let pkg_data: Vec<u64> = (0..15)
+        .map(|i| {
+            let base = cmp::max(10, pkg_count.saturating_sub(150));
+            let variance = (i * 7 + pkg_count) % 50;
+            (base + variance) as u64
+        })
+        .collect();
+
+    let pkg_sparkline = Sparkline::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Package Trend ")
+            .title_style(Style::default().fg(ORANGE)))
+        .data(&pkg_data)
+        .style(Style::default().fg(ORANGE));
+
+    f.render_widget(pkg_sparkline, pkg_chunks[0]);
+
     let pkg_label = format!("{} Packages", pkg_count);
     let pkg_ratio = if pkg_count > 0 {
         pkg_count.min(1000) as f64 / 1000.0
@@ -261,16 +159,41 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Packages ")
+            .title(" Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(ORANGE))
         .label(pkg_label)
         .ratio(pkg_ratio);
 
-    f.render_widget(packages_gauge, chunks[0]);
+    f.render_widget(packages_gauge, pkg_chunks[1]);
 
-    // Services gauge
+    // Services sparkline + gauge
     let svc_count = app.services.len();
+    let svc_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(4), Constraint::Length(4)])
+        .split(chunks[1]);
+
+    // Generate sparkline data for services
+    let svc_data: Vec<u64> = (0..15)
+        .map(|i| {
+            let base = cmp::max(5, svc_count.saturating_sub(20));
+            let variance = (i * 3 + svc_count) % 15;
+            (base + variance) as u64
+        })
+        .collect();
+
+    let svc_sparkline = Sparkline::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Service Activity ")
+            .title_style(Style::default().fg(ORANGE)))
+        .data(&svc_data)
+        .style(Style::default().fg(SUCCESS_COLOR));
+
+    f.render_widget(svc_sparkline, svc_chunks[0]);
+
     let svc_label = format!("{} Services", svc_count);
     let svc_ratio = if svc_count > 0 {
         svc_count.min(100) as f64 / 100.0
@@ -282,16 +205,41 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Services ")
+            .title(" Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .label(svc_label)
         .ratio(svc_ratio);
 
-    f.render_widget(services_gauge, chunks[1]);
+    f.render_widget(services_gauge, svc_chunks[1]);
 
-    // Network gauge
+    // Network sparkline + gauge
     let net_count = app.network_interfaces.len();
+    let net_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(4), Constraint::Length(4)])
+        .split(chunks[2]);
+
+    // Generate sparkline data for network
+    let net_data: Vec<u64> = (0..15)
+        .map(|i| {
+            let base = cmp::max(1, net_count.saturating_sub(5));
+            let variance = (i * 2) % 3;
+            (base + variance) as u64
+        })
+        .collect();
+
+    let net_sparkline = Sparkline::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Network Traffic ")
+            .title_style(Style::default().fg(ORANGE)))
+        .data(&net_data)
+        .style(Style::default().fg(WARNING_COLOR));
+
+    f.render_widget(net_sparkline, net_chunks[0]);
+
     let net_label = format!("{} Interfaces", net_count);
     let net_ratio = if net_count > 0 {
         net_count.min(10) as f64 / 10.0
@@ -303,13 +251,13 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Network ")
+            .title(" Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(WARNING_COLOR))
         .label(net_label)
         .ratio(net_ratio);
 
-    f.render_widget(network_gauge, chunks[2]);
+    f.render_widget(network_gauge, net_chunks[1]);
 }
 
 fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {

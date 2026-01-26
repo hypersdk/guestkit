@@ -15,10 +15,8 @@ use ratatui::{
 pub const ORANGE: Color = Color::Rgb(222, 115, 86);        // Primary coral orange (Pantone 7416 C)
 pub const DARK_ORANGE: Color = Color::Rgb(180, 85, 60);    // Darker terracotta
 pub const LIGHT_ORANGE: Color = Color::Rgb(255, 145, 115); // Lighter coral
-pub const BURNT_ORANGE: Color = Color::Rgb(200, 95, 70);   // Burnt terracotta accent
 pub const BG_COLOR: Color = Color::Reset;
 pub const TEXT_COLOR: Color = Color::Rgb(220, 220, 220);   // Softer white
-pub const HIGHLIGHT_COLOR: Color = ORANGE;
 pub const BORDER_COLOR: Color = DARK_ORANGE;
 pub const SUCCESS_COLOR: Color = Color::Rgb(50, 205, 50);  // Brighter green
 pub const WARNING_COLOR: Color = Color::Rgb(255, 200, 0);  // Deeper yellow
@@ -313,7 +311,7 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
 }
 
 fn draw_export_menu(f: &mut Frame, app: &App) {
-    use super::app::{ExportFormat, ExportMode};
+    use super::app::ExportMode;
 
     let area = centered_rect(60, 55, f.area());
 

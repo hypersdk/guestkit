@@ -3,8 +3,8 @@
 
 use anyhow::Result;
 use guestctl::guestfs::inspect_enhanced::{
-    Database, FirewallInfo, HostEntry, LVMInfo, LogicalVolume, NetworkInterface, PackageInfo,
-    RAIDArray, SecurityInfo, SystemService, UserAccount, VolumeGroup, WebServer,
+    Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, PackageInfo,
+    RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
 use guestctl::Guestfs;
 use std::collections::HashMap;
@@ -685,6 +685,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     pub fn clear_bookmarks(&mut self) {
         self.bookmarks.clear();
     }
