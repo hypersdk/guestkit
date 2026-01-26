@@ -135,6 +135,7 @@ pub struct App {
     pub show_stats_bar: bool,
     pub bookmarks: Vec<String>,
     pub search_history: Vec<String>,
+    pub notification: Option<(String, u8)>, // (message, ticks_remaining)
 
     // Export state
     pub export_mode: Option<ExportMode>,
@@ -294,6 +295,7 @@ impl App {
             show_stats_bar: true,
             bookmarks: Vec::new(),
             search_history: Vec::new(),
+            notification: None,
 
             export_mode: None,
             export_format: None,
@@ -420,6 +422,19 @@ impl App {
 
     pub fn on_tick(&mut self) {
         // Handle periodic updates if needed
+        // Decrement notification timer
+        if let Some((_, ref mut ticks)) = self.notification {
+            if *ticks > 0 {
+                *ticks -= 1;
+            } else {
+                self.notification = None;
+            }
+        }
+    }
+
+    pub fn show_notification(&mut self, message: String) {
+        // Show notification for 8 ticks (2 seconds at 250ms tick rate)
+        self.notification = Some((message, 8));
     }
 
     pub fn toggle_export_menu(&mut self) {
@@ -660,6 +675,7 @@ impl App {
         // Reset scroll when sorting changes
         self.scroll_offset = 0;
         self.selected_index = 0;
+        self.show_notification(format!("Sort: {}", self.sort_mode.label()));
     }
 
     pub fn jump_to_view(&mut self, index: usize) {
@@ -673,15 +689,20 @@ impl App {
 
     pub fn toggle_stats_bar(&mut self) {
         self.show_stats_bar = !self.show_stats_bar;
+        let state = if self.show_stats_bar { "shown" } else { "hidden" };
+        self.show_notification(format!("Stats bar {}", state));
     }
 
     pub fn add_bookmark(&mut self, item: String) {
         if !self.bookmarks.contains(&item) {
-            self.bookmarks.push(item);
+            self.bookmarks.push(item.clone());
             // Keep only last 20 bookmarks
             if self.bookmarks.len() > 20 {
                 self.bookmarks.remove(0);
             }
+            self.show_notification(format!("✓ Bookmarked: {}", item));
+        } else {
+            self.show_notification("⚠ Already bookmarked".to_string());
         }
     }
 
