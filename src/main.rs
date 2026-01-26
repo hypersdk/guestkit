@@ -413,7 +413,10 @@ fn main() -> anyhow::Result<()> {
 
     // Setup debug environment variable
     if cli.debug {
-        std::env::set_var("GUESTCTL_DEBUG", "1");
+        // SAFETY: Setting an environment variable in single-threaded initialization is safe
+        unsafe {
+            std::env::set_var("GUESTCTL_DEBUG", "1");
+        }
     }
 
     // Setup logging
