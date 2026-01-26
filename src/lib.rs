@@ -68,7 +68,10 @@ pub use converters::DiskConverter;
 pub use core::types::*;
 pub use core::{Error, Result, RetryConfig};
 pub use disk::{DiskReader, FileSystem, PartitionTable};
-pub use export::{HtmlExporter, HtmlExportOptions, PaperSize, PdfExporter, PdfExportOptions};
+pub use export::{
+    create_variable_map, HtmlExporter, HtmlExportOptions, PaperSize, PdfExporter,
+    PdfExportOptions, TemplateEngine, TemplateFormat, TemplateLevel,
+};
 pub use guestfs::Guestfs;
 
 #[cfg(feature = "guest-inspect")]
