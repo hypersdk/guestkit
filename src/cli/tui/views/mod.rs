@@ -2,6 +2,7 @@
 //! TUI view modules
 
 pub mod dashboard;
+pub mod databases;
 pub mod kernel;
 pub mod network;
 pub mod packages;
@@ -10,3 +11,4 @@ pub mod security;
 pub mod services;
 pub mod storage;
 pub mod users;
+pub mod webservers;
