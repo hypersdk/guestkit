@@ -26,20 +26,40 @@ pub const ERROR_COLOR: Color = Color::Rgb(220, 50, 47);    // Deep red
 pub const INFO_COLOR: Color = Color::Rgb(100, 150, 255);   // Soft blue
 
 pub fn draw(f: &mut Frame, app: &App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
+    let constraints = if app.show_stats_bar {
+        vec![
+            Constraint::Length(3), // Header
+            Constraint::Length(2), // Stats bar
+            Constraint::Length(3), // Tabs
+            Constraint::Min(0),    // Content
+            Constraint::Length(1), // Footer
+        ]
+    } else {
+        vec![
             Constraint::Length(3), // Header
             Constraint::Length(3), // Tabs
             Constraint::Min(0),    // Content
             Constraint::Length(1), // Footer
-        ])
+        ]
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
         .split(f.area());
 
-    draw_header(f, chunks[0], app);
-    draw_tabs(f, chunks[1], app);
-    draw_content(f, chunks[2], app);
-    draw_footer(f, chunks[3], app);
+    if app.show_stats_bar {
+        draw_header(f, chunks[0], app);
+        draw_stats_bar(f, chunks[1], app);
+        draw_tabs(f, chunks[2], app);
+        draw_content(f, chunks[3], app);
+        draw_footer(f, chunks[4], app);
+    } else {
+        draw_header(f, chunks[0], app);
+        draw_tabs(f, chunks[1], app);
+        draw_content(f, chunks[2], app);
+        draw_footer(f, chunks[3], app);
+    }
 
     if app.show_help {
         draw_help_overlay(f, app);
@@ -74,6 +94,49 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
             .style(Style::default().bg(BG_COLOR)));
 
     f.render_widget(header, area);
+}
+
+fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
+    let (critical, high, medium) = app.get_risk_summary();
+
+    let stats_spans = vec![
+        Span::styled("📊 ", Style::default().fg(ORANGE)),
+        Span::styled("Pkgs:", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled(format!(" {} ", app.packages.package_count), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+        Span::raw("│ "),
+        Span::styled("Svcs:", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled(format!(" {} ", app.services.len()), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+        Span::raw("│ "),
+        Span::styled("Users:", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled(format!(" {} ", app.users.len()), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+        Span::raw("│ "),
+        Span::styled("Risk:", Style::default().fg(LIGHT_ORANGE)),
+        Span::raw(" "),
+    ];
+
+    let mut risk_spans = stats_spans;
+
+    if critical > 0 {
+        risk_spans.push(Span::styled(format!("🔴{} ", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)));
+    }
+    if high > 0 {
+        risk_spans.push(Span::styled(format!("🟠{} ", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)));
+    }
+    if medium > 0 {
+        risk_spans.push(Span::styled(format!("🟡{} ", medium), Style::default().fg(WARNING_COLOR)));
+    }
+    if critical == 0 && high == 0 && medium == 0 {
+        risk_spans.push(Span::styled("✓ OK", Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)));
+    }
+
+    risk_spans.push(Span::raw("│ "));
+    risk_spans.push(Span::styled("Bookmarks:", Style::default().fg(LIGHT_ORANGE)));
+    risk_spans.push(Span::styled(format!(" {} ", app.bookmarks.len()), Style::default().fg(INFO_COLOR)));
+
+    let stats = Paragraph::new(Line::from(risk_spans))
+        .style(Style::default().bg(BG_COLOR).fg(TEXT_COLOR));
+
+    f.render_widget(stats, area);
 }
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
@@ -119,25 +182,24 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::raw("ESC: Cancel"),
         ]
     } else {
-        let mut spans = vec![
+        vec![
             Span::styled("1-9", Style::default().fg(ORANGE)),
             Span::raw(": Jump | "),
-            Span::styled("Tab", Style::default().fg(ORANGE)),
-            Span::raw(": Switch | "),
             Span::styled("s", Style::default().fg(ORANGE)),
             Span::raw(": Sort ["),
             Span::styled(app.sort_mode.label(), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("] | "),
+            Span::styled("b", Style::default().fg(ORANGE)),
+            Span::raw(": Bookmark | "),
+            Span::styled("i", Style::default().fg(ORANGE)),
+            Span::raw(": Stats | "),
             Span::styled("↵", Style::default().fg(ORANGE)),
             Span::raw(": Detail | "),
             Span::styled("e", Style::default().fg(ORANGE)),
             Span::raw(": Export | "),
             Span::styled("h", Style::default().fg(ORANGE)),
-            Span::raw(": Help | "),
-            Span::styled("q", Style::default().fg(ORANGE)),
-            Span::raw(": Quit"),
-        ];
-        spans
+            Span::raw(": Help"),
+        ]
     };
 
     let footer = Paragraph::new(Line::from(footer_text))
@@ -199,8 +261,16 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::raw("Cycle sort mode (Default → Name ↑ → Name ↓)")
         ]),
         Line::from(vec![
+            Span::styled("  b              ", Style::default().fg(ORANGE)),
+            Span::raw("Bookmark current view")
+        ]),
+        Line::from(vec![
+            Span::styled("  i              ", Style::default().fg(ORANGE)),
+            Span::raw("Toggle statistics bar")
+        ]),
+        Line::from(vec![
             Span::styled("  /              ", Style::default().fg(ORANGE)),
-            Span::raw("Start search/filter")
+            Span::raw("Start search/filter (history saved)")
         ]),
         Line::from(vec![
             Span::styled("  e              ", Style::default().fg(ORANGE)),
