@@ -147,6 +147,6 @@ Found an issue or want to improve documentation?
 
 ---
 
-**Documentation Version:** 0.3.0
-**Last Updated:** 2026-01-24
+**Documentation Version:** 0.3.1
+**Last Updated:** 2026-01-26
 **License:** LGPL-3.0-or-later

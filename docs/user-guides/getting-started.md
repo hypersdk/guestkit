@@ -2,12 +2,15 @@
 
 ## Project Overview
 
-**guestctl** is a Rust library and CLI tool for guest VM disk manipulation, designed to work with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
+**guestctl** (v0.3.1) is a pure Rust library and CLI tool for VM disk inspection and manipulation with beautiful terminal output. Features include:
 
-### Location
-```
-~/tt/guestctl/
-```
+- 🎯 **Killer Summary View** - See OS, version, architecture at a glance
+- 🪟 **Windows Registry Parsing** - Full Windows version detection
+- 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter
+- 💾 **Smart LVM Cleanup** - Automatic volume group management
+- 🔄 **Loop Device Primary** - Built-in support for RAW/IMG/ISO
+
+Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm) and VM migration workflows.
 
 ## Building
 

@@ -1,10 +1,10 @@
 [package]
 name = "guestctl"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
-description = "Guest VM toolkit for disk inspection and manipulation"
+description = "Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support"
 repository = "https://github.com/ssahani/guestkit"
 keywords = ["virtualization", "vm", "disk", "qemu", "kvm"]
 categories = ["virtualization", "filesystem", "command-line-utilities"]

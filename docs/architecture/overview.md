@@ -1,6 +1,6 @@
-# guestctl Architecture
+# guestctl Architecture (v0.3.1)
 
-Complete **Pure Rust** implementation for guest VM operations.
+Complete **Pure Rust** implementation for guest VM operations and migration.
 
 ## Overview
 
@@ -10,8 +10,12 @@ Complete **Pure Rust** implementation for guest VM operations.
 - **Pure Rust partition table parsing** (MBR, GPT)
 - **Pure Rust filesystem detection** (ext4, NTFS, XFS, Btrfs, FAT32)
 - **Guest OS detection and manipulation**
+- **Windows registry parsing** for full Windows version detection
+- **VM migration support** with universal fstab/crypttab rewriter
+- **Smart device management** (loop devices primary, NBD fallback)
+- **Automatic LVM cleanup** for reliable operations
 - **PyO3 Python bindings** for zero-overhead integration
-- **Production-ready CLI tool**
+- **Production-ready CLI tool** with beautiful terminal output
 
 ## Key Design Principle
 

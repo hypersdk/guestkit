@@ -1,6 +1,6 @@
 # guestctl
 
-A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emoji-enhanced output**. Inspect VM disks in seconds without booting them. Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm).
+A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emoji-enhanced output**. Inspect VM disks in seconds without booting them. Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm) and VM migration workflows.
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
@@ -8,7 +8,12 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 [![PyPI](https://img.shields.io/pypi/v/guestctl.svg)](https://pypi.org/project/guestctl/)
 [![Downloads](https://pepy.tech/badge/guestctl)](https://pepy.tech/project/guestctl)
 
-**🎨 New:** Beautiful terminal output with emojis and color coding makes VM inspection actually enjoyable!
+**✨ Latest (v0.3.1):**
+- **🎯 Killer Summary View** - See OS, version, architecture at a glance with color-coded output
+- **🪟 Windows Registry Parsing** - Full Windows version detection via registry access
+- **🔄 VM Migration Support** - Universal fstab/crypttab rewriter for cross-platform migration
+- **💾 Smart LVM Cleanup** - Automatic volume group cleanup for reliable operations
+- **🔄 Loop Device Primary** - Built-in support for RAW/IMG/ISO without kernel modules
 
 ## 🚀 Quick Start
 
@@ -40,6 +45,12 @@ guestctl inspect vm.qcow2
 
 **Output:**
 ```
+┌────────────────────────────────────────────────────────┐
+│ Ubuntu 22.04.3 LTS                                      │
+│ Type: linux | Arch: x86_64 | Hostname: webserver-prod │
+│ Packages: deb | Init: systemd                          │
+└────────────────────────────────────────────────────────┘
+
 💾 Block Devices
 ────────────────────────────────────────────────────────────
   ▪ /dev/sda 8589934592 bytes (8.59 GB)
@@ -48,7 +59,7 @@ guestctl inspect vm.qcow2
 ────────────────────────────────────────────────────────────
     🐧 Type:         linux
     📦 Distribution: ubuntu
-    🏷️ Product:      Ubuntu 22.04 LTS
+    🏷️ Product:      Ubuntu 22.04.3 LTS
     🏠 Hostname:     webserver-prod
     ⚡ Init system:  systemd
 
@@ -87,14 +98,22 @@ with Guestfs() as g:
 
 guestctl automatically detects your disk format and uses the optimal mounting method:
 
-### 🔄 Loop Device (Primary) - Built into Linux Kernel
+### 🔄 Loop Device (Primary) - Built into Linux Kernel ⚡ **Default**
 **Formats:** RAW, IMG, ISO
-**Advantages:** ✅ No kernel modules needed ✅ Faster setup ✅ More reliable
-**Use case:** Cloud images, raw disks, ISO files
+**Advantages:**
+- ✅ No kernel modules needed - Built into Linux kernel
+- ✅ Faster setup - Immediate availability
+- ✅ More reliable - No QEMU dependencies
+- ✅ Zero configuration - Works out of the box
+**Use case:** Cloud images, raw disks, ISO files, DD images
 
 ### 🌐 NBD Device (Fallback) - Advanced Format Support
-**Formats:** QCOW2, VMDK, VDI, VHD
-**Advantages:** ✅ Compressed formats ✅ Snapshots ✅ Auto-loads NBD module
+**Formats:** QCOW2, VMDK, VDI, VHD, VHDX
+**Advantages:**
+- ✅ Compressed formats - Efficient storage
+- ✅ Snapshots - Copy-on-write support
+- ✅ Auto-loads NBD module - Automatic setup
+- ✅ QEMU integration - Native QEMU format support
 **Use case:** QEMU/KVM, VMware, VirtualBox, Hyper-V images
 
 ```bash
@@ -117,92 +136,78 @@ guestctl inspect vm.raw  # Now uses loop device!
 
 ## Features
 
+### Core Capabilities
 - 🦀 **Ergonomic Rust API** - Type-safe enums, builder patterns, and fluent interfaces for modern Rust idioms
 - 🔍 **Comprehensive API** - 578 disk image manipulation functions (563 fully implemented, 15 API-defined) - **97.4% implementation coverage**
 - 🦀 **Pure Rust** - No C dependencies for core library, memory safe, high performance
 - ⚡ **Compile-Time Safety** - Type-safe filesystems, OS detection, and partition tables prevent runtime errors
-- 💿 **Disk Format Support** - RAW/IMG/ISO via loop devices (default), QCOW2/VMDK/VDI/VHD via NBD (automatic)
+
+### Disk & Storage
+- 💿 **Disk Format Support** - RAW/IMG/ISO via loop devices (default, built-in), QCOW2/VMDK/VDI/VHD via NBD (automatic fallback)
 - 📊 **Partition Tables** - MBR and GPT parsing, partition creation/deletion/resizing
 - 🗂️ **Filesystem Operations** - Mount/unmount, create (mkfs), check (fsck), tune, trim, resize
+- 🔐 **Encryption Support** - LUKS encrypted volumes with full key management
+- 📚 **LVM Support** - Logical volume management with automatic cleanup
+- 🔷 **Advanced Filesystems** - ext2/3/4, XFS, Btrfs, NTFS, ZFS, F2FS, ReiserFS, JFS, and 10+ more
+- 💾 **Disk Image Management** - Create, resize, convert, sparsify, snapshot disk images
+
+### OS Inspection & Detection
 - 🔎 **OS Inspection** - Detect OS type, distro, version, architecture, hostname
-- 📦 **Package Management** - List and inspect dpkg/rpm packages
-- 🌐 **Network Configuration** - Read hostname, DNS, interface config
+- 🪟 **Windows Support** - Full Windows registry parsing for version detection, registry hive access
+- 🐧 **Linux Detection** - 30+ distributions with detailed metadata
+- 📦 **Package Management** - List and inspect dpkg/rpm/pacman packages
+- 🥾 **Boot Configuration** - Bootloader detection, kernel management, UEFI support
+
+### System Analysis
 - 👤 **System Configuration** - Timezone, locale, users, groups, systemd units
-- 🔐 **Encryption Support** - LUKS encrypted volumes
-- 📚 **LVM Support** - Logical volume management
+- 🌐 **Network Configuration** - Read hostname, DNS, interface config, DHCP status
+- 🔐 **SSH Configuration** - Analyze SSH settings with security recommendations
+- 🔧 **Service Management** - systemd/sysvinit service detection, timers, cron jobs
+- 💻 **Runtime Detection** - Identify Python, Node.js, Java, Ruby, Go, Perl installations
+- 🐳 **Container Runtimes** - Detect Docker, Podman, containerd, CRI-O
+
+### VM Migration & Preparation
+- 🔄 **Universal fstab/crypttab Rewriter** - Modify mount configurations for cross-platform migration
+- 🧹 **SysPrep Operations** - Remove unique identifiers for VM cloning
+- 📝 **Device Path Translation** - Automatic translation for target systems
+- 🔑 **LUKS Migration** - Rewrite crypttab entries for encrypted volumes
+
+### Advanced Operations
 - 🗜️ **Archive Operations** - tar, tgz, cpio creation and extraction
 - 🔑 **Checksums** - MD5, SHA1, SHA256, SHA384, SHA512
 - 🛡️ **Security Operations** - SELinux, AppArmor, capabilities, ACLs
-- 🥾 **Boot Configuration** - Bootloader detection, kernel management, UEFI support
-- 💾 **Advanced Disk Operations** - Swap management, hexdump, strings, secure scrubbing
-- 🔧 **Service Management** - systemd/sysvinit service detection, cron jobs
 - 🔑 **SSH Operations** - SSH key management, certificates, authorized_keys
 - ⚙️ **Configuration Editing** - Augeas-based config file editing
-- 🪟 **Windows Support** - Registry hive access, Windows-specific inspection
 - 🌳 **Btrfs Advanced** - Subvolumes, snapshots, balance, scrub operations
 - 📊 **File Metadata** - Detailed stat operations, inode info, permissions
-- 🛠️ **Utility Functions** - Feature detection, settings management, debug tools
-- 🔷 **XFS Support** - XFS repair, administration, info, database operations
 - 💿 **ISO Operations** - ISO creation, inspection, mounting
 - 📤 **Advanced Transfer** - Offset-based downloads/uploads, device copying
-- 💾 **Disk Image Management** - Create, resize, convert, sparsify, snapshot disk images
-- 🔧 **Internal API** - State management, environment parsing, debug functions
-- 💿 **NTFS Operations** - ntfsclone, ntfsfix, label management
-- 🔷 **Extended Filesystem** - ext2/3/4 UUID, label, dump/restore operations
-- 🔍 **Glob Operations** - Pattern matching, ls0, find0, case-insensitive search
-- 🔧 **Node Operations** - mknod, mkfifo, mktemp, truncate, utimens
 - 💾 **MD/RAID** - Software RAID creation, management, inspection
-- 🛡️ **SELinux Extended** - SELinux inspection, restorecon
-- 🔐 **Capabilities** - Linux capabilities management
-- 🔒 **ACL Operations** - POSIX ACL management
-- 🪟 **Hivex** - Windows registry hive manipulation (16 functions)
 - 🔄 **Rsync** - rsync-based file synchronization
-- 🥾 **Syslinux** - syslinux/extlinux bootloader installation
 - 📔 **Journal** - systemd journal reading, export, verification
-- 👁️ **Inotify** - file monitoring with inotify
-- 🗜️ **SquashFS** - SquashFS creation and extraction
 - 🦠 **YARA** - malware scanning with YARA rules
 - 🔬 **TSK** - forensics with The Sleuth Kit (deleted file recovery)
-- 💽 **ZFS** - ZFS filesystem management (10 functions)
-- 🪟 **LDM** - Windows dynamic disk support (8 functions)
-- 🔀 **Multipath** - multipath device management
-- 🥾 **GRUB** - GRUB bootloader installation and configuration
-- ⚡ **F2FS** - Flash-Friendly File System support
-- 💾 **Bcache** - block cache management
-- 📁 **DOSFS** - FAT12/16/32 filesystem tools
-- 📦 **CPIO** - CPIO archive format support
-- 🗂️ **NILFS** - log-structured filesystem support
-- 🔧 **UFS** - Unix File System support
-- 🌲 **ReiserFS** - ReiserFS filesystem management
-- 📝 **JFS** - Journaled File System support
-- 🔹 **Minix** - Minix filesystem support
 - 🩺 **SMART** - disk health monitoring with smartctl
-- 🧹 **SysPrep** - VM preparation operations (remove unique data)
-- 🛠️ **Utilities** - version info, QEMU detection, umask, device stats
-- 🔧 **Block Device Ops** - setro/setrw, flush, reread partition table, block/sector size
-- 📝 **Base64** - Base64 encoding/decoding for file content
-- 🔄 **Extended Swap** - swap label/UUID management operations
-- 💾 **DD Operations** - dd-style copy, zero device operations
-- 📍 **Positional I/O** - pread/pwrite with offset support
-- 🔍 **Virt Tools** - virt-inspector, virt-convert, virt-resize, virt-sparsify info
-- 🗜️ **Compression** - gzip, bzip2, xz compression/decompression for files and devices
-- 🏷️ **Label Operations** - generic filesystem label/UUID management (auto-detect fs type)
-- 🔄 **Sync Operations** - sync, drop_caches, flush for data consistency
-- 🔖 **Attributes** - extended attributes (xattr) and file flags management
-- 🧩 **Partition Types** - GPT type GUID, attributes, expand partition tables
-- 🔗 **Link Management** - symbolic and hard link operations
-- 🐍 **Python Bindings** - PyO3-based native Python bindings
+
+### Developer Experience
+- 🐍 **Python Bindings** - PyO3-based native Python bindings with 100+ methods
 - ⚡ **Retry Logic** - Built-in exponential backoff for reliable operations
 - 🔌 **Extensible** - Modular architecture for easy extension
+- 📖 **Rich Documentation** - Comprehensive guides and API references
 
 ### Advanced CLI Features (guestctl)
+
+- 🎯 **Killer Summary View** - Quick summary box showing OS product, architecture, hostname at a glance
+  - Color-coded information: Green (OS product), Cyan (architecture), Blue (hostname)
+  - Boxed display for immediate visual impact
+  - All key information in one line
 
 - 🎨 **Beautiful Visual Output** - Emoji-enhanced terminal output with color coding for easy scanning
   - 💾 Block devices with icons and visual hierarchy
   - 🐧 OS detection with distribution-specific icons (Linux, Windows, FreeBSD)
   - 🔴 Package manager icons (RPM, DEB, Pacman)
   - 🌐 Network configuration display
-  - Smart color coding: green (active), red (issues), gray (unknown)
+  - Smart color coding: green (secure/active), red (issues/insecure), orange (key info), gray (unknown)
 - 📊 **Multiple Output Formats** - JSON, YAML, CSV, and beautiful plain text for automation and scripting
 - 🎯 **Inspection Profiles** - Specialized analysis modes:
   - **Security Profile** - SSH hardening, firewall status, user security, SELinux/AppArmor, risk scoring
@@ -746,6 +751,43 @@ cargo run --example detect_format
 - ✅ LVM support
 - ✅ Windows registry parsing
 
+## VM Migration Support
+
+guestctl provides comprehensive VM migration capabilities for cross-platform migrations:
+
+### Universal fstab/crypttab Rewriter
+
+Modify disk images to work in different environments:
+
+```rust
+use guestctl::guestfs::Guestfs;
+
+let mut g = Guestfs::new()?;
+g.add_drive("/path/to/disk.qcow2")?;
+g.launch()?;
+
+// Rewrite fstab for new environment
+g.rewrite_fstab(root, old_device_mapping, new_device_mapping)?;
+
+// Rewrite crypttab for encrypted volumes
+g.rewrite_crypttab(root, luks_device_mapping)?;
+```
+
+### Migration Features
+
+- **Device Path Translation** - Automatically translate device paths (e.g., /dev/sda → /dev/vda)
+- **LUKS Support** - Rewrite encrypted volume configurations
+- **Cross-Platform** - Migrate between different hypervisors (Hyper-V → KVM, VMware → KVM)
+- **Network Configuration** - Update network interface names and configurations
+- **Boot Configuration** - Modify bootloader settings for new environment
+
+### Use Cases
+
+- Hyper-V to KVM migration (via [hyper2kvm](https://github.com/ssahani/hyper2kvm))
+- VMware to KVM migration
+- Physical to virtual (P2V) conversions
+- Cloud migrations (AWS → Azure, etc.)
+
 ## Integration with hyper2kvm
 
 guestctl is designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm):
@@ -768,11 +810,13 @@ for root in &roots {
 }
 ```
 
-Benefits for hyper2kvm:
+Benefits for hyper2kvm and VM migration:
 - ✅ **No root required** for read-only operations
 - ✅ **Faster** - Pure Rust implementation
 - ✅ **Simpler** - No C dependencies
 - ✅ **Safer** - Rust memory safety
+- ✅ **VM Migration** - Universal fstab/crypttab rewriter
+- ✅ **Windows Support** - Full registry parsing for version detection
 - ✅ **Comprehensive** - 578 functions, 97.4% implementation coverage
 
 ## Dependencies

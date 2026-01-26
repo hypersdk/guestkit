@@ -7,13 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Loop Device Support 🔄
+### Changed - Visual Refinements 🎨
+- **Orange Color Theme**: Switched primary accent color from yellow to orange (RGB 255, 165, 0) for better visual hierarchy
+- **Improved Readability**: Enhanced contrast for section headers and key information
+
+## [0.3.1] - 2026-01-26
+
+### Added - Enhanced UX and VM Migration Support 🚀
+
+#### Killer Summary View 📊
+- **Quick Summary Box**: Prominent boxed display showing OS product name in bright green
+- **At-a-Glance Information**: Instantly see OS type, version, architecture, hostname without scrolling
+- **Color-Coded Output**: Smart color coding for better visual scanning
+  - 🟢 Green: OS product name and detected values
+  - 🔵 Cyan: Architecture information
+  - 🔵 Blue: Hostname
+  - 🟣 Magenta: Package format
+  - 🟡 Yellow: Init system
+
+#### Windows Registry Parsing 🪟
+- **Full Version Detection**: Automatic Windows version detection via registry parsing
+- **Registry Hive Access**: Direct parsing of Windows registry hives for OS information
+- **Enhanced Windows Support**: Better detection of Windows editions and service packs
+
+#### LVM Volume Group Management 💾
+- **Automatic Cleanup**: LVM volume groups automatically deactivated and cleaned up during shutdown
+- **Improved Reliability**: Prevents stale LVM state from interfering with subsequent operations
+- **Clean Teardown**: Proper resource management for LVM devices
+
+#### Universal VM Migration Support 🔄
+- **fstab/crypttab Rewriter**: Universal rewriter for mount configurations to support VM migration
+- **Cross-Platform Migration**: Modify disk images for migration between different environments
+- **Device Path Translation**: Automatic translation of device paths for target systems
+- **LUKS Support**: Rewrite crypttab entries for encrypted volumes during migration
+
+#### Loop Device Primary Support 🔄
 - **Loop Device Primary**: Loop devices (losetup) now used as primary mounting method for RAW/IMG/ISO formats
 - **Built-in Support**: No kernel module loading required for common disk formats
 - **NBD Fallback**: NBD remains available for QCOW2/VMDK/VDI/VHD formats
 - **Auto-Detection**: Automatic format detection based on file extension
 - **Better Reliability**: Eliminates NBD dependency for typical use cases
 - **Cleaner Architecture**: Separate LoopDevice and NbdDevice implementations with proper cleanup
+
+### Enhanced
+- **Color Coding System**: Consistent color scheme across all output
+  - Green: Positive/secure values
+  - Red: Issues/insecure configurations
+  - Yellow/Orange: Warnings and key information
+  - Cyan/Blue: Informational data
+  - Gray: Unknown or disabled values
+- **Visual Hierarchy**: Better section organization with clear separators
+- **Scanning Experience**: Output optimized for quick visual scanning
+
+### Fixed
+- **Resource Cleanup**: Improved cleanup of loop and NBD devices on shutdown
+- **LVM State Management**: Proper LVM volume group state handling
+- **Windows Detection**: More reliable Windows OS version detection
+
+### Documentation
+- Updated README with latest features and capabilities
+- Enhanced examples showing new summary view
+- Documented migration support features
+- Added Windows registry parsing documentation
 
 ## [0.3.0] - 2026-01-25
 
