@@ -181,6 +181,46 @@ Power users can jump to any view with just a few keystrokes (e.g., "pkg" → Pac
 - Modified `src/cli/tui/views/issues.rs` - enhanced `draw_summary()` with gauges
 - Imported Gauge widget in all three view modules
 
+### 9. 📦 Package Statistics and RAID Health Gauges
+**Commit:** e0343a1
+
+- Enhanced Packages and Storage views with analytics
+- Package ecosystem composition analysis
+- RAID array health monitoring
+
+**Packages View:**
+- Package statistics summary panel (9 lines)
+- Total packages header with package manager info
+- Library packages gauge (lib* prefix)
+  * Blue gauge showing percentage of library packages
+  * Count and percentage display
+- Python packages gauge (python* prefix)
+  * Orange gauge showing Python package distribution
+  * Helps identify Python-heavy systems
+- Scrollable package list below summary
+
+**Storage View (RAID):**
+- RAID array health gauge
+- Dynamic color based on health:
+  * 100% healthy → Green
+  * 50-99% healthy → Orange/Warning
+  * <50% healthy → Red/Error
+- Shows: X/Y healthy • Z degraded (N%)
+- Positioned above RAID array list
+- Instant health assessment for critical storage
+
+**Implementation:**
+- Package categorization with .starts_with() filters
+- RAID health: count arrays where status=="active" && active_devices==total_devices
+- Refactored into draw_package_summary() function
+- Enhanced draw_raid_summary() with health calculation
+- O(n) performance (minimal impact)
+
+**Code Changes:**
+- Modified `src/cli/tui/views/packages.rs` - added statistics panel
+- Modified `src/cli/tui/views/storage.rs` - added RAID health gauge
+- Imported Gauge, Layout, and additional color constants
+
 ---
 
 ## Files Modified
@@ -191,10 +231,12 @@ Power users can jump to any view with just a few keystrokes (e.g., "pkg" → Pac
 - `src/cli/tui/ui.rs` - UI rendering, tabs, footer, help, jump menu overlay
 - `src/cli/tui/splash.rs` - Enabled for use
 
-### View Files
-- `src/cli/tui/views/services.rs` - Added service status gauges
-- `src/cli/tui/views/network.rs` - Added network configuration gauges
-- `src/cli/tui/views/issues.rs` - Added risk distribution gauges
+### View Files (5 views enhanced)
+- `src/cli/tui/views/services.rs` - Added service status gauges (enabled/running)
+- `src/cli/tui/views/network.rs` - Added network configuration gauges (configured/DHCP)
+- `src/cli/tui/views/issues.rs` - Added risk distribution gauges (critical/high/medium)
+- `src/cli/tui/views/packages.rs` - Added package statistics gauges (library/python)
+- `src/cli/tui/views/storage.rs` - Added RAID health gauge
 
 ### Documentation
 - `docs/development/tui-development-plan.md` - Complete roadmap
@@ -287,6 +329,7 @@ Dashboard | Network (5) | Packages (1247) | Services (42) | ...
 4. **56bf6ab** - Add enhanced search with case-sensitive and regex modes
 5. **50b30e1** - Add quick jump menu with fuzzy search to TUI
 6. **4ee4bfb** - Add visual progress bars and gauges to TUI views
+7. **e0343a1** - Add package statistics and RAID health gauges to TUI
 
 ---
 
@@ -406,9 +449,10 @@ The TUI is production-ready and provides an excellent experience for VM disk ins
 
 ---
 
-**Total Development Time:** ~4-5 hours
-**Lines Changed:** ~650+
-**Features Added:** 8 major enhancements
-**Commits Created:** 6 commits
-**Views Enhanced:** 3 views with visual gauges
+**Total Development Time:** ~5-6 hours
+**Lines Changed:** ~800+
+**Features Added:** 9 major enhancements
+**Commits Created:** 7 commits
+**Views Enhanced:** 5 views with 11 visual gauges
+**Gauge Types:** Services(2), Network(2), Issues(3), Packages(2), Storage(1), Dashboard(existing)
 **User Experience:** Significantly improved ⭐⭐⭐⭐⭐
