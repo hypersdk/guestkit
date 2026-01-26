@@ -10,6 +10,20 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+/// Output redirection mode
+#[derive(Debug, Clone)]
+enum RedirectMode {
+    Write,
+    Append,
+}
+
+/// Output redirection configuration
+#[derive(Debug, Clone)]
+struct OutputRedirect {
+    path: String,
+    mode: RedirectMode,
+}
+
 /// Batch script executor
 pub struct BatchExecutor {
     handle: Guestfs,
@@ -132,7 +146,7 @@ impl BatchExecutor {
     /// Execute a single command
     fn execute_command(&mut self, line: &str) -> Result<()> {
         // Handle output redirection
-        let (command, output_file) = self.parse_redirection(line)?;
+        let (command, output_redirect) = self.parse_redirection(line)?;
         let parts: Vec<&str> = command.split_whitespace().collect();
 
         if parts.is_empty() {
@@ -140,16 +154,16 @@ impl BatchExecutor {
         }
 
         // Capture output if redirecting
-        let result = if output_file.is_some() {
+        let result = if output_redirect.is_some() {
             self.execute_with_output_capture(&parts)
         } else {
             self.execute_command_parts(&parts)
         };
 
         // Write to file if needed
-        if let Some(path) = output_file {
+        if let Some(redirect) = output_redirect {
             if let Ok(ref output) = result {
-                self.write_output(&path, output)?;
+                self.write_output(&redirect, output)?;
             }
         }
 
@@ -157,16 +171,28 @@ impl BatchExecutor {
     }
 
     /// Parse output redirection (>, >>)
-    fn parse_redirection(&self, line: &str) -> Result<(String, Option<String>)> {
-        if let Some(pos) = line.find(" > ") {
+    fn parse_redirection(&self, line: &str) -> Result<(String, Option<OutputRedirect>)> {
+        // Check for append mode first (>>) before write mode (>)
+        if let Some(pos) = line.find(" >> ") {
             let command = line[..pos].trim().to_string();
-            let output = line[pos + 3..].trim().to_string();
-            Ok((command, Some(output)))
-        } else if let Some(pos) = line.find(" >> ") {
-            // TODO: Handle append mode
+            let output_path = line[pos + 4..].trim().to_string();
+            Ok((
+                command,
+                Some(OutputRedirect {
+                    path: output_path,
+                    mode: RedirectMode::Append,
+                }),
+            ))
+        } else if let Some(pos) = line.find(" > ") {
             let command = line[..pos].trim().to_string();
-            let output = line[pos + 4..].trim().to_string();
-            Ok((command, Some(output)))
+            let output_path = line[pos + 3..].trim().to_string();
+            Ok((
+                command,
+                Some(OutputRedirect {
+                    path: output_path,
+                    mode: RedirectMode::Write,
+                }),
+            ))
         } else {
             Ok((line.to_string(), None))
         }
@@ -289,13 +315,27 @@ impl BatchExecutor {
     }
 
     /// Write output to file
-    fn write_output(&self, path: &str, content: &str) -> Result<()> {
-        let mut file = fs::File::create(path)
-            .with_context(|| format!("Failed to create output file: {}", path))?;
-        file.write_all(content.as_bytes())?;
+    fn write_output(&self, redirect: &OutputRedirect, content: &str) -> Result<()> {
+        let file = match redirect.mode {
+            RedirectMode::Write => fs::File::create(&redirect.path)
+                .with_context(|| format!("Failed to create output file: {}", redirect.path))?,
+            RedirectMode::Append => fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&redirect.path)
+                .with_context(|| format!("Failed to open output file for append: {}", redirect.path))?,
+        };
+
+        let mut writer = std::io::BufWriter::new(file);
+        writer.write_all(content.as_bytes())?;
+        writer.flush()?;
 
         if self.verbose {
-            println!("  {} Wrote output to {}", "→".cyan(), path);
+            let mode_str = match redirect.mode {
+                RedirectMode::Write => "Wrote",
+                RedirectMode::Append => "Appended",
+            };
+            println!("  {} {} output to {}", "→".cyan(), mode_str, redirect.path);
         }
 
         Ok(())
