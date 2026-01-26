@@ -151,6 +151,11 @@ pub struct App {
     pub last_updated: DateTime<Local>,
     pub refreshing: bool,
 
+    // Jump menu state
+    pub show_jump_menu: bool,
+    pub jump_query: String,
+    pub jump_selected_index: usize,
+
     // Export state
     pub export_mode: Option<ExportMode>,
     pub export_format: Option<ExportFormat>,
@@ -318,6 +323,10 @@ impl App {
             notification: None,
             last_updated: Local::now(),
             refreshing: false,
+
+            show_jump_menu: false,
+            jump_query: String::new(),
+            jump_selected_index: 0,
 
             export_mode: None,
             export_format: None,
@@ -929,6 +938,115 @@ impl App {
             String::new()
         } else {
             format!("[{}] ", indicators.join(" "))
+        }
+    }
+
+    /// Toggle jump menu visibility
+    pub fn toggle_jump_menu(&mut self) {
+        self.show_jump_menu = !self.show_jump_menu;
+        if self.show_jump_menu {
+            self.jump_query.clear();
+            self.jump_selected_index = 0;
+        }
+    }
+
+    /// Handle jump menu input
+    pub fn jump_menu_input(&mut self, c: char) {
+        self.jump_query.push(c);
+        self.jump_selected_index = 0; // Reset selection when query changes
+    }
+
+    /// Handle jump menu backspace
+    pub fn jump_menu_backspace(&mut self) {
+        self.jump_query.pop();
+        self.jump_selected_index = 0; // Reset selection when query changes
+    }
+
+    /// Get filtered views based on jump query
+    pub fn get_filtered_views(&self) -> Vec<(usize, View, String)> {
+        let views = View::all();
+
+        if self.jump_query.is_empty() {
+            // Show all views with their index
+            return views.iter().enumerate()
+                .map(|(idx, v)| (idx, *v, v.title().to_string()))
+                .collect();
+        }
+
+        // Fuzzy matching: check if query chars appear in order in the view title
+        let query_lower = self.jump_query.to_lowercase();
+        views.iter().enumerate()
+            .filter_map(|(idx, v)| {
+                let title = v.title();
+                let title_lower = title.to_lowercase();
+
+                // Simple fuzzy match: all query chars must appear in order
+                let mut query_chars = query_lower.chars();
+                let mut current_query_char = query_chars.next();
+
+                for title_char in title_lower.chars() {
+                    if let Some(qc) = current_query_char {
+                        if qc == title_char {
+                            current_query_char = query_chars.next();
+                        }
+                    }
+                }
+
+                // If we consumed all query chars, it's a match
+                if current_query_char.is_none() {
+                    // Highlight matching characters
+                    let mut highlighted = String::new();
+                    let mut query_chars = query_lower.chars().peekable();
+
+                    for tc in title.chars() {
+                        if let Some(&qc) = query_chars.peek() {
+                            if tc.to_lowercase().to_string() == qc.to_string() {
+                                highlighted.push_str(&format!("[{}]", tc));
+                                query_chars.next();
+                            } else {
+                                highlighted.push(tc);
+                            }
+                        } else {
+                            highlighted.push(tc);
+                        }
+                    }
+
+                    Some((idx, *v, highlighted))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Navigate jump menu selection
+    pub fn jump_menu_next(&mut self) {
+        let filtered_count = self.get_filtered_views().len();
+        if filtered_count > 0 {
+            self.jump_selected_index = (self.jump_selected_index + 1) % filtered_count;
+        }
+    }
+
+    pub fn jump_menu_previous(&mut self) {
+        let filtered_count = self.get_filtered_views().len();
+        if filtered_count > 0 {
+            if self.jump_selected_index == 0 {
+                self.jump_selected_index = filtered_count - 1;
+            } else {
+                self.jump_selected_index -= 1;
+            }
+        }
+    }
+
+    /// Execute jump to selected view
+    pub fn jump_menu_select(&mut self) {
+        let filtered_views = self.get_filtered_views();
+        if let Some((_, view, _)) = filtered_views.get(self.jump_selected_index) {
+            self.current_view = *view;
+            self.scroll_offset = 0;
+            self.selected_index = 0;
+            self.show_jump_menu = false;
+            self.show_notification(format!("→ {}", view.title()));
         }
     }
 }
