@@ -215,55 +215,137 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
     f.render_widget(help, area);
 }
 
-fn draw_export_menu(f: &mut Frame, _app: &App) {
-    let area = centered_rect(50, 40, f.area());
+fn draw_export_menu(f: &mut Frame, app: &App) {
+    use super::app::{ExportFormat, ExportMode};
 
-    let export_text = vec![
-        Line::from(vec![
-            Span::styled("Export Menu",
-                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Export current view or profile data:",
-                Style::default().fg(TEXT_COLOR))
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Formats available:",
-                Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::styled("  • HTML  ", Style::default().fg(ORANGE)),
-            Span::raw("- Rich formatted report")
-        ]),
-        Line::from(vec![
-            Span::styled("  • PDF   ", Style::default().fg(ORANGE)),
-            Span::raw("- Portable document format")
-        ]),
-        Line::from(vec![
-            Span::styled("  • JSON  ", Style::default().fg(ORANGE)),
-            Span::raw("- Machine-readable data")
-        ]),
-        Line::from(vec![
-            Span::styled("  • YAML  ", Style::default().fg(ORANGE)),
-            Span::raw("- Human-readable data")
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Note: ", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw("Export functionality will be fully integrated in the next update.")
-        ]),
-        Line::from(vec![
-            Span::raw("Use CLI commands for now: "),
-            Span::styled("guestctl inspect <image> --export <format>", Style::default().fg(ORANGE)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or e to close",
-                Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
-    ];
+    let area = centered_rect(60, 55, f.area());
+
+    let export_text = match &app.export_mode {
+        Some(ExportMode::Selecting) => {
+            vec![
+                Line::from(vec![
+                    Span::styled("Export Menu - Select Format",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Exporting: ", Style::default().fg(LIGHT_ORANGE)),
+                    Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Select export format:",
+                        Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  1  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::raw("JSON  - Machine-readable data (recommended)")
+                ]),
+                Line::from(vec![
+                    Span::styled("  2  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::raw("YAML  - Human-readable data")
+                ]),
+                Line::from(vec![
+                    Span::styled("  3  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::raw("HTML  - Rich formatted report (coming soon)")
+                ]),
+                Line::from(vec![
+                    Span::styled("  4  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::raw("PDF   - Portable document (coming soon)")
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press 1-4 to select format, ESC to cancel",
+                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+                ]),
+            ]
+        }
+        Some(ExportMode::EnteringFilename) => {
+            vec![
+                Line::from(vec![
+                    Span::styled("Export Menu - Enter Filename",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Format: ", Style::default().fg(LIGHT_ORANGE)),
+                    Span::styled(
+                        app.export_format.map(|f| f.name()).unwrap_or("Unknown"),
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)
+                    ),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Filename:",
+                        Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(&app.export_filename, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
+                    Span::styled("_", Style::default().fg(ORANGE)),
+                ]),
+                Line::from(""),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press Enter to export, ESC to go back",
+                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+                ]),
+            ]
+        }
+        Some(ExportMode::Exporting) => {
+            vec![
+                Line::from(vec![
+                    Span::styled("Exporting...",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from("Please wait..."),
+            ]
+        }
+        Some(ExportMode::Success(filename)) => {
+            vec![
+                Line::from(vec![
+                    Span::styled("✓ Export Successful!",
+                        Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Saved to: ", Style::default().fg(LIGHT_ORANGE)),
+                    Span::styled(filename, Style::default().fg(TEXT_COLOR)),
+                ]),
+                Line::from(""),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press ESC or e to close",
+                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+                ]),
+            ]
+        }
+        Some(ExportMode::Error(error)) => {
+            vec![
+                Line::from(vec![
+                    Span::styled("✗ Export Failed",
+                        Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD))
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Error: ", Style::default().fg(ERROR_COLOR)),
+                    Span::styled(error, Style::default().fg(TEXT_COLOR)),
+                ]),
+                Line::from(""),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("Press ESC or e to close",
+                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+                ]),
+            ]
+        }
+        None => {
+            vec![Line::from("No export state")]
+        }
+    };
 
     let export_menu = Paragraph::new(export_text)
         .block(Block::default()
