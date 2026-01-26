@@ -31,6 +31,7 @@ clap_complete = "4.5"
 indicatif = "0.17"
 miette = { version = "7.0", features = ["fancy"] }
 owo-colors = "4.0"
+colored = "2.1"
 unicode-width = "0.1"
 rustyline = "14.0"
 dirs = "5.0"
