@@ -107,6 +107,14 @@ impl BinaryCache {
         Ok(Self { cache_dir })
     }
 
+    /// Create cache with custom directory (for testing)
+    #[cfg(test)]
+    pub fn with_dir(cache_dir: PathBuf) -> Result<Self> {
+        fs::create_dir_all(&cache_dir)
+            .context("Failed to create cache directory")?;
+        Ok(Self { cache_dir })
+    }
+
     /// Get cache file path for a given key
     fn cache_path(&self, key: &str) -> PathBuf {
         self.cache_dir.join(format!("{}.bin", key))
@@ -389,8 +397,8 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
-        let cache = BinaryCache::new().unwrap();
-        cache.clear_all().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
 
         let data = CachedInspection::new("test".to_string());
         cache.save("stats-test", &data).unwrap();
@@ -402,7 +410,8 @@ mod tests {
 
     #[test]
     fn test_clear_older_than() {
-        let cache = BinaryCache::new().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
 
         let mut old_data = CachedInspection::new("old".to_string());
         old_data.timestamp = 0; // Very old
