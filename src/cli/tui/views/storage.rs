@@ -2,12 +2,12 @@
 //! Storage view - LVM, RAID, and mount points
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -88,6 +88,49 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
+    // Calculate RAID health metrics
+    let total_arrays = app.raid_arrays.len();
+    let healthy_arrays = app.raid_arrays.iter()
+        .filter(|r| r.status == "active" && r.active_devices == r.total_devices)
+        .count();
+    let degraded_arrays = total_arrays - healthy_arrays;
+
+    let health_pct = if total_arrays > 0 {
+        (healthy_arrays as f64 / total_arrays as f64 * 100.0) as u16
+    } else {
+        100
+    };
+
+    // Split into gauge and list
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),  // Health gauge
+            Constraint::Min(0),     // RAID list
+        ])
+        .split(area);
+
+    // RAID health gauge
+    let gauge_color = if health_pct == 100 {
+        SUCCESS_COLOR
+    } else if health_pct >= 50 {
+        WARNING_COLOR
+    } else {
+        ERROR_COLOR
+    };
+
+    let health_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🔧 RAID Array Health "))
+        .gauge_style(Style::default().fg(gauge_color))
+        .percent(health_pct)
+        .label(format!("{}/{} healthy • {} degraded ({}%)", healthy_arrays, total_arrays, degraded_arrays, health_pct));
+
+    f.render_widget(health_gauge, chunks[0]);
+
+    // RAID array list
     let items: Vec<ListItem> = app.raid_arrays
         .iter()
         .map(|raid| {
@@ -116,10 +159,10 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 🔧 RAID Arrays • {} configured ", app.raid_arrays.len()))
+            .title(format!(" 📋 RAID Arrays • {} configured ", app.raid_arrays.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
-    f.render_widget(list, area);
+    f.render_widget(list, chunks[1]);
 }
 
 fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {

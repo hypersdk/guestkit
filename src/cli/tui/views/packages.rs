@@ -2,12 +2,12 @@
 //! Packages view - Installed packages browser
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    text::Line,
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    text::{Line, Span},
+    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -33,6 +33,101 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         f.render_widget(empty, area);
         return;
     }
+
+    // Split area into summary and list
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(9),  // Summary with statistics
+            Constraint::Min(0),     // Package list
+        ])
+        .split(area);
+
+    draw_package_summary(f, chunks[0], app);
+    draw_package_list(f, chunks[1], app);
+}
+
+fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {
+    // Count packages by prefix
+    let lib_count = app.packages.packages.iter().filter(|p| p.name.starts_with("lib")).count();
+    let python_count = app.packages.packages.iter().filter(|p| p.name.starts_with("python")).count();
+    let total_count = app.packages.package_count;
+
+    let lib_pct = if total_count > 0 {
+        (lib_count as f64 / total_count as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    let python_pct = if total_count > 0 {
+        (python_count as f64 / total_count as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    // Split into header and gauges
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),  // Header
+            Constraint::Length(3),  // Lib packages gauge
+            Constraint::Length(3),  // Python packages gauge
+        ])
+        .split(area);
+
+    // Header with package info
+    let header = Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled(" 📊 Package Statistics", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled("Total Packages: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", total_count), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw("  │  "),
+            Span::styled("Manager: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.packages.manager, Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD)),
+        ]),
+    ])
+    .block(Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(BORDER_COLOR)));
+
+    f.render_widget(header, chunks[0]);
+
+    // Library packages gauge
+    let lib_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 📚 Library Packages (lib*) "))
+        .gauge_style(Style::default().fg(INFO_COLOR))
+        .percent(lib_pct)
+        .label(format!("{} libraries ({}% of total)", lib_count, lib_pct));
+
+    f.render_widget(lib_gauge, chunks[1]);
+
+    // Python packages gauge
+    let python_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🐍 Python Packages "))
+        .gauge_style(Style::default().fg(WARNING_COLOR))
+        .percent(python_pct)
+        .label(format!("{} python packages ({}% of total)", python_count, python_pct));
+
+    f.render_widget(python_gauge, chunks[2]);
+}
+
+fn draw_package_list(f: &mut Frame, area: Rect, app: &App) {
+    let manager_icon = match app.packages.manager.to_lowercase().as_str() {
+        "rpm" | "dnf" | "yum" => "📦",
+        "deb" | "apt" | "dpkg" => "📦",
+        "pacman" => "📦",
+        "apk" => "📦",
+        "zypper" => "📦",
+        _ => "📦",
+    };
 
     let filtered_packages: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.packages.packages
