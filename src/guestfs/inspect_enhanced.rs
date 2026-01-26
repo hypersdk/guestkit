@@ -31,6 +31,7 @@ pub struct NetworkInterface {
     pub ip_address: Vec<String>,
     pub mac_address: String,
     pub dhcp: bool,
+    pub dns_servers: Vec<String>,
 }
 
 /// User account information
@@ -108,49 +109,83 @@ impl Guestfs {
     }
 
     /// Inspect network configuration
+    ///
+    /// Detects network interfaces from multiple configuration formats:
+    /// - Debian/Ubuntu: /etc/network/interfaces
+    /// - RHEL/CentOS/Fedora: /etc/sysconfig/network-scripts/ifcfg-*
+    /// - Ubuntu 17.10+: /etc/netplan/*.yaml
+    /// - NetworkManager: /etc/NetworkManager/system-connections/*.nmconnection
+    /// - systemd-networkd: /etc/systemd/network/*.network
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Vector of NetworkInterface with name, IPs, MAC, DHCP, and DNS servers
     pub fn inspect_network(&mut self, root: &str) -> Result<Vec<NetworkInterface>> {
-        let mut interfaces = Vec::new();
-        // Try to mount if not already mounted
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(interfaces);
+        self.with_mount(root, |guestfs| {
+            let mut interfaces = Vec::new();
+
+            // 1. Check /etc/network/interfaces (Debian/Ubuntu)
+            if let Ok(content) = guestfs.cat("/etc/network/interfaces") {
+                interfaces.extend(guestfs.parse_debian_interfaces(&content));
             }
-        }
-        // Try different network configuration locations
-        // 1. Check /etc/network/interfaces (Debian/Ubuntu)
-        if let Ok(content) = self.cat("/etc/network/interfaces") {
-            interfaces.extend(self.parse_debian_interfaces(&content));
-        }
-        // 2. Check /etc/sysconfig/network-scripts/ (RHEL/CentOS/Fedora)
-        if let Ok(files) = self.ls("/etc/sysconfig/network-scripts") {
-            for file in files.iter().filter(|f| f.starts_with("ifcfg-")) {
-                let path = format!("/etc/sysconfig/network-scripts/{}", file);
-                if let Ok(content) = self.cat(&path) {
-                    if let Some(iface) = self.parse_rhel_interface(&content, file) {
-                        interfaces.push(iface);
+
+            // 2. Check /etc/sysconfig/network-scripts/ (RHEL/CentOS/Fedora)
+            if let Ok(files) = guestfs.ls("/etc/sysconfig/network-scripts") {
+                for file in files.iter().filter(|f| f.starts_with("ifcfg-")) {
+                    let path = format!("/etc/sysconfig/network-scripts/{}", file);
+                    if let Ok(content) = guestfs.cat(&path) {
+                        if let Some(iface) = guestfs.parse_rhel_interface(&content, file) {
+                            interfaces.push(iface);
+                        }
                     }
                 }
             }
-        }
-        // 3. Check netplan (newer Ubuntu)
-        if self.is_dir("/etc/netplan").unwrap_or(false) {
-            if let Ok(files) = self.ls("/etc/netplan") {
-                for file in files
-                    .iter()
-                    .filter(|f| f.ends_with(".yaml") || f.ends_with(".yml"))
-                {
-                    let path = format!("/etc/netplan/{}", file);
-                    if let Ok(content) = self.cat(&path) {
-                        interfaces.extend(self.parse_netplan(&content));
+
+            // 3. Check netplan (Ubuntu 17.10+)
+            if guestfs.is_dir("/etc/netplan").unwrap_or(false) {
+                if let Ok(files) = guestfs.ls("/etc/netplan") {
+                    for file in files
+                        .iter()
+                        .filter(|f| f.ends_with(".yaml") || f.ends_with(".yml"))
+                    {
+                        let path = format!("/etc/netplan/{}", file);
+                        if let Ok(content) = guestfs.cat(&path) {
+                            interfaces.extend(guestfs.parse_netplan(&content));
+                        }
                     }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(interfaces)
+
+            // 4. Check NetworkManager (modern distros)
+            if guestfs.is_dir("/etc/NetworkManager/system-connections").unwrap_or(false) {
+                if let Ok(files) = guestfs.ls("/etc/NetworkManager/system-connections") {
+                    for file in files.iter().filter(|f| f.ends_with(".nmconnection")) {
+                        let path = format!("/etc/NetworkManager/system-connections/{}", file);
+                        if let Ok(content) = guestfs.cat(&path) {
+                            if let Some(iface) = guestfs.parse_networkmanager(&content, file) {
+                                interfaces.push(iface);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Check systemd-networkd
+            if guestfs.is_dir("/etc/systemd/network").unwrap_or(false) {
+                if let Ok(files) = guestfs.ls("/etc/systemd/network") {
+                    for file in files.iter().filter(|f| f.ends_with(".network")) {
+                        let path = format!("/etc/systemd/network/{}", file);
+                        if let Ok(content) = guestfs.cat(&path) {
+                            interfaces.extend(guestfs.parse_systemd_network(&content, file));
+                        }
+                    }
+                }
+            }
+
+            Ok(interfaces)
+        })
     }
 
     fn parse_debian_interfaces(&self, content: &str) -> Vec<NetworkInterface> {
@@ -177,6 +212,7 @@ impl Guestfs {
                         ip_address: Vec::new(),
                         mac_address: String::new(),
                         dhcp,
+                        dns_servers: Vec::new(),
                     });
                 }
             } else if let Some(ref mut iface) = current_iface {
@@ -189,6 +225,10 @@ impl Guestfs {
                     let mac = line.split_whitespace().nth(1).unwrap_or("").to_string();
                     if !mac.is_empty() {
                         iface.mac_address = mac;
+                    }
+                } else if line.starts_with("dns-nameservers ") {
+                    for server in line.split_whitespace().skip(1) {
+                        iface.dns_servers.push(server.to_string());
                     }
                 }
             }
@@ -208,6 +248,7 @@ impl Guestfs {
             ip_address: Vec::new(),
             mac_address: String::new(),
             dhcp: false,
+            dns_servers: Vec::new(),
         };
         let mut index = 0;
         for line in content.lines() {
@@ -235,6 +276,11 @@ impl Guestfs {
                         }
                     }
                     "HWADDR" | "MACADDR" => iface.mac_address = value.to_string(),
+                    k if k.starts_with("DNS") => {
+                        if k[3..].parse::<usize>().is_ok() {
+                            iface.dns_servers.push(value.to_string());
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -255,6 +301,7 @@ impl Guestfs {
                                     ip_address: Vec::new(),
                                     mac_address: String::new(),
                                     dhcp: false,
+                                    dns_servers: Vec::new(),
                                 };
                                 if let Some(iface) = iface_val.as_mapping() {
                                     if let Some(dhcp4) = iface.get("dhcp4") {
@@ -278,12 +325,177 @@ impl Guestfs {
                                     } else if let Some(mac) = iface.get("macaddress") {
                                         intf.mac_address = mac.as_str().unwrap_or("").to_string();
                                     }
+                                    if let Some(nameservers) = iface.get("nameservers") {
+                                        if let Some(addresses) = nameservers.get("addresses") {
+                                            if let Some(addrs) = addresses.as_sequence() {
+                                                for addr in addrs {
+                                                    if let Some(s) = addr.as_str() {
+                                                        intf.dns_servers.push(s.to_string());
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 interfaces.push(intf);
                             }
                         }
                     }
                 }
+            }
+        }
+        interfaces
+    }
+
+    fn parse_networkmanager(&self, content: &str, filename: &str) -> Option<NetworkInterface> {
+        let mut iface = NetworkInterface {
+            name: filename.strip_suffix(".nmconnection").unwrap_or(filename).to_string(),
+            ip_address: Vec::new(),
+            mac_address: String::new(),
+            dhcp: false,
+            dns_servers: Vec::new(),
+        };
+        let mut current_section = "";
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with(';') {
+                continue;
+            }
+            if line.starts_with('[') && line.ends_with(']') {
+                current_section = line[1..line.len() - 1].trim();
+                continue;
+            }
+            if let Some((key, value)) = line.split_once('=') {
+                let key = key.trim();
+                let value = value.trim();
+                match current_section {
+                    "connection" => {
+                        if key == "interface-name" {
+                            iface.name = value.to_string();
+                        }
+                    }
+                    "ethernet" | "wifi" => {
+                        if key == "mac-address" {
+                            iface.mac_address = value.to_string();
+                        }
+                    }
+                    "ipv4" => {
+                        if key == "method" {
+                            iface.dhcp = value == "auto";
+                        } else if key.starts_with("address") {
+                            let parts: Vec<&str> = value.split(',').collect();
+                            if !parts.is_empty() {
+                                let ip = parts[0].split('/').next().unwrap_or("").to_string();
+                                if !ip.is_empty() {
+                                    iface.ip_address.push(ip);
+                                }
+                            }
+                        } else if key == "dns" {
+                            for s in value.split(';') {
+                                let s = s.trim();
+                                if !s.is_empty() {
+                                    iface.dns_servers.push(s.to_string());
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Some(iface)
+    }
+
+    fn parse_systemd_network(&self, content: &str, filename: &str) -> Vec<NetworkInterface> {
+        let mut interfaces = Vec::new();
+        let mut current_section = "";
+        let mut name = String::new();
+        let mut mac_address = String::new();
+        let mut dhcp = false;
+        let mut ip_address = Vec::new();
+        let mut dns_servers = Vec::new();
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
+                continue;
+            }
+            if line.starts_with('[') && line.ends_with(']') {
+                // If we have data from previous sections, create interface
+                if !name.is_empty() {
+                    interfaces.push(NetworkInterface {
+                        name: name.clone(),
+                        ip_address: ip_address.clone(),
+                        mac_address: mac_address.clone(),
+                        dhcp,
+                        dns_servers: dns_servers.clone(),
+                    });
+                    // Reset for next potential interface
+                    name.clear();
+                    mac_address.clear();
+                    dhcp = false;
+                    ip_address.clear();
+                    dns_servers.clear();
+                }
+                current_section = &line[1..line.len() - 1];
+                continue;
+            }
+            if let Some((key, value)) = line.split_once('=') {
+                let key = key.trim();
+                let value = value.trim();
+                match current_section {
+                    "Match" => {
+                        if key == "Name" {
+                            name = value.to_string();
+                        } else if key == "MACAddress" {
+                            mac_address = value.to_string();
+                        }
+                    }
+                    "Network" => {
+                        if key == "DHCP" {
+                            dhcp = matches!(value, "yes" | "ipv4" | "true");
+                        } else if key == "Address" {
+                            let ip = value.split('/').next().unwrap_or("").to_string();
+                            if !ip.is_empty() {
+                                ip_address.push(ip);
+                            }
+                        } else if key == "DNS" {
+                            for server in value.split_whitespace() {
+                                dns_servers.push(server.to_string());
+                            }
+                        }
+                    }
+                    "Address" => {
+                        if key == "Address" {
+                            let ip = value.split('/').next().unwrap_or("").to_string();
+                            if !ip.is_empty() {
+                                ip_address.push(ip);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // After loop, add if data present
+        if !name.is_empty() {
+            interfaces.push(NetworkInterface {
+                name,
+                ip_address,
+                mac_address,
+                dhcp,
+                dns_servers,
+            });
+        } else if interfaces.is_empty() {
+            // If no interfaces parsed, create one with filename as fallback
+            let name = filename.strip_suffix(".network").unwrap_or(filename).to_string();
+            if !name.is_empty() {
+                interfaces.push(NetworkInterface {
+                    name,
+                    ip_address: Vec::new(),
+                    mac_address: String::new(),
+                    dhcp: false,
+                    dns_servers: Vec::new(),
+                });
             }
         }
         interfaces
