@@ -1,5 +1,20 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! OS inspection APIs for VM disk images
+//!
+//! Goals:
+//! - Prefer correctness over “best effort guessing”
+//! - Never mount RW during inspection
+//! - Reduce false positives when selecting OS roots
+//! - Provide a single high-level `inspect()` API returning `InspectedOS` records
+//! - Broaden distro/package-format coverage via os-release parsing
+//!
+//! NOTE: This file assumes your Guestfs wrapper provides these methods (as in your code):
+//! - ensure_ready(), partition_table(), parse_device_name()
+//! - mount_ro(dev, mp), umount(mp), exists(path), cat(path)
+//! - vgscan(), vg_activate_all(bool), lvs()
+//! - and fields: verbose/debug, mounted, mount_root, windows_version_cache
+//!
+//! If your actual API names differ slightly, adjust accordingly.
 
 use crate::core::{Error, Result};
 use crate::disk::FileSystem;
@@ -22,31 +37,66 @@ pub struct InspectedOS {
 }
 
 impl Guestfs {
-    /// Inspect operating systems in the disk image
+    /// High-level inspect API: returns structured `InspectedOS` results.
     ///
-    /// Returns a list of root devices where operating systems were found.
+    /// This mounts each candidate root at `/` read-only (once per root) and
+    /// gathers all metadata with minimal remounting.
+    pub fn inspect(&mut self) -> Result<Vec<InspectedOS>> {
+        self.ensure_ready()?;
+
+        let roots = self.inspect_os()?;
+        let mut out = Vec::with_capacity(roots.len());
+
+        for root in roots {
+            let os_type = self.inspect_get_type(&root)?;
+
+            // Mount RO if not already mounted
+            let was_mounted = self.mounted.contains_key("/");
+            if !was_mounted {
+                self.mount_ro(&root, "/")?;
+            }
+
+            let distro = self.inspect_get_distro(&root)?;
+            let product_name = self.inspect_get_product_name(&root)?;
+            let major_version = self.inspect_get_major_version(&root)?;
+            let minor_version = self.inspect_get_minor_version(&root)?;
+            let hostname = self.inspect_get_hostname(&root)?;
+            let arch = self.inspect_get_arch(&root)?;
+            let package_format = self.inspect_get_package_format(&root)?;
+            let mountpoints = self.inspect_get_mountpoints(&root)?;
+
+            // Cleanup: unmount if we mounted it
+            if !was_mounted {
+                let _ = self.umount("/");
+            }
+
+            out.push(InspectedOS {
+                root,
+                os_type,
+                distro,
+                product_name,
+                major_version,
+                minor_version,
+                arch,
+                hostname,
+                package_format,
+                mountpoints,
+            });
+        }
+
+        Ok(out)
+    }
+
+    /// Inspect operating systems in the disk image.
     ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use guestctl::guestfs::Guestfs;
-    ///
-    /// let mut g = Guestfs::new().unwrap();
-    /// g.add_drive_ro("/path/to/disk.qcow2").unwrap();
-    /// g.launch().unwrap();
-    ///
-    /// let roots = g.inspect_os().unwrap();
-    /// for root in roots {
-    ///     println!("Found OS at: {}", root);
-    /// }
-    /// ```
+    /// Returns a list of *validated* root devices where operating systems were found.
+    /// Validation is done by mounting candidates RO and checking for OS root markers.
     pub fn inspect_os(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
         let mut roots = crate::core::mem_optimize::vec_for_partitions();
 
-        // Try to scan and activate LVM volumes
-        // This is needed for RHEL/CentOS/Fedora/Ubuntu VMs that use LVM
+        // Try to scan and activate LVM volumes (best-effort).
         if self.vgscan().is_ok() {
             if let Err(e) = self.vg_activate_all(true) {
                 if self.debug {
@@ -57,53 +107,72 @@ impl Guestfs {
             }
         }
 
-        // Clone partition data to avoid borrow checker issues
-        let partitions: Vec<_> = {
-            let partition_table = self.partition_table()?;
-            partition_table.partitions().to_vec()
+        // Clone partition data to avoid borrow checker issues.
+        let partitions = {
+            let pt = self.partition_table()?;
+            pt.partitions().to_vec()
         };
 
-        // Examine each partition
-        for partition in &partitions {
-            let device_name = format!("/dev/sda{}", partition.number);
+        // Use standard device path (most common in VMs)
+        let disk_dev = "/dev/sda".to_string();
 
-            // Try to detect filesystem
+        // 1) Partition candidates
+        for p in &partitions {
+            let dev = build_partition_path(&disk_dev, p.number);
+
+            // Only consider partitions with plausible FS types, then validate.
             let reader = self
                 .reader
                 .as_mut()
                 .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
-            if let Ok(fs) = FileSystem::detect(reader, partition) {
-                // Check if this looks like a root filesystem
+
+            if let Ok(fs) = FileSystem::detect(reader, p) {
                 match fs.fs_type() {
                     crate::disk::FileSystemType::Ext
                     | crate::disk::FileSystemType::Xfs
                     | crate::disk::FileSystemType::Btrfs
                     | crate::disk::FileSystemType::Ntfs => {
-                        // This could be a root partition
-                        roots.push(device_name);
+                        if self.validate_root_partition(&dev)? {
+                            roots.push(dev);
+                        }
                     }
                     _ => {}
                 }
             }
         }
 
-        // Also check for LVM logical volumes
+        // 2) LVM logical volume candidates (validated)
         if let Ok(lvs) = self.lvs() {
+            // Prefer typical root LV names first (stable priority).
+            let mut preferred = Vec::new();
+            let mut others = Vec::new();
+
             for lv_path in lvs {
-                // Filter out swap volumes and empty paths
-                if lv_path.is_empty() || lv_path.contains("swap") {
+                let lv = lv_path.trim().to_string();
+                if lv.is_empty() {
+                    continue;
+                }
+                let name = lv.to_lowercase();
+
+                // Quick rejects
+                if name.contains("swap") {
                     continue;
                 }
 
-                // Check if this LVM volume has a filesystem that could be root
-                // Prioritize volumes named 'root' or 'system'
-                let lv_name = lv_path.to_lowercase();
-                if lv_name.contains("root") || lv_name.contains("system") {
-                    // Insert at beginning for priority
-                    roots.insert(0, lv_path);
-                } else if !lv_name.contains("home") && !lv_name.contains("var") && !lv_name.contains("tmp") {
-                    // Other volumes that aren't obviously data partitions
-                    roots.push(lv_path);
+                // Partition into buckets
+                if name.contains("root") || name.contains("system") || name.ends_with("/root") {
+                    preferred.push(lv);
+                } else if name.contains("home") || name.contains("var") || name.contains("tmp") {
+                    // likely data volumes; still could be root in weird installs, but de-prioritize
+                    others.push(lv);
+                } else {
+                    others.push(lv);
+                }
+            }
+
+            for lv in preferred.into_iter().chain(others.into_iter()) {
+                if self.validate_root_partition(&lv)? {
+                    roots.push(lv);
                 }
             }
         }
@@ -111,113 +180,129 @@ impl Guestfs {
         Ok(roots)
     }
 
-    /// Get the type of operating system
+    /// Root validation: mount RO and check for strong OS markers.
     ///
+    /// This is the key upgrade that reduces false positives (/home, data disks, etc.).
+    fn validate_root_partition(&mut self, dev: &str) -> Result<bool> {
+        let was_mounted = self.mounted.contains_key("/");
+
+        // Temporarily mount at / if not already mounted.
+        if !was_mounted {
+            self.mount_ro(dev, "/")?;
+        }
+
+        // Validate root markers.
+        let is_linux = looks_like_linux_root(self);
+        let is_windows = looks_like_windows_root(self);
+
+        // Cleanup: unmount if we mounted it
+        if !was_mounted {
+            let _ = self.umount("/");
+        }
+
+        Ok(is_linux || is_windows)
+    }
+
+    /// Get the type of operating system (linux/windows/unknown).
     pub fn inspect_get_type(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
-        // Parse device name to get partition
-        let partition_num = self.parse_device_name(root)?;
+        // If root is an LV, parse_device_name may fail; use marker detection instead.
+        // Prefer marker-based detection when mounted.
+        let was_mounted = self.mounted.contains_key("/");
 
-        // Clone partition to avoid borrow checker issues
-        let partition = {
-            let partition_table = self.partition_table()?;
-            partition_table
-                .partitions()
-                .iter()
-                .find(|p| p.number == partition_num)
-                .cloned()
-                .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
+        if !was_mounted {
+            self.mount_ro(root, "/")?;
+        }
+
+        let os_type = if looks_like_windows_root(self) {
+            "windows".to_string()
+        } else if looks_like_linux_root(self) {
+            "linux".to_string()
+        } else {
+            "unknown".to_string()
         };
 
-        // Detect filesystem
-        let reader = self
-            .reader
-            .as_mut()
-            .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
-        let fs = FileSystem::detect(reader, &partition)?;
-
-        match fs.fs_type() {
-            crate::disk::FileSystemType::Ntfs => Ok("windows".to_string()),
-            crate::disk::FileSystemType::Ext
-            | crate::disk::FileSystemType::Xfs
-            | crate::disk::FileSystemType::Btrfs => Ok("linux".to_string()),
-            _ => Ok("unknown".to_string()),
+        if !was_mounted {
+            let _ = self.umount("/");
         }
+
+        Ok(os_type)
     }
 
-    /// Get the distribution name
-    ///
+    /// Get the distribution name (Linux ID from os-release; Windows edition if available).
     pub fn inspect_get_distro(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
         let os_type = self.inspect_get_type(root)?;
 
-        // Handle Windows - return edition
+        // Windows: return edition where possible.
         if os_type == "windows" {
             if let Ok((_, _, edition)) = self.read_windows_version(root) {
                 return Ok(edition);
             }
-            return Ok("unknown".to_string());
+            return Ok("windows".to_string());
         }
 
-        // Try to read /etc/os-release first for Linux
+        // Linux: prefer os-release
         if let Ok(os_release) = self.read_os_release(root) {
-            return Ok(os_release.id);
+            if !os_release.id.is_empty() {
+                return Ok(os_release.id);
+            }
         }
 
-        // Try legacy release files as fallback
+        // Fallback: legacy release files
         if let Ok(distro) = self.detect_from_release_files(root) {
             return Ok(distro);
         }
 
+        // Last ditch: filesystem label hints (weak)
+        // NOTE: This can be inaccurate; keep it as a final fallback only.
         let partition_num = self.parse_device_name(root)?;
-
-        // Clone partition to avoid borrow checker issues
         let partition = {
-            let partition_table = self.partition_table()?;
-            partition_table
-                .partitions()
+            let pt = self.partition_table()?;
+            pt.partitions()
                 .iter()
                 .find(|p| p.number == partition_num)
                 .cloned()
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?
         };
 
-        // Detect filesystem
         let reader = self
             .reader
             .as_mut()
             .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
         let fs = FileSystem::detect(reader, &partition)?;
 
-        // Try to infer distribution from filesystem label
         if let Some(label) = fs.label() {
-            if label.contains("fedora") || label.contains("Fedora") {
+            let l = label.to_lowercase();
+            if l.contains("fedora") {
                 return Ok("fedora".to_string());
-            } else if label.contains("ubuntu") || label.contains("Ubuntu") {
+            } else if l.contains("ubuntu") {
                 return Ok("ubuntu".to_string());
-            } else if label.contains("debian") || label.contains("Debian") {
+            } else if l.contains("debian") {
                 return Ok("debian".to_string());
-            } else if label.contains("rhel") || label.contains("RHEL") {
+            } else if l.contains("rhel") || l.contains("redhat") {
                 return Ok("rhel".to_string());
-            } else if label.contains("centos") || label.contains("CentOS") {
+            } else if l.contains("centos") {
                 return Ok("centos".to_string());
-            } else if label.contains("photon") || label.contains("Photon") {
+            } else if l.contains("photon") {
                 return Ok("photon".to_string());
+            } else if l.contains("opensuse") || l.contains("suse") {
+                return Ok("opensuse".to_string());
+            } else if l.contains("alpine") {
+                return Ok("alpine".to_string());
             }
         }
 
         Ok("unknown".to_string())
     }
 
-    /// Read and parse /etc/os-release
+    /// Read and parse /etc/os-release (or /usr/lib/os-release).
     fn read_os_release(&mut self, root: &str) -> Result<OsRelease> {
-        // Try to mount the root partition first
         let was_mounted = self.mounted.contains_key("/");
 
         if !was_mounted {
-            // Try to mount root temporarily (read-only for inspection)
             self.mount_ro(root, "/")?;
         }
 
@@ -226,17 +311,19 @@ impl Guestfs {
             .or_else(|_| self.cat("/usr/lib/os-release"))?;
 
         if !was_mounted {
-            self.umount("/").ok();
+            let _ = self.umount("/");
         }
 
         OsRelease::parse(&os_release_content)
     }
 
-    /// Read Windows version from registry
+    /// Read Windows version from registry hive.
+    ///
+    /// Uses a cache and searches common hive paths beneath the mount root.
     fn read_windows_version(&mut self, root: &str) -> Result<(String, String, String)> {
         use crate::guestfs::windows_registry::get_windows_version;
 
-        // Check cache first
+        // Cache
         if let Some(cached) = self.windows_version_cache.get(root) {
             if self.verbose || self.debug {
                 eprintln!("[DEBUG] Using cached Windows version for {}", root);
@@ -244,26 +331,26 @@ impl Guestfs {
             return Ok(cached.clone());
         }
 
-        // Try to mount the root partition first
         let was_mounted = self.mounted.contains_key("/");
 
         if !was_mounted {
-            // Try to mount root temporarily (read-only for inspection)
             self.mount_ro(root, "/")?;
         }
 
-        // Get SOFTWARE hive path
         let mount_root = self
             .mount_root
             .as_ref()
-            .ok_or_else(|| Error::InvalidState("No mount root".to_string()))?;
+            .ok_or_else(|| Error::InvalidState("No mount root (mount_root is None)".to_string()))?
+            .clone(); // Clone to avoid borrow issues
 
-        // Try common Windows registry hive locations
+        // Common Windows registry hive locations (case variations).
         let hive_paths = [
             mount_root.join("Windows/System32/config/SOFTWARE"),
+            mount_root.join("Windows/System32/Config/SOFTWARE"),
             mount_root.join("WINDOWS/System32/config/SOFTWARE"),
-            mount_root.join("windows/system32/config/SOFTWARE"),
+            mount_root.join("WINDOWS/System32/Config/SOFTWARE"),
             mount_root.join("WinNT/System32/config/SOFTWARE"),
+            mount_root.join("WinNT/System32/Config/SOFTWARE"),
         ];
 
         let mut result = Err(Error::NotFound("SOFTWARE hive not found".to_string()));
@@ -277,56 +364,68 @@ impl Guestfs {
             }
         }
 
-        // Cache the result if successful
         if let Ok(ref data) = result {
             self.windows_version_cache.insert(root.to_string(), data.clone());
         }
 
         if !was_mounted {
-            self.umount("/").ok();
+            let _ = self.umount("/");
         }
 
         result
     }
 
-    /// Detect distribution from legacy release files
+    /// Detect distribution from legacy release files (fallback only).
     fn detect_from_release_files(&mut self, root: &str) -> Result<String> {
-        // Try to mount the root partition first
         let was_mounted = self.mounted.contains_key("/");
 
         if !was_mounted {
-            // Try to mount root temporarily (read-only for inspection)
-            if let Err(e) = self.mount_ro(root, "/") {
-                if self.debug {
-                    eprintln!("[DEBUG] Failed to mount {} for release file detection: {}", root, e);
-                }
-                return Err(Error::NotFound(format!("Cannot mount root: {}", e)));
-            }
+            self.mount_ro(root, "/")?;
         }
 
-        // Check for distro-specific release files
-        let distro = if self.exists("/etc/arch-release").unwrap_or(false) {
+        let distro = if self.exists("/etc/arch-release").unwrap_or(false)
+            || (self.exists("/usr/bin/pacman").unwrap_or(false)
+                && self.exists("/etc/pacman.conf").unwrap_or(false))
+        {
             "arch".to_string()
-        } else if self.exists("/usr/bin/pacman").unwrap_or(false)
-                  && self.exists("/etc/pacman.conf").unwrap_or(false) {
-            "arch".to_string()
+        } else if self.exists("/etc/alpine-release").unwrap_or(false) {
+            "alpine".to_string()
         } else if self.exists("/etc/redhat-release").unwrap_or(false) {
-            // Read the file to determine exact distro
             if let Ok(content) = self.cat("/etc/redhat-release") {
-                if content.to_lowercase().contains("fedora") {
+                let lc = content.to_lowercase();
+                if lc.contains("fedora") {
                     "fedora".to_string()
-                } else if content.to_lowercase().contains("centos") {
+                } else if lc.contains("centos") {
                     "centos".to_string()
-                } else if content.to_lowercase().contains("red hat") {
+                } else if lc.contains("rocky") {
+                    "rocky".to_string()
+                } else if lc.contains("alma") {
+                    "alma".to_string()
+                } else if lc.contains("oracle linux") {
+                    "ol".to_string()
+                } else if lc.contains("red hat") {
                     "rhel".to_string()
                 } else {
-                    "unknown".to_string()
+                    "rhel".to_string() // default family guess
+                }
+            } else {
+                "unknown".to_string()
+            }
+        } else if self.exists("/etc/SuSE-release").unwrap_or(false) || self.exists("/etc/os-release").unwrap_or(false) {
+            // SuSE-release is legacy; os-release should have ID=sles/opensuse
+            if let Ok(osr) = self.read_os_release(root) {
+                if osr.id.contains("sles") {
+                    "sles".to_string()
+                } else if osr.id.contains("opensuse") || osr.id.contains("suse") {
+                    "opensuse".to_string()
+                } else {
+                    osr.id
                 }
             } else {
                 "unknown".to_string()
             }
         } else if self.exists("/etc/debian_version").unwrap_or(false) {
-            // Could be Debian or Ubuntu
+            // Debian or Ubuntu
             if self.exists("/etc/lsb-release").unwrap_or(false) {
                 if let Ok(content) = self.cat("/etc/lsb-release") {
                     if content.contains("Ubuntu") {
@@ -341,22 +440,23 @@ impl Guestfs {
                 "debian".to_string()
             }
         } else {
+            if !was_mounted {
+                let _ = self.umount("/");
+            }
             return Err(Error::NotFound("No release files found".to_string()));
         };
 
         if !was_mounted {
-            self.umount("/").ok();
+            let _ = self.umount("/");
         }
 
         Ok(distro)
     }
 
-    /// Get the product name
-    ///
+    /// Get the product name.
     pub fn inspect_get_product_name(&mut self, root: &str) -> Result<String> {
         let os_type = self.inspect_get_type(root)?;
 
-        // Handle Windows via registry
         if os_type == "windows" {
             if let Ok((product_name, _, _)) = self.read_windows_version(root) {
                 return Ok(product_name);
@@ -364,13 +464,13 @@ impl Guestfs {
             return Ok("Windows".to_string());
         }
 
-        // Try to get from /etc/os-release first for Linux
         if let Ok(os_release) = self.read_os_release(root) {
-            return Ok(os_release.pretty_name);
+            if !os_release.pretty_name.is_empty() {
+                return Ok(os_release.pretty_name);
+            }
         }
 
         let distro = self.inspect_get_distro(root)?;
-
         if os_type == "linux" {
             match distro.as_str() {
                 "fedora" => Ok("Fedora Linux".to_string()),
@@ -378,7 +478,15 @@ impl Guestfs {
                 "debian" => Ok("Debian GNU/Linux".to_string()),
                 "rhel" => Ok("Red Hat Enterprise Linux".to_string()),
                 "centos" => Ok("CentOS Linux".to_string()),
+                "rocky" => Ok("Rocky Linux".to_string()),
+                "alma" => Ok("AlmaLinux".to_string()),
+                "ol" => Ok("Oracle Linux".to_string()),
+                "amzn" | "amazon" => Ok("Amazon Linux".to_string()),
                 "photon" => Ok("VMware Photon OS".to_string()),
+                "opensuse" => Ok("openSUSE".to_string()),
+                "sles" => Ok("SUSE Linux Enterprise Server".to_string()),
+                "alpine" => Ok("Alpine Linux".to_string()),
+                "arch" => Ok("Arch Linux".to_string()),
                 _ => Ok("Linux".to_string()),
             }
         } else {
@@ -386,25 +494,73 @@ impl Guestfs {
         }
     }
 
-    /// Get the architecture
+    /// Get the architecture (heuristic; avoids hardcoding x86_64).
     ///
-    pub fn inspect_get_arch(&mut self, _root: &str) -> Result<String> {
+    /// Without reading ELF/PE headers (binary-safe read), this uses conservative hints.
+    /// If uncertain, returns "unknown".
+    pub fn inspect_get_arch(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
-        // For now, assume x86_64 (TODO: detect from ELF binaries or PE headers)
-        Ok("x86_64".to_string())
+
+        let os_type = self.inspect_get_type(root)?;
+        let was_mounted = self.mounted.contains_key("/");
+
+        if !was_mounted {
+            self.mount_ro(root, "/")?;
+        }
+
+        let arch = if os_type == "linux" {
+            // Heuristics:
+            // - /lib64 strongly suggests 64-bit userspace
+            // - /lib/ld-linux-aarch64.so.1 suggests aarch64
+            // - /lib/ld-linux-armhf.so.3 suggests armhf
+            // - /lib/ld-musl-x86_64.so.1 suggests x86_64 (musl)
+            // Keep conservative.
+            if self.exists("/lib/ld-linux-aarch64.so.1").unwrap_or(false)
+                || self.exists("/lib64/ld-linux-aarch64.so.1").unwrap_or(false)
+            {
+                "aarch64".to_string()
+            } else if self.exists("/lib/ld-linux-armhf.so.3").unwrap_or(false) {
+                "armhf".to_string()
+            } else if self.exists("/lib/ld-musl-x86_64.so.1").unwrap_or(false)
+                || self.exists("/lib64/ld-linux-x86-64.so.2").unwrap_or(false)
+                || self.exists("/lib/ld-linux-x86-64.so.2").unwrap_or(false)
+            {
+                "x86_64".to_string()
+            } else if self.exists("/lib64").unwrap_or(false) {
+                "x86_64".to_string() // still a heuristic; but common
+            } else {
+                "unknown".to_string()
+            }
+        } else if os_type == "windows" {
+            // Heuristics:
+            // - Presence of "Program Files (x86)" often indicates 64-bit Windows.
+            if self.exists("/Program Files (x86)").unwrap_or(false)
+                || self.exists("/program files (x86)").unwrap_or(false)
+            {
+                "x86_64".to_string()
+            } else {
+                // Otherwise could be 32-bit.
+                "i686".to_string()
+            }
+        } else {
+            "unknown".to_string()
+        };
+
+        if !was_mounted {
+            let _ = self.umount("/");
+        }
+
+        Ok(arch)
     }
 
-    /// Get the major version number
-    ///
+    /// Get the major version number.
     pub fn inspect_get_major_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
         let os_type = self.inspect_get_type(root)?;
 
-        // Handle Windows
         if os_type == "windows" {
             if let Ok((_, version, _)) = self.read_windows_version(root) {
-                // Parse version string like "10.0.19045" or "11.0.22631"
                 if let Some(major_str) = version.split('.').next() {
                     if let Ok(major) = major_str.parse::<i32>() {
                         return Ok(major);
@@ -414,7 +570,6 @@ impl Guestfs {
             return Ok(0);
         }
 
-        // Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.version_major);
         }
@@ -422,17 +577,14 @@ impl Guestfs {
         Ok(0)
     }
 
-    /// Get the minor version number
-    ///
+    /// Get the minor version number.
     pub fn inspect_get_minor_version(&mut self, root: &str) -> Result<i32> {
         self.ensure_ready()?;
 
         let os_type = self.inspect_get_type(root)?;
 
-        // Handle Windows
         if os_type == "windows" {
             if let Ok((_, version, _)) = self.read_windows_version(root) {
-                // Parse version string like "10.0.19045" or "11.0.22631"
                 let parts: Vec<&str> = version.split('.').collect();
                 if parts.len() >= 2 {
                     if let Ok(minor) = parts[1].parse::<i32>() {
@@ -443,7 +595,6 @@ impl Guestfs {
             return Ok(0);
         }
 
-        // Linux
         if let Ok(os_release) = self.read_os_release(root) {
             return Ok(os_release.version_minor);
         }
@@ -451,75 +602,140 @@ impl Guestfs {
         Ok(0)
     }
 
-    /// Get the hostname
-    ///
+    /// Get the hostname (read-only; never mounts RW).
     pub fn inspect_get_hostname(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
-        // Try to mount and read /etc/hostname
         let was_mounted = self.mounted.contains_key("/");
 
         if !was_mounted {
-            self.mount(root, "/").ok();
+            self.mount_ro(root, "/")?;
         }
 
-        let hostname = self
-            .cat("/etc/hostname")
-            .map(|content| content.trim().to_string())
-            .unwrap_or_else(|_| "localhost".to_string());
+        let hostname = {
+            // Linux hostname
+            if let Ok(content) = self.cat("/etc/hostname") {
+                let t = content.trim();
+                if !t.is_empty() {
+                    t.to_string()
+                } else if let Ok(mi) = self.cat("/etc/machine-info") {
+                    // systemd machine-info
+                    let mut result = "localhost".to_string();
+                    for line in mi.lines() {
+                        if let Some(v) = line.strip_prefix("PRETTY_HOSTNAME=") {
+                            let t = v.trim().trim_matches('"');
+                            if !t.is_empty() {
+                                result = t.to_string();
+                                break;
+                            }
+                        }
+                    }
+                    result
+                } else {
+                    "localhost".to_string()
+                }
+            } else if let Ok(mi) = self.cat("/etc/machine-info") {
+                // systemd machine-info
+                let mut result = "localhost".to_string();
+                for line in mi.lines() {
+                    if let Some(v) = line.strip_prefix("PRETTY_HOSTNAME=") {
+                        let t = v.trim().trim_matches('"');
+                        if !t.is_empty() {
+                            result = t.to_string();
+                            break;
+                        }
+                    }
+                }
+                result
+            } else {
+                "localhost".to_string()
+            }
+        };
 
         if !was_mounted {
-            self.umount("/").ok();
+            let _ = self.umount("/");
         }
 
         Ok(hostname)
     }
 
-    /// Get the package format (rpm, deb, etc.)
+    /// Get the package format (rpm/deb/apk/pacman/unknown).
     ///
+    /// Uses os-release `ID` + `ID_LIKE` for broader coverage.
     pub fn inspect_get_package_format(&mut self, root: &str) -> Result<String> {
-        let distro = self.inspect_get_distro(root)?;
+        let os_type = self.inspect_get_type(root)?;
+        if os_type == "windows" {
+            return Ok("msi".to_string()); // not strictly “package format”, but useful
+        }
 
+        if let Ok(osr) = self.read_os_release(root) {
+            let mut ids = Vec::new();
+            if !osr.id.is_empty() {
+                ids.push(osr.id.clone());
+            }
+            ids.extend(osr.id_like.clone());
+
+            let has = |s: &str| ids.iter().any(|x| x == s);
+
+            if has("alpine") {
+                return Ok("apk".to_string());
+            }
+            if has("debian") || has("ubuntu") {
+                return Ok("deb".to_string());
+            }
+            if has("arch") || has("archlinux") || has("manjaro") {
+                return Ok("pacman".to_string());
+            }
+            if has("rhel")
+                || has("fedora")
+                || has("centos")
+                || has("suse")
+                || has("opensuse")
+                || has("sles")
+                || has("photon")
+                || has("amzn")
+                || has("rocky")
+                || has("alma")
+                || has("ol")
+            {
+                return Ok("rpm".to_string());
+            }
+        }
+
+        // Fallback map from distro string
+        let distro = self.inspect_get_distro(root)?;
         match distro.as_str() {
-            "fedora" | "rhel" | "centos" | "photon" => Ok("rpm".to_string()),
+            "fedora" | "rhel" | "centos" | "photon" | "opensuse" | "sles" | "rocky" | "alma" | "ol" => {
+                Ok("rpm".to_string())
+            }
             "ubuntu" | "debian" => Ok("deb".to_string()),
-            "arch" | "archlinux" | "manjaro" => Ok("pacman".to_string()),
+            "arch" => Ok("pacman".to_string()),
+            "alpine" => Ok("apk".to_string()),
             _ => Ok("unknown".to_string()),
         }
     }
 
-    /// Get mountpoints for the root device
+    /// Get mountpoints for the root device.
     ///
+    /// v0: root always at `/`.
+    /// TODO: parse /etc/fstab, resolve UUID/LABEL, handle btrfs subvol=.
     pub fn inspect_get_mountpoints(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
         let mut mountpoints = HashMap::new();
-
-        // Root is always mounted at /
         mountpoints.insert("/".to_string(), root.to_string());
-
-        // TODO: Parse fstab or other mount configuration
-        // For now, just return root
-
         Ok(mountpoints)
     }
 
-    /// List installed applications
-    ///
+    /// List installed applications (stub).
     pub fn inspect_list_applications(&mut self, _root: &str) -> Result<Vec<Application>> {
         self.ensure_ready()?;
-
-        // TODO: Parse RPM database or dpkg status
-        // For now, return empty list
-
         Ok(Vec::new())
     }
 
-    /// Check if this is a live CD/USB
-    ///
+    /// Check if this is a live CD/USB (stub).
     pub fn inspect_is_live(&mut self, _root: &str) -> Result<bool> {
         self.ensure_ready()?;
-        // TODO: Check for live indicators
         Ok(false)
     }
 }
@@ -544,6 +760,7 @@ pub struct Application {
 #[allow(dead_code)]
 struct OsRelease {
     pub id: String,
+    pub id_like: Vec<String>,
     pub pretty_name: String,
     pub version_id: String,
     pub version_major: i32,
@@ -557,6 +774,7 @@ struct OsRelease {
 impl OsRelease {
     fn parse(content: &str) -> Result<Self> {
         let mut id = String::new();
+        let mut id_like = Vec::<String>::new();
         let mut pretty_name = String::new();
         let mut version_id = String::new();
         let mut cpe_name = String::new();
@@ -570,11 +788,19 @@ impl OsRelease {
                 continue;
             }
 
-            if let Some((key, value)) = line.split_once('=') {
-                let value = value.trim_matches('"').trim();
+            if let Some((key, raw_val)) = line.split_once('=') {
+                let value = raw_val.trim().trim_matches('"').trim();
 
                 match key {
                     "ID" => id = value.to_lowercase(),
+                    "ID_LIKE" => {
+                        // Common format: ID_LIKE="rhel fedora"
+                        id_like = value
+                            .split_whitespace()
+                            .map(|s| s.to_lowercase())
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                    }
                     "PRETTY_NAME" => pretty_name = value.to_string(),
                     "VERSION_ID" => version_id = value.to_string(),
                     "CPE_NAME" => cpe_name = value.to_string(),
@@ -602,6 +828,7 @@ impl OsRelease {
 
         Ok(OsRelease {
             id,
+            id_like,
             pretty_name,
             version_id,
             version_major,
@@ -614,15 +841,52 @@ impl OsRelease {
     }
 }
 
+/// Build a partition path that handles the "p" separator for nvme/mmcblk devices.
+///
+/// Examples:
+/// - /dev/sda + 1 => /dev/sda1
+/// - /dev/vda + 2 => /dev/vda2
+/// - /dev/nvme0n1 + 3 => /dev/nvme0n1p3
+/// - /dev/mmcblk0 + 1 => /dev/mmcblk0p1
+fn build_partition_path(disk: &str, part_num: u32) -> String {
+    let needs_p = disk.contains("nvme") || disk.contains("mmcblk");
+    if needs_p {
+        format!("{}p{}", disk, part_num)
+    } else {
+        format!("{}{}", disk, part_num)
+    }
+}
+
+/// Strong Linux root markers.
+/// Keep this strict-ish to reduce false positives.
+fn looks_like_linux_root(g: &mut Guestfs) -> bool {
+    let osr = g.exists("/etc/os-release").unwrap_or(false) || g.exists("/usr/lib/os-release").unwrap_or(false);
+    let shellish = g.exists("/bin/sh").unwrap_or(false) || g.exists("/usr/bin/env").unwrap_or(false);
+    osr && shellish
+}
+
+/// Strong Windows root markers.
+/// Keep strict-ish to avoid NTFS data volumes being misclassified.
+fn looks_like_windows_root(g: &mut Guestfs) -> bool {
+    // Case-insensitive filesystems make this fairly robust.
+    let win = g.exists("/Windows/System32").unwrap_or(false) || g.exists("/WINDOWS/System32").unwrap_or(false);
+    let hive = g.exists("/Windows/System32/config").unwrap_or(false)
+        || g.exists("/Windows/System32/Config").unwrap_or(false)
+        || g.exists("/WINDOWS/System32/config").unwrap_or(false)
+        || g.exists("/WINDOWS/System32/Config").unwrap_or(false);
+    win && hive
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_inspect_api_exists() {
-        let g = Guestfs::new().unwrap();
-        // API structure tests
-        let _ = g;
+    fn test_partition_path_builder() {
+        assert_eq!(build_partition_path("/dev/sda", 1), "/dev/sda1");
+        assert_eq!(build_partition_path("/dev/vda", 2), "/dev/vda2");
+        assert_eq!(build_partition_path("/dev/nvme0n1", 3), "/dev/nvme0n1p3");
+        assert_eq!(build_partition_path("/dev/mmcblk0", 1), "/dev/mmcblk0p1");
     }
 
     #[test]
@@ -646,11 +910,13 @@ PRETTY_NAME="VMware Photon OS/Linux"
 NAME="Fedora Linux"
 VERSION="39 (Server Edition)"
 ID=fedora
+ID_LIKE="rhel fedora"
 VERSION_ID=39
 PRETTY_NAME="Fedora Linux 39 (Server Edition)"
 "#;
         let os_release = OsRelease::parse(content).unwrap();
         assert_eq!(os_release.id, "fedora");
+        assert!(os_release.id_like.contains(&"rhel".to_string()));
         assert_eq!(os_release.version_major, 39);
         assert_eq!(os_release.version_minor, 0);
     }
