@@ -71,6 +71,8 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('q') | KeyCode::Esc => {
                         if app.is_searching() {
                             app.cancel_search();
+                        } else if app.is_exporting() {
+                            app.cancel_export();
                         } else if app.show_export_menu {
                             app.toggle_export_menu();
                         } else if app.show_help {
@@ -107,14 +109,39 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::PageDown => app.page_down(),
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
-                    KeyCode::Enter => app.select_item(),
+                    KeyCode::Enter => {
+                        use app::{ExportFormat, ExportMode};
+
+                        if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
+                            let _ = app.execute_export();
+                        } else {
+                            app.select_item();
+                        }
+                    }
                     KeyCode::Char(c) => {
-                        if app.is_searching() {
+                        use app::{ExportFormat, ExportMode};
+
+                        if matches!(app.export_mode, Some(ExportMode::Selecting)) {
+                            // Handle format selection
+                            match c {
+                                '1' => app.select_export_format(ExportFormat::Json),
+                                '2' => app.select_export_format(ExportFormat::Yaml),
+                                '3' => app.select_export_format(ExportFormat::Html),
+                                '4' => app.select_export_format(ExportFormat::Pdf),
+                                _ => {}
+                            }
+                        } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
+                            app.export_input(c);
+                        } else if app.is_searching() {
                             app.search_input(c);
                         }
                     }
                     KeyCode::Backspace => {
-                        if app.is_searching() {
+                        use app::ExportMode;
+
+                        if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
+                            app.export_backspace();
+                        } else if app.is_searching() {
                             app.search_backspace();
                         }
                     }
