@@ -405,7 +405,7 @@ guestctl inspect vm.qcow2
 - name: Inspect VM image
   run: |
     # Install guestctl
-    cargo install guestctl
+    cargo install guestkit
 
     # Inspect test image
     guestctl inspect test-vm.qcow2 --output json > inspection.json
@@ -552,7 +552,7 @@ guestctl cache-clear
 guestctl version
 
 # Update to latest
-cargo install guestctl --force
+cargo install guestkit --force
 
 # Or from source
 cd guestkit
