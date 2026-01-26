@@ -77,7 +77,7 @@ impl InspectionDiff {
         };
 
         // Compare OS details
-        if let (Some(ref os1), Some(ref os2)) = (&report1.os.hostname, &report2.os.hostname) {
+        if let (Some(os1), Some(os2)) = (&report1.os.hostname, &report2.os.hostname) {
             if os1 != os2 {
                 diff.os_changes.push(Change {
                     field: "hostname".to_string(),
@@ -87,7 +87,7 @@ impl InspectionDiff {
             }
         }
 
-        if let (Some(ref v1), Some(ref v2)) = (&report1.os.version, &report2.os.version) {
+        if let (Some(v1), Some(v2)) = (&report1.os.version, &report2.os.version) {
             if v1.major != v2.major || v1.minor != v2.minor {
                 diff.os_changes.push(Change {
                     field: "version".to_string(),
@@ -98,7 +98,7 @@ impl InspectionDiff {
         }
 
         // Compare packages (kernels as proxy since we don't have full package lists in report)
-        if let (Some(ref p1), Some(ref p2)) = (&report1.packages, &report2.packages) {
+        if let (Some(p1), Some(p2)) = (&report1.packages, &report2.packages) {
             let kernels1: HashSet<_> = p1.kernels.iter().collect();
             let kernels2: HashSet<_> = p2.kernels.iter().collect();
 
@@ -124,7 +124,7 @@ impl InspectionDiff {
         }
 
         // Compare services
-        if let (Some(ref s1), Some(ref s2)) = (&report1.services, &report2.services) {
+        if let (Some(s1), Some(s2)) = (&report1.services, &report2.services) {
             let services1: HashSet<_> = s1.enabled_services.iter().map(|s| &s.name).collect();
             let services2: HashSet<_> = s2.enabled_services.iter().map(|s| &s.name).collect();
 
@@ -138,7 +138,7 @@ impl InspectionDiff {
         }
 
         // Compare users
-        if let (Some(ref u1), Some(ref u2)) = (&report1.users, &report2.users) {
+        if let (Some(u1), Some(u2)) = (&report1.users, &report2.users) {
             let users1: HashSet<_> = u1.regular_users.iter().map(|u| &u.username).collect();
             let users2: HashSet<_> = u2.regular_users.iter().map(|u| &u.username).collect();
 
@@ -152,8 +152,8 @@ impl InspectionDiff {
         }
 
         // Compare network
-        if let (Some(ref n1), Some(ref n2)) = (&report1.network, &report2.network) {
-            if let (Some(ref ifaces1), Some(ref ifaces2)) = (&n1.interfaces, &n2.interfaces) {
+        if let (Some(n1), Some(n2)) = (&report1.network, &report2.network) {
+            if let (Some(ifaces1), Some(ifaces2)) = (&n1.interfaces, &n2.interfaces) {
                 // Simple comparison - check if interface count changed
                 if ifaces1.len() != ifaces2.len() {
                     diff.network_changes.push(Change {
@@ -179,9 +179,9 @@ impl InspectionDiff {
         }
 
         // Compare system config
-        if let (Some(ref c1), Some(ref c2)) = (&report1.system_config, &report2.system_config) {
+        if let (Some(c1), Some(c2)) = (&report1.system_config, &report2.system_config) {
             if c1.timezone != c2.timezone {
-                if let (Some(ref tz1), Some(ref tz2)) = (&c1.timezone, &c2.timezone) {
+                if let (Some(tz1), Some(tz2)) = (&c1.timezone, &c2.timezone) {
                     diff.config_changes.push(Change {
                         field: "timezone".to_string(),
                         old_value: tz1.clone(),
@@ -191,7 +191,7 @@ impl InspectionDiff {
             }
 
             if c1.selinux != c2.selinux {
-                if let (Some(ref se1), Some(ref se2)) = (&c1.selinux, &c2.selinux) {
+                if let (Some(se1), Some(se2)) = (&c1.selinux, &c2.selinux) {
                     diff.config_changes.push(Change {
                         field: "selinux".to_string(),
                         old_value: se1.clone(),
