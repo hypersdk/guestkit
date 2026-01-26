@@ -12,6 +12,7 @@ pub mod interactive;
 pub mod output;
 pub mod parallel;
 pub mod profiles;
+pub mod shell;
 pub mod tui;
 
 pub use batch::*;

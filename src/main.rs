@@ -374,16 +374,23 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// Interactive shell for VM inspection (REPL mode)
+    #[command(alias = "sh")]
+    Shell {
+        /// Disk image path
+        image: PathBuf,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
         #[arg(value_enum)]
-        shell: Shell,
+        shell: CompletionShell,
     },
 }
 
 #[derive(clap::ValueEnum, Clone)]
-enum Shell {
+enum CompletionShell {
     Bash,
     Zsh,
     Fish,
@@ -669,16 +676,20 @@ fn main() -> anyhow::Result<()> {
             cli::tui::run_tui(&image)?;
         }
 
+        Commands::Shell { image } => {
+            cli::shell::run_interactive_shell(&image)?;
+        }
+
         Commands::Completion { shell } => {
             let mut cmd = Cli::command();
             match shell {
-                Shell::Bash => generate(shells::Bash, &mut cmd, "guestctl", &mut io::stdout()),
-                Shell::Zsh => generate(shells::Zsh, &mut cmd, "guestctl", &mut io::stdout()),
-                Shell::Fish => generate(shells::Fish, &mut cmd, "guestctl", &mut io::stdout()),
-                Shell::PowerShell => {
+                CompletionShell::Bash => generate(shells::Bash, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::Zsh => generate(shells::Zsh, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::Fish => generate(shells::Fish, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::PowerShell => {
                     generate(shells::PowerShell, &mut cmd, "guestctl", &mut io::stdout())
                 }
-                Shell::Elvish => generate(shells::Elvish, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::Elvish => generate(shells::Elvish, &mut cmd, "guestctl", &mut io::stdout()),
             }
         }
     }
