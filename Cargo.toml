@@ -39,6 +39,7 @@ dirs = "5.0"
 rand = "0.8"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3.0"
 
 # Disk image and partition parsing (pure Rust)
 memmap2 = "0.9"
