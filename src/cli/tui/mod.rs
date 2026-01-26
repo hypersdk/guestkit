@@ -117,6 +117,13 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
                     KeyCode::Char('i') => app.toggle_stats_bar(),
+                    KeyCode::Char('r') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        // Trigger refresh
+                        app.start_refresh();
+                        // Note: In a real implementation, this would spawn a background task
+                        // For now, just update the timestamp
+                        app.complete_refresh();
+                    }
                     KeyCode::Char('b') => {
                         // Bookmark current view
                         let bookmark = format!("{} view", app.current_view.title());

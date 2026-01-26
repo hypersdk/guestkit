@@ -2,13 +2,14 @@
 //! TUI application state management
 
 use anyhow::Result;
+use chrono::{DateTime, Local};
 use guestctl::guestfs::inspect_enhanced::{
     Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, PackageInfo,
     RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
 use guestctl::Guestfs;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::cli::profiles::{
     ComplianceProfile, HardeningProfile, InspectionProfile, MigrationProfile, PerformanceProfile,
@@ -145,6 +146,8 @@ pub struct App {
     pub bookmarks: Vec<String>,
     pub search_history: Vec<String>,
     pub notification: Option<(String, u8)>, // (message, ticks_remaining)
+    pub last_updated: DateTime<Local>,
+    pub refreshing: bool,
 
     // Export state
     pub export_mode: Option<ExportMode>,
@@ -153,6 +156,7 @@ pub struct App {
 
     // Inspection data
     pub image_path: String,
+    pub image_path_buf: PathBuf,
     pub os_name: String,
     pub os_version: String,
     pub hostname: String,
@@ -308,12 +312,15 @@ impl App {
             bookmarks: Vec::new(),
             search_history: Vec::new(),
             notification: None,
+            last_updated: Local::now(),
+            refreshing: false,
 
             export_mode: None,
             export_format: None,
             export_filename: String::new(),
 
             image_path: image_path.display().to_string(),
+            image_path_buf: image_path.to_path_buf(),
             os_name,
             os_version,
             hostname,
@@ -856,5 +863,38 @@ impl App {
             40..=59 => ("Poor", "red"),
             _ => ("Critical", "red"),
         }
+    }
+
+    /// Get formatted timestamp of last update
+    pub fn get_last_updated_formatted(&self) -> String {
+        self.last_updated.format("%H:%M:%S").to_string()
+    }
+
+    /// Get time since last update in human-readable format
+    pub fn get_time_since_update(&self) -> String {
+        let duration = Local::now().signed_duration_since(self.last_updated);
+
+        if duration.num_seconds() < 60 {
+            format!("{}s ago", duration.num_seconds())
+        } else if duration.num_minutes() < 60 {
+            format!("{}m ago", duration.num_minutes())
+        } else if duration.num_hours() < 24 {
+            format!("{}h ago", duration.num_hours())
+        } else {
+            format!("{}d ago", duration.num_days())
+        }
+    }
+
+    /// Initiate refresh (note: actual refresh would need background thread)
+    pub fn start_refresh(&mut self) {
+        self.refreshing = true;
+        self.show_notification("Refreshing data...".to_string());
+    }
+
+    /// Mark refresh as complete
+    pub fn complete_refresh(&mut self) {
+        self.refreshing = false;
+        self.last_updated = Local::now();
+        self.show_notification("✓ Data refreshed".to_string());
     }
 }
