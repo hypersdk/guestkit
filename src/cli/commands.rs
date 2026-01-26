@@ -391,7 +391,7 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Enumerating block devices...");
     }
-    println!("\n{}", "💾 Block Devices".truecolor(255, 165, 0).bold());
+    println!("\n{}", "💾 Block Devices".truecolor(222, 115, 86).bold());
     println!("{}", "─".repeat(60).bright_black());
     let devices = g.list_devices()?;
     for device in &devices {
@@ -400,7 +400,7 @@ pub fn inspect_image(
             eprintln!("[VERBOSE] Found device: {} ({} bytes)", device, size);
         }
         println!("  {} {} {} ({:.2} GB)",
-            "▪".truecolor(255, 165, 0),
+            "▪".truecolor(222, 115, 86),
             device.bright_white().bold(),
             format!("{} bytes", size).bright_black(),
             size as f64 / 1e9);
@@ -422,14 +422,14 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Analyzing partition table...");
     }
-    println!("\n{}", "🗂  Partitions".truecolor(255, 165, 0).bold());
+    println!("\n{}", "🗂  Partitions".truecolor(222, 115, 86).bold());
     println!("{}", "─".repeat(60).bright_black());
     let partitions = g.list_partitions()?;
     for partition in &partitions {
         if verbose {
             eprintln!("[VERBOSE] Examining partition: {}", partition);
         }
-        println!("  {} {}", "📦".truecolor(255, 165, 0), partition.bright_white().bold());
+        println!("  {} {}", "📦".truecolor(222, 115, 86), partition.bright_white().bold());
 
         if let Ok(part_list) = g.part_list("/dev/sda") {
             let part_num = g.part_to_partnum(partition)?;
@@ -452,7 +452,7 @@ pub fn inspect_image(
         eprintln!("[VERBOSE] Detecting partition scheme...");
     }
     if let Ok(scheme) = g.part_get_parttype("/dev/sda") {
-        println!("\n{}", "⚙️  Partition Scheme".truecolor(255, 165, 0).bold());
+        println!("\n{}", "⚙️  Partition Scheme".truecolor(222, 115, 86).bold());
         println!("{}", "─".repeat(60).bright_black());
         let scheme_icon = match scheme.as_str() {
             "gpt" => "🔷",
@@ -469,7 +469,7 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Detecting filesystems...");
     }
-    println!("\n{}", "📁 Filesystems".truecolor(255, 165, 0).bold());
+    println!("\n{}", "📁 Filesystems".truecolor(222, 115, 86).bold());
     println!("{}", "─".repeat(60).bright_black());
     let filesystems = g.list_filesystems()?;
     for (device, fstype) in &filesystems {
@@ -604,7 +604,7 @@ pub fn inspect_image(
     // Print Quick Summary first
     if !roots.is_empty() {
         println!("\n╭─────────────────────────────────────────────────────────╮");
-        println!("│ {} {}", "✨ Quick Summary".bright_cyan().bold(), " ".repeat(38));
+        println!("│ {} {}", "✨ Quick Summary".truecolor(222, 115, 86).bold(), " ".repeat(38));
         println!("╰─────────────────────────────────────────────────────────╯");
 
         for root in &roots {
@@ -625,13 +625,13 @@ pub fn inspect_image(
                 if major > 0 || minor > 0 {
                     print!("{} ", format!("v{}.{}", major, minor).bright_white());
                 }
-                println!("({})", distro.truecolor(255, 165, 0));
+                println!("({})", distro.truecolor(222, 115, 86));
             }
         }
         println!();
     }
 
-    println!("{}", "🖥️  Operating Systems".truecolor(255, 165, 0).bold());
+    println!("{}", "🖥️  Operating Systems".truecolor(222, 115, 86).bold());
     println!("{}", "─".repeat(60).bright_black());
 
     if roots.is_empty() {
@@ -644,7 +644,7 @@ pub fn inspect_image(
             if verbose {
                 eprintln!("[VERBOSE] Inspecting OS at root: {}", root);
             }
-            println!("  {} Root: {}", "🔹".truecolor(255, 165, 0), root.bright_white().bold());
+            println!("  {} Root: {}", "🔹".truecolor(222, 115, 86), root.bright_white().bold());
             println!();
 
             if let Ok(ostype) = g.inspect_get_type(root) {
@@ -679,7 +679,7 @@ pub fn inspect_image(
                 if verbose {
                     eprintln!("[VERBOSE] Architecture: {}", arch);
                 }
-                println!("    {} Architecture: {}", "⚙️".cyan(), arch.bright_cyan().bold());
+                println!("    {} Architecture: {}", "⚙️".truecolor(222, 115, 86), arch.truecolor(222, 115, 86).bold());
             }
             if let Ok(major) = g.inspect_get_major_version(root) {
                 if let Ok(minor) = g.inspect_get_minor_version(root) {
@@ -729,7 +729,7 @@ pub fn inspect_image(
                 if init == "unknown" {
                     println!("    {} Init system:  {}", "⚡".bright_black(), init.bright_black());
                 } else {
-                    println!("    {} Init system:  {}", "⚡".yellow(), init.truecolor(255, 165, 0).bold());
+                    println!("    {} Init system:  {}", "⚡".yellow(), init.truecolor(222, 115, 86).bold());
                 }
             }
 
@@ -885,7 +885,7 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Gathering system configuration...");
             }
             println!();
-            println!("    {}", "⚙️  System Configuration".truecolor(255, 165, 0).bold());
+            println!("    {}", "⚙️  System Configuration".truecolor(222, 115, 86).bold());
             println!("    {}", "─".repeat(56).bright_black());
 
             if let Ok(timezone) = g.inspect_timezone(root) {
@@ -938,7 +938,7 @@ pub fn inspect_image(
             if let Ok(interfaces) = g.inspect_network(root) {
                 if !interfaces.is_empty() {
                     println!();
-                    println!("    {}", "🌐 Network Configuration".truecolor(255, 165, 0).bold());
+                    println!("    {}", "🌐 Network Configuration".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     for iface in &interfaces {
                         println!("      {} Interface: {}", "📡".yellow(), iface.name.bright_white().bold());
@@ -986,7 +986,7 @@ pub fn inspect_image(
 
                 if !regular_users.is_empty() || !system_users.is_empty() {
                     println!();
-                    println!("    {}", "👥 User Accounts".truecolor(255, 165, 0).bold());
+                    println!("    {}", "👥 User Accounts".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
 
                     if !regular_users.is_empty() {
@@ -1016,7 +1016,7 @@ pub fn inspect_image(
             if let Ok(ssh_config) = g.inspect_ssh_config(root) {
                 if !ssh_config.is_empty() {
                     println!();
-                    println!("    {}", "🔐 SSH Configuration".truecolor(255, 165, 0).bold());
+                    println!("    {}", "🔐 SSH Configuration".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     if let Some(port) = ssh_config.get("Port") {
                         println!("      {} Port: {}", "•".bright_black(), port.bright_white().bold());
@@ -1045,7 +1045,7 @@ pub fn inspect_image(
             if let Ok(services) = g.inspect_systemd_services(root) {
                 if !services.is_empty() {
                     println!();
-                    println!("    {}", "⚙️  Systemd Services".truecolor(255, 165, 0).bold());
+                    println!("    {}", "⚙️  Systemd Services".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     println!("      {} Enabled: {}", "✓".green(), services.len().to_string().bright_white().bold());
                     for service in services.iter().take(15) {
@@ -1064,7 +1064,7 @@ pub fn inspect_image(
             if let Ok(runtimes) = g.inspect_runtimes(root) {
                 if !runtimes.is_empty() {
                     println!();
-                    println!("    {}", "💻 Language Runtimes".truecolor(255, 165, 0).bold());
+                    println!("    {}", "💻 Language Runtimes".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
 
                     // Define icons for each runtime
@@ -1090,7 +1090,7 @@ pub fn inspect_image(
             if let Ok(container_runtimes) = g.inspect_container_runtimes(root) {
                 if !container_runtimes.is_empty() {
                     println!();
-                    println!("    {}", "🐳 Container Runtimes".truecolor(255, 165, 0).bold());
+                    println!("    {}", "🐳 Container Runtimes".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     for runtime in &container_runtimes {
                         let (icon, name) = match runtime.as_str() {
@@ -1115,7 +1115,7 @@ pub fn inspect_image(
                     || !lvm_info.logical_volumes.is_empty()
                 {
                     println!();
-                    println!("    {}", "💾 LVM Configuration".truecolor(255, 165, 0).bold());
+                    println!("    {}", "💾 LVM Configuration".truecolor(222, 115, 86).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     if !lvm_info.physical_volumes.is_empty() {
                         println!("      {} Physical Volumes: {}", "🔷".bright_blue(), lvm_info.physical_volumes.join(", ").bright_white());
@@ -1126,7 +1126,7 @@ pub fn inspect_image(
                     }
                     if !lvm_info.logical_volumes.is_empty() {
                         let lv_names = lvm_info.logical_volumes.iter().map(|lv| lv.name.as_str()).collect::<Vec<_>>().join(", ");
-                        println!("      {} Logical Volumes: {}", "💿".bright_cyan(), lv_names.bright_white());
+                        println!("      {} Logical Volumes: {}", "💿".truecolor(222, 115, 86), lv_names.bright_white());
                     }
                 }
             }
@@ -1943,7 +1943,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
     println!("\n{}", "═".repeat(70).bright_blue());
     println!(
         "{} {}",
-        "💾 Disk Image:".bright_cyan().bold(),
+        "💾 Disk Image:".truecolor(222, 115, 86).bold(),
         image.display().to_string().bright_white()
     );
     println!("{}\n", "═".repeat(70).bright_blue());
@@ -1952,7 +1952,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
     println!("{}", "Block Devices".bright_white().bold());
     println!("{}", "─".repeat(50).bright_black());
     for device in devices {
-        println!("  {} {}", "▪".bright_cyan(), device.bright_white().bold());
+        println!("  {} {}", "▪".truecolor(222, 115, 86), device.bright_white().bold());
 
         if detailed {
             if let Ok(size) = g.blockdev_getsize64(&device) {
@@ -1960,7 +1960,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                 println!(
                     "    {} {} ({:.2} GiB)",
                     "Size:".dimmed(),
-                    size.to_string().truecolor(255, 165, 0),
+                    size.to_string().truecolor(222, 115, 86),
                     gb
                 );
             }
@@ -2002,8 +2002,8 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                 "  {} {} {} {}",
                 fs_icon,
                 partition.bright_white().bold(),
-                format!("({})", fstype).bright_cyan(),
-                format!("{:.1} GiB", gb).truecolor(255, 165, 0)
+                format!("({})", fstype).truecolor(222, 115, 86),
+                format!("{:.1} GiB", gb).truecolor(222, 115, 86)
             );
 
             if let Ok(label) = g.vfs_label(&partition) {
@@ -2053,7 +2053,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                     "  {} {} {}",
                     "▸".bright_magenta(),
                     lv.bright_white().bold(),
-                    format!("{:.1} GiB", gb).truecolor(255, 165, 0)
+                    format!("{:.1} GiB", gb).truecolor(222, 115, 86)
                 );
             }
         }
@@ -2444,7 +2444,7 @@ pub fn systemd_journal_command(
                     0..=2 => print!("{}", entry.priority_str().red()),
                     3 => print!("{}", entry.priority_str().bright_red()),
                     4 => print!("{}", entry.priority_str().yellow()),
-                    5 => print!("{}", entry.priority_str().cyan()),
+                    5 => print!("{}", entry.priority_str().truecolor(222, 115, 86)),
                     _ => print!("{}", entry.priority_str().white()),
                 }
                 print!("] ");
