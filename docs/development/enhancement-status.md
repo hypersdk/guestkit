@@ -419,9 +419,9 @@ These are longer-term enhancements for future releases.
 ## Getting Help
 
 ### Implementation Questions
-- See detailed guides in [`NEXT_ENHANCEMENTS.md`](NEXT_ENHANCEMENTS.md)
-- Check [`ENHANCEMENT_ROADMAP.md`](ENHANCEMENT_ROADMAP.md) for full feature list
-- Review [`ENHANCEMENTS_IMPLEMENTED.md`](ENHANCEMENTS_IMPLEMENTED.md) for examples
+- See detailed guides in [`next-enhancements.md`](next-enhancements.md)
+- Check [`enhancement-roadmap.md`](enhancement-roadmap.md) for full feature list
+- Review [`enhancements-implemented.md`](enhancements-implemented.md) for examples
 
 ### Resources
 - **PyO3 Docs:** https://pyo3.rs
@@ -436,7 +436,7 @@ These are longer-term enhancements for future releases.
 **Ready to start Phase 2!**
 
 The recommended next step is:
-1. Review the PyPI Publication guide in [`NEXT_ENHANCEMENTS.md`](NEXT_ENHANCEMENTS.md)
+1. Review the PyPI Publication guide in [`next-enhancements.md`](next-enhancements.md)
 2. Set up PyPI account if needed
 3. Configure `pyproject.toml` with complete metadata
 4. Create GitHub Actions workflow

@@ -38,7 +38,7 @@ Transform GuestCtl into the **premier disk image manipulation toolkit** - faster
 - Integration test matrix (Ubuntu, Debian, Fedora, Arch)
 - Performance baseline establishment
 
-**📖 Details:** [`docs/QUICK_WINS.md`](docs/QUICK_WINS.md) - Ready-to-implement code examples
+**📖 Details:** See quick-priorities.md for ready-to-implement code examples
 
 ---
 
@@ -165,7 +165,7 @@ Transform GuestCtl into the **premier disk image manipulation toolkit** - faster
 ## Detailed Documentation
 
 ### Enhancement Planning
-- 📋 **[Enhancement Roadmap](docs/ENHANCEMENT_ROADMAP.md)** - Comprehensive 10-section plan covering:
+- 📋 **[Enhancement Roadmap](enhancement-roadmap.md)** - Comprehensive 10-section plan covering:
   - Performance & Scalability
   - Developer Experience (CLI, REPL, Web UI)
   - Language Ecosystem
@@ -178,15 +178,15 @@ Transform GuestCtl into the **premier disk image manipulation toolkit** - faster
   - Community & Governance
 
 ### Quick Start
-- ⚡ **[Quick Wins Guide](docs/QUICK_WINS.md)** - High-impact, low-effort improvements:
+- ⚡ **[Quick Priorities](quick-priorities.md)** - High-impact, low-effort improvements:
   - Week 1: CLI Tool (complete implementation)
   - Week 2: Progress bars + Better errors
   - Week 3: Benchmarks + Integration tests
 
 ### API Documentation
-- 🦀 **[Ergonomic API Guide](docs/ERGONOMIC_API.md)** - Type-safe builder patterns
-- 🔄 **[Migration Guide](docs/MIGRATION_GUIDE.md)** - Adopting the ergonomic API
-- 🐍 **[Python Bindings](docs/PYTHON_BINDINGS.md)** - Complete Python documentation
+- 🦀 **[Ergonomic API Guide](../api/ergonomic-design.md)** - Type-safe builder patterns
+- 🔄 **[Migration Guide](../api/migration-guide.md)** - Adopting the ergonomic API
+- 🐍 **[Python Bindings](../user-guides/python-bindings.md)** - Complete Python documentation
 
 ---
 
@@ -332,8 +332,8 @@ When evaluating features, we prioritize based on:
 
 ## Questions?
 
-- 📖 Read the **[Enhancement Roadmap](docs/ENHANCEMENT_ROADMAP.md)** for detailed plans
-- ⚡ Check **[Quick Wins](docs/QUICK_WINS.md)** for immediate tasks
+- 📖 Read the **[Enhancement Roadmap](enhancement-roadmap.md)** for detailed plans
+- ⚡ Check **[Quick Priorities](quick-priorities.md)** for immediate tasks
 - 💬 Open a **GitHub Discussion** for questions
 - 🐛 File an **Issue** for bugs or feature requests
 

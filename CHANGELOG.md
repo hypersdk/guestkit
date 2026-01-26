@@ -115,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - PyPI Publication Setup 📦
 - **GitHub Actions Workflow**: Automated wheel building for Linux (x86_64, aarch64) and macOS (x86_64, aarch64)
 - **PyPI Publishing**: Complete setup for publishing to PyPI via Trusted Publishing (OIDC)
-- **PyPI Publishing Guide**: Comprehensive documentation at `docs/guides/PYPI_PUBLISHING.md`
+- **PyPI Publishing Guide**: Comprehensive documentation at `docs/development/publishing.md`
 - **Test Script**: `scripts/test_pypi_build.sh` for local build verification
 - **Enhanced Metadata**: Updated `pyproject.toml` with complete PyPI metadata
   - Added Python 3.13 support
@@ -145,7 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - Documentation
 - `docs/README.md` - Complete documentation index with navigation guide
-- `docs/guides/PYPI_PUBLISHING.md` - Comprehensive PyPI publishing guide
+- `docs/development/publishing.md` - Comprehensive PyPI publishing guide
 - `docs/development/NEXT_ENHANCEMENTS.md` - Detailed guides for next 5 priority features
 - `docs/development/ENHANCEMENT_STATUS.md` - Current status and roadmap tracker
 - `docs/development/ENHANCEMENTS_IMPLEMENTED.md` - Summary of all implemented enhancements
@@ -245,7 +245,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JSON mode usage
   - Error handling guide
   - Best practices and tips
-- `docs/ENHANCEMENT_ROADMAP.md` (600 lines) - 10-phase long-term vision
+- `docs/development/enhancement-roadmap.md` (600 lines) - 10-phase long-term vision
 - `docs/QUICK_WINS.md` (500 lines) - 3-week implementation guide
 - `docs/WEEK1_COMPLETE.md` (500 lines) - CLI tool delivery summary
 - `docs/WEEK2_COMPLETE.md` (400 lines) - UX enhancements summary
@@ -383,7 +383,7 @@ guestctl inspect disk.img
 - **API_REFERENCE.md** (952 lines) - Complete API documentation with examples
 - **CONTRIBUTING.md** (452 lines) - Developer contribution guidelines
 - **SECURITY.md** (322 lines) - Security policy and vulnerability reporting
-- **docs/ARCHITECTURE.md** (550+ lines) - Architecture deep-dive
+- **docs/architecture/overview.md** (550+ lines) - Architecture deep-dive
   - High-level architecture with diagrams
   - Core concepts and design patterns
   - Module architecture explained

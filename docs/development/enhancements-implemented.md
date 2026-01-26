@@ -317,10 +317,9 @@ cargo test --all-features
 
 ## 🔗 References
 
-- Implementation guide: [`QUICK_ENHANCEMENTS.md`](QUICK_ENHANCEMENTS.md)
-- Future plans: [`ENHANCEMENT_ROADMAP.md`](ENHANCEMENT_ROADMAP.md)
-- Python API: [`docs/PYTHON_API_REFERENCE.md`](docs/PYTHON_API_REFERENCE.md)
-- Testing guide: [`docs/TESTING.md`](docs/TESTING.md)
+- Implementation guide: [`quick-enhancements.md`](quick-enhancements.md)
+- Future plans: [`enhancement-roadmap.md`](enhancement-roadmap.md)
+- Python API: [`docs/api/python-reference.md`](../api/python-reference.md)
 
 ---
 

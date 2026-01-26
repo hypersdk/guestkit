@@ -665,9 +665,9 @@ Goodbye!
 
 ## See Also
 
-- [CLI Guide](CLI_GUIDE.md) - Standard CLI usage
-- [Quick Start](QUICKSTART.md) - Getting started with GuestCtl
-- [Troubleshooting](TROUBLESHOOTING.md) - Common issues
+- [CLI Guide](cli-guide.md) - Standard CLI usage
+- [Quick Start](getting-started.md) - Getting started with GuestCtl
+- [Troubleshooting](troubleshooting.md) - Common issues
 
 ---
 

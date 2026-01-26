@@ -55,7 +55,7 @@
 - README.md: Add PyPI installation, interactive mode quickstart
 - docs/README.md: Update with new guides
 - CHANGELOG.md: Add v0.3.0 release notes
-- docs/guides/QUICKSTART.md: Update with pip install
+- docs/user-guides/getting-started.md: Update with pip install
 ```
 
 ---
@@ -221,7 +221,7 @@
 ## ⚡ QUICK WINS (Anytime)
 
 ### Easy Improvements (1-2 hours each)
-1. **Add more examples** to docs/guides/
+1. **Add more examples** to docs/user-guides/
 2. **Create video demo** of interactive mode
 3. **Write blog post** about Rust+
 4. **Add badges** to README (PyPI, docs, build status)
