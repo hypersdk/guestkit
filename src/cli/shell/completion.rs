@@ -5,10 +5,12 @@ use rustyline::completion::{Completer, Pair};
 use rustyline::Context;
 use rustyline::Result;
 
+#[allow(dead_code)]
 pub struct ShellCompleter {
     commands: Vec<String>,
 }
 
+#[allow(dead_code)]
 impl ShellCompleter {
     pub fn new() -> Self {
         Self {

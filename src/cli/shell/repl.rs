@@ -4,11 +4,10 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use rustyline::error::ReadlineError;
-use rustyline::{DefaultEditor, Editor};
+use rustyline::DefaultEditor;
 use std::path::Path;
 
 use super::commands::{self, ShellContext};
-use super::completion::ShellCompleter;
 use guestctl::Guestfs;
 
 /// Run interactive shell
@@ -150,6 +149,9 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     }
                     "risks" => {
                         cmd_risks(&mut ctx);
+                    }
+                    "ai" => {
+                        let _ = commands::cmd_ai(&mut ctx, args);
                     }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",

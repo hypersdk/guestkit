@@ -89,9 +89,24 @@ guestctl inspect vm.qcow2
       🐳 Docker
 ```
 
-**Interactive mode:**
+**Interactive mode with 97+ commands:**
 ```bash
 guestctl interactive vm.qcow2
+```
+
+**AI-Powered Diagnostics (optional):**
+```bash
+# Build with AI support
+cargo build --release --features ai
+
+# Set your OpenAI API key
+export OPENAI_API_KEY='your-key-here'
+
+# Use AI assistant in interactive mode
+guestctl interactive vm.qcow2
+> ai why won't this boot?
+> ai what security issues do you see?
+> ai analyze disk usage patterns
 ```
 
 **Python API:**
@@ -217,6 +232,12 @@ guestctl inspect vm.raw  # Now uses loop device!
 - 📖 **Rich Documentation** - Comprehensive guides and API references
 
 ### Advanced CLI Features (guestctl)
+
+- 🤖 **AI-Powered Diagnostics** (optional) - OpenAI GPT-4o integration for intelligent VM troubleshooting
+  - Ask natural language questions about VM issues
+  - Get expert analysis of boot failures, disk problems, and configuration issues
+  - AI assistant with 97+ interactive commands for VM modification
+  - Requires `--features ai` build flag and `OPENAI_API_KEY` environment variable
 
 - 🎯 **Killer Summary View** - Quick summary box showing OS product, architecture, hostname at a glance
   - Color-coded information: Green (OS product), Cyan (architecture), Blue (hostname)
@@ -993,19 +1014,30 @@ guestctl uses Cargo features for optional functionality:
 - **`disk-ops`** (default) - Disk operation utilities
 - **`guest-inspect`** (default) - Guest OS inspection
 - **`python-bindings`** (optional) - PyO3 Python bindings
+- **`ai`** (optional) - AI-powered diagnostics with OpenAI GPT-4o integration
 
 ```toml
 [dependencies]
-guestctl = { version = "0.1", features = ["guest-inspect"] }
+guestctl = { version = "0.3", features = ["guest-inspect"] }
 
 # With Python bindings
-guestctl = { version = "0.1", features = ["python-bindings"] }
+guestctl = { version = "0.3", features = ["python-bindings"] }
+
+# With AI diagnostics
+guestctl = { version = "0.3", features = ["ai"] }
 ```
 
-Build with Python bindings:
+Build with optional features:
 
 ```bash
+# Python bindings
 cargo build --features python-bindings
+
+# AI diagnostics (requires OPENAI_API_KEY environment variable)
+cargo build --features ai
+
+# All features
+cargo build --all-features
 ```
 
 ## Roadmap
