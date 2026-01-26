@@ -5,7 +5,6 @@ use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
 use guestctl::export::{HtmlExporter, HtmlExportOptions};
 use guestctl::export::html::{InspectionData, FilesystemInfo, PackageInfo, UserInfo, NetworkInterface};
-use std::io::Write;
 use tempfile::NamedTempFile;
 
 /// Generate HTML report from inspection data using Chart.js

@@ -41,7 +41,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .take(area.height.saturating_sub(2) as usize)
         .map(|svc| {
             // Determine status symbol and color based on state and enabled status
-            let (status_symbol, status_color) = match (svc.enabled, svc.state.as_str()) {
+            let (status_symbol, _status_color) = match (svc.enabled, svc.state.as_str()) {
                 (true, "running") => ("🟢", SUCCESS_COLOR),
                 (true, "active") => ("🟢", SUCCESS_COLOR),
                 (true, _) => ("🟡", WARNING_COLOR),

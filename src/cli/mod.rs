@@ -16,6 +16,8 @@ pub mod tui;
 
 pub use batch::*;
 pub use interactive::*;
+// Parallel inspection features - currently unused but available for future use
+#[allow(unused_imports)]
 pub use parallel::{
     inspect_batch, inspect_batch_with_workers, InspectionConfig, InspectionResult,
     ParallelInspector, ProgressiveInspector,

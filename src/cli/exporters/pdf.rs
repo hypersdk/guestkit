@@ -7,10 +7,10 @@ use guestctl::export::{PaperSize, PdfExporter, PdfExportOptions};
 use guestctl::export::pdf::{
     FilesystemInfo, InspectionData, NetworkInterface, PackageInfo, UserInfo,
 };
-use std::io::Write;
 use tempfile::NamedTempFile;
 
 /// Generate PDF report from inspection data
+#[allow(dead_code)]
 pub fn generate_pdf_report(report: &InspectionReport) -> Result<String> {
     // Convert InspectionReport to InspectionData for the PDF exporter
     let data = convert_to_inspection_data(report);

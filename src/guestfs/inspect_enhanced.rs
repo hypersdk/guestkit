@@ -19,7 +19,7 @@ const DEFAULT_LOCALE: &str = "/etc/default/locale";
 const SYSTEMD_SERVICES_DIR: &str = "/etc/systemd/system/multi-user.target.wants";
 const SYSTEMD_TIMERS_DIR: &str = "/etc/systemd/system/timers.target.wants";
 const FSTAB: &str = "/etc/fstab";
-const HOSTNAME: &str = "/etc/hostname";
+const _HOSTNAME: &str = "/etc/hostname";
 const HOSTS: &str = "/etc/hosts";
 const SYSCTL_CONF: &str = "/etc/sysctl.conf";
 const CRONTAB: &str = "/etc/crontab";
@@ -810,7 +810,7 @@ impl Guestfs {
     }
 
     /// Detect LVM configuration
-    pub fn inspect_lvm(&mut self, root: &str) -> Result<LVMInfo> {
+    pub fn inspect_lvm(&mut self, _root: &str) -> Result<LVMInfo> {
         let mut lvm_info = LVMInfo {
             physical_volumes: Vec::new(),
             volume_groups: Vec::new(),
