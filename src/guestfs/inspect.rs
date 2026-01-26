@@ -43,7 +43,7 @@ impl Guestfs {
     pub fn inspect_os(&mut self) -> Result<Vec<String>> {
         self.ensure_ready()?;
 
-        let mut roots = Vec::new();
+        let mut roots = crate::core::mem_optimize::vec_for_partitions();
 
         // Try to scan and activate LVM volumes
         // This is needed for RHEL/CentOS/Fedora/Ubuntu VMs that use LVM

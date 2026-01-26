@@ -51,12 +51,12 @@ enum Commands {
         #[arg(long, value_name = "PATH")]
         export_output: Option<PathBuf>,
 
-        /// Enable caching of inspection results
+        /// Disable caching of inspection results (enabled by default)
         #[arg(long)]
-        cache: bool,
+        no_cache: bool,
 
         /// Force refresh cache (ignore existing cached results)
-        #[arg(long, requires = "cache")]
+        #[arg(long)]
         cache_refresh: bool,
     },
 
@@ -214,9 +214,9 @@ enum Commands {
         #[arg(short, long, value_name = "FORMAT")]
         output: Option<String>,
 
-        /// Enable caching of inspection results
+        /// Disable caching of inspection results (enabled by default)
         #[arg(long)]
-        cache: bool,
+        no_cache: bool,
     },
 
     /// Clear inspection cache
@@ -334,7 +334,7 @@ fn main() -> anyhow::Result<()> {
             profile,
             export,
             export_output,
-            cache,
+            no_cache,
             cache_refresh,
         } => {
             use cli::formatters::OutputFormat;
@@ -352,7 +352,7 @@ fn main() -> anyhow::Result<()> {
                 profile,
                 export,
                 export_output,
-                cache,
+                !no_cache,  // Cache enabled by default, disabled with --no-cache
                 cache_refresh,
             )?;
         }
@@ -462,7 +462,7 @@ fn main() -> anyhow::Result<()> {
             images,
             parallel,
             output,
-            cache,
+            no_cache,
         } => {
             use cli::formatters::OutputFormat;
             let output_format = output
@@ -471,7 +471,7 @@ fn main() -> anyhow::Result<()> {
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            inspect_batch(&images, parallel, cli.verbose, output_format, cache)?;
+            inspect_batch(&images, parallel, cli.verbose, output_format, !no_cache)?;  // Cache enabled by default
         }
 
         Commands::CacheClear => {
