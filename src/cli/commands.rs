@@ -387,7 +387,7 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Enumerating block devices...");
     }
-    println!("\n{}", "💾 Block Devices".bright_yellow().bold());
+    println!("\n{}", "💾 Block Devices".truecolor(255, 165, 0).bold());
     println!("{}", "─".repeat(60).bright_black());
     let devices = g.list_devices()?;
     for device in &devices {
@@ -396,7 +396,7 @@ pub fn inspect_image(
             eprintln!("[VERBOSE] Found device: {} ({} bytes)", device, size);
         }
         println!("  {} {} {} ({:.2} GB)",
-            "▪".bright_yellow(),
+            "▪".truecolor(255, 165, 0),
             device.bright_white().bold(),
             format!("{} bytes", size).bright_black(),
             size as f64 / 1e9);
@@ -418,14 +418,14 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Analyzing partition table...");
     }
-    println!("\n{}", "🗂  Partitions".bright_yellow().bold());
+    println!("\n{}", "🗂  Partitions".truecolor(255, 165, 0).bold());
     println!("{}", "─".repeat(60).bright_black());
     let partitions = g.list_partitions()?;
     for partition in &partitions {
         if verbose {
             eprintln!("[VERBOSE] Examining partition: {}", partition);
         }
-        println!("  {} {}", "📦".bright_yellow(), partition.bright_white().bold());
+        println!("  {} {}", "📦".truecolor(255, 165, 0), partition.bright_white().bold());
 
         if let Ok(part_list) = g.part_list("/dev/sda") {
             let part_num = g.part_to_partnum(partition)?;
@@ -448,7 +448,7 @@ pub fn inspect_image(
         eprintln!("[VERBOSE] Detecting partition scheme...");
     }
     if let Ok(scheme) = g.part_get_parttype("/dev/sda") {
-        println!("\n{}", "⚙️  Partition Scheme".bright_yellow().bold());
+        println!("\n{}", "⚙️  Partition Scheme".truecolor(255, 165, 0).bold());
         println!("{}", "─".repeat(60).bright_black());
         let scheme_icon = match scheme.as_str() {
             "gpt" => "🔷",
@@ -465,7 +465,7 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Detecting filesystems...");
     }
-    println!("\n{}", "📁 Filesystems".bright_yellow().bold());
+    println!("\n{}", "📁 Filesystems".truecolor(255, 165, 0).bold());
     println!("{}", "─".repeat(60).bright_black());
     let filesystems = g.list_filesystems()?;
     for (device, fstype) in &filesystems {
@@ -621,13 +621,13 @@ pub fn inspect_image(
                 if major > 0 || minor > 0 {
                     print!("{} ", format!("v{}.{}", major, minor).bright_white());
                 }
-                println!("({})", distro.bright_yellow());
+                println!("({})", distro.truecolor(255, 165, 0));
             }
         }
         println!();
     }
 
-    println!("{}", "🖥️  Operating Systems".bright_yellow().bold());
+    println!("{}", "🖥️  Operating Systems".truecolor(255, 165, 0).bold());
     println!("{}", "─".repeat(60).bright_black());
 
     if roots.is_empty() {
@@ -640,7 +640,7 @@ pub fn inspect_image(
             if verbose {
                 eprintln!("[VERBOSE] Inspecting OS at root: {}", root);
             }
-            println!("  {} Root: {}", "🔹".bright_yellow(), root.bright_white().bold());
+            println!("  {} Root: {}", "🔹".truecolor(255, 165, 0), root.bright_white().bold());
             println!();
 
             if let Ok(ostype) = g.inspect_get_type(root) {
@@ -725,7 +725,7 @@ pub fn inspect_image(
                 if init == "unknown" {
                     println!("    {} Init system:  {}", "⚡".bright_black(), init.bright_black());
                 } else {
-                    println!("    {} Init system:  {}", "⚡".yellow(), init.bright_yellow().bold());
+                    println!("    {} Init system:  {}", "⚡".yellow(), init.truecolor(255, 165, 0).bold());
                 }
             }
 
@@ -881,7 +881,7 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Gathering system configuration...");
             }
             println!();
-            println!("    {}", "⚙️  System Configuration".bright_yellow().bold());
+            println!("    {}", "⚙️  System Configuration".truecolor(255, 165, 0).bold());
             println!("    {}", "─".repeat(56).bright_black());
 
             if let Ok(timezone) = g.inspect_timezone(root) {
@@ -934,7 +934,7 @@ pub fn inspect_image(
             if let Ok(interfaces) = g.inspect_network(root) {
                 if !interfaces.is_empty() {
                     println!();
-                    println!("    {}", "🌐 Network Configuration".bright_yellow().bold());
+                    println!("    {}", "🌐 Network Configuration".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     for iface in &interfaces {
                         println!("      {} Interface: {}", "📡".yellow(), iface.name.bright_white().bold());
@@ -982,7 +982,7 @@ pub fn inspect_image(
 
                 if !regular_users.is_empty() || !system_users.is_empty() {
                     println!();
-                    println!("    {}", "👥 User Accounts".bright_yellow().bold());
+                    println!("    {}", "👥 User Accounts".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
 
                     if !regular_users.is_empty() {
@@ -1012,7 +1012,7 @@ pub fn inspect_image(
             if let Ok(ssh_config) = g.inspect_ssh_config(root) {
                 if !ssh_config.is_empty() {
                     println!();
-                    println!("    {}", "🔐 SSH Configuration".bright_yellow().bold());
+                    println!("    {}", "🔐 SSH Configuration".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     if let Some(port) = ssh_config.get("Port") {
                         println!("      {} Port: {}", "•".bright_black(), port.bright_white().bold());
@@ -1041,7 +1041,7 @@ pub fn inspect_image(
             if let Ok(services) = g.inspect_systemd_services(root) {
                 if !services.is_empty() {
                     println!();
-                    println!("    {}", "⚙️  Systemd Services".bright_yellow().bold());
+                    println!("    {}", "⚙️  Systemd Services".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     println!("      {} Enabled: {}", "✓".green(), services.len().to_string().bright_white().bold());
                     for service in services.iter().take(15) {
@@ -1060,7 +1060,7 @@ pub fn inspect_image(
             if let Ok(runtimes) = g.inspect_runtimes(root) {
                 if !runtimes.is_empty() {
                     println!();
-                    println!("    {}", "💻 Language Runtimes".bright_yellow().bold());
+                    println!("    {}", "💻 Language Runtimes".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
 
                     // Define icons for each runtime
@@ -1086,7 +1086,7 @@ pub fn inspect_image(
             if let Ok(container_runtimes) = g.inspect_container_runtimes(root) {
                 if !container_runtimes.is_empty() {
                     println!();
-                    println!("    {}", "🐳 Container Runtimes".bright_yellow().bold());
+                    println!("    {}", "🐳 Container Runtimes".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     for runtime in &container_runtimes {
                         let (icon, name) = match runtime.as_str() {
@@ -1111,7 +1111,7 @@ pub fn inspect_image(
                     || !lvm_info.logical_volumes.is_empty()
                 {
                     println!();
-                    println!("    {}", "💾 LVM Configuration".bright_yellow().bold());
+                    println!("    {}", "💾 LVM Configuration".truecolor(255, 165, 0).bold());
                     println!("    {}", "─".repeat(56).bright_black());
                     if !lvm_info.physical_volumes.is_empty() {
                         println!("      {} Physical Volumes: {}", "🔷".bright_blue(), lvm_info.physical_volumes.join(", ").bright_white());
@@ -1954,7 +1954,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                 println!(
                     "    {} {} ({:.2} GiB)",
                     "Size:".dimmed(),
-                    size.to_string().bright_yellow(),
+                    size.to_string().truecolor(255, 165, 0),
                     gb
                 );
             }
@@ -1997,7 +1997,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                 fs_icon,
                 partition.bright_white().bold(),
                 format!("({})", fstype).bright_cyan(),
-                format!("{:.1} GiB", gb).bright_yellow()
+                format!("{:.1} GiB", gb).truecolor(255, 165, 0)
             );
 
             if let Ok(label) = g.vfs_label(&partition) {
@@ -2047,7 +2047,7 @@ pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Resul
                     "  {} {} {}",
                     "▸".bright_magenta(),
                     lv.bright_white().bold(),
-                    format!("{:.1} GiB", gb).bright_yellow()
+                    format!("{:.1} GiB", gb).truecolor(255, 165, 0)
                 );
             }
         }

@@ -1,6 +1,14 @@
-# GuestCtl CLI Guide
+# GuestCtl CLI Guide (v0.3.1)
 
 `guestctl` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
+
+## What's New in v0.3.1
+
+- **🎯 Killer Summary View**: Quick boxed summary showing OS, architecture, hostname at a glance
+- **🪟 Windows Registry Parsing**: Full Windows version detection via direct registry access
+- **🔄 VM Migration Support**: Universal fstab/crypttab rewriter for cross-platform migration
+- **💾 Smart LVM Cleanup**: Automatic LVM volume group cleanup during shutdown
+- **🔄 Loop Device Primary**: Built-in support for RAW/IMG/ISO formats without kernel modules
 
 ## Installation
 
