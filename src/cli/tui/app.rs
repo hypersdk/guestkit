@@ -164,7 +164,7 @@ pub struct App {
     pub security: SecurityInfo,
     pub users: Vec<UserAccount>,
 
-    pub hosts: Vec<HostEntry>,
+    pub _hosts: Vec<HostEntry>,
     pub fstab: Vec<(String, String, String)>,
     pub lvm_info: Option<LVMInfo>,
     pub raid_arrays: Vec<RAIDArray>,
@@ -323,7 +323,7 @@ impl App {
             firewall,
             security,
             users,
-            hosts,
+            _hosts: hosts,
             fstab,
             lvm_info,
             raid_arrays,

@@ -4,6 +4,9 @@
 //! This module provides parallel batch inspection capabilities using rayon,
 //! enabling efficient processing of multiple VM disks concurrently.
 //!
+//! Note: Currently unused but available for future parallel inspection features.
+#![allow(dead_code)]
+//!
 //! # Performance
 //!
 //! - Sequential: Process one disk at a time
@@ -363,7 +366,7 @@ impl ProgressiveInspector {
     pub fn inspect_batch_with_progress<P, F>(
         &self,
         disk_paths: &[P],
-        mut progress_callback: F,
+        progress_callback: F,
     ) -> Result<Vec<InspectionResult>>
     where
         P: AsRef<Path> + Send + Sync,

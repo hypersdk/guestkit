@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Event handling module
+//!
+//! Note: Currently unused but available for future async event handling.
+#![allow(dead_code)]
 
 use crossterm::event::{self, Event, KeyEvent};
 use std::time::Duration;
