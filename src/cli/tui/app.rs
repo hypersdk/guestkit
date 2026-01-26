@@ -810,4 +810,51 @@ impl App {
 
         (critical, high, medium)
     }
+
+    /// Calculate overall system health score (0-100)
+    pub fn calculate_health_score(&self) -> u8 {
+        let mut score: u8 = 100;
+
+        // Deduct points for critical/high/medium risks
+        let (critical, high, medium) = self.get_risk_summary();
+        score = score.saturating_sub((critical * 20) as u8);
+        score = score.saturating_sub((high * 10) as u8);
+        score = score.saturating_sub((medium * 5) as u8);
+
+        // Deduct points for missing security features
+        if &self.security.selinux == "disabled" {
+            score = score.saturating_sub(10);
+        }
+        if !self.firewall.enabled {
+            score = score.saturating_sub(15);
+        }
+        if !self.security.auditd {
+            score = score.saturating_sub(5);
+        }
+        if !self.security.fail2ban {
+            score = score.saturating_sub(5);
+        }
+        if !self.security.aide {
+            score = score.saturating_sub(5);
+        }
+
+        // Bonus points for good practices
+        if self.security.apparmor || &self.security.selinux != "disabled" {
+            score = (score + 5).min(100);
+        }
+
+        score
+    }
+
+    /// Get health status message and color based on score
+    pub fn get_health_status(&self) -> (&str, &str) {
+        let score = self.calculate_health_score();
+        match score {
+            90..=100 => ("Excellent", "green"),
+            75..=89 => ("Good", "yellow"),
+            60..=74 => ("Fair", "orange"),
+            40..=59 => ("Poor", "red"),
+            _ => ("Critical", "red"),
+        }
+    }
 }
