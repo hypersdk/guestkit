@@ -226,12 +226,18 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let footer_text = if app.is_searching() {
+        let mode_indicator = app.get_search_mode_indicator();
         vec![
             Span::styled("🔍 ", Style::default().fg(ORANGE)),
             Span::styled("Search: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(mode_indicator, Style::default().fg(INFO_COLOR)),
             Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
             Span::styled("_", Style::default().fg(ORANGE)),
             Span::styled(" │ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+I", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Case • "),
+            Span::styled("Ctrl+R", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Regex • "),
             Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Cancel • "),
             Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
@@ -387,7 +393,19 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("/            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Start search/filter (searches are saved to history)              "),
+            Span::raw("Start search/filter (saved to history)                           "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+I       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle case-sensitive search (while searching)                   "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+R       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle regex mode (while searching)                              "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![

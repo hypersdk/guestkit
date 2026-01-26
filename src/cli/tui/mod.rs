@@ -125,6 +125,12 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
                     }
+                    KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
+                        app.toggle_case_sensitive();
+                    }
+                    KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
+                        app.toggle_regex_mode();
+                    }
                     KeyCode::Tab => app.next_view(),
                     KeyCode::BackTab => app.previous_view(),
                     KeyCode::Char('h') | KeyCode::F(1) => app.toggle_help(),
