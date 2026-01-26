@@ -77,11 +77,29 @@ pub fn draw(f: &mut Frame, app: &App) {
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
+    // Get current view icon and description
+    let (view_icon, view_desc) = match app.current_view {
+        View::Dashboard => ("📊", "System Overview"),
+        View::Network => ("🌐", "Network Configuration"),
+        View::Packages => ("📦", "Installed Packages"),
+        View::Services => ("⚙️ ", "System Services"),
+        View::Security => ("🔒", "Security Features"),
+        View::Storage => ("💾", "Storage & Filesystems"),
+        View::Users => ("👥", "User Accounts"),
+        View::Kernel => ("🧩", "Kernel Configuration"),
+        View::Profiles => ("🛡️ ", "Profile Reports"),
+    };
+
     let header_text = vec![
         Line::from(vec![
             Span::styled("GuestKit", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(" - "),
             Span::styled("VM Inspector", Style::default().fg(LIGHT_ORANGE)),
+            Span::raw("  │  "),
+            Span::raw(format!("{} ", view_icon)),
+            Span::styled(app.current_view.title(), Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": "),
+            Span::styled(view_desc, Style::default().fg(TEXT_COLOR)),
         ]),
         Line::from(vec![
             Span::styled("Image: ", Style::default().fg(TEXT_COLOR)),
