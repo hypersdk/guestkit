@@ -78,8 +78,8 @@ impl DiskConverter {
             )
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
-            let dict = pyo3::types::PyDict::new_bound(py);
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
             dict.set_item("source_path", result.source_path.to_str())?;
             dict.set_item("output_path", result.output_path.to_str())?;
             dict.set_item("source_format", result.source_format.as_str())?;
@@ -125,11 +125,11 @@ impl DiskConverter {
             .get_info(Path::new(&image))
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let json_str = serde_json::to_string(&info)
                 .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-            let json_module = py.import_bound("json")?;
+            let json_module = py.import("json")?;
             let loads = json_module.getattr("loads")?;
             let result = loads.call1((json_str,))?;
             Ok(result.into())
@@ -354,8 +354,8 @@ impl Guestfs {
             .inspect_get_mountpoints(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
-            let dict = pyo3::types::PyDict::new_bound(py);
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
             for (mountpoint, device) in mountpoints {
                 dict.set_item(mountpoint, device)?;
             }
@@ -586,10 +586,10 @@ impl Guestfs {
             .inspect_list_applications(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
-            let list = pyo3::types::PyList::empty_bound(py);
+        Python::attach(|py| {
+            let list = pyo3::types::PyList::empty(py);
             for app in apps {
-                let dict = pyo3::types::PyDict::new_bound(py);
+                let dict = pyo3::types::PyDict::new(py);
                 dict.set_item("app_name", &app.name)?;
                 dict.set_item("app_display_name", &app.display_name)?;
                 dict.set_item("app_epoch", app.epoch)?;
@@ -857,8 +857,8 @@ impl Guestfs {
             .stat(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
-            let dict = pyo3::types::PyDict::new_bound(py);
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
             dict.set_item("dev", stat.dev)?;
             dict.set_item("ino", stat.ino)?;
             dict.set_item("mode", stat.mode)?;
@@ -891,8 +891,8 @@ impl Guestfs {
             .statvfs(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
-            let dict = pyo3::types::PyDict::new_bound(py);
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
             for (key, value) in statvfs {
                 dict.set_item(key, value)?;
             }
@@ -1029,7 +1029,7 @@ impl AsyncGuestfs {
         _traceback: Option<&pyo3::Bound<'_, pyo3::types::PyAny>>,
     ) -> PyResult<pyo3::Bound<'p, pyo3::types::PyAny>> {
         pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let binding = slf.bind(py).borrow_mut();
                 let handle = binding.handle.clone();
                 drop(binding);
