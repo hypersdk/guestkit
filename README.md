@@ -5,8 +5,8 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![Crates.io](https://img.shields.io/crates/v/guestctl.svg)](https://crates.io/crates/guestctl)
-[![PyPI](https://img.shields.io/pypi/v/guestctl.svg)](https://pypi.org/project/guestctl/)
-[![Downloads](https://pepy.tech/badge/guestctl)](https://pepy.tech/project/guestctl)
+[![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
+[![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
 
 **✨ Latest (v0.3.1):**
 - **🤖 AI-Powered Diagnostics** - OpenAI GPT-4o integration for intelligent VM troubleshooting (optional)
@@ -39,7 +39,10 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 
 **Python Package (Recommended for Python users):**
 ```bash
-pip install guestctl
+pip install guestkit
+
+# Note: The package name is "guestkit" but you import "guestctl"
+# This maintains backwards compatibility with existing code
 ```
 
 **Rust Crate (Recommended for Rust developers):**
@@ -153,6 +156,8 @@ See [COMMANDS_SUMMARY.md](COMMANDS_SUMMARY.md) for complete command reference.
 
 **Python API:**
 ```python
+# Install: pip install guestkit
+# Import: from guestctl (module name for backwards compatibility)
 from guestctl import Guestfs
 
 with Guestfs() as g:
