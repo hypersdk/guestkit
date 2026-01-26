@@ -342,6 +342,7 @@ impl App {
         self.current_view = views[(current_idx + 1) % views.len()];
         self.scroll_offset = 0;
         self.selected_index = 0;
+        self.show_notification(format!("→ {}", self.current_view.title()));
     }
 
     pub fn previous_view(&mut self) {
@@ -350,6 +351,7 @@ impl App {
         self.current_view = views[(current_idx + views.len() - 1) % views.len()];
         self.scroll_offset = 0;
         self.selected_index = 0;
+        self.show_notification(format!("← {}", self.current_view.title()));
     }
 
     pub fn toggle_help(&mut self) {
@@ -365,6 +367,7 @@ impl App {
         // Save to history before clearing
         if !self.search_query.is_empty() {
             self.add_to_search_history(self.search_query.clone());
+            self.show_notification("Search saved to history".to_string());
         }
         self.searching = false;
         self.search_query.clear();
@@ -508,9 +511,11 @@ impl App {
             match self.do_export(format, &self.export_filename.clone()) {
                 Ok(()) => {
                     self.export_mode = Some(ExportMode::Success(self.export_filename.clone()));
+                    self.show_notification(format!("✓ Exported to {}", self.export_filename));
                 }
                 Err(e) => {
                     self.export_mode = Some(ExportMode::Error(e.to_string()));
+                    self.show_notification(format!("✗ Export failed: {}", e));
                 }
             }
         }
@@ -649,10 +654,14 @@ impl App {
 
     pub fn next_profile_tab(&mut self) {
         self.selected_profile_tab = (self.selected_profile_tab + 1) % 5;
+        let profile_names = ["Security", "Migration", "Performance", "Compliance", "Hardening"];
+        self.show_notification(format!("→ {} Profile", profile_names[self.selected_profile_tab]));
     }
 
     pub fn previous_profile_tab(&mut self) {
         self.selected_profile_tab = (self.selected_profile_tab + 4) % 5;
+        let profile_names = ["Security", "Migration", "Performance", "Compliance", "Hardening"];
+        self.show_notification(format!("← {} Profile", profile_names[self.selected_profile_tab]));
     }
 
     pub fn get_current_profile_report(&self) -> Option<&ProfileReport> {
@@ -684,6 +693,7 @@ impl App {
             self.current_view = views[index];
             self.scroll_offset = 0;
             self.selected_index = 0;
+            self.show_notification(format!("⚡ {} ({})", self.current_view.title(), index + 1));
         }
     }
 
