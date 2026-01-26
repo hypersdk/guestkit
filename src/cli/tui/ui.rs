@@ -11,17 +11,19 @@ use ratatui::{
     Frame,
 };
 
-// Orange color theme
-pub const ORANGE: Color = Color::Rgb(255, 165, 0);
-pub const DARK_ORANGE: Color = Color::Rgb(204, 85, 0);
-pub const LIGHT_ORANGE: Color = Color::Rgb(255, 200, 100);
+// Deep Orange color theme - Richer, more vibrant colors
+pub const ORANGE: Color = Color::Rgb(230, 115, 0);        // Deeper primary orange
+pub const DARK_ORANGE: Color = Color::Rgb(180, 70, 0);     // Richer dark orange
+pub const LIGHT_ORANGE: Color = Color::Rgb(255, 160, 50); // Warmer light orange
+pub const BURNT_ORANGE: Color = Color::Rgb(204, 85, 0);    // Burnt orange accent
 pub const BG_COLOR: Color = Color::Reset;
-pub const TEXT_COLOR: Color = Color::White;
+pub const TEXT_COLOR: Color = Color::Rgb(220, 220, 220);   // Softer white
 pub const HIGHLIGHT_COLOR: Color = ORANGE;
 pub const BORDER_COLOR: Color = DARK_ORANGE;
-pub const SUCCESS_COLOR: Color = Color::Green;
-pub const WARNING_COLOR: Color = Color::Yellow;
-pub const ERROR_COLOR: Color = Color::Red;
+pub const SUCCESS_COLOR: Color = Color::Rgb(50, 205, 50);  // Brighter green
+pub const WARNING_COLOR: Color = Color::Rgb(255, 200, 0);  // Deeper yellow
+pub const ERROR_COLOR: Color = Color::Rgb(220, 50, 47);    // Deep red
+pub const INFO_COLOR: Color = Color::Rgb(100, 150, 255);   // Soft blue
 
 pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
@@ -45,6 +47,10 @@ pub fn draw(f: &mut Frame, app: &App) {
 
     if app.show_export_menu {
         draw_export_menu(f, app);
+    }
+
+    if app.show_detail {
+        draw_detail_overlay(f, app);
     }
 }
 
@@ -113,18 +119,25 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::raw("ESC: Cancel"),
         ]
     } else {
-        vec![
+        let mut spans = vec![
+            Span::styled("1-9", Style::default().fg(ORANGE)),
+            Span::raw(": Jump | "),
             Span::styled("Tab", Style::default().fg(ORANGE)),
             Span::raw(": Switch | "),
-            Span::styled("p", Style::default().fg(ORANGE)),
-            Span::raw(": Profiles | "),
+            Span::styled("s", Style::default().fg(ORANGE)),
+            Span::raw(": Sort ["),
+            Span::styled(app.sort_mode.label(), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("] | "),
+            Span::styled("↵", Style::default().fg(ORANGE)),
+            Span::raw(": Detail | "),
             Span::styled("e", Style::default().fg(ORANGE)),
             Span::raw(": Export | "),
             Span::styled("h", Style::default().fg(ORANGE)),
             Span::raw(": Help | "),
             Span::styled("q", Style::default().fg(ORANGE)),
             Span::raw(": Quit"),
-        ]
+        ];
+        spans
     };
 
     let footer = Paragraph::new(Line::from(footer_text))
@@ -143,11 +156,23 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Navigation:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+            Span::styled("Quick Navigation:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  1-9            ", Style::default().fg(ORANGE)),
+            Span::raw("Jump directly to view (1=Dashboard, 2=Network, etc.)")
         ]),
         Line::from(vec![
             Span::styled("  Tab/Shift+Tab  ", Style::default().fg(ORANGE)),
             Span::raw("Switch between views")
+        ]),
+        Line::from(vec![
+            Span::styled("  p              ", Style::default().fg(ORANGE)),
+            Span::raw("Jump to Profiles view")
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Scrolling:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
         ]),
         Line::from(vec![
             Span::styled("  ↑/↓            ", Style::default().fg(ORANGE)),
@@ -166,12 +191,16 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::styled("Actions:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
         ]),
         Line::from(vec![
-            Span::styled("  /              ", Style::default().fg(ORANGE)),
-            Span::raw("Start search/filter")
+            Span::styled("  Enter          ", Style::default().fg(ORANGE)),
+            Span::raw("Toggle detail view for selected item")
         ]),
         Line::from(vec![
-            Span::styled("  p              ", Style::default().fg(ORANGE)),
-            Span::raw("Jump to Profiles view")
+            Span::styled("  s              ", Style::default().fg(ORANGE)),
+            Span::raw("Cycle sort mode (Default → Name ↑ → Name ↓)")
+        ]),
+        Line::from(vec![
+            Span::styled("  /              ", Style::default().fg(ORANGE)),
+            Span::raw("Start search/filter")
         ]),
         Line::from(vec![
             Span::styled("  e              ", Style::default().fg(ORANGE)),
@@ -182,16 +211,12 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::raw("Switch profile tabs (in Profiles view)")
         ]),
         Line::from(vec![
-            Span::styled("  Enter          ", Style::default().fg(ORANGE)),
-            Span::raw("Select/expand item")
-        ]),
-        Line::from(vec![
             Span::styled("  h or F1        ", Style::default().fg(ORANGE)),
             Span::raw("Toggle this help")
         ]),
         Line::from(vec![
             Span::styled("  q or ESC       ", Style::default().fg(ORANGE)),
-            Span::raw("Quit / Go back")
+            Span::raw("Quit / Go back / Cancel")
         ]),
         Line::from(vec![
             Span::styled("  Ctrl+C         ", Style::default().fg(ORANGE)),
@@ -360,6 +385,348 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
 
     f.render_widget(ratatui::widgets::Clear, area);
     f.render_widget(export_menu, area);
+}
+
+fn draw_detail_overlay(f: &mut Frame, app: &App) {
+    let area = centered_rect(70, 80, f.area());
+
+    let detail_text = match app.current_view {
+        View::Dashboard => generate_dashboard_details(app),
+        View::Network => generate_network_details(app),
+        View::Packages => generate_packages_details(app),
+        View::Services => generate_services_details(app),
+        View::Security => generate_security_details(app),
+        View::Storage => generate_storage_details(app),
+        View::Users => generate_users_details(app),
+        View::Kernel => generate_kernel_details(app),
+        View::Profiles => generate_profiles_details(app),
+    };
+
+    let detail = Paragraph::new(detail_text)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ORANGE))
+            .title(format!(" {} - Detailed View ", app.current_view.title()))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
+        .wrap(ratatui::widgets::Wrap { trim: false });
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(detail, area);
+}
+
+fn generate_dashboard_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("System Overview", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Operating System: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.os_name.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Version:          ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.os_version.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Kernel:           ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.kernel_version.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Architecture:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.architecture.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Hostname:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.hostname.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Init System:      ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.init_system.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Inventory Summary", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Packages:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Services:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Network Interfaces:", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.network_interfaces.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("User Accounts:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.users.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Kernel Modules:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.kernel_modules.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_network_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Network Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Total Interfaces: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.network_interfaces.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("DNS Servers:      ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.dns_servers.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("DNS Server List:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+    ]
+    .into_iter()
+    .chain(app.dns_servers.iter().take(10).map(|dns| {
+        Line::from(vec![
+            Span::raw("  • "),
+            Span::styled(dns.clone(), Style::default().fg(TEXT_COLOR)),
+        ])
+    }))
+    .chain(std::iter::once(Line::from("")))
+    .chain(std::iter::once(Line::from(vec![
+        Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+    ])))
+    .collect()
+}
+
+fn generate_packages_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Package Management", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Package Manager:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.packages.manager.clone(), Style::default().fg(ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("Total Packages:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Sort Mode:        ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.sort_mode.label().to_string(), Style::default().fg(ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press 's' to cycle sort modes", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_services_details(app: &App) -> Vec<Line<'static>> {
+    let enabled_count = app.services.iter().filter(|s| s.enabled).count();
+    vec![
+        Line::from(vec![
+            Span::styled("System Services", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Total Services:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Enabled:          ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", enabled_count), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Disabled:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.services.len() - enabled_count), Style::default().fg(WARNING_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_security_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Security Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("SELinux:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.security.selinux.clone(), Style::default().fg(if &app.security.selinux != "disabled" { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("AppArmor:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if app.security.apparmor { "enabled" } else { "disabled" }, Style::default().fg(if app.security.apparmor { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("fail2ban:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if app.security.fail2ban { "installed" } else { "not installed" }, Style::default().fg(if app.security.fail2ban { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("AIDE:       ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if app.security.aide { "installed" } else { "not installed" }, Style::default().fg(if app.security.aide { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("auditd:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if app.security.auditd { "enabled" } else { "disabled" }, Style::default().fg(if app.security.auditd { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Firewall:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.firewall.firewall_type.clone(), Style::default().fg(TEXT_COLOR)),
+            Span::raw(" "),
+            Span::styled(if app.firewall.enabled { "(enabled)" } else { "(disabled)" }, Style::default().fg(if app.firewall.enabled { SUCCESS_COLOR } else { ERROR_COLOR })),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_storage_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Storage Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Mount Points:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.fstab.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("LVM Configured:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if app.lvm_info.is_some() { "Yes" } else { "No" }, Style::default().fg(if app.lvm_info.is_some() { SUCCESS_COLOR } else { TEXT_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("RAID Arrays:      ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.raid_arrays.len()), Style::default().fg(if app.raid_arrays.is_empty() { TEXT_COLOR } else { SUCCESS_COLOR })),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_users_details(app: &App) -> Vec<Line<'static>> {
+    let root_users = app.users.iter().filter(|u| u.uid == "0").count();
+    let system_users = app.users.iter().filter(|u| {
+        if let Ok(uid) = u.uid.parse::<i32>() {
+            uid > 0 && uid < 1000
+        } else {
+            false
+        }
+    }).count();
+    let normal_users = app.users.iter().filter(|u| {
+        if let Ok(uid) = u.uid.parse::<i32>() {
+            uid >= 1000
+        } else {
+            false
+        }
+    }).count();
+
+    vec![
+        Line::from(vec![
+            Span::styled("User Accounts", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Total Users:      ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.users.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Root (UID 0):     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", root_users), Style::default().fg(if root_users > 1 { ERROR_COLOR } else { SUCCESS_COLOR })),
+        ]),
+        Line::from(vec![
+            Span::styled("System Users:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", system_users), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Normal Users:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", normal_users), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_kernel_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Kernel Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Boot Modules:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.kernel_modules.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Kernel Parameters:", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", app.kernel_params.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_profiles_details(app: &App) -> Vec<Line<'static>> {
+    let profiles_available = [
+        ("Security", app.security_profile.is_some()),
+        ("Migration", app.migration_profile.is_some()),
+        ("Performance", app.performance_profile.is_some()),
+        ("Compliance", app.compliance_profile.is_some()),
+        ("Hardening", app.hardening_profile.is_some()),
+    ];
+
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled("Profile Reports", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+    ];
+
+    for (name, available) in &profiles_available {
+        lines.push(Line::from(vec![
+            Span::styled(format!("{:12} ", name), Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(if *available { "✓ Available" } else { "✗ Not available" }, Style::default().fg(if *available { SUCCESS_COLOR } else { WARNING_COLOR })),
+        ]));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::styled("Use ←/→ to switch between profile tabs", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+    ]));
+
+    lines
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
