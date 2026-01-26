@@ -7,6 +7,7 @@ use guestctl::guestfs::inspect_enhanced::{
     RAIDArray, SecurityInfo, SystemService, UserAccount, VolumeGroup, WebServer,
 };
 use guestctl::Guestfs;
+use std::collections::HashMap;
 use std::path::Path;
 
 use crate::cli::profiles::{
@@ -60,6 +61,7 @@ pub enum View {
     Security,
     Storage,
     Users,
+    Kernel,
     Profiles,
 }
 
@@ -73,6 +75,7 @@ impl View {
             View::Security => "Security",
             View::Storage => "Storage",
             View::Users => "Users",
+            View::Kernel => "Kernel",
             View::Profiles => "Profiles",
         }
     }
@@ -86,6 +89,7 @@ impl View {
             View::Security,
             View::Storage,
             View::Users,
+            View::Kernel,
             View::Profiles,
         ]
     }
@@ -132,6 +136,10 @@ pub struct App {
     pub fstab: Vec<(String, String, String)>,
     pub lvm_info: Option<LVMInfo>,
     pub raid_arrays: Vec<RAIDArray>,
+
+    // Kernel configuration
+    pub kernel_modules: Vec<String>,
+    pub kernel_params: HashMap<String, String>,
 
     // Profile reports
     pub security_profile: Option<ProfileReport>,
@@ -226,6 +234,12 @@ impl App {
         let lvm_info = guestfs.inspect_lvm(root).ok();
         let raid_arrays = guestfs.inspect_raid(root).unwrap_or_default();
 
+        // Kernel configuration
+        let kernel_modules = guestfs.inspect_kernel_modules(root)
+            .unwrap_or_default();
+        let kernel_params = guestfs.inspect_kernel_params(root)
+            .unwrap_or_default();
+
         // Execute profiles
         let security_profile = SecurityProfile.inspect(&mut guestfs, root).ok();
         let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
@@ -272,6 +286,9 @@ impl App {
             fstab,
             lvm_info,
             raid_arrays,
+
+            kernel_modules,
+            kernel_params,
 
             security_profile,
             migration_profile,
@@ -390,6 +407,7 @@ impl App {
             View::Security => "security",
             View::Storage => "storage",
             View::Users => "users",
+            View::Kernel => "kernel",
             View::Profiles => "profiles",
         };
         self.export_filename = format!(
@@ -539,6 +557,14 @@ impl App {
                 "view": "users",
                 "count": self.users.len(),
                 "users": self.users,
+            }),
+            View::Kernel => json!({
+                "view": "kernel",
+                "modules": {
+                    "count": self.kernel_modules.len(),
+                    "list": self.kernel_modules,
+                },
+                "parameters": self.kernel_params,
             }),
             View::Profiles => {
                 let current_profile = match self.selected_profile_tab {

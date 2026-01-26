@@ -99,6 +99,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Security => views::security::draw(f, area, app),
         View::Storage => views::storage::draw(f, area, app),
         View::Users => views::users::draw(f, area, app),
+        View::Kernel => views::kernel::draw(f, area, app),
         View::Profiles => views::profiles::draw(f, area, app),
     }
 }
