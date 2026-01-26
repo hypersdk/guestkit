@@ -3,7 +3,7 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -32,30 +32,52 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
+    // Determine OS icon based on OS name
+    let os_icon = if app.os_name.to_lowercase().contains("windows") {
+        "🪟"
+    } else if app.os_name.to_lowercase().contains("ubuntu")
+        || app.os_name.to_lowercase().contains("debian")
+        || app.os_name.to_lowercase().contains("linux") {
+        "🐧"
+    } else if app.os_name.to_lowercase().contains("freebsd") {
+        "👿"
+    } else if app.os_name.to_lowercase().contains("macos")
+        || app.os_name.to_lowercase().contains("darwin") {
+        "🍎"
+    } else {
+        "💻"
+    };
+
     let info_lines = vec![
         Line::from(vec![
-            Span::styled("OS:          ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.os_name, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(format!("{} ", os_icon)),
+            Span::styled("OS:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.os_name, Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled("Version:     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.os_version, Style::default().fg(TEXT_COLOR)),
+            Span::raw("🔢 "),
+            Span::styled("Version:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.os_version, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled("Kernel:      ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.kernel_version, Style::default().fg(TEXT_COLOR)),
+            Span::raw("⚙️  "),
+            Span::styled("Kernel:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.kernel_version, Style::default().fg(INFO_COLOR)),
         ]),
         Line::from(vec![
-            Span::styled("Architecture:", Style::default().fg(LIGHT_ORANGE)),
+            Span::raw("🏗️  "),
+            Span::styled("Architecture: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.architecture, Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::raw("🏷️  "),
+            Span::styled("Hostname:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(&app.hostname, Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::raw("🚀 "),
+            Span::styled("Init System:", Style::default().fg(LIGHT_ORANGE)),
             Span::raw(" "),
-            Span::styled(&app.architecture, Style::default().fg(TEXT_COLOR)),
-        ]),
-        Line::from(vec![
-            Span::styled("Hostname:    ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.hostname, Style::default().fg(TEXT_COLOR)),
-        ]),
-        Line::from(vec![
-            Span::styled("Init System: ", Style::default().fg(LIGHT_ORANGE)),
             Span::styled(&app.init_system, Style::default().fg(TEXT_COLOR)),
         ]),
     ];
@@ -64,7 +86,7 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" System Information ")
+            .title(" 📊 System Information ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(block, area);
@@ -102,7 +124,7 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Profile Risk Levels (Press p for details) ")
+            .title(" 🛡️  Profile Risk Levels • Press 'p' for Details ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
         .data(&data)
         .bar_width(8)
@@ -141,7 +163,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Package Trend ")
+            .title(" 📦 Package Trend ")
             .title_style(Style::default().fg(ORANGE)))
         .data(&pkg_data)
         .style(Style::default().fg(ORANGE));
@@ -159,7 +181,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Total ")
+            .title(" 📊 Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(ORANGE))
         .label(pkg_label)
@@ -187,7 +209,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Service Activity ")
+            .title(" ⚡ Service Activity ")
             .title_style(Style::default().fg(ORANGE)))
         .data(&svc_data)
         .style(Style::default().fg(SUCCESS_COLOR));
@@ -205,7 +227,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Total ")
+            .title(" 📊 Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .label(svc_label)
@@ -233,7 +255,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Network Traffic ")
+            .title(" 🌐 Network Traffic ")
             .title_style(Style::default().fg(ORANGE)))
         .data(&net_data)
         .style(Style::default().fg(WARNING_COLOR));
@@ -251,7 +273,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Total ")
+            .title(" 📊 Total ")
             .title_style(Style::default().fg(ORANGE)))
         .gauge_style(Style::default().fg(WARNING_COLOR))
         .label(net_label)
@@ -280,7 +302,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Security ")
+            .title(" 🔒 Security Features ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(security_list, chunks[0]);
@@ -323,7 +345,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" System Details ")
+            .title(" 🌐 System Details ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(apps_list, chunks[1]);
