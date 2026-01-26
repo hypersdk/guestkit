@@ -4,7 +4,7 @@
 use anyhow::Result;
 use guestctl::guestfs::inspect_enhanced::{
     Database, FirewallInfo, HostEntry, LVMInfo, LogicalVolume, NetworkInterface, PackageInfo,
-    RAIDArray, SecurityInfo, SystemService, VolumeGroup, WebServer,
+    RAIDArray, SecurityInfo, SystemService, UserAccount, VolumeGroup, WebServer,
 };
 use guestctl::Guestfs;
 use std::path::Path;
@@ -59,6 +59,7 @@ pub enum View {
     Services,
     Security,
     Storage,
+    Users,
     Profiles,
 }
 
@@ -71,6 +72,7 @@ impl View {
             View::Services => "Services",
             View::Security => "Security",
             View::Storage => "Storage",
+            View::Users => "Users",
             View::Profiles => "Profiles",
         }
     }
@@ -83,6 +85,7 @@ impl View {
             View::Services,
             View::Security,
             View::Storage,
+            View::Users,
             View::Profiles,
         ]
     }
@@ -123,6 +126,7 @@ pub struct App {
     pub web_servers: Vec<WebServer>,
     pub firewall: FirewallInfo,
     pub security: SecurityInfo,
+    pub users: Vec<UserAccount>,
 
     pub hosts: Vec<HostEntry>,
     pub fstab: Vec<(String, String, String)>,
@@ -214,6 +218,10 @@ impl App {
         let fstab = guestfs.inspect_fstab(root)
             .unwrap_or_default();
 
+        // User accounts
+        let users = guestfs.inspect_users(root)
+            .unwrap_or_default();
+
         // Storage information
         let lvm_info = guestfs.inspect_lvm(root).ok();
         let raid_arrays = guestfs.inspect_raid(root).unwrap_or_default();
@@ -259,6 +267,7 @@ impl App {
             web_servers,
             firewall,
             security,
+            users,
             hosts,
             fstab,
             lvm_info,
@@ -380,6 +389,7 @@ impl App {
             View::Services => "services",
             View::Security => "security",
             View::Storage => "storage",
+            View::Users => "users",
             View::Profiles => "profiles",
         };
         self.export_filename = format!(
@@ -483,6 +493,7 @@ impl App {
                     "network_interfaces": self.network_interfaces.len(),
                     "databases": self.databases.len(),
                     "web_servers": self.web_servers.len(),
+                    "users": self.users.len(),
                 },
                 "profiles": {
                     "security": self.security_profile.as_ref().and_then(|p| p.overall_risk),
@@ -521,6 +532,13 @@ impl App {
             View::Storage => json!({
                 "view": "storage",
                 "fstab": self.fstab,
+                "lvm": self.lvm_info,
+                "raid": self.raid_arrays,
+            }),
+            View::Users => json!({
+                "view": "users",
+                "count": self.users.len(),
+                "users": self.users,
             }),
             View::Profiles => {
                 let current_profile = match self.selected_profile_tab {
