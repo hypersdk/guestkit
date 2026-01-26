@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -16,7 +16,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Summary header
+            Constraint::Length(14), // Summary with gauges
             Constraint::Min(0),     // Issues list
         ])
         .split(area);
@@ -39,6 +39,18 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
         ("🟢 HEALTHY", SUCCESS_COLOR)
     };
 
+    // Split into header and gauges
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(5),  // Header info
+            Constraint::Length(3),  // Critical gauge
+            Constraint::Length(3),  // High gauge
+            Constraint::Length(3),  // Medium gauge
+        ])
+        .split(area);
+
+    // Header with overall status
     let summary_lines = vec![
         Line::from(vec![
             Span::styled("Overall Status: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
@@ -66,7 +78,62 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
             .title(" ⚠️  Security & Compliance Issues ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
-    f.render_widget(summary, area);
+    f.render_widget(summary, chunks[0]);
+
+    // Calculate percentages for gauges
+    let critical_pct = if total_issues > 0 {
+        (critical as f64 / total_issues as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    let high_pct = if total_issues > 0 {
+        (high as f64 / total_issues as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    let medium_pct = if total_issues > 0 {
+        (medium as f64 / total_issues as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    // Critical issues gauge
+    let critical_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🔴 Critical Issues "))
+        .gauge_style(Style::default().fg(ERROR_COLOR))
+        .percent(critical_pct)
+        .label(format!("{} critical ({}% of total)", critical, critical_pct));
+
+    f.render_widget(critical_gauge, chunks[1]);
+
+    // High risk gauge
+    let high_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🟠 High Risk Issues "))
+        .gauge_style(Style::default().fg(WARNING_COLOR))
+        .percent(high_pct)
+        .label(format!("{} high ({}% of total)", high, high_pct));
+
+    f.render_widget(high_gauge, chunks[2]);
+
+    // Medium risk gauge
+    let medium_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🟡 Medium Risk Issues "))
+        .gauge_style(Style::default().fg(INFO_COLOR))
+        .percent(medium_pct)
+        .label(format!("{} medium ({}% of total)", medium, medium_pct));
+
+    f.render_widget(medium_gauge, chunks[3]);
 }
 
 fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
