@@ -13,11 +13,11 @@ use ratatui::{
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     if app.users.is_empty() {
-        let empty = Paragraph::new("No user accounts found")
+        let empty = Paragraph::new("⚠️  No user accounts found")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" User Accounts ")
+                .title(" 👥 User Accounts ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -38,6 +38,17 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         app.users.iter().collect()
     };
 
+    // Count different user types
+    let root_count = app.users.iter().filter(|u| u.uid == "0").count();
+    let system_count = app.users.iter().filter(|u| {
+        let uid: i32 = u.uid.parse().unwrap_or(99999);
+        uid > 0 && uid < 1000
+    }).count();
+    let normal_count = app.users.iter().filter(|u| {
+        let uid: i32 = u.uid.parse().unwrap_or(99999);
+        uid >= 1000 && uid < 65534
+    }).count();
+
     let items: Vec<ListItem> = filtered_users
         .iter()
         .skip(app.scroll_offset)
@@ -46,16 +57,16 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
             // Parse UID to determine user type
             let uid: i32 = user.uid.parse().unwrap_or(99999);
 
-            // Color coding:
-            // - System users (UID < 1000): Orange
-            // - Normal users (UID >= 1000): Light orange
-            // - Root (UID 0): Different handling
-            let (username_color, uid_color) = if uid == 0 {
-                (ERROR_COLOR, ERROR_COLOR)  // Root in red
+            // Color coding and icon:
+            // - Root (UID 0): Red with crown icon
+            // - System users (UID < 1000): Yellow with gear icon
+            // - Normal users (UID >= 1000): Green with person icon
+            let (icon, username_color, uid_color) = if uid == 0 {
+                ("👑", ERROR_COLOR, ERROR_COLOR)  // Root in red with crown
             } else if uid < 1000 {
-                (WARNING_COLOR, WARNING_COLOR)  // System users in warning color
+                ("⚙️ ", WARNING_COLOR, WARNING_COLOR)  // System users in warning color
             } else {
-                (SUCCESS_COLOR, LIGHT_ORANGE)  // Normal users in success color
+                ("👤", SUCCESS_COLOR, LIGHT_ORANGE)  // Normal users in success color
             };
 
             // Detect potentially problematic shells
@@ -68,6 +79,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
             };
 
             ListItem::new(Line::from(vec![
+                ratatui::text::Span::raw(format!("{} ", icon)),
                 ratatui::text::Span::styled(
                     format!("{:16}", user.username),
                     Style::default().fg(username_color).add_modifier(Modifier::BOLD)
@@ -96,7 +108,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" User Accounts ({} / {} total) ", filtered_users.len(), app.users.len()))
+            .title(format!(" 👥 User Accounts • {} showing • {} root • {} system • {} normal ",
+                filtered_users.len(), root_count, system_count, normal_count))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

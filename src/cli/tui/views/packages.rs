@@ -2,7 +2,7 @@
 //! Packages view - Installed packages browser
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR};
 use ratatui::{
     layout::Rect,
     style::{Modifier, Style},
@@ -12,12 +12,22 @@ use ratatui::{
 };
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
+    // Determine package manager icon
+    let manager_icon = match app.packages.manager.to_lowercase().as_str() {
+        "rpm" | "dnf" | "yum" => "📦",
+        "deb" | "apt" | "dpkg" => "📦",
+        "pacman" => "📦",
+        "apk" => "📦",
+        "zypper" => "📦",
+        _ => "📦",
+    };
+
     if app.packages.packages.is_empty() {
-        let empty = Paragraph::new(format!("No packages found (manager: {})", app.packages.manager))
+        let empty = Paragraph::new(format!("⚠️  No packages found (manager: {})", app.packages.manager))
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Installed Packages ")
+                .title(format!(" {} Installed Packages ", manager_icon))
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -40,11 +50,17 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
-        .map(|pkg| {
+        .enumerate()
+        .map(|(idx, pkg)| {
+            // Alternate colors for better readability
+            let name_color = if idx % 2 == 0 { LIGHT_ORANGE } else { ORANGE };
+
             ListItem::new(Line::from(vec![
-                ratatui::text::Span::styled(&pkg.name, Style::default().fg(LIGHT_ORANGE)),
+                ratatui::text::Span::raw("• "),
+                ratatui::text::Span::styled(&pkg.name, Style::default().fg(name_color).add_modifier(Modifier::BOLD)),
                 ratatui::text::Span::raw("  "),
-                ratatui::text::Span::styled(&pkg.version, Style::default().fg(TEXT_COLOR)),
+                ratatui::text::Span::styled("v", Style::default().fg(INFO_COLOR)),
+                ratatui::text::Span::styled(&pkg.version, Style::default().fg(SUCCESS_COLOR)),
             ]))
         })
         .collect();
@@ -53,8 +69,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Packages ({} / {} total) - Manager: {} ",
-                filtered_packages.len(), app.packages.package_count, app.packages.manager))
+            .title(format!(" {} Installed Packages • {} showing of {} total • Manager: {} ",
+                manager_icon, filtered_packages.len(), app.packages.package_count, app.packages.manager))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
