@@ -89,8 +89,26 @@ fn run_app<B: ratatui::backend::Backend>(
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
+            match event::read()? {
+                Event::Mouse(mouse) => {
+                    use event::MouseEventKind;
+                    match mouse.kind {
+                        MouseEventKind::ScrollDown => app.scroll_down(),
+                        MouseEventKind::ScrollUp => app.scroll_up(),
+                        MouseEventKind::Down(event::MouseButton::Left) => {
+                            // Handle tab clicks - tabs are in row 4-6 (0-indexed row 3-5)
+                            if mouse.row >= 4 && mouse.row <= 6 {
+                                // Calculate which tab was clicked based on column
+                                // Each tab is approximately width/12 (12 views)
+                                // This is a rough approximation
+                                let tab_index = ((mouse.column as f32 / terminal.size()?.width as f32) * 12.0) as usize;
+                                app.jump_to_view(tab_index);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Event::Key(key) => match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => {
                         if app.is_searching() {
                             app.cancel_search();
@@ -199,7 +217,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                     }
                     _ => {}
-                }
+                },
+                _ => {}
             }
         }
 
