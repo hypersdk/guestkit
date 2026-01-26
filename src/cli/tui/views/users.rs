@@ -104,12 +104,27 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    // Calculate scroll position
+    let visible_items = area.height.saturating_sub(2) as usize;
+    let total_items = filtered_users.len();
+    let scroll_pct = if total_items > 0 {
+        ((app.scroll_offset as f32 / total_items.max(1) as f32) * 100.0) as u16
+    } else {
+        0
+    };
+
+    let scroll_indicator = if total_items > visible_items {
+        format!(" 📜 {}% ", scroll_pct)
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 👥 User Accounts • {} showing • {} root • {} system • {} normal ",
-                filtered_users.len(), root_count, system_count, normal_count))
+            .title(format!(" 👥 User Accounts • {} showing • {} root • {} system • {} normal{} ",
+                filtered_users.len(), root_count, system_count, normal_count, scroll_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
