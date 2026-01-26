@@ -222,7 +222,7 @@ impl InteractiveSession {
     pub fn new(disk_path: PathBuf) -> Result<Self> {
         println!(
             "{}",
-            "Initializing GuestKit Interactive Mode...".cyan().bold()
+            "Initializing GuestKit Interactive Mode...".truecolor(222, 115, 86).bold()
         );
         println!();
 
@@ -230,17 +230,17 @@ impl InteractiveSession {
         let mut handle = Guestfs::new().context("Failed to create guestfs handle")?;
 
         // Add drive
-        println!("  {} Loading disk: {}", "→".cyan(), disk_path.display());
+        println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
         handle
             .add_drive_ro(disk_path.to_str().unwrap())
             .context("Failed to add drive")?;
 
         // Launch
-        println!("  {} Launching appliance...", "→".cyan());
+        println!("  {} Launching appliance...", "→".truecolor(222, 115, 86));
         handle.launch().context("Failed to launch guestfs")?;
 
         // Auto-inspect
-        println!("  {} Inspecting disk...", "→".cyan());
+        println!("  {} Inspecting disk...", "→".truecolor(222, 115, 86));
         let roots = handle.inspect_os().unwrap_or_default();
         let current_root = roots.first().cloned();
 
@@ -255,8 +255,8 @@ impl InteractiveSession {
                         println!(
                             "  {} Found: {} {} {}.{}",
                             "✓".green().bold(),
-                            os_type.bright_cyan(),
-                            distro.bright_cyan(),
+                            os_type.truecolor(222, 115, 86),
+                            distro.truecolor(222, 115, 86),
                             major.to_string().bright_white(),
                             minor.to_string().bright_white()
                         );
@@ -273,7 +273,7 @@ impl InteractiveSession {
         if let Ok(history_file) = get_history_file(&disk_path) {
             if history_file.exists()
                 && editor.load_history(&history_file).is_ok() {
-                    println!("  {} Loaded command history", "→".cyan());
+                    println!("  {} Loaded command history", "→".truecolor(222, 115, 86));
                 }
         }
 
@@ -301,7 +301,7 @@ impl InteractiveSession {
     /// Run the interactive session
     pub fn run(&mut self) -> Result<()> {
         loop {
-            let prompt = format!("{}> ", "guestctl".bright_cyan().bold());
+            let prompt = format!("{}> ", "guestctl".truecolor(222, 115, 86).bold());
 
             match self.editor.readline(&prompt) {
                 Ok(line) => {
@@ -409,61 +409,61 @@ impl InteractiveSession {
     /// Show help
     fn cmd_help(&self) -> Result<()> {
         println!();
-        println!("{}", "GuestKit Interactive Commands:".bright_cyan().bold());
+        println!("{}", "GuestKit Interactive Commands:".truecolor(222, 115, 86).bold());
         println!();
 
         println!("{}", "  System Information:".bright_white().bold());
-        println!("    {}  - Show disk and OS information", "info".cyan());
+        println!("    {}  - Show disk and OS information", "info".truecolor(222, 115, 86));
         println!();
 
         println!("{}", "  Filesystem Operations:".bright_white().bold());
         println!(
             "    {}  - List available filesystems",
-            "filesystems, fs".cyan()
+            "filesystems, fs".truecolor(222, 115, 86)
         );
         println!(
             "    {}  - Mount a filesystem",
-            "mount <device> <path>".cyan()
+            "mount <device> <path>".truecolor(222, 115, 86)
         );
-        println!("    {}  - Unmount a filesystem", "umount <path>".cyan());
-        println!("    {}  - Show mounted filesystems", "mounts".cyan());
+        println!("    {}  - Unmount a filesystem", "umount <path>".truecolor(222, 115, 86));
+        println!("    {}  - Show mounted filesystems", "mounts".truecolor(222, 115, 86));
         println!();
 
         println!("{}", "  File Operations:".bright_white().bold());
-        println!("    {}  - List directory contents", "ls [path]".cyan());
-        println!("    {}  - Display file contents", "cat <path>".cyan());
+        println!("    {}  - List directory contents", "ls [path]".truecolor(222, 115, 86));
+        println!("    {}  - Display file contents", "cat <path>".truecolor(222, 115, 86));
         println!(
             "    {}  - Display first lines of file",
-            "head <path> [lines]".cyan()
+            "head <path> [lines]".truecolor(222, 115, 86)
         );
         println!(
             "    {}  - Find files by name pattern",
-            "find <pattern>".cyan()
+            "find <pattern>".truecolor(222, 115, 86)
         );
-        println!("    {}  - Show file information", "stat <path>".cyan());
+        println!("    {}  - Show file information", "stat <path>".truecolor(222, 115, 86));
         println!(
             "    {}  - Download file from disk",
-            "download <src> <dest>".cyan()
+            "download <src> <dest>".truecolor(222, 115, 86)
         );
         println!();
 
         println!("{}", "  System Inspection:".bright_white().bold());
         println!(
             "    {}  - List installed packages",
-            "packages, pkg [filter]".cyan()
+            "packages, pkg [filter]".truecolor(222, 115, 86)
         );
-        println!("    {}  - List system services", "services, svc".cyan());
-        println!("    {}  - List user accounts", "users".cyan());
+        println!("    {}  - List system services", "services, svc".truecolor(222, 115, 86));
+        println!("    {}  - List user accounts", "users".truecolor(222, 115, 86));
         println!(
             "    {}  - Show network configuration",
-            "network, net".cyan()
+            "network, net".truecolor(222, 115, 86)
         );
         println!();
 
         println!("{}", "  Other:".bright_white().bold());
-        println!("    {}  - Clear screen", "clear, cls".cyan());
-        println!("    {}  - Show this help", "help, ?".cyan());
-        println!("    {}  - Exit interactive mode", "exit, quit, q".cyan());
+        println!("    {}  - Clear screen", "clear, cls".truecolor(222, 115, 86));
+        println!("    {}  - Show this help", "help, ?".truecolor(222, 115, 86));
+        println!("    {}  - Exit interactive mode", "exit, quit, q".truecolor(222, 115, 86));
         println!();
 
         Ok(())
@@ -472,12 +472,12 @@ impl InteractiveSession {
     /// Show disk and OS information
     fn cmd_info(&mut self) -> Result<()> {
         println!();
-        println!("{}", "Disk Information:".bright_cyan().bold());
+        println!("{}", "Disk Information:".truecolor(222, 115, 86).bold());
         println!("  Path: {}", self.disk_path.display());
 
         if let Some(ref root) = self.current_root {
             println!();
-            println!("{}", "Operating System:".bright_cyan().bold());
+            println!("{}", "Operating System:".truecolor(222, 115, 86).bold());
 
             if let Ok(os_type) = self.handle.inspect_get_type(root) {
                 println!("  Type: {}", os_type.bright_white());
@@ -521,7 +521,7 @@ impl InteractiveSession {
             .context("Failed to list filesystems")?;
 
         println!();
-        println!("{}", "Available Filesystems:".bright_cyan().bold());
+        println!("{}", "Available Filesystems:".truecolor(222, 115, 86).bold());
         println!();
 
         for (device, fstype) in filesystems {
@@ -568,7 +568,7 @@ impl InteractiveSession {
             "{} Mounted {} at {}",
             "✓".green().bold(),
             device.bright_white(),
-            mountpoint.bright_cyan()
+            mountpoint.truecolor(222, 115, 86)
         );
 
         Ok(())
@@ -593,7 +593,7 @@ impl InteractiveSession {
         println!(
             "{} Unmounted {}",
             "✓".green().bold(),
-            mountpoint.bright_cyan()
+            mountpoint.truecolor(222, 115, 86)
         );
 
         Ok(())
@@ -608,14 +608,14 @@ impl InteractiveSession {
         }
 
         println!();
-        println!("{}", "Mounted Filesystems:".bright_cyan().bold());
+        println!("{}", "Mounted Filesystems:".truecolor(222, 115, 86).bold());
         println!();
 
         for (device, mountpoint) in &self.mounted {
             println!(
                 "  {} {} {}",
                 device.bright_white().bold(),
-                "→".cyan(),
+                "→".truecolor(222, 115, 86),
                 mountpoint.yellow()
             );
         }
@@ -749,7 +749,7 @@ impl InteractiveSession {
             .with_context(|| format!("Failed to stat: {}", path))?;
 
         println!();
-        println!("{}", "File Information:".bright_cyan().bold());
+        println!("{}", "File Information:".truecolor(222, 115, 86).bold());
         println!("  Path: {}", path.bright_white());
         println!("  Size: {} bytes", stat.size.to_string().bright_white());
         println!("  Mode: {:o}", stat.mode);
@@ -782,7 +782,7 @@ impl InteractiveSession {
             "{} Downloaded {} to {}",
             "✓".green().bold(),
             source.bright_white(),
-            dest.bright_cyan()
+            dest.truecolor(222, 115, 86)
         );
 
         Ok(())
@@ -852,7 +852,7 @@ impl InteractiveSession {
                 .context("Failed to list services")?;
 
             println!();
-            println!("{}", "Enabled Services:".bright_cyan().bold());
+            println!("{}", "Enabled Services:".truecolor(222, 115, 86).bold());
             println!();
 
             for service in &services {
@@ -881,7 +881,7 @@ impl InteractiveSession {
                 .context("Failed to list users")?;
 
             println!();
-            println!("{}", "User Accounts:".bright_cyan().bold());
+            println!("{}", "User Accounts:".truecolor(222, 115, 86).bold());
             println!();
 
             for user in &users {
@@ -921,7 +921,7 @@ impl InteractiveSession {
                 .context("Failed to get network configuration")?;
 
             println!();
-            println!("{}", "Network Interfaces:".bright_cyan().bold());
+            println!("{}", "Network Interfaces:".truecolor(222, 115, 86).bold());
             println!();
 
             for iface in &interfaces {
@@ -931,7 +931,7 @@ impl InteractiveSession {
                     iface.mac_address.yellow()
                 );
                 for addr in &iface.ip_address {
-                    println!("    {} {}", "→".cyan(), addr.bright_white());
+                    println!("    {} {}", "→".truecolor(222, 115, 86), addr.bright_white());
                 }
                 if !iface.ip_address.is_empty() {
                     println!();
@@ -940,7 +940,7 @@ impl InteractiveSession {
 
             if let Ok(dns_servers) = self.handle.inspect_dns(root) {
                 if !dns_servers.is_empty() {
-                    println!("{}", "DNS Servers:".bright_cyan().bold());
+                    println!("{}", "DNS Servers:".truecolor(222, 115, 86).bold());
                     for dns in &dns_servers {
                         println!("  {}", dns.bright_white());
                     }

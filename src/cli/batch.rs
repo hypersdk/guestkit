@@ -38,7 +38,7 @@ impl BatchExecutor {
     /// Create a new batch executor
     pub fn new(disk_path: PathBuf, fail_fast: bool, verbose: bool) -> Result<Self> {
         if verbose {
-            println!("{}", "Initializing batch executor...".cyan());
+            println!("{}", "Initializing batch executor...".truecolor(222, 115, 86));
         }
 
         // Create handle
@@ -46,7 +46,7 @@ impl BatchExecutor {
 
         // Add drive
         if verbose {
-            println!("  {} Loading disk: {}", "→".cyan(), disk_path.display());
+            println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
         }
         handle
             .add_drive_ro(disk_path.to_str().unwrap())
@@ -54,7 +54,7 @@ impl BatchExecutor {
 
         // Launch
         if verbose {
-            println!("  {} Launching appliance...", "→".cyan());
+            println!("  {} Launching appliance...", "→".truecolor(222, 115, 86));
         }
         handle.launch().context("Failed to launch guestfs")?;
 
@@ -69,8 +69,8 @@ impl BatchExecutor {
                         println!(
                             "  {} Detected: {} {}",
                             "✓".green(),
-                            os_type.bright_cyan(),
-                            distro.bright_cyan()
+                            os_type.truecolor(222, 115, 86),
+                            distro.truecolor(222, 115, 86)
                         );
                     }
                 }
@@ -108,7 +108,7 @@ impl BatchExecutor {
                 println!(
                     "\n{} {}",
                     format!("[{}]", line_num + 1).dimmed(),
-                    line.cyan()
+                    line.truecolor(222, 115, 86)
                 );
             }
 
@@ -335,7 +335,7 @@ impl BatchExecutor {
                 RedirectMode::Write => "Wrote",
                 RedirectMode::Append => "Appended",
             };
-            println!("  {} {} output to {}", "→".cyan(), mode_str, redirect.path);
+            println!("  {} {} output to {}", "→".truecolor(222, 115, 86), mode_str, redirect.path);
         }
 
         Ok(())
@@ -369,8 +369,8 @@ impl ExecutionReport {
         println!("{}", "Batch Execution Report".bold());
         println!("{}", "=".repeat(60).dimmed());
 
-        println!("\n{}: {}", "Script".cyan(), self.script_path.display());
-        println!("{}: {}", "Total Commands".cyan(), self.total_commands);
+        println!("\n{}: {}", "Script".truecolor(222, 115, 86), self.script_path.display());
+        println!("{}: {}", "Total Commands".truecolor(222, 115, 86), self.total_commands);
         println!("{}: {}", "Successful".green(), self.successful_commands);
 
         if self.failed_commands > 0 {

@@ -11,11 +11,11 @@ use ratatui::{
     Frame,
 };
 
-// Deep Orange color theme - Richer, more vibrant colors
-pub const ORANGE: Color = Color::Rgb(230, 115, 0);        // Deeper primary orange
-pub const DARK_ORANGE: Color = Color::Rgb(180, 70, 0);     // Richer dark orange
-pub const LIGHT_ORANGE: Color = Color::Rgb(255, 160, 50); // Warmer light orange
-pub const BURNT_ORANGE: Color = Color::Rgb(204, 85, 0);    // Burnt orange accent
+// Coral-Terracotta Orange color theme - Pantone 7416 C inspired
+pub const ORANGE: Color = Color::Rgb(222, 115, 86);        // Primary coral orange (Pantone 7416 C)
+pub const DARK_ORANGE: Color = Color::Rgb(180, 85, 60);    // Darker terracotta
+pub const LIGHT_ORANGE: Color = Color::Rgb(255, 145, 115); // Lighter coral
+pub const BURNT_ORANGE: Color = Color::Rgb(200, 95, 70);   // Burnt terracotta accent
 pub const BG_COLOR: Color = Color::Reset;
 pub const TEXT_COLOR: Color = Color::Rgb(220, 220, 220);   // Softer white
 pub const HIGHLIGHT_COLOR: Color = ORANGE;

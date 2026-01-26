@@ -53,7 +53,7 @@ impl EnhancedError {
         // Examples
         if !self.examples.is_empty() {
             eprintln!();
-            eprintln!("{}", "Examples:".cyan().bold());
+            eprintln!("{}", "Examples:".truecolor(222, 115, 86).bold());
             for example in &self.examples {
                 eprintln!("  {}", example.dimmed());
             }

@@ -7,8 +7,9 @@ use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCE
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
+    symbols,
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, Gauge, List, ListItem, Paragraph, Sparkline},
     Frame,
 };
 
@@ -17,14 +18,14 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(8),  // System info
-            Constraint::Length(6),  // Profile risk summary
-            Constraint::Length(8),  // Stats
+            Constraint::Length(8),  // Profile risk chart
+            Constraint::Length(8),  // Stats gauges
             Constraint::Min(0),     // Quick info
         ])
         .split(area);
 
     draw_system_info(f, chunks[0], app);
-    draw_profile_summary(f, chunks[1], app);
+    draw_risk_chart(f, chunks[1], app);
     draw_stats(f, chunks[2], app);
     draw_quick_info(f, chunks[3], app);
 }
@@ -68,7 +69,60 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(block, area);
 }
 
-fn draw_profile_summary(f: &mut Frame, area: Rect, app: &App) {
+fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
+    // Convert risk levels to numeric values for bar chart
+    fn risk_to_value(risk: Option<RiskLevel>) -> u64 {
+        match risk {
+            Some(RiskLevel::Critical) => 5,
+            Some(RiskLevel::High) => 4,
+            Some(RiskLevel::Medium) => 3,
+            Some(RiskLevel::Low) => 2,
+            Some(RiskLevel::Info) => 1,
+            None => 1,
+        }
+    }
+
+    fn risk_to_color(risk: Option<RiskLevel>) -> ratatui::style::Color {
+        match risk {
+            Some(RiskLevel::Critical) | Some(RiskLevel::High) => ERROR_COLOR,
+            Some(RiskLevel::Medium) => WARNING_COLOR,
+            Some(RiskLevel::Low) | Some(RiskLevel::Info) => SUCCESS_COLOR,
+            None => SUCCESS_COLOR,
+        }
+    }
+
+    let security_risk = app.security_profile.as_ref().and_then(|p| p.overall_risk);
+    let migration_risk = app.migration_profile.as_ref().and_then(|p| p.overall_risk);
+    let performance_risk = app.performance_profile.as_ref().and_then(|p| p.overall_risk);
+    let compliance_risk = app.compliance_profile.as_ref().and_then(|p| p.overall_risk);
+    let hardening_risk = app.hardening_profile.as_ref().and_then(|p| p.overall_risk);
+
+    let data = vec![
+        ("Sec", risk_to_value(security_risk)),
+        ("Mig", risk_to_value(migration_risk)),
+        ("Perf", risk_to_value(performance_risk)),
+        ("Comp", risk_to_value(compliance_risk)),
+        ("Hard", risk_to_value(hardening_risk)),
+    ];
+
+    let barchart = BarChart::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Profile Risk Levels (Press p for details) ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .data(&data)
+        .bar_width(8)
+        .bar_gap(2)
+        .bar_style(Style::default().fg(LIGHT_ORANGE))
+        .value_style(Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD))
+        .label_style(Style::default().fg(LIGHT_ORANGE))
+        .bar_set(symbols::bar::NINE_LEVELS);
+
+    f.render_widget(barchart, area);
+}
+
+fn draw_profile_summary_old(f: &mut Frame, area: Rect, app: &App) {
     let mut profile_items = Vec::new();
 
     // Security Profile

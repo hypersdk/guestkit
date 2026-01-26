@@ -223,6 +223,11 @@ mod tests {
 pub mod colors {
     use super::*;
 
+    // Coral-Terracotta Orange theme - Pantone 7416 C inspired
+    const ORANGE_RGB: (u8, u8, u8) = (222, 115, 86);        // Primary coral orange
+    const LIGHT_ORANGE_RGB: (u8, u8, u8) = (255, 145, 115); // Lighter coral
+    const DARK_ORANGE_RGB: (u8, u8, u8) = (180, 85, 60);    // Darker terracotta
+
     /// Print success message with green checkmark
     pub fn success(msg: &str) {
         println!("{} {}", "✓".green(), msg.green());
@@ -238,24 +243,24 @@ pub mod colors {
         println!("{} {}", "⚠".yellow(), msg.yellow());
     }
 
-    /// Print info message with blue info icon
+    /// Print info message with coral orange info icon
     pub fn info(msg: &str) {
-        println!("{} {}", "ℹ".blue(), msg);
+        println!("{} {}", "ℹ".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
     }
 
-    /// Print header with bold and underline
+    /// Print header with bold and underline in coral orange
     pub fn header(msg: &str) {
-        println!("{}", msg.bold().underline());
+        println!("{}", msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold().underline());
     }
 
-    /// Print section header with cyan color
+    /// Print section header with coral orange color
     pub fn section(msg: &str) {
-        println!("\n{}", msg.cyan().bold());
+        println!("\n{}", msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold());
     }
 
-    /// Print key-value pair with colored key
+    /// Print key-value pair with coral orange key
     pub fn kv(key: &str, value: &str) {
-        println!("{}: {}", key.cyan(), value);
+        println!("{}: {}", key.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2), value);
     }
 
     /// Print key-value with optional value coloring
@@ -296,13 +301,14 @@ pub mod colors {
 
     /// Status indicator with colored icon
     pub fn status(label: &str, status: Status) {
+        let label_colored = label.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2);
         match status {
-            Status::Enabled => println!("{} {}: {}", "✓".bold(), label.cyan(), "enabled".green()),
-            Status::Disabled => println!("{} {}: {}", "✗".bold(), label.cyan(), "disabled".red()),
-            Status::Unknown => println!("{} {}: {}", "?".bold(), label.cyan(), "unknown".yellow()),
-            Status::Running => println!("{} {}: {}", "▶".bold(), label.cyan(), "running".green()),
-            Status::Stopped => println!("{} {}: {}", "■".bold(), label.cyan(), "stopped".red()),
-            Status::Warning => println!("{} {}: {}", "⚠".bold(), label.cyan(), "warning".yellow()),
+            Status::Enabled => println!("{} {}: {}", "✓".bold(), label_colored, "enabled".green()),
+            Status::Disabled => println!("{} {}: {}", "✗".bold(), label_colored, "disabled".red()),
+            Status::Unknown => println!("{} {}: {}", "?".bold(), label_colored, "unknown".yellow()),
+            Status::Running => println!("{} {}: {}", "▶".bold(), label_colored, "running".green()),
+            Status::Stopped => println!("{} {}: {}", "■".bold(), label_colored, "stopped".red()),
+            Status::Warning => println!("{} {}: {}", "⚠".bold(), label_colored, "warning".yellow()),
         }
     }
 
@@ -329,17 +335,17 @@ pub mod colors {
 
     /// Print bullet point item
     pub fn bullet(msg: &str) {
-        println!("  {} {}", "•".cyan(), msg);
+        println!("  {} {}", "•".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
     }
 
     /// Print numbered item
     pub fn numbered(num: usize, msg: &str) {
-        println!("  {}. {}", num.to_string().cyan().bold(), msg);
+        println!("  {}. {}", num.to_string().truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold(), msg);
     }
 
     /// Print progress indicator
     pub fn progress(current: usize, total: usize, msg: &str) {
-        println!("{} {}", format!("[{}/{}]", current, total).cyan(), msg);
+        println!("{} {}", format!("[{}/{}]", current, total).truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
     }
 }
 
