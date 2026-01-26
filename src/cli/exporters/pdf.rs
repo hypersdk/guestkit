@@ -25,7 +25,7 @@ pub fn generate_pdf_report(report: &InspectionReport) -> Result<String> {
     });
 
     // Generate PDF to a temporary file
-    let mut temp_file = NamedTempFile::new()?;
+    let temp_file = NamedTempFile::new()?;
     exporter.generate(temp_file.path(), &data)?;
 
     // Read the generated PDF bytes and return as base64 or path
@@ -102,20 +102,23 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
         .clone()
         .unwrap_or_else(|| "Unknown".to_string());
 
-    // Convert filesystems
-    let filesystems = if let Some(ref fs_section) = report.filesystems {
-        fs_section
-            .filesystems
-            .iter()
-            .map(|fs| FilesystemInfo {
-                device: fs.device.clone(),
-                mountpoint: fs.mountpoint.clone().unwrap_or_else(|| "N/A".to_string()),
-                fstype: fs.fstype.clone(),
-                size: fs.size.unwrap_or(0),
-                used: fs.used.unwrap_or(0),
-                available: fs.available.unwrap_or(0),
-            })
-            .collect()
+    // Convert filesystems from storage/fstab_mounts
+    let filesystems = if let Some(ref storage_section) = report.storage {
+        if let Some(ref mounts) = storage_section.fstab_mounts {
+            mounts
+                .iter()
+                .map(|fs| FilesystemInfo {
+                    device: fs.device.clone(),
+                    mountpoint: fs.mountpoint.clone(),
+                    fstype: fs.fstype.clone(),
+                    size: 0,  // Size not available in fstab
+                    used: 0,  // Used not available in fstab
+                    available: 0,  // Available not available in fstab
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
     } else {
         Vec::new()
     };
@@ -145,10 +148,7 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
                 username: u.username.clone(),
                 uid: u.uid.clone(),
                 home: u.home.clone(),
-                shell: u
-                    .shell
-                    .clone()
-                    .unwrap_or_else(|| "/bin/bash".to_string()),
+                shell: u.shell.clone(),
             })
             .collect()
     } else {

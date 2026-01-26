@@ -13,8 +13,8 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
     // Convert InspectionReport to InspectionData for the HTML exporter
     let data = convert_to_inspection_data(report);
 
-    // Create HTML exporter with default options
-    let exporter = HtmlExporter::new(HtmlExportOptions {
+    // Create HTML exporter with custom options
+    let exporter = HtmlExporter::with_options(HtmlExportOptions {
         include_charts: true,
         include_styles: true,
         dark_theme: false,
@@ -23,7 +23,7 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
     });
 
     // Generate HTML to a temporary file
-    let mut temp_file = NamedTempFile::new()?;
+    let temp_file = NamedTempFile::new()?;
     exporter.generate(temp_file.path(), &data)?;
 
     // Read the generated HTML
@@ -47,18 +47,22 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
     let package_format = report.os.package_format.clone().unwrap_or_else(|| "Unknown".to_string());
     let package_manager = report.os.package_manager.clone().unwrap_or_else(|| "Unknown".to_string());
 
-    // Convert filesystems
-    let filesystems = if let Some(ref fs_section) = report.filesystems {
-        fs_section.filesystems.iter().map(|fs| {
-            FilesystemInfo {
-                device: fs.device.clone(),
-                mountpoint: fs.mountpoint.clone().unwrap_or_else(|| "N/A".to_string()),
-                fstype: fs.fstype.clone(),
-                size: fs.size.unwrap_or(0),
-                used: fs.used.unwrap_or(0),
-                available: fs.available.unwrap_or(0),
-            }
-        }).collect()
+    // Convert filesystems from storage/fstab_mounts
+    let filesystems = if let Some(ref storage_section) = report.storage {
+        if let Some(ref mounts) = storage_section.fstab_mounts {
+            mounts.iter().map(|fs| {
+                FilesystemInfo {
+                    device: fs.device.clone(),
+                    mountpoint: fs.mountpoint.clone(),
+                    fstype: fs.fstype.clone(),
+                    size: 0,  // Size not available in fstab
+                    used: 0,  // Used not available in fstab
+                    available: 0,  // Available not available in fstab
+                }
+            }).collect()
+        } else {
+            Vec::new()
+        }
     } else {
         Vec::new()
     };
@@ -83,7 +87,7 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
                 username: u.username.clone(),
                 uid: u.uid.clone(),
                 home: u.home.clone(),
-                shell: u.shell.clone().unwrap_or_else(|| "/bin/bash".to_string()),
+                shell: u.shell.clone(),
             }
         }).collect()
     } else {
@@ -97,7 +101,7 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
                 NetworkInterface {
                     name: i.name.clone(),
                     mac_address: i.mac_address.clone(),
-                    ip_addresses: i.ip_address.clone(),
+                    ip_addresses: i.ip_address.join(", "),
                     state: "up".to_string(), // Assume up if listed
                 }
             }).collect()
