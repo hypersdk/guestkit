@@ -8,3 +8,4 @@ pub mod profiles;
 pub mod security;
 pub mod services;
 pub mod storage;
+pub mod users;
