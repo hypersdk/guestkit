@@ -17,9 +17,9 @@ impl ProgressReporter {
         let bar = ProgressBar::new(total);
         bar.set_style(
             ProgressStyle::default_bar()
-                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .template("{msg}\n{spinner:.rgb(222,115,86)} [{elapsed_precise}] [{wide_bar:.rgb(222,115,86)/rgb(255,145,115)}] {bytes}/{total_bytes} ({eta})")
                 .unwrap()
-                .progress_chars("#>-"),
+                .progress_chars("━╸─"),
         );
         bar.set_message(message.to_string());
         bar.enable_steady_tick(Duration::from_millis(100));
@@ -35,7 +35,7 @@ impl ProgressReporter {
         let bar = ProgressBar::new_spinner();
         bar.set_style(
             ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
+                .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
                 .unwrap()
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
         );
@@ -102,9 +102,9 @@ impl MultiProgressReporter {
         let bar = self.multi.add(ProgressBar::new(total));
         bar.set_style(
             ProgressStyle::default_bar()
-                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .template("{msg}\n{spinner:.rgb(222,115,86)} [{elapsed_precise}] [{wide_bar:.rgb(222,115,86)/rgb(255,145,115)}] {bytes}/{total_bytes} ({eta})")
                 .unwrap()
-                .progress_chars("#>-"),
+                .progress_chars("━╸─"),
         );
         bar.set_message(message.to_string());
         bar.enable_steady_tick(Duration::from_millis(100));
@@ -120,7 +120,7 @@ impl MultiProgressReporter {
         let bar = self.multi.add(ProgressBar::new_spinner());
         bar.set_style(
             ProgressStyle::default_spinner()
-                .template("{spinner:.green} {msg}")
+                .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
                 .unwrap()
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
         );

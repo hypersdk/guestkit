@@ -12,6 +12,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use indicatif::{ProgressBar, ProgressStyle};
 use ratatui::{
     backend::CrosstermBackend,
     Terminal,
@@ -24,6 +25,24 @@ pub use app::App;
 
 /// Run the TUI application
 pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
+    // Show loading spinner during inspection with coral-terracotta orange theme
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+    );
+    spinner.set_message("🔍 Inspecting disk image and analyzing system...");
+    spinner.enable_steady_tick(Duration::from_millis(80));
+
+    // Create app state (this is the slow part)
+    let app = App::new(image_path.as_ref());
+
+    spinner.finish_and_clear();
+
+    let mut app = app?;
+
     // Setup terminal
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
@@ -31,9 +50,6 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
         .context("Failed to enter alternate screen")?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
-
-    // Create app state
-    let mut app = App::new(image_path.as_ref())?;
 
     // Run the event loop
     let result = run_app(&mut terminal, &mut app);
