@@ -9,6 +9,8 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 [![Downloads](https://pepy.tech/badge/guestctl)](https://pepy.tech/project/guestctl)
 
 **✨ Latest (v0.3.1):**
+- **🤖 AI-Powered Diagnostics** - OpenAI GPT-4o integration for intelligent VM troubleshooting (optional)
+- **🎮 Interactive Mode** - 97+ commands across 28 categories for comprehensive VM management
 - **🎯 Killer Summary View** - See OS, version, architecture at a glance with color-coded output
 - **🪟 Windows Registry Parsing** - Full Windows version detection via registry access
 - **🔄 VM Migration Support** - Universal fstab/crypttab rewriter for cross-platform migration
@@ -108,6 +110,46 @@ guestctl interactive vm.qcow2
 > ai what security issues do you see?
 > ai analyze disk usage patterns
 ```
+
+**Interactive Mode - 97+ Commands:**
+
+The interactive shell provides comprehensive VM management capabilities organized into 28 categories:
+
+```bash
+guestctl interactive vm.qcow2
+```
+
+**Command Categories:**
+- **System Information** (2) - info, help
+- **Filesystem Operations** (5) - filesystems, mount, umount, mounts
+- **File Operations** (8) - ls, cat, head, find, stat, download, upload, edit
+- **File Management** (12) - write, copy, move, delete, mkdir, chmod, chown, symlink, large-files, disk-usage
+- **Package Management** (5) - packages, install, remove, update, search
+- **System Inspection** (4) - services, users, network
+- **User Management** (5) - adduser, deluser, passwd, usermod, groups
+- **SSH Key Management** (5) - ssh-addkey, ssh-removekey, ssh-listkeys, ssh-enable, ssh-config
+- **System Configuration** (4) - hostname, timezone, selinux, locale
+- **Service Management** (6) - enable, disable, restart, logs, failed, boot-time
+- **Firewall Management** (3) - firewall-add, firewall-remove, firewall-list
+- **Cron/Scheduled Tasks** (2) - cron-add, cron-list
+- **System Cleanup** (4) - clean-logs, clean-cache, clean-temp, clean-kernels
+- **Backup & Safety** (2) - backup, backups
+- **Boot Configuration** (3) - grub show, grub set, grub update
+- **Network Configuration** (4) - net-setip, net-setdns, net-route-add, net-dhcp
+- **Process Management** (3) - ps, kill, top
+- **Security & Audit** (4) - scan-ports, audit-perms, audit-suid, check-updates
+- **Database Operations** (2) - db-list, db-backup
+- **Advanced File Operations** (5) - grep-replace, diff, tree, compress, extract
+- **Git Operations** (2) - git-clone, git-pull
+- **Performance Tuning** (2) - tune-swappiness, tune-show
+- **Quick Setup Wizards** (3) - setup-webserver, setup-database, setup-docker
+- **Monitoring & Metrics** (2) - metrics, bandwidth
+- **SELinux Advanced** (2) - selinux-context, selinux-audit
+- **Templates** (1) - template-save
+- **AI Assistant** (1) - ai (requires --features ai)
+- **Shell Commands** (3) - clear, exit, quit
+
+See [COMMANDS_SUMMARY.md](COMMANDS_SUMMARY.md) for complete command reference.
 
 **Python API:**
 ```python
@@ -234,10 +276,25 @@ guestctl inspect vm.raw  # Now uses loop device!
 ### Advanced CLI Features (guestctl)
 
 - 🤖 **AI-Powered Diagnostics** (optional) - OpenAI GPT-4o integration for intelligent VM troubleshooting
-  - Ask natural language questions about VM issues
+  - Ask natural language questions about VM issues in plain English
   - Get expert analysis of boot failures, disk problems, and configuration issues
-  - AI assistant with 97+ interactive commands for VM modification
+  - Context-aware diagnostics based on query keywords (boot, LVM, security, etc.)
+  - Actionable recommendations with specific commands and warnings
+  - Works seamlessly with 97+ interactive commands for VM modification
   - Requires `--features ai` build flag and `OPENAI_API_KEY` environment variable
+  - Example queries: "why won't this boot?", "what security issues do you see?", "analyze disk usage patterns"
+
+- 🎮 **Interactive Mode** - Full-featured REPL shell for VM management
+  - 97+ commands organized into 28 categories
+  - Tab completion and command history (readline-style)
+  - Direct VM modification: user management, SSH keys, system configuration
+  - Package management: install/remove/update packages without booting
+  - Network configuration: static IP, DNS, routes, DHCP setup
+  - Security auditing: port scanning, permission checks, SUID detection
+  - Database operations: MySQL/PostgreSQL backup and management
+  - Quick setup wizards: webserver, database, Docker installation
+  - Performance tuning: swappiness, system metrics, bandwidth monitoring
+  - Beautiful colored output with context-aware prompts
 
 - 🎯 **Killer Summary View** - Quick summary box showing OS product, architecture, hostname at a glance
   - Color-coded information: Green (OS product), Cyan (architecture), Blue (hostname)
@@ -425,6 +482,7 @@ guestctl cache-clear
 
 **Available Commands:**
 - `inspect` - Comprehensive VM inspection with profiles
+- `interactive` - Full-featured REPL shell with 97+ commands for VM management
 - `diff` - Compare two disk images
 - `compare` - Compare multiple VMs against baseline
 - `inspect-batch` - Parallel batch inspection
