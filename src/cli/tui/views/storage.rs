@@ -1,22 +1,133 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Storage view - Disk, LVM, and mount points
+//! Storage view - LVM, RAID, and mount points
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(8),  // LVM summary
+            Constraint::Length(6),  // RAID arrays
+            Constraint::Min(0),     // Fstab entries
+        ])
+        .split(area);
+
+    draw_lvm_summary(f, chunks[0], app);
+    draw_raid_summary(f, chunks[1], app);
+    draw_fstab(f, chunks[2], app);
+}
+
+fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
+    let mut items = Vec::new();
+
+    if let Some(ref lvm) = app.lvm_info {
+        // Physical volumes
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled("Physical Volumes: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", lvm.physical_volumes.len()), Style::default().fg(TEXT_COLOR)),
+        ])));
+
+        // Volume groups
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled("Volume Groups:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", lvm.volume_groups.len()), Style::default().fg(TEXT_COLOR)),
+        ])));
+
+        if !lvm.volume_groups.is_empty() {
+            for vg in &lvm.volume_groups {
+                items.push(ListItem::new(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(&vg.name, Style::default().fg(ORANGE)),
+                    Span::raw(": "),
+                    Span::styled(format!("{} ", vg.size), Style::default().fg(TEXT_COLOR)),
+                    Span::styled(format!("({} PV, {} LV)", vg.pv_count, vg.lv_count), Style::default().fg(LIGHT_ORANGE)),
+                ])));
+            }
+        }
+
+        // Logical volumes
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled("Logical Volumes:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", lvm.logical_volumes.len()), Style::default().fg(TEXT_COLOR)),
+        ])));
+    } else {
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled("No LVM detected", Style::default().fg(TEXT_COLOR)),
+        ])));
+    }
+
+    let list = List::new(items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" LVM Configuration ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+
+    f.render_widget(list, area);
+}
+
+fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
+    if app.raid_arrays.is_empty() {
+        let empty = Paragraph::new("No RAID arrays detected")
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" RAID Arrays ")
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .style(Style::default().fg(TEXT_COLOR));
+        f.render_widget(empty, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = app.raid_arrays
+        .iter()
+        .map(|raid| {
+            let status_color = if raid.status == "active" && raid.active_devices == raid.total_devices {
+                SUCCESS_COLOR
+            } else if raid.active_devices < raid.total_devices {
+                ERROR_COLOR
+            } else {
+                WARNING_COLOR
+            };
+
+            ListItem::new(Line::from(vec![
+                Span::styled(&raid.device, Style::default().fg(ORANGE)),
+                Span::raw(": "),
+                Span::styled(&raid.level, Style::default().fg(LIGHT_ORANGE)),
+                Span::raw(" - "),
+                Span::styled(&raid.status, Style::default().fg(status_color)),
+                Span::raw(" "),
+                Span::styled(format!("[{}/{}]", raid.active_devices, raid.total_devices), Style::default().fg(status_color)),
+            ]))
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(format!(" RAID Arrays ({}) ", app.raid_arrays.len()))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+
+    f.render_widget(list, area);
+}
+
+fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
     if app.fstab.is_empty() {
         let empty = Paragraph::new("No fstab entries found")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Storage / Mount Points ")
+                .title(" Mount Points ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -28,11 +139,11 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
         .map(|(device, mountpoint, fstype)| {
-            ListItem::new(ratatui::text::Line::from(vec![
-                ratatui::text::Span::styled(format!("{:20} ", device), Style::default().fg(LIGHT_ORANGE)),
-                ratatui::text::Span::raw("→ "),
-                ratatui::text::Span::styled(format!("{:20} ", mountpoint), Style::default().fg(TEXT_COLOR)),
-                ratatui::text::Span::styled(format!("({})", fstype), Style::default().fg(ORANGE)),
+            ListItem::new(Line::from(vec![
+                Span::styled(format!("{:25} ", device), Style::default().fg(LIGHT_ORANGE)),
+                Span::raw("→ "),
+                Span::styled(format!("{:20} ", mountpoint), Style::default().fg(TEXT_COLOR)),
+                Span::styled(format!("({})", fstype), Style::default().fg(ORANGE)),
             ]))
         })
         .collect();
@@ -41,7 +152,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" /etc/fstab Entries ({}) ", app.fstab.len()))
+            .title(format!(" Mount Points / fstab ({}) ", app.fstab.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

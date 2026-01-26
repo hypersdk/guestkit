@@ -3,8 +3,8 @@
 
 use anyhow::Result;
 use guestctl::guestfs::inspect_enhanced::{
-    Database, FirewallInfo, HostEntry, NetworkInterface, PackageInfo, SecurityInfo,
-    SystemService, WebServer,
+    Database, FirewallInfo, HostEntry, LVMInfo, LogicalVolume, NetworkInterface, PackageInfo,
+    RAIDArray, SecurityInfo, SystemService, VolumeGroup, WebServer,
 };
 use guestctl::Guestfs;
 use std::path::Path;
@@ -125,6 +125,8 @@ pub struct App {
 
     pub hosts: Vec<HostEntry>,
     pub fstab: Vec<(String, String, String)>,
+    pub lvm_info: Option<LVMInfo>,
+    pub raid_arrays: Vec<RAIDArray>,
 
     // Profile reports
     pub security_profile: Option<ProfileReport>,
@@ -209,6 +211,10 @@ impl App {
         let fstab = guestfs.inspect_fstab(root)
             .unwrap_or_default();
 
+        // Storage information
+        let lvm_info = guestfs.inspect_lvm(root).ok();
+        let raid_arrays = guestfs.inspect_raid(root).unwrap_or_default();
+
         // Execute profiles
         let security_profile = SecurityProfile.inspect(&mut guestfs, root).ok();
         let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
@@ -250,6 +256,8 @@ impl App {
             security,
             hosts,
             fstab,
+            lvm_info,
+            raid_arrays,
 
             security_profile,
             migration_profile,

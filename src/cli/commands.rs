@@ -1121,10 +1121,12 @@ pub fn inspect_image(
                         println!("      {} Physical Volumes: {}", "🔷".bright_blue(), lvm_info.physical_volumes.join(", ").bright_white());
                     }
                     if !lvm_info.volume_groups.is_empty() {
-                        println!("      {} Volume Groups: {}", "📦".yellow(), lvm_info.volume_groups.join(", ").bright_white().bold());
+                        let vg_names = lvm_info.volume_groups.iter().map(|vg| vg.name.as_str()).collect::<Vec<_>>().join(", ");
+                        println!("      {} Volume Groups: {}", "📦".yellow(), vg_names.bright_white().bold());
                     }
                     if !lvm_info.logical_volumes.is_empty() {
-                        println!("      {} Logical Volumes: {}", "💿".bright_cyan(), lvm_info.logical_volumes.join(", ").bright_white());
+                        let lv_names = lvm_info.logical_volumes.iter().map(|lv| lv.name.as_str()).collect::<Vec<_>>().join(", ");
+                        println!("      {} Logical Volumes: {}", "💿".bright_cyan(), lv_names.bright_white());
                     }
                 }
             }

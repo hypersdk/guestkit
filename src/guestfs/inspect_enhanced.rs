@@ -52,12 +52,41 @@ pub struct SystemService {
     pub state: String,
 }
 
+/// LVM Volume Group information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VolumeGroup {
+    pub name: String,
+    pub pv_count: usize,
+    pub lv_count: usize,
+    pub size: String,
+}
+
+/// LVM Logical Volume information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogicalVolume {
+    pub name: String,
+    pub vg_name: String,
+    pub size: String,
+    pub path: String,
+}
+
 /// LVM information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LVMInfo {
     pub physical_volumes: Vec<String>,
-    pub volume_groups: Vec<String>,
-    pub logical_volumes: Vec<String>,
+    pub volume_groups: Vec<VolumeGroup>,
+    pub logical_volumes: Vec<LogicalVolume>,
+}
+
+/// RAID array information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RAIDArray {
+    pub device: String,
+    pub level: String,
+    pub status: String,
+    pub devices: Vec<String>,
+    pub active_devices: usize,
+    pub total_devices: usize,
 }
 
 /// Boot configuration
@@ -781,23 +810,146 @@ impl Guestfs {
     }
 
     /// Detect LVM configuration
-    pub fn inspect_lvm(&mut self, _root: &str) -> Result<LVMInfo> {
+    pub fn inspect_lvm(&mut self, root: &str) -> Result<LVMInfo> {
         let mut lvm_info = LVMInfo {
             physical_volumes: Vec::new(),
             volume_groups: Vec::new(),
             logical_volumes: Vec::new(),
         };
-        // Check if LVM is present
+
+        // Get physical volumes
         if let Ok(pvs) = self.pvs() {
             lvm_info.physical_volumes = pvs;
         }
+
+        // Get volume groups with basic info
         if let Ok(vgs) = self.vgs() {
-            lvm_info.volume_groups = vgs;
+            for vg in vgs {
+                let vg_info = VolumeGroup {
+                    name: vg.clone(),
+                    pv_count: 0, // Will be counted from PVs
+                    lv_count: 0, // Will be counted from LVs
+                    size: "Unknown".to_string(),
+                };
+                lvm_info.volume_groups.push(vg_info);
+            }
         }
+
+        // Get logical volumes with basic info
         if let Ok(lvs) = self.lvs() {
-            lvm_info.logical_volumes = lvs;
+            for lv_path in lvs {
+                // Parse LV path to get VG and LV names
+                // Format is usually /dev/mapper/vgname-lvname or /dev/vgname/lvname
+                let lv_name = lv_path.split('/').last().unwrap_or(&lv_path).to_string();
+
+                // Try to get VG name from LV
+                let vg_name = if lv_path.contains("/mapper/") {
+                    // For /dev/mapper/vg-lv format
+                    lv_name.split('-').next().unwrap_or("unknown").to_string()
+                } else if lv_path.starts_with("/dev/") {
+                    // For /dev/vg/lv format
+                    lv_path.split('/').nth(2).unwrap_or("unknown").to_string()
+                } else {
+                    "unknown".to_string()
+                };
+
+                let lv_info = LogicalVolume {
+                    name: lv_name,
+                    vg_name: vg_name.clone(),
+                    size: "Unknown".to_string(),
+                    path: lv_path.clone(),
+                };
+                lvm_info.logical_volumes.push(lv_info);
+
+                // Update VG counts
+                if let Some(vg) = lvm_info.volume_groups.iter_mut().find(|v| v.name == vg_name) {
+                    vg.lv_count += 1;
+                }
+            }
         }
+
         Ok(lvm_info)
+    }
+
+    /// Inspect RAID arrays
+    pub fn inspect_raid(&mut self, root: &str) -> Result<Vec<RAIDArray>> {
+        let mut raids = Vec::new();
+
+        self.with_mount(root, |guestfs| {
+            // Read /proc/mdstat to get RAID information
+            if let Ok(content) = guestfs.read_file("/proc/mdstat") {
+                let content_str = String::from_utf8_lossy(&content);
+                let mut current_array: Option<RAIDArray> = None;
+
+                for line in content_str.lines() {
+                    let line = line.trim();
+
+                    // Skip header and empty lines
+                    if line.is_empty() || line.starts_with("Personalities") || line.starts_with("unused devices") {
+                        continue;
+                    }
+
+                    // New array line (e.g., "md0 : active raid1 sda1[0] sdb1[1]")
+                    if line.starts_with("md") {
+                        // Save previous array if any
+                        if let Some(array) = current_array.take() {
+                            raids.push(array);
+                        }
+
+                        let parts: Vec<&str> = line.split_whitespace().collect();
+                        if parts.len() >= 4 {
+                            let device = format!("/dev/{}", parts[0]);
+                            let status = parts[2].to_string(); // active/inactive
+                            let level = parts[3].to_string(); // raid0, raid1, raid5, etc.
+
+                            // Extract device list
+                            let devices: Vec<String> = parts.iter()
+                                .skip(4)
+                                .filter_map(|s| {
+                                    // Format: sda1[0] or sdb1[1](F) for failed
+                                    let dev = s.split('[').next()?.to_string();
+                                    Some(format!("/dev/{}", dev))
+                                })
+                                .collect();
+
+                            current_array = Some(RAIDArray {
+                                device: device.clone(),
+                                level,
+                                status,
+                                devices: devices.clone(),
+                                active_devices: devices.len(),
+                                total_devices: devices.len(),
+                            });
+                        }
+                    }
+                    // Status line (e.g., "      123456 blocks [2/2] [UU]")
+                    else if let Some(ref mut array) = current_array {
+                        if line.contains("[") && line.contains("]") {
+                            // Extract [n/m] status
+                            if let Some(start) = line.rfind('[') {
+                                if let Some(end) = line.rfind(']') {
+                                    let status_part = &line[start+1..end];
+                                    if status_part.contains('/') {
+                                        let nums: Vec<&str> = status_part.split('/').collect();
+                                        if nums.len() == 2 {
+                                            array.active_devices = nums[0].parse().unwrap_or(0);
+                                            array.total_devices = nums[1].parse().unwrap_or(0);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Save last array
+                if let Some(array) = current_array {
+                    raids.push(array);
+                }
+            }
+
+            Ok(raids)
+        })
     }
 
     /// Detect cloud-init
