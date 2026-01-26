@@ -119,7 +119,7 @@ impl Guestfs {
     ///
     /// # Returns
     /// Result from the function execution
-    fn with_mount<F, T>(&mut self, root: &str, f: F) -> Result<T>
+    pub fn with_mount<F, T>(&mut self, root: &str, f: F) -> Result<T>
     where
         F: FnOnce(&mut Self) -> Result<T>,
     {
