@@ -359,9 +359,8 @@ Planned improvements:
 
 ## See Also
 
-- [Interactive Mode Guide](./INTERACTIVE_MODE.md)
-- [Batch Mode Guide](../examples/batch/README.md)
-- [CLI Guide](./CLI_GUIDE.md)
+- [Interactive Mode Guide](../user-guides/interactive-mode.md)
+- [CLI Guide](../user-guides/cli-guide.md)
 
 ---
 

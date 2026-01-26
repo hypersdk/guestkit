@@ -947,10 +947,10 @@ done
 
 ## See Also
 
-- **[Python Bindings](PYTHON_BINDINGS.md)** - Use GuestCtl from Python
-- **[Ergonomic API](ERGONOMIC_API.md)** - Type-safe Rust API
-- **[Quick Wins](QUICK_WINS.md)** - Implementation guide
-- **[Enhancement Roadmap](ENHANCEMENT_ROADMAP.md)** - Future features
+- **[Python Bindings](python-bindings.md)** - Use GuestCtl from Python
+- **[Ergonomic API](../api/ergonomic-design.md)** - Type-safe Rust API
+- **[Quick Priorities](../development/quick-priorities.md)** - Implementation guide
+- **[Enhancement Roadmap](../development/enhancement-roadmap.md)** - Future features
 
 ---
 

@@ -503,7 +503,7 @@ guestctl cache-clear
 - `cache-clear` - Clear inspection cache
 - `version` - Show version information
 
-**Full Documentation:** [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md)
+**Full Documentation:** [`docs/user-guides/cli-guide.md`](docs/user-guides/cli-guide.md)
 
 ---
 
@@ -603,7 +603,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-See [`docs/ERGONOMIC_API.md`](docs/ERGONOMIC_API.md) and [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for details.
+See [`docs/api/ergonomic-design.md`](docs/api/ergonomic-design.md) and [`docs/api/migration-guide.md`](docs/api/migration-guide.md) for details.
 
 #### Python Bindings
 
@@ -671,9 +671,8 @@ g.shutdown()
 - [`examples/python/test_bindings.py`](examples/python/test_bindings.py) - Comprehensive test suite
 
 **Full Documentation:**
-- [`docs/guides/PYTHON_BINDINGS.md`](docs/guides/PYTHON_BINDINGS.md) - Comprehensive Python guide
-- [`docs/api/PYTHON_API_REFERENCE.md`](docs/api/PYTHON_API_REFERENCE.md) - Complete API reference with 100+ methods
-- [`docs/status/PYTHON_BINDINGS_STATUS.md`](docs/status/PYTHON_BINDINGS_STATUS.md) - Implementation status and build instructions
+- [`docs/user-guides/python-bindings.md`](docs/user-guides/python-bindings.md) - Comprehensive Python guide
+- [`docs/api/python-reference.md`](docs/api/python-reference.md) - Complete API reference with 100+ methods
 
 **Python API Coverage:**
 - 58 Guestfs methods covering OS inspection, file operations, device management, LVM, archives, and more
@@ -801,22 +800,20 @@ guestctl/
 📚 **Complete documentation is organized in [`docs/`](docs/)**
 
 **Quick Links:**
-- 🚀 **[Quick Start](docs/guides/QUICKSTART.md)** - Get started in minutes
-- 📖 **[CLI Guide](docs/guides/CLI_GUIDE.md)** - Command-line usage
+- 🚀 **[Quick Start](docs/user-guides/getting-started.md)** - Get started in minutes
+- 📖 **[CLI Guide](docs/user-guides/cli-guide.md)** - Command-line usage
 - 🔧 **[Systemd Analysis](docs/systemd-analysis.md)** - Deep systemd inspection guide
-- 🐍 **[Python Guide](docs/guides/PYTHON_BINDINGS.md)** - Python API guide
-- 🔍 **[API Reference](docs/api/PYTHON_API_REFERENCE.md)** - Complete Python API
-- 🏗️ **[Architecture](docs/architecture/ARCHITECTURE.md)** - System architecture
-- 🧪 **[Testing Guide](docs/testing/TESTING.md)** - How to test
-- 📊 **[Project Status](docs/status/PROJECT_SUMMARY.md)** - Implementation status
+- 🐍 **[Python Guide](docs/user-guides/python-bindings.md)** - Python API guide
+- 🔍 **[API Reference](docs/api/python-reference.md)** - Complete Python API
+- 🏗️ **[Architecture](docs/architecture/overview.md)** - System architecture
 - ⚡ **[Performance Baseline](docs/development/performance-baseline.md)** - Performance metrics and optimization guide
-- 🚀 **[Enhancement Roadmap](docs/development/ENHANCEMENT_ROADMAP.md)** - Future plans
+- 🚀 **[Enhancement Roadmap](docs/development/enhancement-roadmap.md)** - Future plans
 
 See **[docs/README.md](docs/README.md)** for complete documentation index.
 
 ## Architecture
 
-See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for detailed architecture documentation.
+See [docs/architecture/overview.md](docs/architecture/overview.md) for detailed architecture documentation.
 
 ### Core Modules
 
@@ -1050,7 +1047,7 @@ sudo python3 test_bindings.py /path/to/disk.img
 
 **Note on Permissions:** Some tests require root access for mounting disk images.
 
-See [docs/testing/TESTING.md](docs/testing/TESTING.md) for complete testing documentation.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for complete testing documentation.
 
 ### Code Quality
 
