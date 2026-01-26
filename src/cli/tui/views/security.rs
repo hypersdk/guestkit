@@ -32,11 +32,19 @@ fn draw_security_tools(f: &mut Frame, area: Rect, app: &App) {
         create_status_item("auditd", if app.security.auditd { "enabled" } else { "disabled" }, app.security.auditd),
     ];
 
+    let enabled_count = vec![
+        app.security.selinux != "disabled",
+        app.security.apparmor,
+        app.security.fail2ban,
+        app.security.aide,
+        app.security.auditd,
+    ].iter().filter(|&&x| x).count();
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Security Tools ")
+            .title(format!(" 🔒 Security Tools • {} of 5 enabled ", enabled_count))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
@@ -67,11 +75,13 @@ fn draw_firewall_ssh(f: &mut Frame, area: Rect, app: &App) {
         ])),
     ];
 
+    let fw_status = if app.firewall.enabled { "🟢 Active" } else { "🔴 Inactive" };
+
     let fw_list = List::new(fw_items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Firewall ")
+            .title(format!(" 🛡️  Firewall • {} ", fw_status))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(fw_list, chunks[0]);
@@ -101,11 +111,13 @@ fn draw_firewall_ssh(f: &mut Frame, area: Rect, app: &App) {
             .collect()
     };
 
+    let total_keys: usize = app.security.ssh_keys.iter().map(|(_, count)| count).sum();
+
     let ssh_list = List::new(ssh_items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" SSH Authorized Keys ")
+            .title(format!(" 🔑 SSH Keys • {} keys for {} users ", total_keys, app.security.ssh_keys.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(ssh_list, chunks[1]);

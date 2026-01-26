@@ -26,11 +26,11 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_modules(f: &mut Frame, area: Rect, app: &App) {
     if app.kernel_modules.is_empty() {
-        let empty = Paragraph::new("No kernel modules configured to load at boot")
+        let empty = Paragraph::new("⚠️  No kernel modules configured to load at boot")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Kernel Modules (Boot Configuration) ")
+                .title(" 🧩 Kernel Modules ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -73,7 +73,7 @@ fn draw_modules(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Kernel Modules ({} / {} total) ", filtered_modules.len(), app.kernel_modules.len()))
+            .title(format!(" 🧩 Kernel Modules • {} showing of {} total ", filtered_modules.len(), app.kernel_modules.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
@@ -81,11 +81,11 @@ fn draw_modules(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_parameters(f: &mut Frame, area: Rect, app: &App) {
     if app.kernel_params.is_empty() {
-        let empty = Paragraph::new("No kernel parameters configured")
+        let empty = Paragraph::new("⚠️  No kernel parameters configured")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Kernel Parameters (sysctl) ")
+                .title(" ⚙️  Kernel Parameters ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -132,11 +132,17 @@ fn draw_parameters(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    // Count different parameter categories
+    let kernel_count = app.kernel_params.keys().filter(|k| k.contains("kernel.")).count();
+    let net_count = app.kernel_params.keys().filter(|k| k.contains("net.")).count();
+    let fs_count = app.kernel_params.keys().filter(|k| k.contains("fs.")).count();
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Kernel Parameters / sysctl ({} / {} total) ", filtered_params.len(), app.kernel_params.len()))
+            .title(format!(" ⚙️  Kernel Parameters (sysctl) • {} showing • {} kernel • {} net • {} fs ",
+                filtered_params.len(), kernel_count, net_count, fs_count))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
