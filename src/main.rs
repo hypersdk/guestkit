@@ -381,6 +381,16 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// AI-powered diagnostics and assistance (requires --features ai and OPENAI_API_KEY)
+    Ai {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Question or problem description
+        #[arg(required = true)]
+        query: String,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -678,6 +688,10 @@ fn main() -> anyhow::Result<()> {
 
         Commands::Shell { image } => {
             cli::shell::run_interactive_shell(&image)?;
+        }
+
+        Commands::Ai { image, query } => {
+            cli::ai::run_ai_assistant(&image, &query)?;
         }
 
         Commands::Completion { shell } => {
