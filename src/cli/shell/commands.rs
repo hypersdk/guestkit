@@ -57,7 +57,13 @@ pub fn cmd_ls(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            eprintln!("{} {}", "Error:".red(), e);
+            // Check if it's a file (common mistake: ls on a file instead of cat)
+            if ctx.guestfs.is_file(&full_path).unwrap_or(false) {
+                eprintln!("{} '{}' is a file, not a directory", "Error:".red(), full_path);
+                eprintln!("{} Use 'cat {}' to view the file contents", "Hint:".yellow(), full_path);
+            } else {
+                eprintln!("{} {}", "Error:".red(), e);
+            }
             Ok(())
         }
     }
