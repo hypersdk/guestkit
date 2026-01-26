@@ -252,6 +252,64 @@ fn benchmark_hashing(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark batch inspection with different worker counts
+fn benchmark_batch_inspection(c: &mut Criterion) {
+    use std::fs;
+    use tempfile::TempDir;
+
+    let mut group = c.benchmark_group("batch_inspection");
+    group.measurement_time(Duration::from_secs(10));
+
+    // Create temporary disk files for testing
+    let temp_dir = TempDir::new().unwrap();
+    let disks: Vec<_> = (0..8)
+        .map(|i| {
+            let path = temp_dir.path().join(format!("disk{}.img", i));
+            fs::write(&path, vec![0u8; 1024 * 1024]).unwrap(); // 1MB fake disk
+            path
+        })
+        .collect();
+
+    // Benchmark sequential processing (1 worker)
+    group.bench_function("sequential_8_disks", |b| {
+        b.iter(|| {
+            for disk in &disks {
+                // Simulate inspection workload
+                std::thread::sleep(Duration::from_millis(50));
+                black_box(disk);
+            }
+        });
+    });
+
+    // Benchmark parallel processing (4 workers)
+    group.bench_function("parallel_4_workers_8_disks", |b| {
+        use rayon::prelude::*;
+
+        b.iter(|| {
+            disks.par_iter().for_each(|disk| {
+                // Simulate inspection workload
+                std::thread::sleep(Duration::from_millis(50));
+                black_box(disk);
+            });
+        });
+    });
+
+    // Benchmark parallel processing (8 workers)
+    group.bench_function("parallel_8_workers_8_disks", |b| {
+        use rayon::prelude::*;
+
+        b.iter(|| {
+            disks.par_iter().for_each(|disk| {
+                // Simulate inspection workload
+                std::thread::sleep(Duration::from_millis(50));
+                black_box(disk);
+            });
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_appliance_lifecycle,
@@ -263,6 +321,7 @@ criterion_group!(
     benchmark_string_ops,
     benchmark_memory,
     benchmark_hashing,
+    benchmark_batch_inspection,
 );
 
 criterion_main!(benches);

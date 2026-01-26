@@ -10,7 +10,12 @@ pub mod exporters;
 pub mod formatters;
 pub mod interactive;
 pub mod output;
+pub mod parallel;
 pub mod profiles;
 
 pub use batch::*;
 pub use interactive::*;
+pub use parallel::{
+    inspect_batch, inspect_batch_with_workers, InspectionConfig, InspectionResult,
+    ParallelInspector, ProgressiveInspector,
+};
