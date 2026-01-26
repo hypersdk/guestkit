@@ -3,6 +3,7 @@
 
 pub mod html;
 pub mod markdown;
+pub mod pdf;
 
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
@@ -13,6 +14,7 @@ use std::path::Path;
 pub enum ExportFormat {
     Html,
     Markdown,
+    Pdf,
 }
 
 impl ExportFormat {
@@ -20,6 +22,7 @@ impl ExportFormat {
         match s.to_lowercase().as_str() {
             "html" => Ok(ExportFormat::Html),
             "md" | "markdown" => Ok(ExportFormat::Markdown),
+            "pdf" => Ok(ExportFormat::Pdf),
             _ => Err(anyhow::anyhow!("Unknown export format: {}", s)),
         }
     }
@@ -29,6 +32,7 @@ impl ExportFormat {
         match self {
             ExportFormat::Html => "html",
             ExportFormat::Markdown => "md",
+            ExportFormat::Pdf => "pdf",
         }
     }
 }
@@ -39,12 +43,19 @@ pub fn export_report(
     format: ExportFormat,
     output_path: &Path,
 ) -> Result<()> {
-    let content = match format {
-        ExportFormat::Html => html::generate_html_report(report)?,
-        ExportFormat::Markdown => markdown::generate_markdown_report(report)?,
-    };
-
-    std::fs::write(output_path, content)?;
+    match format {
+        ExportFormat::Html => {
+            let content = html::generate_html_report(report)?;
+            std::fs::write(output_path, content)?;
+        }
+        ExportFormat::Markdown => {
+            let content = markdown::generate_markdown_report(report)?;
+            std::fs::write(output_path, content)?;
+        }
+        ExportFormat::Pdf => {
+            pdf::generate_pdf_to_file(report, output_path)?;
+        }
+    }
 
     Ok(())
 }

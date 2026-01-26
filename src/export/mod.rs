@@ -5,5 +5,7 @@
 //! to different formats including HTML, PDF, and Markdown.
 
 pub mod html;
+pub mod pdf;
 
 pub use html::{HtmlExporter, HtmlExportOptions};
+pub use pdf::{PdfExporter, PdfExportOptions, PaperSize};

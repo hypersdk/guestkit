@@ -65,6 +65,7 @@ nt_hive2 = "3.0"
 
 # Report generation and export
 askama = "0.12"
+printpdf = "0.7"
 
 # Hashing for cache keys
 sha2 = "0.10"
