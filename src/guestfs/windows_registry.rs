@@ -39,9 +39,12 @@ pub struct WindowsNetAdapter {
 
 /// Parse installed applications from SOFTWARE hive
 ///
-/// TODO: Full implementation using nt_hive2 SubPath API
-/// This stub returns basic detection that hive file exists
+/// Reads from SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
+/// and SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall (for 32-bit apps on 64-bit Windows)
 pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
     // Verify hive exists
     if !hive_path.exists() {
         return Err(Error::NotFound(format!(
@@ -50,20 +53,108 @@ pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
         )));
     }
 
-    // TODO: Implement full registry parsing with nt_hive2
-    // For now, return indication that hive was found
-    Ok(vec![WindowsApp {
-        name: "Registry Hive Detected".to_string(),
-        version: "Parsing not yet implemented".to_string(),
-        publisher: "guestctl".to_string(),
-        install_location: None,
-    }])
+    // Read hive file
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {}", e)))?;
+
+    // Parse hive
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
+
+    let mut applications = Vec::new();
+
+    // Get root key
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
+
+    // Navigate to Uninstall key: Microsoft\Windows\CurrentVersion\Uninstall
+    let microsoft_key = match root_key.subkey("Microsoft", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(applications), // No Microsoft key
+    };
+
+    let windows_key = match microsoft_key.borrow().subkey("Windows", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(applications), // No Windows key
+    };
+
+    let current_version_key = match windows_key.borrow().subkey("CurrentVersion", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(applications), // No CurrentVersion key
+    };
+
+    let uninstall_key = match current_version_key.borrow().subkey("Uninstall", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(applications), // No Uninstall key
+    };
+
+    // Iterate through subkeys (each represents an installed application)
+    let uninstall_borrowed = uninstall_key.borrow();
+    let subkeys_result = uninstall_borrowed.subkeys(&mut hive);
+    let subkeys_ref = match subkeys_result {
+        Ok(ref_vec) => ref_vec,
+        Err(_) => return Ok(applications),
+    };
+
+    for app_key in (&*subkeys_ref).iter() {
+        let app_key_ref = app_key.borrow();
+
+        // Extract application information from values
+        let mut name = String::new();
+        let mut version = String::new();
+        let mut publisher = String::new();
+        let mut install_location = None;
+
+        for kv in app_key_ref.values() {
+            match kv.name().as_ref() {
+                "DisplayName" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        name = data.clone();
+                    }
+                }
+                "DisplayVersion" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        version = data.clone();
+                    }
+                }
+                "Publisher" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        publisher = data.clone();
+                    }
+                }
+                "InstallLocation" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        if !data.is_empty() {
+                            install_location = Some(data.clone());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Only add if we have a display name
+        if !name.is_empty() {
+            applications.push(WindowsApp {
+                name,
+                version,
+                publisher,
+                install_location,
+            });
+        }
+    }
+
+    Ok(applications)
 }
 
 /// Parse Windows services from SYSTEM hive
 ///
-/// TODO: Full implementation using nt_hive2 SubPath API
+/// Reads from SYSTEM\ControlSet001\Services
 pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
     // Verify hive exists
     if !hive_path.exists() {
         return Err(Error::NotFound(format!(
@@ -72,19 +163,100 @@ pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
         )));
     }
 
-    // TODO: Implement full registry parsing
-    Ok(vec![WindowsSvc {
-        name: "RegistryDetected".to_string(),
-        display_name: "SYSTEM Hive Detected".to_string(),
-        start_type: "Automatic".to_string(),
-        image_path: hive_path.display().to_string(),
-    }])
+    // Read hive file
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {}", e)))?;
+
+    // Parse hive
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
+
+    let mut services = Vec::new();
+
+    // Get root key
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
+
+    // Navigate to Services: ControlSet001\Services
+    let controlset_key = match root_key.subkey("ControlSet001", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(services), // No ControlSet001 key
+    };
+
+    let services_key = match controlset_key.borrow().subkey("Services", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(services), // No Services key
+    };
+
+    // Iterate through service subkeys
+    let services_borrowed = services_key.borrow();
+    let subkeys_result = services_borrowed.subkeys(&mut hive);
+    let subkeys_ref = match subkeys_result {
+        Ok(ref_vec) => ref_vec,
+        Err(_) => return Ok(services),
+    };
+
+    for svc_key in (&*subkeys_ref).iter() {
+        let svc_key_ref = svc_key.borrow();
+        let svc_name = svc_key_ref.name().to_string();
+
+        // Extract service information
+        let mut display_name = svc_name.clone();
+        let mut start_type = String::from("Unknown");
+        let mut image_path = String::new();
+
+        for kv in svc_key_ref.values() {
+            match kv.name().as_ref() {
+                "DisplayName" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        display_name = data.clone();
+                    }
+                }
+                "Start" => {
+                    // Start type is a DWORD:
+                    // 0 = Boot, 1 = System, 2 = Automatic, 3 = Manual, 4 = Disabled
+                    if let RegistryValue::RegDWord(start_val) = kv.value() {
+                        start_type = match start_val {
+                            0 => "Boot".to_string(),
+                            1 => "System".to_string(),
+                            2 => "Automatic".to_string(),
+                            3 => "Manual".to_string(),
+                            4 => "Disabled".to_string(),
+                            _ => format!("Unknown({})", start_val),
+                        };
+                    }
+                }
+                "ImagePath" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                        image_path = data.clone();
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Only add services that have an image path (actual services, not just service groups)
+        if !image_path.is_empty() {
+            services.push(WindowsSvc {
+                name: svc_name,
+                display_name,
+                start_type,
+                image_path,
+            });
+        }
+    }
+
+    Ok(services)
 }
 
 /// Parse network configuration from SYSTEM hive
 ///
-/// TODO: Full implementation using nt_hive2 SubPath API
+/// Reads from SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces
 pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>> {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
     // Verify hive exists
     if !hive_path.exists() {
         return Err(Error::NotFound(format!(
@@ -93,15 +265,130 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
         )));
     }
 
-    // TODO: Implement full network adapter parsing
-    Ok(vec![WindowsNetAdapter {
-        name: "DetectedAdapter".to_string(),
-        description: "Network configuration in SYSTEM hive".to_string(),
-        dhcp_enabled: true,
-        ip_address: Vec::new(),
-        mac_address: String::new(),
-        dns_servers: Vec::new(),
-    }])
+    // Read hive file
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {}", e)))?;
+
+    // Parse hive
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
+
+    let mut adapters = Vec::new();
+
+    // Get root key
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
+
+    // Navigate to Tcpip interfaces: ControlSet001\Services\Tcpip\Parameters\Interfaces
+    let controlset_key = match root_key.subkey("ControlSet001", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(adapters), // No ControlSet001 key
+    };
+
+    let services_key = match controlset_key.borrow().subkey("Services", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(adapters), // No Services key
+    };
+
+    let tcpip_key = match services_key.borrow().subkey("Tcpip", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(adapters), // No Tcpip key
+    };
+
+    let params_key = match tcpip_key.borrow().subkey("Parameters", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(adapters), // No Parameters key
+    };
+
+    let interfaces_key = match params_key.borrow().subkey("Interfaces", &mut hive) {
+        Ok(Some(key)) => key,
+        _ => return Ok(adapters), // No Interfaces key
+    };
+
+    // Iterate through interface subkeys (each GUID represents an adapter)
+    let interfaces_borrowed = interfaces_key.borrow();
+    let subkeys_result = interfaces_borrowed.subkeys(&mut hive);
+    let subkeys_ref = match subkeys_result {
+        Ok(ref_vec) => ref_vec,
+        Err(_) => return Ok(adapters),
+    };
+
+    for if_key in (&*subkeys_ref).iter() {
+        let if_key_ref = if_key.borrow();
+        let adapter_guid = if_key_ref.name().to_string();
+
+        // Extract network adapter information
+        let mut dhcp_enabled = false;
+        let mut ip_address = Vec::new();
+        let mut dns_servers = Vec::new();
+
+        for kv in if_key_ref.values() {
+            match kv.name().as_ref() {
+                "EnableDHCP" => {
+                    // DHCP enabled is a DWORD (1 = enabled, 0 = disabled)
+                    if let RegistryValue::RegDWord(val) = kv.value() {
+                        dhcp_enabled = *val == 1;
+                    }
+                }
+                "IPAddress" => {
+                    // IP addresses stored as REG_MULTI_SZ (array of strings)
+                    if let RegistryValue::RegMultiSZ(addrs) = kv.value() {
+                        for addr in addrs {
+                            if !addr.is_empty() && addr != "0.0.0.0" {
+                                ip_address.push(addr.clone());
+                            }
+                        }
+                    }
+                }
+                "DhcpIPAddress" => {
+                    // DHCP-assigned IP address
+                    if let RegistryValue::RegSZ(addr) = kv.value() {
+                        if !addr.is_empty() && addr != "0.0.0.0" {
+                            ip_address.push(addr.clone());
+                        }
+                    }
+                }
+                "NameServer" => {
+                    // DNS servers as comma-separated string
+                    if let RegistryValue::RegSZ(servers) = kv.value() {
+                        for server in servers.split(',') {
+                            let trimmed = server.trim();
+                            if !trimmed.is_empty() {
+                                dns_servers.push(trimmed.to_string());
+                            }
+                        }
+                    }
+                }
+                "DhcpNameServer" => {
+                    // DHCP-assigned DNS servers
+                    if let RegistryValue::RegSZ(servers) = kv.value() {
+                        for server in servers.split(',') {
+                            let trimmed = server.trim();
+                            if !trimmed.is_empty() && !dns_servers.contains(&trimmed.to_string()) {
+                                dns_servers.push(trimmed.to_string());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Only add adapters that have configuration (at least IP or DHCP enabled)
+        if !ip_address.is_empty() || dhcp_enabled {
+            adapters.push(WindowsNetAdapter {
+                name: adapter_guid.clone(),
+                description: format!("Network Adapter {}", adapter_guid),
+                dhcp_enabled,
+                ip_address,
+                mac_address: String::new(), // MAC address not available in Tcpip key
+                dns_servers,
+            });
+        }
+    }
+
+    Ok(adapters)
 }
 
 /// Get Windows version from SOFTWARE hive
