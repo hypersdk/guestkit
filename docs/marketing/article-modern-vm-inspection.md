@@ -506,7 +506,7 @@ jobs:
 
       - name: Install GuestCtl
         run: |
-          cargo install guestctl
+          cargo install guestkit
 
       - name: Validate VM Image
         run: |
