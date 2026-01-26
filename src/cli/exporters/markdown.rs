@@ -240,7 +240,7 @@ pub fn generate_markdown_report_with_options(
             if !lvm.volume_groups.is_empty() {
                 md.push_str("### LVM Volume Groups\n\n");
                 for vg in &lvm.volume_groups {
-                    md.push_str(&format!("- {}\n", vg));
+                    md.push_str(&format!("- {} ({}, {} LVs)\n", vg.name, vg.size, vg.lv_count));
                 }
                 md.push('\n');
             }
@@ -248,7 +248,7 @@ pub fn generate_markdown_report_with_options(
             if !lvm.logical_volumes.is_empty() {
                 md.push_str("### LVM Logical Volumes\n\n");
                 for lv in &lvm.logical_volumes {
-                    md.push_str(&format!("- {}\n", lv));
+                    md.push_str(&format!("- {} (VG: {}, Size: {})\n", lv.name, lv.vg_name, lv.size));
                 }
                 md.push('\n');
             }
@@ -517,7 +517,7 @@ fn generate_storage_diagram(report: &InspectionReport) -> String {
 
             if !lvm.volume_groups.is_empty() {
                 for (idx, vg) in lvm.volume_groups.iter().take(5).enumerate() {
-                    diagram.push_str(&format!("    VG{}[\"VG: {}\"]\n", idx, vg));
+                    diagram.push_str(&format!("    VG{}[\"VG: {}\"]\n", idx, vg.name));
                     if idx < lvm.physical_volumes.len() {
                         diagram.push_str(&format!("    PV{} --> VG{}\n", idx, idx));
                     } else {
@@ -528,7 +528,7 @@ fn generate_storage_diagram(report: &InspectionReport) -> String {
 
             if !lvm.logical_volumes.is_empty() {
                 for (idx, lv) in lvm.logical_volumes.iter().take(5).enumerate() {
-                    diagram.push_str(&format!("    LV{}[\"LV: {}\"]\n", idx, lv));
+                    diagram.push_str(&format!("    LV{}[\"LV: {}\"]\n", idx, lv.name));
                     if idx < lvm.volume_groups.len() {
                         diagram.push_str(&format!("    VG{} --> LV{}\n", idx, idx));
                     } else {
