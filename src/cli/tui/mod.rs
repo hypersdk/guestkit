@@ -92,6 +92,7 @@ fn run_app<B: ratatui::backend::Backend>(
                         app.scroll_offset = 0;
                     }
                     KeyCode::Char('e') => app.toggle_export_menu(),
+                    KeyCode::Char('s') => app.cycle_sort_mode(),
                     KeyCode::Char('/') => app.start_search(),
                     KeyCode::Left => {
                         if app.current_view == app::View::Profiles {
@@ -114,6 +115,8 @@ fn run_app<B: ratatui::backend::Backend>(
 
                         if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();
+                        } else if !app.is_searching() && !app.show_export_menu {
+                            app.toggle_detail();
                         } else {
                             app.select_item();
                         }
@@ -134,6 +137,13 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.export_input(c);
                         } else if app.is_searching() {
                             app.search_input(c);
+                        } else if c.is_ascii_digit() {
+                            // Quick jump to views with number keys 1-9
+                            if let Some(digit) = c.to_digit(10) {
+                                if digit > 0 {
+                                    app.jump_to_view((digit - 1) as usize);
+                                }
+                            }
                         }
                     }
                     KeyCode::Backspace => {

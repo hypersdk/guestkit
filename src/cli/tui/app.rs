@@ -95,6 +95,32 @@ impl View {
     }
 }
 
+/// Sort order for lists
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortMode {
+    NameAsc,
+    NameDesc,
+    Default,
+}
+
+impl SortMode {
+    pub fn next(&self) -> Self {
+        match self {
+            SortMode::Default => SortMode::NameAsc,
+            SortMode::NameAsc => SortMode::NameDesc,
+            SortMode::NameDesc => SortMode::Default,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        match self {
+            SortMode::Default => "Default",
+            SortMode::NameAsc => "Name ↑",
+            SortMode::NameDesc => "Name ↓",
+        }
+    }
+}
+
 pub struct App {
     pub current_view: View,
     pub show_help: bool,
@@ -104,6 +130,8 @@ pub struct App {
     pub selected_index: usize,
     pub show_export_menu: bool,
     pub selected_profile_tab: usize,
+    pub show_detail: bool,
+    pub sort_mode: SortMode,
 
     // Export state
     pub export_mode: Option<ExportMode>,
@@ -258,6 +286,8 @@ impl App {
             selected_index: 0,
             show_export_menu: false,
             selected_profile_tab: 0,
+            show_detail: false,
+            sort_mode: SortMode::Default,
 
             export_mode: None,
             export_format: None,
@@ -608,6 +638,26 @@ impl App {
             3 => self.compliance_profile.as_ref(),
             4 => self.hardening_profile.as_ref(),
             _ => None,
+        }
+    }
+
+    pub fn toggle_detail(&mut self) {
+        self.show_detail = !self.show_detail;
+    }
+
+    pub fn cycle_sort_mode(&mut self) {
+        self.sort_mode = self.sort_mode.next();
+        // Reset scroll when sorting changes
+        self.scroll_offset = 0;
+        self.selected_index = 0;
+    }
+
+    pub fn jump_to_view(&mut self, index: usize) {
+        let views = View::all();
+        if index < views.len() {
+            self.current_view = views[index];
+            self.scroll_offset = 0;
+            self.selected_index = 0;
         }
     }
 }
