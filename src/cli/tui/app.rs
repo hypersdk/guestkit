@@ -136,6 +136,8 @@ pub struct App {
     pub show_help: bool,
     pub searching: bool,
     pub search_query: String,
+    pub search_case_sensitive: bool,
+    pub search_regex_mode: bool,
     pub scroll_offset: usize,
     pub selected_index: usize,
     pub show_export_menu: bool,
@@ -302,6 +304,8 @@ impl App {
             show_help: false,
             searching: false,
             search_query: String::new(),
+            search_case_sensitive: false,
+            search_regex_mode: false,
             scroll_offset: 0,
             selected_index: 0,
             show_export_menu: false,
@@ -896,5 +900,35 @@ impl App {
         self.refreshing = false;
         self.last_updated = Local::now();
         self.show_notification("✓ Data refreshed".to_string());
+    }
+
+    /// Toggle case-sensitive search
+    pub fn toggle_case_sensitive(&mut self) {
+        self.search_case_sensitive = !self.search_case_sensitive;
+        let status = if self.search_case_sensitive { "ON" } else { "OFF" };
+        self.show_notification(format!("Case-sensitive: {}", status));
+    }
+
+    /// Toggle regex search mode
+    pub fn toggle_regex_mode(&mut self) {
+        self.search_regex_mode = !self.search_regex_mode;
+        let status = if self.search_regex_mode { "ON" } else { "OFF" };
+        self.show_notification(format!("Regex mode: {}", status));
+    }
+
+    /// Get search mode indicator string
+    pub fn get_search_mode_indicator(&self) -> String {
+        let mut indicators = Vec::new();
+        if self.search_case_sensitive {
+            indicators.push("Aa");
+        }
+        if self.search_regex_mode {
+            indicators.push(".*");
+        }
+        if indicators.is_empty() {
+            String::new()
+        } else {
+            format!("[{}] ", indicators.join(" "))
+        }
     }
 }
