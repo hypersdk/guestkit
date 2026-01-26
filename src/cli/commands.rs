@@ -2564,20 +2564,21 @@ pub fn systemd_services_command(
             println!("{}", "-".repeat(100));
 
             for service in services {
-                let state_colored = match service.state {
-                    guestctl::core::ServiceState::Active => "active".green(),
-                    guestctl::core::ServiceState::Failed => "failed".red(),
-                    guestctl::core::ServiceState::Inactive => "inactive".dimmed(),
-                    _ => service.state.to_string().white(),
-                };
-
                 let desc = service.description.unwrap_or_else(|| "-".to_string());
-                println!(
-                    "{:<50} {:<15} {}",
-                    service.name.bright_blue(),
-                    state_colored,
-                    desc.dimmed()
-                );
+
+                // Print service name
+                print!("{:<50} ", service.name.bright_blue());
+
+                // Print colored state based on service state
+                match service.state {
+                    guestctl::core::ServiceState::Active => print!("{:<15} ", "active".green()),
+                    guestctl::core::ServiceState::Failed => print!("{:<15} ", "failed".red()),
+                    guestctl::core::ServiceState::Inactive => print!("{:<15} ", "inactive".dimmed()),
+                    _ => print!("{:<15} ", service.state.to_string().white()),
+                }
+
+                // Print description
+                println!("{}", desc.dimmed());
             }
         }
     }
@@ -2666,15 +2667,16 @@ pub fn systemd_boot_command(
 
             for service in slowest {
                 let time_str = format!("{:.2}s", service.activation_time as f64 / 1000.0);
-                let time_colored = if service.activation_time > 3000 {
-                    time_str.red()
-                } else if service.activation_time > 1000 {
-                    time_str.yellow()
-                } else {
-                    time_str.green()
-                };
 
-                println!("{:<50} {}", service.name.bright_blue(), time_colored);
+                // Print service name and colored time
+                print!("{:<50} ", service.name.bright_blue());
+                if service.activation_time > 3000 {
+                    println!("{}", time_str.red());
+                } else if service.activation_time > 1000 {
+                    println!("{}", time_str.yellow());
+                } else {
+                    println!("{}", time_str.green());
+                }
             }
         }
     }

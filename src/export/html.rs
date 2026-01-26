@@ -258,10 +258,10 @@ impl HtmlExporter {
                     <tr><td>Hostname</td><td>{}</td></tr>
                     <tr><td>OS Type</td><td>{}</td></tr>
                     <tr><td>Distribution</td><td>{}</td></tr>
-                    <tr><td>Version</td><td>{}.{}</td></tr>
+                    <tr><td>Version</td><td>{}</td></tr>
                     <tr><td>Architecture</td><td>{}</td></tr>
+                    <tr><td>Package Format</td><td>{}</td></tr>
                     <tr><td>Package Manager</td><td>{}</td></tr>
-                    <tr><td>Init System</td><td>{}</td></tr>
                 </table>
             </div>
         </section>
@@ -269,11 +269,10 @@ impl HtmlExporter {
             data.hostname,
             data.os_type,
             data.distribution,
-            data.version_major,
-            data.version_minor,
+            data.version,
             data.architecture,
             data.package_format,
-            data.init_system
+            data.package_manager
         )
     }
 
@@ -287,9 +286,11 @@ impl HtmlExporter {
                     <thead>
                         <tr>
                             <th>Device</th>
+                            <th>Mountpoint</th>
                             <th>Type</th>
                             <th>Size</th>
-                            <th>UUID</th>
+                            <th>Used</th>
+                            <th>Available</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -301,13 +302,17 @@ impl HtmlExporter {
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td><code>{}</code></td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
                         </tr>
 "#,
                 fs.device,
-                fs.fs_type,
+                fs.mountpoint,
+                fs.fstype,
                 format_bytes(fs.size),
-                fs.uuid
+                format_bytes(fs.used),
+                format_bytes(fs.available)
             ));
         }
 
@@ -390,7 +395,6 @@ impl HtmlExporter {
                         <tr>
                             <th>Username</th>
                             <th>UID</th>
-                            <th>GID</th>
                             <th>Home Directory</th>
                             <th>Shell</th>
                         </tr>
@@ -403,12 +407,11 @@ impl HtmlExporter {
                 r#"                        <tr>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
                             <td><code>{}</code></td>
                             <td><code>{}</code></td>
                         </tr>
 "#,
-                user.username, user.uid, user.gid, user.home_dir, user.shell
+                user.username, user.uid, user.home, user.shell
             ));
         }
 
@@ -455,7 +458,7 @@ impl HtmlExporter {
                             <td><span class="status-badge">{}</span></td>
                         </tr>
 "#,
-                iface.name, iface.ip_address, iface.mac_address, iface.status
+                iface.name, iface.ip_addresses, iface.mac_address, iface.state
             ));
         }
 
@@ -579,11 +582,14 @@ pub struct InspectionData {
     pub hostname: String,
     pub os_type: String,
     pub distribution: String,
-    pub version_major: i32,
-    pub version_minor: i32,
+    pub version: String,
     pub architecture: String,
+    pub product_name: String,
     pub package_format: String,
-    pub init_system: String,
+    pub package_manager: String,
+    pub kernel_version: Option<String>,
+    pub total_memory: Option<u64>,
+    pub vcpus: Option<u32>,
     pub filesystems: Vec<FilesystemInfo>,
     pub packages: Vec<PackageInfo>,
     pub users: Vec<UserInfo>,
@@ -593,9 +599,11 @@ pub struct InspectionData {
 #[derive(Debug, Clone)]
 pub struct FilesystemInfo {
     pub device: String,
-    pub fs_type: String,
+    pub mountpoint: String,
+    pub fstype: String,
     pub size: i64,
-    pub uuid: String,
+    pub used: i64,
+    pub available: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -609,17 +617,16 @@ pub struct PackageInfo {
 pub struct UserInfo {
     pub username: String,
     pub uid: String,
-    pub gid: String,
-    pub home_dir: String,
+    pub home: String,
     pub shell: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct NetworkInterface {
     pub name: String,
-    pub ip_address: String,
     pub mac_address: String,
-    pub status: String,
+    pub ip_addresses: String,
+    pub state: String,
 }
 
 /// Format bytes to human-readable string
@@ -671,11 +678,14 @@ mod tests {
             hostname: "test-vm".to_string(),
             os_type: "linux".to_string(),
             distribution: "ubuntu".to_string(),
-            version_major: 22,
-            version_minor: 4,
+            version: "22.04".to_string(),
             architecture: "x86_64".to_string(),
+            product_name: "Ubuntu 22.04".to_string(),
             package_format: "deb".to_string(),
-            init_system: "systemd".to_string(),
+            package_manager: "apt".to_string(),
+            kernel_version: Some("5.15.0-generic".to_string()),
+            total_memory: Some(8 * 1024 * 1024 * 1024),
+            vcpus: Some(4),
             filesystems: vec![],
             packages: vec![],
             users: vec![],
@@ -684,5 +694,6 @@ mod tests {
 
         assert_eq!(data.hostname, "test-vm");
         assert_eq!(data.os_type, "linux");
+        assert_eq!(data.version, "22.04");
     }
 }
