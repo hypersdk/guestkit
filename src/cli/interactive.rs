@@ -370,6 +370,29 @@ impl InteractiveSession {
             }
         }
 
+        // Auto-mount filesystems
+        if let Some(ref root) = current_root {
+            println!("  {} Auto-mounting filesystems...", "→".truecolor(222, 115, 86));
+            match handle.inspect_get_mountpoints(root) {
+                Ok(mountpoints) => {
+                    // Sort by mountpoint length (mount / before /boot, etc.)
+                    let mut sorted_mounts: Vec<_> = mountpoints.into_iter().collect();
+                    sorted_mounts.sort_by_key(|(mp, _)| mp.len());
+
+                    for (mountpoint, device) in sorted_mounts {
+                        if let Err(e) = handle.mount(&device, &mountpoint) {
+                            println!("  {} Failed to mount {} at {}: {}", "⚠".yellow(), device, mountpoint, e);
+                        } else {
+                            println!("  {} Mounted {} at {}", "✓".green(), device.bright_white(), mountpoint.truecolor(222, 115, 86));
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("  {} Warning: Could not get mountpoints: {}", "⚠".yellow(), e);
+                }
+            }
+        }
+
         // Create editor with tab completion
         let mut editor = Editor::new().context("Failed to create line editor")?;
         editor.set_helper(Some(GuestkitHelper));
@@ -1001,23 +1024,33 @@ impl InteractiveSession {
     fn cmd_ls(&mut self, args: &[&str]) -> Result<()> {
         let path = if args.is_empty() { "/" } else { args[0] };
 
-        let entries = self
-            .handle
-            .ls(path)
-            .with_context(|| format!("Failed to list directory: {}", path))?;
-
-        println!();
-        for entry in &entries {
-            println!("  {}", entry);
+        match self.handle.ls(path) {
+            Ok(entries) => {
+                println!();
+                for entry in &entries {
+                    println!("  {}", entry);
+                }
+                println!();
+                println!(
+                    "{} entries",
+                    entries.len().to_string().bright_white().bold()
+                );
+                println!();
+                Ok(())
+            }
+            Err(e) => {
+                // Check if it's a file (common mistake: ls on a file instead of cat)
+                if self.handle.is_file(path).unwrap_or(false) {
+                    println!();
+                    println!("{} '{}' is a file, not a directory", "Error:".red().bold(), path);
+                    println!("{} Use 'cat {}' to view the file contents", "Hint:".yellow().bold(), path);
+                    println!();
+                    Ok(())
+                } else {
+                    Err(e).with_context(|| format!("Failed to list directory: {}", path))
+                }
+            }
         }
-        println!();
-        println!(
-            "{} entries",
-            entries.len().to_string().bright_white().bold()
-        );
-        println!();
-
-        Ok(())
     }
 
     /// Display file contents
