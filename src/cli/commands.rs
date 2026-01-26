@@ -167,7 +167,7 @@ fn collect_inspection_data(
                 let kernel_params = g.inspect_kernel_params(root).ok().unwrap_or_default();
                 Some(SecurityInfo {
                     certificates_count: certs.len(),
-                    certificate_paths: certs.into_iter().take(5).collect(),
+                    certificate_paths: certs.into_iter().take(5).map(|c| c.path).collect(),
                     kernel_parameters_count: kernel_params.len(),
                 })
             } else {
@@ -1201,7 +1201,7 @@ pub fn inspect_image(
                     println!("\n    === SSL Certificates ===");
                     println!("      Found: {} certificates", certs.len());
                     for cert in certs.iter().take(5) {
-                        println!("        {}", cert);
+                        println!("        {} ({})", cert.path, cert.subject);
                     }
                     if certs.len() > 5 {
                         println!("        ... and {} more", certs.len() - 5);

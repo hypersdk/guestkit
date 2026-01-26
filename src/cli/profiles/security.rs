@@ -338,11 +338,11 @@ impl SecurityProfile {
             });
 
             // Show sample paths
-            for (i, path) in cert_paths.iter().take(3).enumerate() {
+            for (i, cert) in cert_paths.iter().take(3).enumerate() {
                 findings.push(Finding {
                     item: format!("Certificate {}", i + 1),
                     status: FindingStatus::Info,
-                    message: path.clone(),
+                    message: format!("{} ({})", cert.path, cert.subject),
                     risk_level: None,
                 });
             }
