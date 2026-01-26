@@ -77,7 +77,7 @@ Never modify a disk image while the VM is running. This will cause:
 
 **From crates.io:**
 ```bash
-cargo install guestctl
+cargo install guestkit
 ```
 
 **From source:**
@@ -124,7 +124,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 # Then install guestctl
-cargo install guestctl
+cargo install guestkit
 ```
 
 ## Usage Questions
