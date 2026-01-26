@@ -380,10 +380,10 @@ impl InteractiveSession {
                     sorted_mounts.sort_by_key(|(mp, _)| mp.len());
 
                     for (mountpoint, device) in sorted_mounts {
-                        if let Err(e) = handle.mount(&device, &mountpoint) {
+                        if let Err(e) = handle.mount_ro(&device, &mountpoint) {
                             println!("  {} Failed to mount {} at {}: {}", "⚠".yellow(), device, mountpoint, e);
                         } else {
-                            println!("  {} Mounted {} at {}", "✓".green(), device.bright_white(), mountpoint.truecolor(222, 115, 86));
+                            println!("  {} Mounted {} at {} (ro)", "✓".green(), device.bright_white(), mountpoint.truecolor(222, 115, 86));
                         }
                     }
                 }
