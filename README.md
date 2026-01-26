@@ -4,7 +4,7 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![Crates.io](https://img.shields.io/crates/v/guestctl.svg)](https://crates.io/crates/guestctl)
+[![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
 
@@ -47,7 +47,7 @@ pip install guestkit
 
 **Rust Crate (Recommended for Rust developers):**
 ```bash
-cargo install guestctl
+cargo install guestkit
 ```
 
 **From Source:**
@@ -1069,7 +1069,7 @@ cargo doc --no-deps --open
 
 ## Cargo Features
 
-guestctl uses Cargo features for optional functionality:
+guestkit uses Cargo features for optional functionality:
 
 - **`disk-ops`** (default) - Disk operation utilities
 - **`guest-inspect`** (default) - Guest OS inspection
@@ -1078,13 +1078,13 @@ guestctl uses Cargo features for optional functionality:
 
 ```toml
 [dependencies]
-guestctl = { version = "0.3", features = ["guest-inspect"] }
+guestkit = { version = "0.3", features = ["guest-inspect"] }
 
 # With Python bindings
-guestctl = { version = "0.3", features = ["python-bindings"] }
+guestkit = { version = "0.3", features = ["python-bindings"] }
 
 # With AI diagnostics
-guestctl = { version = "0.3", features = ["ai"] }
+guestkit = { version = "0.3", features = ["ai"] }
 ```
 
 Build with optional features:
