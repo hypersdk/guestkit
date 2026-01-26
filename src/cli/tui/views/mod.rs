@@ -3,6 +3,7 @@
 
 pub mod dashboard;
 pub mod databases;
+pub mod issues;
 pub mod kernel;
 pub mod network;
 pub mod packages;

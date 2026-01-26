@@ -61,6 +61,7 @@ pub enum View {
     Databases,
     WebServers,
     Security,
+    Issues,
     Storage,
     Users,
     Kernel,
@@ -77,6 +78,7 @@ impl View {
             View::Databases => "Databases",
             View::WebServers => "WebServers",
             View::Security => "Security",
+            View::Issues => "Issues",
             View::Storage => "Storage",
             View::Users => "Users",
             View::Kernel => "Kernel",
@@ -93,6 +95,7 @@ impl View {
             View::Databases,
             View::WebServers,
             View::Security,
+            View::Issues,
             View::Storage,
             View::Users,
             View::Kernel,
@@ -474,6 +477,7 @@ impl App {
             View::Databases => "databases",
             View::WebServers => "webservers",
             View::Security => "security",
+            View::Issues => "issues",
             View::Storage => "storage",
             View::Users => "users",
             View::Kernel => "kernel",
@@ -628,6 +632,31 @@ impl App {
                 "ssh_keys": self.security.ssh_keys,
                 "firewall": self.firewall,
             }),
+            View::Issues => {
+                let (critical, high, medium) = self.get_risk_summary();
+                let mut all_sections = Vec::new();
+
+                if let Some(sec) = &self.security_profile {
+                    all_sections.extend(sec.sections.clone());
+                }
+                if let Some(hard) = &self.hardening_profile {
+                    all_sections.extend(hard.sections.clone());
+                }
+                if let Some(comp) = &self.compliance_profile {
+                    all_sections.extend(comp.sections.clone());
+                }
+
+                json!({
+                    "view": "issues",
+                    "summary": {
+                        "critical": critical,
+                        "high": high,
+                        "medium": medium,
+                        "total": critical + high + medium,
+                    },
+                    "sections": all_sections,
+                })
+            }
             View::Storage => json!({
                 "view": "storage",
                 "fstab": self.fstab,
