@@ -40,8 +40,10 @@ impl Guestfs {
         }
 
         // Determine the actual device path to mount
-        let device_partition = if mountable.starts_with("/dev/mapper/") {
-            // LVM logical volume - use the path directly
+        let device_partition = if mountable.starts_with("/dev/mapper/")
+            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3) {
+            // LVM logical volume (/dev/mapper/* or /dev/vgname/lvname) - use the path directly
+            // These device nodes are created by LVM on top of the underlying block device
             std::path::PathBuf::from(mountable)
         } else {
             // Parse device name to get partition number
@@ -101,7 +103,9 @@ impl Guestfs {
         let need_sudo = unsafe { libc::geteuid() } != 0;
 
         // Detect filesystem type to use appropriate mount options
-        let fs_type = self.vfs_type(&mountable).unwrap_or_else(|_| "ext4".to_string());
+        // Use the original mountable parameter, as device_partition might not exist yet (LVM)
+        let fs_type = self.vfs_type(mountable)
+            .unwrap_or_else(|_| "auto".to_string());
 
         // Build mount command
         let mut cmd = if need_sudo {
@@ -114,7 +118,7 @@ impl Guestfs {
 
         // Use filesystem-specific mount options
         // For ext* filesystems: use noload to prevent journal updates on read-only mounts
-        // For btrfs and others: just use ro
+        // For XFS, btrfs and others: just use ro (they handle read-only properly)
         let mount_opts = if fs_type.starts_with("ext") {
             "ro,noload"
         } else {
