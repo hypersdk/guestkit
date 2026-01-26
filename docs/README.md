@@ -8,12 +8,24 @@ Welcome to the GuestCtl documentation! This directory contains all project docum
 
 Start here if you're learning to use GuestCtl!
 
+**Getting Started:**
 - **[Getting Started](user-guides/getting-started.md)** - Quick start guide
 - **[CLI Guide](user-guides/cli-guide.md)** - Command-line interface usage
-- **[Interactive Mode](user-guides/interactive-mode.md)** - REPL for disk exploration
-- **[Python Bindings](user-guides/python-bindings.md)** - Python API guide
-- **[Profiles](user-guides/profiles.md)** - Security, migration, performance profiles
 - **[Quick Reference](user-guides/quick-reference.md)** - Quick command reference
+- **[FAQ](user-guides/faq.md)** ⭐ NEW - Frequently asked questions
+
+**Advanced Features:**
+- **[VM Migration Guide](user-guides/vm-migration.md)** ⭐ NEW - Complete migration workflows (Hyper-V, VMware, P2V)
+- **[Windows Support](user-guides/windows-support.md)** ⭐ NEW - Windows registry, VirtIO drivers, users
+- **[Interactive Mode](user-guides/interactive-mode.md)** - REPL for disk exploration
+- **[Profiles](user-guides/profiles.md)** - Security, migration, performance profiles
+
+**Python & APIs:**
+- **[Python Bindings](user-guides/python-bindings.md)** - Python API guide
+
+**Reference & Help:**
+- **[Visual Output Guide](user-guides/visual-output-guide.md)** ⭐ NEW - Color coding, emojis, terminal output
+- **[Best Practices](user-guides/best-practices.md)** ⭐ NEW - Expert recommendations
 - **[Troubleshooting](user-guides/troubleshooting.md)** - Common issues and solutions
 
 ### ⚡ [Features](features/) - Feature Documentation
@@ -104,14 +116,19 @@ Historical documents for reference.
 ### I want to...
 
 - **Get started quickly** → [Getting Started](user-guides/getting-started.md)
+- **Migrate VMs** → [VM Migration Guide](user-guides/vm-migration.md) ⭐ NEW
+- **Work with Windows VMs** → [Windows Support](user-guides/windows-support.md) ⭐ NEW
 - **Use from command line** → [CLI Guide](user-guides/cli-guide.md)
 - **Use interactively** → [Interactive Mode](user-guides/interactive-mode.md)
 - **Use from Python** → [Python Bindings](user-guides/python-bindings.md)
+- **Understand colors/emojis** → [Visual Output Guide](user-guides/visual-output-guide.md) ⭐ NEW
+- **Learn best practices** → [Best Practices](user-guides/best-practices.md) ⭐ NEW
 - **Do security audits** → [Profiles](user-guides/profiles.md)
 - **Export HTML reports** → [HTML Export](features/html-export.md)
 - **Export data (JSON/CSV)** → [Output Formats](features/output-formats.md)
 - **Understand architecture** → [Architecture Overview](architecture/overview.md)
 - **Compare with alternatives** → [Comparison Guide](architecture/comparison-guide.md)
+- **Find answers** → [FAQ](user-guides/faq.md) ⭐ NEW
 - **Contribute code** → [Development](development/)
 - **Fix issues** → [Troubleshooting](user-guides/troubleshooting.md)
 
