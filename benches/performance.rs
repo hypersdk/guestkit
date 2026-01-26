@@ -310,6 +310,66 @@ fn benchmark_batch_inspection(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark cache hit vs cache miss performance
+fn benchmark_cache_performance(c: &mut Criterion) {
+    use guestctl::core::BinaryCache;
+    use serde::{Deserialize, Serialize};
+    use tempfile::TempDir;
+
+    #[derive(Serialize, Deserialize, Clone)]
+    struct LargeInspectionData {
+        os_info: String,
+        packages: Vec<String>,
+        users: Vec<String>,
+        filesystems: Vec<String>,
+    }
+
+    let mut group = c.benchmark_group("cache_performance");
+
+    let temp_dir = TempDir::new().unwrap();
+    let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+    // Create large mock data (simulating full VM inspection)
+    let large_data = guestctl::core::CachedInspection::new("test-key".to_string());
+
+    // Save to cache first
+    cache.save("large-inspection", &large_data).unwrap();
+
+    // Benchmark cache hit (fast path)
+    group.bench_function("cache_hit", |b| {
+        b.iter(|| {
+            let loaded = cache.load("large-inspection").unwrap();
+            black_box(loaded);
+        });
+    });
+
+    // Benchmark cache miss + save (slow path)
+    group.bench_function("cache_miss_and_save", |b| {
+        let mut counter = 0;
+        b.iter(|| {
+            let key = format!("cache-miss-{}", counter);
+            counter += 1;
+
+            // Simulate inspection work
+            let data = guestctl::core::CachedInspection::new(key.clone());
+
+            // Save to cache
+            cache.save(&key, &data).unwrap();
+            black_box(data);
+        });
+    });
+
+    // Benchmark cache statistics calculation
+    group.bench_function("cache_stats", |b| {
+        b.iter(|| {
+            let stats = cache.stats().unwrap();
+            black_box(stats);
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_appliance_lifecycle,
@@ -322,6 +382,7 @@ criterion_group!(
     benchmark_memory,
     benchmark_hashing,
     benchmark_batch_inspection,
+    benchmark_cache_performance,
 );
 
 criterion_main!(benches);
