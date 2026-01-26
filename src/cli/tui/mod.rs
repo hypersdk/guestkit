@@ -71,6 +71,10 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('q') | KeyCode::Esc => {
                         if app.is_searching() {
                             app.cancel_search();
+                        } else if app.show_export_menu {
+                            app.toggle_export_menu();
+                        } else if app.show_help {
+                            app.toggle_help();
                         } else {
                             return Ok(());
                         }
@@ -81,7 +85,22 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Tab => app.next_view(),
                     KeyCode::BackTab => app.previous_view(),
                     KeyCode::Char('h') | KeyCode::F(1) => app.toggle_help(),
+                    KeyCode::Char('p') => {
+                        app.current_view = app::View::Profiles;
+                        app.scroll_offset = 0;
+                    }
+                    KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('/') => app.start_search(),
+                    KeyCode::Left => {
+                        if app.current_view == app::View::Profiles {
+                            app.previous_profile_tab();
+                        }
+                    }
+                    KeyCode::Right => {
+                        if app.current_view == app::View::Profiles {
+                            app.next_profile_tab();
+                        }
+                    }
                     KeyCode::Up => app.scroll_up(),
                     KeyCode::Down => app.scroll_down(),
                     KeyCode::PageUp => app.page_up(),

@@ -42,6 +42,10 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.show_help {
         draw_help_overlay(f, app);
     }
+
+    if app.show_export_menu {
+        draw_export_menu(f, app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -94,6 +98,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Services => views::services::draw(f, area, app),
         View::Security => views::security::draw(f, area, app),
         View::Storage => views::storage::draw(f, area, app),
+        View::Profiles => views::profiles::draw(f, area, app),
     }
 }
 
@@ -108,9 +113,11 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     } else {
         vec![
             Span::styled("Tab", Style::default().fg(ORANGE)),
-            Span::raw(": Switch View | "),
-            Span::styled("/", Style::default().fg(ORANGE)),
-            Span::raw(": Search | "),
+            Span::raw(": Switch | "),
+            Span::styled("p", Style::default().fg(ORANGE)),
+            Span::raw(": Profiles | "),
+            Span::styled("e", Style::default().fg(ORANGE)),
+            Span::raw(": Export | "),
             Span::styled("h", Style::default().fg(ORANGE)),
             Span::raw(": Help | "),
             Span::styled("q", Style::default().fg(ORANGE)),
@@ -161,6 +168,18 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::raw("Start search/filter")
         ]),
         Line::from(vec![
+            Span::styled("  p              ", Style::default().fg(ORANGE)),
+            Span::raw("Jump to Profiles view")
+        ]),
+        Line::from(vec![
+            Span::styled("  e              ", Style::default().fg(ORANGE)),
+            Span::raw("Toggle export menu")
+        ]),
+        Line::from(vec![
+            Span::styled("  ←/→            ", Style::default().fg(ORANGE)),
+            Span::raw("Switch profile tabs (in Profiles view)")
+        ]),
+        Line::from(vec![
             Span::styled("  Enter          ", Style::default().fg(ORANGE)),
             Span::raw("Select/expand item")
         ]),
@@ -194,6 +213,69 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
 
     f.render_widget(ratatui::widgets::Clear, area);
     f.render_widget(help, area);
+}
+
+fn draw_export_menu(f: &mut Frame, _app: &App) {
+    let area = centered_rect(50, 40, f.area());
+
+    let export_text = vec![
+        Line::from(vec![
+            Span::styled("Export Menu",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Export current view or profile data:",
+                Style::default().fg(TEXT_COLOR))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Formats available:",
+                Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  • HTML  ", Style::default().fg(ORANGE)),
+            Span::raw("- Rich formatted report")
+        ]),
+        Line::from(vec![
+            Span::styled("  • PDF   ", Style::default().fg(ORANGE)),
+            Span::raw("- Portable document format")
+        ]),
+        Line::from(vec![
+            Span::styled("  • JSON  ", Style::default().fg(ORANGE)),
+            Span::raw("- Machine-readable data")
+        ]),
+        Line::from(vec![
+            Span::styled("  • YAML  ", Style::default().fg(ORANGE)),
+            Span::raw("- Human-readable data")
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Note: ", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw("Export functionality will be fully integrated in the next update.")
+        ]),
+        Line::from(vec![
+            Span::raw("Use CLI commands for now: "),
+            Span::styled("guestctl inspect <image> --export <format>", Style::default().fg(ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or e to close",
+                Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ];
+
+    let export_menu = Paragraph::new(export_text)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ORANGE))
+            .title(" Export ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
+        .alignment(Alignment::Left);
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(export_menu, area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

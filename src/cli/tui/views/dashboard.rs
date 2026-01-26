@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Dashboard view - System overview
 
+use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
 use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
@@ -16,14 +17,16 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(8),  // System info
+            Constraint::Length(6),  // Profile risk summary
             Constraint::Length(8),  // Stats
             Constraint::Min(0),     // Quick info
         ])
         .split(area);
 
     draw_system_info(f, chunks[0], app);
-    draw_stats(f, chunks[1], app);
-    draw_quick_info(f, chunks[2], app);
+    draw_profile_summary(f, chunks[1], app);
+    draw_stats(f, chunks[2], app);
+    draw_quick_info(f, chunks[3], app);
 }
 
 fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
@@ -63,6 +66,86 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(block, area);
+}
+
+fn draw_profile_summary(f: &mut Frame, area: Rect, app: &App) {
+    let mut profile_items = Vec::new();
+
+    // Security Profile
+    if let Some(ref profile) = app.security_profile {
+        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
+            match risk {
+                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
+                RiskLevel::High => ("HIGH", ERROR_COLOR),
+                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
+                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
+                RiskLevel::Info => ("OK", SUCCESS_COLOR),
+            }
+        } else {
+            ("OK", SUCCESS_COLOR)
+        };
+
+        profile_items.push(ListItem::new(Line::from(vec![
+            Span::styled("Security:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
+        ])));
+    }
+
+    // Migration Profile
+    if let Some(ref profile) = app.migration_profile {
+        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
+            match risk {
+                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
+                RiskLevel::High => ("HIGH", ERROR_COLOR),
+                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
+                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
+                RiskLevel::Info => ("OK", SUCCESS_COLOR),
+            }
+        } else {
+            ("OK", SUCCESS_COLOR)
+        };
+
+        profile_items.push(ListItem::new(Line::from(vec![
+            Span::styled("Migration:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
+        ])));
+    }
+
+    // Performance Profile
+    if let Some(ref profile) = app.performance_profile {
+        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
+            match risk {
+                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
+                RiskLevel::High => ("HIGH", ERROR_COLOR),
+                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
+                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
+                RiskLevel::Info => ("OK", SUCCESS_COLOR),
+            }
+        } else {
+            ("OK", SUCCESS_COLOR)
+        };
+
+        profile_items.push(ListItem::new(Line::from(vec![
+            Span::styled("Performance: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
+        ])));
+    }
+
+    // Add helper text
+    profile_items.push(ListItem::new(Line::from(vec![
+        Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
+        Span::styled("p", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(" for detailed profile reports", Style::default().fg(TEXT_COLOR)),
+    ])));
+
+    let list = List::new(profile_items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Profile Status ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+
+    f.render_widget(list, area);
 }
 
 fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
