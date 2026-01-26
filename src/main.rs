@@ -367,6 +367,13 @@ enum Commands {
         top: usize,
     },
 
+    /// Interactive TUI for VM inspection with orange color theme
+    #[command(alias = "ui")]
+    Tui {
+        /// Disk image path
+        image: PathBuf,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -656,6 +663,10 @@ fn main() -> anyhow::Result<()> {
             top,
         } => {
             systemd_boot_command(&image, timeline, recommendations, summary, top, cli.verbose)?;
+        }
+
+        Commands::Tui { image } => {
+            cli::tui::run_tui(&image)?;
         }
 
         Commands::Completion { shell } => {
