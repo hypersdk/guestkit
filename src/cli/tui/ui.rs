@@ -70,6 +70,10 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.show_detail {
         draw_detail_overlay(f, app);
     }
+
+    if app.notification.is_some() {
+        draw_notification(f, app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -174,29 +178,37 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let footer_text = if app.is_searching() {
         vec![
-            Span::styled("Search: ", Style::default().fg(ORANGE)),
-            Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR)),
-            Span::styled(" | ", Style::default().fg(DARK_ORANGE)),
-            Span::raw("ESC: Cancel"),
+            Span::styled("🔍 ", Style::default().fg(ORANGE)),
+            Span::styled("Search: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
+            Span::styled("_", Style::default().fg(ORANGE)),
+            Span::styled(" │ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Cancel • "),
+            Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Finish"),
         ]
     } else {
         vec![
-            Span::styled("1-9", Style::default().fg(ORANGE)),
-            Span::raw(": Jump | "),
-            Span::styled("s", Style::default().fg(ORANGE)),
+            Span::styled("⌨  ", Style::default().fg(ORANGE)),
+            Span::styled("1-9", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Jump │ "),
+            Span::styled("s", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Sort ["),
             Span::styled(app.sort_mode.label(), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("] | "),
-            Span::styled("b", Style::default().fg(ORANGE)),
-            Span::raw(": Bookmark | "),
-            Span::styled("i", Style::default().fg(ORANGE)),
-            Span::raw(": Stats | "),
-            Span::styled("↵", Style::default().fg(ORANGE)),
-            Span::raw(": Detail | "),
-            Span::styled("e", Style::default().fg(ORANGE)),
-            Span::raw(": Export | "),
-            Span::styled("h", Style::default().fg(ORANGE)),
-            Span::raw(": Help"),
+            Span::raw("] │ "),
+            Span::styled("/", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Search │ "),
+            Span::styled("b", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Bookmark ["),
+            Span::styled(format!("{}", app.bookmarks.len()), Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw("] │ "),
+            Span::styled("e", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Export │ "),
+            Span::styled("h", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Help │ "),
+            Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(": Quit"),
         ]
     };
 
@@ -207,92 +219,197 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_help_overlay(f: &mut Frame, _app: &App) {
-    let area = centered_rect(60, 70, f.area());
+    let area = centered_rect(75, 85, f.area());
 
     let help_text = vec![
         Line::from(vec![
-            Span::styled("GuestKit TUI - Keyboard Shortcuts",
+            Span::styled("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(ORANGE))
+        ]),
+        Line::from(vec![
+            Span::raw("                    "),
+            Span::styled("🔍 GuestKit TUI - Complete Keyboard Reference",
                 Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
         ]),
-        Line::from(""),
         Line::from(vec![
-            Span::styled("Quick Navigation:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::styled("  1-9            ", Style::default().fg(ORANGE)),
-            Span::raw("Jump directly to view (1=Dashboard, 2=Network, etc.)")
-        ]),
-        Line::from(vec![
-            Span::styled("  Tab/Shift+Tab  ", Style::default().fg(ORANGE)),
-            Span::raw("Switch between views")
-        ]),
-        Line::from(vec![
-            Span::styled("  p              ", Style::default().fg(ORANGE)),
-            Span::raw("Jump to Profiles view")
+            Span::styled("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(ORANGE))
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Scrolling:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("NAVIGATION & MOVEMENT", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ─────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  ↑/↓            ", Style::default().fg(ORANGE)),
-            Span::raw("Scroll up/down")
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("1-9          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Quick jump to view (1=Dashboard, 2=Network, 3=Packages, etc.)"),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  PgUp/PgDn      ", Style::default().fg(ORANGE)),
-            Span::raw("Page up/down")
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Tab          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Next view                                                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  Home/End       ", Style::default().fg(ORANGE)),
-            Span::raw("Jump to top/bottom")
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Actions:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Shift+Tab    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Previous view                                                     "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  Enter          ", Style::default().fg(ORANGE)),
-            Span::raw("Toggle detail view for selected item")
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("p            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Jump to Profiles view                                            "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  s              ", Style::default().fg(ORANGE)),
-            Span::raw("Cycle sort mode (Default → Name ↑ → Name ↓)")
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("←/→          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Switch profile tabs (when in Profiles view)                      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
-            Span::styled("  b              ", Style::default().fg(ORANGE)),
-            Span::raw("Bookmark current view")
-        ]),
-        Line::from(vec![
-            Span::styled("  i              ", Style::default().fg(ORANGE)),
-            Span::raw("Toggle statistics bar")
-        ]),
-        Line::from(vec![
-            Span::styled("  /              ", Style::default().fg(ORANGE)),
-            Span::raw("Start search/filter (history saved)")
-        ]),
-        Line::from(vec![
-            Span::styled("  e              ", Style::default().fg(ORANGE)),
-            Span::raw("Toggle export menu")
-        ]),
-        Line::from(vec![
-            Span::styled("  ←/→            ", Style::default().fg(ORANGE)),
-            Span::raw("Switch profile tabs (in Profiles view)")
-        ]),
-        Line::from(vec![
-            Span::styled("  h or F1        ", Style::default().fg(ORANGE)),
-            Span::raw("Toggle this help")
-        ]),
-        Line::from(vec![
-            Span::styled("  q or ESC       ", Style::default().fg(ORANGE)),
-            Span::raw("Quit / Go back / Cancel")
-        ]),
-        Line::from(vec![
-            Span::styled("  Ctrl+C         ", Style::default().fg(ORANGE)),
-            Span::raw("Force quit")
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Press ESC or h to close this help",
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("SCROLLING & BROWSING", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ───────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("↑/↓          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Scroll up/down one line                                          "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("PgUp/PgDn    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Scroll up/down one page (10 lines)                               "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Home         ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Jump to top of list                                              "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("End          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Jump to bottom of list                                           "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("DATA OPERATIONS", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ─────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("s            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Cycle sort mode (Default → Name ↑ → Name ↓)                      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("/            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Start search/filter (searches are saved to history)              "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Enter        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Show detailed view for current item                              "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Open export menu (JSON, YAML, HTML, PDF)                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("UI CUSTOMIZATION", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ──────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("i            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle statistics bar (shows pkgs, services, risk summary)       "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("b            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Bookmark current view (max 20 bookmarks)                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("h or F1      ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle this help overlay                                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("EXIT & CONTROL", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ────────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("q or ESC     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Quit application / Close overlay / Cancel action                "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+C       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Force quit immediately                                           "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("💡 ", Style::default().fg(WARNING_COLOR)),
+            Span::styled("Pro Tips:", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw("  Use number keys for fastest navigation • Search is live and instant")
+        ]),
+        Line::from(vec![
+            Span::raw("             Color coding: "),
+            Span::styled("🟢 OK/Running", Style::default().fg(SUCCESS_COLOR)),
+            Span::raw(" • "),
+            Span::styled("🟡 Warning", Style::default().fg(WARNING_COLOR)),
+            Span::raw(" • "),
+            Span::styled("🔴 Error/Critical", Style::default().fg(ERROR_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC, h, or F1 to close this help",
                 Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
         ]),
     ];
@@ -300,8 +417,12 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
     let help = Paragraph::new(help_text)
         .block(Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE))
-            .title(" Help ")
+            .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+            .title(vec![
+                Span::raw(" "),
+                Span::styled("📖 Help & Keyboard Shortcuts", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                Span::raw(" "),
+            ])
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
         .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
         .alignment(Alignment::Left);
@@ -795,6 +916,35 @@ fn generate_profiles_details(app: &App) -> Vec<Line<'static>> {
     ]));
 
     lines
+}
+
+fn draw_notification(f: &mut Frame, app: &App) {
+    if let Some((ref message, _)) = app.notification {
+        // Calculate notification position (top-right corner)
+        let area = Rect {
+            x: f.area().width.saturating_sub(message.len() as u16 + 6),
+            y: 1,
+            width: message.len() as u16 + 4,
+            height: 3,
+        };
+
+        let notification_text = vec![
+            Line::from(vec![
+                Span::styled(message.clone(), Style::default().fg(TEXT_COLOR))
+            ]),
+        ];
+
+        let notification = Paragraph::new(notification_text)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+                .style(Style::default().bg(Color::Black)))
+            .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
+            .alignment(Alignment::Center);
+
+        f.render_widget(ratatui::widgets::Clear, area);
+        f.render_widget(notification, area);
+    }
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
