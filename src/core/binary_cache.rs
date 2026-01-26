@@ -429,6 +429,274 @@ mod tests {
         assert!(cache.exists("new"));
     }
 
+    // ========== Additional Edge Case Tests ==========
+
+    #[test]
+    fn test_delete_nonexistent() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        // Deleting non-existent key should not error
+        assert!(cache.delete("nonexistent").is_ok());
+    }
+
+    #[test]
+    fn test_load_nonexistent() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        // Loading non-existent key should error
+        assert!(cache.load("nonexistent").is_err());
+    }
+
+    #[test]
+    fn test_clear_all_empty_cache() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let count = cache.clear_all().unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_clear_all_multiple_entries() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        for i in 0..5 {
+            let data = CachedInspection::new(format!("hash-{}", i));
+            cache.save(&format!("key-{}", i), &data).unwrap();
+        }
+
+        let count = cache.clear_all().unwrap();
+        assert_eq!(count, 5);
+
+        // Verify all entries are gone
+        for i in 0..5 {
+            assert!(!cache.exists(&format!("key-{}", i)));
+        }
+    }
+
+    #[test]
+    fn test_is_valid_fresh_cache() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let data = CachedInspection::new("test".to_string());
+        cache.save("fresh", &data).unwrap();
+
+        // Fresh cache should be valid for 1 hour
+        assert!(cache.is_valid("fresh", 3600).unwrap());
+    }
+
+    #[test]
+    fn test_is_valid_expired_cache() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let mut data = CachedInspection::new("test".to_string());
+        data.timestamp = 0; // Very old
+
+        cache.save("old", &data).unwrap();
+
+        // Old cache should not be valid for 1 hour
+        assert!(!cache.is_valid("old", 3600).unwrap());
+    }
+
+    #[test]
+    fn test_is_valid_nonexistent() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        // Non-existent key should not be valid
+        assert!(!cache.is_valid("nonexistent", 3600).unwrap());
+    }
+
+    #[test]
+    fn test_stats_empty_cache() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let stats = cache.stats().unwrap();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.total_size_bytes, 0);
+        assert_eq!(stats.oldest_entry, None);
+        assert_eq!(stats.newest_entry, None);
+    }
+
+    #[test]
+    fn test_stats_single_entry() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let data = CachedInspection::new("test".to_string());
+        cache.save("single", &data).unwrap();
+
+        let stats = cache.stats().unwrap();
+        assert_eq!(stats.total_entries, 1);
+        assert!(stats.total_size_bytes > 0);
+        assert!(stats.oldest_entry.is_some());
+        assert!(stats.newest_entry.is_some());
+    }
+
+    #[test]
+    fn test_stats_total_size_human_bytes() {
+        let stats = CacheStats {
+            total_entries: 1,
+            total_size_bytes: 512,
+            oldest_entry: None,
+            newest_entry: None,
+        };
+        assert_eq!(stats.total_size_human(), "512 B");
+    }
+
+    #[test]
+    fn test_stats_total_size_human_kb() {
+        let stats = CacheStats {
+            total_entries: 1,
+            total_size_bytes: 2048,
+            oldest_entry: None,
+            newest_entry: None,
+        };
+        assert_eq!(stats.total_size_human(), "2.00 KB");
+    }
+
+    #[test]
+    fn test_stats_total_size_human_mb() {
+        let stats = CacheStats {
+            total_entries: 1,
+            total_size_bytes: 2 * 1024 * 1024,
+            oldest_entry: None,
+            newest_entry: None,
+        };
+        assert_eq!(stats.total_size_human(), "2.00 MB");
+    }
+
+    #[test]
+    fn test_stats_total_size_human_gb() {
+        let stats = CacheStats {
+            total_entries: 1,
+            total_size_bytes: 3 * 1024 * 1024 * 1024,
+            oldest_entry: None,
+            newest_entry: None,
+        };
+        assert_eq!(stats.total_size_human(), "3.00 GB");
+    }
+
+    #[test]
+    fn test_cached_inspection_new() {
+        let data = CachedInspection::new("abc123".to_string());
+
+        assert_eq!(data.disk_hash, "abc123");
+        assert!(data.timestamp > 0);
+        assert_eq!(data.filesystems.len(), 0);
+        assert_eq!(data.users.len(), 0);
+        assert_eq!(data.packages.len(), 0);
+        assert!(data.network.is_none());
+        assert!(data.system_config.is_none());
+    }
+
+    #[test]
+    fn test_cached_inspection_with_data() {
+        let mut data = CachedInspection::new("test".to_string());
+        data.users.push(UserCache {
+            username: "root".to_string(),
+            uid: "0".to_string(),
+            gid: "0".to_string(),
+            home_dir: "/root".to_string(),
+            shell: "/bin/bash".to_string(),
+        });
+
+        assert_eq!(data.users.len(), 1);
+        assert_eq!(data.users[0].username, "root");
+    }
+
+    #[test]
+    fn test_save_load_with_full_data() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let mut data = CachedInspection::new("full-test".to_string());
+        data.os_info = OsInfoCache {
+            os_type: "linux".to_string(),
+            distribution: "ubuntu".to_string(),
+            product_name: "Ubuntu 22.04".to_string(),
+            version_major: 22,
+            version_minor: 4,
+            architecture: "x86_64".to_string(),
+            hostname: "test-host".to_string(),
+            package_format: "deb".to_string(),
+            init_system: "systemd".to_string(),
+        };
+
+        cache.save("full", &data).unwrap();
+        let loaded = cache.load("full").unwrap();
+
+        assert_eq!(loaded.os_info.os_type, "linux");
+        assert_eq!(loaded.os_info.distribution, "ubuntu");
+        assert_eq!(loaded.os_info.version_major, 22);
+    }
+
+    #[test]
+    fn test_clear_older_than_zero() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let data = CachedInspection::new("test".to_string());
+        cache.save("recent", &data).unwrap();
+
+        // Clear entries older than 0 seconds - should clear nothing
+        let cleared = cache.clear_older_than(0).unwrap();
+        assert_eq!(cleared, 0);
+    }
+
+    #[test]
+    fn test_multiple_save_overwrites() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let data1 = CachedInspection::new("first".to_string());
+        cache.save("key", &data1).unwrap();
+
+        let data2 = CachedInspection::new("second".to_string());
+        cache.save("key", &data2).unwrap();
+
+        let loaded = cache.load("key").unwrap();
+        assert_eq!(loaded.disk_hash, "second");
+    }
+
+    #[test]
+    fn test_special_characters_in_key() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+        let data = CachedInspection::new("test".to_string());
+
+        // Test various special characters in keys
+        cache.save("key-with-dashes", &data).unwrap();
+        cache.save("key_with_underscores", &data).unwrap();
+        cache.save("key123", &data).unwrap();
+
+        assert!(cache.exists("key-with-dashes"));
+        assert!(cache.exists("key_with_underscores"));
+        assert!(cache.exists("key123"));
+    }
+
+    #[test]
+    fn test_default_os_info_cache() {
+        let os_info = OsInfoCache::default();
+
+        assert_eq!(os_info.os_type, "");
+        assert_eq!(os_info.distribution, "");
+        assert_eq!(os_info.product_name, "");
+        assert_eq!(os_info.version_major, 0);
+        assert_eq!(os_info.version_minor, 0);
+        assert_eq!(os_info.architecture, "");
+        assert_eq!(os_info.hostname, "");
+        assert_eq!(os_info.package_format, "");
+        assert_eq!(os_info.init_system, "");
+    }
+
     // Property-based tests
     #[cfg(test)]
     mod proptests {

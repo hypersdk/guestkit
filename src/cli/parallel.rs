@@ -534,4 +534,375 @@ mod tests {
         let results = inspect_batch_with_workers(&[&disk], 2).unwrap();
         assert_eq!(results.len(), 1);
     }
+
+    // ========== Cache Key Generation Tests ==========
+
+    #[test]
+    fn test_cache_key_generation() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk = temp_dir.path().join("test.img");
+        fs::write(&disk, b"test data").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let key = inspector.generate_cache_key(&disk).unwrap();
+
+        // Should be a 64-character hex string (SHA256)
+        assert_eq!(key.len(), 64);
+        assert!(key.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_cache_key_deterministic() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk = temp_dir.path().join("test.img");
+        fs::write(&disk, b"test data").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let key1 = inspector.generate_cache_key(&disk).unwrap();
+        let key2 = inspector.generate_cache_key(&disk).unwrap();
+
+        // Same file should produce same cache key
+        assert_eq!(key1, key2);
+    }
+
+    #[test]
+    fn test_cache_key_different_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk1 = temp_dir.path().join("test1.img");
+        let disk2 = temp_dir.path().join("test2.img");
+
+        fs::write(&disk1, b"data1").unwrap();
+        fs::write(&disk2, b"data2").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let key1 = inspector.generate_cache_key(&disk1).unwrap();
+        let key2 = inspector.generate_cache_key(&disk2).unwrap();
+
+        // Different files should produce different keys
+        assert_ne!(key1, key2);
+    }
+
+    #[test]
+    fn test_cache_key_invalidation_on_modification() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk = temp_dir.path().join("test.img");
+
+        fs::write(&disk, b"original").unwrap();
+        let inspector = ParallelInspector::default();
+        let key1 = inspector.generate_cache_key(&disk).unwrap();
+
+        // Modify file
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        fs::write(&disk, b"modified").unwrap();
+        let key2 = inspector.generate_cache_key(&disk).unwrap();
+
+        // Modified file should have different key
+        assert_ne!(key1, key2);
+    }
+
+    // ========== Worker Configuration Tests ==========
+
+    #[test]
+    fn test_zero_workers_uses_all_cores() {
+        let config = InspectionConfig {
+            max_workers: 0,
+            ..Default::default()
+        };
+        let inspector = ParallelInspector::new(config);
+
+        // Should use all available cores
+        assert!(inspector.num_workers() > 0);
+        assert!(inspector.num_workers() <= num_cpus::get());
+    }
+
+    #[test]
+    fn test_single_worker() {
+        let config = InspectionConfig {
+            max_workers: 1,
+            ..Default::default()
+        };
+        let inspector = ParallelInspector::new(config);
+        assert_eq!(inspector.num_workers(), 1);
+    }
+
+    #[test]
+    fn test_many_workers() {
+        let config = InspectionConfig {
+            max_workers: 16,
+            ..Default::default()
+        };
+        let inspector = ParallelInspector::new(config);
+        assert_eq!(inspector.num_workers(), 16);
+    }
+
+    // ========== Edge Case Tests ==========
+
+    #[test]
+    fn test_inspect_empty_batch() {
+        let inspector = ParallelInspector::default();
+        let disks: Vec<PathBuf> = vec![];
+
+        let results = inspector.inspect_batch(&disks).unwrap();
+        assert_eq!(results.len(), 0);
+    }
+
+    #[test]
+    fn test_inspect_single_disk() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk = temp_dir.path().join("single.img");
+        fs::write(&disk, b"data").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let results = inspector.inspect_batch(&[&disk]).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].success);
+    }
+
+    #[test]
+    fn test_inspect_mixed_success_failure() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk1 = temp_dir.path().join("exists.img");
+        let disk2 = PathBuf::from("/nonexistent/missing.img");
+        let disk3 = temp_dir.path().join("exists2.img");
+
+        fs::write(&disk1, b"data1").unwrap();
+        fs::write(&disk3, b"data3").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let results = inspector.inspect_batch(&[&disk1, &disk2, &disk3]).unwrap();
+
+        assert_eq!(results.len(), 3);
+        assert!(results[0].success);
+        assert!(!results[1].success);
+        assert!(results[2].success);
+    }
+
+    #[test]
+    fn test_inspect_large_batch() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut disks = Vec::new();
+
+        // Create 20 test disks
+        for i in 0..20 {
+            let disk = temp_dir.path().join(format!("disk{}.img", i));
+            fs::write(&disk, format!("data{}", i)).unwrap();
+            disks.push(disk);
+        }
+
+        let inspector = ParallelInspector::default();
+        let disk_refs: Vec<&PathBuf> = disks.iter().collect();
+        let results = inspector.inspect_batch(&disk_refs).unwrap();
+
+        assert_eq!(results.len(), 20);
+        assert!(results.iter().all(|r| r.success));
+    }
+
+    // ========== Configuration Tests ==========
+
+    #[test]
+    fn test_config_cache_disabled() {
+        let config = InspectionConfig {
+            enable_cache: false,
+            ..Default::default()
+        };
+        assert!(!config.enable_cache);
+    }
+
+    #[test]
+    fn test_config_verbose_mode() {
+        let config = InspectionConfig {
+            verbose: true,
+            ..Default::default()
+        };
+        assert!(config.verbose);
+    }
+
+    #[test]
+    fn test_config_custom_timeout() {
+        let config = InspectionConfig {
+            timeout_secs: 600,
+            ..Default::default()
+        };
+        assert_eq!(config.timeout_secs, 600);
+    }
+
+    #[test]
+    fn test_config_fail_fast() {
+        let config = InspectionConfig {
+            continue_on_error: false,
+            ..Default::default()
+        };
+        assert!(!config.continue_on_error);
+    }
+
+    // ========== InspectionResult Tests ==========
+
+    #[test]
+    fn test_result_success_fields() {
+        let result = InspectionResult::success(
+            PathBuf::from("/path/to/disk.qcow2"),
+            Duration::from_millis(1500),
+            "windows".to_string(),
+            "Windows 10 Pro".to_string(),
+            true,
+        );
+
+        assert_eq!(result.disk_path, PathBuf::from("/path/to/disk.qcow2"));
+        assert!(result.success);
+        assert_eq!(result.error, None);
+        assert_eq!(result.duration, Duration::from_millis(1500));
+        assert_eq!(result.os_type, Some("windows".to_string()));
+        assert_eq!(result.product_name, Some("Windows 10 Pro".to_string()));
+        assert!(result.from_cache);
+    }
+
+    #[test]
+    fn test_result_failure_fields() {
+        let result = InspectionResult::failure(
+            PathBuf::from("/path/to/bad.img"),
+            Duration::from_millis(500),
+            "Permission denied".to_string(),
+        );
+
+        assert_eq!(result.disk_path, PathBuf::from("/path/to/bad.img"));
+        assert!(!result.success);
+        assert_eq!(result.error, Some("Permission denied".to_string()));
+        assert_eq!(result.duration, Duration::from_millis(500));
+        assert_eq!(result.os_type, None);
+        assert_eq!(result.product_name, None);
+        assert!(!result.from_cache);
+    }
+
+    #[test]
+    fn test_result_duration_tracking() {
+        let short = InspectionResult::success(
+            PathBuf::from("test.img"),
+            Duration::from_millis(100),
+            "linux".to_string(),
+            "Debian".to_string(),
+            true,
+        );
+
+        let long = InspectionResult::failure(
+            PathBuf::from("test2.img"),
+            Duration::from_secs(5),
+            "Timeout".to_string(),
+        );
+
+        assert!(short.duration < long.duration);
+    }
+
+    // ========== Progressive Inspector Tests ==========
+
+    #[test]
+    fn test_progressive_inspector_creation() {
+        let config = InspectionConfig::default();
+        let _inspector = ProgressiveInspector::new(config);
+    }
+
+    #[test]
+    fn test_progressive_inspector_with_progress() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk1 = temp_dir.path().join("disk1.img");
+        let disk2 = temp_dir.path().join("disk2.img");
+
+        fs::write(&disk1, b"data1").unwrap();
+        fs::write(&disk2, b"data2").unwrap();
+
+        let config = InspectionConfig::default();
+        let inspector = ProgressiveInspector::new(config);
+
+        let mut progress_calls = 0;
+        let results = inspector
+            .inspect_batch_with_progress(&[&disk1, &disk2], |_current, _total| {
+                progress_calls += 1;
+            })
+            .unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(progress_calls, 2);
+    }
+
+    // ========== Error Handling Tests ==========
+
+    #[test]
+    fn test_inspect_nonexistent_file() {
+        let inspector = ParallelInspector::default();
+        let disk = PathBuf::from("/definitely/does/not/exist.img");
+
+        let results = inspector.inspect_batch(&[&disk]).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].success);
+        assert!(results[0].error.is_some());
+    }
+
+    #[test]
+    fn test_inspect_all_failures() {
+        let inspector = ParallelInspector::default();
+        let disks = vec![
+            PathBuf::from("/nonexistent1.img"),
+            PathBuf::from("/nonexistent2.img"),
+            PathBuf::from("/nonexistent3.img"),
+        ];
+
+        let disk_refs: Vec<&PathBuf> = disks.iter().collect();
+        let results = inspector.inspect_batch(&disk_refs).unwrap();
+
+        assert_eq!(results.len(), 3);
+        assert!(results.iter().all(|r| !r.success));
+        assert!(results.iter().all(|r| r.error.is_some()));
+    }
+
+    #[test]
+    fn test_cache_key_nonexistent_file() {
+        let inspector = ParallelInspector::default();
+        let disk = PathBuf::from("/nonexistent.img");
+
+        let result = inspector.generate_cache_key(&disk);
+        assert!(result.is_err());
+    }
+
+    // ========== Integration Tests ==========
+
+    #[test]
+    fn test_full_workflow_no_cache() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk = temp_dir.path().join("workflow.img");
+        fs::write(&disk, b"test").unwrap();
+
+        let config = InspectionConfig {
+            enable_cache: false,
+            max_workers: 2,
+            verbose: false,
+            ..Default::default()
+        };
+
+        let inspector = ParallelInspector::new(config);
+        let results = inspector.inspect_batch(&[&disk]).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].success);
+        assert!(!results[0].from_cache);
+    }
+
+    #[test]
+    fn test_result_ordering_preserved() {
+        let temp_dir = TempDir::new().unwrap();
+        let disk1 = temp_dir.path().join("first.img");
+        let disk2 = temp_dir.path().join("second.img");
+        let disk3 = temp_dir.path().join("third.img");
+
+        fs::write(&disk1, b"1").unwrap();
+        fs::write(&disk2, b"2").unwrap();
+        fs::write(&disk3, b"3").unwrap();
+
+        let inspector = ParallelInspector::default();
+        let results = inspector.inspect_batch(&[&disk1, &disk2, &disk3]).unwrap();
+
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].disk_path, disk1);
+        assert_eq!(results[1].disk_path, disk2);
+        assert_eq!(results[2].disk_path, disk3);
+    }
 }

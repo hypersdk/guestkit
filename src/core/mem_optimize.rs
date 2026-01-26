@@ -295,4 +295,264 @@ mod tests {
         let _: Vec<u8> = vec_for_env_vars();
         let _: Vec<u8> = vec_for_cron_jobs();
     }
+
+    // ========== Edge Case Tests ==========
+
+    #[test]
+    fn test_vec_for_filesystems_capacity() {
+        let vec: Vec<String> = vec_for_filesystems();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::FILESYSTEMS);
+    }
+
+    #[test]
+    fn test_vec_for_mount_points_capacity() {
+        let vec: Vec<String> = vec_for_mount_points();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::MOUNT_POINTS);
+    }
+
+    #[test]
+    fn test_vec_for_users_capacity() {
+        let vec: Vec<String> = vec_for_users();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::USERS);
+    }
+
+    #[test]
+    fn test_vec_for_services_capacity() {
+        let vec: Vec<String> = vec_for_services();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::SERVICES);
+    }
+
+    #[test]
+    fn test_vec_for_network_interfaces_capacity() {
+        let vec: Vec<String> = vec_for_network_interfaces();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::NETWORK_INTERFACES);
+    }
+
+    #[test]
+    fn test_vec_for_lvm_vg_capacity() {
+        let vec: Vec<String> = vec_for_lvm_vg();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::LVM_VG);
+    }
+
+    #[test]
+    fn test_vec_for_lvm_lv_capacity() {
+        let vec: Vec<String> = vec_for_lvm_lv();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::LVM_LV);
+    }
+
+    #[test]
+    fn test_vec_for_files_capacity() {
+        let vec: Vec<String> = vec_for_files();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::FILES);
+    }
+
+    #[test]
+    fn test_vec_for_batch_vms_capacity() {
+        let vec: Vec<String> = vec_for_batch_vms();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::BATCH_VMS);
+    }
+
+    #[test]
+    fn test_vec_for_env_vars_capacity() {
+        let vec: Vec<String> = vec_for_env_vars();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::ENV_VARS);
+    }
+
+    #[test]
+    fn test_vec_for_cron_jobs_capacity() {
+        let vec: Vec<String> = vec_for_cron_jobs();
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), capacity::CRON_JOBS);
+    }
+
+    // ========== vec_with_estimated_capacity Edge Cases ==========
+
+    #[test]
+    fn test_vec_with_estimated_capacity_zero_input() {
+        let input: Vec<i32> = vec![];
+        let vec: Vec<i32> = vec_with_estimated_capacity(&input, 2.0);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn test_vec_with_estimated_capacity_zero_multiplier() {
+        let input = vec![1, 2, 3];
+        let vec: Vec<i32> = vec_with_estimated_capacity(&input, 0.0);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn test_vec_with_estimated_capacity_one_multiplier() {
+        let input = vec![1, 2, 3, 4, 5];
+        let vec: Vec<i32> = vec_with_estimated_capacity(&input, 1.0);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 5);
+    }
+
+    #[test]
+    fn test_vec_with_estimated_capacity_fractional() {
+        let input = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let vec: Vec<i32> = vec_with_estimated_capacity(&input, 0.5);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 5);
+    }
+
+    #[test]
+    fn test_vec_with_estimated_capacity_large_multiplier() {
+        let input = vec![1, 2, 3];
+        let vec: Vec<i32> = vec_with_estimated_capacity(&input, 100.0);
+        assert_eq!(vec.len(), 0);
+        assert_eq!(vec.capacity(), 300);
+    }
+
+    // ========== shrink_if_wasteful Edge Cases ==========
+
+    #[test]
+    fn test_shrink_if_wasteful_empty_vec() {
+        let mut vec: Vec<i32> = Vec::with_capacity(100);
+        shrink_if_wasteful(&mut vec);
+        // Empty vec with >25% waste should shrink
+        assert!(vec.capacity() < 100);
+    }
+
+    #[test]
+    fn test_shrink_if_wasteful_full_vec() {
+        let mut vec = Vec::with_capacity(10);
+        for i in 0..10 {
+            vec.push(i);
+        }
+        let cap_before = vec.capacity();
+        shrink_if_wasteful(&mut vec);
+        // Full vec should not shrink
+        assert_eq!(vec.capacity(), cap_before);
+    }
+
+    #[test]
+    fn test_shrink_if_wasteful_exactly_25_percent() {
+        let mut vec = Vec::with_capacity(100);
+        for i in 0..75 {
+            vec.push(i);
+        }
+        // Exactly 25% waste - should NOT shrink (threshold is >25%)
+        let cap_before = vec.capacity();
+        shrink_if_wasteful(&mut vec);
+        assert_eq!(vec.capacity(), cap_before);
+    }
+
+    #[test]
+    fn test_shrink_if_wasteful_just_over_25_percent() {
+        let mut vec = Vec::with_capacity(100);
+        for i in 0..74 {
+            vec.push(i);
+        }
+        // Just over 25% waste - should shrink
+        shrink_if_wasteful(&mut vec);
+        assert!(vec.capacity() < 100);
+    }
+
+    #[test]
+    fn test_shrink_if_wasteful_minimal_waste() {
+        let mut vec = Vec::with_capacity(10);
+        for i in 0..9 {
+            vec.push(i);
+        }
+        // Only 10% waste - should NOT shrink
+        let cap_before = vec.capacity();
+        shrink_if_wasteful(&mut vec);
+        assert_eq!(vec.capacity(), cap_before);
+    }
+
+    #[test]
+    fn test_shrink_if_wasteful_massive_waste() {
+        let mut vec = Vec::with_capacity(10000);
+        vec.push(1);
+        // 99.99% waste - should definitely shrink
+        shrink_if_wasteful(&mut vec);
+        assert!(vec.capacity() < 10000);
+    }
+
+    // ========== Performance Verification Tests ==========
+
+    #[test]
+    fn test_preallocated_vs_default() {
+        // Verify pre-allocated vectors are actually pre-allocated
+        let default: Vec<String> = Vec::new();
+        let preallocated: Vec<String> = vec_for_packages();
+
+        assert_eq!(default.capacity(), 0);
+        assert!(preallocated.capacity() > 0);
+        assert_eq!(preallocated.capacity(), capacity::PACKAGES);
+    }
+
+    #[test]
+    fn test_capacity_ordering() {
+        // Verify capacity constants are in sensible order
+        assert!(capacity::PARTITIONS < capacity::USERS);
+        assert!(capacity::USERS < capacity::SERVICES);
+        assert!(capacity::SERVICES < capacity::PACKAGES_SMALL);
+        assert!(capacity::PACKAGES_SMALL < capacity::PACKAGES_MEDIUM);
+        assert_eq!(capacity::PACKAGES_MEDIUM, capacity::PACKAGES); // PACKAGES is alias for PACKAGES_MEDIUM
+        assert!(capacity::PACKAGES_MEDIUM < capacity::PACKAGES_LARGE);
+    }
+
+    #[test]
+    fn test_all_capacities_positive() {
+        assert!(capacity::PARTITIONS > 0);
+        assert!(capacity::FILESYSTEMS > 0);
+        assert!(capacity::MOUNT_POINTS > 0);
+        assert!(capacity::PACKAGES > 0);
+        assert!(capacity::PACKAGES_SMALL > 0);
+        assert!(capacity::PACKAGES_MEDIUM > 0);
+        assert!(capacity::PACKAGES_LARGE > 0);
+        assert!(capacity::USERS > 0);
+        assert!(capacity::SERVICES > 0);
+        assert!(capacity::NETWORK_INTERFACES > 0);
+        assert!(capacity::LVM_VG > 0);
+        assert!(capacity::LVM_LV > 0);
+        assert!(capacity::FILES > 0);
+        assert!(capacity::BATCH_VMS > 0);
+        assert!(capacity::ENV_VARS > 0);
+        assert!(capacity::CRON_JOBS > 0);
+    }
+
+    #[test]
+    fn test_shrink_preserves_data() {
+        let mut vec = Vec::with_capacity(1000);
+        vec.push("test1");
+        vec.push("test2");
+        vec.push("test3");
+
+        shrink_if_wasteful(&mut vec);
+
+        // Data should be preserved
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec[0], "test1");
+        assert_eq!(vec[1], "test2");
+        assert_eq!(vec[2], "test3");
+    }
+
+    #[test]
+    fn test_vec_with_estimated_capacity_different_types() {
+        let input = vec![1, 2, 3, 4, 5];
+
+        let vec_i32: Vec<i32> = vec_with_estimated_capacity(&input, 2.0);
+        let vec_string: Vec<String> = vec_with_estimated_capacity(&input, 2.0);
+        let vec_u64: Vec<u64> = vec_with_estimated_capacity(&input, 2.0);
+
+        assert_eq!(vec_i32.capacity(), 10);
+        assert_eq!(vec_string.capacity(), 10);
+        assert_eq!(vec_u64.capacity(), 10);
+    }
 }
