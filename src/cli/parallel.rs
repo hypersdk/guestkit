@@ -26,7 +26,7 @@
 //! }
 //! ```
 
-use crate::core::{BinaryCache, CachedInspection, Error, Result};
+use guestctl::core::{BinaryCache, CachedInspection, Error, Result};
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -284,8 +284,7 @@ impl ParallelInspector {
     /// Uses SHA256 hash of: file path + file size + modification time
     /// This ensures cache invalidation when disk changes.
     fn generate_cache_key(&self, disk_path: &Path) -> Result<String> {
-        let metadata = fs::metadata(disk_path)
-            .map_err(|e| Error::IoError(format!("Failed to read disk metadata: {}", e)))?;
+        let metadata = fs::metadata(disk_path)?;
 
         let mut hasher = Sha256::new();
 

@@ -4,6 +4,7 @@
 pub mod binary_cache;
 pub mod diagnostics;
 pub mod error;
+pub mod mem_optimize;
 pub mod progress;
 pub mod retry;
 pub mod types;

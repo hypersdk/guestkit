@@ -22,7 +22,7 @@ impl Guestfs {
         }
 
         let status = self.cat("/var/lib/dpkg/status")?;
-        let mut packages = Vec::new();
+        let mut packages = crate::core::mem_optimize::vec_for_packages();
         let mut current_package = String::new();
         let mut current_status = String::new();
 
