@@ -9,6 +9,10 @@ use guestctl::guestfs::inspect_enhanced::{
 use guestctl::Guestfs;
 use std::path::Path;
 
+use crate::cli::profiles::{
+    InspectionProfile, MigrationProfile, PerformanceProfile, ProfileReport, SecurityProfile,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
     Dashboard,
@@ -17,6 +21,7 @@ pub enum View {
     Services,
     Security,
     Storage,
+    Profiles,
 }
 
 impl View {
@@ -28,6 +33,7 @@ impl View {
             View::Services => "Services",
             View::Security => "Security",
             View::Storage => "Storage",
+            View::Profiles => "Profiles",
         }
     }
 
@@ -39,6 +45,7 @@ impl View {
             View::Services,
             View::Security,
             View::Storage,
+            View::Profiles,
         ]
     }
 }
@@ -50,6 +57,8 @@ pub struct App {
     pub search_query: String,
     pub scroll_offset: usize,
     pub selected_index: usize,
+    pub show_export_menu: bool,
+    pub selected_profile_tab: usize,
 
     // Inspection data
     pub image_path: String,
@@ -74,6 +83,11 @@ pub struct App {
 
     pub hosts: Vec<HostEntry>,
     pub fstab: Vec<(String, String, String)>,
+
+    // Profile reports
+    pub security_profile: Option<ProfileReport>,
+    pub migration_profile: Option<ProfileReport>,
+    pub performance_profile: Option<ProfileReport>,
 }
 
 impl App {
@@ -153,6 +167,11 @@ impl App {
         let fstab = guestfs.inspect_fstab(root)
             .unwrap_or_default();
 
+        // Execute profiles
+        let security_profile = SecurityProfile.inspect(&mut guestfs, root).ok();
+        let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
+        let performance_profile = PerformanceProfile.inspect(&mut guestfs, root).ok();
+
         guestfs.shutdown()?;
 
         Ok(Self {
@@ -162,6 +181,8 @@ impl App {
             search_query: String::new(),
             scroll_offset: 0,
             selected_index: 0,
+            show_export_menu: false,
+            selected_profile_tab: 0,
 
             image_path: image_path.display().to_string(),
             os_name,
@@ -183,6 +204,10 @@ impl App {
             security,
             hosts,
             fstab,
+
+            security_profile,
+            migration_profile,
+            performance_profile,
         })
     }
 
@@ -268,5 +293,26 @@ impl App {
 
     pub fn on_tick(&mut self) {
         // Handle periodic updates if needed
+    }
+
+    pub fn toggle_export_menu(&mut self) {
+        self.show_export_menu = !self.show_export_menu;
+    }
+
+    pub fn next_profile_tab(&mut self) {
+        self.selected_profile_tab = (self.selected_profile_tab + 1) % 3;
+    }
+
+    pub fn previous_profile_tab(&mut self) {
+        self.selected_profile_tab = (self.selected_profile_tab + 2) % 3;
+    }
+
+    pub fn get_current_profile_report(&self) -> Option<&ProfileReport> {
+        match self.selected_profile_tab {
+            0 => self.security_profile.as_ref(),
+            1 => self.migration_profile.as_ref(),
+            2 => self.performance_profile.as_ref(),
+            _ => None,
+        }
     }
 }
