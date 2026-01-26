@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//! TUI (Terminal User Interface) module for interactive VM inspection
+
+pub mod app;
+pub mod events;
+pub mod ui;
+pub mod views;
+
+use anyhow::{Context, Result};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    Terminal,
+};
+use std::io;
+use std::path::Path;
+use std::time::{Duration, Instant};
+
+pub use app::App;
+
+/// Run the TUI application
+pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
+    // Setup terminal
+    enable_raw_mode().context("Failed to enable raw mode")?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
+        .context("Failed to enter alternate screen")?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
+
+    // Create app state
+    let mut app = App::new(image_path.as_ref())?;
+
+    // Run the event loop
+    let result = run_app(&mut terminal, &mut app);
+
+    // Restore terminal
+    disable_raw_mode().context("Failed to disable raw mode")?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )
+    .context("Failed to leave alternate screen")?;
+    terminal.show_cursor().context("Failed to show cursor")?;
+
+    result
+}
+
+fn run_app<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+) -> Result<()> {
+    let tick_rate = Duration::from_millis(250);
+    let mut last_tick = Instant::now();
+
+    loop {
+        terminal.draw(|f| ui::draw(f, app))?;
+
+        let timeout = tick_rate
+            .checked_sub(last_tick.elapsed())
+            .unwrap_or_else(|| Duration::from_secs(0));
+
+        if event::poll(timeout)? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        if app.is_searching() {
+                            app.cancel_search();
+                        } else {
+                            return Ok(());
+                        }
+                    }
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        return Ok(());
+                    }
+                    KeyCode::Tab => app.next_view(),
+                    KeyCode::BackTab => app.previous_view(),
+                    KeyCode::Char('h') | KeyCode::F(1) => app.toggle_help(),
+                    KeyCode::Char('/') => app.start_search(),
+                    KeyCode::Up => app.scroll_up(),
+                    KeyCode::Down => app.scroll_down(),
+                    KeyCode::PageUp => app.page_up(),
+                    KeyCode::PageDown => app.page_down(),
+                    KeyCode::Home => app.scroll_top(),
+                    KeyCode::End => app.scroll_bottom(),
+                    KeyCode::Enter => app.select_item(),
+                    KeyCode::Char(c) => {
+                        if app.is_searching() {
+                            app.search_input(c);
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        if app.is_searching() {
+                            app.search_backspace();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if last_tick.elapsed() >= tick_rate {
+            app.on_tick();
+            last_tick = Instant::now();
+        }
+    }
+}
