@@ -242,6 +242,8 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("⌨  ", Style::default().fg(ORANGE)),
             Span::styled("1-9", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Jump │ "),
+            Span::styled("r", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(": Refresh │ "),
             Span::styled("s", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Sort ["),
             Span::styled(app.sort_mode.label(), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
@@ -249,15 +251,15 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("/", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Search │ "),
             Span::styled("b", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Bookmark ["),
-            Span::styled(format!("{}", app.bookmarks.len()), Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw("] │ "),
+            Span::raw(": Bookmark │ "),
             Span::styled("e", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Export │ "),
             Span::styled("h", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw(": Help │ "),
             Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Quit"),
+            Span::raw(": Quit │ "),
+            Span::styled("⏱  ", Style::default().fg(INFO_COLOR)),
+            Span::styled(app.get_time_since_update(), Style::default().fg(TEXT_COLOR)),
         ]
     };
 
@@ -369,6 +371,12 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
             Span::styled("DATA OPERATIONS", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
             Span::styled(" ─────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("r            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Refresh data and update timestamp                                "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
