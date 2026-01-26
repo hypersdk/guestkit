@@ -2,6 +2,7 @@
 //! TUI view modules
 
 pub mod dashboard;
+pub mod kernel;
 pub mod network;
 pub mod packages;
 pub mod profiles;
