@@ -6,11 +6,13 @@ use guestctl::Guestfs;
 use serde::{Deserialize, Serialize};
 
 pub mod compliance;
+pub mod hardening;
 pub mod migration;
 pub mod performance;
 pub mod security;
 
 pub use compliance::ComplianceProfile;
+pub use hardening::HardeningProfile;
 pub use migration::MigrationProfile;
 pub use performance::PerformanceProfile;
 pub use security::SecurityProfile;
@@ -105,6 +107,7 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "migration" => Some(Box::new(MigrationProfile)),
         "performance" => Some(Box::new(PerformanceProfile)),
         "compliance" => Some(Box::new(ComplianceProfile)),
+        "hardening" => Some(Box::new(HardeningProfile)),
         _ => None,
     }
 }
@@ -125,6 +128,10 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         (
             "compliance",
             "Regulatory compliance assessment (CIS, FIPS, HIPAA, PCI-DSS)",
+        ),
+        (
+            "hardening",
+            "System hardening recommendations with actionable remediation steps",
         ),
     ]
 }
