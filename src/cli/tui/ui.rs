@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Tabs},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
     Frame,
 };
 
@@ -73,6 +73,10 @@ pub fn draw(f: &mut Frame, app: &App) {
 
     if app.notification.is_some() {
         draw_notification(f, app);
+    }
+
+    if app.show_jump_menu {
+        draw_jump_menu(f, app);
     }
 }
 
@@ -332,6 +336,12 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("←/→          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Switch profile tabs (when in Profiles view)                      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+P       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Quick jump menu with fuzzy search                                "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
@@ -1111,6 +1121,106 @@ fn draw_notification(f: &mut Frame, app: &App) {
         f.render_widget(ratatui::widgets::Clear, area);
         f.render_widget(notification, area);
     }
+}
+
+fn draw_jump_menu(f: &mut Frame, app: &App) {
+    let area = centered_rect(50, 60, f.area());
+
+    // Get filtered views
+    let filtered_views = app.get_filtered_views();
+
+    // Create list items
+    let items: Vec<ListItem> = filtered_views.iter().enumerate().map(|(idx, (view_idx, _view, highlighted))| {
+        let is_selected = idx == app.jump_selected_index;
+
+        // Parse highlighted string to create spans
+        let mut spans = vec![];
+        let mut current_text = String::new();
+        let mut chars = highlighted.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '[' {
+                // Push accumulated text
+                if !current_text.is_empty() {
+                    spans.push(Span::raw(current_text.clone()));
+                    current_text.clear();
+                }
+                // Get highlighted char
+                if let Some(highlighted_char) = chars.next() {
+                    if chars.next() == Some(']') {
+                        spans.push(Span::styled(
+                            highlighted_char.to_string(),
+                            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                        ));
+                    }
+                }
+            } else {
+                current_text.push(c);
+            }
+        }
+        if !current_text.is_empty() {
+            spans.push(Span::raw(current_text));
+        }
+
+        let line = if is_selected {
+            Line::from(vec![
+                Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{} ", view_idx + 1), Style::default().fg(INFO_COLOR)),
+            ].into_iter().chain(spans.into_iter().map(|s| {
+                s.style(Style::default().add_modifier(Modifier::BOLD))
+            })).collect::<Vec<_>>())
+        } else {
+            Line::from(vec![
+                Span::raw("   "),
+                Span::styled(format!("{} ", view_idx + 1), Style::default().fg(Color::DarkGray)),
+            ].into_iter().chain(spans).collect::<Vec<_>>())
+        };
+
+        ListItem::new(line)
+    }).collect();
+
+    let list = List::new(items)
+        .block(Block::default()
+            .title(vec![
+                Span::styled(" 🚀 Quick Jump ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                Span::styled(&app.jump_query, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+                Span::raw(" "),
+            ])
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ORANGE)))
+        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+
+    // Help footer
+    let help_text = vec![
+        Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(": Navigate  "),
+        Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(": Select  "),
+        Span::styled("Esc", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(": Cancel  "),
+        Span::styled("Type", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(": Search"),
+    ];
+
+    let help = Paragraph::new(Line::from(help_text))
+        .block(Block::default()
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(DARK_ORANGE)))
+        .alignment(Alignment::Center)
+        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+
+    // Split area for list and help
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(2),
+        ])
+        .split(area);
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(list, chunks[0]);
+    f.render_widget(help, chunks[1]);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

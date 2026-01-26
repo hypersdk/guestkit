@@ -110,7 +110,9 @@ fn run_app<B: ratatui::backend::Backend>(
                 }
                 Event::Key(key) => match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => {
-                        if app.is_searching() {
+                        if app.show_jump_menu {
+                            app.toggle_jump_menu();
+                        } else if app.is_searching() {
                             app.cancel_search();
                         } else if app.is_exporting() {
                             app.cancel_export();
@@ -124,6 +126,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
+                    }
+                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        app.toggle_jump_menu();
                     }
                     KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
                         app.toggle_case_sensitive();
@@ -164,8 +169,20 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.next_profile_tab();
                         }
                     }
-                    KeyCode::Up => app.scroll_up(),
-                    KeyCode::Down => app.scroll_down(),
+                    KeyCode::Up => {
+                        if app.show_jump_menu {
+                            app.jump_menu_previous();
+                        } else {
+                            app.scroll_up();
+                        }
+                    }
+                    KeyCode::Down => {
+                        if app.show_jump_menu {
+                            app.jump_menu_next();
+                        } else {
+                            app.scroll_down();
+                        }
+                    }
                     KeyCode::PageUp => app.page_up(),
                     KeyCode::PageDown => app.page_down(),
                     KeyCode::Home => app.scroll_top(),
@@ -180,7 +197,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Enter => {
                         use app::ExportMode;
 
-                        if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
+                        if app.show_jump_menu {
+                            app.jump_menu_select();
+                        } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();
                         } else if !app.is_searching() && !app.show_export_menu {
                             app.toggle_detail();
@@ -191,7 +210,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char(c) => {
                         use app::{ExportFormat, ExportMode};
 
-                        if matches!(app.export_mode, Some(ExportMode::Selecting)) {
+                        if app.show_jump_menu {
+                            app.jump_menu_input(c);
+                        } else if matches!(app.export_mode, Some(ExportMode::Selecting)) {
                             // Handle format selection
                             match c {
                                 '1' => app.select_export_format(ExportFormat::Json),
@@ -216,7 +237,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Backspace => {
                         use app::ExportMode;
 
-                        if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
+                        if app.show_jump_menu {
+                            app.jump_menu_backspace();
+                        } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             app.export_backspace();
                         } else if app.is_searching() {
                             app.search_backspace();
