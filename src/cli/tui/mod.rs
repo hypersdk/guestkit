@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod events;
+pub mod splash;
 pub mod ui;
 pub mod views;
 

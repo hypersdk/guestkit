@@ -5,7 +5,7 @@ use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
 use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     symbols,
     text::{Line, Span},
@@ -15,7 +15,15 @@ use ratatui::{
 use std::cmp;
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
-    let chunks = Layout::default()
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(70),  // Left column
+            Constraint::Percentage(30),  // Right column (health meter)
+        ])
+        .split(area);
+
+    let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(8),  // System info
@@ -23,12 +31,13 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
             Constraint::Length(8),  // Stats gauges
             Constraint::Min(0),     // Quick info
         ])
-        .split(area);
+        .split(main_chunks[0]);
 
-    draw_system_info(f, chunks[0], app);
-    draw_risk_chart(f, chunks[1], app);
-    draw_stats(f, chunks[2], app);
-    draw_quick_info(f, chunks[3], app);
+    draw_system_info(f, left_chunks[0], app);
+    draw_risk_chart(f, left_chunks[1], app);
+    draw_stats(f, left_chunks[2], app);
+    draw_quick_info(f, left_chunks[3], app);
+    draw_health_meter(f, main_chunks[1], app);
 }
 
 fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
@@ -364,4 +373,89 @@ fn create_status_item(name: &str, status: &str, enabled: bool) -> ListItem<'stat
         Span::styled(format!("{:12} ", name), Style::default().fg(LIGHT_ORANGE)),
         Span::styled(status.to_string(), Style::default().fg(TEXT_COLOR)),
     ]))
+}
+
+fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
+    let health_score = app.calculate_health_score();
+    let (status_text, _status_color) = app.get_health_status();
+
+    let health_color = match health_score {
+        90..=100 => SUCCESS_COLOR,
+        75..=89 => WARNING_COLOR,
+        60..=74 => ORANGE,
+        _ => ERROR_COLOR,
+    };
+
+    // Create a vertical layout for the health meter
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(12),  // Large health gauge
+            Constraint::Min(0),      // Details
+        ])
+        .split(area);
+
+    // Large health percentage display
+    let score_text = format!("{}%", health_score);
+    let score_display = format!("        {}",  score_text);
+    let health_display = vec![
+        Line::from(""),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(&score_display, Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("      ═══════", Style::default().fg(health_color)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(format!("      {}", status_text), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
+        ]),
+    ];
+
+    let health_para = Paragraph::new(health_display)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 💊 System Health ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .alignment(Alignment::Center);
+
+    f.render_widget(health_para, chunks[0]);
+
+    // Health details
+    let (critical, high, medium) = app.get_risk_summary();
+    let details = vec![
+        ListItem::new(Line::from(vec![
+            Span::styled("Score:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}/100", health_score), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from("")),
+        ListItem::new(Line::from(vec![
+            Span::styled("🔴 Critical: ", Style::default().fg(ERROR_COLOR)),
+            Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("🟠 High:     ", Style::default().fg(WARNING_COLOR)),
+            Span::styled(format!("{}", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("🟡 Medium:   ", Style::default().fg(WARNING_COLOR)),
+            Span::styled(format!("{}", medium), Style::default().fg(WARNING_COLOR)),
+        ])),
+        ListItem::new(Line::from("")),
+        ListItem::new(Line::from(vec![
+            Span::styled("Press 8 for issues", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::ITALIC)),
+        ])),
+    ];
+
+    let details_list = List::new(details)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Details ")
+            .title_style(Style::default().fg(ORANGE)));
+
+    f.render_widget(details_list, chunks[1]);
 }
