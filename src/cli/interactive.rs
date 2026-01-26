@@ -123,8 +123,86 @@ impl Completer for GuestkitHelper {
             return Ok((start, matches));
         }
 
-        // Future: Path completion would go here
-        // For now, just command completion is implemented
+        // Device/filesystem completion for mount commands
+        if parts.len() >= 2 {
+            let command = parts[0];
+
+            if command == "mount" && parts.len() == 2 {
+                let prefix = parts.last().unwrap_or(&"");
+
+                // Common device paths in VMs
+                let devices = vec![
+                    "/dev/sda", "/dev/sda1", "/dev/sda2", "/dev/sda3",
+                    "/dev/vda", "/dev/vda1", "/dev/vda2", "/dev/vda3",
+                    "/dev/mapper/",
+                ];
+
+                let matches: Vec<Pair> = devices
+                    .iter()
+                    .filter(|dev| dev.starts_with(prefix))
+                    .map(|dev| Pair {
+                        display: dev.to_string(),
+                        replacement: dev.to_string(),
+                    })
+                    .collect();
+
+                if !matches.is_empty() {
+                    let start = before_cursor.len() - prefix.len();
+                    return Ok((start, matches));
+                }
+            }
+
+            // Mount point completion for mount command (second argument)
+            if command == "mount" && parts.len() == 3 {
+                let prefix = parts.last().unwrap_or(&"");
+
+                let mount_points = vec!["/mnt", "/mnt/", "/tmp/mnt", "/tmp/mnt/"];
+
+                let matches: Vec<Pair> = mount_points
+                    .iter()
+                    .filter(|mp| mp.starts_with(prefix))
+                    .map(|mp| Pair {
+                        display: mp.to_string(),
+                        replacement: mp.to_string(),
+                    })
+                    .collect();
+
+                if !matches.is_empty() {
+                    let start = before_cursor.len() - prefix.len();
+                    return Ok((start, matches));
+                }
+            }
+
+            // Path completion for commands that expect paths
+            let path_commands = vec!["ls", "cat", "head", "stat", "find", "download", "dl", "umount", "unmount"];
+
+            if path_commands.contains(&command) {
+                let prefix = parts.last().unwrap_or(&"");
+
+                // Common Linux paths
+                let common_paths = vec![
+                    "/", "/etc", "/etc/", "/var", "/var/", "/home", "/home/",
+                    "/usr", "/usr/", "/tmp", "/tmp/", "/opt", "/opt/",
+                    "/root", "/root/", "/boot", "/boot/", "/dev", "/dev/",
+                    "/proc", "/proc/", "/sys", "/sys/", "/run", "/run/",
+                    "/mnt", "/mnt/",
+                ];
+
+                let matches: Vec<Pair> = common_paths
+                    .iter()
+                    .filter(|path| path.starts_with(prefix))
+                    .map(|path| Pair {
+                        display: path.to_string(),
+                        replacement: path.to_string(),
+                    })
+                    .collect();
+
+                if !matches.is_empty() {
+                    let start = before_cursor.len() - prefix.len();
+                    return Ok((start, matches));
+                }
+            }
+        }
 
         Ok((0, vec![]))
     }
