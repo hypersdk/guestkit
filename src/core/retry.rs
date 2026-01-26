@@ -75,7 +75,7 @@ where
 
                 // Add jitter to prevent thundering herd
                 if config.jitter {
-                    let jitter_factor = 0.5 + rand::thread_rng().gen::<f64>() * 0.5;
+                    let jitter_factor = 0.5 + rand::thread_rng().r#gen::<f64>() * 0.5;
                     delay = Duration::from_secs_f64(delay.as_secs_f64() * jitter_factor);
                 }
 
