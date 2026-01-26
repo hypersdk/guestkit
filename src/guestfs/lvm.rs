@@ -31,7 +31,29 @@ pub struct LV {
 }
 
 impl Guestfs {
-    /// Scan for LVM volume groups
+    /// Get device filter config for LVM to restrict to NBD/loop devices only
+    fn get_lvm_device_filter(&self) -> String {
+        let device_path = if let Some(nbd) = &self.nbd_device {
+            nbd.device_path().display().to_string()
+        } else if let Some(loop_dev) = &self.loop_device {
+            loop_dev.device_path()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "/dev/loop".to_string())
+        } else {
+            "/dev/nbd".to_string()
+        };
+
+        // LVM filter to ONLY scan our device and reject all others
+        // This prevents accidentally discovering host LVM volumes
+        // Escape forward slashes for the regex pattern
+        let escaped_path = device_path.replace("/", r"\/");
+        format!(
+            r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#,
+            escaped_path
+        )
+    }
+
+    /// Scan for LVM volume groups (isolated to our block device only)
     ///
     pub fn vgscan(&mut self) -> Result<()> {
         self.ensure_ready()?;
@@ -43,9 +65,44 @@ impl Guestfs {
         // Ensure NBD device is set up for LVM to detect
         self.setup_nbd_if_needed()?;
 
-        // Run vgscan to detect volume groups
-        let output = Command::new("vgscan")
-            .arg("--mknodes")
+        // Create isolated LVM system directory
+        let lvm_dir = if let Some(mount_root) = &self.mount_root {
+            mount_root.join("lvm")
+        } else {
+            std::path::PathBuf::from("/run")
+                .join(format!("guestctl-{}", std::process::id()))
+                .join("lvm")
+        };
+
+        std::fs::create_dir_all(&lvm_dir)
+            .map_err(|e| Error::CommandFailed(format!("Failed to create LVM directory: {}", e)))?;
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Get device filter to restrict LVM to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
+        // Build vgscan command with isolation
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("env");
+            // Set env vars via sudo env to ensure they're passed through
+            sudo_cmd.arg(format!("LVM_SYSTEM_DIR={}", lvm_dir.display()));
+            sudo_cmd.arg("LVM_SUPPRESS_FD_WARNINGS=1");
+            sudo_cmd.arg("vgscan");
+            sudo_cmd
+        } else {
+            let mut cmd = Command::new("vgscan");
+            cmd.env("LVM_SYSTEM_DIR", &lvm_dir);
+            cmd.env("LVM_SUPPRESS_FD_WARNINGS", "1");
+            cmd
+        };
+
+        // Run vgscan with device filter to only scan our NBD/loop device
+        let output = cmd
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| {
                 Error::CommandFailed(format!(
@@ -59,15 +116,10 @@ impl Guestfs {
             return Err(Error::CommandFailed(format!("vgscan failed: {}", stderr)));
         }
 
-        if self.verbose {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            eprintln!("vgscan output: {}", stdout);
-        }
-
         Ok(())
     }
 
-    /// Activate all LVM volume groups
+    /// Activate all LVM volume groups (isolated to our block device only)
     ///
     pub fn vg_activate_all(&mut self, activate: bool) -> Result<()> {
         self.ensure_ready()?;
@@ -89,10 +141,42 @@ impl Guestfs {
             }
         }
 
+        // Get isolated LVM directory
+        let lvm_dir = if let Some(mount_root) = &self.mount_root {
+            mount_root.join("lvm")
+        } else {
+            std::path::PathBuf::from("/run")
+                .join(format!("guestctl-{}", std::process::id()))
+                .join("lvm")
+        };
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Get device filter to restrict LVM to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
+        // Build vgchange command with isolation
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("env");
+            sudo_cmd.arg(format!("LVM_SYSTEM_DIR={}", lvm_dir.display()));
+            sudo_cmd.arg("LVM_SUPPRESS_FD_WARNINGS=1");
+            sudo_cmd.arg("vgchange");
+            sudo_cmd
+        } else {
+            let mut cmd = Command::new("vgchange");
+            cmd.env("LVM_SYSTEM_DIR", &lvm_dir);
+            cmd.env("LVM_SUPPRESS_FD_WARNINGS", "1");
+            cmd
+        };
+
         // Run vgchange to activate/deactivate all VGs
-        let output = Command::new("vgchange")
+        let output = cmd
             .arg("-a")
             .arg(action)
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run vgchange: {}", e)))?;
 
@@ -101,9 +185,22 @@ impl Guestfs {
             return Err(Error::CommandFailed(format!("vgchange failed: {}", stderr)));
         }
 
-        if self.verbose {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            eprintln!("vgchange output: {}", stdout);
+        // After activation, wait for device nodes to be created
+        // Device-mapper creates nodes in /dev/mapper/ regardless of LVM_SYSTEM_DIR
+        if activate {
+            // Run udevadm settle to ensure device nodes are fully created
+            let settle_result = Command::new("udevadm")
+                .arg("settle")
+                .output();
+
+            if let Ok(settle_output) = settle_result {
+                if !settle_output.status.success() && self.verbose {
+                    eprintln!("guestfs: udevadm settle failed: {}", String::from_utf8_lossy(&settle_output.stderr));
+                }
+            }
+
+            // Brief additional sleep to ensure device nodes are ready
+            std::thread::sleep(std::time::Duration::from_millis(200));
         }
 
         Ok(())
@@ -120,8 +217,20 @@ impl Guestfs {
             eprintln!("guestfs: vg_activate {} {:?}", activate, volgroups);
         }
 
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
         for vg in volgroups {
-            let output = Command::new("vgchange")
+            // Build vgchange command
+            let mut cmd = if need_sudo {
+                let mut sudo_cmd = Command::new("sudo");
+                sudo_cmd.arg("vgchange");
+                sudo_cmd
+            } else {
+                Command::new("vgchange")
+            };
+
+            let output = cmd
                 .arg("-a")
                 .arg(action)
                 .arg(vg)
@@ -294,11 +403,28 @@ impl Guestfs {
             eprintln!("guestfs: lvs");
         }
 
-        // List logical volumes
-        let output = Command::new("lvs")
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Build lvs command
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("lvs");
+            sudo_cmd
+        } else {
+            Command::new("lvs")
+        };
+
+        // List logical volumes with device filter
+        let output = cmd
             .arg("--noheadings")
             .arg("-o")
             .arg("lv_path")
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run lvs: {}", e)))?;
 
@@ -326,11 +452,28 @@ impl Guestfs {
             eprintln!("guestfs: vgs");
         }
 
-        // List volume groups
-        let output = Command::new("vgs")
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Build vgs command
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("vgs");
+            sudo_cmd
+        } else {
+            Command::new("vgs")
+        };
+
+        // List volume groups with device filter
+        let output = cmd
             .arg("--noheadings")
             .arg("-o")
             .arg("vg_name")
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run vgs: {}", e)))?;
 
@@ -358,11 +501,28 @@ impl Guestfs {
             eprintln!("guestfs: pvs");
         }
 
-        // List physical volumes
-        let output = Command::new("pvs")
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
+        // Check if we need sudo
+        let need_sudo = unsafe { libc::geteuid() } != 0;
+
+        // Build pvs command
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("pvs");
+            sudo_cmd
+        } else {
+            Command::new("pvs")
+        };
+
+        // List physical volumes with device filter
+        let output = cmd
             .arg("--noheadings")
             .arg("-o")
             .arg("pv_name")
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run pvs: {}", e)))?;
 

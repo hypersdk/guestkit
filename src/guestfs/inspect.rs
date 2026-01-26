@@ -48,14 +48,14 @@ impl Guestfs {
         let mut out = Vec::with_capacity(roots.len());
 
         for root in roots {
-            let os_type = self.inspect_get_type(&root)?;
-
             // Mount RO if not already mounted
-            let was_mounted = self.mounted.contains_key("/");
+            let was_mounted = self.mounted.contains_key(&root);
             if !was_mounted {
                 self.mount_ro(&root, "/")?;
             }
 
+            // All inspect_get_* functions should be called while root is mounted
+            let os_type = self.inspect_get_type(&root)?;
             let distro = self.inspect_get_distro(&root)?;
             let product_name = self.inspect_get_product_name(&root)?;
             let major_version = self.inspect_get_major_version(&root)?;
@@ -67,7 +67,7 @@ impl Guestfs {
 
             // Cleanup: unmount if we mounted it
             if !was_mounted {
-                let _ = self.umount("/");
+                let _ = self.umount(&root);
             }
 
             out.push(InspectedOS {
@@ -184,7 +184,9 @@ impl Guestfs {
     ///
     /// This is the key upgrade that reduces false positives (/home, data disks, etc.).
     fn validate_root_partition(&mut self, dev: &str) -> Result<bool> {
-        let was_mounted = self.mounted.contains_key("/");
+        // Check if this device is already mounted (at any mountpoint)
+        // The mounted HashMap is device->mountpoint, so we check if the device is a key
+        let was_mounted = self.mounted.contains_key(dev);
 
         // Temporarily mount at / if not already mounted.
         if !was_mounted {
@@ -196,8 +198,9 @@ impl Guestfs {
         let is_windows = looks_like_windows_root(self);
 
         // Cleanup: unmount if we mounted it
+        // Use the device name for umount since that's the key in the mounted HashMap
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(dev);
         }
 
         Ok(is_linux || is_windows)
@@ -209,7 +212,7 @@ impl Guestfs {
 
         // If root is an LV, parse_device_name may fail; use marker detection instead.
         // Prefer marker-based detection when mounted.
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -224,7 +227,7 @@ impl Guestfs {
         };
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         Ok(os_type)
@@ -300,7 +303,7 @@ impl Guestfs {
 
     /// Read and parse /etc/os-release (or /usr/lib/os-release).
     fn read_os_release(&mut self, root: &str) -> Result<OsRelease> {
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -311,7 +314,7 @@ impl Guestfs {
             .or_else(|_| self.cat("/usr/lib/os-release"))?;
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         OsRelease::parse(&os_release_content)
@@ -331,7 +334,7 @@ impl Guestfs {
             return Ok(cached.clone());
         }
 
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -369,7 +372,7 @@ impl Guestfs {
         }
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         result
@@ -377,7 +380,7 @@ impl Guestfs {
 
     /// Detect distribution from legacy release files (fallback only).
     fn detect_from_release_files(&mut self, root: &str) -> Result<String> {
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -441,13 +444,13 @@ impl Guestfs {
             }
         } else {
             if !was_mounted {
-                let _ = self.umount("/");
+                let _ = self.umount(root);
             }
             return Err(Error::NotFound("No release files found".to_string()));
         };
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         Ok(distro)
@@ -502,7 +505,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         let os_type = self.inspect_get_type(root)?;
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -547,7 +550,7 @@ impl Guestfs {
         };
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         Ok(arch)
@@ -606,7 +609,7 @@ impl Guestfs {
     pub fn inspect_get_hostname(&mut self, root: &str) -> Result<String> {
         self.ensure_ready()?;
 
-        let was_mounted = self.mounted.contains_key("/");
+        let was_mounted = self.mounted.contains_key(root);
 
         if !was_mounted {
             self.mount_ro(root, "/")?;
@@ -653,7 +656,7 @@ impl Guestfs {
         };
 
         if !was_mounted {
-            let _ = self.umount("/");
+            let _ = self.umount(root);
         }
 
         Ok(hostname)

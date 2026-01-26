@@ -192,6 +192,9 @@ impl App {
             anyhow::anyhow!("No operating systems found in image")
         })?;
 
+        // Mount the root filesystem once before gathering all inspection data
+        guestfs.mount_ro(root, "/")?;
+
         // Gather basic OS info
         let os_name = guestfs.inspect_get_product_name(root)
             .unwrap_or_else(|_| "Unknown".to_string());
