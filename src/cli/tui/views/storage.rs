@@ -69,7 +69,7 @@ fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" LVM Configuration ")
+            .title(" 💾 LVM Configuration ")
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
@@ -81,7 +81,7 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" RAID Arrays ")
+                .title(" 🔧 RAID Arrays ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -91,16 +91,17 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
     let items: Vec<ListItem> = app.raid_arrays
         .iter()
         .map(|raid| {
-            let status_color = if raid.status == "active" && raid.active_devices == raid.total_devices {
-                SUCCESS_COLOR
+            let (status_icon, status_color) = if raid.status == "active" && raid.active_devices == raid.total_devices {
+                ("✓", SUCCESS_COLOR)
             } else if raid.active_devices < raid.total_devices {
-                ERROR_COLOR
+                ("⚠", ERROR_COLOR)
             } else {
-                WARNING_COLOR
+                ("●", WARNING_COLOR)
             };
 
             ListItem::new(Line::from(vec![
-                Span::styled(&raid.device, Style::default().fg(ORANGE)),
+                Span::raw(format!("{} ", status_icon)),
+                Span::styled(&raid.device, Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
                 Span::raw(": "),
                 Span::styled(&raid.level, Style::default().fg(LIGHT_ORANGE)),
                 Span::raw(" - "),
@@ -115,7 +116,7 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" RAID Arrays ({}) ", app.raid_arrays.len()))
+            .title(format!(" 🔧 RAID Arrays • {} configured ", app.raid_arrays.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
@@ -123,11 +124,11 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
     if app.fstab.is_empty() {
-        let empty = Paragraph::new("No fstab entries found")
+        let empty = Paragraph::new("⚠️  No fstab entries found")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Mount Points ")
+                .title(" 📁 Mount Points ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -165,7 +166,7 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Mount Points / fstab ({} / {} total) ", filtered_fstab.len(), app.fstab.len()))
+            .title(format!(" 📁 Mount Points / fstab • {} showing of {} total ", filtered_fstab.len(), app.fstab.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
