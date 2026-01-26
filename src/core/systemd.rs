@@ -51,7 +51,7 @@ impl JournalEntry {
 }
 
 /// Systemd service information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ServiceInfo {
     /// Service name
     pub name: String,
@@ -70,7 +70,7 @@ pub struct ServiceInfo {
 }
 
 /// Service state
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ServiceState {
     Active,
     Inactive,
@@ -94,7 +94,7 @@ impl std::fmt::Display for ServiceState {
 }
 
 /// Service dependencies
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ServiceDependencies {
     /// Services that must be started before this one
     pub requires: Vec<String>,

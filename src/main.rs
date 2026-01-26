@@ -290,6 +290,83 @@ enum Commands {
         fail_fast: bool,
     },
 
+    /// Analyze systemd journal logs
+    #[command(name = "systemd-journal")]
+    SystemdJournal {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Filter by priority (0=emerg, 3=err, 4=warning, 6=info)
+        #[arg(short, long)]
+        priority: Option<u8>,
+
+        /// Filter by unit name
+        #[arg(short, long)]
+        unit: Option<String>,
+
+        /// Show only errors (priority 0-3)
+        #[arg(short, long)]
+        errors: bool,
+
+        /// Show only warnings (priority 4)
+        #[arg(short, long)]
+        warnings: bool,
+
+        /// Show statistics
+        #[arg(short, long)]
+        stats: bool,
+
+        /// Limit number of entries
+        #[arg(short, long)]
+        limit: Option<usize>,
+    },
+
+    /// Analyze systemd services and dependencies
+    #[command(name = "systemd-services")]
+    SystemdServices {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Show dependency tree for specific service
+        #[arg(short, long)]
+        service: Option<String>,
+
+        /// Show only failed services
+        #[arg(short, long)]
+        failed: bool,
+
+        /// Generate Mermaid diagram for dependencies
+        #[arg(short, long)]
+        diagram: bool,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT")]
+        output: Option<String>,
+    },
+
+    /// Analyze systemd boot performance
+    #[command(name = "systemd-boot")]
+    SystemdBoot {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Show boot timeline diagram
+        #[arg(short, long)]
+        timeline: bool,
+
+        /// Show optimization recommendations
+        #[arg(short, long)]
+        recommendations: bool,
+
+        /// Show summary statistics
+        #[arg(short, long)]
+        summary: bool,
+
+        /// Number of slowest services to show
+        #[arg(short = 'n', long, default_value = "10")]
+        top: usize,
+    },
+
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -531,6 +608,54 @@ fn main() -> anyhow::Result<()> {
             let report = executor.execute_script(&script)?;
             report.print();
             std::process::exit(report.exit_code());
+        }
+
+        Commands::SystemdJournal {
+            image,
+            priority,
+            unit,
+            errors,
+            warnings,
+            stats,
+            limit,
+        } => {
+            systemd_journal_command(
+                &image,
+                priority,
+                unit.as_deref(),
+                errors,
+                warnings,
+                stats,
+                limit,
+                cli.verbose,
+            )?;
+        }
+
+        Commands::SystemdServices {
+            image,
+            service,
+            failed,
+            diagram,
+            output,
+        } => {
+            systemd_services_command(
+                &image,
+                service.as_deref(),
+                failed,
+                diagram,
+                output.as_deref(),
+                cli.verbose,
+            )?;
+        }
+
+        Commands::SystemdBoot {
+            image,
+            timeline,
+            recommendations,
+            summary,
+            top,
+        } => {
+            systemd_boot_command(&image, timeline, recommendations, summary, top, cli.verbose)?;
         }
 
         Commands::Completion { shell } => {
