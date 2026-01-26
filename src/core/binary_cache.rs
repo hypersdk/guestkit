@@ -428,4 +428,100 @@ mod tests {
         assert!(!cache.exists("old"));
         assert!(cache.exists("new"));
     }
+
+    // Property-based tests
+    #[cfg(test)]
+    mod proptests {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            /// Property: Any data saved to cache can be loaded back unchanged
+            #[test]
+            fn prop_cache_roundtrip(disk_hash in "[a-f0-9]{64}") {
+                let temp_dir = tempfile::tempdir().unwrap();
+                let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+                let data = CachedInspection::new(disk_hash.clone());
+                cache.save(&disk_hash, &data).unwrap();
+                let loaded = cache.load(&disk_hash).unwrap();
+
+                prop_assert_eq!(data.disk_hash, loaded.disk_hash);
+                prop_assert_eq!(data.timestamp, loaded.timestamp);
+            }
+
+            /// Property: Cache key can be any valid string
+            #[test]
+            fn prop_cache_key_validity(key in "[a-zA-Z0-9_-]{1,64}") {
+                let temp_dir = tempfile::tempdir().unwrap();
+                let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+                let data = CachedInspection::new("test-hash".to_string());
+                prop_assert!(cache.save(&key, &data).is_ok());
+                prop_assert!(cache.exists(&key));
+                prop_assert!(cache.load(&key).is_ok());
+            }
+
+            /// Property: Clearing cache with any age threshold works correctly
+            #[test]
+            fn prop_clear_older_than(age_secs in 0u64..1000000u64) {
+                let temp_dir = tempfile::tempdir().unwrap();
+                let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+                // Add some data
+                let data = CachedInspection::new("test".to_string());
+                cache.save("test", &data).unwrap();
+
+                // Clear with arbitrary age
+                let result = cache.clear_older_than(age_secs);
+                prop_assert!(result.is_ok());
+            }
+
+            /// Property: Cache stats always return valid values
+            #[test]
+            fn prop_cache_stats_valid(num_entries in 0usize..100) {
+                let temp_dir = tempfile::tempdir().unwrap();
+                let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+                // Add random number of entries
+                for i in 0..num_entries {
+                    let data = CachedInspection::new(format!("hash-{}", i));
+                    cache.save(&format!("key-{}", i), &data).unwrap();
+                }
+
+                let stats = cache.stats().unwrap();
+                prop_assert_eq!(stats.total_entries, num_entries);
+                // Verify total_size_bytes is reasonable (non-zero if entries exist)
+                if num_entries > 0 {
+                    prop_assert!(stats.total_size_bytes > 0);
+                }
+            }
+
+            /// Property: Saving then deleting makes exists() return false
+            #[test]
+            fn prop_save_delete_consistency(key in "[a-z]{10}") {
+                let temp_dir = tempfile::tempdir().unwrap();
+                let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
+
+                let data = CachedInspection::new("test-hash".to_string());
+                cache.save(&key, &data).unwrap();
+                prop_assert!(cache.exists(&key));
+
+                cache.delete(&key).unwrap();
+                prop_assert!(!cache.exists(&key));
+            }
+
+            /// Property: Timestamp is always <= current time
+            #[test]
+            fn prop_timestamp_validity(disk_hash in "[a-f0-9]{32}") {
+                let data = CachedInspection::new(disk_hash);
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+
+                prop_assert!(data.timestamp <= now);
+            }
+        }
+    }
 }
