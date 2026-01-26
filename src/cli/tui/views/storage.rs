@@ -134,7 +134,20 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let items: Vec<ListItem> = app.fstab
+    let filtered_fstab: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
+        app.fstab
+            .iter()
+            .filter(|(device, mountpoint, fstype)| {
+                device.to_lowercase().contains(&app.search_query.to_lowercase())
+                    || mountpoint.to_lowercase().contains(&app.search_query.to_lowercase())
+                    || fstype.to_lowercase().contains(&app.search_query.to_lowercase())
+            })
+            .collect()
+    } else {
+        app.fstab.iter().collect()
+    };
+
+    let items: Vec<ListItem> = filtered_fstab
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
@@ -152,7 +165,7 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Mount Points / fstab ({}) ", app.fstab.len()))
+            .title(format!(" Mount Points / fstab ({} / {} total) ", filtered_fstab.len(), app.fstab.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

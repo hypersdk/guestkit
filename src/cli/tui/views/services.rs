@@ -23,7 +23,19 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let items: Vec<ListItem> = app.services
+    let filtered_services: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
+        app.services
+            .iter()
+            .filter(|svc| {
+                svc.name.to_lowercase().contains(&app.search_query.to_lowercase())
+                    || svc.state.to_lowercase().contains(&app.search_query.to_lowercase())
+            })
+            .collect()
+    } else {
+        app.services.iter().collect()
+    };
+
+    let items: Vec<ListItem> = filtered_services
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
@@ -42,7 +54,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Systemd Services ({}) ", app.services.len()))
+            .title(format!(" Systemd Services ({} / {} total) ", filtered_services.len(), app.services.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

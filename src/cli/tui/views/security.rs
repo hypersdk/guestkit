@@ -80,7 +80,16 @@ fn draw_firewall_ssh(f: &mut Frame, area: Rect, app: &App) {
     let ssh_items: Vec<ListItem> = if app.security.ssh_keys.is_empty() {
         vec![ListItem::new("No SSH keys found")]
     } else {
-        app.security.ssh_keys
+        let filtered_keys: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
+            app.security.ssh_keys
+                .iter()
+                .filter(|(user, _)| user.to_lowercase().contains(&app.search_query.to_lowercase()))
+                .collect()
+        } else {
+            app.security.ssh_keys.iter().collect()
+        };
+
+        filtered_keys
             .iter()
             .map(|(user, count)| {
                 ListItem::new(ratatui::text::Line::from(vec![
