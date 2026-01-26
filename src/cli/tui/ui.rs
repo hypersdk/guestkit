@@ -164,7 +164,32 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     let views = View::all();
-    let titles: Vec<String> = views.iter().map(|v| v.title().to_string()).collect();
+    let titles: Vec<String> = views.iter().map(|v| {
+        let count = match v {
+            View::Dashboard => None,
+            View::Network => Some(app.network_interfaces.len()),
+            View::Packages => Some(app.packages.package_count),
+            View::Services => Some(app.services.len()),
+            View::Databases => Some(app.databases.len()),
+            View::WebServers => Some(app.web_servers.len()),
+            View::Security => None,
+            View::Issues => {
+                let (critical, high, medium) = app.get_risk_summary();
+                let total = critical + high + medium;
+                if total > 0 { Some(total) } else { None }
+            },
+            View::Storage => Some(app.fstab.len()),
+            View::Users => Some(app.users.len()),
+            View::Kernel => Some(app.kernel_modules.len()),
+            View::Profiles => None,
+        };
+
+        if let Some(n) = count {
+            format!("{} ({})", v.title(), n)
+        } else {
+            v.title().to_string()
+        }
+    }).collect();
 
     let tabs = Tabs::new(titles)
         .block(Block::default()
@@ -313,26 +338,26 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("↑/↓          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Scroll up/down one line                                          "),
+            Span::styled("↑/↓ or j/k   ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Scroll up/down one line (vim-style)                              "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("PgUp/PgDn    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Scroll up/down one page (10 lines)                               "),
+            Span::raw("Scroll up/down one page (also Ctrl-u/Ctrl-d)                     "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Home         ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Jump to top of list                                              "),
+            Span::styled("Home or g    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Jump to top of list (vim-style)                                  "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("End          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Jump to bottom of list                                           "),
+            Span::styled("End or G     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Jump to bottom of list (vim-style)                               "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
