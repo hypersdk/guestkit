@@ -2,11 +2,12 @@
 //! Services view - Systemd services viewer
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    text::{Line, Span},
+    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -22,6 +23,81 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         f.render_widget(empty, area);
         return;
     }
+
+    // Split area into summary and list sections
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(8),  // Summary gauges
+            Constraint::Min(0),     // Service list
+        ])
+        .split(area);
+
+    draw_service_summary(f, chunks[0], app);
+    draw_service_list(f, chunks[1], app);
+}
+
+fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {
+    let enabled_count = app.services.iter().filter(|s| s.enabled).count();
+    let disabled_count = app.services.len() - enabled_count;
+    let running_count = app.services.iter().filter(|s| s.state == "running" || s.state == "active").count();
+    let stopped_count = app.services.len() - running_count;
+
+    let enabled_pct = if app.services.len() > 0 {
+        (enabled_count as f64 / app.services.len() as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    let running_pct = if app.services.len() > 0 {
+        (running_count as f64 / app.services.len() as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    // Split into two gauge sections
+    let gauge_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),  // Header
+            Constraint::Length(3),  // Enabled gauge
+            Constraint::Length(3),  // Running gauge
+            Constraint::Length(1),  // Padding
+        ])
+        .split(area);
+
+    // Header
+    let header = Paragraph::new(Line::from(vec![
+        Span::styled(" 📊 Service Status Overview", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    ]));
+    f.render_widget(header, gauge_chunks[0]);
+
+    // Enabled/Disabled gauge
+    let enabled_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Enabled Services "))
+        .gauge_style(Style::default().fg(SUCCESS_COLOR))
+        .percent(enabled_pct)
+        .label(format!("{} enabled • {} disabled ({}%)", enabled_count, disabled_count, enabled_pct));
+
+    f.render_widget(enabled_gauge, gauge_chunks[1]);
+
+    // Running/Stopped gauge
+    let running_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" Running Services "))
+        .gauge_style(Style::default().fg(INFO_COLOR))
+        .percent(running_pct)
+        .label(format!("{} running • {} stopped ({}%)", running_count, stopped_count, running_pct));
+
+    f.render_widget(running_gauge, gauge_chunks[2]);
+}
+
+fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
 
     let filtered_services: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.services

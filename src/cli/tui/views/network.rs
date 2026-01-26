@@ -2,12 +2,12 @@
 //! Network view - Network configuration details
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Row, Table},
+    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph, Row, Table},
     Frame,
 };
 
@@ -15,13 +15,66 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(6),  // Network summary gauges
             Constraint::Min(0),     // Interfaces table
             Constraint::Length(10), // DNS servers
         ])
         .split(area);
 
-    draw_interfaces(f, chunks[0], app);
-    draw_dns_servers(f, chunks[1], app);
+    draw_network_summary(f, chunks[0], app);
+    draw_interfaces(f, chunks[1], app);
+    draw_dns_servers(f, chunks[2], app);
+}
+
+fn draw_network_summary(f: &mut Frame, area: Rect, app: &App) {
+    let total_interfaces = app.network_interfaces.len();
+    let configured_count = app.network_interfaces.iter().filter(|i| !i.ip_address.is_empty()).count();
+    let dhcp_count = app.network_interfaces.iter().filter(|i| i.dhcp).count();
+
+    let configured_pct = if total_interfaces > 0 {
+        (configured_count as f64 / total_interfaces as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    let dhcp_pct = if total_interfaces > 0 {
+        (dhcp_count as f64 / total_interfaces as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    // Split horizontally for two gauges side by side
+    let gauge_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+        .split(area);
+
+    // Configured interfaces gauge
+    let configured_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 📡 Configured Interfaces "))
+        .gauge_style(Style::default().fg(SUCCESS_COLOR))
+        .percent(configured_pct)
+        .label(format!("{}/{} configured ({}%)", configured_count, total_interfaces, configured_pct));
+
+    f.render_widget(configured_gauge, gauge_chunks[0]);
+
+    // DHCP-enabled gauge
+    let dhcp_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 🔄 DHCP Enabled "))
+        .gauge_style(Style::default().fg(INFO_COLOR))
+        .percent(dhcp_pct)
+        .label(format!("{}/{} using DHCP ({}%)", dhcp_count, total_interfaces, dhcp_pct));
+
+    f.render_widget(dhcp_gauge, gauge_chunks[1]);
 }
 
 fn draw_interfaces(f: &mut Frame, area: Rect, app: &App) {
