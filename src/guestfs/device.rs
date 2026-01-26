@@ -78,6 +78,40 @@ impl Guestfs {
     pub fn vfs_type(&mut self, device: &str) -> Result<String> {
         self.ensure_ready()?;
 
+        // For LVM volumes (/dev/mapper/* or /dev/vgname/lvname), use blkid directly
+        if device.starts_with("/dev/mapper/") || (device.starts_with("/dev/") && device.matches('/').count() >= 3) {
+            // Use blkid to detect filesystem type on LVM volumes
+            let need_sudo = unsafe { libc::geteuid() } != 0;
+
+            let mut cmd = if need_sudo {
+                let mut sudo_cmd = std::process::Command::new("sudo");
+                sudo_cmd.arg("blkid");
+                sudo_cmd
+            } else {
+                std::process::Command::new("blkid")
+            };
+
+            let output = cmd
+                .arg("-o")
+                .arg("value")
+                .arg("-s")
+                .arg("TYPE")
+                .arg(device)
+                .output()
+                .map_err(|e| Error::CommandFailed(format!("Failed to run blkid: {}", e)))?;
+
+            if output.status.success() {
+                let fs_type = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !fs_type.is_empty() {
+                    return Ok(fs_type);
+                }
+            }
+
+            // If blkid fails, return unknown
+            return Ok("unknown".to_string());
+        }
+
+        // For regular partitions, use the existing detection logic
         let partition_num = self.parse_device_name(device)?;
 
         // Clone partition to avoid borrow checker issues

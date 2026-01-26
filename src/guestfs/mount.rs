@@ -39,6 +39,11 @@ impl Guestfs {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
+        // Check if this device is already mounted - prevent duplicate mounts
+        if self.mounted.contains_key(mountable) {
+            return Ok(());
+        }
+
         // Determine the actual device path to mount
         let device_partition = if mountable.starts_with("/dev/mapper/")
             || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3) {
@@ -118,9 +123,12 @@ impl Guestfs {
 
         // Use filesystem-specific mount options
         // For ext* filesystems: use noload to prevent journal updates on read-only mounts
-        // For XFS, btrfs and others: just use ro (they handle read-only properly)
+        // For XFS: use norecovery to skip log replay (which requires write access)
+        // For btrfs and others: just use ro
         let mount_opts = if fs_type.starts_with("ext") {
             "ro,noload"
+        } else if fs_type == "xfs" {
+            "ro,norecovery"
         } else {
             "ro"
         };
