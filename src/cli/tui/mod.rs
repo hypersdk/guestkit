@@ -93,6 +93,12 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
+                    KeyCode::Char('i') => app.toggle_stats_bar(),
+                    KeyCode::Char('b') => {
+                        // Bookmark current view
+                        let bookmark = format!("{} view", app.current_view.title());
+                        app.add_bookmark(bookmark);
+                    }
                     KeyCode::Char('/') => app.start_search(),
                     KeyCode::Left => {
                         if app.current_view == app::View::Profiles {

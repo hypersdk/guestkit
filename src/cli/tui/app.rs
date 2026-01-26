@@ -132,6 +132,9 @@ pub struct App {
     pub selected_profile_tab: usize,
     pub show_detail: bool,
     pub sort_mode: SortMode,
+    pub show_stats_bar: bool,
+    pub bookmarks: Vec<String>,
+    pub search_history: Vec<String>,
 
     // Export state
     pub export_mode: Option<ExportMode>,
@@ -288,6 +291,9 @@ impl App {
             selected_profile_tab: 0,
             show_detail: false,
             sort_mode: SortMode::Default,
+            show_stats_bar: true,
+            bookmarks: Vec::new(),
+            search_history: Vec::new(),
 
             export_mode: None,
             export_format: None,
@@ -354,6 +360,10 @@ impl App {
     }
 
     pub fn cancel_search(&mut self) {
+        // Save to history before clearing
+        if !self.search_query.is_empty() {
+            self.add_to_search_history(self.search_query.clone());
+        }
         self.searching = false;
         self.search_query.clear();
     }
@@ -659,5 +669,63 @@ impl App {
             self.scroll_offset = 0;
             self.selected_index = 0;
         }
+    }
+
+    pub fn toggle_stats_bar(&mut self) {
+        self.show_stats_bar = !self.show_stats_bar;
+    }
+
+    pub fn add_bookmark(&mut self, item: String) {
+        if !self.bookmarks.contains(&item) {
+            self.bookmarks.push(item);
+            // Keep only last 20 bookmarks
+            if self.bookmarks.len() > 20 {
+                self.bookmarks.remove(0);
+            }
+        }
+    }
+
+    pub fn clear_bookmarks(&mut self) {
+        self.bookmarks.clear();
+    }
+
+    pub fn add_to_search_history(&mut self, query: String) {
+        if !query.is_empty() && !self.search_history.contains(&query) {
+            self.search_history.push(query);
+            // Keep only last 10 searches
+            if self.search_history.len() > 10 {
+                self.search_history.remove(0);
+            }
+        }
+    }
+
+    pub fn get_risk_summary(&self) -> (usize, usize, usize) {
+        let mut critical = 0;
+        let mut high = 0;
+        let mut medium = 0;
+
+        let profiles = vec![
+            &self.security_profile,
+            &self.migration_profile,
+            &self.performance_profile,
+            &self.compliance_profile,
+            &self.hardening_profile,
+        ];
+
+        for profile in profiles {
+            if let Some(p) = profile {
+                if let Some(risk) = p.overall_risk {
+                    use crate::cli::profiles::RiskLevel;
+                    match risk {
+                        RiskLevel::Critical => critical += 1,
+                        RiskLevel::High => high += 1,
+                        RiskLevel::Medium => medium += 1,
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        (critical, high, medium)
     }
 }
