@@ -7,6 +7,23 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+// Common file paths
+const RESOLV_CONF: &str = "/etc/resolv.conf";
+const PASSWD: &str = "/etc/passwd";
+const SSHD_CONFIG: &str = "/etc/ssh/sshd_config";
+const SELINUX_CONFIG: &str = "/etc/selinux/config";
+const TIMEZONE: &str = "/etc/timezone";
+const LOCALTIME: &str = "/etc/localtime";
+const LOCALE_CONF: &str = "/etc/locale.conf";
+const DEFAULT_LOCALE: &str = "/etc/default/locale";
+const SYSTEMD_SERVICES_DIR: &str = "/etc/systemd/system/multi-user.target.wants";
+const SYSTEMD_TIMERS_DIR: &str = "/etc/systemd/system/timers.target.wants";
+const FSTAB: &str = "/etc/fstab";
+const HOSTNAME: &str = "/etc/hostname";
+const HOSTS: &str = "/etc/hosts";
+const SYSCTL_CONF: &str = "/etc/sysctl.conf";
+const CRONTAB: &str = "/etc/crontab";
+
 /// Network interface information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkInterface {
@@ -61,6 +78,35 @@ pub struct Certificate {
 }
 
 impl Guestfs {
+    /// Execute a function with automatic mount/unmount handling
+    ///
+    /// This helper ensures the root filesystem is mounted before executing the function
+    /// and properly unmounts it afterwards if it wasn't already mounted.
+    ///
+    /// # Arguments
+    /// * `root` - Root device to mount (e.g., "/dev/sda1")
+    /// * `f` - Function to execute while filesystem is mounted
+    ///
+    /// # Returns
+    /// Result from the function execution
+    fn with_mount<F, T>(&mut self, root: &str, f: F) -> Result<T>
+    where
+        F: FnOnce(&mut Self) -> Result<T>,
+    {
+        let was_mounted = self.mounted.contains_key("/");
+        if !was_mounted {
+            self.mount_ro(root, "/")?;
+        }
+
+        let result = f(self);
+
+        if !was_mounted {
+            let _ = self.umount("/");
+        }
+
+        result
+    }
+
     /// Inspect network configuration
     pub fn inspect_network(&mut self, root: &str) -> Result<Vec<NetworkInterface>> {
         let mut interfaces = Vec::new();
@@ -245,203 +291,144 @@ impl Guestfs {
 
     /// Get DNS configuration
     pub fn inspect_dns(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut dns_servers = Vec::new();
-        // Try to mount if not already mounted
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(dns_servers);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/resolv.conf") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.starts_with("nameserver ") {
-                    if let Some(server) = line.split_whitespace().nth(1) {
-                        dns_servers.push(server.to_string());
+        self.with_mount(root, |guestfs| {
+            let mut dns_servers = Vec::new();
+            if let Ok(content) = guestfs.cat(RESOLV_CONF) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.starts_with("nameserver ") {
+                        if let Some(server) = line.split_whitespace().nth(1) {
+                            dns_servers.push(server.to_string());
+                        }
                     }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(dns_servers)
+            Ok(dns_servers)
+        })
     }
 
     /// List user accounts
     pub fn inspect_users(&mut self, root: &str) -> Result<Vec<UserAccount>> {
-        let mut users = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(users);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/passwd") {
-            for line in content.lines() {
-                let parts: Vec<&str> = line.split(':').collect();
-                if parts.len() >= 7 {
-                    users.push(UserAccount {
-                        username: parts[0].to_string(),
-                        uid: parts[2].to_string(),
-                        gid: parts[3].to_string(),
-                        home: parts[5].to_string(),
-                        shell: parts[6].to_string(),
-                    });
+        self.with_mount(root, |guestfs| {
+            let mut users = Vec::new();
+            if let Ok(content) = guestfs.cat(PASSWD) {
+                for line in content.lines() {
+                    let parts: Vec<&str> = line.split(':').collect();
+                    if parts.len() >= 7 {
+                        users.push(UserAccount {
+                            username: parts[0].to_string(),
+                            uid: parts[2].to_string(),
+                            gid: parts[3].to_string(),
+                            home: parts[5].to_string(),
+                            shell: parts[6].to_string(),
+                        });
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(users)
+            Ok(users)
+        })
     }
 
     /// Get SSH configuration
     pub fn inspect_ssh_config(&mut self, root: &str) -> Result<HashMap<String, String>> {
-        let mut config = HashMap::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(config);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/ssh/sshd_config") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-                if let Some((key, value)) = line.split_once(char::is_whitespace) {
-                    config.insert(key.to_string(), value.trim().to_string());
+        self.with_mount(root, |guestfs| {
+            let mut config = HashMap::new();
+            if let Ok(content) = guestfs.cat(SSHD_CONFIG) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    if let Some((key, value)) = line.split_once(char::is_whitespace) {
+                        config.insert(key.to_string(), value.trim().to_string());
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(config)
+            Ok(config)
+        })
     }
 
     /// Check SELinux status
     pub fn inspect_selinux(&mut self, root: &str) -> Result<String> {
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok("unknown".to_string());
-            }
-        }
-        let status = if let Ok(content) = self.cat("/etc/selinux/config") {
-            let mut selinux_mode = "unknown".to_string();
-            for line in content.lines() {
-                if line.starts_with("SELINUX=") {
-                    selinux_mode = line.split('=').nth(1).unwrap_or("unknown").to_string();
-                    break;
+        self.with_mount(root, |guestfs| {
+            if let Ok(content) = guestfs.cat(SELINUX_CONFIG) {
+                for line in content.lines() {
+                    if line.starts_with("SELINUX=") {
+                        return Ok(line.split('=').nth(1).unwrap_or("unknown").to_string());
+                    }
                 }
+                Ok("unknown".to_string())
+            } else {
+                Ok("disabled".to_string())
             }
-            selinux_mode
-        } else {
-            "disabled".to_string()
-        };
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(status)
+        })
     }
 
     /// List systemd services
     pub fn inspect_systemd_services(&mut self, root: &str) -> Result<Vec<SystemService>> {
-        let mut services = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(services);
+        self.with_mount(root, |guestfs| {
+            let mut services = Vec::new();
+            // Check for enabled services in /etc/systemd/system
+            if let Ok(links) = guestfs.ls(SYSTEMD_SERVICES_DIR) {
+                for link in links {
+                    services.push(SystemService {
+                        name: link.strip_suffix(".service").unwrap_or(&link).to_string(),
+                        enabled: true,
+                        state: "enabled".to_string(),
+                    });
+                }
             }
-        }
-        // Check for enabled services in /etc/systemd/system
-        if let Ok(links) = self.ls("/etc/systemd/system/multi-user.target.wants") {
-            for link in links {
-                services.push(SystemService {
-                    name: link.strip_suffix(".service").unwrap_or(&link).to_string(),
-                    enabled: true,
-                    state: "enabled".to_string(),
-                });
-            }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(services)
+            Ok(services)
+        })
     }
 
     /// Get timezone information
     pub fn inspect_timezone(&mut self, root: &str) -> Result<String> {
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok("unknown".to_string());
-            }
-        }
-        let timezone = if let Ok(content) = self.cat("/etc/timezone") {
-            content.trim().to_string()
-        } else if self.is_symlink("/etc/localtime").unwrap_or(false) {
-            if let Ok(target) = self.readlink("/etc/localtime") {
-                // Extract timezone from path like /usr/share/zoneinfo/America/New_York
-                target
-                    .strip_prefix("/usr/share/zoneinfo/")
-                    .unwrap_or(&target)
-                    .to_string()
+        self.with_mount(root, |guestfs| {
+            if let Ok(content) = guestfs.cat(TIMEZONE) {
+                Ok(content.trim().to_string())
+            } else if guestfs.is_symlink(LOCALTIME).unwrap_or(false) {
+                if let Ok(target) = guestfs.readlink(LOCALTIME) {
+                    // Extract timezone from path like /usr/share/zoneinfo/America/New_York
+                    Ok(target
+                        .strip_prefix("/usr/share/zoneinfo/")
+                        .unwrap_or(&target)
+                        .to_string())
+                } else {
+                    Ok("unknown".to_string())
+                }
             } else {
-                "unknown".to_string()
+                Ok("unknown".to_string())
             }
-        } else {
-            "unknown".to_string()
-        };
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(timezone)
+        })
     }
 
     /// Get locale information
     pub fn inspect_locale(&mut self, root: &str) -> Result<String> {
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok("unknown".to_string());
-            }
-        }
-        let locale = if let Ok(content) = self.cat("/etc/locale.conf") {
-            let mut lang = "unknown".to_string();
-            for line in content.lines() {
-                if line.starts_with("LANG=") {
-                    lang = line.split('=').nth(1).unwrap_or("unknown").to_string();
-                    break;
+        self.with_mount(root, |guestfs| {
+            if let Ok(content) = guestfs.cat(LOCALE_CONF) {
+                for line in content.lines() {
+                    if line.starts_with("LANG=") {
+                        return Ok(line.split('=').nth(1).unwrap_or("unknown").to_string());
+                    }
                 }
-            }
-            lang
-        } else if let Ok(content) = self.cat("/etc/default/locale") {
-            let mut lang = "unknown".to_string();
-            for line in content.lines() {
-                if line.starts_with("LANG=") {
-                    lang = line
-                        .split('=')
-                        .nth(1)
-                        .unwrap_or("unknown")
-                        .trim_matches('"')
-                        .to_string();
-                    break;
+                Ok("unknown".to_string())
+            } else if let Ok(content) = guestfs.cat(DEFAULT_LOCALE) {
+                for line in content.lines() {
+                    if line.starts_with("LANG=") {
+                        return Ok(line
+                            .split('=')
+                            .nth(1)
+                            .unwrap_or("unknown")
+                            .trim_matches('"')
+                            .to_string());
+                    }
                 }
+                Ok("unknown".to_string())
+            } else {
+                Ok("unknown".to_string())
             }
-            lang
-        } else {
-            "unknown".to_string()
-        };
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(locale)
+        })
     }
 
     /// Detect LVM configuration
@@ -466,296 +453,232 @@ impl Guestfs {
 
     /// Detect cloud-init
     pub fn inspect_cloud_init(&mut self, root: &str) -> Result<bool> {
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(false);
-            }
-        }
-        let has_cloud_init = self.exists("/etc/cloud/cloud.cfg").unwrap_or(false)
-            || self.exists("/usr/bin/cloud-init").unwrap_or(false);
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(has_cloud_init)
+        self.with_mount(root, |guestfs| {
+            Ok(guestfs.exists("/etc/cloud/cloud.cfg").unwrap_or(false)
+                || guestfs.exists("/usr/bin/cloud-init").unwrap_or(false))
+        })
     }
 
     /// Get language runtime versions
     pub fn inspect_runtimes(&mut self, root: &str) -> Result<HashMap<String, String>> {
-        let mut runtimes = HashMap::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(runtimes);
+        self.with_mount(root, |guestfs| {
+            let mut runtimes = HashMap::new();
+            // Python
+            for py in &["python3", "python", "python2"] {
+                let path = format!("/usr/bin/{}", py);
+                if guestfs.exists(&path).unwrap_or(false) {
+                    runtimes.insert(py.to_string(), "installed".to_string());
+                }
             }
-        }
-        // Python
-        for py in &["python3", "python", "python2"] {
-            let path = format!("/usr/bin/{}", py);
-            if self.exists(&path).unwrap_or(false) {
-                // Try to get version from symlink or binary
-                runtimes.insert(py.to_string(), "installed".to_string());
+            // Node.js
+            if guestfs.exists("/usr/bin/node").unwrap_or(false) {
+                runtimes.insert("nodejs".to_string(), "installed".to_string());
             }
-        }
-        // Node.js
-        if self.exists("/usr/bin/node").unwrap_or(false) {
-            runtimes.insert("nodejs".to_string(), "installed".to_string());
-        }
-        // Ruby
-        if self.exists("/usr/bin/ruby").unwrap_or(false) {
-            runtimes.insert("ruby".to_string(), "installed".to_string());
-        }
-        // Java
-        if self.exists("/usr/bin/java").unwrap_or(false) {
-            runtimes.insert("java".to_string(), "installed".to_string());
-        }
-        // Go
-        if self.exists("/usr/bin/go").unwrap_or(false) {
-            runtimes.insert("go".to_string(), "installed".to_string());
-        }
-        // Perl
-        if self.exists("/usr/bin/perl").unwrap_or(false) {
-            runtimes.insert("perl".to_string(), "installed".to_string());
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(runtimes)
+            // Ruby
+            if guestfs.exists("/usr/bin/ruby").unwrap_or(false) {
+                runtimes.insert("ruby".to_string(), "installed".to_string());
+            }
+            // Java
+            if guestfs.exists("/usr/bin/java").unwrap_or(false) {
+                runtimes.insert("java".to_string(), "installed".to_string());
+            }
+            // Go
+            if guestfs.exists("/usr/bin/go").unwrap_or(false) {
+                runtimes.insert("go".to_string(), "installed".to_string());
+            }
+            // Perl
+            if guestfs.exists("/usr/bin/perl").unwrap_or(false) {
+                runtimes.insert("perl".to_string(), "installed".to_string());
+            }
+            Ok(runtimes)
+        })
     }
 
     /// Detect container runtimes
     pub fn inspect_container_runtimes(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut runtimes = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(runtimes);
+        self.with_mount(root, |guestfs| {
+            let mut runtimes = Vec::new();
+            if guestfs.exists("/usr/bin/docker").unwrap_or(false) {
+                runtimes.push("docker".to_string());
             }
-        }
-        if self.exists("/usr/bin/docker").unwrap_or(false) {
-            runtimes.push("docker".to_string());
-        }
-        if self.exists("/usr/bin/podman").unwrap_or(false) {
-            runtimes.push("podman".to_string());
-        }
-        if self.exists("/usr/bin/containerd").unwrap_or(false) {
-            runtimes.push("containerd".to_string());
-        }
-        if self.exists("/usr/bin/crio").unwrap_or(false)
-            || self.exists("/usr/bin/cri-o").unwrap_or(false)
-        {
-            runtimes.push("cri-o".to_string());
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(runtimes)
+            if guestfs.exists("/usr/bin/podman").unwrap_or(false) {
+                runtimes.push("podman".to_string());
+            }
+            if guestfs.exists("/usr/bin/containerd").unwrap_or(false) {
+                runtimes.push("containerd".to_string());
+            }
+            if guestfs.exists("/usr/bin/crio").unwrap_or(false)
+                || guestfs.exists("/usr/bin/cri-o").unwrap_or(false)
+            {
+                runtimes.push("cri-o".to_string());
+            }
+            Ok(runtimes)
+        })
     }
 
     /// List cron jobs
     pub fn inspect_cron(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut cron_jobs = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(cron_jobs);
-            }
-        }
-        // System crontab
-        if let Ok(content) = self.cat("/etc/crontab") {
-            for line in content.lines() {
-                let line = line.trim();
-                if !line.is_empty() && !line.starts_with('#') {
-                    cron_jobs.push(line.to_string());
+        self.with_mount(root, |guestfs| {
+            let mut cron_jobs = Vec::new();
+            // System crontab
+            if let Ok(content) = guestfs.cat(CRONTAB) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if !line.is_empty() && !line.starts_with('#') {
+                        cron_jobs.push(line.to_string());
+                    }
                 }
             }
-        }
-        // Cron directories
-        for dir in &[
-            "/etc/cron.d",
-            "/etc/cron.daily",
-            "/etc/cron.hourly",
-            "/etc/cron.weekly",
-            "/etc/cron.monthly",
-        ] {
-            if let Ok(files) = self.ls(dir) {
-                for file in files {
-                    cron_jobs.push(format!(
-                        "{}/{}",
-                        dir.strip_prefix("/etc/").unwrap_or(dir),
-                        file
-                    ));
+            // Cron directories
+            for dir in &[
+                "/etc/cron.d",
+                "/etc/cron.daily",
+                "/etc/cron.hourly",
+                "/etc/cron.weekly",
+                "/etc/cron.monthly",
+            ] {
+                if let Ok(files) = guestfs.ls(dir) {
+                    for file in files {
+                        cron_jobs.push(format!(
+                            "{}/{}",
+                            dir.strip_prefix("/etc/").unwrap_or(dir),
+                            file
+                        ));
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(cron_jobs)
+            Ok(cron_jobs)
+        })
     }
 
     /// List systemd timers
     pub fn inspect_systemd_timers(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut timers = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(timers);
+        self.with_mount(root, |guestfs| {
+            let mut timers = Vec::new();
+            if let Ok(links) = guestfs.ls(SYSTEMD_TIMERS_DIR) {
+                timers = links
+                    .into_iter()
+                    .filter(|f| f.ends_with(".timer"))
+                    .collect();
             }
-        }
-        if let Ok(links) = self.ls("/etc/systemd/system/timers.target.wants") {
-            timers = links
-                .into_iter()
-                .filter(|f| f.ends_with(".timer"))
-                .collect();
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(timers)
+            Ok(timers)
+        })
     }
 
     /// List SSL certificates
     pub fn inspect_certificates(&mut self, root: &str) -> Result<Vec<Certificate>> {
-        let mut certs = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(certs);
-            }
-        }
-        // Common certificate locations
-        let mut paths = Vec::new();
-        for dir in &["/etc/ssl/certs", "/etc/pki/tls/certs", "/etc/pki/ca-trust"] {
-            if let Ok(files) = self.ls(dir) {
-                for file in files
-                    .iter()
-                    .filter(|f| f.ends_with(".crt") || f.ends_with(".pem"))
-                {
-                    paths.push(format!("{}/{}", dir, file));
-                }
-            }
-        }
-        // Parse certificates if openssl is available in the guest
-        let has_openssl = self.exists("/usr/bin/openssl").unwrap_or(false);
-        for path in paths {
-            let mut subject = "Unknown".to_string();
-            let mut issuer = "Unknown".to_string();
-            let mut expiry = "Unknown".to_string();
-            if has_openssl {
-                let cmd = format!("openssl x509 -in {} -noout -subject -issuer -enddate", path);
-                if let Ok(output) = self.command(&["sh", "-c", &cmd]) {
-                    for line in output.lines() {
-                        let trimmed = line.trim();
-                        if trimmed.starts_with("subject=") {
-                            subject = trimmed.strip_prefix("subject=").unwrap_or(&subject).to_string();
-                        } else if trimmed.starts_with("issuer=") {
-                            issuer = trimmed.strip_prefix("issuer=").unwrap_or(&issuer).to_string();
-                        } else if trimmed.starts_with("notAfter=") {
-                            expiry = trimmed.strip_prefix("notAfter=").unwrap_or(&expiry).to_string();
-                        }
+        self.with_mount(root, |guestfs| {
+            let mut certs = Vec::new();
+            // Common certificate locations
+            let mut paths = Vec::new();
+            for dir in &["/etc/ssl/certs", "/etc/pki/tls/certs", "/etc/pki/ca-trust"] {
+                if let Ok(files) = guestfs.ls(dir) {
+                    for file in files
+                        .iter()
+                        .filter(|f| f.ends_with(".crt") || f.ends_with(".pem"))
+                    {
+                        paths.push(format!("{}/{}", dir, file));
                     }
                 }
             }
-            certs.push(Certificate {
-                path: path.clone(),
-                subject,
-                issuer,
-                expiry,
-            });
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(certs)
+            // Parse certificates if openssl is available in the guest
+            let has_openssl = guestfs.exists("/usr/bin/openssl").unwrap_or(false);
+            for path in paths {
+                let mut subject = "Unknown".to_string();
+                let mut issuer = "Unknown".to_string();
+                let mut expiry = "Unknown".to_string();
+                if has_openssl {
+                    let cmd = format!("openssl x509 -in {} -noout -subject -issuer -enddate", path);
+                    if let Ok(output) = guestfs.command(&["sh", "-c", &cmd]) {
+                        for line in output.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("subject=") {
+                                subject = trimmed.strip_prefix("subject=").unwrap_or(&subject).to_string();
+                            } else if trimmed.starts_with("issuer=") {
+                                issuer = trimmed.strip_prefix("issuer=").unwrap_or(&issuer).to_string();
+                            } else if trimmed.starts_with("notAfter=") {
+                                expiry = trimmed.strip_prefix("notAfter=").unwrap_or(&expiry).to_string();
+                            }
+                        }
+                    }
+                }
+                certs.push(Certificate {
+                    path: path.clone(),
+                    subject,
+                    issuer,
+                    expiry,
+                });
+            }
+            Ok(certs)
+        })
     }
 
     /// Get kernel parameters
     pub fn inspect_kernel_params(&mut self, root: &str) -> Result<HashMap<String, String>> {
-        let mut params = HashMap::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(params);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/sysctl.conf") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-                if let Some((key, value)) = line.split_once('=') {
-                    params.insert(key.trim().to_string(), value.trim().to_string());
+        self.with_mount(root, |guestfs| {
+            let mut params = HashMap::new();
+            if let Ok(content) = guestfs.cat(SYSCTL_CONF) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    if let Some((key, value)) = line.split_once('=') {
+                        params.insert(key.trim().to_string(), value.trim().to_string());
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(params)
+            Ok(params)
+        })
     }
 
     /// Detect virtualization guest tools
     pub fn inspect_vm_tools(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut tools = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(tools);
+        self.with_mount(root, |guestfs| {
+            let mut tools = Vec::new();
+            // VMware Tools
+            if guestfs.exists("/usr/bin/vmware-toolbox-cmd").unwrap_or(false)
+                || guestfs.exists("/etc/vmware-tools").unwrap_or(false)
+            {
+                tools.push("vmware-tools".to_string());
             }
-        }
-        // VMware Tools
-        if self.exists("/usr/bin/vmware-toolbox-cmd").unwrap_or(false)
-            || self.exists("/etc/vmware-tools").unwrap_or(false)
-        {
-            tools.push("vmware-tools".to_string());
-        }
-        // QEMU Guest Agent
-        if self.exists("/usr/bin/qemu-ga").unwrap_or(false) {
-            tools.push("qemu-guest-agent".to_string());
-        }
-        // VirtualBox Guest Additions
-        if self.exists("/usr/sbin/VBoxService").unwrap_or(false)
-            || self.exists("/opt/VBoxGuestAdditions").unwrap_or(false)
-        {
-            tools.push("virtualbox-guest-additions".to_string());
-        }
-        // Hyper-V tools
-        if self.exists("/usr/sbin/hv_kvp_daemon").unwrap_or(false) {
-            tools.push("hyper-v-tools".to_string());
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(tools)
+            // QEMU Guest Agent
+            if guestfs.exists("/usr/bin/qemu-ga").unwrap_or(false) {
+                tools.push("qemu-guest-agent".to_string());
+            }
+            // VirtualBox Guest Additions
+            if guestfs.exists("/usr/sbin/VBoxService").unwrap_or(false)
+                || guestfs.exists("/opt/VBoxGuestAdditions").unwrap_or(false)
+            {
+                tools.push("virtualbox-guest-additions".to_string());
+            }
+            // Hyper-V tools
+            if guestfs.exists("/usr/sbin/hv_kvp_daemon").unwrap_or(false) {
+                tools.push("hyper-v-tools".to_string());
+            }
+            Ok(tools)
+        })
     }
 
     /// Get boot configuration
     pub fn inspect_boot_config(&mut self, root: &str) -> Result<BootConfig> {
-        let mut config = BootConfig {
-            bootloader: "unknown".to_string(),
-            default_entry: "unknown".to_string(),
-            timeout: "unknown".to_string(),
-            kernel_cmdline: String::new(),
-        };
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(config);
-            }
-        }
-        // Check GRUB2
-        let grub_paths = vec!["/boot/grub2/grub.cfg", "/boot/grub/grub.cfg", "/etc/grub2.cfg"];
-        for grub_cfg in grub_paths {
-            if self.exists(&grub_cfg).unwrap_or(false) {
-                config.bootloader = "GRUB2".to_string();
-                if let Ok(content) = self.cat(&grub_cfg) {
+        self.with_mount(root, |guestfs| {
+            let mut config = BootConfig {
+                bootloader: "unknown".to_string(),
+                default_entry: "unknown".to_string(),
+                timeout: "unknown".to_string(),
+                kernel_cmdline: String::new(),
+            };
+            // Check GRUB2
+            let grub_paths = vec!["/boot/grub2/grub.cfg", "/boot/grub/grub.cfg", "/etc/grub2.cfg"];
+            for grub_cfg in grub_paths {
+                if guestfs.exists(&grub_cfg).unwrap_or(false) {
+                    config.bootloader = "GRUB2".to_string();
+                    if let Ok(content) = guestfs.cat(&grub_cfg) {
                     // Parse basic GRUB config
                     let mut default_index: Option<usize> = None;
                     let mut current_entry = 0;
                     let mut in_menuentry = false;
-                    let mut current_title = String::new();
                     for line in content.lines() {
                         let trimmed = line.trim();
                         if trimmed.starts_with("set timeout=") {
@@ -769,13 +692,13 @@ impl Guestfs {
                             }
                             in_menuentry = true;
                             let title_parts: Vec<&str> = trimmed.splitn(3, '\'').collect();
-                            if title_parts.len() >= 2 {
-                                current_title = title_parts[1].to_string();
+                            let current_title = if title_parts.len() >= 2 {
+                                title_parts[1].to_string()
                             } else {
-                                current_title = "unknown".to_string();
-                            }
+                                "unknown".to_string()
+                            };
                             if Some(current_entry) == default_index {
-                                config.default_entry = current_title.clone();
+                                config.default_entry = current_title;
                             }
                         } else if in_menuentry && (trimmed.starts_with("linux") || trimmed.starts_with("linux16") || trimmed.starts_with("linuxefi")) {
                             let parts: Vec<&str> = trimmed.split_whitespace().collect();
@@ -789,72 +712,525 @@ impl Guestfs {
                             }
                         }
                     }
+                    }
+                    break;
                 }
-                break;
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(config)
+            Ok(config)
+        })
     }
 
     /// Get swap information
     pub fn inspect_swap(&mut self, root: &str) -> Result<Vec<String>> {
-        let mut swap_devices = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(swap_devices);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/fstab") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 3 && parts[2] == "swap" {
-                    swap_devices.push(parts[0].to_string());
+        self.with_mount(root, |guestfs| {
+            let mut swap_devices = Vec::new();
+            if let Ok(content) = guestfs.cat(FSTAB) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 3 && parts[2] == "swap" {
+                        swap_devices.push(parts[0].to_string());
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(swap_devices)
+            Ok(swap_devices)
+        })
     }
 
     /// Get fstab mounts
     pub fn inspect_fstab(&mut self, root: &str) -> Result<Vec<(String, String, String)>> {
-        let mut mounts = Vec::new();
-        let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
-                return Ok(mounts);
-            }
-        }
-        if let Ok(content) = self.cat("/etc/fstab") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 3 {
-                    mounts.push((
-                        parts[0].to_string(), // device
-                        parts[1].to_string(), // mountpoint
-                        parts[2].to_string(), // fstype
-                    ));
+        self.with_mount(root, |guestfs| {
+            let mut mounts = Vec::new();
+            if let Ok(content) = guestfs.cat(FSTAB) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 3 {
+                        mounts.push((
+                            parts[0].to_string(), // device
+                            parts[1].to_string(), // mountpoint
+                            parts[2].to_string(), // fstype
+                        ));
+                    }
                 }
             }
-        }
-        if !was_mounted {
-            self.umount("/").ok();
-        }
-        Ok(mounts)
+            Ok(mounts)
+        })
+    }
+
+    /// Detect installed package manager and list packages
+    ///
+    /// Supports rpm (RHEL, Fedora, CentOS, openSUSE), dpkg (Debian, Ubuntu),
+    /// pacman (Arch Linux), and apk (Alpine Linux).
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// `PackageInfo` struct containing manager type, count, and package list
+    pub fn inspect_packages(&mut self, root: &str) -> Result<PackageInfo> {
+        self.with_mount(root, |guestfs| {
+            let mut pkg_info = PackageInfo {
+                manager: "unknown".to_string(),
+                package_count: 0,
+                packages: Vec::new(),
+            };
+
+            // RPM-based (RHEL, Fedora, CentOS, openSUSE)
+            if guestfs.exists("/usr/bin/rpm").unwrap_or(false) {
+                pkg_info.manager = "rpm".to_string();
+                if let Ok(output) = guestfs.command(&["rpm", "-qa", "--qf", "%{NAME}|%{VERSION}|%{RELEASE}\\n"]) {
+                    for line in output.lines() {
+                        let parts: Vec<&str> = line.split('|').collect();
+                        if parts.len() >= 3 {
+                            pkg_info.packages.push(Package {
+                                name: parts[0].to_string(),
+                                version: format!("{}-{}", parts[1], parts[2]),
+                                manager: "rpm".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+            // DEB-based (Debian, Ubuntu)
+            else if guestfs.exists("/usr/bin/dpkg").unwrap_or(false) {
+                pkg_info.manager = "dpkg".to_string();
+                if let Ok(output) = guestfs.command(&["dpkg-query", "-W", "-f=${Package}|${Version}\\n"]) {
+                    for line in output.lines() {
+                        if let Some((name, version)) = line.split_once('|') {
+                            pkg_info.packages.push(Package {
+                                name: name.to_string(),
+                                version: version.to_string(),
+                                manager: "dpkg".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+            // Arch Linux
+            else if guestfs.exists("/usr/bin/pacman").unwrap_or(false) {
+                pkg_info.manager = "pacman".to_string();
+                if let Ok(output) = guestfs.command(&["pacman", "-Q"]) {
+                    for line in output.lines() {
+                        let parts: Vec<&str> = line.split_whitespace().collect();
+                        if parts.len() >= 2 {
+                            pkg_info.packages.push(Package {
+                                name: parts[0].to_string(),
+                                version: parts[1].to_string(),
+                                manager: "pacman".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+            // Alpine Linux
+            else if guestfs.exists("/sbin/apk").unwrap_or(false) {
+                pkg_info.manager = "apk".to_string();
+                if let Ok(output) = guestfs.command(&["apk", "info", "-v"]) {
+                    for line in output.lines() {
+                        // Format: package-version
+                        if let Some(pos) = line.rfind('-') {
+                            pkg_info.packages.push(Package {
+                                name: line[..pos].to_string(),
+                                version: line[pos+1..].to_string(),
+                                manager: "apk".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            pkg_info.package_count = pkg_info.packages.len();
+            Ok(pkg_info)
+        })
+    }
+
+    /// Detect firewall configuration
+    ///
+    /// Supports firewalld (RHEL/Fedora/CentOS), ufw (Ubuntu/Debian), and iptables.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// `FirewallInfo` struct with type, enabled status, rule count, and zones
+    pub fn inspect_firewall(&mut self, root: &str) -> Result<FirewallInfo> {
+        self.with_mount(root, |guestfs| {
+            let mut fw_info = FirewallInfo {
+                firewall_type: "none".to_string(),
+                enabled: false,
+                rules_count: 0,
+                zones: Vec::new(),
+            };
+
+            // firewalld (RHEL/Fedora/CentOS)
+            if guestfs.exists("/usr/sbin/firewalld").unwrap_or(false) {
+                fw_info.firewall_type = "firewalld".to_string();
+
+                // Check if enabled
+                if let Ok(links) = guestfs.ls(SYSTEMD_SERVICES_DIR) {
+                    fw_info.enabled = links.iter().any(|l| l.contains("firewalld"));
+                }
+
+                // Get active zones
+                if let Ok(zones) = guestfs.ls("/etc/firewalld/zones") {
+                    fw_info.zones = zones.into_iter()
+                        .filter(|z| z.ends_with(".xml"))
+                        .map(|z| z.strip_suffix(".xml").unwrap_or(&z).to_string())
+                        .collect();
+                }
+            }
+            // ufw (Ubuntu/Debian)
+            else if guestfs.exists("/usr/sbin/ufw").unwrap_or(false) {
+                fw_info.firewall_type = "ufw".to_string();
+
+                if let Ok(content) = guestfs.cat("/etc/ufw/ufw.conf") {
+                    for line in content.lines() {
+                        if line.starts_with("ENABLED=") {
+                            fw_info.enabled = line.contains("yes");
+                        }
+                    }
+                }
+
+                // Count rules
+                if let Ok(rules) = guestfs.cat("/etc/ufw/user.rules") {
+                    fw_info.rules_count = rules.lines()
+                        .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+                        .count();
+                }
+            }
+            // iptables (legacy)
+            else if guestfs.exists("/usr/sbin/iptables").unwrap_or(false) {
+                fw_info.firewall_type = "iptables".to_string();
+
+                // Check for rules files
+                if let Ok(rules) = guestfs.cat("/etc/sysconfig/iptables")
+                    .or_else(|_| guestfs.cat("/etc/iptables/rules.v4")) {
+                    fw_info.rules_count = rules.lines()
+                        .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+                        .count();
+                    fw_info.enabled = fw_info.rules_count > 0;
+                }
+            }
+
+            Ok(fw_info)
+        })
+    }
+
+    /// Detect init system
+    ///
+    /// Detects systemd, upstart, OpenRC, runit, or SysVinit.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// String identifying the init system
+    pub fn inspect_init_system(&mut self, root: &str) -> Result<String> {
+        self.with_mount(root, |guestfs| {
+            // systemd
+            if guestfs.is_dir("/run/systemd/system").unwrap_or(false)
+                || guestfs.exists("/usr/lib/systemd/systemd").unwrap_or(false) {
+                return Ok("systemd".to_string());
+            }
+
+            // upstart
+            if guestfs.exists("/sbin/initctl").unwrap_or(false)
+                && guestfs.is_dir("/etc/init").unwrap_or(false) {
+                return Ok("upstart".to_string());
+            }
+
+            // OpenRC
+            if guestfs.exists("/sbin/openrc").unwrap_or(false)
+                || guestfs.exists("/sbin/rc-service").unwrap_or(false) {
+                return Ok("openrc".to_string());
+            }
+
+            // runit
+            if guestfs.is_dir("/etc/runit").unwrap_or(false) {
+                return Ok("runit".to_string());
+            }
+
+            // SysVinit (fallback)
+            if guestfs.exists("/sbin/init").unwrap_or(false) {
+                return Ok("sysvinit".to_string());
+            }
+
+            Ok("unknown".to_string())
+        })
+    }
+
+    /// Detect installed web servers
+    ///
+    /// Detects Apache, Nginx, and Lighttpd with configuration paths and enabled status.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Vector of `WebServer` structs
+    pub fn inspect_web_servers(&mut self, root: &str) -> Result<Vec<WebServer>> {
+        self.with_mount(root, |guestfs| {
+            let mut servers = Vec::new();
+
+            // Apache
+            if guestfs.exists("/usr/sbin/httpd").unwrap_or(false)
+                || guestfs.exists("/usr/sbin/apache2").unwrap_or(false) {
+                let mut apache = WebServer {
+                    name: "apache".to_string(),
+                    version: "unknown".to_string(),
+                    config_path: String::new(),
+                    enabled: false,
+                };
+
+                // Detect config location
+                if guestfs.is_dir("/etc/httpd").unwrap_or(false) {
+                    apache.config_path = "/etc/httpd/conf/httpd.conf".to_string();
+                } else if guestfs.is_dir("/etc/apache2").unwrap_or(false) {
+                    apache.config_path = "/etc/apache2/apache2.conf".to_string();
+                }
+
+                // Check if enabled
+                if let Ok(links) = guestfs.ls(SYSTEMD_SERVICES_DIR) {
+                    apache.enabled = links.iter().any(|l| l.contains("httpd") || l.contains("apache"));
+                }
+
+                servers.push(apache);
+            }
+
+            // Nginx
+            if guestfs.exists("/usr/sbin/nginx").unwrap_or(false) {
+                let mut nginx = WebServer {
+                    name: "nginx".to_string(),
+                    version: "unknown".to_string(),
+                    config_path: "/etc/nginx/nginx.conf".to_string(),
+                    enabled: false,
+                };
+
+                if let Ok(links) = guestfs.ls(SYSTEMD_SERVICES_DIR) {
+                    nginx.enabled = links.iter().any(|l| l.contains("nginx"));
+                }
+
+                servers.push(nginx);
+            }
+
+            // Lighttpd
+            if guestfs.exists("/usr/sbin/lighttpd").unwrap_or(false) {
+                servers.push(WebServer {
+                    name: "lighttpd".to_string(),
+                    version: "unknown".to_string(),
+                    config_path: "/etc/lighttpd/lighttpd.conf".to_string(),
+                    enabled: false,
+                });
+            }
+
+            Ok(servers)
+        })
+    }
+
+    /// Detect installed databases
+    ///
+    /// Detects PostgreSQL, MySQL/MariaDB, MongoDB, and Redis with data directories
+    /// and configuration paths.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Vector of `Database` structs
+    pub fn inspect_databases(&mut self, root: &str) -> Result<Vec<Database>> {
+        self.with_mount(root, |guestfs| {
+            let mut databases = Vec::new();
+
+            // PostgreSQL
+            if guestfs.exists("/usr/bin/postgres").unwrap_or(false)
+                || guestfs.exists("/usr/lib/postgresql").unwrap_or(false) {
+                databases.push(Database {
+                    name: "postgresql".to_string(),
+                    data_dir: "/var/lib/pgsql/data".to_string(),
+                    config_path: "/var/lib/pgsql/data/postgresql.conf".to_string(),
+                });
+            }
+
+            // MySQL/MariaDB
+            if guestfs.exists("/usr/bin/mysqld").unwrap_or(false)
+                || guestfs.exists("/usr/sbin/mysqld").unwrap_or(false) {
+                let name = if guestfs.exists("/usr/bin/mariadb").unwrap_or(false) {
+                    "mariadb"
+                } else {
+                    "mysql"
+                };
+
+                databases.push(Database {
+                    name: name.to_string(),
+                    data_dir: "/var/lib/mysql".to_string(),
+                    config_path: "/etc/my.cnf".to_string(),
+                });
+            }
+
+            // MongoDB
+            if guestfs.exists("/usr/bin/mongod").unwrap_or(false) {
+                databases.push(Database {
+                    name: "mongodb".to_string(),
+                    data_dir: "/var/lib/mongo".to_string(),
+                    config_path: "/etc/mongod.conf".to_string(),
+                });
+            }
+
+            // Redis
+            if guestfs.exists("/usr/bin/redis-server").unwrap_or(false) {
+                databases.push(Database {
+                    name: "redis".to_string(),
+                    data_dir: "/var/lib/redis".to_string(),
+                    config_path: "/etc/redis.conf".to_string(),
+                });
+            }
+
+            Ok(databases)
+        })
+    }
+
+    /// Detect security tools and hardening
+    ///
+    /// Checks for SELinux, AppArmor, fail2ban, AIDE, auditd, and SSH authorized keys.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// `SecurityInfo` struct with security tool status
+    pub fn inspect_security(&mut self, root: &str) -> Result<SecurityInfo> {
+        self.with_mount(root, |guestfs| {
+            let mut sec_info = SecurityInfo {
+                selinux: "unknown".to_string(),
+                apparmor: false,
+                fail2ban: false,
+                aide: false,
+                auditd: false,
+                ssh_keys: Vec::new(),
+            };
+
+            // SELinux
+            if let Ok(content) = guestfs.cat(SELINUX_CONFIG) {
+                for line in content.lines() {
+                    if line.starts_with("SELINUX=") {
+                        sec_info.selinux = line.split('=').nth(1).unwrap_or("unknown").to_string();
+                    }
+                }
+            }
+
+            // AppArmor
+            sec_info.apparmor = guestfs.exists("/etc/apparmor.d").unwrap_or(false)
+                || guestfs.exists("/sys/kernel/security/apparmor").unwrap_or(false);
+
+            // fail2ban
+            sec_info.fail2ban = guestfs.exists("/etc/fail2ban").unwrap_or(false);
+
+            // AIDE
+            sec_info.aide = guestfs.exists("/usr/sbin/aide").unwrap_or(false);
+
+            // auditd
+            sec_info.auditd = guestfs.exists("/sbin/auditd").unwrap_or(false);
+
+            // SSH authorized keys
+            if let Ok(users) = guestfs.ls("/home") {
+                for user in users {
+                    let key_path = format!("/home/{}/.ssh/authorized_keys", user);
+                    if let Ok(content) = guestfs.cat(&key_path) {
+                        let key_count = content.lines()
+                            .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+                            .count();
+                        if key_count > 0 {
+                            sec_info.ssh_keys.push((user, key_count));
+                        }
+                    }
+                }
+            }
+
+            Ok(sec_info)
+        })
+    }
+
+    /// List kernel modules configured to load at boot
+    ///
+    /// Reads from /etc/modules and /etc/modules-load.d/ directories.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Vector of module names
+    pub fn inspect_kernel_modules(&mut self, root: &str) -> Result<Vec<String>> {
+        self.with_mount(root, |guestfs| {
+            let mut modules = Vec::new();
+
+            // Get list of modules to load at boot
+            if let Ok(content) = guestfs.cat("/etc/modules") {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if !line.is_empty() && !line.starts_with('#') {
+                        modules.push(line.to_string());
+                    }
+                }
+            }
+
+            // RHEL/Fedora/systemd style
+            if let Ok(files) = guestfs.ls("/etc/modules-load.d") {
+                for file in files.iter().filter(|f| f.ends_with(".conf")) {
+                    let path = format!("/etc/modules-load.d/{}", file);
+                    if let Ok(content) = guestfs.cat(&path) {
+                        for line in content.lines() {
+                            let line = line.trim();
+                            if !line.is_empty() && !line.starts_with('#') {
+                                modules.push(line.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+
+            Ok(modules)
+        })
+    }
+
+    /// Parse /etc/hosts file
+    ///
+    /// Extracts IP addresses and their associated hostnames.
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Vector of `HostEntry` structs
+    pub fn inspect_hosts(&mut self, root: &str) -> Result<Vec<HostEntry>> {
+        self.with_mount(root, |guestfs| {
+            let mut entries = Vec::new();
+
+            if let Ok(content) = guestfs.cat(HOSTS) {
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') {
+                        continue;
+                    }
+
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        entries.push(HostEntry {
+                            ip: parts[0].to_string(),
+                            hostnames: parts[1..].iter().map(|s| s.to_string()).collect(),
+                        });
+                    }
+                }
+            }
+
+            Ok(entries)
+        })
     }
 
     // ==================== Windows-Specific Inspection ====================
@@ -1125,4 +1501,64 @@ pub struct WindowsEventLogEntry {
     pub source: String,
     pub message: String,
     pub time_created: String,
+}
+
+/// Package information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackageInfo {
+    pub manager: String,
+    pub package_count: usize,
+    pub packages: Vec<Package>,
+}
+
+/// Individual package
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Package {
+    pub name: String,
+    pub version: String,
+    pub manager: String,
+}
+
+/// Firewall information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirewallInfo {
+    pub firewall_type: String,
+    pub enabled: bool,
+    pub rules_count: usize,
+    pub zones: Vec<String>,
+}
+
+/// Web server information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebServer {
+    pub name: String,
+    pub version: String,
+    pub config_path: String,
+    pub enabled: bool,
+}
+
+/// Database information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Database {
+    pub name: String,
+    pub data_dir: String,
+    pub config_path: String,
+}
+
+/// Security information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityInfo {
+    pub selinux: String,
+    pub apparmor: bool,
+    pub fail2ban: bool,
+    pub aide: bool,
+    pub auditd: bool,
+    pub ssh_keys: Vec<(String, usize)>,
+}
+
+/// Host entry from /etc/hosts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostEntry {
+    pub ip: String,
+    pub hostnames: Vec<String>,
 }
