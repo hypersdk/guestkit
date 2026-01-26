@@ -26,6 +26,20 @@ pub use app::App;
 
 /// Run the TUI application
 pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
+    // Setup terminal first for splash screen
+    enable_raw_mode().context("Failed to enable raw mode")?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
+        .context("Failed to enter alternate screen")?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
+
+    // Show splash screen
+    terminal.draw(|f| splash::draw_splash(f))?;
+
+    // Small delay to show splash
+    std::thread::sleep(Duration::from_millis(800));
+
     // Show loading spinner during inspection with coral-terracotta orange theme
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
@@ -43,14 +57,6 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     spinner.finish_and_clear();
 
     let mut app = app?;
-
-    // Setup terminal
-    enable_raw_mode().context("Failed to enable raw mode")?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
-        .context("Failed to enter alternate screen")?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
 
     // Run the event loop
     let result = run_app(&mut terminal, &mut app);
@@ -133,6 +139,13 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::PageDown => app.page_down(),
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
+                    // Vim-style navigation
+                    KeyCode::Char('k') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_up(),
+                    KeyCode::Char('j') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_down(),
+                    KeyCode::Char('g') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_top(),
+                    KeyCode::Char('G') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_bottom(),
+                    KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_up(),
+                    KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_down(),
                     KeyCode::Enter => {
                         use app::ExportMode;
 

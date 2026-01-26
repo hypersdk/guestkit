@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Splash screen with ASCII art
-//!
-//! Note: Currently prepared but not yet integrated into startup flow.
-//! Available for future use.
-#![allow(dead_code)]
 
 use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR};
 use ratatui::{
