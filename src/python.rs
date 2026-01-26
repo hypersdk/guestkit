@@ -66,7 +66,7 @@ impl DiskConverter {
         format: &str,
         compress: bool,
         flatten: bool,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let result = self
             .converter
             .convert(
@@ -119,7 +119,7 @@ impl DiskConverter {
     /// # Returns
     ///
     /// Dictionary with disk image metadata
-    fn get_info(&self, image: String) -> PyResult<PyObject> {
+    fn get_info(&self, image: String) -> PyResult<Py<PyAny>> {
         let info = self
             .converter
             .get_info(Path::new(&image))
@@ -348,7 +348,7 @@ impl Guestfs {
     /// # Returns
     ///
     /// Dictionary of mountpoint -> device mappings
-    fn inspect_get_mountpoints(&mut self, root: String) -> PyResult<PyObject> {
+    fn inspect_get_mountpoints(&mut self, root: String) -> PyResult<Py<PyAny>> {
         let mountpoints = self
             .handle
             .inspect_get_mountpoints(&root)
@@ -580,7 +580,7 @@ impl Guestfs {
     /// # Returns
     ///
     /// List of installed packages
-    fn inspect_list_applications(&mut self, root: String) -> PyResult<PyObject> {
+    fn inspect_list_applications(&mut self, root: String) -> PyResult<Py<PyAny>> {
         let apps = self
             .handle
             .inspect_list_applications(&root)
@@ -851,7 +851,7 @@ impl Guestfs {
     /// # Returns
     ///
     /// Dictionary with stat information
-    fn stat(&mut self, path: String) -> PyResult<PyObject> {
+    fn stat(&mut self, path: String) -> PyResult<Py<PyAny>> {
         let stat = self
             .handle
             .stat(&path)
@@ -885,7 +885,7 @@ impl Guestfs {
     /// # Returns
     ///
     /// Dictionary with filesystem statistics
-    fn statvfs(&mut self, path: String) -> PyResult<PyObject> {
+    fn statvfs(&mut self, path: String) -> PyResult<Py<PyAny>> {
         let statvfs = self
             .handle
             .statvfs(&path)
