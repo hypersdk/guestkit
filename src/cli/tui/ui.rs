@@ -86,6 +86,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         View::Databases => ("🗄️ ", "Database Installations"),
         View::WebServers => ("🌐", "Web Server Installations"),
         View::Security => ("🔒", "Security Features"),
+        View::Issues => ("⚠️ ", "Security Issues & Findings"),
         View::Storage => ("💾", "Storage & Filesystems"),
         View::Users => ("👥", "User Accounts"),
         View::Kernel => ("🧩", "Kernel Configuration"),
@@ -190,6 +191,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Databases => views::databases::draw(f, area, app),
         View::WebServers => views::webservers::draw(f, area, app),
         View::Security => views::security::draw(f, area, app),
+        View::Issues => views::issues::draw(f, area, app),
         View::Storage => views::storage::draw(f, area, app),
         View::Users => views::users::draw(f, area, app),
         View::Kernel => views::kernel::draw(f, area, app),
@@ -266,13 +268,13 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("1-9          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Quick jump: 1=Dashboard 2=Network 3=Packages 4=Services 5=DBs "),
+            Span::raw("Quick jump: 1=Dashboard 2=Network 3=Packages 4=Services     "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("             ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("            6=WebServers 7=Security 8=Storage 9=Users        "),
+            Span::raw("            5=DBs 6=WebServers 7=Security 8=Issues 9=Storage"),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
@@ -615,6 +617,7 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
         View::Databases => generate_databases_details(app),
         View::WebServers => generate_webservers_details(app),
         View::Security => generate_security_details(app),
+        View::Issues => generate_issues_details(app),
         View::Storage => generate_storage_details(app),
         View::Users => generate_users_details(app),
         View::Kernel => generate_kernel_details(app),
@@ -983,6 +986,45 @@ fn generate_webservers_details(app: &App) -> Vec<Line<'static>> {
         Line::from(vec![
             Span::styled("Disabled:         ", Style::default().fg(LIGHT_ORANGE)),
             Span::styled(format!("{}", app.web_servers.len() - enabled_count), Style::default().fg(WARNING_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_issues_details(app: &App) -> Vec<Line<'static>> {
+    let (critical, high, medium) = app.get_risk_summary();
+    vec![
+        Line::from(vec![
+            Span::styled("Security Issues Summary", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Critical Issues:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled("High Risk:        ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled("Medium Risk:      ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", medium), Style::default().fg(WARNING_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Sources:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Security Profile"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Hardening Profile"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Compliance Profile"),
         ]),
         Line::from(""),
         Line::from(vec![
