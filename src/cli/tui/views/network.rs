@@ -26,11 +26,11 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_interfaces(f: &mut Frame, area: Rect, app: &App) {
     if app.network_interfaces.is_empty() {
-        let empty = Paragraph::new("No network interfaces found")
+        let empty = Paragraph::new("⚠️  No network interfaces found")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" Network Interfaces ")
+                .title(" 🌐 Network Interfaces ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -103,7 +103,7 @@ fn draw_interfaces(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" Network Interfaces ({}) ", filtered_interfaces.len()))
+            .title(format!(" 🌐 Network Interfaces • {} configured ", filtered_interfaces.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
         .column_spacing(2);
 
@@ -112,11 +112,11 @@ fn draw_interfaces(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_dns_servers(f: &mut Frame, area: Rect, app: &App) {
     if app.dns_servers.is_empty() {
-        let empty = Paragraph::new("No DNS servers configured")
+        let empty = Paragraph::new("⚠️  No DNS servers configured")
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" DNS Servers ")
+                .title(" 🌍 DNS Servers ")
                 .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
@@ -142,7 +142,7 @@ fn draw_dns_servers(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" DNS Servers ({}) ", app.dns_servers.len()))
+            .title(format!(" 🌍 DNS Servers • {} configured ", app.dns_servers.len()))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(dns_list, area);
