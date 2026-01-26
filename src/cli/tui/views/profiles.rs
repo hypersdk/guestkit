@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Profiles view - Security, Migration, Performance, and Compliance profile results
+//! Profiles view - Security, Migration, Performance, Compliance, and Hardening profile results
 
 use crate::cli::profiles::{FindingStatus, ProfileReport, RiskLevel};
 use crate::cli::tui::app::App;
@@ -26,7 +26,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
-    let tab_titles = vec!["Security", "Migration", "Performance", "Compliance"];
+    let tab_titles = vec!["Security", "Migration", "Performance", "Compliance", "Hardening"];
     let tabs = Tabs::new(tab_titles)
         .block(Block::default()
             .borders(Borders::ALL)

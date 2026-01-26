@@ -151,6 +151,26 @@ fn draw_profile_summary(f: &mut Frame, area: Rect, app: &App) {
         ])));
     }
 
+    // Hardening Profile
+    if let Some(ref profile) = app.hardening_profile {
+        let (risk_text, risk_color) = if let Some(risk) = profile.overall_risk {
+            match risk {
+                RiskLevel::Critical => ("CRITICAL", ERROR_COLOR),
+                RiskLevel::High => ("HIGH", ERROR_COLOR),
+                RiskLevel::Medium => ("MEDIUM", WARNING_COLOR),
+                RiskLevel::Low => ("LOW", SUCCESS_COLOR),
+                RiskLevel::Info => ("OK", SUCCESS_COLOR),
+            }
+        } else {
+            ("OK", SUCCESS_COLOR)
+        };
+
+        profile_items.push(ListItem::new(Line::from(vec![
+            Span::styled("Hardening:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
+        ])));
+    }
+
     // Add helper text
     profile_items.push(ListItem::new(Line::from(vec![
         Span::styled("Press ", Style::default().fg(TEXT_COLOR)),

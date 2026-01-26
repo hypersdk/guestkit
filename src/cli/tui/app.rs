@@ -10,8 +10,8 @@ use guestctl::Guestfs;
 use std::path::Path;
 
 use crate::cli::profiles::{
-    ComplianceProfile, InspectionProfile, MigrationProfile, PerformanceProfile, ProfileReport,
-    SecurityProfile,
+    ComplianceProfile, HardeningProfile, InspectionProfile, MigrationProfile, PerformanceProfile,
+    ProfileReport, SecurityProfile,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,6 +134,7 @@ pub struct App {
     pub migration_profile: Option<ProfileReport>,
     pub performance_profile: Option<ProfileReport>,
     pub compliance_profile: Option<ProfileReport>,
+    pub hardening_profile: Option<ProfileReport>,
 }
 
 impl App {
@@ -222,6 +223,7 @@ impl App {
         let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
         let performance_profile = PerformanceProfile.inspect(&mut guestfs, root).ok();
         let compliance_profile = ComplianceProfile.inspect(&mut guestfs, root).ok();
+        let hardening_profile = HardeningProfile.inspect(&mut guestfs, root).ok();
 
         guestfs.shutdown()?;
 
@@ -266,6 +268,7 @@ impl App {
             migration_profile,
             performance_profile,
             compliance_profile,
+            hardening_profile,
         })
     }
 
@@ -486,6 +489,7 @@ impl App {
                     "migration": self.migration_profile.as_ref().and_then(|p| p.overall_risk),
                     "performance": self.performance_profile.as_ref().and_then(|p| p.overall_risk),
                     "compliance": self.compliance_profile.as_ref().and_then(|p| p.overall_risk),
+                    "hardening": self.hardening_profile.as_ref().and_then(|p| p.overall_risk),
                 }
             }),
             View::Network => json!({
@@ -524,6 +528,7 @@ impl App {
                     1 => self.migration_profile.as_ref().map(|p| ("migration", p)),
                     2 => self.performance_profile.as_ref().map(|p| ("performance", p)),
                     3 => self.compliance_profile.as_ref().map(|p| ("compliance", p)),
+                    4 => self.hardening_profile.as_ref().map(|p| ("hardening", p)),
                     _ => None,
                 };
 
@@ -544,11 +549,11 @@ impl App {
     }
 
     pub fn next_profile_tab(&mut self) {
-        self.selected_profile_tab = (self.selected_profile_tab + 1) % 4;
+        self.selected_profile_tab = (self.selected_profile_tab + 1) % 5;
     }
 
     pub fn previous_profile_tab(&mut self) {
-        self.selected_profile_tab = (self.selected_profile_tab + 3) % 4;
+        self.selected_profile_tab = (self.selected_profile_tab + 4) % 5;
     }
 
     pub fn get_current_profile_report(&self) -> Option<&ProfileReport> {
@@ -557,6 +562,7 @@ impl App {
             1 => self.migration_profile.as_ref(),
             2 => self.performance_profile.as_ref(),
             3 => self.compliance_profile.as_ref(),
+            4 => self.hardening_profile.as_ref(),
             _ => None,
         }
     }
