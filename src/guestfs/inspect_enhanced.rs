@@ -502,21 +502,158 @@ impl Guestfs {
     }
 
     /// Get DNS configuration
+    ///
+    /// Extracts DNS servers from multiple sources:
+    /// - /etc/resolv.conf (standard)
+    /// - systemd-resolved configuration (when resolv.conf points to loopback)
+    /// - Network interface configurations (fallback)
+    /// - NetworkManager global DNS settings
+    ///
+    /// # Arguments
+    /// * `root` - Root device (e.g., "/dev/sda1")
+    ///
+    /// # Returns
+    /// Deduplicated and sorted list of DNS server addresses
     pub fn inspect_dns(&mut self, root: &str) -> Result<Vec<String>> {
         self.with_mount(root, |guestfs| {
             let mut dns_servers = Vec::new();
+
+            // Parse /etc/resolv.conf
+            let mut is_loopback_only = true;
+            let mut has_resolv_conf = false;
             if let Ok(content) = guestfs.cat(RESOLV_CONF) {
+                has_resolv_conf = true;
                 for line in content.lines() {
                     let line = line.trim();
                     if line.starts_with("nameserver ") {
                         if let Some(server) = line.split_whitespace().nth(1) {
                             dns_servers.push(server.to_string());
+                            if !server.starts_with("127.") && server != "::1" {
+                                is_loopback_only = false;
+                            }
                         }
                     }
                 }
             }
+
+            // If resolv.conf points to loopback (e.g., 127.0.0.53 for systemd-resolved), parse resolved.conf
+            if has_resolv_conf && is_loopback_only && guestfs.exists("/etc/systemd/resolved.conf").unwrap_or(false) {
+                // Parse main resolved.conf
+                if let Ok(content) = guestfs.cat("/etc/systemd/resolved.conf") {
+                    let mut parsed = guestfs.parse_systemd_resolved_content(&content);
+                    dns_servers.append(&mut parsed.dns);
+                    dns_servers.append(&mut parsed.fallback_dns);
+                }
+
+                // Parse drop-ins in /etc/systemd/resolved.conf.d/
+                if guestfs.is_dir("/etc/systemd/resolved.conf.d").unwrap_or(false) {
+                    if let Ok(files) = guestfs.ls("/etc/systemd/resolved.conf.d") {
+                        let mut conf_files: Vec<String> = files.into_iter()
+                            .filter(|f| f.ends_with(".conf"))
+                            .collect();
+                        conf_files.sort();
+                        for file in conf_files {
+                            let path = format!("/etc/systemd/resolved.conf.d/{}", file);
+                            if let Ok(content) = guestfs.cat(&path) {
+                                let mut parsed = guestfs.parse_systemd_resolved_content(&content);
+                                dns_servers.append(&mut parsed.dns);
+                                dns_servers.append(&mut parsed.fallback_dns);
+                            }
+                        }
+                    }
+                }
+            } else if !has_resolv_conf || dns_servers.is_empty() {
+                // If no resolv.conf or empty, collect from network configs
+                // Note: We need to temporarily unmount to call inspect_network
+                let unmount_after = !guestfs.mounted.contains_key("/");
+                if unmount_after {
+                    let _ = guestfs.umount("/");
+                }
+
+                if let Ok(interfaces) = guestfs.inspect_network(root) {
+                    for iface in interfaces {
+                        dns_servers.extend(iface.dns_servers);
+                    }
+                }
+
+                // Re-mount if we unmounted
+                if unmount_after {
+                    guestfs.mount_ro(root, "/")?;
+                }
+
+                // For NetworkManager global DNS
+                if guestfs.exists("/etc/NetworkManager/NetworkManager.conf").unwrap_or(false) {
+                    if let Ok(content) = guestfs.cat("/etc/NetworkManager/NetworkManager.conf") {
+                        let mut in_dns_section = false;
+                        for line in content.lines() {
+                            let line = line.trim();
+                            if line == "[dns]" {
+                                in_dns_section = true;
+                            } else if in_dns_section && line.starts_with('[') {
+                                in_dns_section = false;
+                            } else if in_dns_section && line.starts_with("dns=") {
+                                let value = line.split_once('=').map(|(_, v)| v.trim()).unwrap_or("");
+                                for server in value.split(';') {
+                                    let server = server.trim();
+                                    if !server.is_empty() {
+                                        dns_servers.push(server.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            dns_servers.sort();
+            dns_servers.dedup();
             Ok(dns_servers)
         })
+    }
+
+    fn parse_systemd_resolved_content(&self, content: &str) -> ParsedResolved {
+        let mut parsed = ParsedResolved {
+            dns: Vec::new(),
+            fallback_dns: Vec::new(),
+        };
+        let mut current_section = "";
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
+                continue;
+            }
+            if line.starts_with('[') && line.ends_with(']') {
+                current_section = &line[1..line.len() - 1];
+                continue;
+            }
+            if current_section == "Resolve" {
+                if let Some((key, value)) = line.split_once('=') {
+                    let key = key.trim();
+                    let value = value.trim();
+                    match key {
+                        "DNS" => {
+                            for server in value.split_whitespace() {
+                                // Extract just the IP address, ignoring port, interface, SNI
+                                let ip = server.split(|c: char| c == ':' || c == '%' || c == '#').next().unwrap_or("");
+                                if !ip.is_empty() {
+                                    parsed.dns.push(ip.to_string());
+                                }
+                            }
+                        }
+                        "FallbackDNS" => {
+                            for server in value.split_whitespace() {
+                                let ip = server.split(|c: char| c == ':' || c == '%' || c == '#').next().unwrap_or("");
+                                if !ip.is_empty() {
+                                    parsed.fallback_dns.push(ip.to_string());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        parsed
     }
 
     /// List user accounts
@@ -1773,4 +1910,10 @@ pub struct SecurityInfo {
 pub struct HostEntry {
     pub ip: String,
     pub hostnames: Vec<String>,
+}
+
+/// Parsed systemd-resolved configuration
+struct ParsedResolved {
+    dns: Vec<String>,
+    fallback_dns: Vec<String>,
 }
