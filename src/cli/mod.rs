@@ -12,6 +12,7 @@ pub mod formatters;
 pub mod interactive;
 pub mod output;
 pub mod parallel;
+pub mod plan;
 pub mod profiles;
 pub mod shell;
 pub mod tui;
