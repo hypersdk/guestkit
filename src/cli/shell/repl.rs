@@ -371,6 +371,15 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "validate" => {
                         commands::cmd_validate(&mut ctx, args)
                     }
+                    "forensics" => {
+                        commands::cmd_forensics(&mut ctx, args)
+                    }
+                    "audit" => {
+                        commands::cmd_audit(&mut ctx, args)
+                    }
+                    "baseline" => {
+                        commands::cmd_baseline(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
