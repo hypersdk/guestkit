@@ -86,6 +86,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         View::Dashboard => ("📊", "System Overview"),
         View::Analytics => ("📈", "Analytics & Charts"),
         View::Timeline => ("⏰", "System Timeline"),
+        View::Recommendations => ("💡", "Smart Recommendations"),
+        View::Topology => ("🏗️ ", "System Topology"),
         View::Network => ("🌐", "Network Configuration"),
         View::Packages => ("📦", "Installed Packages"),
         View::Services => ("⚙️ ", "System Services"),
@@ -176,6 +178,8 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
             View::Dashboard => None,
             View::Analytics => None,
             View::Timeline => None,
+            View::Recommendations => None,
+            View::Topology => None,
             View::Network => Some(app.network_interfaces.len()),
             View::Packages => Some(app.packages.package_count),
             View::Services => Some(app.services.len()),
@@ -222,6 +226,8 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Dashboard => views::dashboard::draw(f, area, app),
         View::Analytics => views::analytics::draw(f, area, app),
         View::Timeline => views::timeline::draw(f, area, app),
+        View::Recommendations => views::recommendations::draw(f, area, app),
+        View::Topology => views::topology::draw(f, area, app),
         View::Network => views::network::draw(f, area, app),
         View::Packages => views::packages::draw(f, area, app),
         View::Services => views::services::draw(f, area, app),
@@ -683,6 +689,8 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
         View::Dashboard => generate_dashboard_details(app),
         View::Analytics => generate_analytics_details(app),
         View::Timeline => generate_timeline_details(app),
+        View::Recommendations => generate_recommendations_details(app),
+        View::Topology => generate_topology_details(app),
         View::Network => generate_network_details(app),
         View::Packages => generate_packages_details(app),
         View::Services => generate_services_details(app),
@@ -1224,6 +1232,94 @@ fn generate_logs_details(app: &App) -> Vec<Line<'static>> {
         ]),
         Line::from(vec![
             Span::raw("  • Scroll with ↑↓"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_recommendations_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("Smart Recommendations", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("AI-Powered Analysis:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Security hardening recommendations"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Performance optimization suggestions"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Maintenance and compliance guidance"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Features:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Priority-based sorting (Critical → Info)"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Impact and effort analysis"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Step-by-step remediation guides"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Quick wins identification"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_topology_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("System Topology", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Architecture Layers:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Applications & Services layer"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • System Services layer"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Operating System layer"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Kernel layer"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Hardware layer"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Network Topology:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Internet connectivity flow"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Firewall configuration"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Network interface mapping"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Service dependencies"),
         ]),
         Line::from(""),
         Line::from(vec![
