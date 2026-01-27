@@ -590,6 +590,15 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Improvement roadmaps", "roadmap <timeframe>".green());
     println!("           Timeframes: 30-day, 90-day, annual");
 
+    println!("\n{}", "Intelligence & Analytics:".yellow().bold());
+    println!("  {} - AI-like intelligent insights", "insights".green());
+    println!("  {}  - Comprehensive health diagnostic", "doctor".green());
+    println!("  {}   - Goal setting and tracking", "goals <command>".green());
+    println!("           Commands: suggest, list, check");
+    println!("  {}  - Shell usage analysis", "habits".green());
+    println!("  {} - Team collaboration reports", "collaborate <type>".green());
+    println!("           Types: handoff, incident, change, status");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -5873,6 +5882,879 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     println!("{} Start now: {}", "💡".yellow(), "verify all".cyan());
     println!();
+
+    Ok(())
+}
+
+/// AI-like intelligent insights
+pub fn cmd_insights(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Intelligent System Insights                ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Analyzing system patterns...".yellow());
+    println!();
+
+    let mut insights = Vec::new();
+
+    // Analyze packages
+    if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+        let pkg_count = pkg_info.packages.len();
+
+        if pkg_count > 1500 {
+            insights.push((
+                "📦",
+                "Package Density",
+                format!("{} packages detected - This is a feature-rich system", pkg_count),
+                "Consider reviewing with 'packages' to identify unused packages".to_string(),
+                "Medium"
+            ));
+        } else if pkg_count < 300 {
+            insights.push((
+                "📦",
+                "Minimal Footprint",
+                format!("{} packages - This is a lean, focused system", pkg_count),
+                "Minimal attack surface, good for security".to_string(),
+                "Info"
+            ));
+        }
+
+        // Detect development environment
+        let dev_packages = pkg_info.packages.iter().filter(|p| {
+            p.name.contains("gcc") || p.name.contains("make") ||
+            p.name.contains("git") || p.name.contains("devel")
+        }).count();
+
+        if dev_packages > 20 {
+            insights.push((
+                "💻",
+                "Development Environment",
+                format!("{} development packages found", dev_packages),
+                "This appears to be a build/development system - ensure build tools are up to date".to_string(),
+                "Info"
+            ));
+        }
+
+        // Check for multiple web servers
+        let web_servers = pkg_info.packages.iter().filter(|p| {
+            p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache")
+        }).count();
+
+        if web_servers > 1 {
+            insights.push((
+                "⚠️",
+                "Multiple Web Servers",
+                format!("{} different web server packages detected", web_servers),
+                "Multiple web servers can cause port conflicts - verify only one is enabled".to_string(),
+                "Warning"
+            ));
+        }
+    }
+
+    // Analyze security
+    if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+        let mut security_score = 0;
+        let mut security_features = Vec::new();
+
+        if &sec.selinux != "disabled" {
+            security_score += 1;
+            security_features.push("SELinux");
+        }
+        if sec.apparmor {
+            security_score += 1;
+            security_features.push("AppArmor");
+        }
+        if sec.auditd {
+            security_score += 1;
+            security_features.push("Auditd");
+        }
+
+        if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+            if fw.enabled {
+                security_score += 1;
+                security_features.push("Firewall");
+            }
+        }
+
+        if security_score >= 3 {
+            insights.push((
+                "🛡️",
+                "Strong Security Posture",
+                format!("{} security features active: {}", security_score, security_features.join(", ")),
+                "Well-configured security - maintain with regular updates".to_string(),
+                "Good"
+            ));
+        } else if security_score <= 1 {
+            insights.push((
+                "🚨",
+                "Weak Security Posture",
+                format!("Only {} security features active", security_score),
+                "Critical: Enable SELinux/AppArmor and firewall - run 'advisor secure'".to_string(),
+                "Critical"
+            ));
+        }
+    }
+
+    // Analyze users
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        let root_users = users.iter().filter(|u| u.uid == "0").count();
+        let regular_users = users.iter().filter(|u| {
+            if let Ok(uid) = u.uid.parse::<u32>() {
+                uid >= 1000
+            } else {
+                false
+            }
+        }).count();
+
+        if root_users > 1 {
+            insights.push((
+                "⚠️",
+                "Multiple Root Accounts",
+                format!("{} accounts with UID 0 detected", root_users),
+                "Security risk: Review root accounts immediately with 'users'".to_string(),
+                "High"
+            ));
+        }
+
+        if regular_users == 0 {
+            insights.push((
+                "🤖",
+                "Service-Only System",
+                "No regular user accounts detected".to_string(),
+                "This is a dedicated service system - appropriate for containers/VMs".to_string(),
+                "Info"
+            ));
+        } else if regular_users > 10 {
+            insights.push((
+                "👥",
+                "Multi-User Environment",
+                format!("{} regular user accounts", regular_users),
+                "Review user access regularly for security - 'users' command".to_string(),
+                "Info"
+            ));
+        }
+    }
+
+    // Analyze services
+    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+        let enabled = services.iter().filter(|s| s.enabled).count();
+        let total = services.len();
+        let ratio = (enabled as f64 / total as f64) * 100.0;
+
+        if ratio > 70.0 {
+            insights.push((
+                "⚙️",
+                "High Service Density",
+                format!("{:.0}% of services enabled ({}/{})", ratio, enabled, total),
+                "Many services running - review with 'services' to disable unused ones".to_string(),
+                "Medium"
+            ));
+        } else if ratio < 30.0 {
+            insights.push((
+                "⚙️",
+                "Selective Service Configuration",
+                format!("Only {:.0}% of services enabled", ratio),
+                "Conservative service configuration - good for security and performance".to_string(),
+                "Good"
+            ));
+        }
+    }
+
+    // Display insights
+    if insights.is_empty() {
+        println!("{}", "No significant patterns detected.".bright_black());
+        println!("System appears to be in a standard configuration.");
+    } else {
+        println!("{} ({} insights)", "Key Insights:".green().bold(), insights.len());
+        println!("{}", "─".repeat(70).cyan());
+        println!();
+
+        for (icon, title, description, recommendation, priority) in insights {
+            let priority_colored = match priority {
+                "Critical" => priority.red().bold(),
+                "High" => priority.red(),
+                "Warning" => priority.yellow().bold(),
+                "Medium" => priority.yellow(),
+                "Good" => priority.green(),
+                _ => priority.cyan(),
+            };
+
+            println!("{} {} {}", icon, title.bold(), format!("[{}]", priority_colored));
+            println!("  {}", description);
+            println!("  {} {}", "→".cyan(), recommendation.bright_black());
+            println!();
+        }
+    }
+
+    println!("{} Next Steps:", "💡".yellow());
+    println!("  • {}", "verify all - Comprehensive validation".cyan());
+    println!("  • {}", "advisor secure - Security improvements".cyan());
+    println!("  • {}", "optimize - Optimization recommendations".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Interactive diagnostic doctor
+pub fn cmd_doctor(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                  System Doctor                           ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Running comprehensive system diagnostic...".yellow());
+    println!();
+
+    let mut health_score = 100;
+    let mut issues = Vec::new();
+    let mut warnings = Vec::new();
+    let mut recommendations = Vec::new();
+
+    // Check 1: Critical Files
+    println!("{} Checking critical files...", "→".cyan());
+    let critical_files = vec![
+        ("/etc/passwd", "User database"),
+        ("/etc/shadow", "Password hashes"),
+        ("/etc/fstab", "Filesystem table"),
+    ];
+
+    for (file, desc) in &critical_files {
+        if !ctx.guestfs.exists(file).unwrap_or(false) {
+            health_score -= 20;
+            issues.push(format!("Missing critical file: {} ({})", file, desc));
+        }
+    }
+
+    // Check 2: Security Configuration
+    println!("{} Checking security configuration...", "→".cyan());
+    if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+        if &sec.selinux == "disabled" {
+            health_score -= 10;
+            warnings.push("SELinux is disabled - mandatory access control not active");
+            recommendations.push("Enable SELinux for enhanced security");
+        }
+
+        if !sec.apparmor && &sec.selinux == "disabled" {
+            health_score -= 10;
+            warnings.push("No MAC system active (neither SELinux nor AppArmor)");
+        }
+
+        if !sec.auditd {
+            health_score -= 5;
+            warnings.push("Audit daemon not running - no detailed event logging");
+            recommendations.push("Enable auditd for security event tracking");
+        }
+
+        if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+            if !fw.enabled {
+                health_score -= 15;
+                warnings.push("Firewall is disabled - no network filtering");
+                recommendations.push("Enable and configure firewall immediately");
+            }
+        }
+    }
+
+    // Check 3: Boot Configuration
+    println!("{} Checking boot configuration...", "→".cyan());
+    if !ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+        health_score -= 15;
+        issues.push("Missing /etc/fstab - system may not boot properly".to_string());
+    }
+
+    let grub_found = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false)
+        || ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+
+    if !grub_found {
+        health_score -= 10;
+        warnings.push("No GRUB configuration found - boot loader may not be configured");
+    }
+
+    // Check 4: User Configuration
+    println!("{} Checking user configuration...", "→".cyan());
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        let root_users = users.iter().filter(|u| u.uid == "0").count();
+        if root_users > 1 {
+            health_score -= 15;
+            issues.push(format!("Multiple root accounts detected ({})", root_users));
+            recommendations.push("Audit root accounts and remove duplicates");
+        }
+
+        let locked_users = users.iter().filter(|u| u.shell.contains("nologin") || u.shell.contains("false")).count();
+        if locked_users == users.len() && users.len() > 0 {
+            warnings.push("All user accounts appear to be locked");
+        }
+    }
+
+    // Check 5: Network Configuration
+    println!("{} Checking network configuration...", "→".cyan());
+    if !ctx.guestfs.exists("/etc/hosts").unwrap_or(false) {
+        health_score -= 5;
+        warnings.push("Missing /etc/hosts file");
+    }
+
+    if !ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+        health_score -= 5;
+        warnings.push("Missing /etc/resolv.conf - DNS may not be configured");
+    }
+
+    println!();
+    println!("{}", "═".repeat(70).cyan());
+    println!();
+
+    // Display Results
+    let health_grade = if health_score >= 90 {
+        "A (Excellent)".green().bold()
+    } else if health_score >= 75 {
+        "B (Good)".green()
+    } else if health_score >= 60 {
+        "C (Fair)".yellow()
+    } else if health_score >= 40 {
+        "D (Poor)".red()
+    } else {
+        "F (Critical)".red().bold()
+    };
+
+    println!("{} {}/100 - Grade: {}", "Overall Health Score:".green().bold(), health_score, health_grade);
+    println!();
+
+    if !issues.is_empty() {
+        println!("{} ({} found)", "Critical Issues:".red().bold(), issues.len());
+        for issue in &issues {
+            println!("  {} {}", "✗".red(), issue);
+        }
+        println!();
+    }
+
+    if !warnings.is_empty() {
+        println!("{} ({} found)", "Warnings:".yellow().bold(), warnings.len());
+        for warning in &warnings {
+            println!("  {} {}", "⚠".yellow(), warning);
+        }
+        println!();
+    }
+
+    if !recommendations.is_empty() {
+        println!("{} ({} items)", "Recommended Actions:".cyan().bold(), recommendations.len());
+        for (i, rec) in recommendations.iter().enumerate() {
+            println!("  {} {}", format!("{}.", i + 1).cyan(), rec);
+        }
+        println!();
+    }
+
+    if issues.is_empty() && warnings.is_empty() {
+        println!("{} System is healthy! No critical issues detected.", "✓".green().bold());
+        println!();
+    }
+
+    println!("{} Detailed Analysis:", "💡".yellow());
+    println!("  • {}", "verify all - Run all verification checks".cyan());
+    println!("  • {}", "wizard health - Interactive health assessment".cyan());
+    println!("  • {}", "scan issues - Scan for specific problems".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Goal setting and tracking
+pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║              System Improvement Goals                    ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Track your system improvement journey!".yellow());
+        println!();
+
+        println!("{}", "Available Commands:".green().bold());
+        println!("  {} - Show suggested goals", "goals suggest".cyan());
+        println!("  {} - Set a custom goal", "goals set <name>".cyan());
+        println!("  {} - List all goals", "goals list".cyan());
+        println!("  {} - Check goal status", "goals check <name>".cyan());
+        println!();
+
+        println!("{}", "Example Goals:".yellow());
+        println!("  • Achieve security score of 80+");
+        println!("  • Reduce enabled services by 20%");
+        println!("  • Remove 100+ unused packages");
+        println!("  • Enable all security features");
+        println!("  • Document all configurations");
+        println!();
+
+        return Ok(());
+    }
+
+    let subcommand = args[0];
+
+    match subcommand {
+        "suggest" => {
+            println!("\n{} {}", "🎯".cyan(), "Suggested Goals".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Based on current system state:".green().bold());
+            println!();
+
+            // Security goals
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let mut security_goals = 0;
+
+                if &sec.selinux == "disabled" {
+                    security_goals += 1;
+                    println!("{} {} Enable SELinux", "1.".yellow(), "🔒".cyan());
+                    println!("   Target: Activate mandatory access control");
+                    println!("   Command: Check /etc/selinux/config");
+                    println!();
+                }
+
+                if !sec.auditd {
+                    security_goals += 1;
+                    println!("{} {} Enable Audit Daemon", format!("{}.", security_goals + 1).yellow(), "📝".cyan());
+                    println!("   Target: Start security event logging");
+                    println!("   Verify: Run 'security' command");
+                    println!();
+                }
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if !fw.enabled {
+                        security_goals += 1;
+                        println!("{} {} Enable Firewall", format!("{}.", security_goals + 1).yellow(), "🛡️".cyan());
+                        println!("   Target: Configure network filtering");
+                        println!("   Verify: Run 'verify security'");
+                        println!();
+                    }
+                }
+            }
+
+            // Performance goals
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                if enabled > 50 {
+                    println!("{} {} Optimize Services", "4.".yellow(), "⚙️".cyan());
+                    println!("   Target: Reduce enabled services to <40");
+                    println!("   Current: {} enabled", enabled);
+                    println!("   Command: 'services' to review");
+                    println!();
+                }
+            }
+
+            // Documentation goals
+            println!("{} {} Complete Documentation", "5.".yellow(), "📚".cyan());
+            println!("   Target: Generate comprehensive system documentation");
+            println!("   Command: 'auto run documentation'");
+            println!();
+
+            println!("{} Use {} to track progress", "💡".yellow(), "verify all".cyan());
+            println!();
+        }
+
+        "list" => {
+            println!("\n{} {}", "📋".cyan(), "Goal Tracking".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Common Goals:".green().bold());
+
+            let goals = vec![
+                ("Security Excellence", "Achieve security score 90+", "verify security"),
+                ("Performance Optimization", "Reduce service count by 25%", "services"),
+                ("Compliance Ready", "Pass all audit checks", "playbook audit"),
+                ("Documentation Complete", "Full system documentation", "auto run documentation"),
+                ("Zero Critical Issues", "No critical findings", "doctor"),
+            ];
+
+            for (i, (name, target, cmd)) in goals.iter().enumerate() {
+                println!("{}. {} {}", i + 1, name.bold(), "🎯".cyan());
+                println!("   Target: {}", target);
+                println!("   Check: {}", cmd.bright_black());
+                println!();
+            }
+
+            println!("{} Run commands to check progress towards your goals", "💡".yellow());
+            println!();
+        }
+
+        "check" => {
+            if args.len() < 2 {
+                println!("{} Usage: goals check <goal-name>", "Error:".red());
+                return Ok(());
+            }
+
+            let goal = args[1];
+            println!("\n{} {}", "🎯".cyan(), format!("Checking Goal: {}", goal).yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            match goal {
+                "security" => {
+                    println!("Running security verification...");
+                    println!();
+                    cmd_verify(ctx, &["security"])?;
+                }
+                "health" => {
+                    println!("Running health diagnostic...");
+                    println!();
+                    cmd_doctor(ctx, &[])?;
+                }
+                "services" => {
+                    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                        let enabled = services.iter().filter(|s| s.enabled).count();
+                        println!("{}", "Service Optimization Goal:".green().bold());
+                        println!("  Current: {} enabled services", enabled);
+                        println!("  Target:  <40 enabled services");
+
+                        if enabled < 40 {
+                            println!("  Status:  {} Goal achieved!", "✓".green().bold());
+                        } else {
+                            println!("  Status:  {} In progress ({} to remove)", "→".yellow(), enabled - 40);
+                        }
+                        println!();
+                    }
+                }
+                _ => {
+                    println!("{} Unknown goal: {}", "Error:".red(), goal);
+                    println!("Use {} to see available goals", "goals list".cyan());
+                }
+            }
+        }
+
+        _ => {
+            println!("{} Unknown subcommand: {}", "Error:".red(), subcommand);
+            println!("{} goals", "Usage:".yellow());
+        }
+    }
+
+    Ok(())
+}
+
+/// Shell usage analysis and habits
+pub fn cmd_habits(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Shell Usage Analysis                        ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Session Statistics:".green().bold());
+    println!("{}", "─".repeat(70).cyan());
+    println!();
+
+    println!("  Commands executed: {}", ctx.command_count.to_string().yellow());
+
+    if let Some(duration) = ctx.last_command_time {
+        println!("  Last command time: {} ms", format!("{:.2}", duration.as_secs_f64() * 1000.0).yellow());
+    }
+
+    println!("  Current directory: {}", ctx.current_path.cyan());
+    println!("  Active aliases:    {}", ctx.aliases.len().to_string().yellow());
+    println!("  Bookmarks saved:   {}", ctx.bookmarks.len().to_string().yellow());
+    println!();
+
+    println!("{}", "Usage Patterns:".green().bold());
+    println!("{}", "─".repeat(70).cyan());
+    println!();
+
+    // Analyze usage patterns
+    if ctx.command_count < 5 {
+        println!("{} {}", "🌱".cyan(), "Getting Started".bold());
+        println!("  You're just beginning your exploration. Try these commands:");
+        println!("  • {} - Learn the basics", "learn basics".cyan());
+        println!("  • {} - See available commands", "help".cyan());
+        println!("  • {} - Get an overview", "dashboard".cyan());
+    } else if ctx.command_count < 20 {
+        println!("{} {}", "🔍".cyan(), "Active Explorer".bold());
+        println!("  You're actively exploring the system. Enhance your workflow:");
+        println!("  • {} - Create shortcuts", "alias".cyan());
+        println!("  • {} - Save favorite locations", "bookmark".cyan());
+        println!("  • {} - Learn advanced features", "learn advanced".cyan());
+    } else {
+        println!("{} {}", "⭐".cyan(), "Power User".bold());
+        println!("  Excellent engagement! Take advantage of advanced features:");
+        println!("  • {} - Automate workflows", "auto run <preset>".cyan());
+        println!("  • {} - Advanced searches", "search".cyan());
+        println!("  • {} - Batch operations", "batch".cyan());
+    }
+    println!();
+
+    println!("{}", "Efficiency Tips:".yellow().bold());
+    println!("{}", "─".repeat(70).cyan());
+    println!();
+
+    let tips = vec![
+        ("Use Tab completion", "Faster command entry"),
+        ("Create aliases", "Shortcut frequently used commands"),
+        ("Bookmark paths", "Quick navigation with 'goto'"),
+        ("Use 'quick' menu", "Fast access to common actions"),
+        ("Try 'context' command", "Get location-specific suggestions"),
+    ];
+
+    for (tip, benefit) in tips {
+        println!("  {} {} - {}", "💡".yellow(), tip.bold(), benefit.bright_black());
+    }
+    println!();
+
+    println!("{}", "Recommended Next Steps:".green().bold());
+    println!("{}", "─".repeat(70).cyan());
+    println!();
+
+    if ctx.bookmarks.is_empty() {
+        println!("  {} Create bookmarks for frequently visited paths", "1.".yellow());
+        println!("     Command: {}", "bookmark myspot".cyan());
+    }
+
+    if ctx.aliases.len() <= 5 {
+        println!("  {} Set up custom aliases for your workflow", "2.".yellow());
+        println!("     Command: {}", "alias shortname 'full command'".cyan());
+    }
+
+    println!("  {} Try automation presets", "3.".yellow());
+    println!("     Command: {}", "auto run full-analysis".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Team collaboration report generator
+pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "Usage: collaborate <report-type>".red());
+        println!();
+        println!("{}", "Available Report Types:".yellow().bold());
+        println!("  {} - Handoff report for team transition", "handoff".green());
+        println!("  {} - Incident report for security team", "incident".green());
+        println!("  {} - Change request documentation", "change".green());
+        println!("  {} - Weekly status report", "status".green());
+        println!();
+        return Ok(());
+    }
+
+    let report_type = args[0];
+
+    match report_type {
+        "handoff" => {
+            println!("\n{} {}", "👥".cyan(), "Team Handoff Report".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Generating team handoff documentation...".yellow());
+            println!();
+
+            println!("{}", "## System Handoff Report".green().bold());
+            println!();
+
+            // Current timestamp
+            let now = chrono::Local::now();
+            println!("**Generated:** {}", now.format("%Y-%m-%d %H:%M:%S"));
+            println!("**Inspector:** GuestKit Interactive Shell");
+            println!();
+
+            println!("{}", "### System Overview".yellow());
+            if let Ok(os_type) = ctx.guestfs.inspect_get_type(&ctx.root) {
+                println!("- **OS Type:** {}", os_type);
+            }
+            if let Ok(distro) = ctx.guestfs.inspect_get_distro(&ctx.root) {
+                println!("- **Distribution:** {}", distro);
+            }
+            if let Ok(arch) = ctx.guestfs.inspect_get_arch(&ctx.root) {
+                println!("- **Architecture:** {}", arch);
+            }
+            println!();
+
+            println!("{}", "### Key Information".yellow());
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("- **Total Packages:** {}", pkg_info.packages.len());
+            }
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("- **User Accounts:** {}", users.len());
+            }
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                println!("- **Services:** {} total, {} enabled", services.len(), enabled);
+            }
+            println!();
+
+            println!("{}", "### Security Status".yellow());
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("- **SELinux:** {}", sec.selinux);
+                println!("- **AppArmor:** {}", if sec.apparmor { "enabled" } else { "disabled" });
+                println!("- **Auditd:** {}", if sec.auditd { "enabled" } else { "disabled" });
+            }
+            println!();
+
+            println!("{}", "### Recommendations for Incoming Team".yellow());
+            println!("1. Run `dashboard` for quick overview");
+            println!("2. Run `verify all` to check system health");
+            println!("3. Review `security` status");
+            println!("4. Check `services` for running daemons");
+            println!("5. Use `learn basics` for shell orientation");
+            println!();
+
+            println!("{}", "### Critical Files to Review".yellow());
+            println!("- /etc/fstab - Filesystem mounts");
+            println!("- /etc/hosts - Network configuration");
+            println!("- /etc/ssh/sshd_config - SSH settings");
+            println!();
+
+            println!("{} Save this report: {}", "💡".yellow(), "snapshot handoff-report.md".cyan());
+            println!();
+        }
+
+        "incident" => {
+            println!("\n{} {}", "🚨".cyan(), "Security Incident Report".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "## Security Incident Report".green().bold());
+            println!();
+
+            let now = chrono::Local::now();
+            println!("**Report Date:** {}", now.format("%Y-%m-%d %H:%M:%S"));
+            println!("**System:** {}", ctx.root);
+            println!("**Reporter:** GuestKit Analysis Tool");
+            println!();
+
+            println!("{}", "### Incident Summary".yellow());
+            println!("*[To be filled by investigator]*");
+            println!();
+
+            println!("{}", "### System State at Time of Incident".yellow());
+
+            println!("\n**Security Configuration:**");
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("- SELinux: {}", sec.selinux);
+                println!("- AppArmor: {}", if sec.apparmor { "Active" } else { "Inactive" });
+                println!("- Audit Daemon: {}", if sec.auditd { "Running" } else { "Not running" });
+            }
+
+            println!("\n**Active Users:**");
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                let regular = users.iter().filter(|u| {
+                    u.uid.parse::<u32>().map(|uid| uid >= 1000).unwrap_or(false)
+                }).count();
+                println!("- {} regular user accounts", regular);
+                println!("- Run 'users' for complete list");
+            }
+
+            println!();
+            println!("{}", "### Evidence Collection".yellow());
+            println!("The following data should be preserved:");
+            println!("1. Complete snapshot: `snapshot incident-{}.md`", now.format("%Y%m%d-%H%M%S"));
+            println!("2. Security logs: `recent /var/log 100`");
+            println!("3. User activity: `users`");
+            println!("4. Service status: `services`");
+            println!();
+
+            println!("{}", "### Recommended Actions".yellow());
+            println!("1. Run `playbook incident` for investigation steps");
+            println!("2. Use `search <indicator> --content --path /var/log` for log analysis");
+            println!("3. Export evidence: `batch export /tmp/incident-evidence`");
+            println!("4. Generate forensics report: `report security`");
+            println!();
+        }
+
+        "change" => {
+            println!("\n{} {}", "📝".cyan(), "Change Request Documentation".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "## Change Request - System Modification".green().bold());
+            println!();
+
+            println!("**Date:** {}", chrono::Local::now().format("%Y-%m-%d"));
+            println!("**System:** {}", ctx.root);
+            println!("**Prepared by:** GuestKit Shell");
+            println!();
+
+            println!("{}", "### Current State Baseline".yellow());
+            println!("*Pre-change system snapshot*");
+            println!();
+            println!("```");
+            println!("Command: snapshot pre-change-baseline.md");
+            println!("```");
+            println!();
+
+            println!("{}", "### Proposed Changes".yellow());
+            println!("*[Describe changes to be made]*");
+            println!();
+
+            println!("{}", "### Risk Assessment".yellow());
+            println!("**Impact Level:** *[Low/Medium/High]*");
+            println!("**Affected Components:** *[List components]*");
+            println!("**Rollback Plan:** *[Describe rollback procedure]*");
+            println!();
+
+            println!("{}", "### Testing Plan".yellow());
+            println!("1. Pre-change verification: `verify all`");
+            println!("2. Implement changes");
+            println!("3. Post-change verification: `verify all`");
+            println!("4. Performance check: `bench all`");
+            println!("5. Health assessment: `doctor`");
+            println!();
+
+            println!("{}", "### Approval".yellow());
+            println!("**Requested by:** ___________");
+            println!("**Approved by:** ___________");
+            println!("**Date:** ___________");
+            println!();
+        }
+
+        "status" => {
+            println!("\n{} {}", "📊".cyan(), "Weekly Status Report".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "## Weekly System Status".green().bold());
+            println!();
+
+            let now = chrono::Local::now();
+            println!("**Report Period:** Week of {}", now.format("%Y-%m-%d"));
+            println!();
+
+            println!("{}", "### System Health".yellow());
+            println!("Run `doctor` for comprehensive health check");
+            println!();
+
+            println!("{}", "### Security Status".yellow());
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let features = vec![
+                    ("SELinux", &sec.selinux != "disabled"),
+                    ("AppArmor", sec.apparmor),
+                    ("Auditd", sec.auditd),
+                ];
+
+                let active = features.iter().filter(|(_, enabled)| *enabled).count();
+                println!("**Security Features Active:** {}/3", active);
+
+                for (name, enabled) in features {
+                    let status = if enabled { "✓" } else { "✗" };
+                    println!("  {} {}", status, name);
+                }
+            }
+            println!();
+
+            println!("{}", "### Activity Summary".yellow());
+            println!("- Shell sessions: {}", ctx.command_count);
+            println!("- Commands executed: {}", ctx.command_count);
+            println!("- Bookmarks created: {}", ctx.bookmarks.len());
+            println!();
+
+            println!("{}", "### Recommendations".yellow());
+            println!("1. Run monthly security audit: `auto run security-audit`");
+            println!("2. Update system documentation: `auto run documentation`");
+            println!("3. Review service status: `services`");
+            println!();
+
+            println!("{}", "### Next Week Goals".yellow());
+            println!("Use `goals suggest` to set improvement targets");
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown report type: {}", "Error:".red(), report_type);
+            println!("{} collaborate <report-type>", "Usage:".yellow());
+            return Ok(());
+        }
+    }
 
     Ok(())
 }
