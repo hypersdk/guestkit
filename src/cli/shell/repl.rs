@@ -278,6 +278,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "report" => {
                         commands::cmd_report(&mut ctx, args)
                     }
+                    "auto" => {
+                        commands::cmd_auto(&mut ctx, args)
+                    }
+                    "menu" => {
+                        commands::cmd_menu(&mut ctx, args)
+                    }
+                    "timeline" => {
+                        commands::cmd_timeline(&mut ctx, args)
+                    }
+                    "bench" => {
+                        commands::cmd_bench(&mut ctx, args)
+                    }
+                    "presets" => {
+                        commands::cmd_presets(&ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
