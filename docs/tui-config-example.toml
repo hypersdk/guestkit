@@ -1,0 +1,84 @@
+# GuestKit TUI Configuration
+# Location: ~/.config/guestkit/tui.toml
+#
+# This file contains user preferences for the GuestKit Terminal User Interface.
+# All settings are optional - if not specified, defaults will be used.
+
+[ui]
+# Show splash screen on startup (default: true)
+show_splash = true
+
+# Splash screen duration in milliseconds (default: 800)
+splash_duration_ms = 800
+
+# Show statistics bar at startup (default: true)
+# Toggle during session with 'i' key
+show_stats_bar = true
+
+# Color theme - currently only "default" is supported (default: "default")
+# Future: "light", "dark", "solarized", etc.
+theme = "default"
+
+# Enable mouse support for scrolling and clicking (default: true)
+mouse_enabled = true
+
+[behavior]
+# Default view to show on startup (default: "dashboard")
+# Options: "dashboard", "network", "packages", "services", "databases",
+#          "webservers", "security", "issues", "storage", "users",
+#          "kernel", "profiles"
+default_view = "dashboard"
+
+# Auto-refresh interval in seconds (default: 0 = disabled)
+# Set to 0 to disable automatic refresh
+# Example: 60 = refresh every 60 seconds
+auto_refresh_seconds = 0
+
+# Search case-sensitive by default (default: false)
+# Toggle during session with Ctrl+I
+search_case_sensitive = false
+
+# Search regex mode by default (default: false)
+# Toggle during session with Ctrl+R
+search_regex_mode = false
+
+# Maximum number of bookmarks (default: 20)
+max_bookmarks = 20
+
+# Number of lines to scroll for Page Up/Page Down (default: 10)
+page_scroll_lines = 10
+
+[keybindings]
+# Enable vim-style keybindings (j/k/g/G/Ctrl-u/Ctrl-d) (default: true)
+vim_mode = true
+
+# Enable Ctrl+P quick jump menu (default: true)
+quick_jump_enabled = true
+
+
+# ============================================================================
+# Example Configurations
+# ============================================================================
+
+# Example 1: Minimal splash, start at Services view
+# [ui]
+# show_splash = false
+# [behavior]
+# default_view = "services"
+
+# Example 2: Power user setup
+# [ui]
+# show_splash = false
+# mouse_enabled = false
+# [behavior]
+# default_view = "issues"
+# search_regex_mode = true
+# page_scroll_lines = 20
+
+# Example 3: Accessibility-focused
+# [ui]
+# splash_duration_ms = 2000
+# show_stats_bar = true
+# [behavior]
+# default_view = "dashboard"
+# auto_refresh_seconds = 60
