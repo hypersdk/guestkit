@@ -227,6 +227,12 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "tips" | "tip" => {
                         commands::cmd_tips(&ctx, args)
                     }
+                    "snapshot" | "snap" => {
+                        commands::cmd_snapshot(&mut ctx, args)
+                    }
+                    "diff" => {
+                        commands::cmd_diff(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
