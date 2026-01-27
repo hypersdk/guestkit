@@ -62,6 +62,7 @@ struct LogEntry {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 enum LogLevel {
     Error,
     Warning,

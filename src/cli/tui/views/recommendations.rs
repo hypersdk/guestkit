@@ -62,6 +62,7 @@ enum Impact {
 }
 
 impl Impact {
+    #[allow(dead_code)]
     fn label(&self) -> &'static str {
         match self {
             Impact::High => "High Impact",
@@ -80,6 +81,7 @@ impl Impact {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 enum Effort {
     High,
     Medium,
@@ -87,6 +89,7 @@ enum Effort {
 }
 
 impl Effort {
+    #[allow(dead_code)]
     fn label(&self) -> &'static str {
         match self {
             Effort::High => "High Effort",

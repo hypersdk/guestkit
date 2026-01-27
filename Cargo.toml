@@ -76,7 +76,6 @@ nt_hive2 = "4.2"
 # TODO: Add evtx crate when log feature conflicts are resolved
 
 # Report generation and export
-askama = "0.15"
 printpdf = "0.7"
 
 # Hashing for cache keys

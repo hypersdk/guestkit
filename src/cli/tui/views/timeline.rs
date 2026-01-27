@@ -88,7 +88,7 @@ fn draw_timeline_summary(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_timeline_events(f: &mut Frame, area: Rect, app: &App) {
-    let mut events = generate_timeline_events(app);
+    let events = generate_timeline_events(app);
 
     // Apply scrolling
     let visible_events: Vec<_> = events

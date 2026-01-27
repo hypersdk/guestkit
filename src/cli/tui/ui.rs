@@ -1196,7 +1196,7 @@ fn generate_timeline_details(app: &App) -> Vec<Line<'static>> {
     ]
 }
 
-fn generate_logs_details(app: &App) -> Vec<Line<'static>> {
+fn generate_logs_details(_app: &App) -> Vec<Line<'static>> {
     vec![
         Line::from(vec![
             Span::styled("System Logs", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
@@ -1240,7 +1240,7 @@ fn generate_logs_details(app: &App) -> Vec<Line<'static>> {
     ]
 }
 
-fn generate_recommendations_details(app: &App) -> Vec<Line<'static>> {
+fn generate_recommendations_details(_app: &App) -> Vec<Line<'static>> {
     vec![
         Line::from(vec![
             Span::styled("Smart Recommendations", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
@@ -1281,7 +1281,7 @@ fn generate_recommendations_details(app: &App) -> Vec<Line<'static>> {
     ]
 }
 
-fn generate_topology_details(app: &App) -> Vec<Line<'static>> {
+fn generate_topology_details(_app: &App) -> Vec<Line<'static>> {
     vec![
         Line::from(vec![
             Span::styled("System Topology", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))

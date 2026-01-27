@@ -10060,7 +10060,6 @@ pub fn cmd_baseline(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             // User accounts
             println!("{}", "User Accounts:".yellow().bold());
             if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
-                let total_user_info = user_info.len();
                 let privileged = user_info.iter().filter(|u| u.uid == "0").count();
                 println!("  Total users: {}", user_info.len());
                 println!("  Privileged accounts: {}", privileged);
