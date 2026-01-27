@@ -18,6 +18,14 @@ A pure Rust toolkit for VM disk inspection and manipulation with **beautiful emo
 - **🔄 Loop Device Primary** - Built-in support for RAW/IMG/ISO without kernel modules
 
 **🚀 Recent Enhancements (Q1 2026):**
+- **🎨 Enhanced Interactive TUI** - Professional terminal dashboard with visual analytics
+  - 20 visual widgets (14 gauges + 3 bar charts + 3 dashboard visualizations)
+  - Quick jump menu (Ctrl+P) with fuzzy search across all views
+  - Vim-style navigation (j/k/g/G) and full mouse support
+  - Visual progress bars and status gauges for all 8 major data views
+  - Real-time statistics: service status, network config, security risk distribution
+  - Package analytics, RAID health monitoring, user account analysis
+  - Database and web server ecosystem visualization
 - **🔧 Systemd Analysis Suite** - Comprehensive systemd inspection without running the VM
   - `systemd-journal` - Analyze journal logs with filtering, statistics, and error detection
   - `systemd-services` - Inspect services, dependencies, and generate Mermaid diagrams
@@ -301,6 +309,24 @@ guestctl inspect vm.raw  # Now uses loop device!
   - Performance tuning: swappiness, system metrics, bandwidth monitoring
   - Beautiful colored output with context-aware prompts
 
+- 🎨 **Interactive TUI (Terminal User Interface)** - Professional dashboard for VM inspection
+  - **Visual Analytics Dashboard** - 20 widgets across 8 major views with real-time statistics
+    - Services: Enabled/disabled and running/stopped status gauges
+    - Network: Interface configuration and DHCP adoption gauges
+    - Security: Critical/high/medium risk distribution with color-coded gauges
+    - Packages: Library and Python package statistics
+    - Storage: RAID array health monitoring with dynamic coloring
+    - Users: Account type distribution (root/system/normal) and shell analysis
+    - Databases: Database type distribution (PostgreSQL, MySQL, MongoDB, Redis, SQLite)
+    - Web Servers: Server type chart (Nginx, Apache, Caddy) with enabled status gauge
+  - **Quick Navigation** - Ctrl+P quick jump menu with fuzzy search across all 12 views
+  - **Vim-Style Keybindings** - j/k scroll, g/G top/bottom, Ctrl-u/Ctrl-d page up/down
+  - **Full Mouse Support** - Mouse wheel scrolling and tab clicking for seamless navigation
+  - **Advanced Search** - Toggle case-sensitive (Ctrl+I) and regex modes (Ctrl+R)
+  - **Refresh Tracking** - Live timestamp showing time since last inspection update
+  - **Professional Design** - Coral-terracotta orange theme with emoji icons and color coding
+  - **Usage:** `guestctl tui vm.qcow2` - Launch the interactive TUI dashboard
+
 - 🎯 **Killer Summary View** - Quick summary box showing OS product, architecture, hostname at a glance
   - Color-coded information: Green (OS product), Cyan (architecture), Blue (hostname)
   - Boxed display for immediate visual impact
@@ -487,6 +513,7 @@ guestctl cache-clear
 
 **Available Commands:**
 - `inspect` - Comprehensive VM inspection with profiles
+- `tui` - Interactive TUI dashboard with visual analytics (NEW!)
 - `interactive` - Full-featured REPL shell with 97+ commands for VM management
 - `diff` - Compare two disk images
 - `compare` - Compare multiple VMs against baseline
