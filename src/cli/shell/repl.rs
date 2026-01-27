@@ -257,6 +257,15 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "h" => {
                         commands::cmd_history_enhanced(&ctx, args)
                     }
+                    "wizard" | "wiz" => {
+                        commands::cmd_wizard(&mut ctx, args)
+                    }
+                    "scan" => {
+                        commands::cmd_scan(&mut ctx, args)
+                    }
+                    "compare" | "cmp" => {
+                        commands::cmd_compare(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
