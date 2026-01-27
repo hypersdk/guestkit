@@ -118,8 +118,129 @@ guestctl tui vm.qcow2
   - Linux (primary platform)
   - Terminal emulators: gnome-terminal, alacritty, kitty, wezterm
 
+## Configuration System ⚙️
+
+### Overview
+The TUI now supports user configuration through a TOML file located at `~/.config/guestkit/tui.toml`.
+
+### Configuration File
+Create a config file to customize your TUI experience:
+
+```toml
+[ui]
+show_splash = true              # Show splash screen on startup
+splash_duration_ms = 800        # Splash duration in milliseconds
+show_stats_bar = true           # Show statistics bar
+theme = "default"               # Color theme (currently only "default")
+mouse_enabled = true            # Enable mouse support
+
+[behavior]
+default_view = "dashboard"      # Initial view on startup
+auto_refresh_seconds = 0        # Auto-refresh interval (0 = disabled)
+search_case_sensitive = false   # Search case-sensitive by default
+search_regex_mode = false       # Search regex mode by default
+max_bookmarks = 20              # Maximum bookmarks
+page_scroll_lines = 10          # Lines to scroll with Page Up/Down
+
+[keybindings]
+vim_mode = true                 # Enable vim-style keybindings
+quick_jump_enabled = true       # Enable Ctrl+P quick jump menu
+```
+
+### Configuration Options
+
+#### UI Settings (`[ui]`)
+- **show_splash**: Enable/disable splash screen (default: `true`)
+- **splash_duration_ms**: How long to show splash in milliseconds (default: `800`)
+- **show_stats_bar**: Show/hide the statistics bar (default: `true`)
+- **theme**: Color theme selection (default: `"default"`)
+- **mouse_enabled**: Enable/disable mouse support (default: `true`)
+
+#### Behavior Settings (`[behavior]`)
+- **default_view**: Which view to show on startup (default: `"dashboard"`)
+  - Options: `"dashboard"`, `"network"`, `"packages"`, `"services"`, `"databases"`, `"webservers"`, `"security"`, `"issues"`, `"storage"`, `"users"`, `"kernel"`, `"profiles"`
+- **auto_refresh_seconds**: Auto-refresh interval in seconds (default: `0` = disabled)
+- **search_case_sensitive**: Search case-sensitive by default (default: `false`)
+- **search_regex_mode**: Enable regex search by default (default: `false`)
+- **max_bookmarks**: Maximum number of bookmarks (default: `20`)
+- **page_scroll_lines**: Lines to scroll with Page Up/Down (default: `10`)
+
+#### Keybindings Settings (`[keybindings]`)
+- **vim_mode**: Enable vim-style navigation (default: `true`)
+- **quick_jump_enabled**: Enable Ctrl+P quick jump menu (default: `true`)
+
+### Example Configurations
+
+**Minimal Splash, Start at Services:**
+```toml
+[ui]
+show_splash = false
+
+[behavior]
+default_view = "services"
+```
+
+**Power User Setup:**
+```toml
+[ui]
+show_splash = false
+mouse_enabled = false
+
+[behavior]
+default_view = "issues"
+search_regex_mode = true
+page_scroll_lines = 20
+```
+
+**Accessibility-Focused:**
+```toml
+[ui]
+splash_duration_ms = 2000
+show_stats_bar = true
+
+[behavior]
+default_view = "dashboard"
+auto_refresh_seconds = 60
+```
+
+### Configuration File Location
+The configuration file is automatically loaded from:
+- **Linux/macOS**: `~/.config/guestkit/tui.toml`
+- **Windows**: `%APPDATA%\guestkit\tui.toml`
+
+### Creating Configuration
+1. Create the directory:
+   ```bash
+   mkdir -p ~/.config/guestkit
+   ```
+
+2. Copy the example config:
+   ```bash
+   cp docs/tui-config-example.toml ~/.config/guestkit/tui.toml
+   ```
+
+3. Edit to your preferences:
+   ```bash
+   nano ~/.config/guestkit/tui.toml
+   ```
+
+### Default Behavior
+If no configuration file exists, the TUI uses built-in defaults:
+- Splash screen: enabled (800ms)
+- Mouse support: enabled
+- Vim keybindings: enabled
+- Default view: Dashboard
+- Auto-refresh: disabled
+- All settings match the defaults listed above
+
+### Configuration Validation
+- Invalid configuration files fall back to defaults
+- Unknown fields are ignored
+- Type mismatches use defaults for that setting
+
 ## Credits
 
 - ASCII art logo created for GuestKit branding
 - Color scheme inspired by Pantone 7416 C (Coral/Terracotta)
 - Vim keybindings follow standard vim conventions
+- Configuration system uses TOML for human-friendly editing

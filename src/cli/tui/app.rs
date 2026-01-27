@@ -11,6 +11,7 @@ use guestctl::Guestfs;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use super::config::TuiConfig;
 use crate::cli::profiles::{
     ComplianceProfile, HardeningProfile, InspectionProfile, MigrationProfile, PerformanceProfile,
     ProfileReport, SecurityProfile,
@@ -199,6 +200,9 @@ pub struct App {
     pub performance_profile: Option<ProfileReport>,
     pub compliance_profile: Option<ProfileReport>,
     pub hardening_profile: Option<ProfileReport>,
+
+    // Configuration
+    pub config: TuiConfig,
 }
 
 impl App {
@@ -304,20 +308,39 @@ impl App {
 
         guestfs.shutdown()?;
 
+        // Load configuration
+        let config = TuiConfig::load();
+
+        // Determine initial view from config
+        let current_view = match config.behavior.default_view.as_str() {
+            "network" => View::Network,
+            "packages" => View::Packages,
+            "services" => View::Services,
+            "databases" => View::Databases,
+            "webservers" => View::WebServers,
+            "security" => View::Security,
+            "issues" => View::Issues,
+            "storage" => View::Storage,
+            "users" => View::Users,
+            "kernel" => View::Kernel,
+            "profiles" => View::Profiles,
+            _ => View::Dashboard, // default to Dashboard
+        };
+
         Ok(Self {
-            current_view: View::Dashboard,
+            current_view,
             show_help: false,
             searching: false,
             search_query: String::new(),
-            search_case_sensitive: false,
-            search_regex_mode: false,
+            search_case_sensitive: config.behavior.search_case_sensitive,
+            search_regex_mode: config.behavior.search_regex_mode,
             scroll_offset: 0,
             selected_index: 0,
             show_export_menu: false,
             selected_profile_tab: 0,
             show_detail: false,
             sort_mode: SortMode::Default,
-            show_stats_bar: true,
+            show_stats_bar: config.ui.show_stats_bar,
             bookmarks: Vec::new(),
             search_history: Vec::new(),
             notification: None,
@@ -365,6 +388,8 @@ impl App {
             performance_profile,
             compliance_profile,
             hardening_profile,
+
+            config,
         })
     }
 

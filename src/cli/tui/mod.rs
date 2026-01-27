@@ -2,6 +2,7 @@
 //! TUI (Terminal User Interface) module for interactive VM inspection
 
 pub mod app;
+pub mod config;
 pub mod events;
 pub mod splash;
 pub mod ui;
@@ -26,19 +27,30 @@ pub use app::App;
 
 /// Run the TUI application
 pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
+    // Load configuration first
+    let config = config::TuiConfig::load();
+
     // Setup terminal first for splash screen
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
-        .context("Failed to enter alternate screen")?;
+
+    // Enable mouse capture based on config
+    if config.ui.mouse_enabled {
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
+            .context("Failed to enter alternate screen")?;
+    } else {
+        execute!(stdout, EnterAlternateScreen)
+            .context("Failed to enter alternate screen")?;
+    }
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
 
-    // Show splash screen
-    terminal.draw(|f| splash::draw_splash(f))?;
-
-    // Small delay to show splash
-    std::thread::sleep(Duration::from_millis(800));
+    // Show splash screen if enabled
+    if config.ui.show_splash {
+        terminal.draw(|f| splash::draw_splash(f))?;
+        std::thread::sleep(Duration::from_millis(config.ui.splash_duration_ms));
+    }
 
     // Show loading spinner during inspection with coral-terracotta orange theme
     let spinner = ProgressBar::new_spinner();
@@ -63,12 +75,23 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
 
     // Restore terminal
     disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )
-    .context("Failed to leave alternate screen")?;
+
+    // Disable mouse capture if it was enabled
+    if config.ui.mouse_enabled {
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )
+        .context("Failed to leave alternate screen")?;
+    } else {
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen
+        )
+        .context("Failed to leave alternate screen")?;
+    }
+
     terminal.show_cursor().context("Failed to show cursor")?;
 
     result
