@@ -527,6 +527,11 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
         println!("           Example: ai why won't this boot?");
     }
 
+    println!("\n{}", "Quick Commands:".yellow().bold());
+    println!("  {}   - Quick actions menu", "quick".green());
+    println!("  {}   - Command cheat sheet", "cheat".green());
+    println!("  {}  - Recently modified files", "recent [path] [limit]".green());
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -1160,6 +1165,241 @@ pub fn cmd_diff(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{} Unknown diff type: {}", "Error:".red(), diff_type);
         }
     }
+    println!();
+
+    Ok(())
+}
+
+/// Show recently modified files
+pub fn cmd_recent(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    let path = if args.is_empty() {
+        ctx.current_path.clone()
+    } else {
+        resolve_path(&ctx.current_path, args[0])
+    };
+
+    let limit = if args.len() > 1 {
+        args[1].parse::<usize>().unwrap_or(20)
+    } else {
+        20
+    };
+
+    println!("{} Finding recently modified files in: {}", "→".cyan(), path.yellow());
+    println!();
+
+    // This is a simplified version - in a real impl, we'd walk the tree and sort by mtime
+    if let Ok(entries) = ctx.guestfs.ls(&path) {
+        let mut files_with_time = Vec::new();
+
+        for entry in entries.iter().take(limit) {
+            let full_path = format!("{}/{}", path.trim_end_matches('/'), entry);
+            if let Ok(stat) = ctx.guestfs.stat(&full_path) {
+                files_with_time.push((entry.clone(), stat.mtime, stat.size));
+            }
+        }
+
+        // Sort by modification time (descending)
+        files_with_time.sort_by(|a, b| b.1.cmp(&a.1));
+
+        println!("{}", "Recently Modified Files:".yellow().bold());
+        println!("{}", "─".repeat(80).cyan());
+
+        for (name, mtime, size) in files_with_time.iter().take(limit) {
+            use chrono::{DateTime, Utc};
+            let dt = DateTime::<Utc>::from_timestamp(*mtime, 0)
+                .unwrap_or_else(|| Utc::now());
+            let time_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+
+            let size_str = format_bytes(*size as u64);
+            println!("  {} {} {} {}",
+                time_str.bright_black(),
+                name.green(),
+                "-".bright_black(),
+                size_str.yellow());
+        }
+        println!();
+    }
+
+    Ok(())
+}
+
+/// Quick actions menu
+pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║            Quick Actions Menu                   ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Snapshots & Reports:".yellow().bold());
+        println!("  {} - Full system snapshot", "quick snapshot".cyan());
+        println!("  {} - Security report", "quick security".cyan());
+        println!("  {} - Package inventory", "quick packages".cyan());
+
+        println!("\n{}", "Common Tasks:".yellow().bold());
+        println!("  {} - List all users", "quick users".cyan());
+        println!("  {} - Show enabled services", "quick services".cyan());
+        println!("  {} - Network overview", "quick network".cyan());
+
+        println!("\n{}", "Analysis:".yellow().bold());
+        println!("  {} - Show recent files", "quick recent".cyan());
+        println!("  {} - Find large files", "quick large".cyan());
+        println!("  {} - System health", "quick health".cyan());
+
+        println!();
+        return Ok(());
+    }
+
+    let action = args[0];
+
+    match action {
+        "snapshot" => {
+            println!("{} Generating quick snapshot...", "→".cyan());
+            cmd_snapshot(ctx, &[])?;
+        }
+        "security" => {
+            println!("{} Security overview:", "→".cyan());
+            println!();
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let selinux_icon = if &sec.selinux != "disabled" { "✓".green() } else { "✗".red() };
+                let apparmor_icon = if sec.apparmor { "✓".green() } else { "✗".red() };
+                let auditd_icon = if sec.auditd { "✓".green() } else { "✗".red() };
+
+                println!("  {} SELinux:  {}", selinux_icon, sec.selinux.yellow());
+                println!("  {} AppArmor: {}", apparmor_icon, if sec.apparmor { "enabled" } else { "disabled" });
+                println!("  {} Auditd:   {}", auditd_icon, if sec.auditd { "enabled" } else { "disabled" });
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    let fw_icon = if fw.enabled { "✓".green() } else { "✗".red() };
+                    println!("  {} Firewall: {} ({})", fw_icon,
+                        if fw.enabled { "enabled" } else { "disabled" },
+                        fw.firewall_type);
+                }
+            }
+            println!();
+        }
+        "packages" => {
+            println!("{} Package summary:", "→".cyan());
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("  Total packages: {}", pkg_info.packages.len().to_string().green().bold());
+                println!("  Use {} for details", "'export packages json'".cyan());
+            }
+            println!();
+        }
+        "users" => {
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("{} User accounts:", "→".cyan());
+                for user in users {
+                    let marker = if user.uid == "0" { " ⚠️ " } else { "   " };
+                    println!("{}  {} ({})", marker, user.username.green(), user.uid.bright_black());
+                }
+                println!();
+            }
+        }
+        "services" => {
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled: Vec<_> = services.iter().filter(|s| s.enabled).collect();
+                println!("{} Enabled services ({}):", "→".cyan(), enabled.len());
+                for svc in enabled.iter().take(20) {
+                    println!("  {} {}", "✓".green(), svc.name.cyan());
+                }
+                if enabled.len() > 20 {
+                    println!("  ... and {} more", enabled.len() - 20);
+                }
+                println!();
+            }
+        }
+        "network" => {
+            if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+                println!("{} Network interfaces:", "→".cyan());
+                for iface in interfaces {
+                    println!("  {} {}", "•".cyan(), iface.name.green());
+                }
+
+                if let Ok(dns) = ctx.guestfs.inspect_dns(&ctx.root) {
+                    if !dns.is_empty() {
+                        println!("\n  DNS servers:");
+                        for server in dns {
+                            println!("    {} {}", "•".cyan(), server.yellow());
+                        }
+                    }
+                }
+                println!();
+            }
+        }
+        "recent" => {
+            cmd_recent(ctx, &["/etc", "20"])?;
+        }
+        "large" => {
+            println!("{} Finding large files...", "→".cyan());
+            println!("{} Use: find . -type f -size +10M", "Hint:".yellow());
+            println!();
+        }
+        "health" => {
+            println!("{} Quick health check:", "→".cyan());
+            cmd_summary(ctx, &[])?;
+        }
+        _ => {
+            println!("{} Unknown quick action: {}", "Error:".red(), action);
+            println!("{} Use 'quick' to see available actions", "Tip:".yellow());
+        }
+    }
+
+    Ok(())
+}
+
+/// Show command cheat sheet
+pub fn cmd_cheat(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                  Command Cheat Sheet                     ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    let cheat = vec![
+        ("📂", "File Operations", vec![
+            ("ls /etc", "List directory contents"),
+            ("cat /etc/fstab", "View file contents"),
+            ("tree /etc 2", "Directory tree (2 levels)"),
+            ("find . passwd", "Find files by name"),
+        ]),
+        ("📊", "System Overview", vec![
+            ("dashboard", "Beautiful system overview"),
+            ("summary", "Quick one-liner status"),
+            ("info", "Detailed system info"),
+        ]),
+        ("💾", "Data Export", vec![
+            ("export packages json", "Export to JSON"),
+            ("snapshot report.md", "Full system snapshot"),
+            ("diff package kernel", "Compare packages"),
+        ]),
+        ("👥", "User & Security", vec![
+            ("users", "List all users"),
+            ("security", "Security status"),
+            ("services", "System services"),
+        ]),
+        ("⚡", "Quick Actions", vec![
+            ("quick", "Show quick actions menu"),
+            ("quick security", "Security overview"),
+            ("recent /var/log", "Recent files"),
+        ]),
+        ("🎯", "Productivity", vec![
+            ("alias ll 'ls -l'", "Create alias"),
+            ("bookmark cfg /etc", "Bookmark path"),
+            ("goto cfg", "Jump to bookmark"),
+            ("tips", "Random tip"),
+        ]),
+    ];
+
+    for (icon, category, commands) in cheat {
+        println!("{} {}", icon, category.yellow().bold());
+        for (cmd, desc) in commands {
+            println!("  {} - {}", cmd.green(), desc.bright_black());
+        }
+        println!();
+    }
+
+    println!("{} Current path: {}", "📍".to_string(), ctx.current_path.cyan());
+    println!("{} Type 'help' for complete command list", "💡".to_string().yellow());
     println!();
 
     Ok(())

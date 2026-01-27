@@ -233,6 +233,15 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "diff" => {
                         commands::cmd_diff(&mut ctx, args)
                     }
+                    "recent" => {
+                        commands::cmd_recent(&mut ctx, args)
+                    }
+                    "quick" => {
+                        commands::cmd_quick(&mut ctx, args)
+                    }
+                    "cheat" => {
+                        commands::cmd_cheat(&ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
