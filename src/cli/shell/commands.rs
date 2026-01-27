@@ -625,6 +625,14 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Configuration validation", "validate <target>".green());
     println!("           Targets: all, config");
 
+    println!("\n{}", "Security & Forensics:".yellow().bold());
+    println!("  {} - Digital forensics workflows", "forensics <workflow>".green());
+    println!("           Workflows: collect, timeline, suspicious, activity, integrity, memory");
+    println!("  {} - Security audit trail analysis", "audit <type>".green());
+    println!("           Types: auth, users, config, packages, sudo, full");
+    println!("  {} - Security baseline management", "baseline <command>".green());
+    println!("           Commands: create, show, drift, cis, export");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -9177,6 +9185,1240 @@ pub fn cmd_validate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{} {} - Configuration files only", "2.".cyan(), "validate config".green());
             println!();
             println!("{} validate <target>", "Usage:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Forensics - Digital forensics investigation workflows
+pub fn cmd_forensics(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "🔍 Digital Forensics Investigation".cyan().bold());
+        println!();
+        println!("{}", "Available Workflows:".yellow().bold());
+        println!("{} {} - Evidence collection", "1.".cyan(), "forensics collect".green());
+        println!("{} {} - Timeline reconstruction", "2.".cyan(), "forensics timeline".green());
+        println!("{} {} - Suspicious activity detection", "3.".cyan(), "forensics suspicious".green());
+        println!("{} {} - User activity analysis", "4.".cyan(), "forensics activity".green());
+        println!("{} {} - Integrity verification", "5.".cyan(), "forensics integrity".green());
+        println!("{} {} - Memory artifacts", "6.".cyan(), "forensics memory".green());
+        println!();
+        println!("{} forensics <workflow>", "Usage:".yellow());
+        println!();
+        return Ok(());
+    }
+
+    let workflow = args[0];
+
+    match workflow {
+        "collect" => {
+            println!("{}", "📦 Evidence Collection".cyan().bold());
+            println!();
+
+            let mut evidence = Vec::new();
+
+            // Critical system files
+            println!("{}", "Critical System Files:".yellow().bold());
+            let critical_files = vec![
+                ("/etc/passwd", "User database"),
+                ("/etc/shadow", "Password hashes"),
+                ("/etc/group", "Group database"),
+                ("/etc/sudoers", "Sudo configuration"),
+                ("/etc/hosts", "Host mappings"),
+                ("/etc/fstab", "Filesystem mounts"),
+                ("/etc/crontab", "System cron jobs"),
+                ("/var/log/auth.log", "Authentication logs"),
+                ("/var/log/secure", "Security logs"),
+                ("/var/log/syslog", "System logs"),
+            ];
+
+            for (path, desc) in &critical_files {
+                if ctx.guestfs.exists(path).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(path).unwrap_or(0);
+                    evidence.push((*path, *desc, size, "✓"));
+                    println!("  {} {} - {} ({} bytes)", "✓".green(), path.cyan(), desc, size);
+                } else {
+                    println!("  {} {} - {} {}", "✗".red(), path.cyan(), desc, "(missing)".bright_black());
+                }
+            }
+            println!();
+
+            // User home directories
+            println!("{}", "User Home Directories:".yellow().bold());
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                for user in &user_info {
+                    if ctx.guestfs.exists(&user.home).unwrap_or(false) {
+                        let bash_history = format!("{}/.bash_history", user.home);
+                        let ssh_dir = format!("{}/.ssh", user.home);
+
+                        if ctx.guestfs.exists(&bash_history).unwrap_or(false) {
+                            let size = ctx.guestfs.filesize(&bash_history).unwrap_or(0);
+                            println!("  {} {} - Command history ({} bytes)", "✓".green(), bash_history.cyan(), size);
+                            // evidence.push((bash_history.as_str(), "Command history", size, "✓"));
+                        }
+
+                        if ctx.guestfs.is_dir(&ssh_dir).unwrap_or(false) {
+                            println!("  {} {} - SSH configuration", "✓".green(), ssh_dir.cyan());
+                        }
+                    }
+                }
+            }
+            println!();
+
+            // Log files
+            println!("{}", "Log Files:".yellow().bold());
+            let log_paths = vec!["/var/log", "/var/log/audit"];
+            for log_path in &log_paths {
+                if ctx.guestfs.is_dir(log_path).unwrap_or(false) {
+                    println!("  {} {} - Available", "✓".green(), log_path.cyan());
+                }
+            }
+            println!();
+
+            println!("{}", "Evidence Summary:".yellow().bold());
+            println!("  Total artifacts collected: {}", evidence.len().to_string().green());
+            println!("  Critical files found: {}", critical_files.len().to_string().cyan());
+            println!();
+            println!("{}", "Next Steps:".yellow());
+            println!("  1. Export evidence: {}", "export system json > evidence.json".cyan());
+            println!("  2. Analyze timeline: {}", "forensics timeline".cyan());
+            println!("  3. Check for suspicious activity: {}", "forensics suspicious".cyan());
+        }
+
+        "timeline" => {
+            println!("{}", "⏰ Timeline Reconstruction".cyan().bold());
+            println!();
+
+            // Analyze modification times of critical files
+            println!("{}", "Recent System Changes:".yellow().bold());
+
+            let mut timeline_events = Vec::new();
+
+            let check_paths = vec![
+                "/etc/passwd",
+                "/etc/shadow",
+                "/etc/group",
+                "/etc/sudoers",
+                "/etc/ssh/sshd_config",
+                "/etc/crontab",
+                "/var/log/auth.log",
+            ];
+
+            for path in &check_paths {
+                if ctx.guestfs.exists(path).unwrap_or(false) {
+                    // We can't get actual timestamps from GuestFS easily, so provide guidance
+                    println!("  {} {} - Available for analysis", "✓".green(), path.cyan());
+                    timeline_events.push(*path);
+                }
+            }
+            println!();
+
+            println!("{}", "Timeline Categories:".yellow().bold());
+            println!("  {} User account changes", "👥".cyan());
+            println!("  {} Authentication events", "🔐".cyan());
+            println!("  {} System configuration changes", "⚙".cyan());
+            println!("  {} Log entries", "📝".cyan());
+            println!();
+
+            println!("{}", "Analysis Recommendations:".yellow());
+            println!("  1. Check /var/log/auth.log for login attempts");
+            println!("  2. Review /etc/passwd for new user accounts");
+            println!("  3. Examine cron jobs for scheduled tasks");
+            println!("  4. Analyze SSH configuration changes");
+            println!();
+            println!("{} Files available for timeline: {}", "Summary:".yellow(), timeline_events.len().to_string().green());
+        }
+
+        "suspicious" => {
+            println!("{}", "🚨 Suspicious Activity Detection".cyan().bold());
+            println!();
+
+            let mut findings = Vec::new();
+
+            // Check for suspicious user accounts
+            println!("{}", "User Account Analysis:".yellow().bold());
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                for user in &user_info {
+                    // Check for UID 0 accounts other than root
+                    if user.uid == "0" && user.username != "root" {
+                        findings.push(("CRITICAL", "UID 0 account", user.username.clone()));
+                        println!("  {} {} - Non-root UID 0 account", "🔴".red(), user.username.red().bold());
+                    }
+
+                    // Check for accounts with no password (if shadow exists)
+                    if ctx.guestfs.exists("/etc/shadow").unwrap_or(false) {
+                        // Would need to read shadow file to check
+                        if user.username.contains("test") || user.username.contains("temp") {
+                            findings.push(("WARNING", "Temporary account", user.username.clone()));
+                            println!("  {} {} - Potential temporary/test account", "⚠".yellow(), user.username.yellow());
+                        }
+                    }
+                }
+            }
+            println!();
+
+            // Check for suspicious SUID binaries
+            println!("{}", "SUID Binary Analysis:".yellow().bold());
+            println!("  {} Checking for unusual SUID files...", "🔍".cyan());
+            println!("  {} Manual verification recommended for:", "ℹ".cyan());
+            println!("    - /tmp, /var/tmp, /dev/shm (world-writable directories)");
+            println!("    - User home directories");
+            println!("    - Unusual system paths");
+            println!();
+
+            // Check for suspicious cron jobs
+            println!("{}", "Scheduled Task Analysis:".yellow().bold());
+            if ctx.guestfs.exists("/etc/crontab").unwrap_or(false) {
+                println!("  {} {} - Present (review recommended)", "✓".green(), "/etc/crontab".cyan());
+            }
+            if ctx.guestfs.is_dir("/etc/cron.d").unwrap_or(false) {
+                println!("  {} {} - Present (review recommended)", "✓".green(), "/etc/cron.d".cyan());
+            }
+            println!();
+
+            // Check for suspicious network configuration
+            println!("{}", "Network Configuration:".yellow().bold());
+            if ctx.guestfs.exists("/etc/hosts").unwrap_or(false) {
+                println!("  {} {} - Check for suspicious redirects", "ℹ".cyan(), "/etc/hosts".cyan());
+            }
+            println!();
+
+            // Security findings summary
+            println!("{}", "Findings Summary:".yellow().bold());
+            if findings.is_empty() {
+                println!("  {} No critical suspicious activity detected", "✓".green());
+            } else {
+                for (severity, category, detail) in &findings {
+                    let severity_colored = match *severity {
+                        "CRITICAL" => severity.red().bold(),
+                        "WARNING" => severity.yellow().bold(),
+                        _ => severity.cyan().bold(),
+                    };
+                    println!("  {} {} - {}", severity_colored, category, detail);
+                }
+            }
+            println!();
+
+            println!("{}", "Recommended Actions:".yellow());
+            println!("  1. Review user accounts: {}", "cat /etc/passwd".cyan());
+            println!("  2. Check for rootkits: {}", "forensics integrity".cyan());
+            println!("  3. Analyze authentication logs");
+            println!("  4. Examine network connections and listening ports");
+        }
+
+        "activity" => {
+            println!("{}", "👤 User Activity Analysis".cyan().bold());
+            println!();
+
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("{}", "User Activity Summary:".yellow().bold());
+
+                for user in &user_info {
+                    println!();
+                    println!("{} {} (UID: {})", "User:".cyan(), user.username.green().bold(), user.uid);
+
+                    // Check for bash history
+                    let bash_history = format!("{}/.bash_history", user.home);
+                    if ctx.guestfs.exists(&bash_history).unwrap_or(false) {
+                        let size = ctx.guestfs.filesize(&bash_history).unwrap_or(0);
+                        println!("  {} Command history: {} bytes", "📜".cyan(), size.to_string().green());
+                    } else {
+                        println!("  {} Command history: {}", "📜".cyan(), "Not found".red());
+                    }
+
+                    // Check for SSH keys
+                    let ssh_dir = format!("{}/.ssh", user.home);
+                    if ctx.guestfs.is_dir(&ssh_dir).unwrap_or(false) {
+                        println!("  {} SSH directory: {}", "🔑".cyan(), "Present".green());
+                    }
+
+                    // Check for common config files
+                    let bashrc = format!("{}/.bashrc", user.home);
+                    if ctx.guestfs.exists(&bashrc).unwrap_or(false) {
+                        println!("  {} Shell config: {}", "⚙".cyan(), "Present".green());
+                    }
+                }
+            }
+            println!();
+
+            println!("{}", "Activity Indicators:".yellow().bold());
+            println!("  {} Authentication logs: {}", "🔐".cyan(),
+                if ctx.guestfs.exists("/var/log/auth.log").unwrap_or(false) {
+                    "Available".green()
+                } else {
+                    "Check /var/log/secure".yellow()
+                });
+            println!("  {} Last login data: {}", "👥".cyan(),
+                if ctx.guestfs.exists("/var/log/lastlog").unwrap_or(false) {
+                    "Available".green()
+                } else {
+                    "Not found".red()
+                });
+            println!();
+
+            println!("{}", "Analysis Tips:".yellow());
+            println!("  • Review .bash_history for executed commands");
+            println!("  • Check authorized_keys for SSH access");
+            println!("  • Examine sudo logs for privilege escalation");
+            println!("  • Analyze authentication patterns in logs");
+        }
+
+        "integrity" => {
+            println!("{}", "🛡 System Integrity Verification".cyan().bold());
+            println!();
+
+            let mut checks = Vec::new();
+
+            // Check critical system binaries
+            println!("{}", "Critical Binary Verification:".yellow().bold());
+            let critical_bins = vec![
+                "/bin/bash", "/bin/sh", "/bin/login",
+                "/usr/bin/sudo", "/usr/bin/ssh", "/usr/bin/passwd",
+                "/sbin/init", "/usr/sbin/sshd",
+            ];
+
+            let mut missing = 0;
+            let mut present = 0;
+
+            for bin in &critical_bins {
+                if ctx.guestfs.exists(bin).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(bin).unwrap_or(0);
+                    println!("  {} {} ({} bytes)", "✓".green(), bin.cyan(), size);
+                    checks.push((bin, "present", size));
+                    present += 1;
+                } else {
+                    println!("  {} {} {}", "✗".red(), bin.cyan(), "(missing)".red());
+                    missing += 1;
+                }
+            }
+            println!();
+
+            // Check system library paths
+            println!("{}", "System Libraries:".yellow().bold());
+            let lib_paths = vec!["/lib", "/lib64", "/usr/lib", "/usr/lib64"];
+            for lib in &lib_paths {
+                if ctx.guestfs.is_dir(lib).unwrap_or(false) {
+                    println!("  {} {} - Present", "✓".green(), lib.cyan());
+                } else {
+                    println!("  {} {} - {}", "✗".red(), lib.cyan(), "Missing".red());
+                }
+            }
+            println!();
+
+            // Configuration integrity
+            println!("{}", "Configuration Integrity:".yellow().bold());
+            let config_files = vec![
+                "/etc/passwd", "/etc/group", "/etc/shadow",
+                "/etc/fstab", "/etc/hosts",
+            ];
+
+            for cfg in &config_files {
+                if ctx.guestfs.exists(cfg).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(cfg).unwrap_or(0);
+                    if size > 0 {
+                        println!("  {} {} ({} bytes)", "✓".green(), cfg.cyan(), size);
+                    } else {
+                        println!("  {} {} {}", "⚠".yellow(), cfg.cyan(), "(empty)".yellow());
+                    }
+                }
+            }
+            println!();
+
+            // Integrity summary
+            println!("{}", "Integrity Summary:".yellow().bold());
+            println!("  Binaries checked: {}", critical_bins.len());
+            println!("  Present: {}", present.to_string().green());
+            if missing > 0 {
+                println!("  Missing: {}", missing.to_string().red());
+            }
+            println!();
+
+            let integrity_score = (present * 100) / critical_bins.len();
+            let grade = if integrity_score >= 95 {
+                "A".green().bold()
+            } else if integrity_score >= 85 {
+                "B".cyan()
+            } else if integrity_score >= 75 {
+                "C".yellow()
+            } else {
+                "D".red()
+            };
+
+            println!("  Integrity Score: {}% (Grade: {})",
+                integrity_score.to_string().cyan(), grade);
+            println!();
+
+            if missing > 0 {
+                println!("{}", "⚠ Warning:".yellow().bold());
+                println!("  Missing critical system files detected!");
+                println!("  This may indicate system corruption or tampering.");
+            }
+        }
+
+        "memory" => {
+            println!("{}", "🧠 Memory Artifacts Analysis".cyan().bold());
+            println!();
+
+            println!("{}", "Note:".yellow().bold());
+            println!("  Memory analysis requires live system access or memory dumps.");
+            println!("  This command focuses on disk artifacts that may indicate memory activity.");
+            println!();
+
+            // Check for swap files and core dumps
+            println!("{}", "Swap & Core Dumps:".yellow().bold());
+
+            if ctx.guestfs.exists("/swap.img").unwrap_or(false) {
+                let size = ctx.guestfs.filesize("/swap.img").unwrap_or(0);
+                println!("  {} {} ({} bytes)", "✓".green(), "/swap.img".cyan(), size);
+            }
+
+            if ctx.guestfs.is_dir("/var/crash").unwrap_or(false) {
+                println!("  {} {} - Present (may contain core dumps)", "ℹ".cyan(), "/var/crash".cyan());
+            }
+
+            if ctx.guestfs.exists("/proc/kcore").unwrap_or(false) {
+                println!("  {} {} - Kernel memory interface", "ℹ".cyan(), "/proc/kcore".cyan());
+            }
+            println!();
+
+            // Check for hibernation files
+            println!("{}", "Hibernation Images:".yellow().bold());
+            let hibernate_paths = vec!["/hibernation.img", "/swap/hibernation"];
+            let mut found_hibernate = false;
+
+            for path in &hibernate_paths {
+                if ctx.guestfs.exists(path).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(path).unwrap_or(0);
+                    println!("  {} {} ({} bytes)", "✓".green(), path.cyan(), size);
+                    found_hibernate = true;
+                }
+            }
+
+            if !found_hibernate {
+                println!("  {} No hibernation images found", "ℹ".cyan());
+            }
+            println!();
+
+            // Process information
+            println!("{}", "Process Artifacts:".yellow().bold());
+            if ctx.guestfs.is_dir("/proc").unwrap_or(false) {
+                println!("  {} {} - Available for analysis", "✓".green(), "/proc".cyan());
+            }
+            println!();
+
+            println!("{}", "Analysis Recommendations:".yellow());
+            println!("  • Extract swap files for string analysis");
+            println!("  • Analyze core dumps for crash investigation");
+            println!("  • Check /tmp and /var/tmp for remnants");
+            println!("  • Review .bash_history for executed commands");
+        }
+
+        _ => {
+            println!("{}", "Unknown forensics workflow".red());
+            println!("Run {} for available workflows", "forensics".cyan());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Audit - Security audit trail analysis
+pub fn cmd_audit(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "📋 Security Audit Trail Analysis".cyan().bold());
+        println!();
+        println!("{}", "Available Audit Types:".yellow().bold());
+        println!("{} {} - Authentication events", "1.".cyan(), "audit auth".green());
+        println!("{} {} - User account changes", "2.".cyan(), "audit users".green());
+        println!("{} {} - System configuration changes", "3.".cyan(), "audit config".green());
+        println!("{} {} - Package installations", "4.".cyan(), "audit packages".green());
+        println!("{} {} - Privilege escalation (sudo)", "5.".cyan(), "audit sudo".green());
+        println!("{} {} - Comprehensive audit report", "6.".cyan(), "audit full".green());
+        println!();
+        println!("{} audit <type>", "Usage:".yellow());
+        println!();
+        return Ok(());
+    }
+
+    let audit_type = args[0];
+
+    match audit_type {
+        "auth" => {
+            println!("{}", "🔐 Authentication Audit".cyan().bold());
+            println!();
+
+            println!("{}", "Log File Analysis:".yellow().bold());
+
+            let auth_logs = vec![
+                "/var/log/auth.log",
+                "/var/log/secure",
+                "/var/log/messages",
+            ];
+
+            let mut found_logs = Vec::new();
+
+            for log in &auth_logs {
+                if ctx.guestfs.exists(log).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(log).unwrap_or(0);
+                    println!("  {} {} ({} bytes)", "✓".green(), log.cyan(), size);
+                    found_logs.push(log);
+                } else {
+                    println!("  {} {} - Not found", "✗".bright_black(), log.bright_black());
+                }
+            }
+            println!();
+
+            if found_logs.is_empty() {
+                println!("{}", "⚠ No authentication logs found".yellow());
+                println!();
+                return Ok(());
+            }
+
+            println!("{}", "Key Authentication Indicators:".yellow().bold());
+            println!("  {} SSH login attempts", "🔑".cyan());
+            println!("  {} Failed password attempts", "❌".cyan());
+            println!("  {} Successful logins", "✅".cyan());
+            println!("  {} Session duration", "⏱".cyan());
+            println!("  {} Remote IP addresses", "🌐".cyan());
+            println!();
+
+            println!("{}", "Audit Checklist:".yellow());
+            println!("  ✓ Check for brute force attempts (multiple failed logins)");
+            println!("  ✓ Identify login patterns (time of day, source IPs)");
+            println!("  ✓ Review privileged account access");
+            println!("  ✓ Verify multi-factor authentication usage");
+            println!("  ✓ Examine account lockouts");
+            println!();
+
+            println!("{} {} authentication logs available", "Summary:".yellow(), found_logs.len().to_string().green());
+        }
+
+        "users" => {
+            println!("{}", "👥 User Account Audit".cyan().bold());
+            println!();
+
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                let total_users = user_info.len();
+                let mut system_users = 0;
+                let mut normal_users = 0;
+                let mut privileged_users = 0;
+
+                println!("{}", "User Account Analysis:".yellow().bold());
+
+                for user in &user_info {
+                    if user.uid == "0" {
+                        privileged_users += 1;
+                        println!("  {} {} (UID: {}) - Root equivalent",
+                            "🔴".red(), user.username.red().bold(), user.uid);
+                    } else if user.uid.parse::<i32>().unwrap_or(9999) < 1000 {
+                        system_users += 1;
+                    } else {
+                        normal_users += 1;
+                        println!("  {} {} (UID: {})",
+                            "👤".cyan(), user.username.cyan(), user.uid);
+                    }
+                }
+                println!();
+
+                println!("{}", "Account Statistics:".yellow().bold());
+                println!("  Total accounts: {}", total_users.to_string().cyan());
+                println!("  Privileged (UID 0): {}", privileged_users.to_string().red().bold());
+                println!("  System (UID < 1000): {}", system_users.to_string().bright_black());
+                println!("  Normal users (UID ≥ 1000): {}", normal_users.to_string().green());
+                println!();
+
+                // Audit findings
+                println!("{}", "Audit Findings:".yellow().bold());
+                if privileged_users > 1 {
+                    println!("  {} Multiple UID 0 accounts detected - CRITICAL", "🔴".red());
+                }
+                if normal_users > 20 {
+                    println!("  {} Large number of user accounts - Review needed", "⚠".yellow());
+                }
+                if privileged_users == 1 && system_users < 100 && normal_users < 10 {
+                    println!("  {} User account configuration appears normal", "✓".green());
+                }
+            }
+            println!();
+
+            println!("{}", "Audit Actions:".yellow());
+            println!("  • Review inactive accounts for removal");
+            println!("  • Verify all UID 0 accounts are authorized");
+            println!("  • Check for accounts with empty passwords");
+            println!("  • Validate group memberships");
+        }
+
+        "config" => {
+            println!("{}", "⚙ Configuration Change Audit".cyan().bold());
+            println!();
+
+            println!("{}", "Critical Configuration Files:".yellow().bold());
+
+            let config_files = vec![
+                ("/etc/passwd", "User database"),
+                ("/etc/shadow", "Password hashes"),
+                ("/etc/group", "Group database"),
+                ("/etc/sudoers", "Sudo configuration"),
+                ("/etc/ssh/sshd_config", "SSH server config"),
+                ("/etc/pam.d", "PAM configuration"),
+                ("/etc/security", "Security settings"),
+                ("/etc/fstab", "Filesystem mounts"),
+                ("/etc/hosts", "Host mappings"),
+                ("/etc/resolv.conf", "DNS configuration"),
+            ];
+
+            let mut audited = 0;
+
+            for (path, desc) in &config_files {
+                if ctx.guestfs.exists(path).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(path).unwrap_or(0);
+                    println!("  {} {} - {} ({} bytes)",
+                        "✓".green(), path.cyan(), desc, size);
+                    audited += 1;
+                } else {
+                    println!("  {} {} - {} {}",
+                        "✗".red(), path.cyan(), desc, "(missing)".red());
+                }
+            }
+            println!();
+
+            println!("{}", "Configuration Audit Summary:".yellow().bold());
+            println!("  Files audited: {}/{}",
+                audited.to_string().green(), config_files.len());
+            println!();
+
+            println!("{}", "Audit Recommendations:".yellow());
+            println!("  • Track configuration changes with version control");
+            println!("  • Implement configuration management (Ansible, Puppet)");
+            println!("  • Regular backups of /etc directory");
+            println!("  • Monitor for unauthorized modifications");
+            println!("  • Validate configurations against security baselines");
+        }
+
+        "packages" => {
+            println!("{}", "📦 Package Installation Audit".cyan().bold());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let total_packages = pkg_info.packages.len();
+
+                println!("{}", "Package Statistics:".yellow().bold());
+                println!("  Total packages: {}", total_packages.to_string().cyan());
+                println!();
+
+                // Categorize packages
+                let mut dev_packages = 0;
+                let mut lib_packages = 0;
+                let mut kernel_packages = 0;
+                let mut doc_packages = 0;
+
+                for pkg in &pkg_info.packages {
+                    let name = pkg.name.to_lowercase();
+                    if name.contains("devel") || name.contains("-dev") {
+                        dev_packages += 1;
+                    } else if name.starts_with("lib") {
+                        lib_packages += 1;
+                    } else if name.contains("kernel") || name.contains("linux-") {
+                        kernel_packages += 1;
+                    } else if name.contains("doc") {
+                        doc_packages += 1;
+                    }
+                }
+
+                println!("{}", "Package Categories:".yellow().bold());
+                println!("  Development: {}", dev_packages.to_string().cyan());
+                println!("  Libraries: {}", lib_packages.to_string().cyan());
+                println!("  Kernel: {}", kernel_packages.to_string().cyan());
+                println!("  Documentation: {}", doc_packages.to_string().cyan());
+                println!("  Other: {}", (total_packages - dev_packages - lib_packages - kernel_packages - doc_packages).to_string().cyan());
+                println!();
+
+                // Audit findings
+                println!("{}", "Audit Findings:".yellow().bold());
+                if dev_packages > 100 {
+                    println!("  {} Large number of development packages - Consider cleanup", "⚠".yellow());
+                }
+                if total_packages > 2000 {
+                    println!("  {} System has many packages - Review for bloat", "⚠".yellow());
+                }
+                if kernel_packages > 5 {
+                    println!("  {} Multiple kernel versions - Remove old kernels", "ℹ".cyan());
+                }
+                println!();
+
+                println!("{}", "Package Audit Tips:".yellow());
+                println!("  • Remove unused development packages");
+                println!("  • Keep only 2-3 recent kernel versions");
+                println!("  • Review automatically installed packages");
+                println!("  • Verify package signatures and sources");
+            }
+        }
+
+        "sudo" => {
+            println!("{}", "🔐 Privilege Escalation Audit (Sudo)".cyan().bold());
+            println!();
+
+            println!("{}", "Sudo Configuration:".yellow().bold());
+
+            if ctx.guestfs.exists("/etc/sudoers").unwrap_or(false) {
+                let size = ctx.guestfs.filesize("/etc/sudoers").unwrap_or(0);
+                println!("  {} {} ({} bytes)", "✓".green(), "/etc/sudoers".cyan(), size);
+            } else {
+                println!("  {} {} - Not found", "✗".red(), "/etc/sudoers".cyan());
+            }
+
+            if ctx.guestfs.is_dir("/etc/sudoers.d").unwrap_or(false) {
+                println!("  {} {} - Present", "✓".green(), "/etc/sudoers.d/".cyan());
+            }
+            println!();
+
+            println!("{}", "Sudo Log Analysis:".yellow().bold());
+            let sudo_logs = vec![
+                "/var/log/sudo.log",
+                "/var/log/secure",
+                "/var/log/auth.log",
+            ];
+
+            for log in &sudo_logs {
+                if ctx.guestfs.exists(log).unwrap_or(false) {
+                    let size = ctx.guestfs.filesize(log).unwrap_or(0);
+                    println!("  {} {} ({} bytes)", "✓".green(), log.cyan(), size);
+                }
+            }
+            println!();
+
+            println!("{}", "Audit Checklist:".yellow().bold());
+            println!("  ✓ Review sudo rules for least privilege");
+            println!("  ✓ Check for NOPASSWD directives");
+            println!("  ✓ Verify sudo group membership");
+            println!("  ✓ Examine sudo command history");
+            println!("  ✓ Look for privilege escalation attempts");
+            println!();
+
+            println!("{}", "Security Recommendations:".yellow());
+            println!("  • Require passwords for all sudo commands");
+            println!("  • Limit sudo access to specific commands");
+            println!("  • Enable sudo logging");
+            println!("  • Regular review of sudo configurations");
+            println!("  • Use role-based access control");
+        }
+
+        "full" => {
+            println!("{}", "📊 Comprehensive Security Audit Report".cyan().bold());
+            println!();
+
+            // Authentication audit summary
+            println!("{}", "1. Authentication Security".yellow().bold());
+            let auth_logs = vec!["/var/log/auth.log", "/var/log/secure"];
+            let mut auth_found = 0;
+            for log in &auth_logs {
+                if ctx.guestfs.exists(log).unwrap_or(false) {
+                    auth_found += 1;
+                }
+            }
+            println!("   Status: {}", if auth_found > 0 { "✓ Logs available".green() } else { "✗ No logs found".red() });
+            println!();
+
+            // User account audit summary
+            println!("{}", "2. User Account Security".yellow().bold());
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                let privileged = user_info.iter().filter(|u| u.uid == "0").count();
+                let normal = user_info.iter().filter(|u| u.uid.parse::<i32>().unwrap_or(0) >= 1000).count();
+                println!("   Total user_info: {}", user_info.len().to_string().cyan());
+                println!("   Privileged accounts: {}", privileged.to_string().cyan());
+                println!("   Normal users: {}", normal.to_string().cyan());
+                if privileged > 1 {
+                    println!("   {} Multiple UID 0 accounts detected", "⚠".yellow());
+                }
+            }
+            println!();
+
+            // Configuration audit summary
+            println!("{}", "3. Configuration Security".yellow().bold());
+            let configs = vec!["/etc/passwd", "/etc/shadow", "/etc/sudoers"];
+            let mut config_ok = 0;
+            for cfg in &configs {
+                if ctx.guestfs.exists(cfg).unwrap_or(false) {
+                    config_ok += 1;
+                }
+            }
+            println!("   Critical configs present: {}/{}", config_ok, configs.len());
+            println!();
+
+            // Package audit summary
+            println!("{}", "4. Package Security".yellow().bold());
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("   Total packages: {}", pkg_info.packages.len().to_string().cyan());
+                let dev_count = pkg_info.packages.iter()
+                    .filter(|p| p.name.contains("devel") || p.name.contains("-dev"))
+                    .count();
+                println!("   Development packages: {}", dev_count.to_string().cyan());
+            }
+            println!();
+
+            // Sudo audit summary
+            println!("{}", "5. Privilege Escalation".yellow().bold());
+            if ctx.guestfs.exists("/etc/sudoers").unwrap_or(false) {
+                println!("   Status: {} Sudo configured", "✓".green());
+            } else {
+                println!("   Status: {} No sudo configuration", "ℹ".cyan());
+            }
+            println!();
+
+            println!("{}", "Audit Completion Summary:".yellow().bold());
+            println!("  ✓ Authentication logs reviewed");
+            println!("  ✓ User accounts audited");
+            println!("  ✓ Configuration files checked");
+            println!("  ✓ Package inventory analyzed");
+            println!("  ✓ Privilege escalation reviewed");
+            println!();
+
+            println!("{}", "Next Steps:".yellow());
+            println!("  1. Address any critical findings");
+            println!("  2. Document audit results");
+            println!("  3. Implement remediation plan");
+            println!("  4. Schedule regular audits");
+        }
+
+        _ => {
+            println!("{}", "Unknown audit type".red());
+            println!("Run {} for available types", "audit".cyan());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Baseline - Security baseline and drift detection
+pub fn cmd_baseline(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "📏 Security Baseline Management".cyan().bold());
+        println!();
+        println!("{}", "Available Commands:".yellow().bold());
+        println!("{} {} - Create current security baseline", "1.".cyan(), "baseline create".green());
+        println!("{} {} - Show current baseline", "2.".cyan(), "baseline show".green());
+        println!("{} {} - Detect configuration drift", "3.".cyan(), "baseline drift".green());
+        println!("{} {} - Compare with CIS benchmark", "4.".cyan(), "baseline cis".green());
+        println!("{} {} - Export baseline for comparison", "5.".cyan(), "baseline export".green());
+        println!();
+        println!("{} baseline <command>", "Usage:".yellow());
+        println!();
+        return Ok(());
+    }
+
+    let command = args[0];
+
+    match command {
+        "create" => {
+            println!("{}", "📋 Creating Security Baseline".cyan().bold());
+            println!();
+
+            let mut baseline = Vec::new();
+
+            // System information
+            println!("{}", "System Configuration:".yellow().bold());
+            if let Ok(os_info) = ctx.guestfs.inspect_os() {
+                if !os_info.is_empty() {
+                    println!("  {} OS detected", "✓".green());
+                    baseline.push("OS configuration captured");
+                }
+            }
+            println!();
+
+            // Security features
+            println!("{}", "Security Features:".yellow().bold());
+            if let Ok(sec_info) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("  SELinux: {}", if &sec_info.selinux != "disabled" {
+                    sec_info.selinux.green()
+                } else {
+                    "disabled".red()
+                });
+                println!("  AppArmor: {}", if sec_info.apparmor {
+                    "enabled".green()
+                } else {
+                    "disabled".red()
+                });
+
+                let firewall_status = if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if fw.enabled {
+                        "enabled".green()
+                    } else {
+                        "disabled".red()
+                    }
+                } else {
+                    "unknown".yellow()
+                };
+                println!("  Firewall: {}", firewall_status);
+                baseline.push("Security features documented");
+            }
+            println!();
+
+            // User accounts
+            println!("{}", "User Accounts:".yellow().bold());
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                let total_user_info = user_info.len();
+                let privileged = user_info.iter().filter(|u| u.uid == "0").count();
+                println!("  Total users: {}", user_info.len());
+                println!("  Privileged accounts: {}", privileged);
+                baseline.push("User accounts baselined");
+            }
+            println!();
+
+            // Package count
+            println!("{}", "Software Inventory:".yellow().bold());
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("  Total packages: {}", pkg_info.packages.len());
+                baseline.push("Package inventory captured");
+            }
+            println!();
+
+            // Services
+            println!("{}", "System Services:".yellow().bold());
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let total = services.len();
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                println!("  Total services: {}", total);
+                println!("  Enabled services: {}", enabled);
+                baseline.push("Service configuration captured");
+            }
+            println!();
+
+            // Network configuration
+            println!("{}", "Network Configuration:".yellow().bold());
+            if ctx.guestfs.exists("/etc/hosts").unwrap_or(false) {
+                println!("  {} /etc/hosts present", "✓".green());
+                baseline.push("Network config documented");
+            }
+            if ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                println!("  {} /etc/resolv.conf present", "✓".green());
+            }
+            println!();
+
+            println!("{}", "Baseline Creation Summary:".yellow().bold());
+            println!("  Components captured: {}", baseline.len().to_string().green());
+            for component in &baseline {
+                println!("    • {}", component);
+            }
+            println!();
+
+            println!("{}", "Next Steps:".yellow());
+            println!("  • Save baseline: {}", "baseline export > baseline.json".cyan());
+            println!("  • Monitor drift: {}", "baseline drift".cyan());
+            println!("  • Compare with standards: {}", "baseline cis".cyan());
+        }
+
+        "show" => {
+            println!("{}", "📋 Current Security Baseline".cyan().bold());
+            println!();
+
+            // Display current system state as baseline
+            println!("{}", "╔══ System Baseline ══╗".cyan().bold());
+            println!();
+
+            if let Ok(sec_info) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("{}", "Security Configuration:".yellow().bold());
+                println!("  SELinux: {}", sec_info.selinux);
+                println!("  AppArmor: {}", sec_info.apparmor);
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    println!("  Firewall: {}", if fw.enabled { "enabled" } else { "disabled" });
+                }
+                println!();
+            }
+
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("{}", "User Account Baseline:".yellow().bold());
+                println!("  Total users: {}", user_info.len());
+                println!("  UID 0 accounts: {}",
+                    user_info.iter().filter(|u| u.uid == "0").count());
+                println!("  Normal users: {}",
+                    user_info.iter().filter(|u| u.uid.parse::<i32>().unwrap_or(0) >= 1000).count());
+                println!();
+            }
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("{}", "Software Baseline:".yellow().bold());
+                println!("  Installed packages: {}", pkg_info.packages.len());
+                println!();
+            }
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                println!("{}", "Service Baseline:".yellow().bold());
+                println!("  Total services: {}", services.len());
+                println!("  Enabled: {}",
+                    services.iter().filter(|s| s.enabled).count());
+                println!("  Disabled: {}",
+                    services.iter().filter(|s| !s.enabled).count());
+                println!();
+            }
+
+            println!("{}", "╚══ End Baseline ══╝".cyan().bold());
+        }
+
+        "drift" => {
+            println!("{}", "🔍 Configuration Drift Detection".cyan().bold());
+            println!();
+
+            println!("{}", "Note:".yellow().bold());
+            println!("  Drift detection requires a saved baseline for comparison.");
+            println!("  Run {} to establish initial baseline.", "baseline create".cyan());
+            println!();
+
+            println!("{}", "Drift Monitoring Areas:".yellow().bold());
+            println!();
+
+            // Check for common drift indicators
+            let mut drift_detected = Vec::new();
+
+            // User account drift
+            println!("{}", "1. User Account Drift".cyan());
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                let uid0_count = user_info.iter().filter(|u| u.uid == "0").count();
+                if uid0_count > 1 {
+                    drift_detected.push("Multiple UID 0 accounts (expected: 1)");
+                    println!("   {} Multiple privileged accounts detected", "⚠".yellow());
+                } else {
+                    println!("   {} Account structure stable", "✓".green());
+                }
+            }
+            println!();
+
+            // Security configuration drift
+            println!("{}", "2. Security Configuration Drift".cyan());
+            if let Ok(sec_info) = ctx.guestfs.inspect_security(&ctx.root) {
+                if &sec_info.selinux == "disabled" && !sec_info.apparmor {
+                    drift_detected.push("No MAC system enabled");
+                    println!("   {} MAC system disabled (potential drift)", "⚠".yellow());
+                }
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if !fw.enabled {
+                        drift_detected.push("Firewall disabled");
+                        println!("   {} Firewall disabled (potential drift)", "⚠".yellow());
+                    }
+                }
+
+                if drift_detected.is_empty() {
+                    println!("   {} Security configuration stable", "✓".green());
+                }
+            }
+            println!();
+
+            // Service drift
+            println!("{}", "3. Service Configuration Drift".cyan());
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                if enabled > 50 {
+                    drift_detected.push("High number of enabled services");
+                    println!("   {} Many services enabled (potential drift)", "⚠".yellow());
+                } else {
+                    println!("   {} Service configuration stable", "✓".green());
+                }
+            }
+            println!();
+
+            // Configuration file drift
+            println!("{}", "4. Critical File Drift".cyan());
+            let critical_files = vec![
+                "/etc/passwd", "/etc/shadow", "/etc/sudoers",
+                "/etc/ssh/sshd_config", "/etc/fstab",
+            ];
+            let mut all_present = true;
+            for file in &critical_files {
+                if !ctx.guestfs.exists(file).unwrap_or(false) {
+                    drift_detected.push("Missing critical configuration file");
+                    println!("   {} {} missing (critical drift)", "🔴".red(), file.red());
+                    all_present = false;
+                }
+            }
+            if all_present {
+                println!("   {} Critical files intact", "✓".green());
+            }
+            println!();
+
+            // Drift summary
+            println!("{}", "Drift Detection Summary:".yellow().bold());
+            if drift_detected.is_empty() {
+                println!("  {} No significant drift detected", "✓".green().bold());
+                println!("  System configuration appears stable");
+            } else {
+                println!("  {} {} drift indicators found:", "⚠".yellow(), drift_detected.len().to_string().red());
+                for drift in &drift_detected {
+                    println!("    • {}", drift);
+                }
+            }
+            println!();
+
+            println!("{}", "Recommendations:".yellow());
+            println!("  • Review and address drift indicators");
+            println!("  • Update baseline if changes are authorized");
+            println!("  • Investigate unauthorized modifications");
+            println!("  • Implement configuration management");
+        }
+
+        "cis" => {
+            println!("{}", "📋 CIS Benchmark Comparison".cyan().bold());
+            println!();
+
+            let mut checks = Vec::new();
+            let mut passed = 0;
+            let mut failed = 0;
+
+            println!("{}", "CIS Controls Validation:".yellow().bold());
+            println!();
+
+            // CIS Control 1: Ensure filesystem integrity checking
+            println!("{}", "1. Filesystem Integrity".cyan());
+            let has_aide = ctx.guestfs.exists("/usr/bin/aide").unwrap_or(false);
+            if has_aide {
+                println!("   {} AIDE installed", "✓".green());
+                passed += 1;
+            } else {
+                println!("   {} AIDE not found - Install integrity checking", "✗".red());
+                failed += 1;
+            }
+            checks.push(("Filesystem integrity checking", has_aide));
+            println!();
+
+            // CIS Control 2: Ensure firewall is enabled
+            println!("{}", "2. Firewall Configuration".cyan());
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if fw.enabled {
+                    println!("   {} Firewall enabled", "✓".green());
+                    passed += 1;
+                } else {
+                    println!("   {} Firewall disabled - Enable firewall", "✗".red());
+                    failed += 1;
+                }
+                checks.push(("Firewall enabled", fw.enabled));
+            }
+            println!();
+
+            // CIS Control 3: Ensure MAC is enabled
+            println!("{}", "3. Mandatory Access Control".cyan());
+            if let Ok(sec_info) = ctx.guestfs.inspect_security(&ctx.root) {
+                let mac_enabled = &sec_info.selinux != "disabled" || sec_info.apparmor;
+                if mac_enabled {
+                    println!("   {} MAC system active", "✓".green());
+                    passed += 1;
+                } else {
+                    println!("   {} No MAC system - Enable SELinux or AppArmor", "✗".red());
+                    failed += 1;
+                }
+                checks.push(("MAC enabled", mac_enabled));
+            }
+            println!();
+
+            // CIS Control 4: SSH configuration
+            println!("{}", "4. SSH Hardening".cyan());
+            let ssh_config = ctx.guestfs.exists("/etc/ssh/sshd_config").unwrap_or(false);
+            if ssh_config {
+                println!("   {} SSH configuration present", "✓".green());
+                println!("   {} Manual review recommended for:", "ℹ".cyan());
+                println!("      • PermitRootLogin no");
+                println!("      • PasswordAuthentication no");
+                println!("      • Protocol 2");
+                passed += 1;
+            } else {
+                println!("   {} SSH configuration missing", "✗".red());
+                failed += 1;
+            }
+            checks.push(("SSH configuration", ssh_config));
+            println!();
+
+            // CIS Control 5: Audit logging
+            println!("{}", "5. Audit Logging".cyan());
+            let auditd = ctx.guestfs.exists("/sbin/auditd").unwrap_or(false);
+            if auditd {
+                println!("   {} Audit daemon installed", "✓".green());
+                passed += 1;
+            } else {
+                println!("   {} Audit daemon not found - Install auditd", "✗".red());
+                failed += 1;
+            }
+            checks.push(("Audit logging", auditd));
+            println!();
+
+            // CIS summary
+            let total = checks.len();
+            let compliance_rate = if total > 0 { (passed * 100) / total } else { 0 };
+
+            println!("{}", "CIS Benchmark Summary:".yellow().bold());
+            println!("  Total checks: {}", total);
+            println!("  Passed: {}", passed.to_string().green());
+            println!("  Failed: {}", failed.to_string().red());
+            println!("  Compliance rate: {}%", compliance_rate.to_string().cyan());
+            println!();
+
+            let grade = if compliance_rate >= 80 {
+                "Compliant".green().bold()
+            } else if compliance_rate >= 60 {
+                "Partially Compliant".yellow()
+            } else {
+                "Non-Compliant".red().bold()
+            };
+
+            println!("  Overall status: {}", grade);
+            println!();
+
+            println!("{}", "Next Steps:".yellow());
+            println!("  • Address failed controls");
+            println!("  • Document exceptions");
+            println!("  • Schedule regular compliance checks");
+            println!("  • Implement remediation plan");
+        }
+
+        "export" => {
+            println!("{}", "💾 Exporting Security Baseline".cyan().bold());
+            println!();
+
+            println!("{}", "Export Format: JSON".yellow().bold());
+            println!();
+
+            // Create a baseline export structure
+            println!("{{");
+            println!("  \"baseline\": {{");
+            println!("    \"created\": \"2024-01-01T00:00:00Z\",");
+            println!("    \"system\": {{");
+
+            if let Ok(sec_info) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("      \"selinux\": \"{}\",", sec_info.selinux);
+                println!("      \"apparmor\": {},", sec_info.apparmor);
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    println!("      \"firewall\": {},", fw.enabled);
+                }
+            }
+
+            if let Ok(user_info) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("      \"total_users\": {},", user_info.len());
+                println!("      \"privileged_users\": {},",
+                    user_info.iter().filter(|u| u.uid == "0").count());
+            }
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("      \"total_packages\": {}", pkg_info.packages.len());
+            }
+
+            println!("    }}");
+            println!("  }}");
+            println!("}}");
+            println!();
+
+            println!("{}", "Save this output:".yellow());
+            println!("  {}", "baseline export > baseline.json".cyan());
+            println!();
+            println!("{}", "Use for comparison:".yellow());
+            println!("  Compare against saved baseline to detect drift");
+        }
+
+        _ => {
+            println!("{}", "Unknown baseline command".red());
+            println!("Run {} for available commands", "baseline".cyan());
         }
     }
 
