@@ -266,6 +266,18 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "compare" | "cmp" => {
                         commands::cmd_compare(&mut ctx, args)
                     }
+                    "profile" => {
+                        commands::cmd_profile(&mut ctx, args)
+                    }
+                    "recommend" | "rec" => {
+                        commands::cmd_recommend(&mut ctx, args)
+                    }
+                    "discover" | "disco" => {
+                        commands::cmd_discover(&mut ctx, args)
+                    }
+                    "report" => {
+                        commands::cmd_report(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
