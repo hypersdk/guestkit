@@ -338,6 +338,15 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "collaborate" => {
                         commands::cmd_collaborate(&mut ctx, args)
                     }
+                    "predict" => {
+                        commands::cmd_predict(&mut ctx, args)
+                    }
+                    "chart" => {
+                        commands::cmd_chart(&mut ctx, args)
+                    }
+                    "compliance" => {
+                        commands::cmd_compliance(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
