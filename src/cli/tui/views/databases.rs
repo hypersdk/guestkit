@@ -2,12 +2,12 @@
 //! Databases view - Database installations and configurations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    text::Line,
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    text::{Line, Span},
+    widgets::{Block, Borders, BarChart, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -23,6 +23,76 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         f.render_widget(empty, area);
         return;
     }
+
+    // Split area into chart and list
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(10), // Database type distribution chart
+            Constraint::Min(0),     // Database list
+        ])
+        .split(area);
+
+    draw_database_chart(f, chunks[0], app);
+    draw_database_list(f, chunks[1], app);
+}
+
+fn draw_database_chart(f: &mut Frame, area: Rect, app: &App) {
+    // Count database types
+    let postgres_count = app.databases.iter()
+        .filter(|db| db.name.to_lowercase().contains("postgres") || db.name.to_lowercase().contains("postgresql"))
+        .count();
+    let mysql_count = app.databases.iter()
+        .filter(|db| db.name.to_lowercase().contains("mysql") || db.name.to_lowercase().contains("mariadb"))
+        .count();
+    let mongodb_count = app.databases.iter()
+        .filter(|db| db.name.to_lowercase().contains("mongodb") || db.name.to_lowercase().contains("mongo"))
+        .count();
+    let redis_count = app.databases.iter()
+        .filter(|db| db.name.to_lowercase().contains("redis"))
+        .count();
+    let sqlite_count = app.databases.iter()
+        .filter(|db| db.name.to_lowercase().contains("sqlite"))
+        .count();
+    let other_count = app.databases.len() - postgres_count - mysql_count - mongodb_count - redis_count - sqlite_count;
+
+    // Create bar chart data
+    let mut data = Vec::new();
+    if postgres_count > 0 {
+        data.push(("PgSQL", postgres_count as u64));
+    }
+    if mysql_count > 0 {
+        data.push(("MySQL", mysql_count as u64));
+    }
+    if mongodb_count > 0 {
+        data.push(("Mongo", mongodb_count as u64));
+    }
+    if redis_count > 0 {
+        data.push(("Redis", redis_count as u64));
+    }
+    if sqlite_count > 0 {
+        data.push(("SQLite", sqlite_count as u64));
+    }
+    if other_count > 0 {
+        data.push(("Other", other_count as u64));
+    }
+
+    let barchart = BarChart::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(format!(" 📊 Database Type Distribution • {} total ", app.databases.len()))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .data(&data)
+        .bar_width(8)
+        .bar_gap(2)
+        .bar_style(Style::default().fg(SUCCESS_COLOR))
+        .value_style(Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD));
+
+    f.render_widget(barchart, area);
+}
+
+fn draw_database_list(f: &mut Frame, area: Rect, app: &App) {
 
     let filtered_databases: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.databases

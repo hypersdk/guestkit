@@ -2,12 +2,12 @@
 //! Web servers view - Web server installations and configurations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    text::Line,
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    text::{Line, Span},
+    widgets::{Block, Borders, BarChart, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -23,6 +23,92 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         f.render_widget(empty, area);
         return;
     }
+
+    // Split area into summary and list
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(13), // Summary with chart and gauge
+            Constraint::Min(0),     // Server list
+        ])
+        .split(area);
+
+    draw_server_summary(f, chunks[0], app);
+    draw_server_list(f, chunks[1], app);
+}
+
+fn draw_server_summary(f: &mut Frame, area: Rect, app: &App) {
+    // Count server types
+    let nginx_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("nginx")).count();
+    let apache_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("apache") || ws.name.to_lowercase().contains("httpd")).count();
+    let caddy_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("caddy")).count();
+    let lighttpd_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("lighttpd")).count();
+    let other_count = app.web_servers.len() - nginx_count - apache_count - caddy_count - lighttpd_count;
+
+    let enabled_count = app.web_servers.iter().filter(|ws| ws.enabled).count();
+    let total_count = app.web_servers.len();
+
+    let enabled_pct = if total_count > 0 {
+        (enabled_count as f64 / total_count as f64 * 100.0) as u16
+    } else {
+        0
+    };
+
+    // Split into chart and gauge
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(10), // Type distribution chart
+            Constraint::Length(3),  // Enabled gauge
+        ])
+        .split(area);
+
+    // Type distribution chart
+    let mut data = Vec::new();
+    if nginx_count > 0 {
+        data.push(("Nginx", nginx_count as u64));
+    }
+    if apache_count > 0 {
+        data.push(("Apache", apache_count as u64));
+    }
+    if caddy_count > 0 {
+        data.push(("Caddy", caddy_count as u64));
+    }
+    if lighttpd_count > 0 {
+        data.push(("Lighttpd", lighttpd_count as u64));
+    }
+    if other_count > 0 {
+        data.push(("Other", other_count as u64));
+    }
+
+    let barchart = BarChart::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(format!(" 📊 Web Server Type Distribution • {} total ", total_count))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .data(&data)
+        .bar_width(10)
+        .bar_gap(2)
+        .bar_style(Style::default().fg(SUCCESS_COLOR))
+        .value_style(Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD));
+
+    f.render_widget(barchart, chunks[0]);
+
+    // Enabled status gauge
+    let enabled_gauge = Gauge::default()
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" ⚡ Enabled Web Servers "))
+        .gauge_style(Style::default().fg(SUCCESS_COLOR))
+        .percent(enabled_pct)
+        .label(format!("{}/{} enabled ({}%)", enabled_count, total_count, enabled_pct));
+
+    f.render_widget(enabled_gauge, chunks[1]);
+}
+
+fn draw_server_list(f: &mut Frame, area: Rect, app: &App) {
 
     let filtered_webservers: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.web_servers
@@ -95,14 +181,12 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let enabled_count = app.web_servers.iter().filter(|ws| ws.enabled).count();
-
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 🌐 Web Servers • {} total • {} enabled{} ",
-                filtered_webservers.len(), enabled_count, scroll_indicator))
+            .title(format!(" 🌐 Web Server List • {} showing{} ",
+                filtered_webservers.len(), scroll_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
