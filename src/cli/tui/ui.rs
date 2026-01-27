@@ -84,6 +84,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     // Get current view icon and description
     let (view_icon, view_desc) = match app.current_view {
         View::Dashboard => ("📊", "System Overview"),
+        View::Analytics => ("📈", "Analytics & Charts"),
+        View::Timeline => ("⏰", "System Timeline"),
         View::Network => ("🌐", "Network Configuration"),
         View::Packages => ("📦", "Installed Packages"),
         View::Services => ("⚙️ ", "System Services"),
@@ -94,6 +96,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         View::Storage => ("💾", "Storage & Filesystems"),
         View::Users => ("👥", "User Accounts"),
         View::Kernel => ("🧩", "Kernel Configuration"),
+        View::Logs => ("📋", "System Logs"),
         View::Profiles => ("🛡️ ", "Profile Reports"),
     };
 
@@ -171,6 +174,8 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     let titles: Vec<String> = views.iter().map(|v| {
         let count = match v {
             View::Dashboard => None,
+            View::Analytics => None,
+            View::Timeline => None,
             View::Network => Some(app.network_interfaces.len()),
             View::Packages => Some(app.packages.package_count),
             View::Services => Some(app.services.len()),
@@ -185,6 +190,7 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
             View::Storage => Some(app.fstab.len()),
             View::Users => Some(app.users.len()),
             View::Kernel => Some(app.kernel_modules.len()),
+            View::Logs => None,
             View::Profiles => None,
         };
 
@@ -214,6 +220,8 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
 fn draw_content(f: &mut Frame, area: Rect, app: &App) {
     match app.current_view {
         View::Dashboard => views::dashboard::draw(f, area, app),
+        View::Analytics => views::analytics::draw(f, area, app),
+        View::Timeline => views::timeline::draw(f, area, app),
         View::Network => views::network::draw(f, area, app),
         View::Packages => views::packages::draw(f, area, app),
         View::Services => views::services::draw(f, area, app),
@@ -224,6 +232,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Storage => views::storage::draw(f, area, app),
         View::Users => views::users::draw(f, area, app),
         View::Kernel => views::kernel::draw(f, area, app),
+        View::Logs => views::logs::draw(f, area, app),
         View::Profiles => views::profiles::draw(f, area, app),
     }
 }
@@ -672,6 +681,8 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
 
     let detail_text = match app.current_view {
         View::Dashboard => generate_dashboard_details(app),
+        View::Analytics => generate_analytics_details(app),
+        View::Timeline => generate_timeline_details(app),
         View::Network => generate_network_details(app),
         View::Packages => generate_packages_details(app),
         View::Services => generate_services_details(app),
@@ -682,6 +693,7 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
         View::Storage => generate_storage_details(app),
         View::Users => generate_users_details(app),
         View::Kernel => generate_kernel_details(app),
+        View::Logs => generate_logs_details(app),
         View::Profiles => generate_profiles_details(app),
     };
 
@@ -1086,6 +1098,132 @@ fn generate_issues_details(app: &App) -> Vec<Line<'static>> {
         ]),
         Line::from(vec![
             Span::raw("  • Compliance Profile"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_analytics_details(app: &App) -> Vec<Line<'static>> {
+    let (critical, high, medium) = app.get_risk_summary();
+    vec![
+        Line::from(vec![
+            Span::styled("Analytics & Charts", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Package Distribution:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  Total Packages:  ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Service Status:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  Total Services:  ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("  Enabled:         ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", app.services.iter().filter(|s| s.enabled).count()), Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Security Score:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  Critical:        ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("  High:            ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", high), Style::default().fg(WARNING_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("  Medium:          ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(format!("{}", medium), Style::default().fg(INFO_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_timeline_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("System Timeline", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Operating System: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.os_name.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(vec![
+            Span::styled("Kernel Version:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(app.kernel_version.clone(), Style::default().fg(TEXT_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Timeline Events:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::styled("  Total Events:    ", Style::default().fg(TEXT_COLOR)),
+            Span::styled("Multiple", Style::default().fg(SUCCESS_COLOR)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("View timeline for chronological system events"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
+        ]),
+    ]
+}
+
+fn generate_logs_details(app: &App) -> Vec<Line<'static>> {
+    vec![
+        Line::from(vec![
+            Span::styled("System Logs", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Log Categories:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Authentication Logs"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • System Logs"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Kernel Logs"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Security Logs"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Application Logs"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Features:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
+        ]),
+        Line::from(vec![
+            Span::raw("  • Filter logs with /"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Switch categories with Tab"),
+        ]),
+        Line::from(vec![
+            Span::raw("  • Scroll with ↑↓"),
         ]),
         Line::from(""),
         Line::from(vec![
