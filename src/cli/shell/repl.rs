@@ -293,6 +293,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "presets" => {
                         commands::cmd_presets(&ctx, args)
                     }
+                    "context" => {
+                        commands::cmd_context(&mut ctx, args)
+                    }
+                    "learn" => {
+                        commands::cmd_learn(&ctx, args)
+                    }
+                    "focus" => {
+                        commands::cmd_focus(&mut ctx, args)
+                    }
+                    "playbook" => {
+                        commands::cmd_playbook(&mut ctx, args)
+                    }
+                    "inspect" => {
+                        commands::cmd_inspect(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);

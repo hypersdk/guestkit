@@ -568,6 +568,17 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("           Types: files, list, packages, all");
     println!("  {} - Role-based command presets", "presets".green());
 
+    println!("\n{}", "Learning & Guidance:".yellow().bold());
+    println!("  {} - Interactive tutorials", "learn <tutorial>".green());
+    println!("           Tutorials: basics, navigation, security, export, advanced, automation");
+    println!("  {} - Context-aware suggestions", "context".green());
+    println!("  {} - Focus on specific aspects", "focus <aspect>".green());
+    println!("           Aspects: security, performance, network, storage, users");
+    println!("  {} - Operational playbooks", "playbook <name>".green());
+    println!("           Playbooks: incident, hardening, audit, forensics, migration, recovery");
+    println!("  {} - Deep component inspection", "inspect <component>".green());
+    println!("           Components: boot, logging, packages, services, kernel");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -3608,6 +3619,1134 @@ fn export_system(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> 
         println!("{} Written to: {}", "→".cyan(), file.yellow());
     } else {
         println!("{}", content);
+    }
+
+    Ok(())
+}
+
+/// Context-aware suggestions based on current location
+pub fn cmd_context(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Context-Aware Suggestions                   ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{} Current Location: {}", "📍".cyan(), ctx.current_path.yellow().bold());
+    println!();
+
+    // Analyze current path and provide context-aware suggestions
+    let path = &ctx.current_path;
+    let mut suggestions = Vec::new();
+
+    if path.contains("/etc") {
+        suggestions.push(("High", "Configuration files detected", "cat /etc/fstab"));
+        suggestions.push(("High", "View network configuration", "cat /etc/hosts"));
+        suggestions.push(("Medium", "Check installed services", "services"));
+        suggestions.push(("Medium", "Review security settings", "security"));
+    } else if path.contains("/var/log") {
+        suggestions.push(("High", "Search for errors in logs", "grep ERROR ."));
+        suggestions.push(("High", "View recent log files", "recent . 10"));
+        suggestions.push(("Medium", "Find critical messages", "search critical --content"));
+    } else if path.contains("/home") || path.contains("/root") {
+        suggestions.push(("High", "List user files", "ls -la"));
+        suggestions.push(("Medium", "Find configuration files", "find .* ."));
+        suggestions.push(("Low", "Search for SSH keys", "find .ssh ."));
+    } else if path.contains("/usr") {
+        suggestions.push(("High", "Installed applications", "discover apps"));
+        suggestions.push(("Medium", "Package information", "packages"));
+    } else if path == "/" {
+        suggestions.push(("High", "System overview", "dashboard"));
+        suggestions.push(("High", "Quick summary", "summary"));
+        suggestions.push(("Medium", "Security analysis", "wizard security"));
+        suggestions.push(("Low", "Explore filesystem", "tree / 2"));
+    }
+
+    // Add generic suggestions
+    if !path.contains("/var/log") {
+        suggestions.push(("Info", "Navigate to logs", "cd /var/log"));
+    }
+    if !path.contains("/etc") {
+        suggestions.push(("Info", "Navigate to config", "cd /etc"));
+    }
+
+    println!("{}", "Suggested Actions:".yellow().bold());
+    println!("{}", "─".repeat(70).cyan());
+
+    for (priority, desc, cmd) in suggestions {
+        let priority_colored = match priority {
+            "High" => priority.red().bold(),
+            "Medium" => priority.yellow().bold(),
+            "Low" => priority.green(),
+            _ => priority.cyan(),
+        };
+
+        println!("  {} {} - {}", priority_colored, desc, cmd.bright_black());
+    }
+
+    println!();
+    println!("{} Run {} for location-specific help", "💡".yellow(), "context".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Interactive tutorial system
+pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Learning Center                         ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Tutorials:".yellow().bold());
+        println!("{}", "─".repeat(70).cyan());
+        println!();
+
+        let tutorials = vec![
+            ("basics", "Getting started with GuestKit", "5 min", "🎓"),
+            ("navigation", "Filesystem navigation", "3 min", "🗺"),
+            ("security", "Security analysis workflow", "10 min", "🔒"),
+            ("export", "Exporting data and reports", "5 min", "💾"),
+            ("advanced", "Advanced search and batch operations", "8 min", "⚡"),
+            ("automation", "Automation and presets", "7 min", "🤖"),
+        ];
+
+        for (name, desc, duration, icon) in tutorials {
+            println!("  {} {} - {} {}",
+                icon,
+                name.green().bold(),
+                desc,
+                format!("({})", duration).bright_black()
+            );
+        }
+
+        println!();
+        println!("{} learn <tutorial>", "Usage:".yellow());
+        println!("{} learn basics", "Example:".cyan());
+        println!();
+        return Ok(());
+    }
+
+    let tutorial = args[0];
+
+    match tutorial {
+        "basics" => {
+            println!("\n{} {}", "📚".cyan(), "Tutorial: Getting Started with GuestKit".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Introduction", "Step 1:".green().bold());
+            println!("GuestKit is a powerful VM inspection shell. You're currently inside");
+            println!("a mounted VM filesystem, allowing you to explore it safely.\n");
+
+            println!("{} Basic Navigation", "Step 2:".green().bold());
+            println!("  • {} - See where you are", "pwd".cyan());
+            println!("  • {} - List files and directories", "ls".cyan());
+            println!("  • {} - Change directory", "cd <path>".cyan());
+            println!("  • {} - Read file contents", "cat <file>".cyan());
+            println!();
+
+            println!("{} Getting Information", "Step 3:".green().bold());
+            println!("  • {} - Beautiful system overview", "dashboard".cyan());
+            println!("  • {} - Quick one-line summary", "summary".cyan());
+            println!("  • {} - System information", "info".cyan());
+            println!();
+
+            println!("{} Try it now!", "💡".yellow());
+            println!("  Type: {}", "dashboard".green());
+            println!();
+        }
+
+        "navigation" => {
+            println!("\n{} {}", "🗺".cyan(), "Tutorial: Filesystem Navigation".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Understanding Paths", "Lesson 1:".green().bold());
+            println!("  • Absolute paths start with /   Example: {}", "/etc/fstab".cyan());
+            println!("  • Relative paths are from current location");
+            println!("  • {} goes up one directory", "..".cyan());
+            println!("  • {} stays in current directory", ".".cyan());
+            println!();
+
+            println!("{} Quick Navigation", "Lesson 2:".green().bold());
+            println!("  • {} - Create bookmarks for favorite locations", "bookmark".cyan());
+            println!("  • {} - Jump to a bookmark", "goto <name>".cyan());
+            println!("  • {} - Quick command aliases", "alias".cyan());
+            println!();
+
+            println!("{} Visual Tools", "Lesson 3:".green().bold());
+            println!("  • {} - Visualize directory structure", "tree".cyan());
+            println!("  • {} - Find files by pattern", "find <pattern>".cyan());
+            println!("  • {} - Search with filters", "search <pattern>".cyan());
+            println!();
+
+            println!("{} Try it!", "💡".yellow());
+            println!("  1. {}", "bookmark myspot".green());
+            println!("  2. {}", "cd /etc".green());
+            println!("  3. {}", "goto myspot".green());
+            println!();
+        }
+
+        "security" => {
+            println!("\n{} {}", "🔒".cyan(), "Tutorial: Security Analysis".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Quick Security Check", "Step 1:".green().bold());
+            println!("  Run: {}", "security".cyan());
+            println!("  This shows SELinux, AppArmor, Firewall, and audit status\n");
+
+            println!("{} Security Wizard", "Step 2:".green().bold());
+            println!("  Run: {}", "wizard security".cyan());
+            println!("  Get a security score (A-D grade) with detailed analysis\n");
+
+            println!("{} Vulnerability Scanning", "Step 3:".green().bold());
+            println!("  Run: {}", "scan security".cyan());
+            println!("  Find security issues with severity ratings\n");
+
+            println!("{} Get Recommendations", "Step 4:".green().bold());
+            println!("  Run: {}", "recommend".cyan());
+            println!("  Receive prioritized security recommendations\n");
+
+            println!("{} Complete Audit", "Step 5:".green().bold());
+            println!("  Run: {}", "auto run security-audit".cyan());
+            println!("  Automated full security audit with report generation\n");
+
+            println!("{} Try the wizard now!", "💡".yellow());
+            println!("  Type: {}", "wizard security".green());
+            println!();
+        }
+
+        "export" => {
+            println!("\n{} {}", "💾".cyan(), "Tutorial: Exporting Data".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Export Formats", "Step 1:".green().bold());
+            println!("  GuestKit supports: JSON, CSV, Markdown, Plain text\n");
+
+            println!("{} Export Examples", "Step 2:".green().bold());
+            println!("  • {} - Package list as JSON", "export packages json packages.json".cyan());
+            println!("  • {} - Users as CSV", "export users csv users.csv".cyan());
+            println!("  • {} - Services as Markdown", "export services md services.md".cyan());
+            println!();
+
+            println!("{} Snapshots", "Step 3:".green().bold());
+            println!("  • {} - Complete system snapshot", "snapshot report.md".cyan());
+            println!("  Creates comprehensive Markdown report with all data\n");
+
+            println!("{} Batch Export", "Step 4:".green().bold());
+            println!("  • {} - Export everything", "batch export /tmp/reports".cyan());
+            println!("  • {} - All data in one command", "auto run export-all".cyan());
+            println!();
+
+            println!("{} Try it!", "💡".yellow());
+            println!("  Type: {}", "snapshot my-system.md".green());
+            println!();
+        }
+
+        "advanced" => {
+            println!("\n{} {}", "⚡".cyan(), "Tutorial: Advanced Features".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Smart Search", "Technique 1:".green().bold());
+            println!("  • {} - Search by path", "search <pattern> --path /etc".cyan());
+            println!("  • {} - Search by type", "search <pattern> --type file".cyan());
+            println!("  • {} - Search in content", "search <pattern> --content".cyan());
+            println!();
+
+            println!("{} Batch Operations", "Technique 2:".green().bold());
+            println!("  • {} - Read multiple files", "batch cat file1 file2 file3".cyan());
+            println!("  • {} - Search multiple dirs", "batch find pattern /etc /var".cyan());
+            println!();
+
+            println!("{} Pin Favorites", "Technique 3:".green().bold());
+            println!("  • {} - Save command", "pin errors 'grep ERROR /var/log'".cyan());
+            println!("  • {} - Run pinned command", "pin run errors".cyan());
+            println!();
+
+            println!("{} Recent Files", "Technique 4:".green().bold());
+            println!("  • {} - Recently modified", "recent /var/log 20".cyan());
+            println!();
+
+            println!("{} Try it!", "💡".yellow());
+            println!("  Type: {}", "search error --content --path /var/log".green());
+            println!();
+        }
+
+        "automation" => {
+            println!("\n{} {}", "🤖".cyan(), "Tutorial: Automation & Presets".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Automation Presets", "Step 1:".green().bold());
+            println!("  • {} - Complete security workflow", "auto run security-audit".cyan());
+            println!("  • {} - Full system analysis", "auto run full-analysis".cyan());
+            println!("  • {} - Health assessment", "auto run health-check".cyan());
+            println!("  • {} - Export everything", "auto run export-all".cyan());
+            println!();
+
+            println!("{} Interactive Menu", "Step 2:".green().bold());
+            println!("  • {} - Navigate via menu", "menu".cyan());
+            println!("  Choose from categorized options\n");
+
+            println!("{} Role-Based Presets", "Step 3:".green().bold());
+            println!("  • {} - Get commands for your role", "presets".cyan());
+            println!("  Roles: Security Analyst, SysAdmin, Developer, Auditor\n");
+
+            println!("{} Benchmarking", "Step 4:".green().bold());
+            println!("  • {} - Performance testing", "bench <type>".cyan());
+            println!();
+
+            println!("{} Try a full analysis!", "💡".yellow());
+            println!("  Type: {}", "auto run full-analysis".green());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown tutorial: {}", "Error:".red(), tutorial);
+            println!("{} learn", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// Focus mode for specific system aspects
+pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "Usage: focus <aspect>".red());
+        println!();
+        println!("{}", "Available Focus Areas:".yellow().bold());
+        println!("  {} - Security posture and vulnerabilities", "security".green());
+        println!("  {} - Performance and resource usage", "performance".green());
+        println!("  {} - Network configuration and connectivity", "network".green());
+        println!("  {} - Storage and filesystems", "storage".green());
+        println!("  {} - User accounts and permissions", "users".green());
+        println!();
+        return Ok(());
+    }
+
+    let aspect = args[0];
+
+    match aspect {
+        "security" => {
+            println!("\n{} {}", "🔒".cyan(), "Security Focus Mode".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("{}", "Security Status:".green().bold());
+                println!("  SELinux:  {}", if &sec.selinux != "disabled" { sec.selinux.green() } else { sec.selinux.red() });
+                println!("  AppArmor: {}", if sec.apparmor { "enabled".green() } else { "disabled".red() });
+                println!("  auditd:   {}", if sec.auditd { "enabled".green() } else { "disabled".red() });
+                println!();
+            }
+
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                println!("{}", "Firewall Configuration:".green().bold());
+                println!("  Type:   {}", fw.firewall_type.cyan());
+                println!("  Status: {}", if fw.enabled { "enabled".green() } else { "disabled".red() });
+                println!();
+            }
+
+            println!("{}", "Critical Files to Review:".yellow().bold());
+            let security_files = vec![
+                "/etc/shadow", "/etc/sudoers", "/etc/ssh/sshd_config",
+                "/etc/pam.d/", "/etc/security/", "/etc/selinux/config"
+            ];
+            for file in security_files {
+                let exists = ctx.guestfs.exists(file).unwrap_or(false);
+                let status = if exists { "✓".green() } else { "✗".red() };
+                println!("  {} {}", status, file.cyan());
+            }
+            println!();
+
+            println!("{} Next Steps:", "💡".yellow());
+            println!("  • {}", "wizard security - Get security score".cyan());
+            println!("  • {}", "scan security - Find vulnerabilities".cyan());
+            println!("  • {}", "recommend - Get security recommendations".cyan());
+            println!();
+        }
+
+        "performance" => {
+            println!("\n{} {}", "⚡".cyan(), "Performance Focus Mode".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("{}", "Package Statistics:".green().bold());
+                println!("  Total packages: {}", pkg_info.packages.len().to_string().yellow());
+                println!();
+            }
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                println!("{}", "Service Statistics:".green().bold());
+                println!("  Total services: {}", services.len().to_string().yellow());
+                println!("  Enabled: {}", enabled.to_string().green());
+                println!("  Disabled: {}", (services.len() - enabled).to_string().bright_black());
+                println!();
+            }
+
+            println!("{} Benchmarking:", "💡".yellow());
+            println!("  • {}", "bench files - Test filesystem operations".cyan());
+            println!("  • {}", "bench list - Test directory listing".cyan());
+            println!("  • {}", "bench packages - Test package queries".cyan());
+            println!();
+        }
+
+        "network" => {
+            println!("\n{} {}", "🌐".cyan(), "Network Focus Mode".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+                println!("{} ({} total)", "Network Interfaces:".green().bold(), interfaces.len());
+                for iface in interfaces {
+                    println!("  • {}", iface.name.cyan());
+                }
+                println!();
+            }
+
+            if let Ok(dns) = ctx.guestfs.inspect_dns(&ctx.root) {
+                if !dns.is_empty() {
+                    println!("{}", "DNS Servers:".green().bold());
+                    for server in dns {
+                        println!("  • {}", server.yellow());
+                    }
+                    println!();
+                }
+            }
+
+            println!("{}", "Network Configuration Files:".yellow().bold());
+            let net_files = vec![
+                "/etc/hosts", "/etc/resolv.conf", "/etc/hostname",
+                "/etc/sysconfig/network", "/etc/network/interfaces"
+            ];
+            for file in net_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {}", "✓".green(), file.cyan());
+                }
+            }
+            println!();
+
+            println!("{} Explore further:", "💡".yellow());
+            println!("  • {}", "cat /etc/hosts".cyan());
+            println!("  • {}", "discover network".cyan());
+            println!();
+        }
+
+        "storage" => {
+            println!("\n{} {}", "💾".cyan(), "Storage Focus Mode".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(devices) = ctx.guestfs.list_devices() {
+                println!("{} ({} total)", "Block Devices:".green().bold(), devices.len());
+                for device in devices {
+                    println!("  • {}", device.cyan());
+                }
+                println!();
+            }
+
+            if let Ok(filesystems) = ctx.guestfs.list_filesystems() {
+                println!("{}", "Filesystems:".green().bold());
+                for (device, fstype) in filesystems {
+                    println!("  {} - {}", device.yellow(), fstype.cyan());
+                }
+                println!();
+            }
+
+            println!("{} Storage Commands:", "💡".yellow());
+            println!("  • {}", "mounts - View mounted filesystems".cyan());
+            println!("  • {}", "cat /etc/fstab - View mount configuration".cyan());
+            println!("  • {}", "tree / 2 - Filesystem overview".cyan());
+            println!();
+        }
+
+        "users" => {
+            println!("\n{} {}", "👥".cyan(), "User Accounts Focus Mode".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                let root_users: Vec<_> = users.iter().filter(|u| u.uid == "0").collect();
+                let system_users: Vec<_> = users.iter().filter(|u| {
+                    if let Ok(uid) = u.uid.parse::<u32>() {
+                        uid > 0 && uid < 1000
+                    } else {
+                        false
+                    }
+                }).collect();
+                let regular_users: Vec<_> = users.iter().filter(|u| {
+                    if let Ok(uid) = u.uid.parse::<u32>() {
+                        uid >= 1000
+                    } else {
+                        false
+                    }
+                }).collect();
+
+                println!("{}", "User Statistics:".green().bold());
+                println!("  Root accounts:    {} {}", root_users.len().to_string().red().bold(), if root_users.len() > 1 { "(⚠ Multiple root accounts!)".yellow() } else { "".normal() });
+                println!("  System accounts:  {}", system_users.len().to_string().cyan());
+                println!("  Regular accounts: {}", regular_users.len().to_string().green());
+                println!();
+
+                println!("{}", "Regular Users:".yellow().bold());
+                for user in regular_users.iter().take(10) {
+                    println!("  {} (UID: {}, Home: {})",
+                        user.username.green(),
+                        user.uid.bright_black(),
+                        user.home.cyan()
+                    );
+                }
+                println!();
+            }
+
+            println!("{}", "User Configuration Files:".yellow().bold());
+            let user_files = vec![
+                ("/etc/passwd", "User accounts"),
+                ("/etc/shadow", "Password hashes"),
+                ("/etc/group", "Group definitions"),
+                ("/etc/sudoers", "Sudo privileges"),
+            ];
+            for (file, desc) in user_files {
+                let exists = ctx.guestfs.exists(file).unwrap_or(false);
+                let status = if exists { "✓".green() } else { "✗".red() };
+                println!("  {} {} - {}", status, file.cyan(), desc.bright_black());
+            }
+            println!();
+
+            println!("{} Deep dive:", "💡".yellow());
+            println!("  • {}", "users - Full user list".cyan());
+            println!("  • {}", "cat /etc/passwd".cyan());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown focus area: {}", "Error:".red(), aspect);
+            println!("{} focus <aspect>", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// Security and operations playbooks
+pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                    Playbook Library                      ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Playbooks:".yellow().bold());
+        println!("{}", "─".repeat(70).cyan());
+        println!();
+
+        let playbooks = vec![
+            ("incident", "🚨", "Security incident response", "Advanced"),
+            ("hardening", "🔒", "System security hardening", "Intermediate"),
+            ("audit", "📋", "Compliance audit checklist", "Intermediate"),
+            ("forensics", "🔍", "Digital forensics investigation", "Advanced"),
+            ("migration", "📦", "VM migration preparation", "Intermediate"),
+            ("recovery", "🔧", "System recovery procedures", "Intermediate"),
+        ];
+
+        for (name, icon, desc, level) in playbooks {
+            let level_color = match level {
+                "Advanced" => level.red(),
+                "Intermediate" => level.yellow(),
+                _ => level.green(),
+            };
+            println!("  {} {} - {} {}",
+                icon,
+                name.green().bold(),
+                desc,
+                format!("[{}]", level_color).bright_black()
+            );
+        }
+
+        println!();
+        println!("{} playbook <name>", "Usage:".yellow());
+        println!("{} playbook incident", "Example:".cyan());
+        println!();
+        return Ok(());
+    }
+
+    let playbook = args[0];
+
+    match playbook {
+        "incident" => {
+            println!("\n{} {}", "🚨".cyan(), "Security Incident Response Playbook".red().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Immediate Actions", "Phase 1:".red().bold());
+            println!("  {} Document current time and create snapshot", "1.".yellow());
+            println!("     Command: {}", "snapshot incident-$(date +%Y%m%d-%H%M%S).md".cyan());
+            println!("  {} Capture system state", "2.".yellow());
+            println!("     Command: {}", "dashboard".cyan());
+            println!("  {} Check currently logged in users", "3.".yellow());
+            println!("     Command: {}", "users".cyan());
+            println!();
+
+            println!("{} Investigation", "Phase 2:".yellow().bold());
+            println!("  {} Review security configuration", "4.".yellow());
+            println!("     Command: {}", "security".cyan());
+            println!("  {} Scan for security issues", "5.".yellow());
+            println!("     Command: {}", "scan security".cyan());
+            println!("  {} Check recent file modifications", "6.".yellow());
+            println!("     Command: {}", "recent /etc 50".cyan());
+            println!("     Command: {}", "recent /var/log 50".cyan());
+            println!("  {} Search for suspicious activity", "7.".yellow());
+            println!("     Command: {}", "search failed --content --path /var/log".cyan());
+            println!("     Command: {}", "search unauthorized --content --path /var/log".cyan());
+            println!();
+
+            println!("{} Analysis", "Phase 3:".green().bold());
+            println!("  {} Review network configuration", "8.".yellow());
+            println!("     Command: {}", "network".cyan());
+            println!("  {} Check running services", "9.".yellow());
+            println!("     Command: {}", "services".cyan());
+            println!("  {} Analyze installed packages", "10.".yellow());
+            println!("     Command: {}", "packages".cyan());
+            println!();
+
+            println!("{} Reporting", "Phase 4:".cyan().bold());
+            println!("  {} Generate comprehensive report", "11.".yellow());
+            println!("     Command: {}", "report security --output incident-report.md".cyan());
+            println!("  {} Export all evidence", "12.".yellow());
+            println!("     Command: {}", "batch export /tmp/incident-evidence".cyan());
+            println!();
+
+            println!("{} This playbook helps investigate security incidents systematically", "Note:".yellow().bold());
+            println!();
+        }
+
+        "hardening" => {
+            println!("\n{} {}", "🔒".cyan(), "System Security Hardening Playbook".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Assessment", "Step 1:".green().bold());
+            println!("  • Run security wizard: {}", "wizard security".cyan());
+            println!("  • Get recommendations: {}", "recommend".cyan());
+            println!();
+
+            println!("{} Security Features", "Step 2:".green().bold());
+            println!("  {} Check SELinux status", "•".yellow());
+            println!("     Location: {}", "/etc/selinux/config".cyan());
+            println!("     Command: {}", "cat /etc/selinux/config".cyan());
+            println!("  {} Verify AppArmor profiles", "•".yellow());
+            println!("     Command: {}", "cat /etc/apparmor.d/".cyan());
+            println!("  {} Review firewall rules", "•".yellow());
+            println!("     Command: {}", "security".cyan());
+            println!();
+
+            println!("{} User Security", "Step 3:".green().bold());
+            println!("  {} Audit user accounts", "•".yellow());
+            println!("     Command: {}", "users".cyan());
+            println!("  {} Check sudo configuration", "•".yellow());
+            println!("     Command: {}", "cat /etc/sudoers".cyan());
+            println!("  {} Review SSH configuration", "•".yellow());
+            println!("     Command: {}", "cat /etc/ssh/sshd_config".cyan());
+            println!();
+
+            println!("{} System Services", "Step 4:".green().bold());
+            println!("  {} List all enabled services", "•".yellow());
+            println!("     Command: {}", "services".cyan());
+            println!("  {} Identify unnecessary services", "•".yellow());
+            println!("     Review output and disable unused services");
+            println!();
+
+            println!("{} Verification", "Step 5:".green().bold());
+            println!("  {} Run security scan", "•".yellow());
+            println!("     Command: {}", "scan security".cyan());
+            println!("  {} Generate compliance report", "•".yellow());
+            println!("     Command: {}", "report compliance".cyan());
+            println!();
+        }
+
+        "audit" => {
+            println!("\n{} {}", "📋".cyan(), "Compliance Audit Checklist".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "System Information:".green().bold());
+            println!("  {} {}", "☐".yellow(), "System overview - dashboard".cyan());
+            println!("  {} {}", "☐".yellow(), "OS and version - info".cyan());
+            println!("  {} {}", "☐".yellow(), "Installed packages - packages".cyan());
+            println!();
+
+            println!("{}", "Security Controls:".green().bold());
+            println!("  {} {}", "☐".yellow(), "Security features - security".cyan());
+            println!("  {} {}", "☐".yellow(), "Firewall configuration - security".cyan());
+            println!("  {} {}", "☐".yellow(), "SELinux/AppArmor status - security".cyan());
+            println!("  {} {}", "☐".yellow(), "Security audit - wizard security".cyan());
+            println!();
+
+            println!("{}", "Access Controls:".green().bold());
+            println!("  {} {}", "☐".yellow(), "User accounts - users".cyan());
+            println!("  {} {}", "☐".yellow(), "Sudo privileges - cat /etc/sudoers".cyan());
+            println!("  {} {}", "☐".yellow(), "SSH configuration - cat /etc/ssh/sshd_config".cyan());
+            println!();
+
+            println!("{}", "Network Security:".green().bold());
+            println!("  {} {}", "☐".yellow(), "Network configuration - network".cyan());
+            println!("  {} {}", "☐".yellow(), "Open ports and services - services".cyan());
+            println!();
+
+            println!("{}", "Logging & Monitoring:".green().bold());
+            println!("  {} {}", "☐".yellow(), "Audit daemon status - security".cyan());
+            println!("  {} {}", "☐".yellow(), "Log files review - recent /var/log 50".cyan());
+            println!();
+
+            println!("{}", "Documentation:".green().bold());
+            println!("  {} {}", "☐".yellow(), "Generate snapshot - snapshot audit-report.md".cyan());
+            println!("  {} {}", "☐".yellow(), "Compliance report - report compliance".cyan());
+            println!();
+        }
+
+        "forensics" => {
+            println!("\n{} {}", "🔍".cyan(), "Digital Forensics Investigation Playbook".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Preservation", "Phase 1:".red().bold());
+            println!("  {} Create complete snapshot immediately", "1.".yellow());
+            println!("     {}", "snapshot forensics-$(date +%Y%m%d-%H%M%S).md".cyan());
+            println!("  {} Export all data for analysis", "2.".yellow());
+            println!("     {}", "auto run export-all".cyan());
+            println!();
+
+            println!("{} System Analysis", "Phase 2:".yellow().bold());
+            println!("  {} Profile the system", "3.".yellow());
+            println!("     {}", "profile detect".cyan());
+            println!("  {} Review system configuration", "4.".yellow());
+            println!("     {}", "info".cyan());
+            println!();
+
+            println!("{} Timeline Analysis", "Phase 3:".green().bold());
+            println!("  {} Find recently modified files", "5.".yellow());
+            println!("     {}", "recent / 100".cyan());
+            println!("  {} Check specific directories", "6.".yellow());
+            println!("     {}", "recent /etc 50".cyan());
+            println!("     {}", "recent /var 50".cyan());
+            println!("     {}", "recent /home 50".cyan());
+            println!();
+
+            println!("{} Evidence Collection", "Phase 4:".cyan().bold());
+            println!("  {} User activity", "7.".yellow());
+            println!("     {}", "users".cyan());
+            println!("     {}", "cat /var/log/auth.log".cyan());
+            println!("  {} Network connections", "8.".yellow());
+            println!("     {}", "network".cyan());
+            println!("  {} Installed software", "9.".yellow());
+            println!("     {}", "packages".cyan());
+            println!("  {} Running services", "10.".yellow());
+            println!("     {}", "services".cyan());
+            println!();
+
+            println!("{} Content Analysis", "Phase 5:".blue().bold());
+            println!("  {} Search for indicators of compromise", "11.".yellow());
+            println!("     {}", "search <ioc> --content".cyan());
+            println!("  {} Batch file examination", "12.".yellow());
+            println!("     {}", "batch cat <files...>".cyan());
+            println!();
+
+            println!("{} Reporting", "Phase 6:".magenta().bold());
+            println!("  {} Generate technical report", "13.".yellow());
+            println!("     {}", "report technical --output forensics-report.md".cyan());
+            println!();
+        }
+
+        "migration" => {
+            println!("\n{} {}", "📦".cyan(), "VM Migration Preparation Playbook".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Discovery", "Step 1:".green().bold());
+            println!("  {} System profile", "•".yellow());
+            println!("     {}", "profile create".cyan());
+            println!("  {} Full analysis", "•".yellow());
+            println!("     {}", "auto run full-analysis".cyan());
+            println!();
+
+            println!("{} Documentation", "Step 2:".green().bold());
+            println!("  {} Create comprehensive snapshot", "•".yellow());
+            println!("     {}", "snapshot pre-migration.md".cyan());
+            println!("  {} Export configuration data", "•".yellow());
+            println!("     {}", "export system json system-config.json".cyan());
+            println!();
+
+            println!("{} Configuration Review", "Step 3:".green().bold());
+            println!("  {} Network settings", "•".yellow());
+            println!("     {}", "network".cyan());
+            println!("     {}", "cat /etc/hosts".cyan());
+            println!("  {} Storage and mounts", "•".yellow());
+            println!("     {}", "mounts".cyan());
+            println!("     {}", "cat /etc/fstab".cyan());
+            println!("  {} Services", "•".yellow());
+            println!("     {}", "services".cyan());
+            println!();
+
+            println!("{} Dependencies", "Step 4:".green().bold());
+            println!("  {} Installed packages", "•".yellow());
+            println!("     {}", "export packages csv packages.csv".cyan());
+            println!("  {} User accounts", "•".yellow());
+            println!("     {}", "export users csv users.csv".cyan());
+            println!();
+
+            println!("{} Final Report", "Step 5:".green().bold());
+            println!("  {} Generate executive summary", "•".yellow());
+            println!("     {}", "report executive --output migration-plan.md".cyan());
+            println!();
+        }
+
+        "recovery" => {
+            println!("\n{} {}", "🔧".cyan(), "System Recovery Procedures".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{} Assessment", "Phase 1:".green().bold());
+            println!("  {} Check system health", "1.".yellow());
+            println!("     {}", "wizard health".cyan());
+            println!("  {} Identify issues", "2.".yellow());
+            println!("     {}", "scan issues".cyan());
+            println!();
+
+            println!("{} Critical Files", "Phase 2:".green().bold());
+            println!("  {} Verify boot configuration", "3.".yellow());
+            println!("     {}", "cat /etc/fstab".cyan());
+            println!("     {}", "cat /boot/grub/grub.cfg".cyan());
+            println!("  {} Check network configuration", "4.".yellow());
+            println!("     {}", "network".cyan());
+            println!();
+
+            println!("{} Services", "Phase 3:".green().bold());
+            println!("  {} Review service status", "5.".yellow());
+            println!("     {}", "services".cyan());
+            println!("  {} Check critical services", "6.".yellow());
+            println!("     Look for failed or disabled critical services");
+            println!();
+
+            println!("{} Logs", "Phase 4:".green().bold());
+            println!("  {} Search for errors", "7.".yellow());
+            println!("     {}", "search error --content --path /var/log".cyan());
+            println!("     {}", "search fail --content --path /var/log".cyan());
+            println!("  {} Recent log activity", "8.".yellow());
+            println!("     {}", "recent /var/log 50".cyan());
+            println!();
+
+            println!("{} Documentation", "Phase 5:".green().bold());
+            println!("  {} Create recovery snapshot", "9.".yellow());
+            println!("     {}", "snapshot recovery-assessment.md".cyan());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown playbook: {}", "Error:".red(), playbook);
+            println!("{} playbook", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// Deep inspection of specific components
+pub fn cmd_inspect(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "Usage: inspect <component>".red());
+        println!();
+        println!("{}", "Available Components:".yellow().bold());
+        println!("  {} - Boot configuration and kernel", "boot".green());
+        println!("  {} - System logging configuration", "logging".green());
+        println!("  {} - Package manager and repositories", "packages".green());
+        println!("  {} - System services and daemons", "services".green());
+        println!("  {} - Kernel modules and drivers", "kernel".green());
+        println!();
+        return Ok(());
+    }
+
+    let component = args[0];
+
+    match component {
+        "boot" => {
+            println!("\n{} {}", "🚀".cyan(), "Boot Configuration Inspection".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Filesystem Table (/etc/fstab):".green().bold());
+            if ctx.guestfs.exists("/etc/fstab")? {
+                if let Ok(content) = ctx.guestfs.read_file("/etc/fstab") {
+                    let lines: Vec<&str> = std::str::from_utf8(&content)
+                        .unwrap_or("")
+                        .lines()
+                        .filter(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
+                        .collect();
+
+                    for line in lines {
+                        println!("  {}", line.cyan());
+                    }
+                }
+            } else {
+                println!("  {} /etc/fstab not found", "✗".red());
+            }
+            println!();
+
+            println!("{}", "Bootloader Configuration:".green().bold());
+            let grub_files = vec![
+                "/boot/grub/grub.cfg",
+                "/boot/grub2/grub.cfg",
+                "/boot/efi/EFI/*/grub.cfg",
+            ];
+            for file in grub_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {}", "✓".green(), file.cyan());
+                }
+            }
+            println!();
+
+            // Kernel information would be displayed here if available
+            println!();
+        }
+
+        "logging" => {
+            println!("\n{} {}", "📝".cyan(), "Logging Configuration Inspection".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "System Logging:".green().bold());
+            let log_configs = vec![
+                ("/etc/rsyslog.conf", "rsyslog configuration"),
+                ("/etc/syslog-ng/syslog-ng.conf", "syslog-ng configuration"),
+                ("/etc/systemd/journald.conf", "systemd journal configuration"),
+            ];
+
+            for (file, desc) in log_configs {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {} - {}", "✓".green(), file.cyan(), desc.bright_black());
+                } else {
+                    println!("  {} {} - {}", "✗".bright_black(), file.bright_black(), desc.bright_black());
+                }
+            }
+            println!();
+
+            println!("{}", "Log Directories:".green().bold());
+            let log_dirs = vec![
+                "/var/log",
+                "/var/log/audit",
+                "/var/log/journal",
+            ];
+
+            for dir in log_dirs {
+                if ctx.guestfs.is_dir(dir).unwrap_or(false) {
+                    if let Ok(files) = ctx.guestfs.ls(dir) {
+                        println!("  {} {} ({} files)", "✓".green(), dir.cyan(), files.len().to_string().yellow());
+                    }
+                }
+            }
+            println!();
+
+            println!("{} Commands to explore logs:", "💡".yellow());
+            println!("  • {}", "cd /var/log".cyan());
+            println!("  • {}", "recent /var/log 20".cyan());
+            println!("  • {}", "search error --content --path /var/log".cyan());
+            println!();
+        }
+
+        "packages" => {
+            println!("\n{} {}", "📦".cyan(), "Package Manager Inspection".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("{}", "Package Statistics:".green().bold());
+                println!("  Total packages: {}", pkg_info.packages.len().to_string().yellow().bold());
+                println!();
+
+                // Categorize packages
+                let mut categories: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+                for pkg in &pkg_info.packages {
+                    let name = pkg.name.to_lowercase();
+                    if name.contains("lib") {
+                        *categories.entry("Libraries").or_insert(0) += 1;
+                    } else if name.contains("devel") || name.contains("dev") {
+                        *categories.entry("Development").or_insert(0) += 1;
+                    } else if name.contains("doc") {
+                        *categories.entry("Documentation").or_insert(0) += 1;
+                    } else if name.contains("kernel") {
+                        *categories.entry("Kernel").or_insert(0) += 1;
+                    } else if name.contains("python") || name.contains("perl") || name.contains("ruby") {
+                        *categories.entry("Interpreters").or_insert(0) += 1;
+                    } else {
+                        *categories.entry("Other").or_insert(0) += 1;
+                    }
+                }
+
+                println!("{}", "Package Categories:".green().bold());
+                let mut cat_vec: Vec<_> = categories.iter().collect();
+                cat_vec.sort_by_key(|(_, count)| std::cmp::Reverse(**count));
+                for (cat, count) in cat_vec {
+                    println!("  {:15} {}", cat, count.to_string().cyan());
+                }
+                println!();
+            }
+
+            println!("{}", "Package Manager Configuration:".green().bold());
+            let pkg_configs = vec![
+                ("/etc/yum.conf", "YUM configuration"),
+                ("/etc/dnf/dnf.conf", "DNF configuration"),
+                ("/etc/apt/sources.list", "APT sources"),
+                ("/etc/zypp/zypp.conf", "Zypper configuration"),
+            ];
+
+            for (file, desc) in pkg_configs {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {} - {}", "✓".green(), file.cyan(), desc.bright_black());
+                }
+            }
+            println!();
+
+            println!("{} Package commands:", "💡".yellow());
+            println!("  • {}", "packages <pattern> - Search packages".cyan());
+            println!("  • {}", "export packages json - Export package list".cyan());
+            println!();
+        }
+
+        "services" => {
+            println!("\n{} {}", "⚙".cyan(), "System Services Inspection".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled: Vec<_> = services.iter().filter(|s| s.enabled).collect();
+                let disabled: Vec<_> = services.iter().filter(|s| !s.enabled).collect();
+
+                println!("{}", "Service Statistics:".green().bold());
+                println!("  Total:    {}", services.len().to_string().yellow());
+                println!("  Enabled:  {} {}%",
+                    enabled.len().to_string().green(),
+                    format!("({:.1})", (enabled.len() as f64 / services.len() as f64) * 100.0).bright_black()
+                );
+                println!("  Disabled: {}", disabled.len().to_string().bright_black());
+                println!();
+
+                println!("{}", "Enabled Services (first 20):".green().bold());
+                for svc in enabled.iter().take(20) {
+                    println!("  {} {}", "✓".green(), svc.name.cyan());
+                }
+                if enabled.len() > 20 {
+                    println!("  ... and {} more", (enabled.len() - 20).to_string().bright_black());
+                }
+                println!();
+
+                // Categorize services
+                let mut critical = Vec::new();
+                let mut network = Vec::new();
+                let mut security = Vec::new();
+
+                for svc in &enabled {
+                    let name = svc.name.to_lowercase();
+                    if name.contains("ssh") || name.contains("systemd") || name.contains("dbus") {
+                        critical.push(&svc.name);
+                    } else if name.contains("network") || name.contains("firewall") {
+                        network.push(&svc.name);
+                    } else if name.contains("selinux") || name.contains("audit") {
+                        security.push(&svc.name);
+                    }
+                }
+
+                if !critical.is_empty() {
+                    println!("{}", "Critical Services:".red().bold());
+                    for svc in critical {
+                        println!("  • {}", svc.yellow());
+                    }
+                    println!();
+                }
+
+                if !network.is_empty() {
+                    println!("{}", "Network Services:".cyan().bold());
+                    for svc in network {
+                        println!("  • {}", svc.cyan());
+                    }
+                    println!();
+                }
+
+                if !security.is_empty() {
+                    println!("{}", "Security Services:".green().bold());
+                    for svc in security {
+                        println!("  • {}", svc.green());
+                    }
+                    println!();
+                }
+            }
+
+            println!("{} Service commands:", "💡".yellow());
+            println!("  • {}", "services - List all services".cyan());
+            println!("  • {}", "services <pattern> - Search services".cyan());
+            println!();
+        }
+
+        "kernel" => {
+            println!("\n{} {}", "🔧".cyan(), "Kernel Inspection".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            // Kernel version information would be displayed here if available
+            println!();
+
+            println!("{}", "Kernel Modules:".green().bold());
+            let mod_dirs = vec![
+                "/lib/modules",
+                "/usr/lib/modules",
+            ];
+
+            for dir in mod_dirs {
+                if ctx.guestfs.is_dir(dir).unwrap_or(false) {
+                    if let Ok(subdirs) = ctx.guestfs.ls(dir) {
+                        println!("  {} {}", "✓".green(), dir.cyan());
+                        for subdir in subdirs.iter().take(5) {
+                            println!("    • {}", subdir.bright_black());
+                        }
+                        if subdirs.len() > 5 {
+                            println!("    ... and {} more", (subdirs.len() - 5).to_string().bright_black());
+                        }
+                    }
+                }
+            }
+            println!();
+
+            println!("{}", "Kernel Configuration:".green().bold());
+            let kernel_configs = vec![
+                "/boot/config-*",
+                "/proc/config.gz",
+            ];
+
+            for pattern in kernel_configs {
+                println!("  {}", pattern.cyan());
+            }
+            println!();
+
+            println!("{} Explore kernel:", "💡".yellow());
+            println!("  • {}", "cd /boot".cyan());
+            println!("  • {}", "ls -la /boot".cyan());
+            println!("  • {}", "cd /lib/modules".cyan());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown component: {}", "Error:".red(), component);
+            println!("{} inspect <component>", "Usage:".yellow());
+            return Ok(());
+        }
     }
 
     Ok(())
