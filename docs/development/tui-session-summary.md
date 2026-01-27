@@ -385,6 +385,73 @@ Dashboard | Network (5) | Packages (1247) | Services (42) | ...
 - **Quick Jump Menu:** O(n*m) fuzzy matching (n=views, m=query length) - negligible for 12 views
 - **Progress Bars/Gauges:** O(n) where n=items in view - calculated once per render, minimal impact
 
+### 11. ⚙️ TUI Configuration System
+**Commit:** 214afd7
+
+- User configuration file support at `~/.config/guestkit/tui.toml`
+- TOML-based configuration for human-friendly editing
+- Graceful fallback to defaults if file doesn't exist
+- Comprehensive customization options
+
+**Configuration Sections:**
+
+**[ui]** - User interface customization:
+- `show_splash` - Enable/disable splash screen (default: true)
+- `splash_duration_ms` - Splash duration in milliseconds (default: 800)
+- `show_stats_bar` - Show/hide statistics bar (default: true)
+- `theme` - Color theme selection (default: "default")
+- `mouse_enabled` - Enable/disable mouse support (default: true)
+
+**[behavior]** - TUI behavior settings:
+- `default_view` - Initial view on startup (default: "dashboard")
+  * Options: dashboard, network, packages, services, databases, webservers, security, issues, storage, users, kernel, profiles
+- `auto_refresh_seconds` - Auto-refresh interval (default: 0 = disabled)
+- `search_case_sensitive` - Search case-sensitive by default (default: false)
+- `search_regex_mode` - Enable regex search by default (default: false)
+- `max_bookmarks` - Maximum number of bookmarks (default: 20)
+- `page_scroll_lines` - Lines to scroll with Page Up/Down (default: 10)
+
+**[keybindings]** - Keyboard customization:
+- `vim_mode` - Enable vim-style keybindings (default: true)
+- `quick_jump_enabled` - Enable Ctrl+P quick jump menu (default: true)
+
+**Implementation:**
+- Type-safe configuration with serde derives
+- Cross-platform config directory support via dirs crate
+- Config loading on TUI startup
+- Values integrated into App initialization
+
+**Code Changes:**
+- Added `src/cli/tui/config.rs` - Configuration struct and loading logic
+- Modified `src/cli/tui/mod.rs` - Integrate config into TUI initialization
+- Modified `src/cli/tui/app.rs` - Load and use config values
+- Added `Cargo.toml` - toml = "0.8" dependency
+- Created `docs/tui-config-example.toml` - Example configuration file
+- Updated `docs/features/tui-enhancements.md` - Configuration documentation
+
+**Example Configurations:**
+
+Minimal splash, start at Services view:
+```toml
+[ui]
+show_splash = false
+
+[behavior]
+default_view = "services"
+```
+
+Power user setup:
+```toml
+[ui]
+show_splash = false
+mouse_enabled = false
+
+[behavior]
+default_view = "issues"
+search_regex_mode = true
+page_scroll_lines = 20
+```
+
 ---
 
 ## Commits
@@ -397,6 +464,8 @@ Dashboard | Network (5) | Packages (1247) | Services (42) | ...
 6. **4ee4bfb** - Add visual progress bars and gauges to TUI views
 7. **e0343a1** - Add package statistics and RAID health gauges to TUI
 8. **be987a9** - Add visual analytics to Users, Databases, and WebServers views
+9. **907e35f** - Document enhanced TUI features in README
+10. **214afd7** - Add comprehensive TUI configuration system
 
 ---
 
@@ -510,18 +579,20 @@ The TUI is now significantly more user-friendly with:
 - Powerful search (case + regex)
 - Quick jump menu with fuzzy search (Ctrl+P)
 - Visual progress bars and status gauges
+- Comprehensive configuration system
 - Comprehensive help system
 
-The TUI is production-ready and provides an excellent experience for VM disk inspection!
+The TUI is production-ready, highly customizable, and provides an excellent experience for VM disk inspection!
 
 ---
 
-**Total Development Time:** ~6-7 hours
-**Lines Changed:** ~1,100+
-**Features Added:** 10 major enhancements
-**Commits Created:** 8 feature commits
+**Total Development Time:** ~8-9 hours
+**Lines Changed:** ~1,700+
+**Features Added:** 11 major enhancements
+**Commits Created:** 10 commits (8 features + 1 documentation + 1 configuration)
 **Views Enhanced:** 8 of 12 views (all major data views)
 **Visual Widgets:** 20 total (14 gauges + 3 bar charts + 3 dashboard charts/sparklines)
+**Configuration Options:** 11 settings across 3 categories (UI, Behavior, Keybindings)
 **Widget Distribution:**
 - Services: 2 gauges
 - Network: 2 gauges
