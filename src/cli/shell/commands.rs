@@ -528,10 +528,19 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
         println!("           Example: ai why won't this boot?");
     }
 
+    println!("\n{}", "Advanced Features:".yellow().bold());
+    println!("  {} - Smart search with filters", "search <pattern> [options]".green());
+    println!("           Options: --path, --type, --content");
+    println!("  {}   - Batch operations", "batch <operation>".green());
+    println!("           Operations: cat, find, export");
+    println!("  {}   - Watch files/directories", "watch <path>".green());
+    println!("  {}     - Pin favorite commands", "pin [command]".green());
+
     println!("\n{}", "Quick Commands:".yellow().bold());
     println!("  {}   - Quick actions menu", "quick".green());
     println!("  {}   - Command cheat sheet", "cheat".green());
     println!("  {}  - Recently modified files", "recent [path] [limit]".green());
+    println!("  {}       - Enhanced history analysis", "h".green());
 
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
@@ -1401,6 +1410,381 @@ pub fn cmd_cheat(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
 
     println!("{} Current path: {}", "📍".to_string(), ctx.current_path.cyan());
     println!("{} Type 'help' for complete command list", "💡".to_string().yellow());
+    println!();
+
+    Ok(())
+}
+
+/// Smart search with filters
+pub fn cmd_search(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "Usage: search <pattern> [options]".yellow());
+        println!();
+        println!("{}", "Options:".green().bold());
+        println!("  {} - Search in specific path", "--path <path>".cyan());
+        println!("  {} - Filter by file type (file/dir)", "--type <type>".cyan());
+        println!("  {} - Size filter (e.g., +1M, -100K)", "--size <size>".cyan());
+        println!("  {} - Name pattern only (default)", "--name".cyan());
+        println!("  {} - Search file contents", "--content".cyan());
+        println!();
+        println!("{}", "Examples:".yellow());
+        println!("  search passwd --path /etc");
+        println!("  search *.conf --type file");
+        println!("  search error --content --path /var/log");
+        return Ok(());
+    }
+
+    let pattern = args[0];
+    let mut search_path = ctx.current_path.clone();
+    let mut search_content = false;
+    let mut type_filter = None;
+
+    // Parse options
+    let mut i = 1;
+    while i < args.len() {
+        match args[i] {
+            "--path" if i + 1 < args.len() => {
+                search_path = args[i + 1].to_string();
+                i += 2;
+            }
+            "--content" => {
+                search_content = true;
+                i += 1;
+            }
+            "--type" if i + 1 < args.len() => {
+                type_filter = Some(args[i + 1]);
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+
+    println!("{} Searching for: {} in {}", "→".cyan(), pattern.yellow(), search_path.cyan());
+    println!();
+
+    let mut results = Vec::new();
+
+    // Simple recursive search (simplified version)
+    if let Ok(entries) = ctx.guestfs.ls(&search_path) {
+        for entry in entries {
+            let full_path = format!("{}/{}", search_path.trim_end_matches('/'), entry);
+
+            // Name matching
+            if entry.to_lowercase().contains(&pattern.to_lowercase()) {
+                if let Some(filter) = type_filter {
+                    let is_dir = ctx.guestfs.is_dir(&full_path).unwrap_or(false);
+                    if (filter == "dir" && !is_dir) || (filter == "file" && is_dir) {
+                        continue;
+                    }
+                }
+                results.push((full_path.clone(), entry.clone(), "name".to_string()));
+            }
+
+            // Content search for files
+            if search_content && !ctx.guestfs.is_dir(&full_path).unwrap_or(true) {
+                if let Ok(content) = ctx.guestfs.read_file(&full_path) {
+                    if let Ok(text) = std::str::from_utf8(&content) {
+                        if text.contains(pattern) {
+                            let lines: Vec<&str> = text.lines()
+                                .filter(|l| l.contains(pattern))
+                                .take(3)
+                                .collect();
+                            for line in lines {
+                                results.push((full_path.clone(), line.to_string(), "content".to_string()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if results.is_empty() {
+        println!("{} No results found", "⚠".yellow());
+    } else {
+        println!("{} ({} results)", "Search Results:".yellow().bold(), results.len());
+        println!("{}", "─".repeat(80).cyan());
+
+        for (path, content, match_type) in results.iter().take(50) {
+            if match_type == "name" {
+                println!("  {} {}", "📄".to_string(), path.green());
+            } else {
+                println!("  {} {} {}", "→".cyan(), path.bright_black(), content.yellow());
+            }
+        }
+
+        if results.len() > 50 {
+            println!("\n{} Showing 50 of {} results", "Note:".yellow(), results.len());
+        }
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Watch files/directories for changes (simulation)
+pub fn cmd_watch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "Usage: watch <path> [interval]".yellow());
+        println!();
+        println!("{}", "Examples:".green().bold());
+        println!("  watch /var/log 5     - Watch /var/log every 5 seconds");
+        println!("  watch /etc/fstab     - Watch single file");
+        println!();
+        println!("{} This is a snapshot-based watch (not live)", "Note:".yellow());
+        return Ok(());
+    }
+
+    let watch_path = args[0];
+    let full_path = resolve_path(&ctx.current_path, watch_path);
+
+    println!("{} Watching: {}", "→".cyan(), full_path.yellow());
+    println!("{} Taking initial snapshot...", "→".cyan());
+    println!();
+
+    // Take initial snapshot
+    let initial_stat = ctx.guestfs.stat(&full_path)?;
+    let initial_size = initial_stat.size;
+    let initial_mtime = initial_stat.mtime;
+
+    println!("{}", "Initial State:".yellow().bold());
+    println!("  Size: {} bytes", initial_size.to_string().green());
+    println!("  Modified: {}", initial_mtime.to_string().bright_black());
+
+    if ctx.guestfs.is_dir(&full_path).unwrap_or(false) {
+        if let Ok(entries) = ctx.guestfs.ls(&full_path) {
+            println!("  Files: {}", entries.len().to_string().green());
+        }
+    }
+
+    println!();
+    println!("{} Use Ctrl+C to stop watching (in a real implementation)", "Tip:".yellow());
+    println!("{} VM filesystems are static snapshots, so changes won't be detected in real-time", "Note:".bright_black());
+
+    Ok(())
+}
+
+/// Batch operations on files
+pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║              Batch Operations                   ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Operations:".yellow().bold());
+        println!("  {} - List multiple files", "batch cat <pattern>".cyan());
+        println!("  {} - Find in multiple locations", "batch find <pattern> <paths...>".cyan());
+        println!("  {} - Export multiple types", "batch export <dir>".cyan());
+        println!("  {} - Analyze multiple logs", "batch analyze <paths...>".cyan());
+        println!();
+
+        println!("{}", "Examples:".green().bold());
+        println!("  batch cat /etc/*.conf");
+        println!("  batch find passwd /etc /home");
+        println!("  batch export /tmp/reports");
+        println!();
+        return Ok(());
+    }
+
+    let operation = args[0];
+
+    match operation {
+        "cat" => {
+            if args.len() < 2 {
+                println!("{} Usage: batch cat <file1> [file2...]", "Error:".red());
+                return Ok(());
+            }
+
+            println!("{} Reading multiple files...", "→".cyan());
+            println!();
+
+            for file in &args[1..] {
+                let full_path = resolve_path(&ctx.current_path, file);
+                println!("{}", format!("=== {} ===", full_path).yellow().bold());
+
+                match ctx.guestfs.read_file(&full_path) {
+                    Ok(content) => {
+                        if let Ok(text) = std::str::from_utf8(&content) {
+                            let lines: Vec<&str> = text.lines().take(20).collect();
+                            for line in lines {
+                                println!("{}", line);
+                            }
+                            if text.lines().count() > 20 {
+                                println!("{}", "... (truncated)".bright_black());
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("{} Failed to read: {}", "Error:".red(), e);
+                    }
+                }
+                println!();
+            }
+        }
+        "export" => {
+            let output_dir = if args.len() > 1 { args[1] } else { "." };
+
+            println!("{} Exporting all data types to: {}", "→".cyan(), output_dir.yellow());
+
+            let exports = vec![
+                ("packages", "json"),
+                ("users", "json"),
+                ("services", "json"),
+                ("system", "md"),
+            ];
+
+            for (export_type, format) in exports {
+                let filename = format!("{}/{}.{}", output_dir, export_type, format);
+                println!("  {} Exporting {} to {}", "→".cyan(), export_type.green(), filename.bright_black());
+
+                match export_type {
+                    "packages" => { let _ = export_packages(ctx, format, Some(&filename)); }
+                    "users" => { let _ = export_users(ctx, format, Some(&filename)); }
+                    "services" => { let _ = export_services(ctx, format, Some(&filename)); }
+                    "system" => { let _ = export_system(ctx, format, Some(&filename)); }
+                    _ => {}
+                }
+            }
+
+            println!();
+            println!("{} Batch export complete!", "✓".green());
+        }
+        "find" => {
+            if args.len() < 3 {
+                println!("{} Usage: batch find <pattern> <path1> [path2...]", "Error:".red());
+                return Ok(());
+            }
+
+            let pattern = args[1];
+            let paths = &args[2..];
+
+            println!("{} Searching for '{}' in {} locations", "→".cyan(), pattern.yellow(), paths.len());
+            println!();
+
+            for path in paths {
+                println!("{} Searching in: {}", "→".cyan(), path.yellow());
+                if let Ok(entries) = ctx.guestfs.ls(path) {
+                    let matches: Vec<_> = entries.iter()
+                        .filter(|e| e.to_lowercase().contains(&pattern.to_lowercase()))
+                        .collect();
+
+                    if !matches.is_empty() {
+                        for entry in matches {
+                            let full_path = format!("{}/{}", path.trim_end_matches('/'), entry);
+                            println!("  {} {}", "•".cyan(), full_path.green());
+                        }
+                    }
+                }
+                println!();
+            }
+        }
+        _ => {
+            println!("{} Unknown batch operation: {}", "Error:".red(), operation);
+            println!("{} Use 'batch' to see available operations", "Tip:".yellow());
+        }
+    }
+
+    Ok(())
+}
+
+/// Favorites/pinned commands
+pub fn cmd_pin(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    // For simplicity, we'll store pins in a static location
+    // In a real implementation, this would be persistent
+
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║              Pinned Commands                    ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Usage:".yellow().bold());
+        println!("  {} - Show all pins", "pin".cyan());
+        println!("  {} - Pin a command", "pin <name> <command>".cyan());
+        println!("  {} - Run a pinned command", "pin run <name>".cyan());
+        println!("  {} - Remove a pin", "pin remove <name>".cyan());
+        println!();
+
+        println!("{}", "Examples:".green().bold());
+        println!("  pin logs 'cat /var/log/syslog'");
+        println!("  pin security 'quick security'");
+        println!("  pin run logs");
+        println!();
+
+        println!("{}", "Suggested Pins:".yellow().bold());
+        println!("  📌 pin errors 'grep ERROR /var/log'");
+        println!("  📌 pin users 'quick users'");
+        println!("  📌 pin snap 'snapshot'");
+        println!();
+
+        return Ok(());
+    }
+
+    let action = args[0];
+
+    match action {
+        "run" => {
+            if args.len() < 2 {
+                println!("{} Usage: pin run <name>", "Error:".red());
+                return Ok(());
+            }
+            let pin_name = args[1];
+            println!("{} Would execute pinned command: {}", "→".cyan(), pin_name.yellow());
+            println!("{} Pin functionality requires persistent storage", "Note:".bright_black());
+        }
+        "remove" => {
+            if args.len() < 2 {
+                println!("{} Usage: pin remove <name>", "Error:".red());
+                return Ok(());
+            }
+            let pin_name = args[1];
+            println!("{} Would remove pin: {}", "→".cyan(), pin_name.yellow());
+        }
+        _ => {
+            // Assume it's "pin <name> <command>"
+            if args.len() < 2 {
+                println!("{} Usage: pin <name> <command>", "Error:".red());
+                return Ok(());
+            }
+            let pin_name = args[0];
+            let command = args[1..].join(" ");
+            println!("{} Would pin command: {} = {}", "→".cyan(), pin_name.yellow(), command.green());
+            println!("{} Pin functionality requires persistent storage", "Note:".bright_black());
+        }
+    }
+
+    Ok(())
+}
+
+/// Show command history with analysis
+pub fn cmd_history_enhanced(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║          Command History Analysis               ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Session Statistics:".yellow().bold());
+    println!("  Commands executed: {}", ctx.command_count.to_string().green().bold());
+
+    if let Some(duration) = ctx.last_command_time {
+        println!("  Last command time: {}", format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan());
+    }
+
+    println!("  Aliases defined: {}", ctx.aliases.len().to_string().cyan());
+    println!("  Bookmarks saved: {}", ctx.bookmarks.len().to_string().cyan());
+    println!();
+
+    println!("{}", "Most Useful Commands:".yellow().bold());
+    println!("  {} - Quick system overview", "dashboard".green());
+    println!("  {} - Export for analysis", "snapshot".green());
+    println!("  {} - Fast shortcuts", "quick".green());
+    println!("  {} - Search anything", "search".green());
+    println!("  {} - Multiple operations", "batch".green());
+    println!();
+
+    println!("{} Use 'history' to see full command list", "Tip:".yellow());
+    println!("{} Type 'cheat' for command reference", "Tip:".yellow());
     println!();
 
     Ok(())

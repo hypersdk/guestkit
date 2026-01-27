@@ -6,10 +6,12 @@ use crate::cli::profiles::{ProfileReport, RiskLevel, ReportSection, Finding};
 use anyhow::Result;
 
 /// Generates fix plans from profile reports
+#[allow(dead_code)]
 pub struct PlanGenerator {
     vm_path: String,
 }
 
+#[allow(dead_code)]
 impl PlanGenerator {
     /// Create a new plan generator
     pub fn new(vm_path: String) -> Self {

@@ -242,6 +242,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "cheat" => {
                         commands::cmd_cheat(&ctx, args)
                     }
+                    "search" => {
+                        commands::cmd_search(&mut ctx, args)
+                    }
+                    "watch" => {
+                        commands::cmd_watch(&mut ctx, args)
+                    }
+                    "batch" => {
+                        commands::cmd_batch(&mut ctx, args)
+                    }
+                    "pin" => {
+                        commands::cmd_pin(&mut ctx, args)
+                    }
+                    "h" => {
+                        commands::cmd_history_enhanced(&ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);

@@ -370,6 +370,7 @@ pub enum PostApplyAction {
 
 impl FixPlan {
     /// Create a new empty plan
+    #[allow(dead_code)]
     pub fn new(vm: String, profile: String) -> Self {
         Self {
             version: "1.0".to_string(),
@@ -391,11 +392,13 @@ impl FixPlan {
     }
 
     /// Add an operation to the plan
+    #[allow(dead_code)]
     pub fn add_operation(&mut self, operation: Operation) {
         self.operations.push(operation);
     }
 
     /// Get operations sorted by priority
+    #[allow(dead_code)]
     pub fn operations_by_priority(&self) -> Vec<&Operation> {
         let mut ops: Vec<&Operation> = self.operations.iter().collect();
         ops.sort_by_key(|op| op.priority);
@@ -408,6 +411,7 @@ impl FixPlan {
     }
 
     /// Check if plan has any critical operations
+    #[allow(dead_code)]
     pub fn has_critical(&self) -> bool {
         self.operations.iter().any(|op| op.priority == Priority::Critical)
     }

@@ -38,6 +38,7 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 - [CLI Examples](#-cli-examples)
 - [Interactive Shell](#-interactive-shell)
 - [Security Profiles](#-security-profiles)
+- [Fix Plans](#-offline-patch--fix-plans)
 - [AI Diagnostics](#-ai-powered-diagnostics-optional)
 - [Python API](#-python-api)
 - [Export Formats](#-export-formats)
@@ -454,6 +455,83 @@ Each profile generates findings with:
 - **Description** — Detailed explanation
 - **Remediation** — How to fix the issue
 - **References** — Links to documentation/CVEs
+
+---
+
+## 🔧 Offline Patch & Fix Plans
+
+GuestKit can generate, preview, and apply fix plans for security hardening, compliance, and migration preparation. This workflow enables safe, reviewable changes with complete separation of concerns.
+
+### Workflow
+
+```
+Inspect → Diagnose → Generate Plan → Review → Approve → Execute
+```
+
+### Generate a Fix Plan
+
+```bash
+# From a security profile (Phase 2 - coming soon)
+guestctl profile security vm.qcow2 --plan security-fixes.yaml
+```
+
+### Preview the Plan
+
+```bash
+# Human-readable preview
+guestctl plan preview security-fixes.yaml
+
+# Show as unified diff
+guestctl plan preview security-fixes.yaml --diff
+
+# Summary only
+guestctl plan preview security-fixes.yaml --summary
+```
+
+### Export to Scripts
+
+```bash
+# Export as bash script
+guestctl plan export security-fixes.yaml --format bash --output fixes.sh
+
+# Export as Ansible playbook
+guestctl plan export security-fixes.yaml --format ansible --output fixes.yml
+
+# Export as JSON or YAML
+guestctl plan export security-fixes.yaml --format json --output fixes.json
+```
+
+### Validate and Apply
+
+```bash
+# Validate plan (dry-run simulation)
+guestctl plan validate security-fixes.yaml
+
+# Apply with interactive prompts
+guestctl plan apply security-fixes.yaml --interactive
+
+# Apply with backup
+guestctl plan apply security-fixes.yaml --backup /backup/vm-state
+
+# Rollback if needed
+guestctl plan rollback /backup/vm-state --vm vm.qcow2
+```
+
+### Show Statistics
+
+```bash
+guestctl plan stats security-fixes.yaml
+```
+
+### Key Features
+
+- **Safety First**: Preview changes, validate plans, create backups
+- **Auditability**: Plans are version-controllable YAML/JSON artifacts
+- **Scriptability**: Export to bash/ansible for integration
+- **Reversibility**: Rollback capabilities for safe recovery
+- **Collaboration**: Security team generates, ops team applies
+
+For detailed documentation, see [Fix Plans Documentation](docs/features/fix-plans.md).
 
 ---
 
