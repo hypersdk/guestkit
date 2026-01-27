@@ -528,6 +528,15 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
         println!("           Example: ai why won't this boot?");
     }
 
+    println!("\n{}", "Intelligence & Discovery:".yellow().bold());
+    println!("  {} - Smart recommendations engine", "recommend, rec".green());
+    println!("  {} - System profiling & detection", "profile <type>".green());
+    println!("           Types: create, quick, detect, show");
+    println!("  {} - Automatic system discovery", "discover, disco <type>".green());
+    println!("           Types: files, apps, network, all");
+    println!("  {}  - Formatted report generator", "report <type>".green());
+    println!("           Types: executive, technical, security, compliance");
+
     println!("\n{}", "Guided Workflows:".yellow().bold());
     println!("  {} - Interactive task wizards", "wizard, wiz <type>".green());
     println!("           Types: security, health, packages, config, export");
@@ -2367,6 +2376,539 @@ pub fn cmd_compare(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// System profiling and fingerprinting
+pub fn cmd_profile(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  System Profiler                         ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Profiles:".yellow().bold());
+        println!("  {} - Create full system profile", "profile create [name]".cyan());
+        println!("  {} - Quick system fingerprint", "profile quick".cyan());
+        println!("  {} - Show system characteristics", "profile show".cyan());
+        println!("  {} - Detect system purpose", "profile detect".cyan());
+        println!();
+
+        return Ok(());
+    }
+
+    let profile_type = args[0];
+
+    match profile_type {
+        "create" => {
+            let profile_name = if args.len() > 1 { args[1] } else { "system-profile" };
+
+            println!("\n{} Creating system profile: {}", "→".cyan(), profile_name.yellow());
+            println!();
+
+            let mut profile_data = String::new();
+            profile_data.push_str(&format!("# System Profile: {}\n\n", profile_name));
+
+            // Basic info
+            if let Ok(os) = ctx.guestfs.inspect_get_product_name(&ctx.root) {
+                profile_data.push_str(&format!("**OS:** {}\n", os));
+            }
+            if let Ok(arch) = ctx.guestfs.inspect_get_arch(&ctx.root) {
+                profile_data.push_str(&format!("**Architecture:** {}\n", arch));
+            }
+            if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
+                profile_data.push_str(&format!("**Hostname:** {}\n", hostname));
+            }
+
+            profile_data.push_str("\n## Profile Metrics\n\n");
+
+            // Metrics
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                profile_data.push_str(&format!("- Packages: {}\n", pkg_info.packages.len()));
+            }
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                profile_data.push_str(&format!("- Users: {}\n", users.len()));
+            }
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                profile_data.push_str(&format!("- Services: {} ({} enabled)\n", services.len(), enabled));
+            }
+
+            let filename = format!("{}.md", profile_name);
+            use std::fs;
+            fs::write(&filename, profile_data)?;
+
+            println!("{} Profile saved to: {}", "✓".green(), filename.yellow());
+            println!();
+        }
+        "quick" => {
+            println!("\n{}", "🔍 Quick System Fingerprint".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let mut fingerprint = Vec::new();
+
+            if let Ok(os_type) = ctx.guestfs.inspect_get_type(&ctx.root) {
+                fingerprint.push(format!("Type: {}", os_type));
+            }
+            if let Ok(distro) = ctx.guestfs.inspect_get_distro(&ctx.root) {
+                fingerprint.push(format!("Distro: {}", distro));
+            }
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let count = pkg_info.packages.len();
+                let size = if count < 200 { "minimal" } else if count < 500 { "standard" } else { "full" };
+                fingerprint.push(format!("Size: {} ({} pkgs)", size, count));
+            }
+
+            for item in fingerprint {
+                println!("  {} {}", "•".cyan(), item.green());
+            }
+            println!();
+        }
+        "detect" => {
+            println!("\n{}", "🎯 System Purpose Detection".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let mut purposes = Vec::new();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let packages = &pkg_info.packages;
+
+                // Check for web server
+                if packages.iter().any(|p| p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache")) {
+                    purposes.push(("Web Server", "🌐", "HTTP server software detected"));
+                }
+
+                // Check for database
+                if packages.iter().any(|p| p.name.contains("mysql") || p.name.contains("postgres") || p.name.contains("mariadb")) {
+                    purposes.push(("Database Server", "💾", "Database software detected"));
+                }
+
+                // Check for development
+                if packages.iter().any(|p| p.name.contains("gcc") || p.name.contains("python-dev") || p.name.contains("build-essential")) {
+                    purposes.push(("Development", "⚙", "Development tools detected"));
+                }
+
+                // Check for desktop
+                if packages.iter().any(|p| p.name.contains("gnome") || p.name.contains("kde") || p.name.contains("xorg")) {
+                    purposes.push(("Desktop/Workstation", "🖥", "Desktop environment detected"));
+                }
+
+                // Check for container
+                if packages.iter().any(|p| p.name.contains("docker") || p.name.contains("podman") || p.name.contains("kubernetes")) {
+                    purposes.push(("Container Platform", "📦", "Container runtime detected"));
+                }
+            }
+
+            if purposes.is_empty() {
+                println!("  {} Minimal/Base system", "🔧".to_string());
+                println!("  No specific purpose detected - likely a base installation");
+            } else {
+                println!("{}", "Detected Purposes:".green().bold());
+                for (purpose, icon, desc) in purposes {
+                    println!("  {} {} - {}", icon.to_string(), purpose.green().bold(), desc.bright_black());
+                }
+            }
+            println!();
+        }
+        "show" => {
+            println!("\n{}", "📋 System Characteristics".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            println!("{}", "System Identity:".green().bold());
+            if let Ok(os) = ctx.guestfs.inspect_get_product_name(&ctx.root) {
+                println!("  OS: {}", os.cyan());
+            }
+            if let Ok(arch) = ctx.guestfs.inspect_get_arch(&ctx.root) {
+                println!("  Architecture: {}", arch.cyan());
+            }
+
+            println!();
+            println!("{}", "Security Profile:".green().bold());
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let profile = if &sec.selinux != "disabled" && sec.apparmor {
+                    "Hardened"
+                } else if &sec.selinux != "disabled" || sec.apparmor {
+                    "Standard"
+                } else {
+                    "Basic"
+                };
+                println!("  Security Level: {}", profile.yellow());
+            }
+
+            println!();
+        }
+        _ => {
+            println!("{} Unknown profile command: {}", "Error:".red(), profile_type);
+        }
+    }
+
+    Ok(())
+}
+
+/// Smart recommendations engine
+pub fn cmd_recommend(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Smart Recommendations                       ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{} Analyzing system and generating recommendations...", "→".cyan());
+    println!();
+
+    let mut recommendations = Vec::new();
+
+    // Security recommendations
+    if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+        if &sec.selinux == "disabled" {
+            recommendations.push((
+                "HIGH",
+                "Security",
+                "Enable SELinux for enhanced security",
+                "wizard security"
+            ));
+        }
+
+        if !sec.auditd {
+            recommendations.push((
+                "MEDIUM",
+                "Monitoring",
+                "Enable auditd for system auditing",
+                "scan security"
+            ));
+        }
+    }
+
+    // Firewall recommendation
+    if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+        if !fw.enabled {
+            recommendations.push((
+                "HIGH",
+                "Security",
+                "Enable firewall for network protection",
+                "quick security"
+            ));
+        }
+    }
+
+    // User account recommendations
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        let root_count = users.iter().filter(|u| u.uid == "0").count();
+        if root_count > 1 {
+            recommendations.push((
+                "HIGH",
+                "Security",
+                "Multiple root accounts detected - review user list",
+                "users"
+            ));
+        }
+    }
+
+    // Package recommendations
+    if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+        if pkg_info.packages.len() < 100 {
+            recommendations.push((
+                "LOW",
+                "System",
+                "Very minimal package set - consider if all tools are available",
+                "wizard packages"
+            ));
+        }
+    }
+
+    // General recommendations
+    recommendations.push((
+        "INFO",
+        "Analysis",
+        "Generate a full system snapshot for documentation",
+        "snapshot"
+    ));
+
+    recommendations.push((
+        "INFO",
+        "Export",
+        "Export data for external analysis",
+        "batch export /tmp/data"
+    ));
+
+    if recommendations.is_empty() {
+        println!("{} No recommendations - system looks good!", "✓".green());
+    } else {
+        println!("{} ({} items)", "Recommendations:".yellow().bold(), recommendations.len());
+        println!();
+
+        for (priority, category, recommendation, command) in recommendations {
+            let priority_colored = match priority {
+                "HIGH" => "HIGH".red(),
+                "MEDIUM" => "MEDIUM".yellow(),
+                "LOW" => "LOW".bright_black(),
+                _ => "INFO".cyan(),
+            };
+
+            println!("  [{}] {} - {}", priority_colored, category.green().bold(), recommendation);
+            println!("      {} {}", "Command:".bright_black(), command.cyan());
+            println!();
+        }
+    }
+
+    println!("{} Run suggested commands to address recommendations", "Tip:".yellow());
+    println!();
+
+    Ok(())
+}
+
+/// Discover and explore system
+pub fn cmd_discover(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  System Discovery                        ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Discovery Options:".yellow().bold());
+        println!("  {} - Discover interesting files", "discover files".cyan());
+        println!("  {} - Discover installed applications", "discover apps".cyan());
+        println!("  {} - Discover network configuration", "discover network".cyan());
+        println!("  {} - Discover all (comprehensive)", "discover all".cyan());
+        println!();
+
+        return Ok(());
+    }
+
+    let discover_type = args[0];
+
+    match discover_type {
+        "files" => {
+            println!("\n{}", "📂 Discovering Interesting Files".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let interesting_paths = vec![
+                ("/etc/fstab", "Filesystem table"),
+                ("/etc/passwd", "User accounts"),
+                ("/etc/shadow", "Password hashes"),
+                ("/etc/hosts", "Host name mappings"),
+                ("/etc/ssh/sshd_config", "SSH server config"),
+                ("/var/log/syslog", "System log"),
+                ("/root/.bash_history", "Root command history"),
+            ];
+
+            println!("{}", "Critical System Files:".green().bold());
+            for (path, description) in interesting_paths {
+                if ctx.guestfs.exists(path).unwrap_or(false) {
+                    if let Ok(stat) = ctx.guestfs.stat(path) {
+                        println!("  {} {} - {} ({} bytes)",
+                            "✓".green(),
+                            path.cyan(),
+                            description.bright_black(),
+                            stat.size);
+                    }
+                } else {
+                    println!("  {} {} - {} (not found)", "✗".red(), path, description.bright_black());
+                }
+            }
+            println!();
+        }
+        "apps" => {
+            println!("\n{}", "🚀 Discovering Applications".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let packages = &pkg_info.packages;
+
+                let categories = vec![
+                    ("Web Servers", vec!["httpd", "nginx", "apache"]),
+                    ("Databases", vec!["mysql", "postgres", "mariadb", "mongodb"]),
+                    ("Programming", vec!["python", "ruby", "nodejs", "java", "golang"]),
+                    ("Security Tools", vec!["nmap", "wireshark", "fail2ban", "aide"]),
+                    ("System Tools", vec!["systemd", "cron", "rsyslog"]),
+                ];
+
+                for (category, keywords) in categories {
+                    let found: Vec<_> = packages.iter()
+                        .filter(|p| keywords.iter().any(|k| p.name.contains(k)))
+                        .collect();
+
+                    if !found.is_empty() {
+                        println!("{} ({}):", category.green().bold(), found.len());
+                        for pkg in found.iter().take(5) {
+                            println!("  {} {} - {}", "•".cyan(), pkg.name.green(), pkg.version.to_string().bright_black());
+                        }
+                        if found.len() > 5 {
+                            println!("  ... and {} more", found.len() - 5);
+                        }
+                        println!();
+                    }
+                }
+            }
+        }
+        "network" => {
+            println!("\n{}", "🌐 Discovering Network Configuration".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+                println!("{} ({}):", "Network Interfaces".green().bold(), interfaces.len());
+                for iface in interfaces {
+                    println!("  {} {}", "•".cyan(), iface.name.green());
+                }
+                println!();
+            }
+
+            if let Ok(dns) = ctx.guestfs.inspect_dns(&ctx.root) {
+                if !dns.is_empty() {
+                    println!("{} ({}):", "DNS Servers".green().bold(), dns.len());
+                    for server in dns {
+                        println!("  {} {}", "•".cyan(), server.yellow());
+                    }
+                    println!();
+                }
+            }
+
+            // Check for common network files
+            println!("{}", "Network Configuration Files:".green().bold());
+            let net_files = vec!["/etc/hosts", "/etc/resolv.conf", "/etc/hostname"];
+            for file in net_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {}", "✓".green(), file.cyan());
+                }
+            }
+            println!();
+        }
+        "all" => {
+            println!("\n{}", "🔍 Comprehensive System Discovery".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            cmd_discover(ctx, &["files"])?;
+            cmd_discover(ctx, &["apps"])?;
+            cmd_discover(ctx, &["network"])?;
+
+            println!("{}", "═".repeat(60).cyan());
+            println!("{} Discovery complete!", "✓".green());
+            println!();
+        }
+        _ => {
+            println!("{} Unknown discovery type: {}", "Error:".red(), discover_type);
+        }
+    }
+
+    Ok(())
+}
+
+/// Generate formatted reports
+pub fn cmd_report(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Report Generator                        ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Reports:".yellow().bold());
+        println!("  {} - Executive summary report", "report executive".cyan());
+        println!("  {} - Technical detail report", "report technical".cyan());
+        println!("  {} - Security audit report", "report security".cyan());
+        println!("  {} - Compliance report", "report compliance".cyan());
+        println!();
+
+        println!("{}", "Output Options:".green().bold());
+        println!("  Add {} to save to file", "--output <file>".cyan());
+        println!("  Example: report executive --output summary.md");
+        println!();
+
+        return Ok(());
+    }
+
+    let report_type = args[0];
+    let output_file = if args.len() > 2 && args[1] == "--output" {
+        Some(args[2])
+    } else {
+        None
+    };
+
+    let mut report_content = String::new();
+
+    match report_type {
+        "executive" => {
+            use chrono::Local;
+            report_content.push_str("# Executive Summary Report\n\n");
+            report_content.push_str(&format!("**Generated:** {}\n\n", Local::now().format("%Y-%m-%d %H:%M:%S")));
+
+            report_content.push_str("## Overview\n\n");
+
+            if let Ok(os) = ctx.guestfs.inspect_get_product_name(&ctx.root) {
+                report_content.push_str(&format!("System running **{}**", os));
+            }
+
+            if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
+                report_content.push_str(&format!(" on host **{}**", hostname));
+            }
+            report_content.push_str(".\n\n");
+
+            report_content.push_str("## Key Metrics\n\n");
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                report_content.push_str(&format!("- **Installed Packages:** {}\n", pkg_info.packages.len()));
+            }
+
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                report_content.push_str(&format!("- **User Accounts:** {}\n", users.len()));
+            }
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                report_content.push_str(&format!("- **Active Services:** {}/{}\n", enabled, services.len()));
+            }
+
+            report_content.push_str("\n## Recommendations\n\n");
+            report_content.push_str("- Review security configuration\n");
+            report_content.push_str("- Verify all services are necessary\n");
+            report_content.push_str("- Ensure regular updates are applied\n");
+
+            println!("\n{}", "📊 Executive Summary Report".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+            println!("{}", report_content);
+        }
+        "security" => {
+            report_content.push_str("# Security Audit Report\n\n");
+
+            report_content.push_str("## Security Features\n\n");
+
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                report_content.push_str(&format!("- SELinux: {}\n", sec.selinux));
+                report_content.push_str(&format!("- AppArmor: {}\n", if sec.apparmor { "Enabled" } else { "Disabled" }));
+                report_content.push_str(&format!("- Auditd: {}\n", if sec.auditd { "Enabled" } else { "Disabled" }));
+            }
+
+            report_content.push_str("\n## Firewall Status\n\n");
+
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                report_content.push_str(&format!("- Status: {}\n", if fw.enabled { "Enabled" } else { "**Disabled**" }));
+                report_content.push_str(&format!("- Type: {}\n", fw.firewall_type));
+            }
+
+            println!("\n{}", "🔒 Security Audit Report".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+            println!("{}", report_content);
+        }
+        _ => {
+            println!("{} Unknown report type: {}", "Error:".red(), report_type);
+            return Ok(());
+        }
+    }
+
+    if let Some(file) = output_file {
+        use std::fs;
+        fs::write(file, &report_content)?;
+        println!("{} Report saved to: {}", "✓".green(), file.yellow());
+    }
+
+    println!();
     Ok(())
 }
 
