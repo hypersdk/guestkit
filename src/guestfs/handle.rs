@@ -90,7 +90,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```
-    /// use guestctl::guestfs::Guestfs;
+    /// use guestkit::guestfs::Guestfs;
     ///
     /// let g = Guestfs::new().unwrap();
     /// ```

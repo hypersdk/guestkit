@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! PyO3 Python bindings for guestctl
+//! PyO3 Python bindings for guestkit
 //!
 //! Build with: cargo build --release --features python-bindings
 
@@ -45,7 +45,7 @@ impl DiskConverter {
     /// # Examples
     ///
     /// ```python
-    /// from guestctl import DiskConverter
+    /// from guestkit import DiskConverter
     ///
     /// converter = DiskConverter()
     /// result = converter.convert(
@@ -152,7 +152,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```python
-    /// from guestctl import Guestfs
+    /// from guestkit import Guestfs
     ///
     /// g = Guestfs()
     /// g.add_drive_ro("/path/to/disk.qcow2")
@@ -940,7 +940,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```python
-    /// from guestctl import Guestfs
+    /// from guestkit import Guestfs
     ///
     /// with Guestfs() as g:
     ///     g.add_drive_ro("/path/to/disk.qcow2")
@@ -991,7 +991,7 @@ impl AsyncGuestfs {
     ///
     /// ```python
     /// import asyncio
-    /// from guestctl import AsyncGuestfs
+    /// from guestkit import AsyncGuestfs
     ///
     /// async def main():
     ///     async with AsyncGuestfs() as g:
@@ -1233,7 +1233,7 @@ impl AsyncGuestfs {
 /// Python module definition
 #[cfg(feature = "python-bindings")]
 #[pymodule]
-fn guestctl(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
+fn guestkit(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
     m.add_class::<Guestfs>()?;
     // m.add_class::<AsyncGuestfs>()?;  // TODO: Enable when pyo3-asyncio supports PyO3 0.22+
     m.add_class::<DiskConverter>()?;

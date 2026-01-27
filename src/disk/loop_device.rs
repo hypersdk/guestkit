@@ -73,7 +73,7 @@ impl LoopDevice {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestctl::disk::loop_device::LoopDevice;
+    /// use guestkit::disk::loop_device::LoopDevice;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut loop_dev = LoopDevice::new()?;

@@ -5,7 +5,7 @@
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
 use anyhow::Result;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 pub struct HardeningProfile;
 

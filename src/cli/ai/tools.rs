@@ -2,7 +2,7 @@
 //! Tool functions that the AI can call to inspect VMs
 
 use anyhow::Result;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use serde_json::json;
 
 /// Context for AI tools with access to guestfs

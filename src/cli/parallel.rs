@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use guestctl::cli::parallel::{ParallelInspector, InspectionConfig};
+//! use guestkit::cli::parallel::{ParallelInspector, InspectionConfig};
 //!
 //! let disks = vec!["vm1.qcow2", "vm2.qcow2", "vm3.qcow2"];
 //! let config = InspectionConfig::default();
@@ -29,7 +29,7 @@
 //! }
 //! ```
 
-use guestctl::core::{BinaryCache, CachedInspection, Error, Result};
+use guestkit::core::{BinaryCache, CachedInspection, Error, Result};
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use std::fs;

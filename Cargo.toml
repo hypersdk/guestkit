@@ -112,7 +112,7 @@ ai = ["rig-core", "reqwest"]
 
 # Python module (optional)
 [lib]
-name = "guestctl"
+name = "guestkit"
 crate-type = ["rlib", "cdylib"]
 
 [profile.release]
