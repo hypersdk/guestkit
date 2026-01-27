@@ -3633,3 +3633,553 @@ pub fn snapshot_command(
 
     Ok(())
 }
+/// Compare files or directories between disk images
+pub fn diff_command(
+    image1: &PathBuf,
+    image2: &PathBuf,
+    path: &str,
+    unified: bool,
+    _context: usize,
+    ignore_whitespace: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let progress = ProgressReporter::spinner("Loading disk images...");
+
+    let mut g1 = Guestfs::new()?;
+    g1.set_verbose(verbose);
+    g1.add_drive_ro(image1.to_str().unwrap())?;
+
+    let mut g2 = Guestfs::new()?;
+    g2.set_verbose(verbose);
+    g2.add_drive_ro(image2.to_str().unwrap())?;
+
+    progress.set_message("Launching appliances...");
+    g1.launch()?;
+    g2.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots1 = g1.inspect_os().unwrap_or_default();
+    if !roots1.is_empty() {
+        let root = &roots1[0];
+        if let Ok(mountpoints) = g1.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g1.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    let roots2 = g2.inspect_os().unwrap_or_default();
+    if !roots2.is_empty() {
+        let root = &roots2[0];
+        if let Ok(mountpoints) = g2.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g2.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Comparing {}...", path));
+
+    // Check if path exists in both images
+    let exists1 = g1.exists(path).unwrap_or(false);
+    let exists2 = g2.exists(path).unwrap_or(false);
+
+    progress.finish_and_clear();
+
+    if !exists1 && !exists2 {
+        println!("Path '{}' not found in either image", path);
+        g1.umount_all().ok();
+        g2.umount_all().ok();
+        g1.shutdown().ok();
+        g2.shutdown().ok();
+        return Ok(());
+    }
+
+    if !exists1 {
+        println!("--- {}", path);
+        println!("+++ {} (only in image2)", path);
+        g1.umount_all().ok();
+        g2.umount_all().ok();
+        g1.shutdown().ok();
+        g2.shutdown().ok();
+        return Ok(());
+    }
+
+    if !exists2 {
+        println!("--- {} (only in image1)", path);
+        println!("+++ {}", path);
+        g1.umount_all().ok();
+        g2.umount_all().ok();
+        g1.shutdown().ok();
+        g2.shutdown().ok();
+        return Ok(());
+    }
+
+    // Compare files
+    if g1.is_file(path).unwrap_or(false) && g2.is_file(path).unwrap_or(false) {
+        let content1 = g1.read_file(path)?;
+        let content2 = g2.read_file(path)?;
+
+        if content1 == content2 {
+            println!("Files are identical: {}", path);
+        } else {
+            println!("--- {} (image1)", path);
+            println!("+++ {} (image2)", path);
+
+            if let (Ok(text1), Ok(text2)) = (String::from_utf8(content1.clone()), String::from_utf8(content2.clone())) {
+                let lines1: Vec<&str> = text1.lines().collect();
+                let lines2: Vec<&str> = text2.lines().collect();
+
+                if unified {
+                    println!("@@ -{},{} +{},{} @@", 1, lines1.len(), 1, lines2.len());
+                }
+
+                for (idx, (line1, line2)) in lines1.iter().zip(lines2.iter()).enumerate() {
+                    if line1 != line2 {
+                        if !ignore_whitespace || line1.trim() != line2.trim() {
+                            if unified {
+                                println!("-{}", line1);
+                                println!("+{}", line2);
+                            } else {
+                                println!("{}c{}", idx + 1, idx + 1);
+                                println!("< {}", line1);
+                                println!("---");
+                                println!("> {}", line2);
+                            }
+                        }
+                    }
+                }
+
+                if lines1.len() != lines2.len() {
+                    println!("File sizes differ: {} vs {} lines", lines1.len(), lines2.len());
+                }
+            } else {
+                println!("Binary files differ: {} vs {} bytes", content1.len(), content2.len());
+            }
+        }
+    } else if g1.is_dir(path).unwrap_or(false) && g2.is_dir(path).unwrap_or(false) {
+        // Compare directories
+        let files1: std::collections::HashSet<_> = g1.ls(path)?.into_iter().collect();
+        let files2: std::collections::HashSet<_> = g2.ls(path)?.into_iter().collect();
+
+        let only_in_1: Vec<_> = files1.difference(&files2).collect();
+        let only_in_2: Vec<_> = files2.difference(&files1).collect();
+
+        let has_diff = !only_in_1.is_empty() || !only_in_2.is_empty();
+
+        if !only_in_1.is_empty() {
+            println!("Only in image1:");
+            for file in only_in_1 {
+                println!("  {}", file);
+            }
+        }
+
+        if !only_in_2.is_empty() {
+            println!("Only in image2:");
+            for file in only_in_2 {
+                println!("  {}", file);
+            }
+        }
+
+        if !has_diff {
+            println!("Directories have the same files: {}", path);
+        }
+    } else {
+        println!("Type mismatch: {} is different types in the two images", path);
+    }
+
+    g1.umount_all().ok();
+    g2.umount_all().ok();
+    g1.shutdown().ok();
+    g2.shutdown().ok();
+    Ok(())
+}
+
+/// Find large files in disk image
+pub fn find_large_command(
+    image: &PathBuf,
+    path: &str,
+    min_size: u64,
+    max_results: usize,
+    human_readable: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Scanning {} for large files...", path));
+
+    let all_files = g.find(path)?;
+    let mut file_sizes = Vec::new();
+
+    for file in all_files {
+        if g.is_file(&file).unwrap_or(false) {
+            if let Ok(stat) = g.stat(&file) {
+                if stat.size >= min_size as i64 {
+                    file_sizes.push((file, stat.size as u64));
+                }
+            }
+        }
+    }
+
+    // Sort by size descending
+    file_sizes.sort_by(|a, b| b.1.cmp(&a.1));
+    file_sizes.truncate(max_results);
+
+    progress.finish_and_clear();
+
+    println!("Large Files (minimum {} bytes)", min_size);
+    println!("================================");
+    println!();
+
+    if file_sizes.is_empty() {
+        println!("No files found larger than {} bytes", min_size);
+    } else {
+        for (file, size) in file_sizes {
+            if human_readable {
+                println!("{:>10}  {}", format_size(size), file);
+            } else {
+                println!("{:>15}  {}", size, file);
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Copy files between disk images
+pub fn copy_command(
+    source_image: &PathBuf,
+    source_path: &str,
+    dest_image: &PathBuf,
+    dest_path: &str,
+    preserve: bool,
+    force: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use std::fs;
+
+    let progress = ProgressReporter::spinner("Loading disk images...");
+
+    // Read from source
+    let mut g_src = Guestfs::new()?;
+    g_src.set_verbose(verbose);
+    g_src.add_drive_ro(source_image.to_str().unwrap())?;
+
+    progress.set_message("Launching source appliance...");
+    g_src.launch()?;
+
+    // Mount source
+    progress.set_message("Mounting source filesystem...");
+    let roots = g_src.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g_src.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g_src.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check source exists
+    if !g_src.exists(source_path).unwrap_or(false) {
+        progress.abandon_with_message(format!("Source not found: {}", source_path));
+        anyhow::bail!("Source path does not exist");
+    }
+
+    // Read source file
+    progress.set_message(format!("Reading {}...", source_path));
+    let content = g_src.read_file(source_path)?;
+    let stat = if preserve {
+        Some(g_src.stat(source_path)?)
+    } else {
+        None
+    };
+
+    g_src.umount_all().ok();
+    g_src.shutdown().ok();
+
+    // Write to destination (read-write mode)
+    let mut g_dst = Guestfs::new()?;
+    g_dst.set_verbose(verbose);
+    g_dst.add_drive(dest_image.to_str().unwrap())?;
+
+    progress.set_message("Launching destination appliance...");
+    g_dst.launch()?;
+
+    // Mount destination
+    progress.set_message("Mounting destination filesystem...");
+    let roots = g_dst.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g_dst.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g_dst.mount(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if destination exists
+    if g_dst.exists(dest_path).unwrap_or(false) && !force {
+        progress.abandon_with_message(format!("Destination exists: {}", dest_path));
+        anyhow::bail!("Destination already exists (use -f to overwrite)");
+    }
+
+    // Write to temp file then upload
+    progress.set_message(format!("Writing to {}...", dest_path));
+    let temp_file = tempfile::NamedTempFile::new()?;
+    fs::write(temp_file.path(), &content)?;
+
+    g_dst.upload(temp_file.path().to_str().unwrap(), dest_path)?;
+
+    if let Some(s) = stat {
+        if preserve {
+            g_dst.chmod(s.mode as i32, dest_path).ok();
+            g_dst.chown(s.uid as i32, s.gid as i32, dest_path).ok();
+        }
+    }
+
+    progress.finish_and_clear();
+
+    println!("✓ Copied {} bytes from {} to {}",
+        content.len(), source_path, dest_path);
+
+    g_dst.umount_all().ok();
+    g_dst.shutdown().ok();
+    Ok(())
+}
+
+/// Find duplicate files in disk image
+pub fn find_duplicates_command(
+    image: &PathBuf,
+    path: &str,
+    min_size: u64,
+    algorithm: &str,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use std::collections::HashMap;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Scanning {} for duplicates...", path));
+
+    let all_files = g.find(path)?;
+    let mut hash_map: HashMap<String, Vec<(String, u64)>> = HashMap::new();
+    let mut processed = 0;
+
+    for file in all_files {
+        if g.is_file(&file).unwrap_or(false) {
+            if let Ok(stat) = g.stat(&file) {
+                if stat.size >= min_size as i64 {
+                    if let Ok(hash) = g.checksum(algorithm, &file) {
+                        hash_map.entry(hash)
+                            .or_insert_with(Vec::new)
+                            .push((file, stat.size as u64));
+                        processed += 1;
+
+                        if processed % 100 == 0 {
+                            progress.set_message(format!("Processed {} files...", processed));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    progress.finish_and_clear();
+
+    // Find duplicates
+    let mut duplicates: Vec<_> = hash_map.iter()
+        .filter(|(_, files)| files.len() > 1)
+        .collect();
+
+    duplicates.sort_by(|a, b| {
+        let size_a: u64 = a.1.iter().map(|(_, s)| s).sum();
+        let size_b: u64 = b.1.iter().map(|(_, s)| s).sum();
+        size_b.cmp(&size_a)
+    });
+
+    println!("Duplicate Files Report");
+    println!("=====================");
+    println!("Algorithm: {}", algorithm);
+    println!("Minimum size: {} bytes", min_size);
+    println!("Files processed: {}", processed);
+    println!();
+
+    if duplicates.is_empty() {
+        println!("No duplicate files found");
+    } else {
+        let mut total_wasted = 0u64;
+        let mut group_num = 1;
+
+        for (hash, files) in duplicates {
+            let file_size = files[0].1;
+            let wasted = file_size * (files.len() as u64 - 1);
+            total_wasted += wasted;
+
+            println!("Group {}: {} duplicates ({} each, {} wasted)",
+                group_num, files.len(), format_size(file_size), format_size(wasted));
+            println!("Hash: {}", hash);
+            for (file, _) in files {
+                println!("  {}", file);
+            }
+            println!();
+            group_num += 1;
+        }
+
+        println!("Total wasted space: {}", format_size(total_wasted));
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Analyze disk usage by directory
+pub fn disk_usage_command(
+    image: &PathBuf,
+    path: &str,
+    max_depth: usize,
+    min_size: u64,
+    human_readable: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use std::collections::HashMap;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Analyzing disk usage in {}...", path));
+
+    let all_files = g.find(path)?;
+    let mut dir_sizes: HashMap<String, u64> = HashMap::new();
+
+    for file in all_files {
+        if g.is_file(&file).unwrap_or(false) {
+            if let Ok(stat) = g.stat(&file) {
+                let size = stat.size as u64;
+
+                // Add to each parent directory
+                let parts: Vec<&str> = file.split('/').collect();
+                for depth in 1..=parts.len().min(max_depth + 1) {
+                    let dir_path = parts[..depth].join("/");
+                    let dir_path = if dir_path.is_empty() { "/" } else { &dir_path };
+                    *dir_sizes.entry(dir_path.to_string()).or_insert(0) += size;
+                }
+            }
+        }
+    }
+
+    progress.finish_and_clear();
+
+    // Sort by size
+    let mut sorted_dirs: Vec<_> = dir_sizes.iter()
+        .filter(|&(_, size)| *size >= min_size)
+        .collect();
+    sorted_dirs.sort_by(|a, b| b.1.cmp(a.1));
+
+    println!("Disk Usage Analysis");
+    println!("===================");
+    println!("Path: {}", path);
+    println!("Max depth: {}", max_depth);
+    println!();
+
+    println!("{:>15}  {}", "SIZE", "DIRECTORY");
+    println!("{}", "-".repeat(80));
+
+    for (dir, size) in sorted_dirs {
+        if human_readable {
+            println!("{:>15}  {}", format_size(*size), dir);
+        } else {
+            println!("{:>15}  {}", size, dir);
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}

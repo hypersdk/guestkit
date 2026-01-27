@@ -581,6 +581,116 @@ enum Commands {
         description: Option<String>,
     },
 
+    /// Compare specific files between disk images
+    DiffFiles {
+        /// First disk image
+        image1: PathBuf,
+
+        /// Second disk image
+        image2: PathBuf,
+
+        /// Path to compare
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Unified diff format
+        #[arg(short = 'u', long)]
+        unified: bool,
+
+        /// Context lines
+        #[arg(short = 'C', long, default_value = "3")]
+        context: usize,
+
+        /// Ignore whitespace differences
+        #[arg(short = 'w', long)]
+        ignore_whitespace: bool,
+    },
+
+    /// Find large files in disk image
+    FindLarge {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Starting path
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Minimum file size in bytes
+        #[arg(short = 's', long, default_value = "10485760")]
+        min_size: u64,
+
+        /// Maximum number of results
+        #[arg(short = 'n', long, default_value = "20")]
+        max_results: usize,
+
+        /// Human-readable sizes
+        #[arg(short = 'H', long)]
+        human_readable: bool,
+    },
+
+    /// Copy files between disk images
+    Copy {
+        /// Source disk image
+        source_image: PathBuf,
+
+        /// Source file path
+        source_path: String,
+
+        /// Destination disk image
+        dest_image: PathBuf,
+
+        /// Destination file path
+        dest_path: String,
+
+        /// Preserve permissions and timestamps
+        #[arg(short = 'p', long)]
+        preserve: bool,
+
+        /// Force overwrite if destination exists
+        #[arg(short = 'f', long)]
+        force: bool,
+    },
+
+    /// Find duplicate files
+    FindDuplicates {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Starting path
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Minimum file size to consider
+        #[arg(short = 's', long, default_value = "1048576")]
+        min_size: u64,
+
+        /// Hash algorithm
+        #[arg(short = 'a', long, default_value = "sha256")]
+        algorithm: String,
+    },
+
+    /// Analyze disk usage by directory
+    DiskUsage {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Starting path
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Maximum directory depth
+        #[arg(short = 'D', long, default_value = "5")]
+        max_depth: usize,
+
+        /// Minimum size to display
+        #[arg(short = 's', long, default_value = "1048576")]
+        min_size: u64,
+
+        /// Human-readable sizes
+        #[arg(short = 'H', long)]
+        human_readable: bool,
+    },
+
     /// Show version information
     Version,
 
@@ -1132,6 +1242,57 @@ fn main() -> anyhow::Result<()> {
                 SnapshotOperation::Info => "info",
             };
             snapshot_command(&image, op_str, name, description, cli.verbose)?;
+        }
+
+        Commands::DiffFiles {
+            image1,
+            image2,
+            path,
+            unified,
+            context,
+            ignore_whitespace,
+        } => {
+            diff_command(&image1, &image2, &path, unified, context, ignore_whitespace, cli.verbose)?;
+        }
+
+        Commands::FindLarge {
+            image,
+            path,
+            min_size,
+            max_results,
+            human_readable,
+        } => {
+            find_large_command(&image, &path, min_size, max_results, human_readable, cli.verbose)?;
+        }
+
+        Commands::Copy {
+            source_image,
+            source_path,
+            dest_image,
+            dest_path,
+            preserve,
+            force,
+        } => {
+            copy_command(&source_image, &source_path, &dest_image, &dest_path, preserve, force, cli.verbose)?;
+        }
+
+        Commands::FindDuplicates {
+            image,
+            path,
+            min_size,
+            algorithm,
+        } => {
+            find_duplicates_command(&image, &path, min_size, &algorithm, cli.verbose)?;
+        }
+
+        Commands::DiskUsage {
+            image,
+            path,
+            max_depth,
+            min_size,
+            human_readable,
+        } => {
+            disk_usage_command(&image, &path, max_depth, min_size, human_readable, cli.verbose)?;
         }
 
         Commands::Version => {
