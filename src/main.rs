@@ -151,7 +151,7 @@ enum Commands {
         path: String,
 
         /// Recursive listing
-        #[arg(short = 'R', long)]
+        #[arg(short = 'r', long)]
         recursive: bool,
 
         /// Show detailed information (permissions, size, owner)
@@ -205,7 +205,7 @@ enum Commands {
         preserve: bool,
 
         /// Extract multiple files (guest_path can be a directory)
-        #[arg(short = 'R', long)]
+        #[arg(short = 'r', long)]
         recursive: bool,
 
         /// Overwrite existing files without asking
@@ -441,7 +441,7 @@ enum Commands {
         file_type: Option<String>,
 
         /// Maximum search depth
-        #[arg(short = 'd', long)]
+        #[arg(short = 'D', long)]
         max_depth: Option<usize>,
 
         /// Limit number of results
@@ -470,7 +470,7 @@ enum Commands {
         line_numbers: bool,
 
         /// Recursive search
-        #[arg(short = 'R', long)]
+        #[arg(short = 'r', long)]
         recursive: bool,
 
         /// Show only matching filenames
@@ -478,7 +478,7 @@ enum Commands {
         files_only: bool,
 
         /// Invert match (show non-matching lines)
-        #[arg(short = 'v', long)]
+        #[arg(short = 'V', long)]
         invert: bool,
 
         /// Context lines before match
@@ -511,7 +511,7 @@ enum Commands {
         check: Option<String>,
 
         /// Recursive hashing for directories
-        #[arg(short = 'R', long)]
+        #[arg(short = 'r', long)]
         recursive: bool,
     },
 
