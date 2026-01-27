@@ -1004,10 +1004,10 @@ fn main() -> anyhow::Result<()> {
         Commands::Cat {
             image,
             path,
-            line_numbers: _,
-            show_all: _,
+            line_numbers,
+            show_all,
         } => {
-            cat_file(&image, &path, cli.verbose)?;
+            cat_file_enhanced(&image, &path, line_numbers, show_all, cli.verbose)?;
         }
 
         Commands::Search {
@@ -1021,18 +1021,18 @@ fn main() -> anyhow::Result<()> {
             max_depth,
             limit,
         } => {
-            eprintln!("Search command with pattern '{}' in {}", pattern, image.display());
-            eprintln!("Options: path={}, regex={}, ignore_case={}, content={}", path, regex, ignore_case, content);
-            if let Some(ft) = file_type {
-                eprintln!("  File type filter: {}", ft);
-            }
-            if let Some(depth) = max_depth {
-                eprintln!("  Max depth: {}", depth);
-            }
-            if let Some(lim) = limit {
-                eprintln!("  Limit: {}", lim);
-            }
-            eprintln!("Note: Search command implementation pending");
+            search_command(
+                &image,
+                &pattern,
+                &path,
+                regex,
+                ignore_case,
+                content,
+                file_type,
+                max_depth,
+                limit,
+                cli.verbose,
+            )?;
         }
 
         Commands::Grep {
@@ -1048,19 +1048,20 @@ fn main() -> anyhow::Result<()> {
             after_context,
             max_count,
         } => {
-            eprintln!("Grep command searching for '{}' in {}", pattern, image.display());
-            eprintln!("Options: path={}, ignore_case={}, line_numbers={}, recursive={}", path, ignore_case, line_numbers, recursive);
-            eprintln!("  files_only={}, invert={}", files_only, invert);
-            if let Some(before) = before_context {
-                eprintln!("  Before context: {}", before);
-            }
-            if let Some(after) = after_context {
-                eprintln!("  After context: {}", after);
-            }
-            if let Some(max) = max_count {
-                eprintln!("  Max count: {}", max);
-            }
-            eprintln!("Note: Grep command implementation pending");
+            grep_command(
+                &image,
+                &pattern,
+                &path,
+                ignore_case,
+                line_numbers,
+                recursive,
+                files_only,
+                invert,
+                before_context,
+                after_context,
+                max_count,
+                cli.verbose,
+            )?;
         }
 
         Commands::Hash {
@@ -1070,12 +1071,7 @@ fn main() -> anyhow::Result<()> {
             check,
             recursive,
         } => {
-            eprintln!("Hash command for {} using algorithm: {}", path, algorithm);
-            eprintln!("Image: {}, Recursive: {}", image.display(), recursive);
-            if let Some(expected) = check {
-                eprintln!("  Verify against: {}", expected);
-            }
-            eprintln!("Note: Hash command implementation pending");
+            hash_command(&image, &path, &algorithm, check, recursive, cli.verbose)?;
         }
 
         Commands::Scan {
