@@ -308,6 +308,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "inspect" => {
                         commands::cmd_inspect(&mut ctx, args)
                     }
+                    "story" => {
+                        commands::cmd_story(&mut ctx, args)
+                    }
+                    "advisor" => {
+                        commands::cmd_advisor(&ctx, args)
+                    }
+                    "verify" => {
+                        commands::cmd_verify(&mut ctx, args)
+                    }
+                    "optimize" => {
+                        commands::cmd_optimize(&ctx, args)
+                    }
+                    "roadmap" => {
+                        commands::cmd_roadmap(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
