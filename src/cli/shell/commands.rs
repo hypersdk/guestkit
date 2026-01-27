@@ -559,6 +559,15 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}  - Recently modified files", "recent [path] [limit]".green());
     println!("  {}       - Enhanced history analysis", "h".green());
 
+    println!("\n{}", "Automation & Utilities:".yellow().bold());
+    println!("  {}    - Automation presets", "auto <preset>".green());
+    println!("           Presets: security-audit, full-analysis, health-check, export-all, documentation");
+    println!("  {}    - Interactive command menu", "menu".green());
+    println!("  {} - Session timeline visualization", "timeline".green());
+    println!("  {}   - Performance benchmarking", "bench <type>".green());
+    println!("           Types: files, list, packages, all");
+    println!("  {} - Role-based command presets", "presets".green());
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -2909,6 +2918,436 @@ pub fn cmd_report(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     }
 
     println!();
+    Ok(())
+}
+
+/// Automation and macro system
+pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Automation System                       ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Automation Commands:".yellow().bold());
+        println!("  {} - Run preset automation", "auto run <preset>".cyan());
+        println!("  {} - List available presets", "auto list".cyan());
+        println!("  {} - Show preset details", "auto show <preset>".cyan());
+        println!();
+
+        println!("{}", "Available Presets:".green().bold());
+        println!("  {} - Complete security audit", "security-audit".cyan());
+        println!("  {} - Full system analysis", "full-analysis".cyan());
+        println!("  {} - Quick health check", "health-check".cyan());
+        println!("  {} - Export all data", "export-all".cyan());
+        println!("  {} - Documentation package", "documentation".cyan());
+        println!();
+
+        println!("{}", "Example:".yellow());
+        println!("  auto run security-audit");
+        println!();
+
+        return Ok(());
+    }
+
+    let auto_command = args[0];
+
+    match auto_command {
+        "run" => {
+            if args.len() < 2 {
+                println!("{} Usage: auto run <preset>", "Error:".red());
+                return Ok(());
+            }
+
+            let preset = args[1];
+
+            println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+            println!("{}", format!("║  Automation: {}                           ║", preset).cyan().bold());
+            println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+            println!();
+
+            match preset {
+                "security-audit" => {
+                    println!("{} Running security audit automation...", "→".cyan());
+                    println!();
+
+                    println!("[1/4] {} Running security wizard...", "→".cyan());
+                    cmd_wizard(ctx, &["security"])?;
+
+                    println!("[2/4] {} Running security scan...", "→".cyan());
+                    cmd_scan(ctx, &["security"])?;
+
+                    println!("[3/4] {} Generating recommendations...", "→".cyan());
+                    cmd_recommend(ctx, &[])?;
+
+                    println!("[4/4] {} Creating security report...", "→".cyan());
+                    cmd_report(ctx, &["security", "--output", "security-audit.md"])?;
+
+                    println!("{}", "═".repeat(60).cyan());
+                    println!("{} Security audit complete!", "✓".green());
+                    println!("{} Report saved to: {}", "→".cyan(), "security-audit.md".yellow());
+                    println!();
+                }
+                "full-analysis" => {
+                    println!("{} Running full system analysis...", "→".cyan());
+                    println!();
+
+                    println!("[1/5] {} System dashboard...", "→".cyan());
+                    cmd_dashboard(ctx, &[])?;
+
+                    println!("[2/5] {} System discovery...", "→".cyan());
+                    cmd_discover(ctx, &["all"])?;
+
+                    println!("[3/5] {} Health check...", "→".cyan());
+                    cmd_wizard(ctx, &["health"])?;
+
+                    println!("[4/5] {} Creating snapshot...", "→".cyan());
+                    cmd_snapshot(ctx, &["full-analysis-snapshot"])?;
+
+                    println!("[5/5] {} Generating executive report...", "→".cyan());
+                    cmd_report(ctx, &["executive", "--output", "executive-summary.md"])?;
+
+                    println!("{}", "═".repeat(60).cyan());
+                    println!("{} Full analysis complete!", "✓".green());
+                    println!();
+                }
+                "health-check" => {
+                    println!("{} Running health check...", "→".cyan());
+                    println!();
+
+                    cmd_wizard(ctx, &["health"])?;
+                    cmd_scan(ctx, &["issues"])?;
+                    cmd_summary(ctx, &[])?;
+
+                    println!("{} Health check complete!", "✓".green());
+                    println!();
+                }
+                "export-all" => {
+                    println!("{} Exporting all data...", "→".cyan());
+                    println!();
+
+                    cmd_batch(ctx, &["export", "/tmp/guestkit-export"])?;
+
+                    println!("{} Export complete! Check /tmp/guestkit-export/", "✓".green());
+                    println!();
+                }
+                "documentation" => {
+                    println!("{} Creating documentation package...", "→".cyan());
+                    println!();
+
+                    cmd_snapshot(ctx, &["system-documentation"])?;
+                    cmd_report(ctx, &["executive", "--output", "executive-summary.md"])?;
+                    cmd_report(ctx, &["security", "--output", "security-report.md"])?;
+                    cmd_profile(ctx, &["create", "system-profile"])?;
+
+                    println!("{} Documentation package created!", "✓".green());
+                    println!("{} Files created:", "→".cyan());
+                    println!("  - system-documentation.md");
+                    println!("  - executive-summary.md");
+                    println!("  - security-report.md");
+                    println!("  - system-profile.md");
+                    println!();
+                }
+                _ => {
+                    println!("{} Unknown preset: {}", "Error:".red(), preset);
+                    println!("{} Use 'auto list' to see available presets", "Tip:".yellow());
+                }
+            }
+        }
+        "list" => {
+            println!("\n{}", "Available Automation Presets:".yellow().bold());
+            println!();
+
+            let presets = vec![
+                ("security-audit", "Complete security audit with report", "4 steps"),
+                ("full-analysis", "Comprehensive system analysis", "5 steps"),
+                ("health-check", "Quick system health check", "3 steps"),
+                ("export-all", "Export all data types", "1 step"),
+                ("documentation", "Create full documentation package", "4 files"),
+            ];
+
+            for (name, description, info) in presets {
+                println!("  {} {} - {}", name.cyan().bold(), info.bright_black(), description);
+            }
+            println!();
+        }
+        "show" => {
+            if args.len() < 2 {
+                println!("{} Usage: auto show <preset>", "Error:".red());
+                return Ok(());
+            }
+
+            let preset = args[1];
+            println!("\n{} Preset Details: {}", "→".cyan(), preset.yellow().bold());
+            println!();
+
+            match preset {
+                "security-audit" => {
+                    println!("Steps:");
+                    println!("  1. Run security wizard");
+                    println!("  2. Run security scan");
+                    println!("  3. Generate recommendations");
+                    println!("  4. Create security report");
+                    println!();
+                    println!("Output: security-audit.md");
+                }
+                _ => {
+                    println!("{} Preset not found", "Error:".red());
+                }
+            }
+            println!();
+        }
+        _ => {
+            println!("{} Unknown automation command: {}", "Error:".red(), auto_command);
+        }
+    }
+
+    Ok(())
+}
+
+/// Interactive menu system
+pub fn cmd_menu(_ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                  Interactive Menu                        ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Main Categories:".yellow().bold());
+    println!();
+    println!("  {} System Overview & Analysis", "1.".cyan().bold());
+    println!("  {} Security & Compliance", "2.".cyan().bold());
+    println!("  {} Data Export & Reports", "3.".cyan().bold());
+    println!("  {} Search & Discovery", "4.".cyan().bold());
+    println!("  {} Automation & Workflows", "5.".cyan().bold());
+    println!("  {} Help & Documentation", "6.".cyan().bold());
+    println!();
+
+    println!("{}", "━".repeat(60).bright_black());
+    println!();
+
+    println!("{}", "Quick Actions:".green().bold());
+    println!("  {} Quick security check", "S.".yellow());
+    println!("  {} System dashboard", "D.".yellow());
+    println!("  {} Create snapshot", "N.".yellow());
+    println!("  {} Smart recommendations", "R.".yellow());
+    println!();
+
+    println!("{}", "Suggestions:".bright_black());
+    println!("  • First time? Try: {}", "dashboard".cyan());
+    println!("  • Security review? Try: {}", "wizard security".cyan());
+    println!("  • Need export? Try: {}", "auto run export-all".cyan());
+    println!("  • Want guidance? Try: {}", "wizard".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Visual timeline and progress tracking
+pub fn cmd_timeline(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                  Session Timeline                        ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Current Session:".yellow().bold());
+    println!();
+
+    // Visual timeline
+    println!("  {} Session started", "┌─".cyan());
+    println!("  {} Shell initialized", "├─".cyan());
+
+    if ctx.command_count > 0 {
+        println!("  {} {} commands executed", "├─".cyan(), ctx.command_count.to_string().green().bold());
+    }
+
+    if !ctx.aliases.is_empty() {
+        println!("  {} {} aliases defined", "├─".cyan(), ctx.aliases.len().to_string().green());
+    }
+
+    if !ctx.bookmarks.is_empty() {
+        println!("  {} {} bookmarks created", "├─".cyan(), ctx.bookmarks.len().to_string().green());
+    }
+
+    if let Some(duration) = ctx.last_command_time {
+        println!("  {} Last command: {}", "├─".cyan(),
+            format!("{:.2}ms", duration.as_secs_f64() * 1000.0).yellow());
+    }
+
+    println!("  {} Current state", "└─".cyan());
+    println!();
+
+    println!("{}", "Session Statistics:".green().bold());
+    println!("  Path: {}", ctx.current_path.cyan());
+    println!("  OS: {}", ctx.get_os_info().yellow());
+    println!();
+
+    println!("{}", "Suggested Next Steps:".yellow().bold());
+    if ctx.command_count < 5 {
+        println!("  • Try {} for system overview", "'dashboard'".cyan());
+        println!("  • Run {} for guided help", "'wizard'".cyan());
+    } else {
+        println!("  • Create snapshot: {}", "'snapshot'".cyan());
+        println!("  • Get recommendations: {}", "'recommend'".cyan());
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Benchmark and performance testing
+pub fn cmd_bench(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Performance Benchmark                   ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Benchmark Commands:".yellow().bold());
+        println!("  {} - Benchmark file operations", "bench files".cyan());
+        println!("  {} - Benchmark directory listing", "bench list".cyan());
+        println!("  {} - Benchmark package queries", "bench packages".cyan());
+        println!("  {} - Run all benchmarks", "bench all".cyan());
+        println!();
+
+        return Ok(());
+    }
+
+    let bench_type = args[0];
+
+    match bench_type {
+        "files" => {
+            println!("\n{}", "📊 File Operations Benchmark".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let test_file = "/etc/fstab";
+            if ctx.guestfs.exists(test_file).unwrap_or(false) {
+                let iterations = 10;
+                let start = std::time::Instant::now();
+
+                for _ in 0..iterations {
+                    let _ = ctx.guestfs.stat(test_file);
+                }
+
+                let duration = start.elapsed();
+                let avg = duration.as_micros() / iterations;
+
+                println!("  Test: {} stat operations on {}", iterations, test_file.cyan());
+                println!("  Total: {:.2}ms", duration.as_secs_f64() * 1000.0);
+                println!("  Average: {}μs per operation", avg.to_string().green());
+                println!();
+            }
+        }
+        "list" => {
+            println!("\n{}", "📊 Directory Listing Benchmark".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let start = std::time::Instant::now();
+            let result = ctx.guestfs.ls("/etc");
+            let duration = start.elapsed();
+
+            if let Ok(entries) = result {
+                println!("  Listed {} entries in /etc", entries.len().to_string().green());
+                println!("  Time: {:.2}ms", duration.as_secs_f64() * 1000.0);
+                println!();
+            }
+        }
+        "packages" => {
+            println!("\n{}", "📊 Package Query Benchmark".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let start = std::time::Instant::now();
+            let result = ctx.guestfs.inspect_packages(&ctx.root);
+            let duration = start.elapsed();
+
+            if let Ok(pkg_info) = result {
+                println!("  Queried {} packages", pkg_info.packages.len().to_string().green());
+                println!("  Time: {:.2}ms", duration.as_secs_f64() * 1000.0);
+                println!();
+            }
+        }
+        "all" => {
+            println!("\n{}", "📊 Complete Benchmark Suite".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            cmd_bench(ctx, &["files"])?;
+            cmd_bench(ctx, &["list"])?;
+            cmd_bench(ctx, &["packages"])?;
+
+            println!("{}", "═".repeat(60).cyan());
+            println!("{} Benchmark complete!", "✓".green());
+            println!();
+        }
+        _ => {
+            println!("{} Unknown benchmark: {}", "Error:".red(), bench_type);
+        }
+    }
+
+    Ok(())
+}
+
+/// Show system presets and templates
+pub fn cmd_presets(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                  Command Presets                         ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Quick Start Presets:".yellow().bold());
+    println!();
+
+    let presets = vec![
+        ("First Time User", vec![
+            ("Start here", "dashboard"),
+            ("Learn commands", "cheat"),
+            ("Get a tip", "tips"),
+        ]),
+        ("Security Analyst", vec![
+            ("Security audit", "wizard security"),
+            ("Security scan", "scan security"),
+            ("Get recommendations", "recommend"),
+        ]),
+        ("System Administrator", vec![
+            ("Full analysis", "auto run full-analysis"),
+            ("Health check", "wizard health"),
+            ("Create snapshot", "snapshot"),
+        ]),
+        ("Auditor/Compliance", vec![
+            ("Executive report", "report executive --output summary.md"),
+            ("Security report", "report security --output security.md"),
+            ("Export all data", "batch export /tmp/audit"),
+        ]),
+        ("Developer/Researcher", vec![
+            ("Discover apps", "discover apps"),
+            ("Find files", "search <pattern> --path /etc"),
+            ("Profile system", "profile detect"),
+        ]),
+    ];
+
+    for (role, commands) in presets {
+        println!("{}", role.green().bold());
+        for (description, command) in commands {
+            println!("  {} {} {}", "•".cyan(), description.bright_black(), "-".bright_black());
+            println!("    {}", command.yellow());
+        }
+        println!();
+    }
+
+    println!("{}", "Workflow Templates:".yellow().bold());
+    println!();
+    println!("  {} Complete Audit", "1.".cyan());
+    println!("     auto run security-audit");
+    println!();
+    println!("  {} Documentation Package", "2.".cyan());
+    println!("     auto run documentation");
+    println!();
+    println!("  {} Quick Health Check", "3.".cyan());
+    println!("     wizard health && recommend");
+    println!();
+
     Ok(())
 }
 
