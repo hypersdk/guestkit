@@ -20,14 +20,17 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - fedora:39
-          - fedora:40
+          - fedora:41
+          - fedora:42
+          - fedora:43
           - fedora:rawhide
         include:
-          - os: fedora:39
-            version: "39"
-          - os: fedora:40
-            version: "40"
+          - os: fedora:41
+            version: "41"
+          - os: fedora:42
+            version: "42"
+          - os: fedora:43
+            version: "43"
           - os: fedora:rawhide
             version: "rawhide"
     container:
@@ -139,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [39, 40]
+        version: [41, 42, 43, rawhide]
     container:
       image: fedora:${{ matrix.version }}
 
@@ -245,7 +248,7 @@ jobs:
     name: Build with Mock (clean chroot)
     runs-on: ubuntu-latest
     container:
-      image: fedora:39
+      image: fedora:41
 
     steps:
       - name: Install dependencies
@@ -283,21 +286,21 @@ jobs:
 
       - name: Initialize Mock
         run: |
-          mock --init -r fedora-39-x86_64
+          mock --init -r fedora-41-x86_64
 
       - name: Build with Mock
         run: |
-          mock -r fedora-39-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
+          mock -r fedora-41-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
 
       - name: List Mock results
         run: |
-          ls -lh /var/lib/mock/fedora-39-x86_64/result/
+          ls -lh /var/lib/mock/fedora-41-x86_64/result/
 
       - name: Upload Mock build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: rpm-mock-fedora-39-x86_64
-          path: /var/lib/mock/fedora-39-x86_64/result/*.rpm
+          name: rpm-mock-fedora-41-x86_64
+          path: /var/lib/mock/fedora-41-x86_64/result/*.rpm
           retention-days: 30
 
   verify-rpm:
@@ -305,13 +308,13 @@ jobs:
     needs: build-rpm
     runs-on: ubuntu-latest
     container:
-      image: fedora:39
+      image: fedora:41
 
     steps:
       - name: Download RPM artifacts
         uses: actions/download-artifact@v4
         with:
-          name: rpm-fedora-39-x86_64
+          name: rpm-fedora-41-x86_64
           path: ./rpms
 
       - name: Install dependencies
@@ -342,7 +345,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     container:
-      image: fedora:39
+      image: fedora:41
 
     steps:
       - name: Install COPR CLI
@@ -352,7 +355,7 @@ jobs:
       - name: Download RPM artifacts
         uses: actions/download-artifact@v4
         with:
-          name: rpm-fedora-39-x86_64
+          name: rpm-fedora-41-x86_64
           path: ./rpms
 
       - name: Setup COPR config
