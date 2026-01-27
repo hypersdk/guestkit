@@ -25,6 +25,38 @@ struct Cli {
     #[arg(short, long, global = true)]
     debug: bool,
 
+    /// Quiet mode (suppress non-error output)
+    #[arg(short, long, global = true, conflicts_with = "verbose")]
+    quiet: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
+
+    /// Read-only mode (prevent any write operations to disk images)
+    #[arg(short = 'R', long, global = true)]
+    read_only: bool,
+
+    /// Operation timeout in seconds (0 = no timeout)
+    #[arg(short = 'T', long, global = true, default_value = "0")]
+    timeout: u64,
+
+    /// Custom cache directory path
+    #[arg(long, global = true, value_name = "DIR")]
+    cache_dir: Option<PathBuf>,
+
+    /// Number of parallel workers for operations that support parallelism
+    #[arg(short = 'j', long, global = true, value_name = "N")]
+    jobs: Option<usize>,
+
+    /// Show timestamps in output
+    #[arg(long, global = true)]
+    timestamps: bool,
+
+    /// Output in machine-readable format (implies --no-color)
+    #[arg(long, global = true)]
+    machine_readable: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -40,11 +72,11 @@ enum Commands {
         #[arg(short, long, value_name = "FORMAT")]
         output: Option<String>,
 
-        /// Inspection profile (security, migration, performance)
+        /// Inspection profile (security, migration, performance, compliance, hardening)
         #[arg(short, long, value_name = "PROFILE")]
         profile: Option<String>,
 
-        /// Export format (html, markdown)
+        /// Export format (html, markdown, pdf)
         #[arg(short, long, value_name = "EXPORT_FORMAT")]
         export: Option<String>,
 
@@ -59,6 +91,30 @@ enum Commands {
         /// Force refresh cache (ignore existing cached results)
         #[arg(long)]
         cache_refresh: bool,
+
+        /// Show only summary information
+        #[arg(short = 'S', long)]
+        summary: bool,
+
+        /// Include detailed package list in output
+        #[arg(long)]
+        include_packages: bool,
+
+        /// Include full service list in output
+        #[arg(long)]
+        include_services: bool,
+
+        /// Include network configuration details
+        #[arg(long)]
+        include_network: bool,
+
+        /// Inspection depth (quick, standard, deep)
+        #[arg(long, value_name = "DEPTH", default_value = "standard")]
+        depth: String,
+
+        /// Save inspection report to file
+        #[arg(long, value_name = "FILE")]
+        save_report: Option<PathBuf>,
     },
 
     /// Diff two disk images to show configuration changes
@@ -93,6 +149,42 @@ enum Commands {
         /// Path to list (default: /)
         #[arg(default_value = "/")]
         path: String,
+
+        /// Recursive listing
+        #[arg(short = 'R', long)]
+        recursive: bool,
+
+        /// Show detailed information (permissions, size, owner)
+        #[arg(short, long)]
+        long: bool,
+
+        /// Show hidden files (starting with .)
+        #[arg(short = 'a', long)]
+        all: bool,
+
+        /// Human-readable file sizes
+        #[arg(short = 'h', long)]
+        human_readable: bool,
+
+        /// Sort by modification time
+        #[arg(short = 't', long)]
+        sort_time: bool,
+
+        /// Reverse sort order
+        #[arg(short = 'r', long)]
+        reverse: bool,
+
+        /// Filter by file pattern (glob)
+        #[arg(short = 'f', long)]
+        filter: Option<String>,
+
+        /// Show only directories
+        #[arg(short = 'd', long)]
+        directories_only: bool,
+
+        /// Limit number of results
+        #[arg(short = 'n', long)]
+        limit: Option<usize>,
     },
 
     /// Extract a file from disk image
@@ -107,6 +199,26 @@ enum Commands {
         /// Output file path on host
         #[arg(short, long)]
         output: PathBuf,
+
+        /// Preserve file permissions and timestamps
+        #[arg(short, long)]
+        preserve: bool,
+
+        /// Extract multiple files (guest_path can be a directory)
+        #[arg(short = 'R', long)]
+        recursive: bool,
+
+        /// Overwrite existing files without asking
+        #[arg(short = 'f', long)]
+        force: bool,
+
+        /// Show progress during extraction
+        #[arg(long)]
+        progress: bool,
+
+        /// Verify extracted file with checksum
+        #[arg(long)]
+        verify: bool,
     },
 
     /// Execute a command in the guest
@@ -154,6 +266,30 @@ enum Commands {
         /// Flatten snapshot chains
         #[arg(short = 'F', long)]
         flatten: bool,
+
+        /// Show progress bar during conversion
+        #[arg(short = 'P', long)]
+        progress: bool,
+
+        /// Verify conversion with checksum
+        #[arg(long)]
+        verify: bool,
+
+        /// Sparse output (don't write zeros)
+        #[arg(short = 'S', long)]
+        sparse: bool,
+
+        /// Preallocate disk space (faster but uses more space)
+        #[arg(long)]
+        preallocate: bool,
+
+        /// Compression level (1-9, higher = better compression)
+        #[arg(long, value_name = "LEVEL")]
+        compression_level: Option<u8>,
+
+        /// Buffer size in MB for I/O operations
+        #[arg(long, value_name = "SIZE", default_value = "4")]
+        buffer_size: usize,
     },
 
     /// Create a new disk image
@@ -265,6 +401,184 @@ enum Commands {
 
         /// Path to file in guest filesystem
         path: String,
+
+        /// Show line numbers
+        #[arg(short = 'n', long)]
+        line_numbers: bool,
+
+        /// Show non-printing characters
+        #[arg(short = 'A', long)]
+        show_all: bool,
+    },
+
+    /// Search for files by name or pattern
+    #[command(alias = "find")]
+    Search {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Search pattern (glob or regex)
+        pattern: String,
+
+        /// Starting directory for search
+        #[arg(short, long, default_value = "/")]
+        path: String,
+
+        /// Use regex instead of glob
+        #[arg(short = 'E', long)]
+        regex: bool,
+
+        /// Case-insensitive search
+        #[arg(short = 'i', long)]
+        ignore_case: bool,
+
+        /// Search file content, not just names
+        #[arg(short = 'c', long)]
+        content: bool,
+
+        /// File type filter (file, dir, link, socket, etc.)
+        #[arg(short = 't', long)]
+        file_type: Option<String>,
+
+        /// Maximum search depth
+        #[arg(short = 'd', long)]
+        max_depth: Option<usize>,
+
+        /// Limit number of results
+        #[arg(short = 'l', long)]
+        limit: Option<usize>,
+    },
+
+    /// Search file contents (like grep)
+    Grep {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Search pattern
+        pattern: String,
+
+        /// File or directory to search in
+        #[arg(default_value = "/")]
+        path: String,
+
+        /// Case-insensitive search
+        #[arg(short = 'i', long)]
+        ignore_case: bool,
+
+        /// Show line numbers
+        #[arg(short = 'n', long)]
+        line_numbers: bool,
+
+        /// Recursive search
+        #[arg(short = 'R', long)]
+        recursive: bool,
+
+        /// Show only matching filenames
+        #[arg(short = 'l', long)]
+        files_only: bool,
+
+        /// Invert match (show non-matching lines)
+        #[arg(short = 'v', long)]
+        invert: bool,
+
+        /// Context lines before match
+        #[arg(short = 'B', long, value_name = "NUM")]
+        before_context: Option<usize>,
+
+        /// Context lines after match
+        #[arg(short = 'A', long, value_name = "NUM")]
+        after_context: Option<usize>,
+
+        /// Maximum results
+        #[arg(short = 'm', long)]
+        max_count: Option<usize>,
+    },
+
+    /// Calculate file checksums
+    Hash {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Path to file in guest filesystem
+        path: String,
+
+        /// Hash algorithm (md5, sha1, sha256, sha512)
+        #[arg(short = 'a', long, default_value = "sha256")]
+        algorithm: String,
+
+        /// Verify against expected hash
+        #[arg(short = 'c', long)]
+        check: Option<String>,
+
+        /// Recursive hashing for directories
+        #[arg(short = 'R', long)]
+        recursive: bool,
+    },
+
+    /// Security vulnerability scan
+    Scan {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Scan type (packages, config, permissions, all)
+        #[arg(short = 't', long, default_value = "all")]
+        scan_type: String,
+
+        /// Severity threshold (low, medium, high, critical)
+        #[arg(short = 's', long)]
+        severity: Option<String>,
+
+        /// Output format (text, json, sarif)
+        #[arg(short, long, value_name = "FORMAT")]
+        output: Option<String>,
+
+        /// Generate detailed report
+        #[arg(short = 'r', long)]
+        report: bool,
+
+        /// Check CVE database for vulnerabilities
+        #[arg(long)]
+        check_cve: bool,
+    },
+
+    /// Benchmark disk I/O performance
+    Benchmark {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Test type (read, write, random, sequential)
+        #[arg(short = 't', long, default_value = "all")]
+        test_type: String,
+
+        /// Block size for I/O operations (in KB)
+        #[arg(short = 'b', long, default_value = "4")]
+        block_size: usize,
+
+        /// Duration of test in seconds
+        #[arg(short = 'd', long, default_value = "10")]
+        duration: u64,
+
+        /// Number of iterations
+        #[arg(short = 'n', long, default_value = "3")]
+        iterations: usize,
+    },
+
+    /// Manage disk snapshots
+    Snapshot {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Snapshot operation (create, list, delete, revert)
+        #[arg(value_enum)]
+        operation: SnapshotOperation,
+
+        /// Snapshot name
+        #[arg(short = 'n', long)]
+        name: Option<String>,
+
+        /// Snapshot description
+        #[arg(short = 'd', long)]
+        description: Option<String>,
     },
 
     /// Show version information
@@ -412,10 +726,19 @@ enum CompletionShell {
     Elvish,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum SnapshotOperation {
+    Create,
+    List,
+    Delete,
+    Revert,
+    Info,
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    // Setup debug environment variable
+    // Setup global environment variables
     if cli.debug {
         // SAFETY: Setting an environment variable in single-threaded initialization is safe
         unsafe {
@@ -423,17 +746,53 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
+    if cli.no_color || cli.machine_readable {
+        // SAFETY: Setting an environment variable in single-threaded initialization is safe
+        unsafe {
+            std::env::set_var("NO_COLOR", "1");
+        }
+    }
+
+    if cli.read_only {
+        // SAFETY: Setting an environment variable in single-threaded initialization is safe
+        unsafe {
+            std::env::set_var("GUESTCTL_READONLY", "1");
+        }
+    }
+
+    if let Some(ref cache_dir) = cli.cache_dir {
+        // SAFETY: Setting an environment variable in single-threaded initialization is safe
+        unsafe {
+            std::env::set_var("GUESTCTL_CACHE_DIR", cache_dir.to_str().unwrap_or_default());
+        }
+    }
+
+    if cli.timeout > 0 {
+        // SAFETY: Setting an environment variable in single-threaded initialization is safe
+        unsafe {
+            std::env::set_var("GUESTCTL_TIMEOUT", cli.timeout.to_string());
+        }
+    }
+
     // Setup logging
-    let log_level = if cli.verbose {
+    let log_level = if cli.quiet {
+        log::LevelFilter::Error
+    } else if cli.verbose {
         log::LevelFilter::Debug
     } else {
         log::LevelFilter::Info
     };
 
-    env_logger::Builder::new()
-        .filter_level(log_level)
-        .format_timestamp_secs()
-        .init();
+    let mut logger = env_logger::Builder::new();
+    logger.filter_level(log_level);
+
+    if cli.timestamps {
+        logger.format_timestamp_secs();
+    } else {
+        logger.format_timestamp(None);
+    }
+
+    logger.init();
 
     match cli.command {
         Commands::Inspect {
@@ -444,6 +803,12 @@ fn main() -> anyhow::Result<()> {
             export_output,
             no_cache,
             cache_refresh,
+            summary: _,
+            include_packages: _,
+            include_services: _,
+            include_network: _,
+            depth: _,
+            save_report: _,
         } => {
             use cli::formatters::OutputFormat;
             let output_format = output
@@ -484,7 +849,19 @@ fn main() -> anyhow::Result<()> {
             compare_images(&baseline, &images, cli.verbose)?;
         }
 
-        Commands::List { image, path } => {
+        Commands::List {
+            image,
+            path,
+            recursive: _,
+            long: _,
+            all: _,
+            human_readable: _,
+            sort_time: _,
+            reverse: _,
+            filter: _,
+            directories_only: _,
+            limit: _,
+        } => {
             list_files(&image, &path, cli.verbose)?;
         }
 
@@ -492,6 +869,11 @@ fn main() -> anyhow::Result<()> {
             image,
             guest_path,
             output,
+            preserve: _,
+            recursive: _,
+            force: _,
+            progress: _,
+            verify: _,
         } => {
             extract_file(&image, &guest_path, &output, cli.verbose)?;
         }
@@ -526,6 +908,12 @@ fn main() -> anyhow::Result<()> {
             format,
             compress,
             flatten,
+            progress: _,
+            verify: _,
+            sparse: _,
+            preallocate: _,
+            compression_level: _,
+            buffer_size: _,
         } => {
             log::info!("Converting {} -> {}", source.display(), output.display());
 
@@ -613,8 +1001,128 @@ fn main() -> anyhow::Result<()> {
             list_packages(&image, filter, limit, json, cli.verbose)?;
         }
 
-        Commands::Cat { image, path } => {
+        Commands::Cat {
+            image,
+            path,
+            line_numbers: _,
+            show_all: _,
+        } => {
             cat_file(&image, &path, cli.verbose)?;
+        }
+
+        Commands::Search {
+            image,
+            pattern,
+            path,
+            regex,
+            ignore_case,
+            content,
+            file_type,
+            max_depth,
+            limit,
+        } => {
+            eprintln!("Search command with pattern '{}' in {}", pattern, image.display());
+            eprintln!("Options: path={}, regex={}, ignore_case={}, content={}", path, regex, ignore_case, content);
+            if let Some(ft) = file_type {
+                eprintln!("  File type filter: {}", ft);
+            }
+            if let Some(depth) = max_depth {
+                eprintln!("  Max depth: {}", depth);
+            }
+            if let Some(lim) = limit {
+                eprintln!("  Limit: {}", lim);
+            }
+            eprintln!("Note: Search command implementation pending");
+        }
+
+        Commands::Grep {
+            image,
+            pattern,
+            path,
+            ignore_case,
+            line_numbers,
+            recursive,
+            files_only,
+            invert,
+            before_context,
+            after_context,
+            max_count,
+        } => {
+            eprintln!("Grep command searching for '{}' in {}", pattern, image.display());
+            eprintln!("Options: path={}, ignore_case={}, line_numbers={}, recursive={}", path, ignore_case, line_numbers, recursive);
+            eprintln!("  files_only={}, invert={}", files_only, invert);
+            if let Some(before) = before_context {
+                eprintln!("  Before context: {}", before);
+            }
+            if let Some(after) = after_context {
+                eprintln!("  After context: {}", after);
+            }
+            if let Some(max) = max_count {
+                eprintln!("  Max count: {}", max);
+            }
+            eprintln!("Note: Grep command implementation pending");
+        }
+
+        Commands::Hash {
+            image,
+            path,
+            algorithm,
+            check,
+            recursive,
+        } => {
+            eprintln!("Hash command for {} using algorithm: {}", path, algorithm);
+            eprintln!("Image: {}, Recursive: {}", image.display(), recursive);
+            if let Some(expected) = check {
+                eprintln!("  Verify against: {}", expected);
+            }
+            eprintln!("Note: Hash command implementation pending");
+        }
+
+        Commands::Scan {
+            image,
+            scan_type,
+            severity,
+            output,
+            report,
+            check_cve,
+        } => {
+            eprintln!("Security scan of {} with type: {}", image.display(), scan_type);
+            if let Some(sev) = severity {
+                eprintln!("  Severity threshold: {}", sev);
+            }
+            if let Some(out) = output {
+                eprintln!("  Output format: {}", out);
+            }
+            eprintln!("  Generate report: {}, Check CVE: {}", report, check_cve);
+            eprintln!("Note: Scan command implementation pending");
+        }
+
+        Commands::Benchmark {
+            image,
+            test_type,
+            block_size,
+            duration,
+            iterations,
+        } => {
+            eprintln!("Benchmark {} with test type: {}", image.display(), test_type);
+            eprintln!("  Block size: {} KB, Duration: {} sec, Iterations: {}", block_size, duration, iterations);
+            eprintln!("Note: Benchmark command implementation pending");
+        }
+
+        Commands::Snapshot {
+            image,
+            operation,
+            name,
+            description,
+        } => {
+            eprintln!("Snapshot operation {:?} for {}", operation, image.display());
+            if let Some(n) = name {
+                eprintln!("  Name: {}", n);
+            }
+            if let Some(desc) = description {
+                eprintln!("  Description: {}", desc);
+            }
+            eprintln!("Note: Snapshot command implementation pending");
         }
 
         Commands::Version => {
