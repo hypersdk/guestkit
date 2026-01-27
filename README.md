@@ -7,10 +7,11 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![CI](https://github.com/ssahani/guestkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/ci.yml)
+[![RPM Build](https://github.com/ssahani/guestkit/actions/workflows/rpm.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/rpm.yml)
 [![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 
 ---
 
@@ -60,6 +61,14 @@ pip install guestkit
 **Rust (recommended for Rust developers):**
 ```bash
 cargo install guestkit
+```
+
+**RPM (Fedora/RHEL/CentOS):**
+```bash
+# Download latest RPM from releases
+sudo dnf install guestkit-*.rpm
+
+# Or build from source (see RPM-BUILD.md)
 ```
 
 **From source:**
