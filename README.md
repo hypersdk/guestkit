@@ -26,6 +26,7 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 - 🔄 **Migration-ready** — fstab/crypttab rewriting and cross-hypervisor prep (via hyper2kvm)
 - 🧰 **REPL shell** — interactive mode with 20+ commands for offline changes
 - 📊 **Security Profiles** — built-in security, compliance, hardening, and performance analysis
+- 🔧 **Fix Plans** — offline patch preview with bash/ansible export (inspect → plan → review → execute)
 - 📤 **Export Anywhere** — JSON, YAML, HTML, PDF reports for automation
 
 ---
