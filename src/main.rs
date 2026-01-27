@@ -171,7 +171,7 @@ enum Commands {
         sort_time: bool,
 
         /// Reverse sort order
-        #[arg(short = 'r', long)]
+        #[arg(long)]
         reverse: bool,
 
         /// Filter by file pattern (glob)
@@ -852,30 +852,53 @@ fn main() -> anyhow::Result<()> {
         Commands::List {
             image,
             path,
-            recursive: _,
-            long: _,
-            all: _,
-            human_readable: _,
-            sort_time: _,
-            reverse: _,
-            filter: _,
-            directories_only: _,
-            limit: _,
+            recursive,
+            long,
+            all,
+            human_readable,
+            sort_time,
+            reverse,
+            filter,
+            directories_only,
+            limit,
         } => {
-            list_files(&image, &path, cli.verbose)?;
+            list_files_enhanced(
+                &image,
+                &path,
+                recursive,
+                long,
+                all,
+                human_readable,
+                sort_time,
+                reverse,
+                filter,
+                directories_only,
+                limit,
+                cli.verbose,
+            )?;
         }
 
         Commands::Extract {
             image,
             guest_path,
             output,
-            preserve: _,
-            recursive: _,
-            force: _,
-            progress: _,
-            verify: _,
+            preserve,
+            recursive,
+            force,
+            progress,
+            verify,
         } => {
-            extract_file(&image, &guest_path, &output, cli.verbose)?;
+            extract_file_enhanced(
+                &image,
+                &guest_path,
+                &output,
+                preserve,
+                recursive,
+                force,
+                progress,
+                verify,
+                cli.verbose,
+            )?;
         }
 
         Commands::Execute { image, command } => {
