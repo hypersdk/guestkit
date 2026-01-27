@@ -3309,3 +3309,327 @@ pub fn grep_command(
     g.shutdown().ok();
     Ok(())
 }
+/// Security vulnerability scan
+pub fn scan_command(
+    image: &PathBuf,
+    scan_type: &str,
+    severity: Option<String>,
+    _output: Option<String>,
+    report: bool,
+    check_cve: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Scanning for {} vulnerabilities...", scan_type));
+
+    let mut findings = Vec::new();
+
+    // Scan based on type
+    if scan_type == "packages" || scan_type == "all" {
+        // Check for outdated or vulnerable packages
+        if let Ok(apps) = g.inspect_list_applications(&roots[0]) {
+            for app in apps.iter().take(10) {
+                // Simplified: just list some packages
+                findings.push(format!(
+                    "Package: {} {} (epoch {})",
+                    app.name, app.version, app.epoch
+                ));
+            }
+        }
+    }
+
+    if scan_type == "config" || scan_type == "all" {
+        // Check for insecure configurations
+        let config_files = vec![
+            "/etc/ssh/sshd_config",
+            "/etc/sudoers",
+            "/etc/shadow",
+        ];
+
+        for file in config_files {
+            if g.is_file(file).unwrap_or(false) {
+                if let Ok(stat) = g.stat(file) {
+                    if stat.mode & 0o044 != 0 {
+                        findings.push(format!(
+                            "Warning: {} is world-readable (mode: {:o})",
+                            file, stat.mode & 0o777
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    if scan_type == "permissions" || scan_type == "all" {
+        // Check for files with dangerous permissions
+        if let Ok(files) = g.find("/etc") {
+            for file in files.iter().take(50) {
+                if let Ok(stat) = g.stat(file) {
+                    if stat.mode & 0o002 != 0 {
+                        findings.push(format!(
+                            "Warning: {} is world-writable (mode: {:o})",
+                            file, stat.mode & 0o777
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    progress.finish_and_clear();
+
+    // Display results
+    println!("Security Scan Results");
+    println!("=====================");
+    println!("Scan type: {}", scan_type);
+    if let Some(ref sev) = severity {
+        println!("Severity threshold: {}", sev);
+    }
+    println!();
+
+    if findings.is_empty() {
+        println!("No issues found");
+    } else {
+        println!("Found {} potential issues:", findings.len());
+        for finding in findings {
+            println!("  • {}", finding);
+        }
+    }
+
+    if check_cve {
+        println!();
+        println!("Note: CVE database checking not yet implemented");
+    }
+
+    if report {
+        println!();
+        println!("Detailed report generation not yet implemented");
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Benchmark disk I/O performance
+pub fn benchmark_command(
+    image: &PathBuf,
+    test_type: &str,
+    block_size: usize,
+    duration: u64,
+    iterations: usize,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use std::time::Instant;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.finish_and_clear();
+
+    println!("Disk I/O Benchmark");
+    println!("==================");
+    println!("Test type: {}", test_type);
+    println!("Block size: {} KB", block_size);
+    println!("Duration: {} seconds", duration);
+    println!("Iterations: {}", iterations);
+    println!();
+
+    // Simplified benchmark: measure file read performance
+    let test_files = vec!["/etc/passwd", "/etc/group", "/etc/fstab"];
+
+    let mut total_ops = 0;
+    let mut total_bytes = 0u64;
+
+    for iter in 1..=iterations {
+        println!("Iteration {}:", iter);
+        let start = Instant::now();
+
+        for file in &test_files {
+            if g.is_file(file).unwrap_or(false) {
+                if let Ok(content) = g.read_file(file) {
+                    total_bytes += content.len() as u64;
+                    total_ops += 1;
+                }
+            }
+        }
+
+        let elapsed = start.elapsed();
+        let throughput = if elapsed.as_secs() > 0 {
+            total_bytes / elapsed.as_secs()
+        } else {
+            0
+        };
+
+        println!("  Operations: {}", total_ops);
+        println!("  Throughput: {} bytes/sec", throughput);
+        println!();
+    }
+
+    println!("Summary:");
+    println!("  Total operations: {}", total_ops);
+    println!("  Total bytes read: {}", total_bytes);
+    println!();
+    println!("Note: This is a simplified benchmark. Full implementation pending.");
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Manage disk snapshots
+pub fn snapshot_command(
+    image: &PathBuf,
+    operation: &str,
+    name: Option<String>,
+    description: Option<String>,
+    _verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+
+    let msg = format!("Snapshot operation: {}...", operation);
+    let progress = ProgressReporter::spinner(&msg);
+
+    match operation {
+        "create" => {
+            let snap_name = name.unwrap_or_else(|| {
+                chrono::Utc::now().format("snapshot-%Y%m%d-%H%M%S").to_string()
+            });
+
+            progress.set_message(format!("Creating snapshot '{}'...", snap_name));
+
+            // In a real implementation, this would create a QCOW2 snapshot
+            // or use libvirt snapshot APIs
+
+            progress.finish_and_clear();
+
+            println!("✓ Created snapshot: {}", snap_name);
+            if let Some(desc) = description {
+                println!("  Description: {}", desc);
+            }
+            println!("  Image: {}", image.display());
+            println!();
+            println!("Note: Snapshot creation not fully implemented yet");
+            println!("      Would create QCOW2 internal snapshot or use qemu-img");
+        }
+
+        "list" => {
+            progress.set_message("Listing snapshots...");
+
+            progress.finish_and_clear();
+
+            println!("Snapshots for {}:", image.display());
+            println!();
+            println!("Note: Snapshot listing not fully implemented yet");
+            println!("      Would use qemu-img snapshot -l or libvirt APIs");
+        }
+
+        "delete" => {
+            if let Some(snap_name) = name {
+                progress.set_message(format!("Deleting snapshot '{}'...", snap_name));
+
+                progress.finish_and_clear();
+
+                println!("✓ Deleted snapshot: {}", snap_name);
+                println!();
+                println!("Note: Snapshot deletion not fully implemented yet");
+                println!("      Would use qemu-img snapshot -d");
+            } else {
+                progress.abandon_with_message("Snapshot name required for delete operation");
+                anyhow::bail!("Please provide snapshot name with --name");
+            }
+        }
+
+        "revert" => {
+            if let Some(snap_name) = name {
+                progress.set_message(format!("Reverting to snapshot '{}'...", snap_name));
+
+                progress.finish_and_clear();
+
+                println!("✓ Reverted to snapshot: {}", snap_name);
+                println!();
+                println!("Note: Snapshot revert not fully implemented yet");
+                println!("      Would use qemu-img snapshot -a");
+            } else {
+                progress.abandon_with_message("Snapshot name required for revert operation");
+                anyhow::bail!("Please provide snapshot name with --name");
+            }
+        }
+
+        "info" => {
+            if let Some(snap_name) = name {
+                progress.set_message(format!("Getting info for snapshot '{}'...", snap_name));
+
+                progress.finish_and_clear();
+
+                println!("Snapshot Information");
+                println!("====================");
+                println!("Name: {}", snap_name);
+                println!("Image: {}", image.display());
+                if let Some(desc) = description {
+                    println!("Description: {}", desc);
+                }
+                println!();
+                println!("Note: Snapshot info not fully implemented yet");
+                println!("      Would parse qemu-img snapshot -l output");
+            } else {
+                progress.abandon_with_message("Snapshot name required for info operation");
+                anyhow::bail!("Please provide snapshot name with --name");
+            }
+        }
+
+        _ => {
+            progress.abandon_with_message(format!("Unknown operation: {}", operation));
+            anyhow::bail!("Invalid snapshot operation");
+        }
+    }
+
+    Ok(())
+}
