@@ -1,6 +1,8 @@
-# GuestCtl Documentation
+# GuestKit Documentation
 
-Welcome to the GuestCtl documentation! This directory contains all project documentation organized by category.
+Welcome to the GuestKit documentation! This directory contains all project documentation organized by category.
+
+📑 **Quick Index**: See [INDEX.md](INDEX.md) for a complete documentation map and quick navigation.
 
 ## 📚 Documentation Structure
 
@@ -58,15 +60,29 @@ Understand how GuestCtl works internally.
 
 ### 🔧 [Development](development/) - Contributor Documentation
 
-For contributors and developers extending GuestCtl.
+For contributors and developers extending GuestKit.
 
+**Project Planning:**
 - **[Roadmap 2026](development/roadmap-2026.md)** - Project roadmap and future plans
-- **[Improvements Log](development/improvements-log.md)** - Recent improvements and enhancements
-- **[Publishing](development/publishing.md)** - PyPI publishing process
+- **[Q1 2026 Implementation](development/Q1-2026-IMPLEMENTATION-START.md)** - Q1 2026 roadmap details
 - **[Next Steps](development/next-steps.md)** - Upcoming priorities
 - **[Enhancement Roadmap](development/enhancement-roadmap.md)** - Future enhancements (100+ ideas)
 - **[Quick Enhancements](development/quick-enhancements.md)** - Quick wins to implement
+
+**Development Logs:**
+- **[Improvements Log](development/improvements-log.md)** - Recent improvements and enhancements
 - **[Enhancements Implemented](development/enhancements-implemented.md)** - What's been done
+- **[Commands Summary](development/COMMANDS_SUMMARY.md)** - All CLI commands reference
+- **[Inspect Enhanced Improvements](development/INSPECT_ENHANCED_IMPROVEMENTS.md)** - Enhanced inspection features
+- **[Documentation Enhancements](development/DOCUMENTATION_ENHANCEMENTS.md)** - Documentation improvements
+- **[Documentation Update Summary](development/DOCUMENTATION_UPDATE_SUMMARY.md)** - Documentation updates
+
+**Test Coverage:**
+- **[Test Coverage Initiative](development/test-coverage-initiative-complete.md)** - Complete test coverage report
+- **[Complete Session Summary](development/complete-session-summary.md)** - Development session summary
+
+**Publishing & APIs:**
+- **[Publishing](development/publishing.md)** - PyPI publishing process
 - **[Missing APIs](development/missing-apis.md)** - APIs not yet implemented
 
 ### 🎨 [Marketing](marketing/) - Community & Promotion
@@ -165,5 +181,5 @@ Found an issue or want to improve documentation?
 ---
 
 **Documentation Version:** 0.3.1
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-27
 **License:** LGPL-3.0-or-later
