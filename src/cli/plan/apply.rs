@@ -95,6 +95,7 @@ impl PlanApplicator {
     }
 
     /// Create backup before applying plan
+    #[allow(dead_code)]
     fn create_backup(&self) -> Result<String> {
         // TODO: Implement backup creation
         Ok("/backup/vm-state".to_string())

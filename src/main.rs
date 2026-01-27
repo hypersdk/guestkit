@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 mod cli;
 use cli::commands::*;
+use cli::plan::PlanCommand;
 
 /// guestctl - Guest VM toolkit for disk inspection and manipulation
 #[derive(Parser)]
@@ -397,6 +398,9 @@ enum Commands {
         #[arg(value_enum)]
         shell: CompletionShell,
     },
+
+    /// Manage fix plans (preview, validate, export, apply)
+    Plan(PlanCommand),
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -708,6 +712,10 @@ fn main() -> anyhow::Result<()> {
                 }
                 CompletionShell::Elvish => generate(shells::Elvish, &mut cmd, "guestctl", &mut io::stdout()),
             }
+        }
+
+        Commands::Plan(plan_cmd) => {
+            plan_cmd.execute()?;
         }
     }
 

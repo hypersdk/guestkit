@@ -15,6 +15,7 @@ pub mod generator;
 pub mod preview;
 pub mod apply;
 pub mod export;
+pub mod command;
 
 pub use types::{
     FixPlan,
@@ -33,3 +34,4 @@ pub use generator::PlanGenerator;
 pub use preview::PlanPreview;
 pub use apply::PlanApplicator;
 pub use export::PlanExporter;
+pub use command::PlanCommand;
