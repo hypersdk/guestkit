@@ -362,6 +362,15 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "migrate" => {
                         commands::cmd_migrate(&mut ctx, args)
                     }
+                    "troubleshoot" => {
+                        commands::cmd_troubleshoot(&mut ctx, args)
+                    }
+                    "depends" => {
+                        commands::cmd_depends(&mut ctx, args)
+                    }
+                    "validate" => {
+                        commands::cmd_validate(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);

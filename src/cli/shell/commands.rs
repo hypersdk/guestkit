@@ -617,6 +617,14 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Migration readiness assessment", "migrate <target>".green());
     println!("           Targets: cloud, container");
 
+    println!("\n{}", "Diagnostics & Remediation:".yellow().bold());
+    println!("  {} - Intelligent troubleshooting", "troubleshoot <category>".green());
+    println!("           Categories: boot, network, services, performance, security, auto");
+    println!("  {} - Package dependency analysis", "depends <command>".green());
+    println!("           Commands: search, analyze, dev, libs");
+    println!("  {} - Configuration validation", "validate <target>".green());
+    println!("           Targets: all, config");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -8210,6 +8218,965 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{} {} - Container migration assessment", "2.".cyan(), "migrate container".green());
             println!();
             println!("{} migrate <target>", "Usage:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Intelligent troubleshooting assistant
+pub fn cmd_troubleshoot(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║          Intelligent Troubleshooting Assistant          ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    if args.is_empty() {
+        println!("{}", "Troubleshooting Categories:".yellow().bold());
+        println!();
+        println!("{} {} - Boot and startup issues", "1.".cyan(), "troubleshoot boot".green());
+        println!("{} {} - Network connectivity problems", "2.".cyan(), "troubleshoot network".green());
+        println!("{} {} - Service failures", "3.".cyan(), "troubleshoot services".green());
+        println!("{} {} - Performance issues", "4.".cyan(), "troubleshoot performance".green());
+        println!("{} {} - Security concerns", "5.".cyan(), "troubleshoot security".green());
+        println!("{} {} - Auto-detect issues", "6.".cyan(), "troubleshoot auto".green());
+        println!();
+        println!("{} troubleshoot <category>", "Usage:".yellow());
+        return Ok(());
+    }
+
+    let category = args[0];
+
+    match category {
+        "boot" => {
+            println!("{}", "🔧 Boot & Startup Troubleshooting".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let mut issues_found = Vec::new();
+            let mut solutions = Vec::new();
+
+            // Check fstab
+            println!("{} Checking filesystem table...", "→".cyan());
+            if !ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                println!("  {} /etc/fstab is missing", "✗".red().bold());
+                issues_found.push("Missing /etc/fstab");
+                solutions.push((
+                    "Create /etc/fstab",
+                    "The filesystem table is required for mounting filesystems at boot",
+                    vec![
+                        "1. Generate fstab from current mounts",
+                        "2. Verify UUID or device paths",
+                        "3. Test in rescue mode before production boot",
+                    ],
+                ));
+            } else {
+                println!("  {} /etc/fstab exists", "✓".green());
+            }
+
+            // Check boot loader
+            println!("{} Checking boot loader configuration...", "→".cyan());
+            let grub_cfg = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false);
+            let grub2_cfg = ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+
+            if !grub_cfg && !grub2_cfg {
+                println!("  {} No GRUB configuration found", "✗".red().bold());
+                issues_found.push("Missing GRUB configuration");
+                solutions.push((
+                    "Install and configure GRUB",
+                    "Boot loader is missing or not configured properly",
+                    vec![
+                        "1. Install grub2 package",
+                        "2. Run grub2-mkconfig -o /boot/grub2/grub.cfg",
+                        "3. Install to boot device: grub2-install /dev/sda",
+                    ],
+                ));
+            } else {
+                println!("  {} GRUB configuration found", "✓".green());
+            }
+
+            // Check kernel
+            println!("{} Checking kernel installation...", "→".cyan());
+            let has_kernel = ctx.guestfs.exists("/boot/vmlinuz").unwrap_or(false)
+                || ctx.guestfs.exists("/boot/vmlinuz-linux").unwrap_or(false);
+
+            if !has_kernel {
+                println!("  {} No kernel found in /boot", "✗".red().bold());
+                issues_found.push("No kernel installed");
+                solutions.push((
+                    "Install kernel",
+                    "System cannot boot without a kernel",
+                    vec![
+                        "1. Install kernel package for your distribution",
+                        "2. Regenerate initramfs/initrd",
+                        "3. Update GRUB configuration",
+                    ],
+                ));
+            } else {
+                println!("  {} Kernel found", "✓".green());
+            }
+
+            // Summary
+            println!();
+            if issues_found.is_empty() {
+                println!("{}", "✓ No boot issues detected!".green().bold());
+                println!("  Boot configuration appears correct.");
+            } else {
+                println!("{} {} boot issues detected:", "⚠".red(), issues_found.len());
+                println!();
+
+                for (i, (title, description, steps)) in solutions.iter().enumerate() {
+                    println!("{} {}", format!("Issue {}:", i + 1).yellow().bold(), title.bold());
+                    println!("   {}", description.bright_black());
+                    println!();
+                    println!("   {}:", "Solution Steps".green());
+                    for step in steps {
+                        println!("     {}", step.cyan());
+                    }
+                    println!();
+                }
+            }
+        }
+
+        "network" => {
+            println!("{}", "🌐 Network Troubleshooting".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let mut issues_found = Vec::new();
+            let mut solutions = Vec::new();
+
+            // Check DNS configuration
+            println!("{} Checking DNS configuration...", "→".cyan());
+            if !ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                println!("  {} /etc/resolv.conf is missing", "✗".red().bold());
+                issues_found.push("Missing DNS configuration");
+                solutions.push((
+                    "Configure DNS",
+                    "No DNS resolver configuration found",
+                    vec![
+                        "1. Create /etc/resolv.conf",
+                        "2. Add nameserver entries (e.g., nameserver 8.8.8.8)",
+                        "3. Consider using systemd-resolved for dynamic DNS",
+                    ],
+                ));
+            } else {
+                println!("  {} /etc/resolv.conf exists", "✓".green());
+            }
+
+            // Check hosts file
+            println!("{} Checking hosts file...", "→".cyan());
+            if !ctx.guestfs.exists("/etc/hosts").unwrap_or(false) {
+                println!("  {} /etc/hosts is missing", "✗".red().bold());
+                issues_found.push("Missing hosts file");
+                solutions.push((
+                    "Create hosts file",
+                    "Basic hostname resolution requires /etc/hosts",
+                    vec![
+                        "1. Create /etc/hosts with localhost entries",
+                        "2. Add: 127.0.0.1 localhost",
+                        "3. Add: ::1 localhost ip6-localhost",
+                    ],
+                ));
+            } else {
+                println!("  {} /etc/hosts exists", "✓".green());
+            }
+
+            // Check network manager
+            println!("{} Checking network management...", "→".cyan());
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let has_nm = pkg_info.packages.iter().any(|p| p.name.contains("NetworkManager"));
+            let has_netctl = pkg_info.packages.iter().any(|p| p.name.contains("netctl"));
+            let has_systemd_networkd = pkg_info.packages.iter().any(|p| p.name.contains("systemd"));
+
+            if !has_nm && !has_netctl && !has_systemd_networkd {
+                println!("  {} No network manager detected", "⚠".yellow());
+                solutions.push((
+                    "Install network manager",
+                    "No network management tool found",
+                    vec![
+                        "1. Install NetworkManager or systemd-networkd",
+                        "2. Enable and start the service",
+                        "3. Configure network interfaces",
+                    ],
+                ));
+            } else {
+                println!("  {} Network management tools present", "✓".green());
+            }
+
+            // Summary
+            println!();
+            if issues_found.is_empty() && solutions.is_empty() {
+                println!("{}", "✓ No critical network issues detected!".green().bold());
+            } else {
+                println!("{} Network configuration issues:", "⚠".yellow());
+                println!();
+
+                for (i, (title, description, steps)) in solutions.iter().enumerate() {
+                    println!("{} {}", format!("Issue {}:", i + 1).yellow().bold(), title.bold());
+                    println!("   {}", description.bright_black());
+                    println!();
+                    println!("   {}:", "Solution Steps".green());
+                    for step in steps {
+                        println!("     {}", step.cyan());
+                    }
+                    println!();
+                }
+            }
+        }
+
+        "services" => {
+            println!("{}", "⚙️  Service Troubleshooting".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                let total = services.len();
+                let disabled = total - enabled;
+
+                println!("{} Service Statistics:", "→".cyan());
+                println!("  Total services:    {}", total.to_string().cyan());
+                println!("  Enabled:           {} ({}%)", enabled.to_string().green(), (enabled * 100 / total));
+                println!("  Disabled:          {} ({}%)", disabled.to_string().yellow(), (disabled * 100 / total));
+                println!();
+
+                // Identify critical services
+                let critical_services = vec!["sshd", "systemd-networkd", "NetworkManager", "firewalld"];
+                let mut missing_critical = Vec::new();
+
+                println!("{} Checking critical services...", "→".cyan());
+                for critical in &critical_services {
+                    let found = services.iter().any(|s| s.name.contains(critical));
+                    if found {
+                        let enabled = services.iter()
+                            .find(|s| s.name.contains(critical))
+                            .map(|s| s.enabled)
+                            .unwrap_or(false);
+
+                        if enabled {
+                            println!("  {} {} is enabled", "✓".green(), critical.green());
+                        } else {
+                            println!("  {} {} exists but is disabled", "⚠".yellow(), critical.yellow());
+                        }
+                    } else {
+                        println!("  {} {} not found", "✗".red(), critical.bright_black());
+                        missing_critical.push(*critical);
+                    }
+                }
+
+                if !missing_critical.is_empty() {
+                    println!();
+                    println!("{} Recommendations:", "💡".yellow());
+                    for service in missing_critical {
+                        println!("  • Install and enable {}", service.cyan());
+                    }
+                }
+
+                // Check for failed services (we can't actually know this from offline inspection)
+                println!();
+                println!("{}", "Note:".yellow().bold());
+                println!("  Offline inspection cannot detect runtime service failures.");
+                println!("  Run 'systemctl --failed' on the live system to check for failed services.");
+            }
+        }
+
+        "performance" => {
+            println!("{}", "⚡ Performance Troubleshooting".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let mut issues = Vec::new();
+
+            // Check package count
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let pkg_count = pkg_info.packages.len();
+
+            println!("{} Analyzing package overhead...", "→".cyan());
+            println!("  Total packages: {}", pkg_count.to_string().cyan());
+
+            if pkg_count > 1500 {
+                println!("  {} High package count may impact performance", "⚠".yellow());
+                issues.push((
+                    "Package bloat",
+                    "Large number of packages installed (recommended: <1000)",
+                    vec![
+                        "1. Review installed packages: packages",
+                        "2. Remove unnecessary packages",
+                        "3. Consider minimal installation for better performance",
+                    ],
+                ));
+            } else if pkg_count > 1000 {
+                println!("  {} Moderate package count", "→".cyan());
+            } else {
+                println!("  {} Good package count", "✓".green());
+            }
+
+            // Check service count
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+
+                println!("{} Analyzing service overhead...", "→".cyan());
+                println!("  Enabled services: {}", enabled.to_string().cyan());
+
+                if enabled > 80 {
+                    println!("  {} Excessive services may cause slowdowns", "⚠".red());
+                    issues.push((
+                        "Service overhead",
+                        "Too many enabled services (recommended: <50)",
+                        vec![
+                            "1. Review enabled services: services",
+                            "2. Disable unnecessary services",
+                            "3. Use 'systemctl mask' for unwanted services",
+                        ],
+                    ));
+                } else if enabled > 50 {
+                    println!("  {} Many services enabled", "⚠".yellow());
+                    issues.push((
+                        "Service count",
+                        "Consider reviewing and disabling unused services",
+                        vec![
+                            "1. List services: systemctl list-unit-files",
+                            "2. Disable unused: systemctl disable <service>",
+                        ],
+                    ));
+                } else {
+                    println!("  {} Reasonable service count", "✓".green());
+                }
+            }
+
+            println!();
+            if issues.is_empty() {
+                println!("{}", "✓ No obvious performance bottlenecks detected!".green().bold());
+            } else {
+                println!("{} Performance Issues:", "⚠".yellow());
+                println!();
+
+                for (i, (title, description, steps)) in issues.iter().enumerate() {
+                    println!("{} {}", format!("{}.", i + 1).yellow().bold(), title.bold());
+                    println!("   {}", description.bright_black());
+                    println!();
+                    for step in steps {
+                        println!("     {}", step.cyan());
+                    }
+                    println!();
+                }
+            }
+
+            println!("{} Additional recommendations:", "💡".cyan());
+            println!("  • Run 'bench all' to measure command performance");
+            println!("  • Use 'optimize' for detailed optimization suggestions");
+            println!("  • Check 'chart services' for service distribution");
+        }
+
+        "security" => {
+            println!("{}", "🔒 Security Troubleshooting".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+            let mut vulnerabilities = Vec::new();
+
+            // Check MAC systems
+            println!("{} Checking access control systems...", "→".cyan());
+            if &sec.selinux == "disabled" && !sec.apparmor {
+                println!("  {} No MAC system active", "✗".red().bold());
+                vulnerabilities.push((
+                    "CRITICAL",
+                    "No Mandatory Access Control",
+                    "System lacks SELinux or AppArmor protection",
+                    vec![
+                        "1. Install SELinux or AppArmor packages",
+                        "2. Configure policy (targeted for SELinux, enforce for AppArmor)",
+                        "3. Reboot to activate",
+                        "4. Monitor audit logs for policy violations",
+                    ],
+                ));
+            } else if &sec.selinux != "disabled" {
+                println!("  {} SELinux is {}", "✓".green(), sec.selinux.green());
+            } else if sec.apparmor {
+                println!("  {} AppArmor is active", "✓".green());
+            }
+
+            // Check firewall
+            println!("{} Checking firewall...", "→".cyan());
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if !fw.enabled {
+                    println!("  {} Firewall is disabled", "✗".red().bold());
+                    vulnerabilities.push((
+                        "CRITICAL",
+                        "Firewall disabled",
+                        "No network filtering is active",
+                        vec![
+                            "1. Install firewalld or ufw",
+                            "2. Enable: systemctl enable --now firewalld",
+                            "3. Configure zones and rules",
+                            "4. Test connectivity after enabling",
+                        ],
+                    ));
+                } else {
+                    println!("  {} Firewall is enabled", "✓".green());
+                }
+            }
+
+            // Check audit daemon
+            println!("{} Checking audit logging...", "→".cyan());
+            if !sec.auditd {
+                println!("  {} Audit daemon not running", "⚠".yellow());
+                vulnerabilities.push((
+                    "WARNING",
+                    "No audit logging",
+                    "Security events are not being logged",
+                    vec![
+                        "1. Install audit package",
+                        "2. Enable: systemctl enable --now auditd",
+                        "3. Configure rules in /etc/audit/audit.rules",
+                        "4. Monitor /var/log/audit/audit.log",
+                    ],
+                ));
+            } else {
+                println!("  {} Audit daemon configured", "✓".green());
+            }
+
+            // Check SSH configuration
+            println!("{} Checking SSH security...", "→".cyan());
+            if ctx.guestfs.exists("/etc/ssh/sshd_config").unwrap_or(false) {
+                println!("  {} SSH configuration found", "✓".green());
+                println!("     {}", "Review sshd_config for:".bright_black());
+                println!("     {} PermitRootLogin no", "•".bright_black());
+                println!("     {} PasswordAuthentication (consider key-only)", "•".bright_black());
+                println!("     {} Port (consider changing from 22)", "•".bright_black());
+            } else {
+                println!("  {} No SSH configuration", "→".bright_black());
+            }
+
+            println!();
+            if vulnerabilities.is_empty() {
+                println!("{}", "✓ No critical security issues found!".green().bold());
+                println!("  Run 'verify security' for comprehensive security check.");
+            } else {
+                println!("{} Security Vulnerabilities:", "🚨".red());
+                println!();
+
+                for (i, (severity, title, description, steps)) in vulnerabilities.iter().enumerate() {
+                    let severity_colored = match *severity {
+                        "CRITICAL" => severity.red().bold(),
+                        "WARNING" => severity.yellow(),
+                        _ => severity.bright_black(),
+                    };
+
+                    println!("{} [{}] {}", format!("{}.", i + 1).yellow(), severity_colored, title.bold());
+                    println!("   {}", description.bright_black());
+                    println!();
+                    println!("   {}:", "Remediation Steps".green());
+                    for step in steps {
+                        println!("     {}", step.cyan());
+                    }
+                    println!();
+                }
+
+                println!("{} Run these for more details:", "💡".cyan());
+                println!("  • {} - Full security compliance check", "compliance cis".green());
+                println!("  • {} - Security predictions", "predict".green());
+                println!("  • {} - Security insights", "insights".green());
+            }
+        }
+
+        "auto" => {
+            println!("{}", "🔍 Auto-Detecting Issues".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{}", "Running comprehensive system scan...".yellow());
+            println!();
+
+            let mut issues = Vec::new();
+
+            // Quick checks across all categories
+            if !ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                issues.push(("CRITICAL", "Boot", "Missing /etc/fstab"));
+            }
+
+            if !ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                issues.push(("WARNING", "Network", "Missing DNS configuration"));
+            }
+
+            let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+            if &sec.selinux == "disabled" && !sec.apparmor {
+                issues.push(("CRITICAL", "Security", "No MAC system active"));
+            }
+
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if !fw.enabled {
+                    issues.push(("CRITICAL", "Security", "Firewall disabled"));
+                }
+            }
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            if pkg_info.packages.len() > 1500 {
+                issues.push(("WARNING", "Performance", "Excessive packages installed"));
+            }
+
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                if enabled > 80 {
+                    issues.push(("WARNING", "Performance", "Too many enabled services"));
+                }
+            }
+
+            if issues.is_empty() {
+                println!("{}", "✓ No issues detected!".green().bold());
+                println!("  System appears to be in good condition.");
+            } else {
+                println!("{} {} issues detected:", "⚠".yellow(), issues.len());
+                println!();
+
+                for (severity, category, description) in &issues {
+                    let severity_colored = match *severity {
+                        "CRITICAL" => severity.red().bold(),
+                        "WARNING" => severity.yellow(),
+                        _ => severity.bright_black(),
+                    };
+
+                    println!("  [{}] {}: {}",
+                        severity_colored,
+                        category.cyan(),
+                        description
+                    );
+                }
+
+                println!();
+                println!("{} Run detailed troubleshooting:", "💡".cyan());
+                println!("  • {} - Boot issues", "troubleshoot boot".green());
+                println!("  • {} - Network issues", "troubleshoot network".green());
+                println!("  • {} - Security issues", "troubleshoot security".green());
+                println!("  • {} - Performance issues", "troubleshoot performance".green());
+            }
+        }
+
+        _ => {
+            println!("{} Unknown category: {}", "Error:".red(), category);
+            println!("{} troubleshoot (without arguments) for options", "Tip:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Package dependency analysis
+pub fn cmd_depends(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║           Package Dependency Analysis                   ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    if args.is_empty() {
+        println!("{}", "Dependency Analysis Features:".yellow().bold());
+        println!();
+        println!("{} {} - Find packages containing pattern", "1.".cyan(), "depends search <pattern>".green());
+        println!("{} {} - Analyze package relationships", "2.".cyan(), "depends analyze".green());
+        println!("{} {} - Find development packages", "3.".cyan(), "depends dev".green());
+        println!("{} {} - Find library packages", "4.".cyan(), "depends libs".green());
+        println!();
+        println!("{} depends <command>", "Usage:".yellow());
+        return Ok(());
+    }
+
+    let command = args[0];
+
+    match command {
+        "search" => {
+            if args.len() < 2 {
+                println!("{} Usage: depends search <pattern>", "Error:".red());
+                return Ok(());
+            }
+
+            let pattern = args[1];
+            println!("{} Searching for packages matching '{}'...", "→".cyan(), pattern.green());
+            println!();
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let matches: Vec<_> = pkg_info.packages.iter()
+                .filter(|p| p.name.to_lowercase().contains(&pattern.to_lowercase()))
+                .collect();
+
+            if matches.is_empty() {
+                println!("{} No packages found matching '{}'", "✗".red(), pattern);
+            } else {
+                println!("{} {} packages found:", "✓".green(), matches.len());
+                println!();
+
+                for (i, pkg) in matches.iter().enumerate().take(50) {
+                    println!("{:3}. {} ({})",
+                        i + 1,
+                        pkg.name.cyan(),
+                        pkg.version.to_string().bright_black()
+                    );
+                }
+
+                if matches.len() > 50 {
+                    println!();
+                    println!("... and {} more", (matches.len() - 50).to_string().yellow());
+                }
+            }
+        }
+
+        "analyze" => {
+            println!("{} Analyzing package relationships...", "→".cyan());
+            println!();
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+
+            // Categorize packages
+            let mut dev_packages = 0;
+            let mut lib_packages = 0;
+            let mut doc_packages = 0;
+            let mut kernel_packages = 0;
+            let mut app_packages = 0;
+
+            for pkg in &pkg_info.packages {
+                let name = pkg.name.to_lowercase();
+                if name.contains("devel") || name.contains("-dev") || name.ends_with("-dev") {
+                    dev_packages += 1;
+                } else if name.starts_with("lib") || name.contains("library") {
+                    lib_packages += 1;
+                } else if name.contains("doc") || name.ends_with("-doc") {
+                    doc_packages += 1;
+                } else if name.contains("kernel") {
+                    kernel_packages += 1;
+                } else {
+                    app_packages += 1;
+                }
+            }
+
+            let total = pkg_info.packages.len();
+
+            println!("{}", "Package Distribution:".cyan().bold());
+            println!();
+            println!("  Development:  {:4} ({:5.1}%)", dev_packages, (dev_packages as f32 / total as f32) * 100.0);
+            println!("  Libraries:    {:4} ({:5.1}%)", lib_packages, (lib_packages as f32 / total as f32) * 100.0);
+            println!("  Documentation:{:4} ({:5.1}%)", doc_packages, (doc_packages as f32 / total as f32) * 100.0);
+            println!("  Kernel:       {:4} ({:5.1}%)", kernel_packages, (kernel_packages as f32 / total as f32) * 100.0);
+            println!("  Applications: {:4} ({:5.1}%)", app_packages, (app_packages as f32 / total as f32) * 100.0);
+            println!("  {}",  "─".repeat(25).bright_black());
+            println!("  Total:        {:4}", total);
+
+            println!();
+            println!("{} Insights:", "💡".yellow());
+
+            if dev_packages > total / 5 {
+                println!("  • {}", "High development package count suggests a build environment".cyan());
+            }
+
+            if lib_packages > total / 3 {
+                println!("  • {}", "Many libraries - system may support multiple applications".cyan());
+            }
+
+            if doc_packages > 50 {
+                println!("  • {}", "Documentation packages can be removed to save space".cyan());
+            }
+        }
+
+        "dev" => {
+            println!("{} Development Packages:", "→".cyan());
+            println!();
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let dev_pkgs: Vec<_> = pkg_info.packages.iter()
+                .filter(|p| {
+                    let name = p.name.to_lowercase();
+                    name.contains("devel") || name.contains("-dev") ||
+                    name.ends_with("-dev") || name.contains("gcc") ||
+                    name.contains("make") || name.contains("cmake")
+                })
+                .collect();
+
+            if dev_pkgs.is_empty() {
+                println!("{} No development packages found", "✓".green());
+                println!("  This is a production/runtime system");
+            } else {
+                println!("{} {} development packages:", "→".cyan(), dev_pkgs.len());
+                println!();
+
+                for (i, pkg) in dev_pkgs.iter().enumerate().take(30) {
+                    println!("{:3}. {}", i + 1, pkg.name.cyan());
+                }
+
+                if dev_pkgs.len() > 30 {
+                    println!();
+                    println!("... and {} more", (dev_pkgs.len() - 30).to_string().yellow());
+                }
+
+                println!();
+                println!("{} Note:", "💡".yellow());
+                println!("  Development packages are typically not needed in production.");
+                println!("  Consider removing them to reduce attack surface and disk usage.");
+            }
+        }
+
+        "libs" => {
+            println!("{} Library Packages:", "→".cyan());
+            println!();
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let lib_pkgs: Vec<_> = pkg_info.packages.iter()
+                .filter(|p| p.name.starts_with("lib") || p.name.to_lowercase().contains("library"))
+                .collect();
+
+            println!("{} {} library packages:", "→".cyan(), lib_pkgs.len());
+            println!();
+
+            for (i, pkg) in lib_pkgs.iter().enumerate().take(30) {
+                println!("{:3}. {}", i + 1, pkg.name.cyan());
+            }
+
+            if lib_pkgs.len() > 30 {
+                println!();
+                println!("... and {} more", (lib_pkgs.len() - 30).to_string().yellow());
+            }
+        }
+
+        _ => {
+            println!("{} Unknown command: {}", "Error:".red(), command);
+            println!("{} depends (without arguments) for options", "Tip:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Configuration validation and recommendations
+pub fn cmd_validate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║          Configuration Validation Suite                 ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    let target = if args.is_empty() { "all" } else { args[0] };
+
+    match target {
+        "all" => {
+            println!("{}", "Running comprehensive validation...".yellow());
+            println!();
+
+            let mut passed = 0;
+            let mut failed = 0;
+            let mut warnings = 0;
+
+            // Validation 1: File system structure
+            println!("{} {}", "1.".cyan().bold(), "File System Structure".bold());
+            let critical_dirs = vec!["/etc", "/var", "/usr", "/boot", "/home"];
+            let mut all_dirs_present = true;
+
+            for dir in &critical_dirs {
+                if ctx.guestfs.exists(dir).unwrap_or(false) {
+                    println!("  {} {} exists", "✓".green(), dir.cyan());
+                } else {
+                    println!("  {} {} missing", "✗".red(), dir.red());
+                    all_dirs_present = false;
+                }
+            }
+
+            if all_dirs_present {
+                passed += 1;
+                println!("  {}", "PASS".green().bold());
+            } else {
+                failed += 1;
+                println!("  {}", "FAIL".red().bold());
+            }
+            println!();
+
+            // Validation 2: System configuration files
+            println!("{} {}", "2.".cyan().bold(), "System Configuration Files".bold());
+            let config_files = vec![
+                ("/etc/passwd", "User database"),
+                ("/etc/group", "Group database"),
+                ("/etc/shadow", "Password hashes"),
+                ("/etc/fstab", "Filesystem table"),
+            ];
+
+            let mut all_configs_present = true;
+            for (file, desc) in &config_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {} - {}", "✓".green(), file.cyan(), desc.bright_black());
+                } else {
+                    println!("  {} {} - {} {}", "✗".red(), file.red(), desc.bright_black(), "[MISSING]".red());
+                    all_configs_present = false;
+                }
+            }
+
+            if all_configs_present {
+                passed += 1;
+                println!("  {}", "PASS".green().bold());
+            } else {
+                failed += 1;
+                println!("  {}", "FAIL".red().bold());
+            }
+            println!();
+
+            // Validation 3: Boot configuration
+            println!("{} {}", "3.".cyan().bold(), "Boot Configuration".bold());
+            let grub_cfg = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false);
+            let grub2_cfg = ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+
+            if grub_cfg || grub2_cfg {
+                println!("  {} Boot loader configured", "✓".green());
+                passed += 1;
+                println!("  {}", "PASS".green().bold());
+            } else {
+                println!("  {} No boot loader configuration", "✗".red());
+                failed += 1;
+                println!("  {}", "FAIL".red().bold());
+            }
+            println!();
+
+            // Validation 4: Security configuration
+            println!("{} {}", "4.".cyan().bold(), "Security Configuration".bold());
+            let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+            let mut sec_checks = 0;
+            let mut sec_total = 0;
+
+            sec_total += 1;
+            if &sec.selinux != "disabled" || sec.apparmor {
+                println!("  {} MAC system active", "✓".green());
+                sec_checks += 1;
+            } else {
+                println!("  {} No MAC system", "⚠".yellow());
+            }
+
+            sec_total += 1;
+            if sec.auditd {
+                println!("  {} Audit daemon configured", "✓".green());
+                sec_checks += 1;
+            } else {
+                println!("  {} No audit daemon", "⚠".yellow());
+            }
+
+            sec_total += 1;
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if fw.enabled {
+                    println!("  {} Firewall enabled", "✓".green());
+                    sec_checks += 1;
+                } else {
+                    println!("  {} Firewall disabled", "⚠".yellow());
+                }
+            }
+
+            if sec_checks >= sec_total - 1 {
+                passed += 1;
+                println!("  {}", "PASS".green().bold());
+            } else if sec_checks >= sec_total / 2 {
+                warnings += 1;
+                println!("  {}", "WARN".yellow().bold());
+            } else {
+                failed += 1;
+                println!("  {}", "FAIL".red().bold());
+            }
+            println!();
+
+            // Validation 5: Package integrity
+            println!("{} {}", "5.".cyan().bold(), "Package System".bold());
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            if pkg_info.packages.len() > 0 {
+                println!("  {} {} packages installed", "✓".green(), pkg_info.packages.len());
+                passed += 1;
+                println!("  {}", "PASS".green().bold());
+            } else {
+                println!("  {} No packages found", "✗".red());
+                failed += 1;
+                println!("  {}", "FAIL".red().bold());
+            }
+            println!();
+
+            // Summary
+            println!("{}", "═".repeat(60).bright_black());
+            println!();
+            println!("{}", "Validation Summary:".cyan().bold());
+            println!("  Passed:   {}", passed.to_string().green());
+            println!("  Failed:   {}", failed.to_string().red());
+            println!("  Warnings: {}", warnings.to_string().yellow());
+
+            let total = passed + failed + warnings;
+            let success_rate = (passed as f32 / total as f32) * 100.0;
+
+            println!();
+            println!("  Success Rate: {:.1}%", success_rate);
+
+            if failed == 0 && warnings == 0 {
+                println!();
+                println!("{}", "✓ System configuration is valid!".green().bold());
+            } else if failed == 0 {
+                println!();
+                println!("{}", "⚠ System is mostly valid with some warnings.".yellow());
+            } else {
+                println!();
+                println!("{}", "✗ System has configuration issues that need attention.".red());
+            }
+        }
+
+        "config" => {
+            println!("{}", "Validating configuration files...".yellow());
+            println!();
+
+            let config_files = vec![
+                ("/etc/passwd", "User accounts", true),
+                ("/etc/group", "Group definitions", true),
+                ("/etc/shadow", "Password hashes", true),
+                ("/etc/fstab", "Filesystem mounts", true),
+                ("/etc/hosts", "Host name resolution", true),
+                ("/etc/resolv.conf", "DNS configuration", false),
+                ("/etc/ssh/sshd_config", "SSH server config", false),
+                ("/etc/sudoers", "Sudo configuration", false),
+            ];
+
+            let mut critical_missing = Vec::new();
+            let mut optional_missing = Vec::new();
+
+            for (file, description, critical) in &config_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {} - {}", "✓".green(), file.cyan(), description.bright_black());
+                } else {
+                    if *critical {
+                        println!("  {} {} - {} {}", "✗".red(), file.red(), description.bright_black(), "[CRITICAL]".red().bold());
+                        critical_missing.push(*file);
+                    } else {
+                        println!("  {} {} - {} {}", "⚠".yellow(), file.yellow(), description.bright_black(), "[OPTIONAL]".yellow());
+                        optional_missing.push(*file);
+                    }
+                }
+            }
+
+            println!();
+            if critical_missing.is_empty() && optional_missing.is_empty() {
+                println!("{}", "✓ All configuration files present!".green().bold());
+            } else {
+                if !critical_missing.is_empty() {
+                    println!("{} Critical files missing:", "✗".red());
+                    for file in &critical_missing {
+                        println!("  • {}", file.red());
+                    }
+                    println!();
+                }
+
+                if !optional_missing.is_empty() {
+                    println!("{} Optional files missing:", "⚠".yellow());
+                    for file in &optional_missing {
+                        println!("  • {}", file.yellow());
+                    }
+                }
+            }
+        }
+
+        _ => {
+            println!("{}", "Validation Targets:".yellow().bold());
+            println!();
+            println!("{} {} - Comprehensive validation", "1.".cyan(), "validate all".green());
+            println!("{} {} - Configuration files only", "2.".cyan(), "validate config".green());
+            println!();
+            println!("{} validate <target>", "Usage:".yellow());
         }
     }
 
