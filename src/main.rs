@@ -163,7 +163,7 @@ enum Commands {
         all: bool,
 
         /// Human-readable file sizes
-        #[arg(short = 'h', long)]
+        #[arg(short = 'H', long)]
         human_readable: bool,
 
         /// Sort by modification time
@@ -179,7 +179,7 @@ enum Commands {
         filter: Option<String>,
 
         /// Show only directories
-        #[arg(short = 'd', long)]
+        #[arg(short = 'D', long)]
         directories_only: bool,
 
         /// Limit number of results
@@ -555,7 +555,7 @@ enum Commands {
         block_size: usize,
 
         /// Duration of test in seconds
-        #[arg(short = 'd', long, default_value = "10")]
+        #[arg(long, default_value = "10")]
         duration: u64,
 
         /// Number of iterations
@@ -577,7 +577,7 @@ enum Commands {
         name: Option<String>,
 
         /// Snapshot description
-        #[arg(short = 'd', long)]
+        #[arg(long)]
         description: Option<String>,
     },
 
@@ -1105,15 +1105,7 @@ fn main() -> anyhow::Result<()> {
             report,
             check_cve,
         } => {
-            eprintln!("Security scan of {} with type: {}", image.display(), scan_type);
-            if let Some(sev) = severity {
-                eprintln!("  Severity threshold: {}", sev);
-            }
-            if let Some(out) = output {
-                eprintln!("  Output format: {}", out);
-            }
-            eprintln!("  Generate report: {}, Check CVE: {}", report, check_cve);
-            eprintln!("Note: Scan command implementation pending");
+            scan_command(&image, &scan_type, severity, output, report, check_cve, cli.verbose)?;
         }
 
         Commands::Benchmark {
@@ -1123,9 +1115,7 @@ fn main() -> anyhow::Result<()> {
             duration,
             iterations,
         } => {
-            eprintln!("Benchmark {} with test type: {}", image.display(), test_type);
-            eprintln!("  Block size: {} KB, Duration: {} sec, Iterations: {}", block_size, duration, iterations);
-            eprintln!("Note: Benchmark command implementation pending");
+            benchmark_command(&image, &test_type, block_size, duration, iterations, cli.verbose)?;
         }
 
         Commands::Snapshot {
@@ -1134,14 +1124,14 @@ fn main() -> anyhow::Result<()> {
             name,
             description,
         } => {
-            eprintln!("Snapshot operation {:?} for {}", operation, image.display());
-            if let Some(n) = name {
-                eprintln!("  Name: {}", n);
-            }
-            if let Some(desc) = description {
-                eprintln!("  Description: {}", desc);
-            }
-            eprintln!("Note: Snapshot command implementation pending");
+            let op_str = match operation {
+                SnapshotOperation::Create => "create",
+                SnapshotOperation::List => "list",
+                SnapshotOperation::Delete => "delete",
+                SnapshotOperation::Revert => "revert",
+                SnapshotOperation::Info => "info",
+            };
+            snapshot_command(&image, op_str, name, description, cli.verbose)?;
         }
 
         Commands::Version => {
