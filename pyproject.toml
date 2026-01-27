@@ -43,8 +43,8 @@ Changelog = "https://github.com/ssahani/guestkit/blob/main/CHANGELOG.md"
 
 [tool.maturin]
 features = ["python-bindings"]
-module-name = "guestctl"
-include = ["guestctl.pyi"]
+module-name = "guestkit"
+include = ["guestkit.pyi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
