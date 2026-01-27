@@ -2,7 +2,7 @@
 //! Output formatters for inspection results
 
 use anyhow::Result;
-use guestctl::guestfs::inspect_enhanced::*;
+use guestkit::guestfs::inspect_enhanced::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

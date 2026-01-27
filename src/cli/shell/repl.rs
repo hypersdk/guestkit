@@ -8,7 +8,7 @@ use rustyline::DefaultEditor;
 use std::path::Path;
 
 use super::commands::{self, ShellContext};
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 /// Run interactive shell
 pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {

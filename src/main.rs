@@ -3,7 +3,7 @@
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, shells};
-use guestctl::{converters::DiskConverter, VERSION};
+use guestkit::{converters::DiskConverter, VERSION};
 use std::io;
 use std::path::PathBuf;
 

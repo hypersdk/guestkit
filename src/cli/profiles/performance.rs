@@ -3,7 +3,7 @@
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection};
 use anyhow::Result;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 pub struct PerformanceProfile;
 

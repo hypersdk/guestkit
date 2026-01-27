@@ -3,8 +3,8 @@
 
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
-use guestctl::export::{PaperSize, PdfExporter, PdfExportOptions};
-use guestctl::export::pdf::{
+use guestkit::export::{PaperSize, PdfExporter, PdfExportOptions};
+use guestkit::export::pdf::{
     FilesystemInfo, InspectionData, NetworkInterface, PackageInfo, UserInfo,
 };
 use tempfile::NamedTempFile;

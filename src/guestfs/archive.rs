@@ -20,7 +20,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestctl::guestfs::Guestfs;
+    /// use guestkit::guestfs::Guestfs;
     ///
     /// let mut g = Guestfs::new().unwrap();
     /// // ... setup and mount ...

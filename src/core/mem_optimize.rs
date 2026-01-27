@@ -13,7 +13,7 @@
 //! # Usage
 //!
 //! ```rust
-//! use guestctl::core::mem_optimize;
+//! use guestkit::core::mem_optimize;
 //!
 //! // Instead of Vec::new()
 //! let packages = mem_optimize::vec_for_packages();
@@ -87,7 +87,7 @@ pub mod capacity {
 /// # Examples
 ///
 /// ```
-/// let mut partitions = guestctl::core::mem_optimize::vec_for_partitions();
+/// let mut partitions = guestkit::core::mem_optimize::vec_for_partitions();
 /// // partitions is pre-allocated with capacity for typical partition count
 /// ```
 #[inline]
@@ -181,7 +181,7 @@ pub fn vec_for_cron_jobs<T>() -> Vec<T> {
 ///
 /// ```
 /// let input = vec![1, 2, 3, 4, 5];
-/// let mut output = guestctl::core::mem_optimize::vec_with_estimated_capacity(&input, 1.5);
+/// let mut output = guestkit::core::mem_optimize::vec_with_estimated_capacity(&input, 1.5);
 /// // output has capacity of ~7 (5 * 1.5), avoiding reallocation
 /// ```
 #[inline]
@@ -199,7 +199,7 @@ pub fn vec_with_estimated_capacity<T, U>(input: &[U], factor: f32) -> Vec<T> {
 /// ```
 /// let mut vec = Vec::with_capacity(1000);
 /// // ... add 100 items ...
-/// guestctl::core::mem_optimize::shrink_if_wasteful(&mut vec);
+/// guestkit::core::mem_optimize::shrink_if_wasteful(&mut vec);
 /// // vec now uses less memory
 /// ```
 pub fn shrink_if_wasteful<T>(vec: &mut Vec<T>) {

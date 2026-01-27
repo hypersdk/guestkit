@@ -657,7 +657,7 @@ guestctl cache-clear
 #### Library (API)
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create handle
@@ -701,7 +701,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 GuestCtl provides modern Rust patterns for better type safety and ergonomics:
 
 ```rust
-use guestctl::guestfs::{Guestfs, FilesystemType, OsType, Distro};
+use guestkit::guestfs::{Guestfs, FilesystemType, OsType, Distro};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Builder pattern for configuration
@@ -1045,7 +1045,7 @@ guestctl provides comprehensive VM migration capabilities for cross-platform mig
 Modify disk images to work in different environments:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 let mut g = Guestfs::new()?;
 g.add_drive("/path/to/disk.qcow2")?;
@@ -1078,7 +1078,7 @@ g.rewrite_crypttab(root, luks_device_mapping)?;
 guestctl is designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kvm):
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 // Simple, intuitive API
 let mut g = Guestfs::new()?;

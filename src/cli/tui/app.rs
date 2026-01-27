@@ -3,11 +3,11 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Local};
-use guestctl::guestfs::inspect_enhanced::{
+use guestkit::guestfs::inspect_enhanced::{
     Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, PackageInfo,
     RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

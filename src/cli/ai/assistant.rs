@@ -4,7 +4,7 @@
 use super::tools::DiagnosticTools;
 use anyhow::{Context, Result};
 use colored::Colorize;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use std::path::Path;
 
 #[cfg(feature = "ai")]

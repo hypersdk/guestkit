@@ -38,7 +38,7 @@ impl DiskConverter {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestctl::converters::DiskConverter;
+    /// use guestkit::converters::DiskConverter;
     /// use std::path::Path;
     ///
     /// let converter = DiskConverter::new();

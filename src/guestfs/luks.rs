@@ -22,7 +22,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestctl::guestfs::Guestfs;
+    /// use guestkit::guestfs::Guestfs;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut g = Guestfs::new()?;
@@ -172,7 +172,7 @@ impl Guestfs {
     /// # Examples
     ///
     /// ```no_run
-    /// use guestctl::guestfs::Guestfs;
+    /// use guestkit::guestfs::Guestfs;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut g = Guestfs::new()?;

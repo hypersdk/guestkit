@@ -2,7 +2,7 @@
 //! Command implementations for interactive shell
 
 use anyhow::Result;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use colored::Colorize;
 
 #[cfg(feature = "ai")]

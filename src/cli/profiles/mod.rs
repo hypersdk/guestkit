@@ -2,7 +2,7 @@
 //! Inspection profiles for focused use cases
 
 use anyhow::Result;
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use serde::{Deserialize, Serialize};
 
 pub mod compliance;

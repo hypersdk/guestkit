@@ -4,11 +4,11 @@
 use super::formatters::*;
 use super::profiles::{FindingStatus, ProfileReport};
 use anyhow::{Context, Result};
-use guestctl::core::systemd::boot::BootAnalyzer;
-use guestctl::core::systemd::journal::{JournalFilter, JournalReader};
-use guestctl::core::systemd::services::ServiceAnalyzer;
-use guestctl::core::{ProgressReporter, SystemdAnalyzer};
-use guestctl::Guestfs;
+use guestkit::core::systemd::boot::BootAnalyzer;
+use guestkit::core::systemd::journal::{JournalFilter, JournalReader};
+use guestkit::core::systemd::services::ServiceAnalyzer;
+use guestkit::core::{ProgressReporter, SystemdAnalyzer};
+use guestkit::Guestfs;
 use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
 use tempfile;
@@ -1916,8 +1916,8 @@ fn inspect_single_image(
 
 /// List filesystems and partitions
 pub fn list_filesystems(image: &PathBuf, detailed: bool, verbose: bool) -> Result<()> {
-    use guestctl::core::ProgressReporter;
-    use guestctl::Guestfs;
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
     use owo_colors::OwoColorize;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
@@ -2073,8 +2073,8 @@ pub fn list_packages(
     json_output: bool,
     verbose: bool,
 ) -> Result<()> {
-    use guestctl::core::ProgressReporter;
-    use guestctl::Guestfs;
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
     use serde_json::json;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
@@ -2217,8 +2217,8 @@ pub fn list_packages(
 
 /// Read and display file content from disk image
 pub fn cat_file(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
-    use guestctl::core::ProgressReporter;
-    use guestctl::Guestfs;
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
 
     let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
 
@@ -2519,7 +2519,7 @@ pub fn systemd_services_command(
             println!("Service: {}", dep_tree.service_name.bright_blue());
             println!("Dependencies: {}", dep_tree.count_dependencies());
 
-            fn print_tree(tree: &guestctl::core::systemd::services::DependencyTree, indent: usize) {
+            fn print_tree(tree: &guestkit::core::systemd::services::DependencyTree, indent: usize) {
                 for dep in &tree.dependencies {
                     println!("{}{}", "  ".repeat(indent), dep.service_name);
                     print_tree(dep, indent + 1);
@@ -2573,9 +2573,9 @@ pub fn systemd_services_command(
 
                 // Print colored state based on service state
                 match service.state {
-                    guestctl::core::ServiceState::Active => print!("{:<15} ", "active".green()),
-                    guestctl::core::ServiceState::Failed => print!("{:<15} ", "failed".red()),
-                    guestctl::core::ServiceState::Inactive => print!("{:<15} ", "inactive".dimmed()),
+                    guestkit::core::ServiceState::Active => print!("{:<15} ", "active".green()),
+                    guestkit::core::ServiceState::Failed => print!("{:<15} ", "failed".red()),
+                    guestkit::core::ServiceState::Inactive => print!("{:<15} ", "inactive".dimmed()),
                     _ => print!("{:<15} ", service.state.to_string().white()),
                 }
 

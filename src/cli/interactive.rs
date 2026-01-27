@@ -3,7 +3,7 @@
 
 use super::errors::errors;
 use anyhow::{Context, Result};
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use owo_colors::OwoColorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
