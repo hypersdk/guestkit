@@ -2216,73 +2216,6 @@ pub fn list_packages(
 }
 
 /// Read and display file content from disk image
-pub fn cat_file(image: &PathBuf, path: &str, verbose: bool) -> Result<()> {
-    use guestkit::core::ProgressReporter;
-    use guestkit::Guestfs;
-
-    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
-
-    if verbose {
-        g.set_verbose(true);
-    }
-
-    let progress = ProgressReporter::spinner("Loading disk image...");
-
-    g.add_drive_ro(image.to_str().unwrap())
-        .with_context(|| format!("Failed to add disk: {}", image.display()))?;
-
-    progress.set_message("Launching appliance...");
-    g.launch().context("Failed to launch appliance")?;
-
-    // Mount filesystems
-    progress.set_message("Mounting filesystems...");
-
-    let roots = g.inspect_os().unwrap_or_default();
-    if !roots.is_empty() {
-        let root = &roots[0];
-        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
-            let mut mounts: Vec<_> = mountpoints.iter().collect();
-            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-            for (mount, device) in mounts {
-                g.mount_ro(device, mount).ok();
-            }
-        }
-    }
-
-    // Check if file exists
-    if !g.is_file(path).unwrap_or(false) {
-        progress.abandon_with_message(format!("File not found: {}", path));
-        anyhow::bail!("File not found: {}", path);
-    }
-
-    // Read and print file
-    progress.set_message(format!("Reading {}...", path));
-    let content = g
-        .read_file(path)
-        .with_context(|| format!("Failed to read file: {}", path))?;
-
-    progress.finish_and_clear();
-
-    // Try to print as UTF-8, fall back to hex if binary
-    match String::from_utf8(content.clone()) {
-        Ok(text) => print!("{}", text),
-        Err(_) => {
-            eprintln!("Warning: File contains binary data, displaying hex dump");
-            for (i, chunk) in content.chunks(16).enumerate() {
-                print!("{:08x}  ", i * 16);
-                for byte in chunk {
-                    print!("{:02x} ", byte);
-                }
-                println!();
-            }
-        }
-    }
-
-    g.umount_all().ok();
-    g.shutdown().ok();
-    Ok(())
-}
-
 // =============================================================================
 // Systemd Analysis Commands
 // =============================================================================
@@ -2681,6 +2614,494 @@ pub fn systemd_boot_command(
                 }
             }
         }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Enhanced cat with line numbers and special character display
+pub fn cat_file_enhanced(
+    image: &PathBuf,
+    path: &str,
+    line_numbers: bool,
+    show_all: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let mut g = Guestfs::new().context("Failed to create Guestfs handle")?;
+
+    if verbose {
+        g.set_verbose(true);
+    }
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())
+        .with_context(|| format!("Failed to add disk: {}", image.display()))?;
+
+    progress.set_message("Launching appliance...");
+    g.launch().context("Failed to launch appliance")?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    // Check if file exists
+    if !g.is_file(path).unwrap_or(false) {
+        progress.abandon_with_message(format!("File not found: {}", path));
+        anyhow::bail!("File not found: {}", path);
+    }
+
+    // Read and print file
+    progress.set_message(format!("Reading {}...", path));
+    let content = g
+        .read_file(path)
+        .with_context(|| format!("Failed to read file: {}", path))?;
+
+    progress.finish_and_clear();
+
+    // Try to print as UTF-8
+    match String::from_utf8(content.clone()) {
+        Ok(text) => {
+            for (idx, line) in text.lines().enumerate() {
+                let display_line = if show_all {
+                    // Show special characters
+                    line.replace('\t', "^I")
+                        .replace('\r', "^M")
+                        .chars()
+                        .map(|c| {
+                            if c.is_control() {
+                                format!("^{}", (c as u8 + 64) as char)
+                            } else {
+                                c.to_string()
+                            }
+                        })
+                        .collect::<String>()
+                } else {
+                    line.to_string()
+                };
+
+                if line_numbers {
+                    println!("{:6}\t{}", idx + 1, display_line);
+                } else {
+                    println!("{}", display_line);
+                }
+            }
+        }
+        Err(_) => {
+            eprintln!("Warning: File contains binary data");
+            // Print hex dump
+            for (i, chunk) in content.chunks(16).enumerate() {
+                if line_numbers {
+                    print!("{:08x}: ", i * 16);
+                }
+                for byte in chunk {
+                    print!("{:02x} ", byte);
+                }
+                println!();
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Calculate file checksums
+pub fn hash_command(
+    image: &PathBuf,
+    path: &str,
+    algorithm: &str,
+    check: Option<String>,
+    recursive: bool,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Computing {} hash...", algorithm));
+
+    if recursive && g.is_dir(path).unwrap_or(false) {
+        // Recursive hashing
+        let files = g.find(path)?;
+        progress.finish_and_clear();
+
+        for file in files {
+            if g.is_file(&file).unwrap_or(false) {
+                match g.checksum(algorithm, &file) {
+                    Ok(hash) => println!("{}  {}", hash, file),
+                    Err(e) => eprintln!("Error hashing {}: {}", file, e),
+                }
+            }
+        }
+    } else {
+        // Single file
+        let hash = g
+            .checksum(algorithm, path)
+            .with_context(|| format!("Failed to compute hash of {}", path))?;
+
+        progress.finish_and_clear();
+
+        if let Some(expected) = check {
+            if hash.to_lowercase() == expected.to_lowercase() {
+                println!("✓ Hash verified: {}: OK", path);
+            } else {
+                eprintln!("✗ Hash mismatch!");
+                eprintln!("  Expected: {}", expected);
+                eprintln!("  Got:      {}", hash);
+                anyhow::bail!("Hash verification failed");
+            }
+        } else {
+            println!("{}  {}", hash, path);
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Search for files by name or content
+pub fn search_command(
+    image: &PathBuf,
+    pattern: &str,
+    search_path: &str,
+    regex: bool,
+    ignore_case: bool,
+    content: bool,
+    file_type: Option<String>,
+    max_depth: Option<usize>,
+    limit: Option<usize>,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use regex::RegexBuilder;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Searching for '{}'...", pattern));
+
+    // Convert glob to regex if needed
+    let pattern_re = if regex {
+        RegexBuilder::new(pattern)
+            .case_insensitive(ignore_case)
+            .build()?
+    } else {
+        // Convert glob to regex
+        let regex_pattern = pattern
+            .replace(".", r"\.")
+            .replace("*", ".*")
+            .replace("?", ".");
+        RegexBuilder::new(&regex_pattern)
+            .case_insensitive(ignore_case)
+            .build()?
+    };
+
+    // Find all files
+    let all_files = g.find(search_path)?;
+
+    progress.finish_and_clear();
+
+    let mut matches = Vec::new();
+    let mut count = 0;
+
+    for file in all_files {
+        if let Some(lim) = limit {
+            if count >= lim {
+                break;
+            }
+        }
+
+        // Check depth
+        if let Some(max_d) = max_depth {
+            let depth = file.matches('/').count() - search_path.matches('/').count();
+            if depth > max_d {
+                continue;
+            }
+        }
+
+        // Check file type
+        if let Some(ref ftype) = file_type {
+            let is_dir = g.is_dir(&file).unwrap_or(false);
+            let is_file = g.is_file(&file).unwrap_or(false);
+            let is_link = g.is_symlink(&file).unwrap_or(false);
+
+            match ftype.as_str() {
+                "dir" | "directory" => {
+                    if !is_dir {
+                        continue;
+                    }
+                }
+                "file" => {
+                    if !is_file {
+                        continue;
+                    }
+                }
+                "link" | "symlink" => {
+                    if !is_link {
+                        continue;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Name matching
+        let file_name = file.rsplit('/').next().unwrap_or(&file);
+        let name_matches = pattern_re.is_match(file_name);
+
+        if content {
+            // Content search
+            if g.is_file(&file).unwrap_or(false) {
+                if let Ok(file_content) = g.read_file(&file) {
+                    if let Ok(text) = String::from_utf8(file_content) {
+                        if pattern_re.is_match(&text) {
+                            matches.push(file.clone());
+                            count += 1;
+                        }
+                    }
+                }
+            }
+        } else if name_matches {
+            matches.push(file.clone());
+            count += 1;
+        }
+    }
+
+    // Print results
+    if matches.is_empty() {
+        println!("No matches found");
+    } else {
+        for m in matches {
+            println!("{}", m);
+        }
+        if let Some(lim) = limit {
+            if count >= lim {
+                eprintln!("(Limit of {} results reached, more matches may exist)", lim);
+            }
+        }
+    }
+
+    g.umount_all().ok();
+    g.shutdown().ok();
+    Ok(())
+}
+
+/// Search file contents like grep
+pub fn grep_command(
+    image: &PathBuf,
+    pattern: &str,
+    search_path: &str,
+    ignore_case: bool,
+    line_numbers: bool,
+    recursive: bool,
+    files_only: bool,
+    invert: bool,
+    before_context: Option<usize>,
+    after_context: Option<usize>,
+    max_count: Option<usize>,
+    verbose: bool,
+) -> Result<()> {
+    use guestkit::core::ProgressReporter;
+    use guestkit::Guestfs;
+    use regex::RegexBuilder;
+
+    let mut g = Guestfs::new()?;
+    g.set_verbose(verbose);
+
+    let progress = ProgressReporter::spinner("Loading disk image...");
+
+    g.add_drive_ro(image.to_str().unwrap())?;
+
+    progress.set_message("Launching appliance...");
+    g.launch()?;
+
+    // Mount filesystems
+    progress.set_message("Mounting filesystems...");
+    let roots = g.inspect_os().unwrap_or_default();
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                g.mount_ro(device, mount).ok();
+            }
+        }
+    }
+
+    progress.set_message(format!("Searching for '{}'...", pattern));
+
+    let pattern_re = RegexBuilder::new(pattern)
+        .case_insensitive(ignore_case)
+        .build()?;
+
+    // Get list of files to search
+    let files_to_search = if recursive {
+        let all = g.find(search_path)?;
+        all.into_iter()
+            .filter(|f| g.is_file(f).unwrap_or(false))
+            .collect::<Vec<_>>()
+    } else {
+        if g.is_file(search_path).unwrap_or(false) {
+            vec![search_path.to_string()]
+        } else {
+            vec![]
+        }
+    };
+
+    progress.finish_and_clear();
+
+    let mut total_matches = 0;
+
+    for file in files_to_search {
+        if let Some(max) = max_count {
+            if total_matches >= max {
+                break;
+            }
+        }
+
+        if let Ok(content_bytes) = g.read_file(&file) {
+            if let Ok(content) = String::from_utf8(content_bytes) {
+                let lines: Vec<&str> = content.lines().collect();
+                let mut file_had_match = false;
+                let mut match_lines = Vec::new();
+
+                for (line_no, line) in lines.iter().enumerate() {
+                    let matches = pattern_re.is_match(line);
+                    let should_print = if invert { !matches } else { matches };
+
+                    if should_print {
+                        file_had_match = true;
+                        total_matches += 1;
+
+                        if !files_only {
+                            // Calculate context range
+                            let start = if let Some(before) = before_context {
+                                line_no.saturating_sub(before)
+                            } else {
+                                line_no
+                            };
+
+                            let end = if let Some(after) = after_context {
+                                (line_no + after + 1).min(lines.len())
+                            } else {
+                                line_no + 1
+                            };
+
+                            // Add context lines
+                            for i in start..end {
+                                match_lines.push((i, lines[i], i == line_no));
+                            }
+                        }
+
+                        if let Some(max) = max_count {
+                            if total_matches >= max {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if file_had_match {
+                    if files_only {
+                        println!("{}", file);
+                    } else {
+                        // Print file header for multiple files
+                        if recursive {
+                            println!("{}:", file);
+                        }
+
+                        // Deduplicate context lines
+                        match_lines.sort_by_key(|(line_no, _, _)| *line_no);
+                        match_lines.dedup_by_key(|(line_no, _, _)| *line_no);
+
+                        for (line_no, line, is_match) in match_lines {
+                            if line_numbers {
+                                if is_match {
+                                    println!("{}: {}", line_no + 1, line);
+                                } else {
+                                    println!("{}- {}", line_no + 1, line);
+                                }
+                            } else {
+                                println!("{}", line);
+                            }
+                        }
+
+                        if recursive {
+                            println!();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if total_matches == 0 {
+        eprintln!("No matches found");
     }
 
     g.umount_all().ok();
