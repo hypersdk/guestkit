@@ -579,6 +579,17 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Deep component inspection", "inspect <component>".green());
     println!("           Components: boot, logging, packages, services, kernel");
 
+    println!("\n{}", "Planning & Strategy:".yellow().bold());
+    println!("  {} - Narrative system explanations", "story <topic>".green());
+    println!("           Topics: system, security, config, timeline");
+    println!("  {} - Interactive advisor Q&A", "advisor <question>".green());
+    println!("           Questions: secure, performance, troubleshoot, backup, monitoring, upgrade, compliance, migration");
+    println!("  {} - System verification checks", "verify <check>".green());
+    println!("           Checks: integrity, security, boot, network, all");
+    println!("  {} - Optimization recommendations", "optimize".green());
+    println!("  {} - Improvement roadmaps", "roadmap <timeframe>".green());
+    println!("           Timeframes: 30-day, 90-day, annual");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -4748,6 +4759,1120 @@ pub fn cmd_inspect(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             return Ok(());
         }
     }
+
+    Ok(())
+}
+
+/// Generate narrative system explanation
+pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "Usage: story <topic>".red());
+        println!();
+        println!("{}", "Available Story Topics:".yellow().bold());
+        println!("  {} - System origin and purpose story", "system".green());
+        println!("  {} - Security posture narrative", "security".green());
+        println!("  {} - Configuration journey", "config".green());
+        println!("  {} - What happened to this system", "timeline".green());
+        println!();
+        return Ok(());
+    }
+
+    let topic = args[0];
+
+    match topic {
+        "system" => {
+            println!("\n{} {}", "📖".cyan(), "System Story".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            // Gather information
+            let os_type = ctx.guestfs.inspect_get_type(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+            let distro = ctx.guestfs.inspect_get_distro(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+            let arch = ctx.guestfs.inspect_get_arch(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+
+            println!("{}", "Once upon a time, in a datacenter far away...".italic());
+            println!();
+
+            println!("This is a {} system, specifically a {} distribution running on {} architecture.",
+                os_type.yellow(), distro.green(), arch.cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let pkg_count = pkg_info.packages.len();
+                println!("The system has been carefully assembled with {} packages, each serving its purpose",
+                    pkg_count.to_string().yellow());
+                println!("in the grand tapestry of this computing environment.");
+                println!();
+
+                // Identify character
+                let web_packages = pkg_info.packages.iter().filter(|p|
+                    p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache")
+                ).count();
+
+                let db_packages = pkg_info.packages.iter().filter(|p|
+                    p.name.contains("mysql") || p.name.contains("postgres") || p.name.contains("mariadb")
+                ).count();
+
+                let dev_packages = pkg_info.packages.iter().filter(|p|
+                    p.name.contains("gcc") || p.name.contains("make") || p.name.contains("python-devel")
+                ).count();
+
+                if web_packages > 0 {
+                    println!("This system bears the marks of a {}, with {} web server packages installed.",
+                        "web server".green().bold(), web_packages.to_string().yellow());
+                    println!("It has likely served countless HTTP requests, delivering content to users worldwide.");
+                }
+
+                if db_packages > 0 {
+                    println!("Database packages ({}) suggest this system has been entrusted with {}.",
+                        db_packages.to_string().yellow(), "storing precious data".green().bold());
+                    println!("Countless queries have been executed within its digital walls.");
+                }
+
+                if dev_packages > 0 {
+                    println!("Development tools ({}) indicate this is a {}, where code is crafted and compiled.",
+                        dev_packages.to_string().yellow(), "builder's workshop".green().bold());
+                }
+
+                if web_packages == 0 && db_packages == 0 && dev_packages == 0 {
+                    println!("This appears to be a {}, lean and purpose-built for specific tasks.",
+                        "minimalist system".green().bold());
+                }
+                println!();
+            }
+
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                let regular_users: Vec<_> = users.iter().filter(|u| {
+                    if let Ok(uid) = u.uid.parse::<u32>() {
+                        uid >= 1000
+                    } else {
+                        false
+                    }
+                }).collect();
+
+                if !regular_users.is_empty() {
+                    println!("{} user accounts have called this system home, each leaving their unique imprint.",
+                        regular_users.len().to_string().yellow());
+                    println!("Their files and configurations tell tales of work accomplished and challenges overcome.");
+                } else {
+                    println!("This is a {}, without regular user accounts - a pure service machine.",
+                        "sentinel system".green().bold());
+                }
+                println!();
+            }
+
+            println!("{}", "And so our system continues its journey, faithfully executing its duties,".italic());
+            println!("{}", "waiting for its next chapter to be written...".italic());
+            println!();
+        }
+
+        "security" => {
+            println!("\n{} {}", "🔒".cyan(), "Security Narrative".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                println!("{}", "A Tale of Protection and Defense".green().bold());
+                println!();
+
+                // SELinux story
+                if &sec.selinux != "disabled" {
+                    println!("This system is guarded by the watchful eyes of {}, operating in {} mode.",
+                        "SELinux".green().bold(), sec.selinux.yellow());
+                    println!("Like a vigilant sentinel, it enforces mandatory access controls,");
+                    println!("ensuring that every process stays within its designated boundaries.");
+                } else {
+                    println!("SELinux, the guardian of mandatory access controls, {} on this system.",
+                        "stands silent".red());
+                    println!("Its protective embrace has been forgone, for better or worse.");
+                }
+                println!();
+
+                // Firewall story
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if fw.enabled {
+                        println!("The {} stands as a mighty barrier, filtering network traffic",
+                            fw.firewall_type.green().bold());
+                        println!("with rules carefully crafted to protect against the outside world.");
+                    } else {
+                        println!("The firewall gates {}. This system trusts the network around it,",
+                            "stand open".red());
+                        println!("or perhaps operates within a protected enclave.");
+                    }
+                    println!();
+                }
+
+                // Audit story
+                if sec.auditd {
+                    println!("The {} chronicles every significant event,", "audit daemon".green().bold());
+                    println!("maintaining detailed logs for forensic analysis and compliance.");
+                    println!("Nothing escapes its watchful recording.");
+                } else {
+                    println!("No audit daemon watches and records. Events pass by {},",
+                        "unchronicled".red());
+                    println!("leaving no detailed trail for future investigators.");
+                }
+                println!();
+
+                println!("{}", "Thus the security posture is revealed - a balance between".italic());
+                println!("{}", "protection and accessibility, security and convenience.".italic());
+                println!();
+            }
+        }
+
+        "config" => {
+            println!("\n{} {}", "⚙".cyan(), "Configuration Journey".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "The Journey of System Configuration".green().bold());
+            println!();
+
+            // Network configuration
+            println!("{}", "Chapter 1: Connectivity".yellow());
+            if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+                println!("The system was blessed with {} network interfaces, each a gateway to communication.",
+                    interfaces.len().to_string().green());
+                for iface in interfaces.iter().take(3) {
+                    println!("  • {} - a conduit for data flow", iface.name.cyan());
+                }
+            }
+            println!();
+
+            // Storage configuration
+            println!("{}", "Chapter 2: Storage".yellow());
+            if let Ok(devices) = ctx.guestfs.list_devices() {
+                println!("Storage was provisioned across {} devices, the foundation of persistent data.",
+                    devices.len().to_string().green());
+            }
+            if ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                println!("The sacred {} defines how these storage realms are mounted,", "/etc/fstab".cyan());
+                println!("a map for the system to understand its storage landscape.");
+            }
+            println!();
+
+            // Services
+            println!("{}", "Chapter 3: Services and Daemons".yellow());
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                println!("Of {} services defined, {} were chosen to run at startup,",
+                    services.len().to_string().green(),
+                    enabled.to_string().yellow());
+                println!("each playing its role in the system's daily operations.");
+            }
+            println!();
+
+            println!("{}", "And thus the system was configured, piece by piece,".italic());
+            println!("{}", "each setting a deliberate choice in its creation.".italic());
+            println!();
+        }
+
+        "timeline" => {
+            println!("\n{} {}", "⏰".cyan(), "System Timeline".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "A Chronicle of Recent Events".green().bold());
+            println!();
+
+            println!("{}", "In recent times...".italic());
+            println!();
+
+            // Check /etc modifications
+            if let Ok(files) = ctx.guestfs.find("/etc") {
+                let etc_files: Vec<_> = files.into_iter().take(5).collect();
+                println!("Configuration files in /etc have been touched and modified,");
+                println!("administrators shaping the system's behavior through careful edits.");
+                for file in etc_files {
+                    if ctx.guestfs.is_file(&file).unwrap_or(false) {
+                        println!("  • {}", file.bright_black());
+                    }
+                }
+            }
+            println!();
+
+            // Check logs
+            if ctx.guestfs.is_dir("/var/log").unwrap_or(false) {
+                println!("The {} directory continues to grow, chronicling system events,",
+                    "/var/log".cyan());
+                println!("errors encountered, and successes achieved.");
+                println!("Each log file a diary entry in the system's ongoing story.");
+            }
+            println!();
+
+            println!("{}", "The system's journey continues, writing new chapters daily...".italic());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown story topic: {}", "Error:".red(), topic);
+            println!("{} story <topic>", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// Interactive advisor system
+pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  System Advisor                          ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Ask the Advisor:".yellow().bold());
+        println!("{}", "─".repeat(70).cyan());
+        println!();
+
+        let questions = vec![
+            ("secure", "How can I improve security?"),
+            ("performance", "How can I optimize performance?"),
+            ("troubleshoot", "How do I troubleshoot issues?"),
+            ("backup", "What backup strategy should I use?"),
+            ("monitoring", "How should I monitor this system?"),
+            ("upgrade", "How do I plan for upgrades?"),
+            ("compliance", "How do I achieve compliance?"),
+            ("migration", "How do I prepare for migration?"),
+        ];
+
+        for (cmd, question) in questions {
+            println!("  {} {}", cmd.green().bold(), question.bright_black());
+        }
+
+        println!();
+        println!("{} advisor <question>", "Usage:".yellow());
+        println!("{} advisor secure", "Example:".cyan());
+        println!();
+        return Ok(());
+    }
+
+    let question = args[0];
+
+    match question {
+        "secure" => {
+            println!("\n{} {}", "🛡".cyan(), "Security Improvement Advice".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Step 1: Assess Current State".green().bold());
+            println!("  Run: {}", "wizard security".cyan());
+            println!("  This gives you a security score and identifies gaps.\n");
+
+            println!("{}", "Step 2: Enable Core Security Features".green().bold());
+            println!("  • SELinux or AppArmor - Mandatory access control");
+            println!("  • Firewall - Network filtering (iptables/firewalld)");
+            println!("  • auditd - Security event logging");
+            println!("  Check with: {}\n", "security".cyan());
+
+            println!("{}", "Step 3: Harden User Access".green().bold());
+            println!("  • Review user accounts: {}", "users".cyan());
+            println!("  • Check sudo privileges: {}", "cat /etc/sudoers".cyan());
+            println!("  • Strengthen SSH: {}", "cat /etc/ssh/sshd_config".cyan());
+            println!("  • Disable unnecessary accounts\n");
+
+            println!("{}", "Step 4: Minimize Attack Surface".green().bold());
+            println!("  • Disable unnecessary services: {}", "services".cyan());
+            println!("  • Remove unused packages: {}", "packages".cyan());
+            println!("  • Close unused network ports\n");
+
+            println!("{}", "Step 5: Implement Monitoring".green().bold());
+            println!("  • Enable intrusion detection (fail2ban, AIDE)");
+            println!("  • Set up log monitoring");
+            println!("  • Configure alerting\n");
+
+            println!("{}", "Step 6: Validate".green().bold());
+            println!("  Run: {}", "scan security".cyan());
+            println!("  Then: {}", "recommend".cyan());
+            println!();
+
+            println!("{} Use {} for a complete security workflow",
+                "💡".yellow(), "auto run security-audit".cyan());
+            println!();
+        }
+
+        "performance" => {
+            println!("\n{} {}", "⚡".cyan(), "Performance Optimization Advice".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Performance Tuning Strategy:".green().bold());
+            println!();
+
+            println!("{}", "1. Benchmark Current Performance".yellow());
+            println!("  • Run: {}", "bench all".cyan());
+            println!("  • Identify bottlenecks\n");
+
+            println!("{}", "2. Optimize Services".yellow());
+            println!("  • Review enabled services: {}", "services".cyan());
+            println!("  • Disable unnecessary startup services");
+            println!("  • Reduce service footprint\n");
+
+            println!("{}", "3. Storage Optimization".yellow());
+            println!("  • Review mount options: {}", "cat /etc/fstab".cyan());
+            println!("  • Consider: noatime, barrier=0 (if safe)");
+            println!("  • Check filesystem type efficiency\n");
+
+            println!("{}", "4. Reduce Package Overhead".yellow());
+            println!("  • Remove unused packages: {}", "packages".cyan());
+            println!("  • Fewer packages = smaller footprint\n");
+
+            println!("{}", "5. Network Tuning".yellow());
+            println!("  • Review network configuration: {}", "network".cyan());
+            println!("  • Optimize TCP/IP stack parameters");
+            println!("  • Adjust buffer sizes\n");
+
+            println!("{}", "6. Kernel Parameters".yellow());
+            println!("  • Review: {}", "inspect kernel".cyan());
+            println!("  • Tune /etc/sysctl.conf");
+            println!("  • Load only necessary modules\n");
+
+            println!("{} Start with: {}", "💡".yellow(), "focus performance".cyan());
+            println!();
+        }
+
+        "troubleshoot" => {
+            println!("\n{} {}", "🔧".cyan(), "Troubleshooting Guide".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Systematic Troubleshooting Approach:".green().bold());
+            println!();
+
+            println!("{}", "Phase 1: Gather Information".yellow());
+            println!("  • System overview: {}", "dashboard".cyan());
+            println!("  • Check health: {}", "wizard health".cyan());
+            println!("  • Review configuration: {}", "info".cyan());
+            println!();
+
+            println!("{}", "Phase 2: Identify Issues".yellow());
+            println!("  • Scan for problems: {}", "scan issues".cyan());
+            println!("  • Search error logs: {}", "search error --content --path /var/log".cyan());
+            println!("  • Review recent changes: {}", "recent /etc 50".cyan());
+            println!();
+
+            println!("{}", "Phase 3: Isolate the Problem".yellow());
+            println!("  • Focus on specific areas: {}", "focus <aspect>".cyan());
+            println!("  • Inspect components: {}", "inspect <component>".cyan());
+            println!("  • Check dependencies\n");
+
+            println!("{}", "Phase 4: Research Solution".yellow());
+            println!("  • Get recommendations: {}", "recommend".cyan());
+            println!("  • Check playbooks: {}", "playbook".cyan());
+            println!("  • Use context help: {}", "context".cyan());
+            println!();
+
+            println!("{}", "Phase 5: Document Findings".yellow());
+            println!("  • Create snapshot: {}", "snapshot troubleshooting.md".cyan());
+            println!("  • Export evidence: {}", "batch export /tmp/evidence".cyan());
+            println!();
+
+            println!("{} For systematic investigation: {}", "💡".yellow(), "playbook forensics".cyan());
+            println!();
+        }
+
+        "backup" => {
+            println!("\n{} {}", "💾".cyan(), "Backup Strategy Advice".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Comprehensive Backup Strategy:".green().bold());
+            println!();
+
+            println!("{}", "1. Document Current State".yellow());
+            println!("  • Create snapshot: {}", "snapshot pre-backup.md".cyan());
+            println!("  • Export configurations: {}", "export system json config.json".cyan());
+            println!("  • List packages: {}", "export packages csv packages.csv".cyan());
+            println!("  • Export users: {}", "export users csv users.csv".cyan());
+            println!();
+
+            println!("{}", "2. Identify Critical Data".yellow());
+            println!("  • Configuration files in /etc");
+            println!("  • User data in /home");
+            println!("  • Application data in /var");
+            println!("  • Custom scripts and tools\n");
+
+            println!("{}", "3. Backup Key Configurations".yellow());
+            println!("  • Network: {}", "cat /etc/hosts /etc/resolv.conf".cyan());
+            println!("  • Storage: {}", "cat /etc/fstab".cyan());
+            println!("  • Services: {}", "export services md services.md".cyan());
+            println!();
+
+            println!("{}", "4. Regular Automation".yellow());
+            println!("  • Schedule periodic snapshots");
+            println!("  • Automated exports");
+            println!("  • Version control for configs\n");
+
+            println!("{}", "5. Test Recovery".yellow());
+            println!("  • Verify backup integrity");
+            println!("  • Practice restoration");
+            println!("  • Document recovery procedures\n");
+
+            println!("{} Quick backup: {}", "💡".yellow(), "auto run export-all".cyan());
+            println!();
+        }
+
+        "monitoring" => {
+            println!("\n{} {}", "📊".cyan(), "Monitoring Strategy".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Effective System Monitoring:".green().bold());
+            println!();
+
+            println!("{}", "1. Security Monitoring".yellow());
+            println!("  • Audit logs: Check auditd status");
+            println!("  • Failed logins: Monitor /var/log/auth.log");
+            println!("  • File integrity: Use AIDE or similar");
+            println!("  • Firewall logs: Review firewall activity\n");
+
+            println!("{}", "2. Performance Monitoring".yellow());
+            println!("  • Service health: {}", "services".cyan());
+            println!("  • Resource usage: CPU, memory, disk");
+            println!("  • Network throughput\n");
+
+            println!("{}", "3. Log Management".yellow());
+            println!("  • Centralize logs");
+            println!("  • Set retention policies");
+            println!("  • Implement log rotation");
+            println!("  • Check: {}", "inspect logging".cyan());
+            println!();
+
+            println!("{}", "4. Alerting".yellow());
+            println!("  • Configure thresholds");
+            println!("  • Set up notifications");
+            println!("  • Define escalation paths\n");
+
+            println!("{}", "5. Regular Reviews".yellow());
+            println!("  • Weekly: {}", "wizard health".cyan());
+            println!("  • Monthly: {}", "scan security".cyan());
+            println!("  • Quarterly: Full audit\n");
+
+            println!("{} Get current status: {}", "💡".yellow(), "dashboard".cyan());
+            println!();
+        }
+
+        "upgrade" => {
+            println!("\n{} {}", "⬆".cyan(), "Upgrade Planning Advice".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Safe Upgrade Strategy:".green().bold());
+            println!();
+
+            println!("{}", "Phase 1: Pre-Upgrade Assessment".yellow());
+            println!("  • Document current state: {}", "snapshot pre-upgrade.md".cyan());
+            println!("  • Check compatibility");
+            println!("  • Review release notes");
+            println!("  • Export packages: {}", "export packages json".cyan());
+            println!();
+
+            println!("{}", "Phase 2: Dependency Analysis".yellow());
+            println!("  • Review package dependencies");
+            println!("  • Check service dependencies: {}", "services".cyan());
+            println!("  • Identify potential conflicts\n");
+
+            println!("{}", "Phase 3: Backup Everything".yellow());
+            println!("  • Full system backup");
+            println!("  • Configuration exports: {}", "auto run export-all".cyan());
+            println!("  • Test backup restoration\n");
+
+            println!("{}", "Phase 4: Test Upgrade".yellow());
+            println!("  • Use test environment first");
+            println!("  • Validate functionality");
+            println!("  • Performance testing: {}", "bench all".cyan());
+            println!();
+
+            println!("{}", "Phase 5: Production Upgrade".yellow());
+            println!("  • Schedule maintenance window");
+            println!("  • Execute upgrade");
+            println!("  • Validate: {}", "wizard health".cyan());
+            println!();
+
+            println!("{}", "Phase 6: Post-Upgrade".yellow());
+            println!("  • Verify services: {}", "services".cyan());
+            println!("  • Check security: {}", "security".cyan());
+            println!("  • Create snapshot: {}", "snapshot post-upgrade.md".cyan());
+            println!();
+        }
+
+        "compliance" => {
+            println!("\n{} {}", "📋".cyan(), "Compliance Achievement Guide".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Path to Compliance:".green().bold());
+            println!();
+
+            println!("{}", "1. Understand Requirements".yellow());
+            println!("  • Identify applicable standards (PCI-DSS, HIPAA, etc.)");
+            println!("  • Document requirements");
+            println!("  • Map to controls\n");
+
+            println!("{}", "2. Current State Assessment".yellow());
+            println!("  • Run audit checklist: {}", "playbook audit".cyan());
+            println!("  • Security assessment: {}", "wizard security".cyan());
+            println!("  • Document gaps\n");
+
+            println!("{}", "3. Implement Controls".yellow());
+            println!("  • Security hardening: {}", "playbook hardening".cyan());
+            println!("  • Access controls: Review {}", "users".cyan());
+            println!("  • Audit logging: Enable auditd");
+            println!("  • Network security: Configure firewall\n");
+
+            println!("{}", "4. Documentation".yellow());
+            println!("  • System documentation: {}", "snapshot compliance-docs.md".cyan());
+            println!("  • Configuration records");
+            println!("  • Change management logs\n");
+
+            println!("{}", "5. Validation".yellow());
+            println!("  • Self-assessment: {}", "scan security".cyan());
+            println!("  • Generate reports: {}", "report compliance".cyan());
+            println!("  • Third-party audit\n");
+
+            println!("{}", "6. Continuous Compliance".yellow());
+            println!("  • Regular reviews");
+            println!("  • Automated scanning");
+            println!("  • Ongoing documentation\n");
+
+            println!("{} Start here: {}", "💡".yellow(), "playbook audit".cyan());
+            println!();
+        }
+
+        "migration" => {
+            println!("\n{} {}", "🚀".cyan(), "Migration Preparation Guide".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("{}", "Complete Migration Strategy:".green().bold());
+            println!();
+
+            println!("{}", "Step 1: Discovery & Documentation".yellow());
+            println!("  • Full system analysis: {}", "auto run full-analysis".cyan());
+            println!("  • Detect purpose: {}", "profile detect".cyan());
+            println!("  • Create baseline: {}", "snapshot pre-migration.md".cyan());
+            println!();
+
+            println!("{}", "Step 2: Dependency Mapping".yellow());
+            println!("  • Services: {}", "export services csv".cyan());
+            println!("  • Packages: {}", "export packages csv".cyan());
+            println!("  • Network: {}", "discover network".cyan());
+            println!("  • Users: {}", "export users csv".cyan());
+            println!();
+
+            println!("{}", "Step 3: Configuration Export".yellow());
+            println!("  • Export all data: {}", "auto run export-all".cyan());
+            println!("  • Document customizations");
+            println!("  • Backup critical files\n");
+
+            println!("{}", "Step 4: Planning".yellow());
+            println!("  • Use migration playbook: {}", "playbook migration".cyan());
+            println!("  • Define cutover plan");
+            println!("  • Identify risks\n");
+
+            println!("{}", "Step 5: Testing".yellow());
+            println!("  • Build target environment");
+            println!("  • Migrate test data");
+            println!("  • Validate functionality\n");
+
+            println!("{}", "Step 6: Execution & Validation".yellow());
+            println!("  • Execute migration");
+            println!("  • Post-migration verification");
+            println!("  • Performance check: {}", "bench all".cyan());
+            println!();
+
+            println!("{} Complete workflow: {}", "💡".yellow(), "playbook migration".cyan());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown question: {}", "Error:".red(), question);
+            println!("{} advisor", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// System verification and validation
+pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "Usage: verify <check>".red());
+        println!();
+        println!("{}", "Available Verifications:".yellow().bold());
+        println!("  {} - Verify system integrity", "integrity".green());
+        println!("  {} - Verify security configuration", "security".green());
+        println!("  {} - Verify boot configuration", "boot".green());
+        println!("  {} - Verify network setup", "network".green());
+        println!("  {} - Run all verifications", "all".green());
+        println!();
+        return Ok(());
+    }
+
+    let check = args[0];
+
+    match check {
+        "integrity" => {
+            println!("\n{} {}", "✓".cyan(), "System Integrity Verification".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            let mut passed = 0;
+            let mut failed = 0;
+            let mut warnings = 0;
+
+            println!("{}", "Critical System Files:".green().bold());
+            let critical_files = vec![
+                ("/etc/passwd", "User account database", true),
+                ("/etc/shadow", "Password hashes", true),
+                ("/etc/group", "Group definitions", true),
+                ("/etc/fstab", "Filesystem mount table", true),
+                ("/etc/hosts", "Host name resolution", false),
+                ("/etc/resolv.conf", "DNS configuration", false),
+                ("/boot/grub/grub.cfg", "Boot configuration", false),
+                ("/boot/grub2/grub.cfg", "Boot configuration (grub2)", false),
+            ];
+
+            for (file, desc, critical) in critical_files {
+                if ctx.guestfs.exists(file).unwrap_or(false) {
+                    println!("  {} {} - {}", "✓".green(), file.cyan(), desc.bright_black());
+                    passed += 1;
+                } else {
+                    if critical {
+                        println!("  {} {} - {} {}", "✗".red(), file.cyan(), desc.bright_black(), "[CRITICAL]".red().bold());
+                        failed += 1;
+                    } else {
+                        println!("  {} {} - {} {}", "⚠".yellow(), file.bright_black(), desc.bright_black(), "[OPTIONAL]".yellow());
+                        warnings += 1;
+                    }
+                }
+            }
+            println!();
+
+            println!("{}", "Results:".green().bold());
+            println!("  Passed:   {}", passed.to_string().green());
+            if warnings > 0 {
+                println!("  Warnings: {}", warnings.to_string().yellow());
+            }
+            if failed > 0 {
+                println!("  Failed:   {}", failed.to_string().red().bold());
+            }
+            println!();
+
+            if failed == 0 && warnings == 0 {
+                println!("{} System integrity: {}", "✓".green().bold(), "EXCELLENT".green().bold());
+            } else if failed == 0 {
+                println!("{} System integrity: {} ({} warnings)",
+                    "✓".green(), "GOOD".green(), warnings.to_string().yellow());
+            } else {
+                println!("{} System integrity: {} ({} critical failures)",
+                    "✗".red().bold(), "POOR".red().bold(), failed.to_string().red());
+            }
+            println!();
+        }
+
+        "security" => {
+            println!("\n{} {}", "🔒".cyan(), "Security Configuration Verification".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let mut score = 0;
+                let mut max_score = 0;
+
+                println!("{}", "Security Features:".green().bold());
+
+                // SELinux
+                max_score += 25;
+                if &sec.selinux != "disabled" {
+                    println!("  {} SELinux: {} {}", "✓".green(), sec.selinux.green(), "[25 points]".bright_black());
+                    score += 25;
+                } else {
+                    println!("  {} SELinux: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                }
+
+                // AppArmor
+                max_score += 25;
+                if sec.apparmor {
+                    println!("  {} AppArmor: {} {}", "✓".green(), "enabled".green(), "[25 points]".bright_black());
+                    score += 25;
+                } else {
+                    println!("  {} AppArmor: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                }
+
+                // Firewall
+                max_score += 25;
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if fw.enabled {
+                        println!("  {} Firewall: {} ({}) {}", "✓".green(), "enabled".green(), fw.firewall_type, "[25 points]".bright_black());
+                        score += 25;
+                    } else {
+                        println!("  {} Firewall: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                    }
+                }
+
+                // Auditd
+                max_score += 25;
+                if sec.auditd {
+                    println!("  {} Auditd: {} {}", "✓".green(), "enabled".green(), "[25 points]".bright_black());
+                    score += 25;
+                } else {
+                    println!("  {} Auditd: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                }
+
+                println!();
+                println!("{}", "Security Score:".green().bold());
+                println!("  {}/{} points ({}%)",
+                    score.to_string().yellow(),
+                    max_score,
+                    ((score as f64 / max_score as f64) * 100.0) as i32
+                );
+
+                let grade = if score >= 80 {
+                    "A (Excellent)".green().bold()
+                } else if score >= 60 {
+                    "B (Good)".green()
+                } else if score >= 40 {
+                    "C (Fair)".yellow()
+                } else {
+                    "D (Poor)".red().bold()
+                };
+
+                println!("  Grade: {}", grade);
+                println!();
+
+                println!("{} For detailed security analysis: {}", "💡".yellow(), "wizard security".cyan());
+                println!();
+            }
+        }
+
+        "boot" => {
+            println!("\n{} {}", "🚀".cyan(), "Boot Configuration Verification".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            let mut issues = Vec::new();
+
+            println!("{}", "Boot Components:".green().bold());
+
+            // Check fstab
+            if ctx.guestfs.exists("/etc/fstab")? {
+                println!("  {} /etc/fstab present", "✓".green());
+            } else {
+                println!("  {} /etc/fstab missing", "✗".red());
+                issues.push("Missing /etc/fstab");
+            }
+
+            // Check grub
+            let grub_found = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false)
+                || ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+
+            if grub_found {
+                println!("  {} GRUB configuration present", "✓".green());
+            } else {
+                println!("  {} GRUB configuration not found", "⚠".yellow());
+                issues.push("No GRUB configuration found");
+            }
+
+            // Check boot directory
+            if ctx.guestfs.is_dir("/boot").unwrap_or(false) {
+                println!("  {} /boot directory present", "✓".green());
+            } else {
+                println!("  {} /boot directory missing", "✗".red());
+                issues.push("Missing /boot directory");
+            }
+
+            println!();
+
+            if issues.is_empty() {
+                println!("{} Boot configuration: {}", "✓".green().bold(), "VALID".green().bold());
+            } else {
+                println!("{} Boot configuration: {} ({} issues)",
+                    "⚠".yellow(), "WARNING".yellow(), issues.len());
+                println!();
+                println!("{}", "Issues:".yellow());
+                for issue in issues {
+                    println!("  • {}", issue.red());
+                }
+            }
+            println!();
+
+            println!("{} For detailed inspection: {}", "💡".yellow(), "inspect boot".cyan());
+            println!();
+        }
+
+        "network" => {
+            println!("\n{} {}", "🌐".cyan(), "Network Configuration Verification".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            let mut checks = 0;
+            let mut passed = 0;
+
+            println!("{}", "Network Configuration:".green().bold());
+
+            // Check interfaces
+            checks += 1;
+            if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+                if !interfaces.is_empty() {
+                    println!("  {} {} network interfaces configured",
+                        "✓".green(), interfaces.len().to_string().yellow());
+                    passed += 1;
+                } else {
+                    println!("  {} No network interfaces configured", "⚠".yellow());
+                }
+            }
+
+            // Check hosts file
+            checks += 1;
+            if ctx.guestfs.exists("/etc/hosts").unwrap_or(false) {
+                println!("  {} /etc/hosts present", "✓".green());
+                passed += 1;
+            } else {
+                println!("  {} /etc/hosts missing", "✗".red());
+            }
+
+            // Check DNS
+            checks += 1;
+            if ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                println!("  {} /etc/resolv.conf present", "✓".green());
+                passed += 1;
+            } else {
+                println!("  {} /etc/resolv.conf missing", "⚠".yellow());
+            }
+
+            // Check hostname
+            checks += 1;
+            if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
+                println!("  {} Hostname configured: {}", "✓".green(), hostname.yellow());
+                passed += 1;
+            } else {
+                println!("  {} Hostname not configured", "⚠".yellow());
+            }
+
+            println!();
+            println!("{} {}/{} checks passed", "Results:".green().bold(), passed, checks);
+            println!();
+
+            println!("{} For detailed analysis: {}", "💡".yellow(), "focus network".cyan());
+            println!();
+        }
+
+        "all" => {
+            println!("\n{} {}", "🔍".cyan(), "Complete System Verification".yellow().bold());
+            println!("{}", "═".repeat(70).cyan());
+            println!();
+
+            println!("Running all verification checks...\n");
+
+            println!("{}", "[1/4] Integrity Check".cyan());
+            cmd_verify(ctx, &["integrity"])?;
+
+            println!("{}", "[2/4] Security Check".cyan());
+            cmd_verify(ctx, &["security"])?;
+
+            println!("{}", "[3/4] Boot Check".cyan());
+            cmd_verify(ctx, &["boot"])?;
+
+            println!("{}", "[4/4] Network Check".cyan());
+            cmd_verify(ctx, &["network"])?;
+
+            println!("{}", "═".repeat(70).cyan());
+            println!("{} Complete system verification finished", "✓".green().bold());
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown verification: {}", "Error:".red(), check);
+            println!("{} verify <check>", "Usage:".yellow());
+            return Ok(());
+        }
+    }
+
+    Ok(())
+}
+
+/// Optimization recommendations
+pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Optimization Recommendations                ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "System Optimization Guide".yellow().bold());
+    println!("{}", "─".repeat(70).cyan());
+    println!();
+
+    let categories = vec![
+        ("Performance", vec![
+            ("Disable unnecessary services", "services -> disable unused", "Medium"),
+            ("Remove unused packages", "packages -> uninstall unused", "Low"),
+            ("Optimize mount options", "cat /etc/fstab -> add noatime", "Medium"),
+            ("Tune kernel parameters", "/etc/sysctl.conf tuning", "High"),
+        ]),
+        ("Security", vec![
+            ("Enable SELinux/AppArmor", "Mandatory access control", "High"),
+            ("Configure firewall", "Network filtering", "High"),
+            ("Enable audit logging", "auditd configuration", "Medium"),
+            ("Harden SSH", "/etc/ssh/sshd_config", "Medium"),
+        ]),
+        ("Storage", vec![
+            ("Clean log files", "Log rotation and cleanup", "Low"),
+            ("Remove old kernels", "Keep only recent kernels", "Low"),
+            ("Optimize filesystem", "Choice of fs type", "Medium"),
+        ]),
+        ("Network", vec![
+            ("Optimize TCP/IP stack", "sysctl network tuning", "Medium"),
+            ("Configure DNS properly", "/etc/resolv.conf", "Low"),
+            ("Use connection pooling", "For applications", "Medium"),
+        ]),
+    ];
+
+    for (category, optimizations) in categories {
+        println!("{}", format!("{}:", category).green().bold());
+        for (name, action, impact) in optimizations {
+            let impact_colored = match impact {
+                "High" => impact.red().bold(),
+                "Medium" => impact.yellow(),
+                _ => impact.green(),
+            };
+            println!("  {} {} - {} {}",
+                "•".cyan(),
+                name,
+                action.bright_black(),
+                format!("[{}]", impact_colored)
+            );
+        }
+        println!();
+    }
+
+    println!("{}", "Getting Started:".yellow().bold());
+    println!("  • {} - Performance analysis", "focus performance".cyan());
+    println!("  • {} - Security improvements", "advisor secure".cyan());
+    println!("  • {} - Full system analysis", "auto run full-analysis".cyan());
+    println!();
+
+    Ok(())
+}
+
+/// Improvement roadmap generator
+pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    let timeframe = if args.is_empty() { "30-day" } else { args[0] };
+
+    println!("\n{} {}", "🗺".cyan(), format!("{} Improvement Roadmap", timeframe.to_uppercase()).yellow().bold());
+    println!("{}", "═".repeat(70).cyan());
+    println!();
+
+    match timeframe {
+        "30-day" | "short" => {
+            println!("{} (Priority: Quick Wins)", "30-Day Roadmap".green().bold());
+            println!();
+
+            println!("{} Week 1: Assessment", "📅".yellow());
+            println!("  • Run: {}", "auto run full-analysis".cyan());
+            println!("  • Run: {}", "wizard security".cyan());
+            println!("  • Run: {}", "wizard health".cyan());
+            println!("  • Document baseline: {}", "snapshot baseline.md".cyan());
+            println!();
+
+            println!("{} Week 2: Quick Security Fixes", "📅".yellow());
+            println!("  • Enable missing security features");
+            println!("  • Remove unnecessary user accounts: {}", "users".cyan());
+            println!("  • Disable unused services: {}", "services".cyan());
+            println!("  • Verify: {}", "verify security".cyan());
+            println!();
+
+            println!("{} Week 3: Performance Tuning", "📅".yellow());
+            println!("  • Benchmark: {}", "bench all".cyan());
+            println!("  • Remove unused packages: {}", "packages".cyan());
+            println!("  • Optimize startup services");
+            println!("  • Test improvements");
+            println!();
+
+            println!("{} Week 4: Documentation & Validation", "📅".yellow());
+            println!("  • Create documentation: {}", "auto run documentation".cyan());
+            println!("  • Run all verifications: {}", "verify all".cyan());
+            println!("  • Generate reports: {}", "report executive".cyan());
+            println!("  • Archive baseline for future comparison");
+            println!();
+        }
+
+        "90-day" | "medium" => {
+            println!("{} (Priority: Substantial Improvements)", "90-Day Roadmap".green().bold());
+            println!();
+
+            println!("{} Month 1: Foundation", "📅".yellow());
+            println!("  • Complete 30-day roadmap");
+            println!("  • Establish monitoring");
+            println!("  • Implement backup strategy: {}", "advisor backup".cyan());
+            println!();
+
+            println!("{} Month 2: Security Hardening", "📅".yellow());
+            println!("  • Follow hardening playbook: {}", "playbook hardening".cyan());
+            println!("  • Implement intrusion detection");
+            println!("  • Configure log centralization");
+            println!("  • Security scan: {}", "scan security".cyan());
+            println!();
+
+            println!("{} Month 3: Optimization & Compliance", "📅".yellow());
+            println!("  • Performance optimization: {}", "advisor performance".cyan());
+            println!("  • Compliance assessment: {}", "playbook audit".cyan());
+            println!("  • Automated monitoring setup");
+            println!("  • Final validation: {}", "verify all".cyan());
+            println!();
+        }
+
+        "annual" | "long" => {
+            println!("{} (Priority: Strategic Transformation)", "Annual Roadmap".green().bold());
+            println!();
+
+            println!("{} Q1: Assessment & Planning", "📅".yellow());
+            println!("  • Complete current state analysis");
+            println!("  • Define target state");
+            println!("  • Create detailed project plan");
+            println!("  • Stakeholder alignment");
+            println!();
+
+            println!("{} Q2: Security & Compliance", "📅".yellow());
+            println!("  • Complete security hardening");
+            println!("  • Achieve compliance: {}", "advisor compliance".cyan());
+            println!("  • Implement monitoring");
+            println!("  • Staff training");
+            println!();
+
+            println!("{} Q3: Optimization & Automation", "📅".yellow());
+            println!("  • Performance optimization");
+            println!("  • Automation implementation");
+            println!("  • Disaster recovery setup");
+            println!("  • Documentation: {}", "auto run documentation".cyan());
+            println!();
+
+            println!("{} Q4: Migration & Modernization", "📅".yellow());
+            println!("  • Migration planning: {}", "playbook migration".cyan());
+            println!("  • Infrastructure modernization");
+            println!("  • Continuous improvement process");
+            println!("  • Year-end review and reporting");
+            println!();
+        }
+
+        _ => {
+            println!("{} Unknown timeframe: {}", "Error:".red(), timeframe);
+            println!("{}", "Available timeframes: 30-day, 90-day, annual".yellow());
+            return Ok(());
+        }
+    }
+
+    println!("{}", "Key Success Metrics:".green().bold());
+    println!("  • Security score improvement: Track with {}", "wizard security".cyan());
+    println!("  • Health score improvement: Track with {}", "wizard health".cyan());
+    println!("  • Performance gains: Measure with {}", "bench all".cyan());
+    println!("  • Compliance status: Verify with {}", "verify all".cyan());
+    println!();
+
+    println!("{} Start now: {}", "💡".yellow(), "verify all".cyan());
+    println!();
 
     Ok(())
 }
