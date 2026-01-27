@@ -4,6 +4,8 @@
 use anyhow::Result;
 use guestkit::Guestfs;
 use colored::Colorize;
+use std::collections::HashMap;
+use std::time::Instant;
 
 #[cfg(feature = "ai")]
 use reqwest;
@@ -19,15 +21,79 @@ pub struct ShellContext {
     pub guestfs: Guestfs,
     pub root: String,
     pub current_path: String,
+    pub aliases: HashMap<String, String>,
+    pub bookmarks: HashMap<String, String>,
+    pub last_command_time: Option<std::time::Duration>,
+    pub command_count: usize,
+    pub os_info: String,
 }
 
 impl ShellContext {
     pub fn new(guestfs: Guestfs, root: String) -> Self {
+        let mut aliases = HashMap::new();
+
+        // Add default aliases
+        aliases.insert("ll".to_string(), "ls -l".to_string());
+        aliases.insert("la".to_string(), "ls -a".to_string());
+        aliases.insert("..".to_string(), "cd ..".to_string());
+        aliases.insert("~".to_string(), "cd /".to_string());
+        aliases.insert("q".to_string(), "quit".to_string());
+
         Self {
             guestfs,
             root,
             current_path: "/".to_string(),
+            aliases,
+            bookmarks: HashMap::new(),
+            last_command_time: None,
+            command_count: 0,
+            os_info: String::new(),
         }
+    }
+
+    /// Get OS information for display
+    pub fn get_os_info(&self) -> &str {
+        if self.os_info.is_empty() {
+            "Unknown OS"
+        } else {
+            &self.os_info
+        }
+    }
+
+    /// Set OS information
+    pub fn set_os_info(&mut self, info: String) {
+        self.os_info = info;
+    }
+
+    /// Add an alias
+    pub fn add_alias(&mut self, name: String, command: String) {
+        self.aliases.insert(name, command);
+    }
+
+    /// Get alias expansion
+    pub fn get_alias(&self, name: &str) -> Option<&String> {
+        self.aliases.get(name)
+    }
+
+    /// Add a bookmark
+    pub fn add_bookmark(&mut self, name: String, path: String) {
+        self.bookmarks.insert(name, path);
+    }
+
+    /// Get bookmark path
+    pub fn get_bookmark(&self, name: &str) -> Option<&String> {
+        self.bookmarks.get(name)
+    }
+
+    /// Start timing a command
+    pub fn start_timing(&mut self) -> Instant {
+        Instant::now()
+    }
+
+    /// End timing and store duration
+    pub fn end_timing(&mut self, start: Instant) {
+        self.last_command_time = Some(start.elapsed());
+        self.command_count += 1;
     }
 }
 
@@ -448,13 +514,163 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
     println!("  {}   - Show command history", "history".green());
+    println!("  {}    - Show shell statistics", "stats".green());
     println!("  {}    - Exit shell", "exit, quit, q".green());
+
+    println!("\n{}", "Aliases & Bookmarks:".yellow().bold());
+    println!("  {} - List all aliases", "alias".green());
+    println!("  {} - Create an alias", "alias <name> <command>".green());
+    println!("  {} - Remove an alias", "unalias <name>".green());
+    println!("  {} - List bookmarks", "bookmark".green());
+    println!("  {} - Bookmark current path", "bookmark <name>".green());
+    println!("  {} - Bookmark specific path", "bookmark <name> <path>".green());
+    println!("  {} - Jump to bookmark", "goto <name>".green());
+
+    println!("\n{}", "Default Aliases:".yellow().bold());
+    println!("  {} - Same as: ls -l", "ll".cyan());
+    println!("  {} - Same as: ls -a", "la".cyan());
+    println!("  {} - Same as: cd ..  ", "..".cyan());
+    println!("  {}  - Same as: cd /   ", "~".cyan());
+    println!("  {}  - Same as: quit  ", "q".cyan());
 
     println!("\n{}", "Tips:".yellow().bold());
     println!("  • Use {} for command completion", "Tab".cyan());
     println!("  • Use {} for command history", "↑/↓ arrows".cyan());
     println!("  • Paths are relative to current directory");
+    println!("  • Commands taking >100ms show execution time");
+    println!("  • Prompt shows: {}", "[OS] /current/path>".yellow());
     println!();
+
+    Ok(())
+}
+
+/// Manage aliases
+pub fn cmd_alias(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        // List all aliases
+        println!("{}", "Current Aliases:".yellow().bold());
+        let mut aliases: Vec<_> = ctx.aliases.iter().collect();
+        aliases.sort_by_key(|(k, _)| *k);
+
+        for (name, command) in aliases {
+            println!("  {} = {}", name.cyan(), command.green());
+        }
+        println!();
+        println!("{}", "Usage: alias <name> <command>".yellow());
+        return Ok(());
+    }
+
+    if args.len() < 2 {
+        println!("{}", "Usage: alias <name> <command>".red());
+        println!("{}", "Example: alias ll ls -l".yellow());
+        return Ok(());
+    }
+
+    let name = args[0].to_string();
+    let command = args[1..].join(" ");
+
+    ctx.add_alias(name.clone(), command.clone());
+    println!("{} Alias added: {} = {}", "✓".green(), name.cyan(), command.green());
+
+    Ok(())
+}
+
+/// Remove an alias
+pub fn cmd_unalias(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "Usage: unalias <name>".red());
+        return Ok(());
+    }
+
+    let name = args[0];
+    if ctx.aliases.remove(name).is_some() {
+        println!("{} Alias removed: {}", "✓".green(), name.cyan());
+    } else {
+        println!("{} Alias not found: {}", "⚠".yellow(), name);
+    }
+
+    Ok(())
+}
+
+/// Manage bookmarks
+pub fn cmd_bookmark(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        // List all bookmarks
+        println!("{}", "Current Bookmarks:".yellow().bold());
+        let mut bookmarks: Vec<_> = ctx.bookmarks.iter().collect();
+        bookmarks.sort_by_key(|(k, _)| *k);
+
+        for (name, path) in bookmarks {
+            println!("  {} → {}", name.cyan(), path.blue());
+        }
+
+        if ctx.bookmarks.is_empty() {
+            println!("  {}",  "No bookmarks set".yellow());
+        }
+
+        println!();
+        println!("{}", "Usage:".yellow());
+        println!("  {} - Add bookmark for current path", "bookmark <name>".green());
+        println!("  {} - Add bookmark for specific path", "bookmark <name> <path>".green());
+        println!("  {} - Jump to bookmark", "goto <name>".green());
+        return Ok(());
+    }
+
+    let name = args[0].to_string();
+    let path = if args.len() > 1 {
+        args[1].to_string()
+    } else {
+        ctx.current_path.clone()
+    };
+
+    ctx.add_bookmark(name.clone(), path.clone());
+    println!("{} Bookmark added: {} → {}", "✓".green(), name.cyan(), path.blue());
+
+    Ok(())
+}
+
+/// Jump to a bookmark
+pub fn cmd_goto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "Usage: goto <bookmark>".red());
+        println!();
+        cmd_bookmark(ctx, &[])?;  // Show available bookmarks
+        return Ok(());
+    }
+
+    let name = args[0];
+    if let Some(path) = ctx.get_bookmark(name) {
+        let path = path.clone();  // Clone to avoid borrow conflict
+
+        // Verify path exists
+        if ctx.guestfs.is_dir(&path).unwrap_or(false) {
+            ctx.current_path = path.clone();
+            println!("{} Jumped to: {}", "→".cyan(), path.blue());
+        } else {
+            println!("{} Bookmark path no longer exists: {}", "⚠".yellow(), path);
+        }
+    } else {
+        println!("{} Bookmark not found: {}", "⚠".yellow(), name);
+        println!();
+        cmd_bookmark(ctx, &[])?;  // Show available bookmarks
+    }
+
+    Ok(())
+}
+
+/// Show shell statistics
+pub fn cmd_stats(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    println!("{}", "Shell Statistics:".yellow().bold());
+    println!("  OS: {}", ctx.get_os_info().cyan());
+    println!("  Current Path: {}", ctx.current_path.blue());
+    println!("  Commands Executed: {}", ctx.command_count.to_string().green());
+
+    if let Some(duration) = ctx.last_command_time {
+        println!("  Last Command Time: {}", format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan());
+    }
+
+    println!("  Aliases: {}", ctx.aliases.len().to_string().cyan());
+    println!("  Bookmarks: {}", ctx.bookmarks.len().to_string().cyan());
 
     Ok(())
 }
