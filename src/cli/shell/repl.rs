@@ -51,6 +51,11 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     // Create shell context
     let mut ctx = ShellContext::new(guestfs, root.to_string());
 
+    // Get OS information for context
+    let os_product = ctx.guestfs.inspect_get_product_name(&root)
+        .unwrap_or_else(|_| "Unknown OS".to_string());
+    ctx.set_os_info(os_product);
+
     // Create readline editor with history
     let mut rl = DefaultEditor::new()?;
 
@@ -63,8 +68,9 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
 
     // REPL loop
     loop {
-        let prompt = format!("{}{}{}> ",
-            "guestkit:".cyan().bold(),
+        // Enhanced prompt showing OS and path
+        let prompt = format!("[{}] {}{}> ",
+            ctx.get_os_info().cyan(),
             ctx.current_path.yellow(),
             "".clear());
 
@@ -79,8 +85,33 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                 // Add to history
                 let _ = rl.add_history_entry(line);
 
-                // Parse command
-                let parts: Vec<&str> = line.split_whitespace().collect();
+                // Parse command - use owned strings to avoid lifetime issues
+                let mut line_owned = line.to_string();
+
+                // Check for alias expansion first
+                let parts: Vec<&str> = line_owned.split_whitespace().collect();
+                if parts.is_empty() {
+                    continue;
+                }
+
+                let cmd_str = parts[0];
+
+                // Expand alias if exists
+                if let Some(alias_expansion) = ctx.get_alias(cmd_str).cloned() {
+                    // Replace command with alias and keep arguments
+                    let alias_parts: Vec<String> = alias_expansion.split_whitespace().map(|s| s.to_string()).collect();
+                    if !alias_parts.is_empty() {
+                        let mut expanded_parts = alias_parts;
+                        for arg in &parts[1..] {
+                            expanded_parts.push(arg.to_string());
+                        }
+                        line_owned = expanded_parts.join(" ");
+                        println!("{} {}", "→".cyan(), line_owned.yellow());
+                    }
+                }
+
+                // Re-parse the (possibly expanded) line
+                let parts: Vec<&str> = line_owned.split_whitespace().collect();
                 if parts.is_empty() {
                     continue;
                 }
@@ -88,75 +119,119 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                 let cmd = parts[0];
                 let args = &parts[1..];
 
+                // Start timing (without borrowing ctx mutably)
+                let start = std::time::Instant::now();
+
                 // Execute command
-                match cmd {
+                let result = match cmd {
                     "exit" | "quit" | "q" => {
                         println!("{} Shutting down...", "→".cyan());
                         break;
                     }
                     "help" | "?" => {
-                        let _ = commands::cmd_help(&ctx, args);
+                        commands::cmd_help(&ctx, args)
                     }
                     "clear" | "cls" => {
                         print!("\x1B[2J\x1B[1;1H");
+                        Ok(())
                     }
                     "history" => {
                         for (i, entry) in rl.history().iter().enumerate() {
                             println!("{:4}  {}", i + 1, entry);
                         }
+                        Ok(())
                     }
                     "ls" => {
-                        let _ = commands::cmd_ls(&mut ctx, args);
+                        commands::cmd_ls(&mut ctx, args)
                     }
                     "cat" => {
-                        let _ = commands::cmd_cat(&mut ctx, args);
+                        commands::cmd_cat(&mut ctx, args)
                     }
                     "cd" => {
-                        let _ = commands::cmd_cd(&mut ctx, args);
+                        commands::cmd_cd(&mut ctx, args)
                     }
                     "pwd" => {
-                        let _ = commands::cmd_pwd(&ctx, args);
+                        commands::cmd_pwd(&ctx, args)
                     }
                     "find" => {
-                        let _ = commands::cmd_find(&mut ctx, args);
+                        commands::cmd_find(&mut ctx, args)
                     }
                     "grep" => {
-                        let _ = commands::cmd_grep(&mut ctx, args);
+                        commands::cmd_grep(&mut ctx, args)
                     }
                     "info" => {
-                        let _ = commands::cmd_info(&mut ctx, args);
+                        commands::cmd_info(&mut ctx, args)
                     }
                     "mounts" => {
-                        let _ = commands::cmd_mounts(&mut ctx, args);
+                        commands::cmd_mounts(&mut ctx, args)
                     }
                     "packages" => {
                         cmd_packages(&mut ctx, args);
+                        Ok(())
                     }
                     "services" => {
                         cmd_services(&mut ctx, args);
+                        Ok(())
                     }
                     "users" => {
                         cmd_users(&mut ctx);
+                        Ok(())
                     }
                     "network" => {
                         cmd_network(&mut ctx);
+                        Ok(())
                     }
                     "security" => {
                         cmd_security(&mut ctx);
+                        Ok(())
                     }
                     "health" => {
                         cmd_health(&mut ctx);
+                        Ok(())
                     }
                     "risks" => {
                         cmd_risks(&mut ctx);
+                        Ok(())
                     }
                     "ai" => {
                         let _ = commands::cmd_ai(&mut ctx, args);
+                        Ok(())
+                    }
+                    "alias" => {
+                        commands::cmd_alias(&mut ctx, args)
+                    }
+                    "unalias" => {
+                        commands::cmd_unalias(&mut ctx, args)
+                    }
+                    "bookmark" | "bm" => {
+                        commands::cmd_bookmark(&mut ctx, args)
+                    }
+                    "goto" => {
+                        commands::cmd_goto(&mut ctx, args)
+                    }
+                    "stats" => {
+                        commands::cmd_stats(&ctx, args)
                     }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
+                        Ok(())
                     }
+                };
+
+                // End timing and show duration if command took >100ms
+                ctx.end_timing(start);
+                if let Some(duration) = ctx.last_command_time {
+                    if duration.as_millis() > 100 {
+                        println!("{} Command completed in {}",
+                            "⏱".cyan(),
+                            format!("{:.2}ms", duration.as_secs_f64() * 1000.0).yellow());
+                    }
+                }
+
+                // Check for errors
+                if let Err(e) = result {
+                    eprintln!("{} {}", "Error:".red(), e);
                 }
             }
             Err(ReadlineError::Interrupted) => {
