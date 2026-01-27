@@ -176,6 +176,7 @@ impl TuiConfig {
     }
 
     /// Save configuration to default path
+    #[allow(dead_code)]
     pub fn save(&self) -> Result<()> {
         let path = Self::default_path()?;
 
@@ -195,6 +196,7 @@ impl TuiConfig {
     }
 
     /// Create a default config file if it doesn't exist
+    #[allow(dead_code)]
     pub fn init() -> Result<PathBuf> {
         let path = Self::default_path()?;
 

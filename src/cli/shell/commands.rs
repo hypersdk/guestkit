@@ -86,6 +86,7 @@ impl ShellContext {
     }
 
     /// Start timing a command
+    #[allow(dead_code)]
     pub fn start_timing(&mut self) -> Instant {
         Instant::now()
     }

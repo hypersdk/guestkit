@@ -164,6 +164,7 @@ pub struct App {
 
     // Inspection data
     pub image_path: String,
+    #[allow(dead_code)]
     pub image_path_buf: PathBuf,
     pub os_name: String,
     pub os_version: String,
@@ -202,6 +203,7 @@ pub struct App {
     pub hardening_profile: Option<ProfileReport>,
 
     // Configuration
+    #[allow(dead_code)]
     pub config: TuiConfig,
 }
 
@@ -904,6 +906,7 @@ impl App {
     }
 
     /// Get formatted timestamp of last update
+    #[allow(dead_code)]
     pub fn get_last_updated_formatted(&self) -> String {
         self.last_updated.format("%H:%M:%S").to_string()
     }
