@@ -56,7 +56,6 @@ pub mod guestfs;
 pub mod detectors;
 
 #[cfg(feature = "disk-ops")]
-pub mod fixers;
 
 pub mod orchestrator;
 

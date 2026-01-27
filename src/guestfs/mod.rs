@@ -7,7 +7,6 @@
 pub mod acl_ops;
 pub mod archive;
 pub mod attr_ops;
-pub mod augeas;
 pub mod backup_ops;
 pub mod base64_ops;
 pub mod bcache_ops;
@@ -65,7 +64,6 @@ pub mod part_type_ops;
 pub mod partition;
 pub mod pread_ops;
 pub mod reiserfs_ops;
-pub mod resize;
 pub mod rsync_ops;
 pub mod security;
 pub mod security_utils;
@@ -99,8 +97,6 @@ pub mod zfs_ops;
 // Ergonomic API extensions
 pub mod builder;
 pub mod types;
-// TODO: Fix mkfs naming conflict
-// pub mod filesystem_ops;
 
 pub use handle::Guestfs;
 pub use inspect::*;
