@@ -57,6 +57,8 @@ pub enum ExportMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
     Dashboard,
+    Analytics,
+    Timeline,
     Network,
     Packages,
     Services,
@@ -67,6 +69,7 @@ pub enum View {
     Storage,
     Users,
     Kernel,
+    Logs,
     Profiles,
 }
 
@@ -74,6 +77,8 @@ impl View {
     pub fn title(&self) -> &str {
         match self {
             View::Dashboard => "Dashboard",
+            View::Analytics => "Analytics",
+            View::Timeline => "Timeline",
             View::Network => "Network",
             View::Packages => "Packages",
             View::Services => "Services",
@@ -84,6 +89,7 @@ impl View {
             View::Storage => "Storage",
             View::Users => "Users",
             View::Kernel => "Kernel",
+            View::Logs => "Logs",
             View::Profiles => "Profiles",
         }
     }
@@ -91,6 +97,8 @@ impl View {
     pub fn all() -> Vec<View> {
         vec![
             View::Dashboard,
+            View::Analytics,
+            View::Timeline,
             View::Network,
             View::Packages,
             View::Services,
@@ -101,6 +109,7 @@ impl View {
             View::Storage,
             View::Users,
             View::Kernel,
+            View::Logs,
             View::Profiles,
         ]
     }
@@ -518,6 +527,8 @@ impl App {
         // Generate default filename
         let view_name = match self.current_view {
             View::Dashboard => "dashboard",
+            View::Analytics => "analytics",
+            View::Timeline => "timeline",
             View::Network => "network",
             View::Packages => "packages",
             View::Services => "services",
@@ -528,6 +539,7 @@ impl App {
             View::Storage => "storage",
             View::Users => "users",
             View::Kernel => "kernel",
+            View::Logs => "logs",
             View::Profiles => "profiles",
         };
         self.export_filename = format!(
@@ -722,6 +734,32 @@ impl App {
                     "list": self.kernel_modules,
                 },
                 "parameters": self.kernel_params,
+            }),
+            View::Analytics => json!({
+                "view": "analytics",
+                "security_score": {
+                    "critical": self.get_risk_summary().0,
+                    "high": self.get_risk_summary().1,
+                    "medium": self.get_risk_summary().2,
+                },
+                "package_stats": {
+                    "total": self.packages.package_count,
+                },
+                "service_stats": {
+                    "total": self.services.len(),
+                    "enabled": self.services.iter().filter(|s| s.enabled).count(),
+                },
+            }),
+            View::Timeline => json!({
+                "view": "timeline",
+                "system": {
+                    "os": self.os_name,
+                    "kernel": self.kernel_version,
+                },
+            }),
+            View::Logs => json!({
+                "view": "logs",
+                "summary": "System logs view",
             }),
             View::Profiles => {
                 let current_profile = match self.selected_profile_tab {
