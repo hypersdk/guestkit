@@ -503,6 +503,18 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}  - Show system health score", "health".green());
     println!("  {}   - Show security risks", "risks".green());
 
+    println!("\n{}", "Overview & Visualization:".yellow().bold());
+    println!("  {} - Beautiful system dashboard", "dashboard, dash".green());
+    println!("  {} - Quick system summary", "summary, sum".green());
+    println!("  {} - Visualize directory tree", "tree [path] [depth]".green());
+    println!("  {}     - Random helpful tip", "tips, tip".green());
+
+    println!("\n{}", "Data Export:".yellow().bold());
+    println!("  {} - Export data in various formats", "export <type> <format> [file]".green());
+    println!("           Types: packages, users, services, system");
+    println!("           Formats: json, csv, md, txt");
+    println!("           Example: export packages json packages.json");
+
     #[cfg(feature = "ai")]
     {
         println!("\n{}", "AI Assistant:".yellow().bold());
@@ -671,6 +683,509 @@ pub fn cmd_stats(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
 
     println!("  Aliases: {}", ctx.aliases.len().to_string().cyan());
     println!("  Bookmarks: {}", ctx.bookmarks.len().to_string().cyan());
+
+    Ok(())
+}
+
+/// Beautiful dashboard with system overview
+pub fn cmd_dashboard(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║                        SYSTEM DASHBOARD                              ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    // System Information
+    println!("{}", "┌─ System Information ─────────────────────────────────────┐".cyan());
+    if let Ok(os_type) = ctx.guestfs.inspect_get_type(&ctx.root) {
+        println!("  {} {}", "Type:".yellow().bold(), os_type.green());
+    }
+    if let Ok(distro) = ctx.guestfs.inspect_get_distro(&ctx.root) {
+        println!("  {} {}", "Distribution:".yellow().bold(), distro.green());
+    }
+    if let Ok(version) = ctx.guestfs.inspect_get_product_name(&ctx.root) {
+        println!("  {} {}", "Version:".yellow().bold(), version.green());
+    }
+    if let Ok(arch) = ctx.guestfs.inspect_get_arch(&ctx.root) {
+        println!("  {} {}", "Architecture:".yellow().bold(), arch.green());
+    }
+    if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
+        println!("  {} {}", "Hostname:".yellow().bold(), hostname.cyan());
+    }
+    println!("{}", "└──────────────────────────────────────────────────────────┘".cyan());
+    println!();
+
+    // Storage Overview
+    println!("{}", "┌─ Storage Overview ───────────────────────────────────────┐".cyan());
+    if let Ok(filesystems) = ctx.guestfs.list_filesystems() {
+        let fs_count = filesystems.len();
+        println!("  {} {}", "Filesystems:".yellow().bold(), fs_count.to_string().green());
+
+        for (device, fstype) in filesystems.iter().take(5) {
+            if fstype != "unknown" && !fstype.is_empty() {
+                let size_str = if let Ok(size) = ctx.guestfs.blockdev_getsize64(device) {
+                    format_bytes(size as u64)
+                } else {
+                    "unknown".to_string()
+                };
+                println!("    {} {} ({})", "•".cyan(), device.bright_black(), size_str.yellow());
+            }
+        }
+    }
+    println!("{}", "└──────────────────────────────────────────────────────────┘".cyan());
+    println!();
+
+    // Quick Stats
+    println!("{}", "┌─ Quick Stats ────────────────────────────────────────────┐".cyan());
+
+    if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+        println!("  {} {} packages installed", "📦".to_string(), pkg_info.packages.len().to_string().green().bold());
+    }
+
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        let user_count = users.len();
+        let root_users = users.iter().filter(|u| u.uid == "0").count();
+        println!("  {} {} users ({} root)", "👥".to_string(), user_count.to_string().green().bold(), root_users.to_string().red());
+    }
+
+    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+        let enabled = services.iter().filter(|s| s.enabled).count();
+        println!("  {} {} services ({} enabled)", "⚙".to_string(), services.len().to_string().green().bold(), enabled.to_string().cyan());
+    }
+
+    println!("{}", "└──────────────────────────────────────────────────────────┘".cyan());
+    println!();
+
+    // Security Status
+    if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+        println!("{}", "┌─ Security Status ────────────────────────────────────────┐".cyan());
+
+        let selinux_icon = if &sec.selinux != "disabled" { "✓" } else { "✗" };
+        let selinux_color = if &sec.selinux != "disabled" { sec.selinux.green() } else { sec.selinux.red() };
+        println!("  {} SELinux:  {}", selinux_icon, selinux_color);
+
+        let apparmor_icon = if sec.apparmor { "✓" } else { "✗" };
+        let apparmor_status = if sec.apparmor { "enabled".green() } else { "disabled".red() };
+        println!("  {} AppArmor: {}", apparmor_icon, apparmor_status);
+
+        let auditd_icon = if sec.auditd { "✓" } else { "✗" };
+        let auditd_status = if sec.auditd { "enabled".green() } else { "disabled".red() };
+        println!("  {} Auditd:   {}", auditd_icon, auditd_status);
+
+        if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+            let fw_icon = if fw.enabled { "✓" } else { "✗" };
+            let fw_status = if fw.enabled {
+                format!("enabled ({})", fw.firewall_type).green()
+            } else {
+                format!("disabled ({})", fw.firewall_type).red()
+            };
+            println!("  {} Firewall: {}", fw_icon, fw_status);
+        }
+
+        println!("{}", "└──────────────────────────────────────────────────────────┘".cyan());
+    }
+
+    println!("\n{} Use specific commands for detailed information", "💡".to_string().yellow());
+    println!();
+
+    Ok(())
+}
+
+/// Export data in various formats
+pub fn cmd_export(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("{}", "Usage: export <type> <format> [output_file]".yellow());
+        println!();
+        println!("{}", "Types:".green().bold());
+        println!("  {} - Export package list", "packages".cyan());
+        println!("  {} - Export user accounts", "users".cyan());
+        println!("  {} - Export services", "services".cyan());
+        println!("  {} - Export system info", "system".cyan());
+        println!();
+        println!("{}", "Formats:".green().bold());
+        println!("  {} - JSON format", "json".cyan());
+        println!("  {} - CSV format", "csv".cyan());
+        println!("  {} - Markdown table", "md".cyan());
+        println!("  {} - Plain text", "txt".cyan());
+        println!();
+        println!("{}", "Examples:".yellow());
+        println!("  export packages json packages.json");
+        println!("  export users csv users.csv");
+        println!("  export system md system.md");
+        return Ok(());
+    }
+
+    let export_type = args[0];
+    let format = if args.len() > 1 { args[1] } else { "json" };
+    let output = if args.len() > 2 { Some(args[2]) } else { None };
+
+    println!("{} Exporting {} as {}...", "→".cyan(), export_type.yellow(), format.green());
+
+    match export_type {
+        "packages" => export_packages(ctx, format, output)?,
+        "users" => export_users(ctx, format, output)?,
+        "services" => export_services(ctx, format, output)?,
+        "system" => export_system(ctx, format, output)?,
+        _ => {
+            println!("{} Unknown export type: {}", "Error:".red(), export_type);
+            return Ok(());
+        }
+    }
+
+    println!("{} Export completed!", "✓".green());
+    Ok(())
+}
+
+/// Show directory tree
+pub fn cmd_tree(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    let path = if args.is_empty() {
+        ctx.current_path.clone()
+    } else {
+        resolve_path(&ctx.current_path, args[0])
+    };
+
+    let max_depth = if args.len() > 1 {
+        args[1].parse::<usize>().unwrap_or(3)
+    } else {
+        3
+    };
+
+    println!("\n{} {}", "Tree view of:".yellow().bold(), path.cyan());
+    println!();
+
+    print_tree(ctx, &path, "", 0, max_depth)?;
+    println!();
+
+    Ok(())
+}
+
+/// Quick system summary
+pub fn cmd_summary(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+
+    // One-liner system info
+    let os = ctx.guestfs.inspect_get_product_name(&ctx.root).unwrap_or_else(|_| "Unknown".to_string());
+    let arch = ctx.guestfs.inspect_get_arch(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let hostname = ctx.guestfs.inspect_get_hostname(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+
+    println!("  {} {} | {} | {}",
+        "🖥".to_string(),
+        os.green().bold(),
+        arch.cyan(),
+        hostname.yellow());
+
+    // Quick counts
+    let mut quick_stats = Vec::new();
+
+    if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+        quick_stats.push(format!("{} pkgs", pkg_info.packages.len()));
+    }
+
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        quick_stats.push(format!("{} users", users.len()));
+    }
+
+    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+        let enabled = services.iter().filter(|s| s.enabled).count();
+        quick_stats.push(format!("{}/{} services", enabled, services.len()));
+    }
+
+    if !quick_stats.is_empty() {
+        println!("  {}", quick_stats.join(" • ").bright_black());
+    }
+
+    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!();
+
+    Ok(())
+}
+
+/// Show helpful tips
+pub fn cmd_tips(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
+    use rand::Rng;
+
+    let tips = vec![
+        ("⚡", "Use aliases to speed up common commands", "Try: alias ll 'ls -l'"),
+        ("🔖", "Bookmark frequently visited directories", "Try: bookmark config /etc"),
+        ("⏱", "Commands >100ms show execution time automatically", ""),
+        ("🔍", "Use grep with patterns", "Try: grep 'error' /var/log/syslog"),
+        ("📊", "View system overview", "Try: dashboard"),
+        ("💾", "Export data for analysis", "Try: export packages json"),
+        ("🌳", "Visualize directory structure", "Try: tree /etc 2"),
+        ("↑↓", "Navigate command history with arrow keys", ""),
+        ("Tab", "Use Tab for command completion", ""),
+        ("📈", "Check shell statistics", "Try: stats"),
+    ];
+
+    let mut rng = rand::thread_rng();
+    let tip = &tips[rng.gen_range(0..tips.len())];
+
+    println!("\n{} {}", "💡 Tip:".yellow().bold(), tip.1.green());
+    if !tip.2.is_empty() {
+        println!("   {}", tip.2.cyan());
+    }
+    println!();
+
+    Ok(())
+}
+
+// Helper functions for new commands
+
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+    let mut size = bytes as f64;
+    let mut unit_idx = 0;
+
+    while size >= 1024.0 && unit_idx < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_idx += 1;
+    }
+
+    format!("{:.2} {}", size, UNITS[unit_idx])
+}
+
+fn print_tree(ctx: &mut ShellContext, path: &str, prefix: &str, depth: usize, max_depth: usize) -> Result<()> {
+    if depth >= max_depth {
+        return Ok(());
+    }
+
+    let entries = match ctx.guestfs.ls(path) {
+        Ok(e) => e,
+        Err(_) => return Ok(()),
+    };
+
+    for (i, entry) in entries.iter().enumerate() {
+        let is_last = i == entries.len() - 1;
+        let connector = if is_last { "└── " } else { "├── " };
+        let new_prefix = if is_last { "    " } else { "│   " };
+
+        let full_path = format!("{}/{}", path, entry);
+        let is_dir = ctx.guestfs.is_dir(&full_path).unwrap_or(false);
+
+        let display_name = if is_dir {
+            format!("{}/", entry).cyan().bold()
+        } else {
+            entry.normal()
+        };
+
+        println!("{}{}{}", prefix, connector, display_name);
+
+        if is_dir {
+            let new_prefix_full = format!("{}{}", prefix, new_prefix);
+            let _ = print_tree(ctx, &full_path, &new_prefix_full, depth + 1, max_depth);
+        }
+    }
+
+    Ok(())
+}
+
+fn export_packages(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
+    let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+    let packages = &pkg_info.packages;
+
+    let content = match format {
+        "json" => {
+            let mut json_items = Vec::new();
+            for pkg in packages {
+                json_items.push(format!(
+                    r#"  {{"name": "{}", "version": "{}"}}"#,
+                    pkg.name, pkg.version
+                ));
+            }
+            format!("[\n{}\n]", json_items.join(",\n"))
+        }
+        "csv" => {
+            let mut lines = vec!["name,version".to_string()];
+            for pkg in packages {
+                lines.push(format!("{},{}", pkg.name, pkg.version));
+            }
+            lines.join("\n")
+        }
+        "md" => {
+            let mut lines = vec![
+                "| Package | Version |".to_string(),
+                "|---------|---------|".to_string(),
+            ];
+            for pkg in packages {
+                lines.push(format!("| {} | {} |", pkg.name, pkg.version));
+            }
+            lines.join("\n")
+        }
+        _ => {
+            let mut lines = Vec::new();
+            for pkg in packages {
+                lines.push(format!("{} - {}", pkg.name, pkg.version));
+            }
+            lines.join("\n")
+        }
+    };
+
+    if let Some(file) = output {
+        use std::fs;
+        fs::write(file, content)?;
+        println!("{} Written to: {}", "→".cyan(), file.yellow());
+    } else {
+        println!("{}", content);
+    }
+
+    Ok(())
+}
+
+fn export_users(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
+    let users = ctx.guestfs.inspect_users(&ctx.root)?;
+
+    let content = match format {
+        "json" => {
+            let mut json_items = Vec::new();
+            for user in users {
+                json_items.push(format!(
+                    r#"  {{"username": "{}", "uid": "{}", "gid": "{}", "home": "{}"}}"#,
+                    user.username, user.uid, user.gid, user.home
+                ));
+            }
+            format!("[\n{}\n]", json_items.join(",\n"))
+        }
+        "csv" => {
+            let mut lines = vec!["username,uid,gid,home".to_string()];
+            for user in users {
+                lines.push(format!("{},{},{},{}", user.username, user.uid, user.gid, user.home));
+            }
+            lines.join("\n")
+        }
+        "md" => {
+            let mut lines = vec![
+                "| Username | UID | GID | Home |".to_string(),
+                "|----------|-----|-----|------|".to_string(),
+            ];
+            for user in users {
+                lines.push(format!("| {} | {} | {} | {} |", user.username, user.uid, user.gid, user.home));
+            }
+            lines.join("\n")
+        }
+        _ => {
+            let mut lines = Vec::new();
+            for user in users {
+                lines.push(format!("{} ({}:{}) - {}", user.username, user.uid, user.gid, user.home));
+            }
+            lines.join("\n")
+        }
+    };
+
+    if let Some(file) = output {
+        use std::fs;
+        fs::write(file, content)?;
+        println!("{} Written to: {}", "→".cyan(), file.yellow());
+    } else {
+        println!("{}", content);
+    }
+
+    Ok(())
+}
+
+fn export_services(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
+    let services = ctx.guestfs.inspect_systemd_services(&ctx.root)?;
+
+    let content = match format {
+        "json" => {
+            let mut json_items = Vec::new();
+            for svc in services {
+                json_items.push(format!(
+                    r#"  {{"name": "{}", "enabled": {}}}"#,
+                    svc.name, svc.enabled
+                ));
+            }
+            format!("[\n{}\n]", json_items.join(",\n"))
+        }
+        "csv" => {
+            let mut lines = vec!["name,enabled".to_string()];
+            for svc in services {
+                lines.push(format!("{},{}", svc.name, svc.enabled));
+            }
+            lines.join("\n")
+        }
+        "md" => {
+            let mut lines = vec![
+                "| Service | Enabled |".to_string(),
+                "|---------|---------|".to_string(),
+            ];
+            for svc in services {
+                lines.push(format!("| {} | {} |", svc.name, svc.enabled));
+            }
+            lines.join("\n")
+        }
+        _ => {
+            let mut lines = Vec::new();
+            for svc in services {
+                let status = if svc.enabled { "enabled" } else { "disabled" };
+                lines.push(format!("{} - {}", svc.name, status));
+            }
+            lines.join("\n")
+        }
+    };
+
+    if let Some(file) = output {
+        use std::fs;
+        fs::write(file, content)?;
+        println!("{} Written to: {}", "→".cyan(), file.yellow());
+    } else {
+        println!("{}", content);
+    }
+
+    Ok(())
+}
+
+fn export_system(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
+    let os_type = ctx.guestfs.inspect_get_type(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let distro = ctx.guestfs.inspect_get_distro(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let version = ctx.guestfs.inspect_get_product_name(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let arch = ctx.guestfs.inspect_get_arch(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let hostname = ctx.guestfs.inspect_get_hostname(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+
+    let content = match format {
+        "json" => {
+            format!(
+                r#"{{
+  "type": "{}",
+  "distribution": "{}",
+  "version": "{}",
+  "architecture": "{}",
+  "hostname": "{}"
+}}"#,
+                os_type, distro, version, arch, hostname
+            )
+        }
+        "md" => {
+            format!(
+                "# System Information\n\n\
+                | Property | Value |\n\
+                |----------|-------|\n\
+                | Type | {} |\n\
+                | Distribution | {} |\n\
+                | Version | {} |\n\
+                | Architecture | {} |\n\
+                | Hostname | {} |",
+                os_type, distro, version, arch, hostname
+            )
+        }
+        _ => {
+            format!(
+                "System Information:\n\
+                  Type: {}\n\
+                  Distribution: {}\n\
+                  Version: {}\n\
+                  Architecture: {}\n\
+                  Hostname: {}",
+                os_type, distro, version, arch, hostname
+            )
+        }
+    };
+
+    if let Some(file) = output {
+        use std::fs;
+        fs::write(file, content)?;
+        println!("{} Written to: {}", "→".cyan(), file.yellow());
+    } else {
+        println!("{}", content);
+    }
 
     Ok(())
 }
