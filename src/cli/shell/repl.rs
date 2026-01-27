@@ -323,6 +323,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "roadmap" => {
                         commands::cmd_roadmap(&mut ctx, args)
                     }
+                    "insights" => {
+                        commands::cmd_insights(&mut ctx, args)
+                    }
+                    "doctor" => {
+                        commands::cmd_doctor(&mut ctx, args)
+                    }
+                    "goals" => {
+                        commands::cmd_goals(&mut ctx, args)
+                    }
+                    "habits" => {
+                        commands::cmd_habits(&ctx, args)
+                    }
+                    "collaborate" => {
+                        commands::cmd_collaborate(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
