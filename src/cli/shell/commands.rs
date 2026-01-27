@@ -606,6 +606,17 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Compliance checking", "compliance <standard>".green());
     println!("           Standards: cis, pci-dss, hipaa, gdpr, soc2");
 
+    println!("\n{}", "Automation & Operations:".yellow().bold());
+    println!("  {} - Command template system", "template <name>".green());
+    println!("           Templates: security-audit, health-check, compliance-review");
+    println!("           performance-analysis, export-all, pre-migration");
+    println!("  {}   - Comprehensive system scoring", "score".green());
+    println!("  {}   - SQL-like query interface", "query <statement>".green());
+    println!("  {} - System monitoring & alerts", "monitor <type>".green());
+    println!("           Types: security, health, changes, alerts");
+    println!("  {} - Migration readiness assessment", "migrate <target>".green());
+    println!("           Targets: cloud, container");
+
     println!("\n{}", "Shell Commands:".yellow().bold());
     println!("  {}    - Show this help", "help".green());
     println!("  {}   - Clear screen", "clear".green());
@@ -7390,6 +7401,815 @@ pub fn cmd_compliance(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         _ => {
             println!("{} Unknown standard: {}", "Error:".red(), standard);
             println!("{} compliance menu", "Usage:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Command template system for repeatable operations
+pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Command Template System                     ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    if args.is_empty() {
+        println!("{}", "Available Templates:".yellow().bold());
+        println!();
+        println!("{} {} - Full security audit", "1.".cyan(), "security-audit".green());
+        println!("{} {} - System health check", "2.".cyan(), "health-check".green());
+        println!("{} {} - Compliance review", "3.".cyan(), "compliance-review".green());
+        println!("{} {} - Performance analysis", "4.".cyan(), "performance-analysis".green());
+        println!("{} {} - Export all data", "5.".cyan(), "export-all".green());
+        println!("{} {} - Pre-migration check", "6.".cyan(), "pre-migration".green());
+        println!();
+        println!("{} template <name>", "Usage:".yellow());
+        return Ok(());
+    }
+
+    let template_name = args[0];
+
+    match template_name {
+        "security-audit" => {
+            println!("{}", "🔒 Running Security Audit Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} Phase 1: Security Configuration", "→".cyan());
+            cmd_verify(ctx, &["security"])?;
+            println!();
+
+            println!("{} Phase 2: Vulnerability Predictions", "→".cyan());
+            cmd_predict(ctx, &[])?;
+            println!();
+
+            println!("{} Phase 3: Compliance Checks", "→".cyan());
+            cmd_compliance(ctx, &["cis"])?;
+            println!();
+
+            println!("{} Phase 4: Security Insights", "→".cyan());
+            cmd_insights(ctx, &[])?;
+            println!();
+
+            println!("{}", "✓ Security Audit Complete".green().bold());
+            println!("  Review the findings above and address critical issues first.");
+        }
+
+        "health-check" => {
+            println!("{}", "🏥 Running Health Check Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} Phase 1: System Doctor", "→".cyan());
+            cmd_doctor(ctx, &[])?;
+            println!();
+
+            println!("{} Phase 2: Verification Suite", "→".cyan());
+            cmd_verify(ctx, &["all"])?;
+            println!();
+
+            println!("{} Phase 3: Intelligent Insights", "→".cyan());
+            cmd_insights(ctx, &[])?;
+            println!();
+
+            println!("{}", "✓ Health Check Complete".green().bold());
+        }
+
+        "compliance-review" => {
+            println!("{}", "📋 Running Compliance Review Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} CIS Benchmark", "→".cyan());
+            cmd_compliance(ctx, &["cis"])?;
+            println!();
+
+            println!("{} PCI-DSS", "→".cyan());
+            cmd_compliance(ctx, &["pci-dss"])?;
+            println!();
+
+            println!("{} HIPAA", "→".cyan());
+            cmd_compliance(ctx, &["hipaa"])?;
+            println!();
+
+            println!("{}", "✓ Compliance Review Complete".green().bold());
+        }
+
+        "performance-analysis" => {
+            println!("{}", "⚡ Running Performance Analysis Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} Phase 1: Package Analysis", "→".cyan());
+            cmd_chart(ctx, &["packages"])?;
+            println!();
+
+            println!("{} Phase 2: Service Analysis", "→".cyan());
+            cmd_chart(ctx, &["services"])?;
+            println!();
+
+            println!("{} Phase 3: Optimization Recommendations", "→".cyan());
+            cmd_optimize(ctx, &[])?;
+            println!();
+
+            println!("{}", "✓ Performance Analysis Complete".green().bold());
+        }
+
+        "export-all" => {
+            println!("{}", "💾 Running Export All Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} Generating comprehensive snapshot...", "→".cyan());
+            cmd_snapshot(ctx, &[])?;
+            println!();
+
+            println!("{}", "✓ Export Complete".green().bold());
+        }
+
+        "pre-migration" => {
+            println!("{}", "🚀 Running Pre-Migration Check Template".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{} Phase 1: System Verification", "→".cyan());
+            cmd_verify(ctx, &["all"])?;
+            println!();
+
+            println!("{} Phase 2: Production Readiness", "→".cyan());
+            cmd_compare(ctx, &["production"])?;
+            println!();
+
+            println!("{} Phase 3: Issue Predictions", "→".cyan());
+            cmd_predict(ctx, &[])?;
+            println!();
+
+            println!("{} Phase 4: Data Export", "→".cyan());
+            cmd_snapshot(ctx, &[])?;
+            println!();
+
+            println!("{}", "✓ Pre-Migration Check Complete".green().bold());
+            println!("  Address any critical issues before migration.");
+        }
+
+        _ => {
+            println!("{} Unknown template: {}", "Error:".red(), template_name);
+            println!("{} template (without arguments) to see available templates", "Tip:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Comprehensive system scoring across multiple dimensions
+pub fn cmd_score(ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              Comprehensive System Score                  ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    println!("{}", "Calculating multi-dimensional system score...".yellow());
+    println!();
+
+    let mut total_score = 0;
+    let mut max_score = 0;
+    let mut scores = Vec::new();
+
+    // Security Score (0-30)
+    let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+    let mut sec_score = 0;
+    max_score += 30;
+
+    if &sec.selinux != "disabled" {
+        sec_score += 10;
+    }
+    if sec.apparmor {
+        sec_score += 10;
+    }
+    if sec.auditd {
+        sec_score += 5;
+    }
+    if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+        if fw.enabled {
+            sec_score += 5;
+        }
+    }
+
+    total_score += sec_score;
+    scores.push(("Security", sec_score, 30));
+
+    // Reliability Score (0-25)
+    let mut rel_score = 25;
+    max_score += 25;
+
+    if !ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+        rel_score -= 10;
+    }
+    let grub_found = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false)
+        || ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+    if !grub_found {
+        rel_score -= 10;
+    }
+    if !ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+        rel_score -= 5;
+    }
+
+    total_score += rel_score;
+    scores.push(("Reliability", rel_score, 25));
+
+    // Configuration Score (0-20)
+    let mut config_score = 0;
+    max_score += 20;
+
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        let normal_users = users.iter().filter(|u| u.uid != "0").count();
+        if normal_users > 0 {
+            config_score += 10;
+        }
+    }
+
+    if ctx.guestfs.exists("/etc/ssh/sshd_config").unwrap_or(false) {
+        config_score += 5;
+    }
+
+    let syslog_found = ctx.guestfs.exists("/etc/rsyslog.conf").unwrap_or(false)
+        || ctx.guestfs.exists("/etc/syslog.conf").unwrap_or(false);
+    if syslog_found {
+        config_score += 5;
+    }
+
+    total_score += config_score;
+    scores.push(("Configuration", config_score, 20));
+
+    // Maintainability Score (0-15)
+    let mut maint_score = 15;
+    max_score += 15;
+
+    let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+    let pkg_count = pkg_info.packages.len();
+
+    if pkg_count > 1500 {
+        maint_score -= 5; // Too many packages
+    }
+    if pkg_count < 100 {
+        maint_score -= 5; // Too minimal, might be missing essentials
+    }
+
+    total_score += maint_score;
+    scores.push(("Maintainability", maint_score, 15));
+
+    // Performance Score (0-10)
+    let mut perf_score = 10;
+    max_score += 10;
+
+    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+        let enabled = services.iter().filter(|s| s.enabled).count();
+        if enabled > 80 {
+            perf_score -= 5;
+        } else if enabled > 50 {
+            perf_score -= 3;
+        }
+    }
+
+    total_score += perf_score;
+    scores.push(("Performance", perf_score, 10));
+
+    // Display scores
+    println!("{}", "Score Breakdown:".cyan().bold());
+    println!();
+
+    for (category, score, max) in &scores {
+        let percentage = (*score as f32 / *max as f32) * 100.0;
+        let bar_length = 40;
+        let filled = ((percentage / 100.0) * bar_length as f32) as usize;
+
+        let color = if percentage >= 80.0 {
+            "green"
+        } else if percentage >= 60.0 {
+            "yellow"
+        } else {
+            "red"
+        };
+
+        let bar = match color {
+            "green" => format!("{}{}", "▓".repeat(filled).green(), "░".repeat(bar_length - filled).bright_black()),
+            "yellow" => format!("{}{}", "▓".repeat(filled).yellow(), "░".repeat(bar_length - filled).bright_black()),
+            _ => format!("{}{}", "▓".repeat(filled).red(), "░".repeat(bar_length - filled).bright_black()),
+        };
+
+        println!("{:15} [{}] {}/{} ({:.0}%)",
+            format!("{}:", category).bold(),
+            bar,
+            score.to_string().cyan(),
+            max,
+            percentage
+        );
+    }
+
+    println!();
+    println!("{}", "═".repeat(60).bright_black());
+
+    let overall_percentage = (total_score as f32 / max_score as f32) * 100.0;
+    let grade = if overall_percentage >= 90.0 {
+        "A+ (Excellent)".green().bold()
+    } else if overall_percentage >= 85.0 {
+        "A (Very Good)".green()
+    } else if overall_percentage >= 80.0 {
+        "B+ (Good)".green()
+    } else if overall_percentage >= 75.0 {
+        "B (Above Average)".yellow()
+    } else if overall_percentage >= 70.0 {
+        "C+ (Average)".yellow()
+    } else if overall_percentage >= 60.0 {
+        "C (Below Average)".yellow()
+    } else {
+        "D (Needs Improvement)".red()
+    };
+
+    println!("{:15} {}/{} ({:.1}%)",
+        "Overall Score:".bold(),
+        total_score.to_string().cyan().bold(),
+        max_score,
+        overall_percentage
+    );
+    println!("{:15} {}", "Grade:".bold(), grade);
+
+    println!();
+    println!("{} Recommendations:", "💡".yellow());
+
+    if sec_score < 20 {
+        println!("  • {}", "Improve security posture (enable SELinux/AppArmor, firewall, audit)".cyan());
+    }
+    if rel_score < 15 {
+        println!("  • {}", "Fix critical configuration files (/etc/fstab, boot loader)".cyan());
+    }
+    if config_score < 10 {
+        println!("  • {}", "Enhance system configuration (user accounts, SSH, logging)".cyan());
+    }
+    if maint_score < 10 {
+        println!("  • {}", "Optimize package management".cyan());
+    }
+    if perf_score < 7 {
+        println!("  • {}", "Reduce service overhead".cyan());
+    }
+
+    if overall_percentage >= 85.0 {
+        println!();
+        println!("{}", "✓ System is in excellent condition!".green().bold());
+    } else if overall_percentage >= 70.0 {
+        println!();
+        println!("{}", "⚠ System is acceptable but has room for improvement.".yellow());
+    } else {
+        println!();
+        println!("{}", "✗ System requires attention to critical issues.".red());
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Query system data with SQL-like syntax
+pub fn cmd_query(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              System Query Interface                      ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    if args.is_empty() {
+        println!("{}", "Available Queries:".yellow().bold());
+        println!();
+        println!("{} {} - Find packages by name", "1.".cyan(), "packages where name=<pattern>".green());
+        println!("{} {} - Find users by UID range", "2.".cyan(), "users where uid>1000".green());
+        println!("{} {} - Find enabled services", "3.".cyan(), "services where enabled=true".green());
+        println!("{} {} - Count packages by type", "4.".cyan(), "count packages by type".green());
+        println!("{} {} - List largest packages", "5.".cyan(), "packages order by size desc limit 10".green());
+        println!();
+        println!("{}", "Examples:".green().bold());
+        println!("  query packages where name=kernel");
+        println!("  query users where uid>1000");
+        println!("  query services where enabled=true");
+        println!("  query count packages");
+        println!();
+        return Ok(());
+    }
+
+    let query_str = args.join(" ");
+
+    // Simple query parser
+    if query_str.starts_with("packages where name=") {
+        let pattern = query_str.strip_prefix("packages where name=").unwrap_or("");
+        println!("{} Packages matching '{}':", "→".cyan(), pattern.green());
+        println!();
+
+        let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+        let matches: Vec<_> = pkg_info.packages.iter()
+            .filter(|p| p.name.contains(pattern))
+            .collect();
+
+        for (i, pkg) in matches.iter().enumerate().take(50) {
+            println!("{:3}. {} - {}", i + 1, pkg.name.cyan(), pkg.version.to_string().bright_black());
+        }
+
+        println!();
+        println!("Found {} matching packages", matches.len().to_string().green());
+
+    } else if query_str.starts_with("users where uid>") {
+        let uid_str = query_str.strip_prefix("users where uid>").unwrap_or("1000");
+        let min_uid: i32 = uid_str.parse().unwrap_or(1000);
+
+        println!("{} Users with UID > {}:", "→".cyan(), min_uid.to_string().green());
+        println!();
+
+        if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+            let matches: Vec<_> = users.iter()
+                .filter(|u| u.uid.parse::<i32>().unwrap_or(0) > min_uid)
+                .collect();
+
+            for user in &matches {
+                println!("  {} {} (UID: {}, GID: {})",
+                    "•".cyan(),
+                    user.username.green(),
+                    user.uid.yellow(),
+                    user.gid.bright_black()
+                );
+            }
+
+            println!();
+            println!("Found {} matching users", matches.len().to_string().green());
+        }
+
+    } else if query_str == "services where enabled=true" {
+        println!("{} Enabled services:", "→".cyan());
+        println!();
+
+        if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+            let enabled: Vec<_> = services.iter()
+                .filter(|s| s.enabled)
+                .collect();
+
+            for (i, service) in enabled.iter().enumerate().take(50) {
+                println!("{:3}. {}", i + 1, service.name.cyan());
+            }
+
+            println!();
+            println!("Found {} enabled services", enabled.len().to_string().green());
+        }
+
+    } else if query_str == "count packages" {
+        let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+        println!("{} Total packages: {}", "→".cyan(), pkg_info.packages.len().to_string().green().bold());
+
+    } else if query_str.starts_with("packages order by") {
+        println!("{} Package list:", "→".cyan());
+        println!();
+
+        let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+        let mut packages: Vec<_> = pkg_info.packages.iter().collect();
+
+        // Simple sorting by name
+        packages.sort_by_key(|p| &p.name);
+
+        let limit = if query_str.contains("limit") {
+            let parts: Vec<&str> = query_str.split("limit").collect();
+            if parts.len() > 1 {
+                parts[1].trim().parse::<usize>().unwrap_or(10)
+            } else {
+                10
+            }
+        } else {
+            10
+        };
+
+        for (i, pkg) in packages.iter().take(limit).enumerate() {
+            println!("{:3}. {} - {}", i + 1, pkg.name.cyan(), pkg.version.to_string().bright_black());
+        }
+
+        println!();
+        println!("Showing {} of {} packages", limit.min(packages.len()), packages.len());
+
+    } else {
+        println!("{} Unsupported query syntax", "Error:".red());
+        println!("{} query (without arguments) for examples", "Tip:".yellow());
+    }
+
+    println!();
+    Ok(())
+}
+
+/// System monitoring and change detection
+pub fn cmd_monitor(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║              System Monitoring & Alerts                  ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    if args.is_empty() {
+        println!("{}", "Monitoring Capabilities:".yellow().bold());
+        println!();
+        println!("{} {} - Monitor for security issues", "1.".cyan(), "monitor security".green());
+        println!("{} {} - Monitor system health", "2.".cyan(), "monitor health".green());
+        println!("{} {} - Monitor for changes", "3.".cyan(), "monitor changes".green());
+        println!("{} {} - Alert configuration", "4.".cyan(), "monitor alerts".green());
+        println!();
+        println!("{} monitor <type>", "Usage:".yellow());
+        return Ok(());
+    }
+
+    let monitor_type = args[0];
+
+    match monitor_type {
+        "security" => {
+            println!("{}", "🔒 Security Monitoring Report".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+            let mut alerts = Vec::new();
+
+            if &sec.selinux == "disabled" && !sec.apparmor {
+                alerts.push(("CRITICAL", "No MAC system active", "Enable SELinux or AppArmor"));
+            }
+
+            if !sec.auditd {
+                alerts.push(("WARNING", "Audit daemon not running", "Enable auditd for security logging"));
+            }
+
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if !fw.enabled {
+                    alerts.push(("CRITICAL", "Firewall is disabled", "Enable firewall immediately"));
+                }
+            }
+
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                let root_users = users.iter().filter(|u| u.uid == "0").count();
+                if root_users > 1 {
+                    alerts.push(("WARNING", "Multiple root accounts detected", "Review and consolidate root access"));
+                }
+            }
+
+            if alerts.is_empty() {
+                println!("{}", "✓ No security alerts detected".green().bold());
+                println!("  System security configuration appears nominal.");
+            } else {
+                println!("{} {} security alerts:", "⚠".yellow(), alerts.len());
+                println!();
+
+                for (i, (level, issue, action)) in alerts.iter().enumerate() {
+                    let level_colored = match *level {
+                        "CRITICAL" => level.red().bold(),
+                        "WARNING" => level.yellow(),
+                        _ => level.bright_black(),
+                    };
+
+                    println!("{} [{}] {}", format!("{}.", i + 1).cyan(), level_colored, issue.bold());
+                    println!("   Action: {}", action.bright_black());
+                    println!();
+                }
+            }
+        }
+
+        "health" => {
+            println!("{}", "🏥 Health Monitoring Report".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let mut issues = Vec::new();
+
+            if !ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                issues.push(("ERROR", "Missing /etc/fstab", "System may not boot"));
+            }
+
+            let grub_found = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false)
+                || ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+            if !grub_found {
+                issues.push(("ERROR", "No GRUB configuration", "Boot loader not configured"));
+            }
+
+            if !ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                issues.push(("WARNING", "Missing /etc/resolv.conf", "DNS may not work"));
+            }
+
+            if issues.is_empty() {
+                println!("{}", "✓ No health issues detected".green().bold());
+                println!("  System health appears good.");
+            } else {
+                println!("{} {} health issues:", "⚠".yellow(), issues.len());
+                println!();
+
+                for (i, (level, issue, impact)) in issues.iter().enumerate() {
+                    let level_colored = match *level {
+                        "ERROR" => level.red().bold(),
+                        "WARNING" => level.yellow(),
+                        _ => level.bright_black(),
+                    };
+
+                    println!("{} [{}] {}", format!("{}.", i + 1).cyan(), level_colored, issue.bold());
+                    println!("   Impact: {}", impact.bright_black());
+                    println!();
+                }
+            }
+        }
+
+        "changes" => {
+            println!("{}", "📊 Change Detection Report".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{}", "Note:".yellow().bold());
+            println!("  Change detection requires multiple snapshots over time.");
+            println!("  Use 'snapshot' command to create baseline snapshots.");
+            println!();
+            println!("{}", "Recommended workflow:".green());
+            println!("  1. snapshot baseline.md");
+            println!("  2. (make system changes)");
+            println!("  3. snapshot current.md");
+            println!("  4. compare files baseline.md current.md");
+        }
+
+        "alerts" => {
+            println!("{}", "🔔 Alert Configuration".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            println!("{}", "Alert Rules:".yellow().bold());
+            println!();
+            println!("{} Security configuration changes", "•".cyan());
+            println!("{} Critical file modifications", "•".cyan());
+            println!("{} Service state changes", "•".cyan());
+            println!("{} User account additions/removals", "•".cyan());
+            println!("{} Package installations/removals", "•".cyan());
+            println!();
+            println!("{}", "Note:".yellow().bold());
+            println!("  Alert rules are informational. Use 'monitor security' and");
+            println!("  'monitor health' for current status checks.");
+        }
+
+        _ => {
+            println!("{} Unknown monitor type: {}", "Error:".red(), monitor_type);
+            println!("{} monitor (without arguments) for options", "Tip:".yellow());
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Migration preparation and readiness assessment
+pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+    println!("{}", "║           Migration Readiness Assessment                ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!();
+
+    let target = if args.is_empty() { "cloud" } else { args[0] };
+
+    match target {
+        "cloud" => {
+            println!("{}", "☁️  Cloud Migration Readiness".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let mut ready = 0;
+            let mut warnings = Vec::new();
+            let mut blockers = Vec::new();
+
+            // Check 1: Boot configuration
+            println!("{} Checking boot configuration...", "→".cyan());
+            if ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                let grub_found = ctx.guestfs.exists("/boot/grub/grub.cfg").unwrap_or(false)
+                    || ctx.guestfs.exists("/boot/grub2/grub.cfg").unwrap_or(false);
+                if grub_found {
+                    println!("  {} Boot configuration is valid", "✓".green());
+                    ready += 1;
+                } else {
+                    println!("  {} Missing boot loader configuration", "✗".red());
+                    blockers.push("Configure GRUB boot loader");
+                }
+            } else {
+                println!("  {} Missing /etc/fstab", "✗".red());
+                blockers.push("Create /etc/fstab");
+            }
+
+            // Check 2: Network configuration
+            println!("{} Checking network configuration...", "→".cyan());
+            if ctx.guestfs.exists("/etc/resolv.conf").unwrap_or(false) {
+                println!("  {} DNS configuration exists", "✓".green());
+                ready += 1;
+            } else {
+                println!("  {} Missing DNS configuration", "⚠".yellow());
+                warnings.push("Configure /etc/resolv.conf");
+            }
+
+            // Check 3: Cloud-init support
+            println!("{} Checking cloud-init support...", "→".cyan());
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let has_cloud_init = pkg_info.packages.iter().any(|p| p.name.contains("cloud-init"));
+            if has_cloud_init {
+                println!("  {} cloud-init is installed", "✓".green());
+                ready += 1;
+            } else {
+                println!("  {} cloud-init not found", "⚠".yellow());
+                warnings.push("Install cloud-init for better cloud integration");
+            }
+
+            // Check 4: SSH server
+            println!("{} Checking SSH server...", "→".cyan());
+            if ctx.guestfs.exists("/etc/ssh/sshd_config").unwrap_or(false) {
+                println!("  {} SSH server configured", "✓".green());
+                ready += 1;
+            } else {
+                println!("  {} SSH server not configured", "⚠".yellow());
+                warnings.push("Configure SSH server for remote access");
+            }
+
+            // Check 5: Security features
+            println!("{} Checking security features...", "→".cyan());
+            let sec = ctx.guestfs.inspect_security(&ctx.root)?;
+            if &sec.selinux != "disabled" || sec.apparmor {
+                println!("  {} MAC system is active", "✓".green());
+                ready += 1;
+            } else {
+                println!("  {} No MAC system active", "⚠".yellow());
+                warnings.push("Consider enabling SELinux or AppArmor");
+            }
+
+            println!();
+            println!("{}", "═".repeat(60).bright_black());
+            println!();
+
+            println!("{} Migration Readiness: {}/5 checks passed", "📊".cyan(), ready.to_string().cyan().bold());
+            println!();
+
+            if !blockers.is_empty() {
+                println!("{} Critical Blockers:", "🚫".red().bold());
+                for (i, blocker) in blockers.iter().enumerate() {
+                    println!("  {}. {}", i + 1, blocker.red());
+                }
+                println!();
+            }
+
+            if !warnings.is_empty() {
+                println!("{} Recommendations:", "⚠".yellow().bold());
+                for (i, warning) in warnings.iter().enumerate() {
+                    println!("  {}. {}", i + 1, warning.yellow());
+                }
+                println!();
+            }
+
+            if blockers.is_empty() && ready >= 4 {
+                println!("{}", "✓ System is ready for cloud migration!".green().bold());
+                println!();
+                println!("{} Next Steps:", "💡".cyan());
+                println!("  1. Create final snapshot: snapshot pre-migration.md");
+                println!("  2. Run template pre-migration for comprehensive check");
+                println!("  3. Export system data: export system json system-config.json");
+                println!("  4. Review and test boot configuration");
+            } else if blockers.is_empty() {
+                println!("{}", "⚠ System is mostly ready but has some warnings.".yellow());
+                println!("  Address recommendations above for best results.");
+            } else {
+                println!("{}", "✗ System has critical blockers preventing migration.".red());
+                println!("  Resolve blockers before attempting migration.");
+            }
+        }
+
+        "container" => {
+            println!("{}", "🐳 Container Migration Assessment".cyan().bold());
+            println!("{}", "━".repeat(60).bright_black());
+            println!();
+
+            let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
+            let pkg_count = pkg_info.packages.len();
+
+            println!("{} Package Analysis:", "→".cyan());
+            println!("  Total packages: {}", pkg_count.to_string().cyan());
+
+            if pkg_count < 300 {
+                println!("  {} Suitable for containerization (minimal footprint)", "✓".green());
+            } else if pkg_count < 600 {
+                println!("  {} Can be containerized (consider reducing packages)", "⚠".yellow());
+            } else {
+                println!("  {} Large package count (strongly consider reduction)", "⚠".yellow());
+            }
+
+            println!();
+            println!("{} Recommendations:", "💡".yellow());
+            println!("  • Identify essential packages only");
+            println!("  • Create multi-stage Dockerfile");
+            println!("  • Use minimal base images (Alpine, distroless)");
+            println!("  • Extract application dependencies");
+        }
+
+        _ => {
+            println!("{}", "Migration Targets:".yellow().bold());
+            println!();
+            println!("{} {} - Cloud platform migration (AWS, Azure, GCP)", "1.".cyan(), "migrate cloud".green());
+            println!("{} {} - Container migration assessment", "2.".cyan(), "migrate container".green());
+            println!();
+            println!("{} migrate <target>", "Usage:".yellow());
         }
     }
 

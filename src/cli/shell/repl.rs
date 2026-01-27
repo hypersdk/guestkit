@@ -347,6 +347,21 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "compliance" => {
                         commands::cmd_compliance(&mut ctx, args)
                     }
+                    "template" => {
+                        commands::cmd_template(&mut ctx, args)
+                    }
+                    "score" => {
+                        commands::cmd_score(&mut ctx, args)
+                    }
+                    "query" => {
+                        commands::cmd_query(&mut ctx, args)
+                    }
+                    "monitor" => {
+                        commands::cmd_monitor(&mut ctx, args)
+                    }
+                    "migrate" => {
+                        commands::cmd_migrate(&mut ctx, args)
+                    }
                     _ => {
                         eprintln!("{} Unknown command: {}. Type 'help' for available commands.",
                                 "Error:".red(), cmd);
