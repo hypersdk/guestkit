@@ -509,11 +509,16 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Visualize directory tree", "tree [path] [depth]".green());
     println!("  {}     - Random helpful tip", "tips, tip".green());
 
-    println!("\n{}", "Data Export:".yellow().bold());
+    println!("\n{}", "Data Export & Reporting:".yellow().bold());
     println!("  {} - Export data in various formats", "export <type> <format> [file]".green());
     println!("           Types: packages, users, services, system");
     println!("           Formats: json, csv, md, txt");
     println!("           Example: export packages json packages.json");
+    println!("  {} - Generate comprehensive snapshot report", "snapshot, snap [file]".green());
+    println!("           Creates detailed Markdown report");
+    println!("           Example: snapshot system-report.md");
+    println!("  {}      - Compare and analyze", "diff <type> <filter>".green());
+    println!("           Example: diff package kernel");
 
     #[cfg(feature = "ai")]
     {
@@ -922,6 +927,238 @@ pub fn cmd_tips(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("\n{} {}", "💡 Tip:".yellow().bold(), tip.1.green());
     if !tip.2.is_empty() {
         println!("   {}", tip.2.cyan());
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Generate comprehensive system snapshot report
+pub fn cmd_snapshot(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    use chrono::Local;
+
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let output_file = if args.is_empty() {
+        format!("snapshot-{}.md", Local::now().format("%Y%m%d-%H%M%S"))
+    } else {
+        args[0].to_string()
+    };
+
+    println!("{} Generating comprehensive system snapshot...", "→".cyan());
+
+    let mut report = String::new();
+
+    // Header
+    report.push_str(&format!("# System Snapshot Report\n\n"));
+    report.push_str(&format!("**Generated:** {}\n\n", timestamp));
+    report.push_str(&format!("---\n\n"));
+
+    // System Information
+    report.push_str("## System Information\n\n");
+    if let Ok(os_type) = ctx.guestfs.inspect_get_type(&ctx.root) {
+        report.push_str(&format!("- **Type:** {}\n", os_type));
+    }
+    if let Ok(distro) = ctx.guestfs.inspect_get_distro(&ctx.root) {
+        report.push_str(&format!("- **Distribution:** {}\n", distro));
+    }
+    if let Ok(version) = ctx.guestfs.inspect_get_product_name(&ctx.root) {
+        report.push_str(&format!("- **Version:** {}\n", version));
+    }
+    if let Ok(arch) = ctx.guestfs.inspect_get_arch(&ctx.root) {
+        report.push_str(&format!("- **Architecture:** {}\n", arch));
+    }
+    if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
+        report.push_str(&format!("- **Hostname:** {}\n", hostname));
+    }
+    report.push_str("\n");
+
+    // Storage
+    report.push_str("## Storage Overview\n\n");
+    if let Ok(filesystems) = ctx.guestfs.list_filesystems() {
+        report.push_str("| Device | Type | Size |\n");
+        report.push_str("|--------|------|------|\n");
+        for (device, fstype) in filesystems.iter() {
+            if fstype != "unknown" && !fstype.is_empty() {
+                let size_str = if let Ok(size) = ctx.guestfs.blockdev_getsize64(device) {
+                    format_bytes(size as u64)
+                } else {
+                    "unknown".to_string()
+                };
+                report.push_str(&format!("| {} | {} | {} |\n", device, fstype, size_str));
+            }
+        }
+        report.push_str("\n");
+    }
+
+    // Packages
+    if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+        let packages = &pkg_info.packages;
+        report.push_str(&format!("## Installed Packages ({})\n\n", packages.len()));
+        report.push_str("| Package | Version |\n");
+        report.push_str("|---------|----------|\n");
+        for pkg in packages.iter().take(50) {
+            report.push_str(&format!("| {} | {} |\n", pkg.name, pkg.version));
+        }
+        if packages.len() > 50 {
+            report.push_str(&format!("\n*Showing 50 of {} packages*\n", packages.len()));
+        }
+        report.push_str("\n");
+    }
+
+    // Users
+    if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+        report.push_str(&format!("## User Accounts ({})\n\n", users.len()));
+        report.push_str("| Username | UID | GID | Home Directory |\n");
+        report.push_str("|----------|-----|-----|----------------|\n");
+        for user in users {
+            let uid_marker = if user.uid == "0" { " ⚠️" } else { "" };
+            report.push_str(&format!("| {}{} | {} | {} | {} |\n",
+                user.username, uid_marker, user.uid, user.gid, user.home));
+        }
+        report.push_str("\n");
+    }
+
+    // Services
+    if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+        let enabled_count = services.iter().filter(|s| s.enabled).count();
+        report.push_str(&format!("## System Services ({} total, {} enabled)\n\n",
+            services.len(), enabled_count));
+        report.push_str("| Service | Status |\n");
+        report.push_str("|---------|--------|\n");
+        for svc in services.iter().take(50) {
+            let status = if svc.enabled { "✓ Enabled" } else { "✗ Disabled" };
+            report.push_str(&format!("| {} | {} |\n", svc.name, status));
+        }
+        if services.len() > 50 {
+            report.push_str(&format!("\n*Showing 50 of {} services*\n", services.len()));
+        }
+        report.push_str("\n");
+    }
+
+    // Security
+    if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+        report.push_str("## Security Configuration\n\n");
+        report.push_str("| Feature | Status |\n");
+        report.push_str("|---------|--------|\n");
+
+        let selinux_status = if &sec.selinux != "disabled" {
+            format!("✓ {}", sec.selinux)
+        } else {
+            "✗ Disabled".to_string()
+        };
+        report.push_str(&format!("| SELinux | {} |\n", selinux_status));
+
+        let apparmor = if sec.apparmor { "✓ Enabled" } else { "✗ Disabled" };
+        report.push_str(&format!("| AppArmor | {} |\n", apparmor));
+
+        let auditd = if sec.auditd { "✓ Enabled" } else { "✗ Disabled" };
+        report.push_str(&format!("| Auditd | {} |\n", auditd));
+
+        let fail2ban = if sec.fail2ban { "✓ Installed" } else { "✗ Not installed" };
+        report.push_str(&format!("| fail2ban | {} |\n", fail2ban));
+
+        let aide = if sec.aide { "✓ Installed" } else { "✗ Not installed" };
+        report.push_str(&format!("| AIDE | {} |\n", aide));
+
+        if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+            let fw_status = if fw.enabled {
+                format!("✓ Enabled ({})", fw.firewall_type)
+            } else {
+                format!("✗ Disabled ({})", fw.firewall_type)
+            };
+            report.push_str(&format!("| Firewall | {} |\n", fw_status));
+        }
+        report.push_str("\n");
+    }
+
+    // Network
+    if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
+        report.push_str(&format!("## Network Configuration ({} interfaces)\n\n", interfaces.len()));
+        for iface in interfaces {
+            report.push_str(&format!("- {}\n", iface.name));
+        }
+
+        if let Ok(dns) = ctx.guestfs.inspect_dns(&ctx.root) {
+            if !dns.is_empty() {
+                report.push_str("\n**DNS Servers:**\n\n");
+                for server in dns {
+                    report.push_str(&format!("- {}\n", server));
+                }
+            }
+        }
+        report.push_str("\n");
+    }
+
+    // Footer
+    report.push_str("---\n\n");
+    report.push_str("*Generated by GuestKit Interactive Shell*\n");
+
+    // Write to file
+    use std::fs;
+    fs::write(&output_file, report)?;
+
+    println!("{} Snapshot saved to: {}", "✓".green(), output_file.yellow());
+    println!("{} Report includes: system info, storage, packages, users, services, security, network", "→".cyan());
+
+    Ok(())
+}
+
+/// Compare two snapshots or system states
+pub fn cmd_diff(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.len() < 2 {
+        println!("{}", "Usage: diff <type> <filter1> [filter2]".yellow());
+        println!();
+        println!("{}", "Examples:".green().bold());
+        println!("  {} - Compare package versions", "diff package kernel".cyan());
+        println!("  {} - Compare files", "diff file /etc/fstab".cyan());
+        println!("  {} - Show file changes", "diff changes /var/log".cyan());
+        return Ok(());
+    }
+
+    let diff_type = args[0];
+
+    match diff_type {
+        "file" => {
+            let file_path = args[1];
+            println!("{} Analyzing file: {}", "→".cyan(), file_path.yellow());
+
+            if let Ok(stat) = ctx.guestfs.stat(file_path) {
+                println!("\n{}", "File Information:".yellow().bold());
+                println!("  Size: {} bytes", stat.size.to_string().green());
+                println!("  Mode: {:o}", stat.mode);
+
+                if let Ok(content) = ctx.guestfs.read_file(file_path) {
+                    let lines: Vec<&str> = std::str::from_utf8(&content)
+                        .unwrap_or("")
+                        .lines()
+                        .collect();
+                    println!("  Lines: {}", lines.len().to_string().green());
+                }
+            }
+        }
+        "package" => {
+            let pkg_name = args[1];
+            println!("{} Searching for package: {}", "→".cyan(), pkg_name.yellow());
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let matches: Vec<_> = pkg_info.packages
+                    .iter()
+                    .filter(|p| p.name.contains(pkg_name))
+                    .collect();
+
+                if matches.is_empty() {
+                    println!("{} No matching packages found", "⚠".yellow());
+                } else {
+                    println!("\n{}", "Matching Packages:".yellow().bold());
+                    for pkg in matches {
+                        println!("  {} {} - {}", "•".cyan(), pkg.name.green(), pkg.version.to_string().bright_black());
+                    }
+                }
+            }
+        }
+        _ => {
+            println!("{} Unknown diff type: {}", "Error:".red(), diff_type);
+        }
     }
     println!();
 
