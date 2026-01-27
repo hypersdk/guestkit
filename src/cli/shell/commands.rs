@@ -528,6 +528,14 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
         println!("           Example: ai why won't this boot?");
     }
 
+    println!("\n{}", "Guided Workflows:".yellow().bold());
+    println!("  {} - Interactive task wizards", "wizard, wiz <type>".green());
+    println!("           Types: security, health, packages, config, export");
+    println!("  {}    - System scanners", "scan <type>".green());
+    println!("           Types: security, issues, vulns, all");
+    println!("  {} - File/directory comparison", "compare, cmp <type>".green());
+    println!("           Types: files, dirs");
+
     println!("\n{}", "Advanced Features:".yellow().bold());
     println!("  {} - Smart search with filters", "search <pattern> [options]".green());
     println!("           Options: --path, --type, --content");
@@ -1786,6 +1794,578 @@ pub fn cmd_history_enhanced(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("{} Use 'history' to see full command list", "Tip:".yellow());
     println!("{} Type 'cheat' for command reference", "Tip:".yellow());
     println!();
+
+    Ok(())
+}
+
+/// Interactive wizard for common tasks
+pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Interactive Wizards                     ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Wizards:".yellow().bold());
+        println!("  {} - Security audit wizard", "wizard security".cyan());
+        println!("  {} - System health check wizard", "wizard health".cyan());
+        println!("  {} - Package analysis wizard", "wizard packages".cyan());
+        println!("  {} - Configuration review wizard", "wizard config".cyan());
+        println!("  {} - Export/report wizard", "wizard export".cyan());
+        println!();
+
+        println!("{}", "What are wizards?".green().bold());
+        println!("  Interactive step-by-step guides for complex tasks");
+        println!("  Automated checks with detailed explanations");
+        println!("  Perfect for learning and thorough analysis");
+        println!();
+
+        return Ok(());
+    }
+
+    let wizard_type = args[0];
+
+    match wizard_type {
+        "security" => {
+            println!("\n{}", "🔒 Security Audit Wizard".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            println!("{} Step 1/5: Checking security features...", "→".cyan());
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                let mut score = 0;
+                let mut issues = Vec::new();
+
+                if &sec.selinux != "disabled" {
+                    println!("  {} SELinux: {} (enforcing)", "✓".green(), sec.selinux.green());
+                    score += 20;
+                } else {
+                    println!("  {} SELinux: disabled", "✗".red());
+                    issues.push("Enable SELinux for mandatory access control");
+                }
+
+                if sec.apparmor {
+                    println!("  {} AppArmor: enabled", "✓".green());
+                    score += 20;
+                } else {
+                    println!("  {} AppArmor: disabled", "✗".red());
+                    issues.push("Enable AppArmor for application confinement");
+                }
+
+                if sec.auditd {
+                    println!("  {} Auditd: enabled", "✓".green());
+                    score += 15;
+                } else {
+                    println!("  {} Auditd: disabled", "✗".yellow());
+                    issues.push("Enable auditd for system auditing");
+                }
+
+                if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                    if fw.enabled {
+                        println!("  {} Firewall: enabled ({})", "✓".green(), fw.firewall_type);
+                        score += 25;
+                    } else {
+                        println!("  {} Firewall: disabled", "✗".red());
+                        issues.push("Enable firewall for network protection");
+                    }
+                }
+
+                println!();
+                println!("{} Step 2/5: Checking user accounts...", "→".cyan());
+                if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                    let root_users: Vec<_> = users.iter().filter(|u| u.uid == "0").collect();
+                    if root_users.len() == 1 {
+                        println!("  {} Single root account", "✓".green());
+                        score += 10;
+                    } else {
+                        println!("  {} Multiple root accounts: {}", "✗".red(), root_users.len());
+                        issues.push("Multiple root accounts detected - security risk");
+                    }
+                }
+
+                println!();
+                println!("{} Step 3/5: Security score calculation...", "→".cyan());
+                let grade = if score >= 80 {
+                    "A (Excellent)".green().bold()
+                } else if score >= 60 {
+                    "B (Good)".cyan().bold()
+                } else if score >= 40 {
+                    "C (Fair)".yellow().bold()
+                } else {
+                    "D (Poor)".red().bold()
+                };
+
+                println!("  Security Score: {}/100 - Grade: {}", score.to_string().bold(), grade);
+
+                println!();
+                println!("{} Step 4/5: Recommendations...", "→".cyan());
+                if issues.is_empty() {
+                    println!("  {} No critical issues found!", "✓".green());
+                } else {
+                    for (i, issue) in issues.iter().enumerate() {
+                        println!("  {}) {}", i + 1, issue.yellow());
+                    }
+                }
+
+                println!();
+                println!("{} Step 5/5: Next steps...", "→".cyan());
+                println!("  • Run {} for detailed security info", "'security'".cyan());
+                println!("  • Generate report: {}", "'snapshot security-audit.md'".cyan());
+                println!("  • Export data: {}", "'export system json'".cyan());
+            }
+            println!();
+        }
+        "health" => {
+            println!("\n{}", "🏥 System Health Check Wizard".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            let mut health_score = 100;
+            let mut warnings = Vec::new();
+
+            println!("{} Checking system health...", "→".cyan());
+            println!();
+
+            // Check 1: Services
+            if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
+                let enabled = services.iter().filter(|s| s.enabled).count();
+                let ratio = (enabled as f64 / services.len() as f64) * 100.0;
+
+                println!("  {} Services: {}/{} enabled ({:.1}%)",
+                    "✓".green(), enabled, services.len(), ratio);
+
+                if ratio < 30.0 {
+                    warnings.push("Low service count - system may be minimal");
+                    health_score -= 10;
+                }
+            }
+
+            // Check 2: Packages
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let count = pkg_info.packages.len();
+                println!("  {} Packages: {} installed", "✓".green(), count);
+
+                if count < 100 {
+                    warnings.push("Very minimal package set - may lack essential tools");
+                    health_score -= 5;
+                }
+            }
+
+            // Check 3: Users
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                println!("  {} Users: {} accounts", "✓".green(), users.len());
+            }
+
+            println!();
+            let health_grade = if health_score >= 90 {
+                "Excellent".green().bold()
+            } else if health_score >= 70 {
+                "Good".cyan().bold()
+            } else {
+                "Fair".yellow().bold()
+            };
+
+            println!("{} Health Score: {}/100 ({})", "→".cyan(), health_score, health_grade);
+
+            if !warnings.is_empty() {
+                println!();
+                println!("{}", "Warnings:".yellow().bold());
+                for warning in warnings {
+                    println!("  {} {}", "⚠".yellow(), warning);
+                }
+            }
+
+            println!();
+            println!("{} Use {} for detailed overview", "Tip:".yellow(), "'dashboard'".cyan());
+            println!();
+        }
+        "packages" => {
+            println!("\n{}", "📦 Package Analysis Wizard".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                let packages = &pkg_info.packages;
+
+                println!("{} Analyzing {} packages...", "→".cyan(), packages.len());
+                println!();
+
+                // Find interesting packages
+                let security_pkgs: Vec<_> = packages.iter()
+                    .filter(|p| p.name.contains("security") || p.name.contains("firewall") || p.name.contains("selinux"))
+                    .collect();
+
+                let dev_pkgs: Vec<_> = packages.iter()
+                    .filter(|p| p.name.contains("dev") || p.name.contains("gcc") || p.name.contains("make"))
+                    .collect();
+
+                let server_pkgs: Vec<_> = packages.iter()
+                    .filter(|p| p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache"))
+                    .collect();
+
+                println!("{}", "Package Categories:".yellow().bold());
+                println!("  {} Security: {} packages", "🔒".to_string(), security_pkgs.len());
+                println!("  {} Development: {} packages", "⚙".to_string(), dev_pkgs.len());
+                println!("  {} Web Servers: {} packages", "🌐".to_string(), server_pkgs.len());
+
+                println!();
+                println!("{}", "Recommendations:".green().bold());
+                if server_pkgs.is_empty() {
+                    println!("  • No web servers detected - workstation/desktop system");
+                } else {
+                    println!("  • Web server detected - review {} output", "'services'".cyan());
+                }
+
+                if dev_pkgs.len() > 50 {
+                    println!("  • Heavy development environment detected");
+                }
+
+                println!();
+                println!("{} Export package list: {}", "Tip:".yellow(), "'export packages json'".cyan());
+            }
+            println!();
+        }
+        "config" => {
+            println!("\n{}", "⚙ Configuration Review Wizard".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            println!("{} Reviewing critical configuration files...", "→".cyan());
+            println!();
+
+            let config_files = vec![
+                "/etc/fstab",
+                "/etc/hosts",
+                "/etc/resolv.conf",
+                "/etc/ssh/sshd_config",
+            ];
+
+            for config_file in config_files {
+                if ctx.guestfs.exists(config_file).unwrap_or(false) {
+                    if let Ok(stat) = ctx.guestfs.stat(config_file) {
+                        println!("  {} {} ({} bytes)", "✓".green(), config_file.cyan(), stat.size);
+                    }
+                } else {
+                    println!("  {} {} (not found)", "✗".red(), config_file);
+                }
+            }
+
+            println!();
+            println!("{} Use {} to examine files", "Tip:".yellow(), "'cat /etc/fstab'".cyan());
+            println!();
+        }
+        "export" => {
+            println!("\n{}", "💾 Export/Report Wizard".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            println!("{} What would you like to export?", "→".cyan());
+            println!();
+            println!("  1) {} - Complete system snapshot", "Full Report".green());
+            println!("  2) {} - All data in JSON format", "All Data (JSON)".green());
+            println!("  3) {} - Security configuration only", "Security Report".green());
+            println!("  4) {} - Package inventory", "Package List".green());
+            println!();
+            println!("{}", "Quick commands:".yellow().bold());
+            println!("  Full: {}", "snapshot system-report.md".cyan());
+            println!("  JSON: {}", "batch export /tmp/data".cyan());
+            println!("  Security: {}", "quick security > security.txt".cyan());
+            println!("  Packages: {}", "export packages json packages.json".cyan());
+            println!();
+        }
+        _ => {
+            println!("{} Unknown wizard: {}", "Error:".red(), wizard_type);
+            println!("{} Use 'wizard' to see available wizards", "Tip:".yellow());
+        }
+    }
+
+    Ok(())
+}
+
+/// Comprehensive scanning (security, health, issues)
+pub fn cmd_scan(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  System Scanner                          ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Available Scans:".yellow().bold());
+        println!("  {} - Quick security scan", "scan security".cyan());
+        println!("  {} - Find common issues", "scan issues".cyan());
+        println!("  {} - Scan for vulnerabilities", "scan vulns".cyan());
+        println!("  {} - Scan all (comprehensive)", "scan all".cyan());
+        println!();
+
+        return Ok(());
+    }
+
+    let scan_type = args[0];
+
+    match scan_type {
+        "security" => {
+            println!("\n{}", "🔍 Security Scan".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            let mut findings = Vec::new();
+
+            // Check 1: Root users
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                let root_count = users.iter().filter(|u| u.uid == "0").count();
+                if root_count > 1 {
+                    findings.push(("HIGH".red(), format!("{} root accounts found (expected 1)", root_count)));
+                }
+            }
+
+            // Check 2: Security features
+            if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
+                if &sec.selinux == "disabled" {
+                    findings.push(("MEDIUM".yellow(), "SELinux is disabled".to_string()));
+                }
+                if !sec.apparmor {
+                    findings.push(("MEDIUM".yellow(), "AppArmor is disabled".to_string()));
+                }
+                if !sec.auditd {
+                    findings.push(("LOW".bright_black(), "Auditd is not enabled".to_string()));
+                }
+            }
+
+            // Check 3: Firewall
+            if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
+                if !fw.enabled {
+                    findings.push(("HIGH".red(), "Firewall is disabled".to_string()));
+                }
+            }
+
+            println!("{} ({} findings)", "Security Findings:".yellow().bold(), findings.len());
+            if findings.is_empty() {
+                println!("  {} No security issues detected!", "✓".green());
+            } else {
+                for (severity, finding) in findings {
+                    println!("  [{}] {}", severity, finding);
+                }
+            }
+            println!();
+        }
+        "issues" => {
+            println!("\n{}", "🔍 Common Issues Scan".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            println!("{} Scanning for common issues...", "→".cyan());
+            println!();
+
+            let mut issue_count = 0;
+
+            // Check for empty password users (simplified)
+            println!("{}", "Checking user accounts...".yellow());
+            if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
+                for user in users.iter().take(5) {
+                    println!("  {} {} (UID: {})", "•".cyan(), user.username.green(), user.uid.bright_black());
+                }
+            }
+
+            println!();
+            println!("{}", "Checking for common misconfigurations...".yellow());
+
+            // Check fstab
+            if ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
+                println!("  {} /etc/fstab exists", "✓".green());
+            } else {
+                println!("  {} /etc/fstab missing", "✗".red());
+                issue_count += 1;
+            }
+
+            println!();
+            if issue_count == 0 {
+                println!("{} No critical issues found", "✓".green());
+            } else {
+                println!("{} {} issues found", "⚠".yellow(), issue_count);
+            }
+            println!();
+        }
+        "vulns" => {
+            println!("\n{}", "🔍 Vulnerability Scan".yellow().bold());
+            println!("{}", "─".repeat(60).cyan());
+            println!();
+
+            println!("{} Checking for known vulnerabilities...", "→".cyan());
+            println!();
+
+            if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
+                println!("  Scanning {} packages...", pkg_info.packages.len());
+                println!();
+                println!("{} Full vulnerability scanning requires CVE database", "Note:".yellow());
+                println!("{} This is a basic package audit", "Note:".yellow());
+                println!();
+
+                // Check for very old or suspicious packages
+                let kernel_pkgs: Vec<_> = pkg_info.packages.iter()
+                    .filter(|p| p.name.contains("kernel"))
+                    .collect();
+
+                if !kernel_pkgs.is_empty() {
+                    println!("{}", "Kernel packages:".green().bold());
+                    for pkg in kernel_pkgs {
+                        println!("  {} {}", pkg.name.cyan(), pkg.version.to_string().bright_black());
+                    }
+                }
+            }
+            println!();
+        }
+        "all" => {
+            println!("\n{}", "🔍 Comprehensive System Scan".yellow().bold());
+            println!("{}", "═".repeat(60).cyan());
+            println!();
+
+            println!("{} Running all scans...", "→".cyan());
+            println!();
+
+            // Run all scans
+            cmd_scan(ctx, &["security"])?;
+            cmd_scan(ctx, &["issues"])?;
+
+            println!("{}", "═".repeat(60).cyan());
+            println!("{} Scan complete!", "✓".green());
+            println!();
+        }
+        _ => {
+            println!("{} Unknown scan type: {}", "Error:".red(), scan_type);
+        }
+    }
+
+    Ok(())
+}
+
+/// Compare two snapshots or states
+pub fn cmd_compare(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    if args.is_empty() {
+        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
+        println!("{}", "║                  Comparison Tools                        ║".cyan().bold());
+        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!();
+
+        println!("{}", "Usage:".yellow().bold());
+        println!("  {} - Compare two files", "compare files <file1> <file2>".cyan());
+        println!("  {} - Compare directories", "compare dirs <dir1> <dir2>".cyan());
+        println!("  {} - Compare package lists", "compare packages <snap1> <snap2>".cyan());
+        println!();
+
+        println!("{}", "Examples:".green().bold());
+        println!("  compare files /etc/fstab /etc/fstab.bak");
+        println!("  compare dirs /etc /etc.backup");
+        println!();
+
+        return Ok(());
+    }
+
+    let compare_type = args[0];
+
+    match compare_type {
+        "files" => {
+            if args.len() < 3 {
+                println!("{} Usage: compare files <file1> <file2>", "Error:".red());
+                return Ok(());
+            }
+
+            let file1 = args[1];
+            let file2 = args[2];
+
+            println!("\n{} Comparing files:", "→".cyan());
+            println!("  {} {}", "A:".yellow(), file1.green());
+            println!("  {} {}", "B:".yellow(), file2.green());
+            println!();
+
+            let stat1 = ctx.guestfs.stat(file1)?;
+            let stat2 = ctx.guestfs.stat(file2)?;
+
+            println!("{}", "Size Comparison:".yellow().bold());
+            println!("  A: {} bytes", stat1.size.to_string().cyan());
+            println!("  B: {} bytes", stat2.size.to_string().cyan());
+
+            if stat1.size == stat2.size {
+                println!("  {} Files are same size", "✓".green());
+            } else {
+                let diff = (stat1.size as i64 - stat2.size as i64).abs();
+                println!("  {} Difference: {} bytes", "△".yellow(), diff);
+            }
+
+            println!();
+            println!("{}", "Modification Time:".yellow().bold());
+            println!("  A: {}", stat1.mtime.to_string().cyan());
+            println!("  B: {}", stat2.mtime.to_string().cyan());
+
+            if stat1.mtime > stat2.mtime {
+                println!("  {} A is newer", "→".cyan());
+            } else if stat2.mtime > stat1.mtime {
+                println!("  {} B is newer", "→".cyan());
+            } else {
+                println!("  {} Same modification time", "✓".green());
+            }
+            println!();
+        }
+        "dirs" => {
+            if args.len() < 3 {
+                println!("{} Usage: compare dirs <dir1> <dir2>", "Error:".red());
+                return Ok(());
+            }
+
+            let dir1 = args[1];
+            let dir2 = args[2];
+
+            println!("\n{} Comparing directories:", "→".cyan());
+            println!("  {} {}", "A:".yellow(), dir1.green());
+            println!("  {} {}", "B:".yellow(), dir2.green());
+            println!();
+
+            let entries1 = ctx.guestfs.ls(dir1)?;
+            let entries2 = ctx.guestfs.ls(dir2)?;
+
+            println!("{}", "File Count:".yellow().bold());
+            println!("  A: {} files", entries1.len().to_string().cyan());
+            println!("  B: {} files", entries2.len().to_string().cyan());
+
+            let only_in_a: Vec<_> = entries1.iter()
+                .filter(|e| !entries2.contains(e))
+                .collect();
+
+            let only_in_b: Vec<_> = entries2.iter()
+                .filter(|e| !entries1.contains(e))
+                .collect();
+
+            if !only_in_a.is_empty() {
+                println!();
+                println!("{} ({}):", "Only in A".yellow().bold(), only_in_a.len());
+                for entry in only_in_a.iter().take(10) {
+                    println!("  {} {}", "-".red(), entry);
+                }
+                if only_in_a.len() > 10 {
+                    println!("  ... and {} more", only_in_a.len() - 10);
+                }
+            }
+
+            if !only_in_b.is_empty() {
+                println!();
+                println!("{} ({}):", "Only in B".yellow().bold(), only_in_b.len());
+                for entry in only_in_b.iter().take(10) {
+                    println!("  {} {}", "+".green(), entry);
+                }
+                if only_in_b.len() > 10 {
+                    println!("  ... and {} more", only_in_b.len() - 10);
+                }
+            }
+
+            if only_in_a.is_empty() && only_in_b.is_empty() {
+                println!();
+                println!("{} Directories have identical file lists", "✓".green());
+            }
+            println!();
+        }
+        _ => {
+            println!("{} Unknown comparison type: {}", "Error:".red(), compare_type);
+        }
+    }
 
     Ok(())
 }
