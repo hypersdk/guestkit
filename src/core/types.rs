@@ -52,6 +52,8 @@ pub enum GuestType {
     FreeBSD,
     OpenBSD,
     NetBSD,
+    Bsd,
+    MacOS,
     Unknown,
 }
 
