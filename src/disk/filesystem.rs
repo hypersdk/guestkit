@@ -16,6 +16,8 @@ pub enum FileSystemType {
     Ntfs,
     /// FAT32
     Fat32,
+    /// exFAT
+    ExFat,
     /// XFS
     Xfs,
     /// Btrfs
@@ -28,6 +30,10 @@ pub enum FileSystemType {
     HfsPlus,
     /// APFS (macOS)
     Apfs,
+    /// ISO9660 (CD/DVD)
+    Iso9660,
+    /// Linux Swap
+    Swap,
     /// Unknown filesystem
     Unknown,
 }
@@ -45,43 +51,30 @@ impl FileSystem {
     pub fn detect(reader: &mut DiskReader, partition: &Partition) -> Result<Self> {
         let offset = partition.start_lba * 512;
 
-        // Try different filesystem detection methods
-        if let Ok(fs) = Self::detect_ext(reader, offset) {
-            return Ok(fs);
+        // Array of detector functions for cleaner dispatch
+        let detectors: &[fn(&mut DiskReader, u64) -> Result<FileSystem>] = &[
+            Self::detect_ext,
+            Self::detect_ntfs,
+            Self::detect_fat32,
+            Self::detect_exfat,
+            Self::detect_xfs,
+            Self::detect_btrfs,
+            Self::detect_zfs,
+            Self::detect_ufs,
+            Self::detect_hfsplus,
+            Self::detect_apfs,
+            Self::detect_iso9660,
+            Self::detect_swap,
+        ];
+
+        // Try each detector in order
+        for detector in detectors {
+            if let Ok(fs) = detector(reader, offset) {
+                return Ok(fs);
+            }
         }
 
-        if let Ok(fs) = Self::detect_ntfs(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_fat32(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_xfs(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_btrfs(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_zfs(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_ufs(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_hfsplus(reader, offset) {
-            return Ok(fs);
-        }
-
-        if let Ok(fs) = Self::detect_apfs(reader, offset) {
-            return Ok(fs);
-        }
-
+        // No filesystem detected
         Ok(Self {
             fs_type: FileSystemType::Unknown,
             label: None,
@@ -311,6 +304,71 @@ impl FileSystem {
         }
 
         Err(Error::Detection("Not an APFS filesystem".to_string()))
+    }
+
+    /// Detect exFAT filesystem
+    fn detect_exfat(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        let mut sector = vec![0u8; 512];
+        reader.read_exact_at(partition_offset, &mut sector)?;
+
+        // exFAT signature at offset 3: "EXFAT   " (8 bytes)
+        if sector.len() >= 11 && &sector[3..11] == b"EXFAT   " {
+            return Ok(Self {
+                fs_type: FileSystemType::ExFat,
+                label: None,
+                uuid: None,
+            });
+        }
+
+        Err(Error::Detection("Not an exFAT filesystem".to_string()))
+    }
+
+    /// Detect ISO9660 filesystem (CD/DVD)
+    fn detect_iso9660(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // Primary Volume Descriptor at offset 0x8000 (sector 16)
+        let mut buf = vec![0u8; 2048];
+        reader.read_exact_at(partition_offset + 0x8000, &mut buf)?;
+
+        // Check for CD001 signature at offset 1
+        if buf.len() >= 6 && &buf[1..6] == b"CD001" {
+            return Ok(Self {
+                fs_type: FileSystemType::Iso9660,
+                label: None,
+                uuid: None,
+            });
+        }
+
+        Err(Error::Detection("Not an ISO9660 filesystem".to_string()))
+    }
+
+    /// Detect Linux Swap
+    fn detect_swap(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // Swap signature is at the end of the first page (4096 bytes)
+        // Signature can be "SWAPSPACE2" or "SWAP-SPACE"
+        let mut buf = vec![0u8; 4096];
+        reader.read_exact_at(partition_offset, &mut buf)?;
+
+        // Check for SWAPSPACE2 at offset 4086 (pagesize - 10)
+        if buf.len() >= 4096 {
+            let sig_offset = 4096 - 10;
+            if &buf[sig_offset..sig_offset + 10] == b"SWAPSPACE2" {
+                return Ok(Self {
+                    fs_type: FileSystemType::Swap,
+                    label: None,
+                    uuid: None,
+                });
+            }
+            // Also check for older SWAP-SPACE signature
+            if &buf[sig_offset..sig_offset + 10] == b"SWAP-SPACE" {
+                return Ok(Self {
+                    fs_type: FileSystemType::Swap,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        Err(Error::Detection("Not a swap partition".to_string()))
     }
 
     /// Get filesystem type
