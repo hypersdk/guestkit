@@ -167,6 +167,18 @@ pub struct App {
     pub last_updated: DateTime<Local>,
     pub refreshing: bool,
 
+    // Mouse state
+    pub mouse_position: Option<(u16, u16)>, // (column, row)
+    pub last_click_time: Option<std::time::Instant>,
+    pub last_click_position: Option<(u16, u16)>,
+    pub mouse_down_position: Option<(u16, u16)>, // For drag detection
+    pub is_dragging: bool,
+    pub drag_start_scroll: usize, // Scroll offset when drag started
+    pub hover_index: Option<usize>, // Index of item being hovered
+    pub show_context_menu: bool,
+    pub context_menu_position: Option<(u16, u16)>,
+    pub context_menu_item: Option<usize>,
+
     // Jump menu state
     pub show_jump_menu: bool,
     pub jump_query: String,
@@ -363,6 +375,17 @@ impl App {
             notification: None,
             last_updated: Local::now(),
             refreshing: false,
+
+            mouse_position: None,
+            last_click_time: None,
+            last_click_position: None,
+            mouse_down_position: None,
+            is_dragging: false,
+            drag_start_scroll: 0,
+            hover_index: None,
+            show_context_menu: false,
+            context_menu_position: None,
+            context_menu_item: None,
 
             show_jump_menu: false,
             jump_query: String::new(),
@@ -1130,5 +1153,429 @@ impl App {
             self.show_jump_menu = false;
             self.show_notification(format!("→ {}", view.title()));
         }
+    }
+
+    /// Update mouse position for hover effects
+    pub fn update_mouse_position(&mut self, col: u16, row: u16) {
+        self.mouse_position = Some((col, row));
+
+        // Update hover index based on position
+        let content_start_row = if self.show_stats_bar { 8 } else { 7 };
+
+        if !self.show_context_menu && row >= content_start_row {
+            let hover_item = (row - content_start_row) as usize + self.scroll_offset;
+
+            // Check if this is a valid item index for current view
+            let max_items = match self.current_view {
+                View::Packages => self.packages.package_count,
+                View::Services => self.services.len(),
+                View::Network => self.network_interfaces.len(),
+                View::Users => self.users.len(),
+                View::Databases => self.databases.len(),
+                View::WebServers => self.web_servers.len(),
+                View::Storage => self.fstab.len(),
+                View::Kernel => self.kernel_modules.len(),
+                _ => 0,
+            };
+
+            if hover_item < max_items {
+                self.hover_index = Some(hover_item);
+            } else {
+                self.hover_index = None;
+            }
+        } else {
+            self.hover_index = None;
+        }
+    }
+
+    /// Start mouse drag
+    pub fn start_drag(&mut self, col: u16, row: u16) {
+        self.mouse_down_position = Some((col, row));
+        self.drag_start_scroll = self.scroll_offset;
+        self.is_dragging = false; // Will become true on movement
+    }
+
+    /// Handle mouse drag movement
+    pub fn handle_drag(&mut self, _col: u16, row: u16) {
+        if let Some((_, start_row)) = self.mouse_down_position {
+            // Check if we've moved enough to consider it a drag
+            if (row as i32 - start_row as i32).abs() > 1 {
+                self.is_dragging = true;
+
+                // Calculate scroll based on drag distance
+                let drag_distance = row as i32 - start_row as i32;
+                let new_scroll = (self.drag_start_scroll as i32 - drag_distance).max(0) as usize;
+
+                self.scroll_offset = new_scroll;
+            }
+        }
+    }
+
+    /// End mouse drag
+    pub fn end_drag(&mut self) {
+        self.mouse_down_position = None;
+        self.is_dragging = false;
+    }
+
+    /// Show context menu at position
+    pub fn show_context_menu_at(&mut self, col: u16, row: u16, item_index: Option<usize>) {
+        self.show_context_menu = true;
+        self.context_menu_position = Some((col, row));
+        self.context_menu_item = item_index;
+        self.show_notification("Right-click menu".to_string());
+    }
+
+    /// Hide context menu
+    pub fn hide_context_menu(&mut self) {
+        self.show_context_menu = false;
+        self.context_menu_position = None;
+        self.context_menu_item = None;
+    }
+
+    /// Handle context menu selection
+    pub fn handle_context_menu_click(&mut self, row: u16) -> bool {
+        if let Some((_, menu_row)) = self.context_menu_position {
+            // Context menu items are relative to menu position
+            let item_offset = row.saturating_sub(menu_row + 1);
+
+            match item_offset {
+                0 => {
+                    // Copy to clipboard
+                    self.show_notification("Copy (not implemented)".to_string());
+                    self.hide_context_menu();
+                    return true;
+                }
+                1 => {
+                    // Toggle details
+                    self.toggle_detail();
+                    self.hide_context_menu();
+                    return true;
+                }
+                2 => {
+                    // Export selected
+                    self.toggle_export_menu();
+                    self.hide_context_menu();
+                    return true;
+                }
+                3 => {
+                    // Bookmark
+                    if let Some(item_idx) = self.context_menu_item {
+                        let bookmark = format!("{} item #{}", self.current_view.title(), item_idx);
+                        self.add_bookmark(bookmark);
+                        self.hide_context_menu();
+                        return true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
+    /// Handle mouse click at position (left button)
+    pub fn handle_mouse_click(&mut self, col: u16, row: u16, terminal_width: u16) -> bool {
+        // Hide context menu if clicking outside it
+        if self.show_context_menu {
+            if !self.is_click_in_context_menu(col, row) {
+                self.hide_context_menu();
+            } else {
+                return self.handle_context_menu_click(row);
+            }
+        }
+        let now = std::time::Instant::now();
+
+        // Check for double-click (within 500ms and same position)
+        let is_double_click = if let (Some(last_time), Some(last_pos)) =
+            (self.last_click_time, self.last_click_position) {
+            now.duration_since(last_time).as_millis() < 500 && last_pos == (col, row)
+        } else {
+            false
+        };
+
+        self.last_click_time = Some(now);
+        self.last_click_position = Some((col, row));
+
+        // Handle clicks in different regions
+
+        // Header area (row 0-3): Title and info
+        if row <= 3 {
+            return false; // No action in header
+        }
+
+        // Tab bar area (row 4-6): View tabs
+        if row >= 4 && row <= 6 {
+            return self.handle_tab_click(col, terminal_width);
+        }
+
+        // Help/Export buttons area (check for specific text positions)
+        // These are typically in the footer or specific locations
+        if self.show_export_menu && row >= 10 && row <= 14 {
+            return self.handle_export_menu_click(row);
+        }
+
+        // Jump menu
+        if self.show_jump_menu && row >= 8 {
+            return self.handle_jump_menu_click(row);
+        }
+
+        // Content area: List items
+        if row > 6 {
+            if is_double_click {
+                self.toggle_detail();
+                return true;
+            } else {
+                return self.handle_content_click(row);
+            }
+        }
+
+        false
+    }
+
+    /// Handle click on view tabs with precise detection
+    fn handle_tab_click(&mut self, col: u16, terminal_width: u16) -> bool {
+        let views = View::all();
+        let tab_width = terminal_width / views.len() as u16;
+
+        let clicked_index = (col / tab_width) as usize;
+
+        if clicked_index < views.len() {
+            self.current_view = views[clicked_index];
+            self.scroll_offset = 0;
+            self.selected_index = 0;
+            self.show_notification(format!("→ {}", views[clicked_index].title()));
+            return true;
+        }
+        false
+    }
+
+    /// Handle click in content area (list items)
+    fn handle_content_click(&mut self, row: u16) -> bool {
+        // Content starts after header (row 0-3) and tabs (row 4-6)
+        // Account for stats bar if shown
+        let content_start_row = if self.show_stats_bar { 8 } else { 7 };
+
+        if row >= content_start_row {
+            let clicked_item = (row - content_start_row) as usize + self.scroll_offset;
+
+            // Set selected index based on current view's content
+            match self.current_view {
+                View::Packages => {
+                    if clicked_item < self.packages.package_count {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Services => {
+                    if clicked_item < self.services.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Network => {
+                    if clicked_item < self.network_interfaces.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Users => {
+                    if clicked_item < self.users.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Databases => {
+                    if clicked_item < self.databases.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::WebServers => {
+                    if clicked_item < self.web_servers.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Storage => {
+                    if clicked_item < self.fstab.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                View::Kernel => {
+                    if clicked_item < self.kernel_modules.len() {
+                        self.selected_index = clicked_item;
+                        return true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
+    /// Handle click in export menu
+    fn handle_export_menu_click(&mut self, row: u16) -> bool {
+        use ExportFormat;
+
+        // Export menu shows format options, typically around row 11-14
+        if row >= 11 && row <= 14 {
+            let option_index = (row - 11) as usize;
+            let format = match option_index {
+                0 => Some(ExportFormat::Json),
+                1 => Some(ExportFormat::Yaml),
+                2 => Some(ExportFormat::Html),
+                3 => Some(ExportFormat::Pdf),
+                _ => None,
+            };
+
+            if let Some(fmt) = format {
+                self.select_export_format(fmt);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Handle click in jump menu
+    fn handle_jump_menu_click(&mut self, row: u16) -> bool {
+        // Jump menu items start around row 9
+        let item_start_row = 9;
+
+        if row >= item_start_row {
+            let clicked_item = (row - item_start_row) as usize;
+            let filtered_views = self.get_filtered_views();
+
+            if clicked_item < filtered_views.len() {
+                self.jump_selected_index = clicked_item;
+                self.jump_menu_select();
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if mouse is hovering over a clickable element
+    #[allow(dead_code)]
+    pub fn is_hovering_clickable(&self, _col: u16, row: u16) -> bool {
+        // Tabs area
+        if row >= 4 && row <= 6 {
+            return true;
+        }
+
+        // Content items
+        let content_start_row = if self.show_stats_bar { 8 } else { 7 };
+        if row >= content_start_row {
+            return true;
+        }
+
+        // Export menu
+        if self.show_export_menu && row >= 11 && row <= 14 {
+            return true;
+        }
+
+        // Jump menu
+        if self.show_jump_menu && row >= 9 {
+            return true;
+        }
+
+        // Context menu
+        if self.show_context_menu {
+            return self.is_click_in_context_menu(_col, row);
+        }
+
+        false
+    }
+
+    /// Check if click is inside context menu
+    fn is_click_in_context_menu(&self, col: u16, row: u16) -> bool {
+        if let Some((menu_col, menu_row)) = self.context_menu_position {
+            // Context menu is approximately 20 chars wide and 5 rows tall
+            let menu_width = 20;
+            let menu_height = 5;
+
+            col >= menu_col
+                && col < menu_col + menu_width
+                && row >= menu_row
+                && row < menu_row + menu_height
+        } else {
+            false
+        }
+    }
+
+    /// Handle right-click at position
+    pub fn handle_right_click(&mut self, col: u16, row: u16) -> bool {
+        // Close existing context menu first
+        if self.show_context_menu {
+            self.hide_context_menu();
+            return true;
+        }
+
+        // Determine what was right-clicked
+        let content_start_row = if self.show_stats_bar { 8 } else { 7 };
+
+        if row >= content_start_row {
+            let clicked_item = (row - content_start_row) as usize + self.scroll_offset;
+
+            // Check if it's a valid item
+            let max_items = match self.current_view {
+                View::Packages => self.packages.package_count,
+                View::Services => self.services.len(),
+                View::Network => self.network_interfaces.len(),
+                View::Users => self.users.len(),
+                View::Databases => self.databases.len(),
+                View::WebServers => self.web_servers.len(),
+                View::Storage => self.fstab.len(),
+                View::Kernel => self.kernel_modules.len(),
+                _ => 0,
+            };
+
+            if clicked_item < max_items {
+                // Show context menu for this item
+                self.show_context_menu_at(col, row, Some(clicked_item));
+                return true;
+            }
+        }
+
+        // Right-click on other areas shows general context menu
+        self.show_context_menu_at(col, row, None);
+        true
+    }
+
+    /// Handle middle-click at position
+    pub fn handle_middle_click(&mut self, _col: u16, row: u16) -> bool {
+        // Middle-click for quick actions
+        let content_start_row = if self.show_stats_bar { 8 } else { 7 };
+
+        if row >= content_start_row {
+            let clicked_item = (row - content_start_row) as usize + self.scroll_offset;
+
+            // Set selected and toggle detail in one action
+            match self.current_view {
+                View::Packages => {
+                    if clicked_item < self.packages.package_count {
+                        self.selected_index = clicked_item;
+                        self.toggle_detail();
+                        return true;
+                    }
+                }
+                View::Services => {
+                    if clicked_item < self.services.len() {
+                        self.selected_index = clicked_item;
+                        self.toggle_detail();
+                        return true;
+                    }
+                }
+                View::Network => {
+                    if clicked_item < self.network_interfaces.len() {
+                        self.selected_index = clicked_item;
+                        self.toggle_detail();
+                        return true;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        false
     }
 }

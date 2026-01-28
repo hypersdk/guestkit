@@ -78,6 +78,10 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.show_jump_menu {
         draw_jump_menu(f, app);
     }
+
+    if app.show_context_menu {
+        draw_context_menu(f, app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -1455,6 +1459,74 @@ fn draw_jump_menu(f: &mut Frame, app: &App) {
     f.render_widget(ratatui::widgets::Clear, area);
     f.render_widget(list, chunks[0]);
     f.render_widget(help, chunks[1]);
+}
+
+/// Draw right-click context menu
+fn draw_context_menu(f: &mut Frame, app: &App) {
+    if let Some((col, row)) = app.context_menu_position {
+        // Create menu area at mouse position
+        let menu_width = 22;
+        let menu_height = 7;
+
+        // Ensure menu fits on screen
+        let max_col = f.area().width.saturating_sub(menu_width);
+        let max_row = f.area().height.saturating_sub(menu_height);
+        let menu_col = col.min(max_col);
+        let menu_row = row.min(max_row);
+
+        let area = Rect::new(menu_col, menu_row, menu_width, menu_height);
+
+        // Menu items
+        let menu_items = if app.context_menu_item.is_some() {
+            // Item-specific context menu
+            vec![
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 📋 ", Style::default().fg(ORANGE)),
+                    Span::raw("Copy"),
+                ])),
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 🔍 ", Style::default().fg(ORANGE)),
+                    Span::raw("Toggle Details"),
+                ])),
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 💾 ", Style::default().fg(ORANGE)),
+                    Span::raw("Export"),
+                ])),
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 🔖 ", Style::default().fg(ORANGE)),
+                    Span::raw("Bookmark"),
+                ])),
+            ]
+        } else {
+            // General context menu
+            vec![
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 🔄 ", Style::default().fg(ORANGE)),
+                    Span::raw("Refresh"),
+                ])),
+                ListItem::new(Line::from(vec![
+                    Span::styled(" 💾 ", Style::default().fg(ORANGE)),
+                    Span::raw("Export View"),
+                ])),
+                ListItem::new(Line::from(vec![
+                    Span::styled(" ⚙️  ", Style::default().fg(ORANGE)),
+                    Span::raw("Settings"),
+                ])),
+            ]
+        };
+
+        let list = List::new(menu_items)
+            .block(Block::default()
+                .title(vec![
+                    Span::styled(" 🖱️  Menu ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                ])
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE)))
+            .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+
+        f.render_widget(ratatui::widgets::Clear, area);
+        f.render_widget(list, area);
+    }
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

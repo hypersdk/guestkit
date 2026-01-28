@@ -115,19 +115,67 @@ fn run_app<B: ratatui::backend::Backend>(
             match event::read()? {
                 Event::Mouse(mouse) => {
                     use event::MouseEventKind;
+
+                    // Debug: Show mouse events
+                    #[cfg(debug_assertions)]
+                    eprintln!("Mouse event: {:?} at ({}, {})", mouse.kind, mouse.column, mouse.row);
+
+                    // Update mouse position for hover effects
+                    app.update_mouse_position(mouse.column, mouse.row);
+
                     match mouse.kind {
-                        MouseEventKind::ScrollDown => app.scroll_down(),
-                        MouseEventKind::ScrollUp => app.scroll_up(),
+                        // Scroll wheel events
+                        MouseEventKind::ScrollDown => {
+                            app.scroll_down();
+                        }
+                        MouseEventKind::ScrollUp => {
+                            app.scroll_up();
+                        }
+
+                        // Left button press - start potential drag
                         MouseEventKind::Down(event::MouseButton::Left) => {
-                            // Handle tab clicks - tabs are in row 4-6 (0-indexed row 3-5)
-                            if mouse.row >= 4 && mouse.row <= 6 {
-                                // Calculate which tab was clicked based on column
-                                // Each tab is approximately width/12 (12 views)
-                                // This is a rough approximation
-                                let tab_index = ((mouse.column as f32 / terminal.size()?.width as f32) * 12.0) as usize;
-                                app.jump_to_view(tab_index);
+                            app.start_drag(mouse.column, mouse.row);
+                        }
+
+                        // Left button release - click or end drag
+                        MouseEventKind::Up(event::MouseButton::Left) => {
+                            if app.is_dragging {
+                                // End drag
+                                app.end_drag();
+                            } else {
+                                // Regular click
+                                let terminal_width = terminal.size()?.width;
+                                let handled = app.handle_mouse_click(mouse.column, mouse.row, terminal_width);
+                                if !handled {
+                                    app.show_notification(format!("Click at ({}, {})", mouse.column, mouse.row));
+                                }
                             }
                         }
+
+                        // Right button - context menu
+                        MouseEventKind::Down(event::MouseButton::Right) => {
+                            app.handle_right_click(mouse.column, mouse.row);
+                        }
+
+                        // Middle button - quick detail toggle
+                        MouseEventKind::Down(event::MouseButton::Middle) => {
+                            let handled = app.handle_middle_click(mouse.column, mouse.row);
+                            if handled {
+                                app.show_notification("Middle-click: Quick detail".to_string());
+                            }
+                        }
+
+                        // Mouse drag
+                        MouseEventKind::Drag(event::MouseButton::Left) => {
+                            app.handle_drag(mouse.column, mouse.row);
+                        }
+
+                        // Mouse moved (hover effects)
+                        MouseEventKind::Moved => {
+                            // Position already updated above
+                            // Hover effects are applied in the UI rendering
+                        }
+
                         _ => {}
                     }
                 }
