@@ -61,12 +61,15 @@ impl Guestfs {
                     crate::disk::FileSystemType::Ext => "ext4",
                     crate::disk::FileSystemType::Ntfs => "ntfs",
                     crate::disk::FileSystemType::Fat32 => "vfat",
+                    crate::disk::FileSystemType::ExFat => "exfat",
                     crate::disk::FileSystemType::Xfs => "xfs",
                     crate::disk::FileSystemType::Btrfs => "btrfs",
                     crate::disk::FileSystemType::Zfs => "zfs",
                     crate::disk::FileSystemType::Ufs => "ufs",
                     crate::disk::FileSystemType::HfsPlus => "hfsplus",
                     crate::disk::FileSystemType::Apfs => "apfs",
+                    crate::disk::FileSystemType::Iso9660 => "iso9660",
+                    crate::disk::FileSystemType::Swap => "swap",
                     crate::disk::FileSystemType::Unknown => "unknown",
                 };
 
@@ -139,12 +142,15 @@ impl Guestfs {
             crate::disk::FileSystemType::Ext => "ext4",
             crate::disk::FileSystemType::Ntfs => "ntfs",
             crate::disk::FileSystemType::Fat32 => "vfat",
+            crate::disk::FileSystemType::ExFat => "exfat",
             crate::disk::FileSystemType::Xfs => "xfs",
             crate::disk::FileSystemType::Btrfs => "btrfs",
             crate::disk::FileSystemType::Zfs => "zfs",
             crate::disk::FileSystemType::Ufs => "ufs",
             crate::disk::FileSystemType::HfsPlus => "hfsplus",
             crate::disk::FileSystemType::Apfs => "apfs",
+            crate::disk::FileSystemType::Iso9660 => "iso9660",
+            crate::disk::FileSystemType::Swap => "swap",
             crate::disk::FileSystemType::Unknown => "unknown",
         };
 
