@@ -691,6 +691,612 @@ enum Commands {
         human_readable: bool,
     },
 
+    /// Build forensic timeline from multiple sources
+    Timeline {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Start time filter (ISO 8601)
+        #[arg(long)]
+        start_time: Option<String>,
+
+        /// End time filter (ISO 8601)
+        #[arg(long)]
+        end_time: Option<String>,
+
+        /// Data sources (files, packages, logs)
+        #[arg(short = 's', long, value_delimiter = ',')]
+        sources: Vec<String>,
+
+        /// Output format (text, json, csv)
+        #[arg(short = 'f', long, default_value = "text")]
+        format: String,
+    },
+
+    /// Create unique fingerprint for disk image
+    Fingerprint {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Hash algorithm
+        #[arg(short = 'a', long, default_value = "sha256")]
+        algorithm: String,
+
+        /// Include file content hashes
+        #[arg(short = 'c', long)]
+        include_content: bool,
+
+        /// Output file path
+        #[arg(short = 'o', long)]
+        output: Option<PathBuf>,
+    },
+
+    /// Detect configuration drift from baseline
+    Drift {
+        /// Baseline disk image
+        baseline: PathBuf,
+
+        /// Current disk image to compare
+        current: PathBuf,
+
+        /// Paths to ignore (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        ignore_paths: Vec<String>,
+
+        /// Drift threshold percentage (0-100)
+        #[arg(short = 't', long, default_value = "20")]
+        threshold: u8,
+
+        /// Generate detailed report
+        #[arg(short = 'r', long)]
+        report: bool,
+    },
+
+    /// AI-powered deep analysis with insights
+    Analyze {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Analysis focus areas (security, performance, compliance, maintainability)
+        #[arg(short = 'f', long, value_delimiter = ',')]
+        focus: Vec<String>,
+
+        /// Analysis depth (quick, standard, deep)
+        #[arg(long, default_value = "standard")]
+        depth: String,
+
+        /// Show actionable suggestions
+        #[arg(short = 's', long)]
+        suggestions: bool,
+    },
+
+    /// Scan for exposed secrets and credentials
+    Secrets {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Paths to scan (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        scan_paths: Vec<String>,
+
+        /// Custom regex patterns to search for
+        #[arg(short = 'p', long, value_delimiter = ',')]
+        patterns: Vec<String>,
+
+        /// Paths to exclude (comma-separated)
+        #[arg(short = 'e', long, value_delimiter = ',')]
+        exclude: Vec<String>,
+
+        /// Show actual secret content (WARNING: sensitive)
+        #[arg(long)]
+        show_content: bool,
+
+        /// Export report to file
+        #[arg(short = 'o', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Automated rescue and recovery operations
+    Rescue {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Rescue operation (reset-password, fix-fstab, fix-grub, enable-ssh)
+        #[arg(short = 'o', long)]
+        operation: String,
+
+        /// Username (for reset-password)
+        #[arg(short = 'u', long)]
+        user: Option<String>,
+
+        /// New password (for reset-password)
+        #[arg(short = 'p', long)]
+        password: Option<String>,
+
+        /// Force operation even if risky
+        #[arg(short = 'f', long)]
+        force: bool,
+
+        /// Backup files before modification
+        #[arg(short = 'b', long)]
+        backup: bool,
+    },
+
+    /// Optimize disk image (cleanup, compact)
+    Optimize {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Operations to perform (temp, logs, cache, packages)
+        #[arg(short = 'o', long, value_delimiter = ',')]
+        operations: Vec<String>,
+
+        /// Aggressive cleanup (may remove more files)
+        #[arg(short = 'a', long)]
+        aggressive: bool,
+
+        /// Dry run (show what would be removed)
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Analyze network configuration
+    Network {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Show routing information
+        #[arg(long)]
+        show_routes: bool,
+
+        /// Show network interfaces
+        #[arg(long)]
+        show_interfaces: bool,
+
+        /// Show DNS configuration
+        #[arg(long)]
+        show_dns: bool,
+
+        /// Export as JSON
+        #[arg(short = 'j', long)]
+        export_json: bool,
+    },
+
+    /// Compliance checking against security standards
+    Compliance {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Security standard (cis, pci-dss, hipaa)
+        #[arg(short = 's', long)]
+        standard: String,
+
+        /// Compliance profile (e.g., level1, level2)
+        #[arg(short = 'p', long)]
+        profile: Option<String>,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+
+        /// Attempt to fix issues
+        #[arg(short = 'f', long)]
+        fix: bool,
+    },
+
+    /// Malware and rootkit detection
+    Malware {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Deep scan (more thorough but slower)
+        #[arg(long)]
+        deep_scan: bool,
+
+        /// Check for rootkit indicators
+        #[arg(long)]
+        check_rootkits: bool,
+
+        /// YARA rules file
+        #[arg(long)]
+        yara_rules: Option<PathBuf>,
+
+        /// Quarantine suspicious files
+        #[arg(short = 'q', long)]
+        quarantine: bool,
+    },
+
+    /// System health and diagnostics
+    Health {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Specific checks to run (disk, services, security, packages, logs)
+        #[arg(short = 'c', long, value_delimiter = ',')]
+        checks: Vec<String>,
+
+        /// Show detailed information
+        #[arg(long)]
+        detailed: bool,
+
+        /// Export as JSON
+        #[arg(short = 'j', long)]
+        export_json: Option<PathBuf>,
+    },
+
+    /// Clone disk image with customizations
+    Clone {
+        /// Source disk image
+        source: PathBuf,
+
+        /// Destination disk image
+        dest: PathBuf,
+
+        /// Run sysprep (generalize image)
+        #[arg(short = 's', long)]
+        sysprep: bool,
+
+        /// Set new hostname
+        #[arg(long)]
+        hostname: Option<String>,
+
+        /// Remove SSH host keys
+        #[arg(long)]
+        remove_keys: bool,
+
+        /// Preserve user accounts and history
+        #[arg(long)]
+        preserve_users: bool,
+    },
+
+    /// Security patch analysis and CVE detection
+    Patch {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Check for CVEs in installed packages
+        #[arg(long)]
+        check_cves: bool,
+
+        /// Filter by severity (CRITICAL, HIGH, MEDIUM, LOW, ALL)
+        #[arg(short = 's', long)]
+        severity: Option<String>,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+
+        /// Simulate package updates
+        #[arg(long)]
+        simulate_update: bool,
+    },
+
+    /// Comprehensive security audit with detailed reporting
+    Audit {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Audit categories (permissions, users, network, services)
+        #[arg(short = 'c', long, value_delimiter = ',')]
+        categories: Vec<String>,
+
+        /// Output format (text, json)
+        #[arg(short = 'f', long, default_value = "text")]
+        output_format: String,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+
+        /// Attempt to fix issues automatically
+        #[arg(long)]
+        fix_issues: bool,
+    },
+
+    /// Automated system repair operations
+    Repair {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Repair type (permissions, packages, network, bootloader, filesystem)
+        #[arg(short = 't', long)]
+        repair_type: String,
+
+        /// Force repair even if risky
+        #[arg(short = 'f', long)]
+        force: bool,
+
+        /// Backup before repair
+        #[arg(short = 'b', long)]
+        backup: bool,
+    },
+
+    /// System hardening configuration
+    Harden {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Hardening profile (basic, moderate, strict)
+        #[arg(short = 'p', long, default_value = "basic")]
+        profile: String,
+
+        /// Apply hardening (default is dry-run)
+        #[arg(short = 'a', long)]
+        apply: bool,
+
+        /// Preview changes without applying
+        #[arg(long)]
+        preview: bool,
+    },
+
+    /// AI-powered anomaly detection
+    Anomaly {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Baseline image for comparison
+        #[arg(short = 'b', long)]
+        baseline: Option<PathBuf>,
+
+        /// Detection sensitivity (low, medium, high)
+        #[arg(short = 's', long, default_value = "medium")]
+        sensitivity: String,
+
+        /// Categories to check (files, config, processes, network)
+        #[arg(short = 'c', long, value_delimiter = ',')]
+        categories: Vec<String>,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Smart recommendations engine
+    Recommend {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Focus areas (security, performance, reliability, cost)
+        #[arg(short = 'f', long, value_delimiter = ',')]
+        focus: Vec<String>,
+
+        /// Priority filter (critical, high, medium, low)
+        #[arg(short = 'p', long, default_value = "medium")]
+        priority: String,
+
+        /// Auto-apply safe recommendations
+        #[arg(short = 'a', long)]
+        apply: bool,
+    },
+
+    /// Dependency graph and impact analysis
+    Dependencies {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Specific target to analyze
+        #[arg(short = 't', long)]
+        target: Option<String>,
+
+        /// Graph type (packages, services, network)
+        #[arg(short = 'g', long, default_value = "packages")]
+        graph_type: String,
+
+        /// Export to Graphviz DOT format
+        #[arg(long)]
+        export_dot: Option<PathBuf>,
+    },
+
+    /// Predictive analysis and capacity planning
+    Predict {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Metric to predict (disk-growth, log-growth, package-updates)
+        #[arg(short = 'm', long, default_value = "disk-growth")]
+        metric: String,
+
+        /// Forecast timeframe in days
+        #[arg(short = 't', long, default_value = "30")]
+        timeframe: u32,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Threat intelligence correlation and IOC detection
+    Intelligence {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Custom IOC file (STIX, OpenIOC, or CSV format)
+        #[arg(short = 'i', long)]
+        ioc_file: Option<PathBuf>,
+
+        /// Threat level filter (critical, high, medium, low)
+        #[arg(short = 'l', long, default_value = "medium")]
+        threat_level: String,
+
+        /// Enable correlation analysis
+        #[arg(short = 'c', long)]
+        correlate: bool,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Change simulation and impact modeling
+    Simulate {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Change type (remove-package, modify-config, disable-service, kernel-update)
+        #[arg(short = 't', long)]
+        change_type: String,
+
+        /// Target (package name, config file, service name, etc.)
+        #[arg(short = 'T', long)]
+        target: String,
+
+        /// Dry run - simulate without making changes
+        #[arg(short = 'd', long, default_value = "true")]
+        dry_run: bool,
+
+        /// Include comprehensive risk assessment
+        #[arg(short = 'r', long)]
+        risk_assessment: bool,
+    },
+
+    /// Comprehensive multi-dimensional risk scoring
+    Score {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Risk dimensions to check (security, compliance, reliability, performance, maintainability)
+        #[arg(short = 'd', long, value_delimiter = ',')]
+        dimensions: Vec<String>,
+
+        /// Custom weights (format: security=40,compliance=30,...)
+        #[arg(short = 'w', long)]
+        weights: Option<String>,
+
+        /// Compare against benchmark image
+        #[arg(short = 'b', long)]
+        benchmark: Option<PathBuf>,
+
+        /// Export report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Golden image template validation
+    Template {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Template type (web-server, database, docker-host, cis-level1)
+        #[arg(short = 't', long)]
+        template: String,
+
+        /// Strict mode - fail on any violation
+        #[arg(short = 's', long)]
+        strict: bool,
+
+        /// Automatically fix violations where possible
+        #[arg(short = 'f', long)]
+        fix: bool,
+
+        /// Export template definition to file
+        #[arg(short = 'e', long)]
+        export_template: Option<PathBuf>,
+    },
+
+    /// Proactive threat hunting with hypothesis-driven investigation
+    Hunt {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Threat hunting hypothesis
+        #[arg(short = 'H', long)]
+        hypothesis: String,
+
+        /// Hunting framework (mitre-attack, custom)
+        #[arg(short = 'f', long, default_value = "mitre-attack")]
+        framework: String,
+
+        /// Specific techniques to hunt (comma-separated tactics)
+        #[arg(short = 't', long, value_delimiter = ',')]
+        techniques: Vec<String>,
+
+        /// Hunt depth (surface, shallow, deep, comprehensive)
+        #[arg(short = 'D', long, default_value = "deep")]
+        depth: String,
+
+        /// Export hunt report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Forensic incident reconstruction and attack path visualization
+    Reconstruct {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Incident type (compromise, data-exfiltration, ransomware, generic)
+        #[arg(short = 't', long)]
+        incident_type: String,
+
+        /// Start time for analysis window
+        #[arg(short = 's', long)]
+        start_time: Option<String>,
+
+        /// End time for analysis window
+        #[arg(short = 'E', long)]
+        end_time: Option<String>,
+
+        /// Generate attack path visualization
+        #[arg(short = 'V', long)]
+        visualize: bool,
+
+        /// Export reconstruction report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
+    /// Automated progressive system evolution and self-improvement
+    Evolve {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target state (hardened, optimized, compliant, production-ready)
+        #[arg(short = 't', long)]
+        target_state: String,
+
+        /// Evolution strategy (aggressive, balanced, conservative)
+        #[arg(short = 's', long, default_value = "balanced")]
+        strategy: String,
+
+        /// Number of evolution stages
+        #[arg(short = 'S', long, default_value = "3")]
+        stages: u32,
+
+        /// Enable safety checks and rollback plans
+        #[arg(short = 'c', long)]
+        safety_checks: bool,
+
+        /// Export evolution plan to file
+        #[arg(short = 'e', long)]
+        export_plan: Option<PathBuf>,
+    },
+
+    /// Zero-trust continuous verification and supply chain integrity
+    Verify {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Verification level (basic, standard, strict, paranoid)
+        #[arg(short = 'l', long, default_value = "standard")]
+        verification_level: String,
+
+        /// Check supply chain integrity
+        #[arg(short = 's', long)]
+        check_supply_chain: bool,
+
+        /// Verify identity and accounts
+        #[arg(short = 'i', long)]
+        check_identity: bool,
+
+        /// Verify file integrity
+        #[arg(short = 'I', long)]
+        check_integrity: bool,
+
+        /// Export verification report to file
+        #[arg(short = 'e', long)]
+        export: Option<PathBuf>,
+    },
+
     /// Show version information
     Version,
 
@@ -1293,6 +1899,284 @@ fn main() -> anyhow::Result<()> {
             human_readable,
         } => {
             disk_usage_command(&image, &path, max_depth, min_size, human_readable, cli.verbose)?;
+        }
+
+        Commands::Timeline {
+            image,
+            start_time,
+            end_time,
+            sources,
+            format,
+        } => {
+            timeline_command(&image, start_time, end_time, sources, &format, cli.verbose)?;
+        }
+
+        Commands::Fingerprint {
+            image,
+            algorithm,
+            include_content,
+            output,
+        } => {
+            fingerprint_command(&image, &algorithm, include_content, output, cli.verbose)?;
+        }
+
+        Commands::Drift {
+            baseline,
+            current,
+            ignore_paths,
+            threshold,
+            report,
+        } => {
+            drift_command(&baseline, &current, ignore_paths, threshold, report, cli.verbose)?;
+        }
+
+        Commands::Analyze {
+            image,
+            focus,
+            depth,
+            suggestions,
+        } => {
+            analyze_command(&image, focus, &depth, suggestions, cli.verbose)?;
+        }
+
+        Commands::Secrets {
+            image,
+            scan_paths,
+            patterns,
+            exclude,
+            show_content,
+            export,
+        } => {
+            secrets_command(&image, scan_paths, patterns, exclude, show_content, export, cli.verbose)?;
+        }
+
+        Commands::Rescue {
+            image,
+            operation,
+            user,
+            password,
+            force,
+            backup,
+        } => {
+            rescue_command(&image, &operation, user, password, force, backup, cli.verbose)?;
+        }
+
+        Commands::Optimize {
+            image,
+            operations,
+            aggressive,
+            dry_run,
+        } => {
+            optimize_command(&image, operations, aggressive, dry_run, cli.verbose)?;
+        }
+
+        Commands::Network {
+            image,
+            show_routes,
+            show_interfaces,
+            show_dns,
+            export_json,
+        } => {
+            network_command(&image, show_routes, show_interfaces, show_dns, export_json, cli.verbose)?;
+        }
+
+        Commands::Compliance {
+            image,
+            standard,
+            profile,
+            export,
+            fix,
+        } => {
+            compliance_command(&image, &standard, profile, export, fix, cli.verbose)?;
+        }
+
+        Commands::Malware {
+            image,
+            deep_scan,
+            check_rootkits,
+            yara_rules,
+            quarantine,
+        } => {
+            malware_command(&image, deep_scan, check_rootkits, yara_rules, quarantine, cli.verbose)?;
+        }
+
+        Commands::Health {
+            image,
+            checks,
+            detailed,
+            export_json,
+        } => {
+            health_command(&image, checks, detailed, export_json, cli.verbose)?;
+        }
+
+        Commands::Clone {
+            source,
+            dest,
+            sysprep,
+            hostname,
+            remove_keys,
+            preserve_users,
+        } => {
+            clone_command(&source, &dest, sysprep, hostname, remove_keys, preserve_users, cli.verbose)?;
+        }
+
+        Commands::Patch {
+            image,
+            check_cves,
+            severity,
+            export,
+            simulate_update,
+        } => {
+            patch_command(&image, check_cves, severity, export, simulate_update, cli.verbose)?;
+        }
+
+        Commands::Audit {
+            image,
+            categories,
+            output_format,
+            export,
+            fix_issues,
+        } => {
+            audit_command(&image, categories, &output_format, export, fix_issues, cli.verbose)?;
+        }
+
+        Commands::Repair {
+            image,
+            repair_type,
+            force,
+            backup,
+        } => {
+            repair_command(&image, &repair_type, force, backup, cli.verbose)?;
+        }
+
+        Commands::Harden {
+            image,
+            profile,
+            apply,
+            preview,
+        } => {
+            harden_command(&image, &profile, apply, preview, cli.verbose)?;
+        }
+
+        Commands::Anomaly {
+            image,
+            baseline,
+            sensitivity,
+            categories,
+            export,
+        } => {
+            anomaly_command(&image, baseline, &sensitivity, categories, export, cli.verbose)?;
+        }
+
+        Commands::Recommend {
+            image,
+            focus,
+            priority,
+            apply,
+        } => {
+            recommend_command(&image, focus, &priority, apply, cli.verbose)?;
+        }
+
+        Commands::Dependencies {
+            image,
+            target,
+            graph_type,
+            export_dot,
+        } => {
+            dependencies_command(&image, target, &graph_type, export_dot, cli.verbose)?;
+        }
+
+        Commands::Predict {
+            image,
+            metric,
+            timeframe,
+            export,
+        } => {
+            predict_command(&image, &metric, timeframe, export, cli.verbose)?;
+        }
+
+        Commands::Intelligence {
+            image,
+            ioc_file,
+            threat_level,
+            correlate,
+            export,
+        } => {
+            intelligence_command(&image, ioc_file, &threat_level, correlate, export, cli.verbose)?;
+        }
+
+        Commands::Simulate {
+            image,
+            change_type,
+            target,
+            dry_run,
+            risk_assessment,
+        } => {
+            simulate_command(&image, &change_type, target, dry_run, risk_assessment, cli.verbose)?;
+        }
+
+        Commands::Score {
+            image,
+            dimensions,
+            weights,
+            benchmark,
+            export,
+        } => {
+            score_command(&image, dimensions, weights, benchmark, export, cli.verbose)?;
+        }
+
+        Commands::Template {
+            image,
+            template,
+            strict,
+            fix,
+            export_template,
+        } => {
+            template_command(&image, &template, strict, fix, export_template, cli.verbose)?;
+        }
+
+        Commands::Hunt {
+            image,
+            hypothesis,
+            framework,
+            techniques,
+            depth,
+            export,
+        } => {
+            hunt_command(&image, hypothesis, &framework, techniques, &depth, export, cli.verbose)?;
+        }
+
+        Commands::Reconstruct {
+            image,
+            incident_type,
+            start_time,
+            end_time,
+            visualize,
+            export,
+        } => {
+            reconstruct_command(&image, &incident_type, start_time, end_time, visualize, export, cli.verbose)?;
+        }
+
+        Commands::Evolve {
+            image,
+            target_state,
+            strategy,
+            stages,
+            safety_checks,
+            export_plan,
+        } => {
+            evolve_command(&image, &target_state, &strategy, stages, safety_checks, export_plan, cli.verbose)?;
+        }
+
+        Commands::Verify {
+            image,
+            verification_level,
+            check_supply_chain,
+            check_identity,
+            check_integrity,
+            export,
+        } => {
+            verify_command(&image, &verification_level, check_supply_chain, check_identity, check_integrity, export, cli.verbose)?;
         }
 
         Commands::Version => {
