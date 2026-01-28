@@ -63,6 +63,10 @@ impl Guestfs {
                     crate::disk::FileSystemType::Fat32 => "vfat",
                     crate::disk::FileSystemType::Xfs => "xfs",
                     crate::disk::FileSystemType::Btrfs => "btrfs",
+                    crate::disk::FileSystemType::Zfs => "zfs",
+                    crate::disk::FileSystemType::Ufs => "ufs",
+                    crate::disk::FileSystemType::HfsPlus => "hfsplus",
+                    crate::disk::FileSystemType::Apfs => "apfs",
                     crate::disk::FileSystemType::Unknown => "unknown",
                 };
 
@@ -137,6 +141,10 @@ impl Guestfs {
             crate::disk::FileSystemType::Fat32 => "vfat",
             crate::disk::FileSystemType::Xfs => "xfs",
             crate::disk::FileSystemType::Btrfs => "btrfs",
+            crate::disk::FileSystemType::Zfs => "zfs",
+            crate::disk::FileSystemType::Ufs => "ufs",
+            crate::disk::FileSystemType::HfsPlus => "hfsplus",
+            crate::disk::FileSystemType::Apfs => "apfs",
             crate::disk::FileSystemType::Unknown => "unknown",
         };
 

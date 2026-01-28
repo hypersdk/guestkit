@@ -57,48 +57,129 @@ impl GuestDetector {
                 // Detect OS based on filesystem and partition analysis
                 match fs.fs_type() {
                     crate::disk::FileSystemType::Ntfs => {
-                        // Likely Windows
                         os_type = GuestType::Windows;
                         os_name = "Windows".to_string();
                         os_version = "Unknown".to_string();
                     }
+
                     crate::disk::FileSystemType::Ext
                     | crate::disk::FileSystemType::Xfs
-                    | crate::disk::FileSystemType::Btrfs => {
-                        // Likely Linux
+                    | crate::disk::FileSystemType::Btrfs
+                    | crate::disk::FileSystemType::Zfs => {
+                        // Linux or BSD (ZFS can be either)
+                        // Default to Linux unless BSD hints appear
                         os_type = GuestType::Linux;
+                        os_name = "Linux".to_string();
 
-                        // Try to detect specific distribution
                         if let Some(label) = fs.label() {
-                            // Use filesystem label for hints
-                            if label.contains("fedora") || label.contains("Fedora") {
+                            let l = label.to_lowercase();
+
+                            // Fedora family
+                            if l.contains("fedora") {
                                 os_name = "Fedora Linux".to_string();
                                 distro = Some("fedora".to_string());
-                            } else if label.contains("ubuntu") || label.contains("Ubuntu") {
+                            }
+                            // Ubuntu
+                            else if l.contains("ubuntu") {
                                 os_name = "Ubuntu".to_string();
                                 distro = Some("ubuntu".to_string());
-                            } else if label.contains("debian") || label.contains("Debian") {
+                            }
+                            // Debian
+                            else if l.contains("debian") {
                                 os_name = "Debian".to_string();
                                 distro = Some("debian".to_string());
-                            } else if label.contains("rhel") || label.contains("RHEL") {
+                            }
+                            // RHEL family
+                            else if l.contains("rhel") || l.contains("redhat") {
                                 os_name = "Red Hat Enterprise Linux".to_string();
                                 distro = Some("rhel".to_string());
-                            } else {
-                                os_name = "Linux".to_string();
                             }
-                        } else {
-                            os_name = "Linux".to_string();
+                            else if l.contains("centos") {
+                                os_name = "CentOS Linux".to_string();
+                                distro = Some("centos".to_string());
+                            }
+                            else if l.contains("almalinux") || l.contains("alma") {
+                                os_name = "AlmaLinux".to_string();
+                                distro = Some("almalinux".to_string());
+                            }
+                            else if l.contains("rocky") {
+                                os_name = "Rocky Linux".to_string();
+                                distro = Some("rocky".to_string());
+                            }
+                            // Arch-based
+                            else if l.contains("arch") {
+                                os_name = "Arch Linux".to_string();
+                                distro = Some("arch".to_string());
+                            }
+                            else if l.contains("manjaro") {
+                                os_name = "Manjaro Linux".to_string();
+                                distro = Some("manjaro".to_string());
+                            }
+                            // SUSE family
+                            else if l.contains("opensuse") || l.contains("suse") {
+                                os_name = "openSUSE".to_string();
+                                distro = Some("opensuse".to_string());
+                            }
+                            else if l.contains("sle") {
+                                os_name = "SUSE Linux Enterprise".to_string();
+                                distro = Some("sles".to_string());
+                            }
+                            // Security distros
+                            else if l.contains("kali") {
+                                os_name = "Kali Linux".to_string();
+                                distro = Some("kali".to_string());
+                            }
+                            // Oracle Linux
+                            else if l.contains("ol") || l.contains("oracle") {
+                                os_name = "Oracle Linux".to_string();
+                                distro = Some("oracle".to_string());
+                            }
                         }
 
                         os_version = "Unknown".to_string();
                     }
+
+                    // BSD detection (UFS or ZFS)
+                    crate::disk::FileSystemType::Ufs => {
+                        os_type = GuestType::Bsd;
+                        os_name = "BSD".to_string();
+
+                        // Try to refine based on partition type GUID if available
+                        if let Some(guid) = partition.type_guid.as_ref() {
+                            let g = guid.to_lowercase();
+                            if g.contains("a503") {
+                                os_type = GuestType::FreeBSD;
+                                os_name = "FreeBSD".to_string();
+                            } else if g.contains("a501") {
+                                os_type = GuestType::NetBSD;
+                                os_name = "NetBSD".to_string();
+                            } else if g.contains("a600") {
+                                os_type = GuestType::OpenBSD;
+                                os_name = "OpenBSD".to_string();
+                            }
+                        }
+
+                        os_version = "Unknown".to_string();
+                    }
+
+                    crate::disk::FileSystemType::HfsPlus => {
+                        os_type = GuestType::MacOS;
+                        os_name = "macOS (HFS+)".to_string();
+                        os_version = "Unknown".to_string();
+                    }
+
+                    crate::disk::FileSystemType::Apfs => {
+                        os_type = GuestType::MacOS;
+                        os_name = "macOS (APFS)".to_string();
+                        os_version = "Unknown".to_string();
+                    }
+
                     crate::disk::FileSystemType::Fat32 => {
-                        // Could be EFI partition or DOS
                         if partition.start_lba < 2048 && partition.size_sectors < 1024 * 1024 {
-                            // Likely EFI system partition
                             firmware = Firmware::Uefi;
                         }
                     }
+
                     _ => {}
                 }
 

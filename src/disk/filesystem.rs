@@ -20,6 +20,14 @@ pub enum FileSystemType {
     Xfs,
     /// Btrfs
     Btrfs,
+    /// ZFS
+    Zfs,
+    /// UFS (BSD)
+    Ufs,
+    /// HFS+ (macOS)
+    HfsPlus,
+    /// APFS (macOS)
+    Apfs,
     /// Unknown filesystem
     Unknown,
 }
@@ -55,6 +63,22 @@ impl FileSystem {
         }
 
         if let Ok(fs) = Self::detect_btrfs(reader, offset) {
+            return Ok(fs);
+        }
+
+        if let Ok(fs) = Self::detect_zfs(reader, offset) {
+            return Ok(fs);
+        }
+
+        if let Ok(fs) = Self::detect_ufs(reader, offset) {
+            return Ok(fs);
+        }
+
+        if let Ok(fs) = Self::detect_hfsplus(reader, offset) {
+            return Ok(fs);
+        }
+
+        if let Ok(fs) = Self::detect_apfs(reader, offset) {
             return Ok(fs);
         }
 
@@ -171,6 +195,122 @@ impl FileSystem {
         }
 
         Err(Error::Detection("Not a Btrfs filesystem".to_string()))
+    }
+
+    /// Detect ZFS filesystem
+    fn detect_zfs(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // ZFS has multiple labels at different offsets (128K, 256K, 512K, 1M)
+        // We'll check the first one at 128K
+        let label_offset = partition_offset + 131072; // 128KB
+        let mut buffer = vec![0u8; 512];
+        reader.read_exact_at(label_offset, &mut buffer)?;
+
+        // Check for ZFS magic number (0x00bab10c at the start of the uberblock)
+        // ZFS is complex, we'll do a simple check
+        if buffer.len() >= 8 && u64::from_le_bytes(buffer[0..8].try_into().unwrap_or([0; 8])) != 0 {
+            // Simple heuristic - check for typical ZFS patterns
+            let label_offset2 = partition_offset + 262144; // 256KB
+            let mut buffer2 = vec![0u8; 512];
+            if reader.read_exact_at(label_offset2, &mut buffer2).is_ok() {
+                return Ok(Self {
+                    fs_type: FileSystemType::Zfs,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        Err(Error::Detection("Not a ZFS filesystem".to_string()))
+    }
+
+    /// Detect UFS (BSD) filesystem
+    fn detect_ufs(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // UFS superblock is at offset 8192 for UFS1, or 65536 for UFS2
+        // Try UFS2 first (more modern)
+        let superblock_offset = partition_offset + 65536;
+        let mut superblock = vec![0u8; 512];
+        reader.read_exact_at(superblock_offset, &mut superblock)?;
+
+        // Check UFS2 magic: 0x19540119
+        if superblock.len() >= 1376 {
+            let magic = u32::from_le_bytes([
+                superblock[1372],
+                superblock[1373],
+                superblock[1374],
+                superblock[1375],
+            ]);
+            if magic == 0x19540119 {
+                return Ok(Self {
+                    fs_type: FileSystemType::Ufs,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        // Try UFS1 at offset 8192
+        let superblock_offset = partition_offset + 8192;
+        reader.read_exact_at(superblock_offset, &mut superblock)?;
+
+        if superblock.len() >= 1376 {
+            let magic = u32::from_le_bytes([
+                superblock[1372],
+                superblock[1373],
+                superblock[1374],
+                superblock[1375],
+            ]);
+            if magic == 0x011954 || magic == 0x19540119 {
+                return Ok(Self {
+                    fs_type: FileSystemType::Ufs,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        Err(Error::Detection("Not a UFS filesystem".to_string()))
+    }
+
+    /// Detect HFS+ filesystem (macOS)
+    fn detect_hfsplus(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // HFS+ volume header is at offset 1024
+        let header_offset = partition_offset + 1024;
+        let mut header = vec![0u8; 512];
+        reader.read_exact_at(header_offset, &mut header)?;
+
+        // Check HFS+ signature "H+" or "HX" at offset 0-1
+        if header.len() >= 2 {
+            if (header[0] == b'H' && header[1] == b'+') || (header[0] == b'H' && header[1] == b'X') {
+                return Ok(Self {
+                    fs_type: FileSystemType::HfsPlus,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        Err(Error::Detection("Not an HFS+ filesystem".to_string()))
+    }
+
+    /// Detect APFS filesystem (macOS)
+    fn detect_apfs(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // APFS container superblock is at the start of the partition
+        let mut superblock = vec![0u8; 4096];
+        reader.read_exact_at(partition_offset, &mut superblock)?;
+
+        // Check APFS magic "NXSB" (container superblock) or "APSB" (volume superblock)
+        if superblock.len() >= 36 {
+            // Magic is at offset 32-35
+            if &superblock[32..36] == b"NXSB" || &superblock[32..36] == b"APSB" {
+                return Ok(Self {
+                    fs_type: FileSystemType::Apfs,
+                    label: None,
+                    uuid: None,
+                });
+            }
+        }
+
+        Err(Error::Detection("Not an APFS filesystem".to_string()))
     }
 
     /// Get filesystem type

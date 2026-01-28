@@ -32,6 +32,8 @@ pub struct Partition {
     pub type_id: u8,
     /// Bootable flag
     pub bootable: bool,
+    /// Partition type GUID (for GPT partitions)
+    pub type_guid: Option<String>,
 }
 
 /// Partition table
@@ -112,6 +114,7 @@ impl PartitionTable {
                 size_sectors,
                 type_id,
                 bootable,
+                type_guid: None,
             });
         }
 
@@ -157,6 +160,16 @@ impl PartitionTable {
                 continue;
             }
 
+            // Extract partition type GUID (bytes 0-15)
+            let type_guid = format!(
+                "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+                entry[3], entry[2], entry[1], entry[0],  // Little-endian DWORD
+                entry[5], entry[4],                       // Little-endian WORD
+                entry[7], entry[6],                       // Little-endian WORD
+                entry[8], entry[9],                       // Big-endian bytes
+                entry[10], entry[11], entry[12], entry[13], entry[14], entry[15]
+            );
+
             let mut cursor = Cursor::new(&entry[32..]);
             let start_lba = cursor
                 .read_u64::<LittleEndian>()
@@ -175,6 +188,7 @@ impl PartitionTable {
                 size_sectors: end_lba - start_lba + 1,
                 type_id: 0, // GPT doesn't use type_id
                 bootable: false,
+                type_guid: Some(type_guid),
             });
         }
 
