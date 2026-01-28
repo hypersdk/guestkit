@@ -367,22 +367,6 @@ if result["success"]:
     print(f"Size: {result['output_size']} bytes")
 ```
 
-### `src/orchestrator/` - Pipeline Orchestration
-
-**Purpose:** Multi-stage migration pipelines
-
-**Stages:**
-```
-FETCH → FLATTEN → INSPECT → FIX → CONVERT → VALIDATE
-```
-
-**Features:**
-- Sequential stage execution
-- Context passing between stages
-- Pre/post hooks
-- Error recovery
-- Progress tracking (planned)
-
 ## Build System
 
 ### Cargo Features

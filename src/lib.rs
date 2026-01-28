@@ -8,7 +8,6 @@
 //! - **Disk format conversion** - Convert between VMDK, qcow2, RAW, VHD, VDI
 //! - **Guest OS detection** - Identify guest operating systems
 //! - **Retry logic** - Built-in exponential backoff for reliable operations
-//! - **Pipeline orchestration** - Multi-stage migration pipelines
 //!
 //! ## Quick Start
 //!
@@ -42,7 +41,6 @@
 //! - `guestfs` - GuestFS-compatible API for disk inspection and manipulation
 //! - `detectors` - Guest OS detection
 //! - `fixers` - Guest OS repair operations
-//! - `orchestrator` - Pipeline orchestration
 //! - `cli` - Command-line interface
 
 pub mod converters;
@@ -54,10 +52,6 @@ pub mod guestfs;
 // Optional modules
 #[cfg(feature = "guest-inspect")]
 pub mod detectors;
-
-#[cfg(feature = "disk-ops")]
-
-pub mod orchestrator;
 
 #[cfg(feature = "python-bindings")]
 pub mod python;

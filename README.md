@@ -879,7 +879,6 @@ guestkit/
 - 🔮 Plugin system for custom profiles and exporters
 - 🔮 Cloud integration (inspect VMs in AWS/Azure/GCP)
 - 🔮 Real-time monitoring integration (Prometheus metrics)
-- 🔮 Deeper integration patterns for hyper2kvm pipelines
 - 🔮 GUI application (GTK/Qt)
 
 ### Long-term

@@ -154,7 +154,6 @@ guestctl/
 │   ├── main.rs         # CLI entry point
 │   ├── core/           # Core utilities
 │   ├── converters/     # Disk converters
-│   ├── orchestrator/   # Pipeline
 │   └── ...
 ├── examples/           # Example programs
 └── tests/              # Tests
