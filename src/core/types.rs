@@ -88,38 +88,3 @@ pub struct ConversionResult {
     pub success: bool,
     pub error: Option<String>,
 }
-
-/// Pipeline stage
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum PipelineStage {
-    Fetch,
-    Flatten,
-    Inspect,
-    Fix,
-    Convert,
-    Validate,
-}
-
-impl PipelineStage {
-    pub fn as_str(&self) -> &str {
-        match self {
-            PipelineStage::Fetch => "fetch",
-            PipelineStage::Flatten => "flatten",
-            PipelineStage::Inspect => "inspect",
-            PipelineStage::Fix => "fix",
-            PipelineStage::Convert => "convert",
-            PipelineStage::Validate => "validate",
-        }
-    }
-}
-
-/// Pipeline stage result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PipelineResult {
-    pub stage: PipelineStage,
-    pub success: bool,
-    pub duration_secs: f64,
-    pub error: Option<String>,
-    pub data: Option<serde_json::Value>,
-}

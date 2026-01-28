@@ -6120,7 +6120,7 @@ pub fn malware_command(
 pub fn health_command(
     image: &PathBuf,
     checks: Vec<String>,
-    detailed: bool,
+    _detailed: bool,
     export_json: Option<PathBuf>,
     verbose: bool,
 ) -> Result<()> {
@@ -6158,7 +6158,11 @@ pub fn health_command(
     println!();
 
     let checks_to_run = if checks.is_empty() {
-        vec!["all".to_string()]
+        vec!["disk".to_string(), "services".to_string(), "security".to_string(),
+             "packages".to_string(), "logs".to_string()]
+    } else if checks.iter().any(|c| c == "all") {
+        vec!["disk".to_string(), "services".to_string(), "security".to_string(),
+             "packages".to_string(), "logs".to_string()]
     } else {
         checks
     };
@@ -6168,7 +6172,7 @@ pub fn health_command(
 
     for check in checks_to_run {
         match check.as_str() {
-            "disk" | "all" => {
+            "disk" => {
                 println!("💾 Disk Health:");
 
                 // Check disk usage
@@ -6201,7 +6205,7 @@ pub fn health_command(
                 println!();
             }
 
-            "services" | "all" => {
+            "services" => {
                 println!("⚙️  Service Health:");
 
                 // Check for failed services (systemd)
@@ -6223,7 +6227,7 @@ pub fn health_command(
                 println!();
             }
 
-            "security" | "all" => {
+            "security" => {
                 println!("🔒 Security Health:");
 
                 let mut security_score = 100;
@@ -6276,7 +6280,7 @@ pub fn health_command(
                 println!();
             }
 
-            "packages" | "all" => {
+            "packages" => {
                 println!("📦 Package Health:");
 
                 if !roots.is_empty() {
@@ -6299,7 +6303,7 @@ pub fn health_command(
                 println!();
             }
 
-            "logs" | "all" => {
+            "logs" => {
                 println!("📋 Log Health:");
 
                 // Check for large log files
@@ -7954,7 +7958,6 @@ pub fn dependencies_command(
     println!();
 
     let mut dependencies: HashMap<String, Vec<String>> = HashMap::new();
-    let mut reverse_deps: HashMap<String, Vec<String>> = HashMap::new();
 
     match graph_type {
         "packages" => {
