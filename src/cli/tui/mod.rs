@@ -217,6 +217,21 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
                     KeyCode::Char('i') => app.toggle_stats_bar(),
+                    KeyCode::Char('m') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        app.toggle_multi_select();
+                    }
+                    KeyCode::Char('f') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        app.cycle_filter();
+                    }
+                    KeyCode::Char('l') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        app.toggle_live_filter();
+                    }
+                    KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => {
+                        app.select_all_items();
+                    }
+                    KeyCode::Char(' ') if app.multi_select_mode && !app.is_searching() => {
+                        app.toggle_item_selection();
+                    }
                     KeyCode::Char('r') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         // Trigger refresh
                         app.start_refresh();

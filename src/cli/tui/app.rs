@@ -8,7 +8,7 @@ use guestkit::guestfs::inspect_enhanced::{
     RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
 use guestkit::Guestfs;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use super::config::TuiConfig;
@@ -154,6 +154,17 @@ pub struct App {
     pub search_query: String,
     pub search_case_sensitive: bool,
     pub search_regex_mode: bool,
+    pub search_results: Vec<usize>, // Filtered item indices
+    pub live_filter_enabled: bool,
+
+    // Multi-select state
+    pub multi_select_mode: bool,
+    pub selected_items: HashSet<usize>, // Set of selected indices
+    pub select_all: bool,
+
+    // Quick filters
+    pub active_filter: Option<String>,
+    pub available_filters: Vec<String>,
     pub scroll_offset: usize,
     pub selected_index: usize,
     pub show_export_menu: bool,
@@ -363,6 +374,22 @@ impl App {
             search_query: String::new(),
             search_case_sensitive: config.behavior.search_case_sensitive,
             search_regex_mode: config.behavior.search_regex_mode,
+            search_results: Vec::new(),
+            live_filter_enabled: true,
+
+            multi_select_mode: false,
+            selected_items: HashSet::new(),
+            select_all: false,
+
+            active_filter: None,
+            available_filters: vec![
+                "critical".to_string(),
+                "enabled".to_string(),
+                "running".to_string(),
+                "failed".to_string(),
+                "installed".to_string(),
+                "dev".to_string(),
+            ],
             scroll_offset: 0,
             selected_index: 0,
             show_export_menu: false,
@@ -476,10 +503,162 @@ impl App {
 
     pub fn search_input(&mut self, c: char) {
         self.search_query.push(c);
+        if self.live_filter_enabled {
+            self.update_search_results();
+        }
     }
 
     pub fn search_backspace(&mut self) {
         self.search_query.pop();
+        if self.live_filter_enabled {
+            self.update_search_results();
+        }
+    }
+
+    /// Toggle live filtering
+    pub fn toggle_live_filter(&mut self) {
+        self.live_filter_enabled = !self.live_filter_enabled;
+        let status = if self.live_filter_enabled { "enabled" } else { "disabled" };
+        self.show_notification(format!("Live filter {}", status));
+    }
+
+    /// Update search results based on current query
+    pub fn update_search_results(&mut self) {
+        if self.search_query.is_empty() {
+            self.search_results.clear();
+            return;
+        }
+
+        let query = if self.search_case_sensitive {
+            self.search_query.clone()
+        } else {
+            self.search_query.to_lowercase()
+        };
+
+        self.search_results.clear();
+
+        // Filter based on current view
+        match self.current_view {
+            View::Packages => {
+                // Search in package names (we don't have full package list, so estimate)
+                for i in 0..self.packages.package_count {
+                    // Placeholder: in real implementation, search actual package names
+                    self.search_results.push(i);
+                }
+            }
+            View::Services => {
+                for (idx, service) in self.services.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        service.name.clone()
+                    } else {
+                        service.name.to_lowercase()
+                    };
+
+                    if self.search_regex_mode {
+                        if let Ok(re) = regex::Regex::new(&query) {
+                            if re.is_match(&name) {
+                                self.search_results.push(idx);
+                            }
+                        }
+                    } else if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            View::Network => {
+                for (idx, iface) in self.network_interfaces.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        iface.name.clone()
+                    } else {
+                        iface.name.to_lowercase()
+                    };
+
+                    if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            View::Users => {
+                for (idx, user) in self.users.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        user.username.clone()
+                    } else {
+                        user.username.to_lowercase()
+                    };
+
+                    if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            View::Databases => {
+                for (idx, db) in self.databases.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        db.name.clone()
+                    } else {
+                        db.name.to_lowercase()
+                    };
+
+                    if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            View::WebServers => {
+                for (idx, ws) in self.web_servers.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        ws.name.clone()
+                    } else {
+                        ws.name.to_lowercase()
+                    };
+
+                    if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            View::Kernel => {
+                for (idx, module) in self.kernel_modules.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        module.clone()
+                    } else {
+                        module.to_lowercase()
+                    };
+
+                    if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
+                }
+            }
+            _ => {
+                // Other views don't support filtering yet
+            }
+        }
+
+        if !self.search_results.is_empty() {
+            self.show_notification(format!("{} matches found", self.search_results.len()));
+        } else {
+            self.show_notification("No matches found".to_string());
+        }
+    }
+
+    /// Get filtered items or all items if no filter active
+    pub fn get_filtered_count(&self) -> usize {
+        if self.searching && self.live_filter_enabled && !self.search_results.is_empty() {
+            self.search_results.len()
+        } else {
+            match self.current_view {
+                View::Packages => self.packages.package_count,
+                View::Services => self.services.len(),
+                View::Network => self.network_interfaces.len(),
+                View::Users => self.users.len(),
+                View::Databases => self.databases.len(),
+                View::WebServers => self.web_servers.len(),
+                View::Kernel => self.kernel_modules.len(),
+                View::Storage => self.fstab.len(),
+                _ => 0,
+            }
+        }
     }
 
     pub fn scroll_up(&mut self) {
@@ -1577,5 +1756,207 @@ impl App {
         }
 
         false
+    }
+
+    /// Toggle multi-select mode
+    pub fn toggle_multi_select(&mut self) {
+        self.multi_select_mode = !self.multi_select_mode;
+        if !self.multi_select_mode {
+            self.selected_items.clear();
+            self.select_all = false;
+        }
+        let status = if self.multi_select_mode { "ON" } else { "OFF" };
+        self.show_notification(format!("Multi-select: {}", status));
+    }
+
+    /// Toggle selection of current item
+    pub fn toggle_item_selection(&mut self) {
+        if !self.multi_select_mode {
+            self.multi_select_mode = true;
+            self.show_notification("Multi-select: ON".to_string());
+        }
+
+        let idx = self.selected_index;
+        if self.selected_items.contains(&idx) {
+            self.selected_items.remove(&idx);
+        } else {
+            self.selected_items.insert(idx);
+        }
+
+        self.show_notification(format!("{} items selected", self.selected_items.len()));
+    }
+
+    /// Select all items in current view
+    pub fn select_all_items(&mut self) {
+        if !self.multi_select_mode {
+            self.multi_select_mode = true;
+        }
+
+        let max_items = self.get_filtered_count();
+
+        if self.select_all {
+            // Deselect all
+            self.selected_items.clear();
+            self.select_all = false;
+            self.show_notification("Deselected all".to_string());
+        } else {
+            // Select all
+            self.selected_items.clear();
+            for i in 0..max_items {
+                self.selected_items.insert(i);
+            }
+            self.select_all = true;
+            self.show_notification(format!("Selected all {} items", max_items));
+        }
+    }
+
+    /// Clear all selections
+    pub fn clear_selection(&mut self) {
+        self.selected_items.clear();
+        self.select_all = false;
+        self.multi_select_mode = false;
+        self.show_notification("Selection cleared".to_string());
+    }
+
+    /// Check if item is selected
+    pub fn is_item_selected(&self, index: usize) -> bool {
+        self.selected_items.contains(&index)
+    }
+
+    /// Get count of selected items
+    pub fn get_selected_count(&self) -> usize {
+        self.selected_items.len()
+    }
+
+    /// Perform bulk action on selected items
+    pub fn bulk_action(&mut self, action: &str) {
+        if self.selected_items.is_empty() {
+            self.show_notification("No items selected".to_string());
+            return;
+        }
+
+        match action {
+            "export" => {
+                self.toggle_export_menu();
+                self.show_notification(format!("Exporting {} items", self.selected_items.len()));
+            }
+            "bookmark" => {
+                // Collect bookmarks first to avoid borrow conflict
+                let bookmarks: Vec<String> = self.selected_items.iter()
+                    .map(|idx| format!("{} item #{}", self.current_view.title(), idx))
+                    .collect();
+                let count = bookmarks.len();
+                for bookmark in bookmarks {
+                    self.add_bookmark(bookmark);
+                }
+                self.show_notification(format!("Bookmarked {} items", count));
+                self.clear_selection();
+            }
+            "delete" => {
+                // Placeholder for delete action
+                self.show_notification(format!("Delete {} items (not implemented)", self.selected_items.len()));
+            }
+            _ => {
+                self.show_notification(format!("Unknown action: {}", action));
+            }
+        }
+    }
+
+    /// Apply quick filter
+    pub fn apply_filter(&mut self, filter: &str) {
+        if self.active_filter.as_deref() == Some(filter) {
+            // Toggle off if same filter
+            self.active_filter = None;
+            self.show_notification(format!("Filter '{}' removed", filter));
+        } else {
+            self.active_filter = Some(filter.to_string());
+            self.show_notification(format!("Filter: {}", filter));
+            self.update_filtered_items();
+        }
+    }
+
+    /// Update items based on active filter
+    fn update_filtered_items(&mut self) {
+        if self.active_filter.is_none() {
+            return;
+        }
+
+        let filter = self.active_filter.as_ref().unwrap();
+
+        match filter.as_str() {
+            "critical" => {
+                // Filter critical security issues
+                self.current_view = View::Issues;
+                self.scroll_offset = 0;
+            }
+            "enabled" => {
+                // Filter enabled services
+                if self.current_view == View::Services {
+                    // In real implementation, would filter the list
+                    self.show_notification(format!("{} enabled services",
+                        self.services.iter().filter(|s| s.enabled).count()));
+                }
+            }
+            "running" => {
+                // Filter running services
+                if self.current_view == View::Services {
+                    self.show_notification(format!("{} running services",
+                        self.services.iter().filter(|s| s.state == "running").count()));
+                }
+            }
+            "failed" => {
+                // Filter failed services
+                if self.current_view == View::Services {
+                    self.show_notification(format!("{} failed services",
+                        self.services.iter().filter(|s| s.state == "failed").count()));
+                }
+            }
+            "dev" => {
+                // Filter development packages
+                if self.current_view == View::Packages {
+                    let dev_count = self.packages.packages.iter()
+                        .filter(|p| p.name.contains("devel") || p.name.contains("-dev"))
+                        .count();
+                    self.show_notification(format!("{} dev packages", dev_count));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Cycle through available filters
+    pub fn cycle_filter(&mut self) {
+        if self.available_filters.is_empty() {
+            return;
+        }
+
+        // Clone filter name to avoid borrow conflict
+        let next_filter = if let Some(current) = &self.active_filter {
+            if let Some(idx) = self.available_filters.iter().position(|f| f == current) {
+                let next_idx = (idx + 1) % self.available_filters.len();
+                self.available_filters[next_idx].clone()
+            } else {
+                self.available_filters[0].clone()
+            }
+        } else {
+            self.available_filters[0].clone()
+        };
+
+        self.apply_filter(&next_filter);
+    }
+
+    /// Get active filter label for display
+    pub fn get_filter_label(&self) -> Option<String> {
+        self.active_filter.as_ref().map(|f| {
+            match f.as_str() {
+                "critical" => "🔴 Critical",
+                "enabled" => "✅ Enabled",
+                "running" => "▶️  Running",
+                "failed" => "❌ Failed",
+                "installed" => "📦 Installed",
+                "dev" => "🔧 Dev Packages",
+                _ => f.as_str(),
+            }.to_string()
+        })
     }
 }

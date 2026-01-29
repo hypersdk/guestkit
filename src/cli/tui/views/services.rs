@@ -115,7 +115,10 @@ fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
-        .map(|svc| {
+        .enumerate()
+        .map(|(idx, svc)| {
+            let actual_idx = app.scroll_offset + idx;
+
             // Determine status symbol and color based on state and enabled status
             let (status_symbol, _status_color) = match (svc.enabled, svc.state.as_str()) {
                 (true, "running") => ("🟢", SUCCESS_COLOR),
@@ -132,7 +135,19 @@ fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
                 _ => WARNING_COLOR,
             };
 
+            // Multi-select checkbox
+            let checkbox = if app.multi_select_mode {
+                if app.is_item_selected(actual_idx) {
+                    "☑ "
+                } else {
+                    "☐ "
+                }
+            } else {
+                ""
+            };
+
             ListItem::new(ratatui::text::Line::from(vec![
+                ratatui::text::Span::raw(checkbox),
                 ratatui::text::Span::raw(format!("{} ", status_symbol)),
                 ratatui::text::Span::styled(&svc.name, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
                 ratatui::text::Span::raw("  "),
@@ -159,12 +174,26 @@ fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
+    // Multi-select indicator
+    let multiselect_indicator = if app.multi_select_mode {
+        format!(" [{}  selected] ", app.get_selected_count())
+    } else {
+        String::new()
+    };
+
+    // Filter indicator
+    let filter_indicator = if let Some(label) = app.get_filter_label() {
+        format!(" [{}] ", label)
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" ⚙️  Systemd Services • {} showing • {} enabled • {} running{} ",
-                filtered_services.len(), enabled_count, running_count, scroll_indicator))
+            .title(format!(" ⚙️  Systemd Services • {} showing • {} enabled • {} running{}{}{} ",
+                filtered_services.len(), enabled_count, running_count, scroll_indicator, multiselect_indicator, filter_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

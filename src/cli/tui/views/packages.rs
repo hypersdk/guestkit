@@ -149,9 +149,21 @@ fn draw_package_list(f: &mut Frame, area: Rect, app: &App) {
         .map(|(idx, pkg)| {
             // Alternate colors for better readability
             let name_color = if idx % 2 == 0 { LIGHT_ORANGE } else { ORANGE };
+            let actual_idx = app.scroll_offset + idx;
+
+            // Multi-select checkbox
+            let checkbox = if app.multi_select_mode {
+                if app.is_item_selected(actual_idx) {
+                    "☑ "
+                } else {
+                    "☐ "
+                }
+            } else {
+                "• "
+            };
 
             ListItem::new(Line::from(vec![
-                ratatui::text::Span::raw("• "),
+                ratatui::text::Span::raw(checkbox),
                 ratatui::text::Span::styled(&pkg.name, Style::default().fg(name_color).add_modifier(Modifier::BOLD)),
                 ratatui::text::Span::raw("  "),
                 ratatui::text::Span::styled("v", Style::default().fg(INFO_COLOR)),
@@ -175,12 +187,27 @@ fn draw_package_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
+    // Multi-select indicator
+    let multiselect_indicator = if app.multi_select_mode {
+        format!(" [{}  selected] ", app.get_selected_count())
+    } else {
+        String::new()
+    };
+
+    // Filter indicator
+    let filter_indicator = if let Some(label) = app.get_filter_label() {
+        format!(" [{}] ", label)
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" {} Installed Packages • {} showing of {} total • Manager: {}{} ",
-                manager_icon, filtered_packages.len(), app.packages.package_count, app.packages.manager, scroll_indicator))
+            .title(format!(" {} Installed Packages • {} showing of {} total • Manager: {}{}{}{} ",
+                manager_icon, filtered_packages.len(), app.packages.package_count, app.packages.manager,
+                scroll_indicator, multiselect_indicator, filter_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

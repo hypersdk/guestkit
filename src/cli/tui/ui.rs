@@ -7,7 +7,9 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
+    widgets::{
+        Block, Borders, List, ListItem, Paragraph, Tabs,
+    },
     Frame,
 };
 
@@ -447,6 +449,46 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Open export menu (JSON, YAML, HTML, PDF)                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("MULTI-SELECT & FILTERING", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ──────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("m            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle multi-select mode (shows checkboxes)                      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Space        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle selection for current item (in multi-select mode)         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("Ctrl+A       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Select all items in current view                                 "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("f            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Cycle through quick filters (critical/enabled/running/etc.)      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("l            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle live filtering (filter as you type in search)             "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
