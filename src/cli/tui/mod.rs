@@ -220,6 +220,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('t') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.toggle_table_mode();
                     }
+                    KeyCode::Char('c') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        app.toggle_comparison_mode();
+                    }
                     KeyCode::Char('m') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.toggle_multi_select();
                     }

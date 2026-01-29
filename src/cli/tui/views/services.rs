@@ -148,19 +148,39 @@ fn draw_service_list_view(f: &mut Frame, area: Rect, app: &App) {
                 _ => WARNING_COLOR,
             };
 
-            // Multi-select checkbox
-            let checkbox = if app.multi_select_mode {
-                if app.is_item_selected(actual_idx) {
-                    "☑ "
+            // Multi-select checkbox or comparison indicator
+            let (prefix, prefix_color) = if app.comparison_mode {
+                if let Some(ref snapshot) = app.snapshot_services {
+                    if let Some(old_svc) = snapshot.iter().find(|s| s.name == svc.name) {
+                        if old_svc.state != svc.state {
+                            if svc.state == "running" && old_svc.state != "running" {
+                                ("↑ ", SUCCESS_COLOR) // Started
+                            } else if svc.state != "running" && old_svc.state == "running" {
+                                ("↓ ", ERROR_COLOR) // Stopped
+                            } else {
+                                ("⟳ ", WARNING_COLOR) // Changed
+                            }
+                        } else {
+                            ("  ", TEXT_COLOR) // Unchanged
+                        }
+                    } else {
+                        ("+ ", SUCCESS_COLOR) // New service
+                    }
                 } else {
-                    "☐ "
+                    ("  ", TEXT_COLOR)
+                }
+            } else if app.multi_select_mode {
+                if app.is_item_selected(actual_idx) {
+                    ("☑ ", TEXT_COLOR)
+                } else {
+                    ("☐ ", TEXT_COLOR)
                 }
             } else {
-                ""
+                ("", TEXT_COLOR)
             };
 
             ListItem::new(ratatui::text::Line::from(vec![
-                ratatui::text::Span::raw(checkbox),
+                ratatui::text::Span::styled(prefix, Style::default().fg(prefix_color)),
                 ratatui::text::Span::raw(format!("{} ", status_symbol)),
                 ratatui::text::Span::styled(&svc.name, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
                 ratatui::text::Span::raw("  "),

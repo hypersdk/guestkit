@@ -292,6 +292,12 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
+    // If in comparison mode, show diff stats
+    if app.comparison_mode {
+        draw_comparison_stats(f, area, app);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -458,4 +464,71 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
             .title_style(Style::default().fg(ORANGE)));
 
     f.render_widget(details_list, chunks[1]);
+}
+
+fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    // Package comparison stats
+    let (pkg_added, pkg_removed, pkg_modified) = app.get_package_diff_stats();
+
+    let package_items = vec![
+        ListItem::new(Line::from(vec![
+            Span::styled("📦 Packages", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Added:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", pkg_added), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Removed:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", pkg_removed), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Modified: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", pkg_modified), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+    ];
+
+    let package_list = List::new(package_items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 📊 Package Changes ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+
+    f.render_widget(package_list, chunks[0]);
+
+    // Service comparison stats
+    let (svc_started, svc_stopped, svc_changed) = app.get_service_diff_stats();
+
+    let service_items = vec![
+        ListItem::new(Line::from(vec![
+            Span::styled("⚙️  Services", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Started:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", svc_started), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Stopped:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", svc_stopped), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+        ListItem::new(Line::from(vec![
+            Span::styled("  Changed:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled(format!("{}", svc_changed), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+        ])),
+    ];
+
+    let service_list = List::new(service_items)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR))
+            .title(" 📊 Service Changes ")
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+
+    f.render_widget(service_list, chunks[1]);
 }

@@ -165,19 +165,33 @@ fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
             let name_color = if display_idx % 2 == 0 { LIGHT_ORANGE } else { ORANGE };
             let actual_idx = app.scroll_offset + display_idx;
 
-            // Multi-select checkbox
-            let checkbox = if app.multi_select_mode {
-                if app.is_item_selected(actual_idx) {
-                    "☑ "
+            // Multi-select checkbox or comparison indicator
+            let (prefix, prefix_color) = if app.comparison_mode {
+                if let Some(ref snapshot) = app.snapshot_packages {
+                    if let Some(old_pkg) = snapshot.iter().find(|p| p.name == pkg.name) {
+                        if old_pkg.version != pkg.version {
+                            ("⟳ ", WARNING_COLOR) // Modified
+                        } else {
+                            ("  ", TEXT_COLOR) // Unchanged
+                        }
+                    } else {
+                        ("+ ", SUCCESS_COLOR) // Added
+                    }
                 } else {
-                    "☐ "
+                    ("  ", TEXT_COLOR)
+                }
+            } else if app.multi_select_mode {
+                if app.is_item_selected(actual_idx) {
+                    ("☑ ", TEXT_COLOR)
+                } else {
+                    ("☐ ", TEXT_COLOR)
                 }
             } else {
-                "• "
+                ("• ", TEXT_COLOR)
             };
 
             ListItem::new(Line::from(vec![
-                ratatui::text::Span::raw(checkbox),
+                ratatui::text::Span::styled(prefix, Style::default().fg(prefix_color)),
                 ratatui::text::Span::styled(&pkg.name, Style::default().fg(name_color).add_modifier(Modifier::BOLD)),
                 ratatui::text::Span::raw("  "),
                 ratatui::text::Span::styled("v", Style::default().fg(INFO_COLOR)),
