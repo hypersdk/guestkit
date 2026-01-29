@@ -147,10 +147,15 @@ fn draw_user_summary(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_user_list(f: &mut Frame, area: Rect, app: &App) {
-    let filtered_users: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
-        app.users
-            .iter()
-            .filter(|user| {
+    // Get sorted indices
+    let sorted_indices = app.get_sorted_user_indices();
+
+    // Apply filtering if searching
+    let filtered_indices: Vec<usize> = if app.is_searching() && !app.search_query.is_empty() {
+        sorted_indices
+            .into_iter()
+            .filter(|&idx| {
+                let user = &app.users[idx];
                 user.username.to_lowercase().contains(&app.search_query.to_lowercase())
                     || user.uid.contains(&app.search_query)
                     || user.shell.to_lowercase().contains(&app.search_query.to_lowercase())
@@ -158,14 +163,15 @@ fn draw_user_list(f: &mut Frame, area: Rect, app: &App) {
             })
             .collect()
     } else {
-        app.users.iter().collect()
+        sorted_indices
     };
 
-    let items: Vec<ListItem> = filtered_users
+    let items: Vec<ListItem> = filtered_indices
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
-        .map(|user| {
+        .map(|&user_idx| {
+            let user = &app.users[user_idx];
             // Parse UID to determine user type
             let uid: i32 = user.uid.parse().unwrap_or(99999);
 
@@ -218,7 +224,7 @@ fn draw_user_list(f: &mut Frame, area: Rect, app: &App) {
 
     // Calculate scroll position
     let visible_items = area.height.saturating_sub(2) as usize;
-    let total_items = filtered_users.len();
+    let total_items = filtered_indices.len();
     let scroll_pct = if total_items > 0 {
         ((app.scroll_offset as f32 / total_items.max(1) as f32) * 100.0) as u16
     } else {
@@ -231,12 +237,19 @@ fn draw_user_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
+    // Sort indicator
+    let sort_indicator = if !matches!(app.sort_mode, crate::cli::tui::app::SortMode::Default) {
+        format!(" [Sort: {}] ", app.sort_mode.label())
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 👥 User Account List • {} showing{} ",
-                filtered_users.len(), scroll_indicator))
+            .title(format!(" 👥 User Account List • {} showing{}{} ",
+                filtered_indices.len(), scroll_indicator, sort_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

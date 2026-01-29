@@ -99,25 +99,31 @@ fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
 
-    let filtered_services: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
-        app.services
-            .iter()
-            .filter(|svc| {
+    // Get sorted indices
+    let sorted_indices = app.get_sorted_service_indices();
+
+    // Apply filtering if searching
+    let filtered_indices: Vec<usize> = if app.is_searching() && !app.search_query.is_empty() {
+        sorted_indices
+            .into_iter()
+            .filter(|&idx| {
+                let svc = &app.services[idx];
                 svc.name.to_lowercase().contains(&app.search_query.to_lowercase())
                     || svc.state.to_lowercase().contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
-        app.services.iter().collect()
+        sorted_indices
     };
 
-    let items: Vec<ListItem> = filtered_services
+    let items: Vec<ListItem> = filtered_indices
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
         .enumerate()
-        .map(|(idx, svc)| {
-            let actual_idx = app.scroll_offset + idx;
+        .map(|(display_idx, &svc_idx)| {
+            let svc = &app.services[svc_idx];
+            let actual_idx = app.scroll_offset + display_idx;
 
             // Determine status symbol and color based on state and enabled status
             let (status_symbol, _status_color) = match (svc.enabled, svc.state.as_str()) {
@@ -161,7 +167,7 @@ fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
 
     // Calculate scroll position
     let visible_items = area.height.saturating_sub(2) as usize;
-    let total_items = filtered_services.len();
+    let total_items = filtered_indices.len();
     let scroll_pct = if total_items > 0 {
         ((app.scroll_offset as f32 / total_items.max(1) as f32) * 100.0) as u16
     } else {
@@ -188,12 +194,19 @@ fn draw_service_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
+    // Sort indicator
+    let sort_indicator = if !matches!(app.sort_mode, crate::cli::tui::app::SortMode::Default) {
+        format!(" [Sort: {}] ", app.sort_mode.label())
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" ⚙️  Systemd Services • {} showing • {} enabled • {} running{}{}{} ",
-                filtered_services.len(), enabled_count, running_count, scroll_indicator, multiselect_indicator, filter_indicator))
+            .title(format!(" ⚙️  Systemd Services • {} showing • {} enabled • {} running{}{}{}{} ",
+                filtered_indices.len(), enabled_count, running_count, scroll_indicator, multiselect_indicator, filter_indicator, sort_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
