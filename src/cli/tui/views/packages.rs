@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Cell, Gauge, List, ListItem, Paragraph, Row, Table},
     Frame,
 };
 
@@ -120,6 +120,14 @@ fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_package_list(f: &mut Frame, area: Rect, app: &App) {
+    if app.table_mode {
+        draw_package_table_view(f, area, app);
+    } else {
+        draw_package_list_view(f, area, app);
+    }
+}
+
+fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
     let manager_icon = match app.packages.manager.to_lowercase().as_str() {
         "rpm" | "dnf" | "yum" => "📦",
         "deb" | "apt" | "dpkg" => "📦",
@@ -224,4 +232,144 @@ fn draw_package_list(f: &mut Frame, area: Rect, app: &App) {
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);
+}
+
+fn draw_package_table_view(f: &mut Frame, area: Rect, app: &App) {
+    let manager_icon = match app.packages.manager.to_lowercase().as_str() {
+        "rpm" | "dnf" | "yum" => "📦",
+        "deb" | "apt" | "dpkg" => "📦",
+        "pacman" => "📦",
+        "apk" => "📦",
+        "zypper" => "📦",
+        _ => "📦",
+    };
+
+    // Get sorted indices
+    let sorted_indices = app.get_sorted_package_indices();
+
+    // Apply filtering if searching
+    let filtered_indices: Vec<usize> = if app.is_searching() && !app.search_query.is_empty() {
+        sorted_indices
+            .into_iter()
+            .filter(|&idx| {
+                let pkg = &app.packages.packages[idx];
+                pkg.name.to_lowercase().contains(&app.search_query.to_lowercase())
+                    || pkg.version.contains(&app.search_query)
+            })
+            .collect()
+    } else {
+        sorted_indices
+    };
+
+    // Create table header
+    let header = Row::new(vec![
+        Cell::from(Span::styled("#", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+        Cell::from(Span::styled("Package Name", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+        Cell::from(Span::styled("Version", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+        Cell::from(Span::styled("Manager", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+    ])
+    .height(1)
+    .bottom_margin(1);
+
+    // Create table rows
+    let rows: Vec<Row> = filtered_indices
+        .iter()
+        .skip(app.scroll_offset)
+        .take(area.height.saturating_sub(4) as usize) // Account for header and borders
+        .enumerate()
+        .map(|(display_idx, &pkg_idx)| {
+            let pkg = &app.packages.packages[pkg_idx];
+            let actual_idx = app.scroll_offset + display_idx;
+
+            // Alternate row colors
+            let row_style = if display_idx % 2 == 0 {
+                Style::default()
+            } else {
+                Style::default().fg(LIGHT_ORANGE)
+            };
+
+            // Multi-select checkbox
+            let checkbox = if app.multi_select_mode {
+                if app.is_item_selected(actual_idx) {
+                    "☑"
+                } else {
+                    "☐"
+                }
+            } else {
+                ""
+            };
+
+            Row::new(vec![
+                Cell::from(format!("{}{}", checkbox, if checkbox.is_empty() { "" } else { " " })),
+                Cell::from(Span::styled(&pkg.name, Style::default().add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(&pkg.version, Style::default().fg(SUCCESS_COLOR))),
+                Cell::from(Span::styled(&pkg.manager, Style::default().fg(INFO_COLOR))),
+            ])
+            .style(row_style)
+        })
+        .collect();
+
+    // Calculate indicators
+    let visible_items = area.height.saturating_sub(4) as usize;
+    let total_items = filtered_indices.len();
+    let scroll_pct = if total_items > 0 {
+        ((app.scroll_offset as f32 / total_items.max(1) as f32) * 100.0) as u16
+    } else {
+        0
+    };
+
+    let scroll_indicator = if total_items > visible_items {
+        format!(" 📜 {}% ", scroll_pct)
+    } else {
+        String::new()
+    };
+
+    let multiselect_indicator = if app.multi_select_mode {
+        format!(" [{}  selected] ", app.get_selected_count())
+    } else {
+        String::new()
+    };
+
+    let filter_indicator = if let Some(label) = app.get_filter_label() {
+        format!(" [{}] ", label)
+    } else {
+        String::new()
+    };
+
+    let sort_indicator = if !matches!(app.sort_mode, crate::cli::tui::app::SortMode::Default) {
+        format!(" [Sort: {}] ", app.sort_mode.label())
+    } else {
+        String::new()
+    };
+
+    // Create table widget
+    let widths = [
+        Constraint::Length(3),      // Checkbox
+        Constraint::Percentage(50), // Package name
+        Constraint::Percentage(30), // Version
+        Constraint::Percentage(20), // Manager
+    ];
+
+    let table = Table::new(rows, widths)
+        .header(header)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(format!(
+                    " {} Packages (Table) • {} showing of {} total • Manager: {}{}{}{}{} ",
+                    manager_icon,
+                    filtered_indices.len(),
+                    app.packages.package_count,
+                    app.packages.manager,
+                    scroll_indicator,
+                    multiselect_indicator,
+                    filter_indicator,
+                    sort_indicator
+                ))
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
+        .column_spacing(2);
+
+    f.render_widget(table, area);
 }

@@ -515,6 +515,12 @@ fn draw_help_overlay(f: &mut Frame, _app: &App) {
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("t            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Toggle table/list view mode (table has columns)                  "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("h or F1      ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Toggle this help overlay                                         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
