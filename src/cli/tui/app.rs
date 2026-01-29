@@ -233,6 +233,9 @@ pub struct App {
     pub sort_mode: SortMode,
     pub show_stats_bar: bool,
     pub table_mode: bool, // Toggle between list and table view
+    pub comparison_mode: bool, // Toggle comparison/diff view
+    pub snapshot_packages: Option<Vec<Package>>, // Snapshot for comparison
+    pub snapshot_services: Option<Vec<SystemService>>,
     pub bookmarks: Vec<String>,
     pub search_history: Vec<String>,
     pub notification: Option<(String, u8)>, // (message, ticks_remaining)
@@ -459,6 +462,9 @@ impl App {
             sort_mode: SortMode::Default,
             show_stats_bar: config.ui.show_stats_bar,
             table_mode: false, // Start in list view by default
+            comparison_mode: false,
+            snapshot_packages: None,
+            snapshot_services: None,
             bookmarks: Vec::new(),
             search_history: Vec::new(),
             notification: None,
@@ -1144,6 +1150,92 @@ impl App {
         self.table_mode = !self.table_mode;
         let mode = if self.table_mode { "Table" } else { "List" };
         self.show_notification(format!("View mode: {}", mode));
+    }
+
+    pub fn toggle_comparison_mode(&mut self) {
+        self.comparison_mode = !self.comparison_mode;
+        if self.comparison_mode {
+            // Take snapshot when entering comparison mode
+            self.take_snapshot();
+            self.show_notification("Comparison mode enabled - snapshot taken".to_string());
+        } else {
+            self.show_notification("Comparison mode disabled".to_string());
+        }
+    }
+
+    pub fn take_snapshot(&mut self) {
+        // Take snapshots of current state for comparison
+        self.snapshot_packages = Some(self.packages.packages.clone());
+        self.snapshot_services = Some(self.services.clone());
+        self.show_notification("✓ Snapshot captured".to_string());
+    }
+
+    pub fn get_package_diff_stats(&self) -> (usize, usize, usize) {
+        // Returns (added, removed, modified)
+        if let Some(ref snapshot) = self.snapshot_packages {
+            let current_names: std::collections::HashSet<&str> =
+                self.packages.packages.iter().map(|p| p.name.as_str()).collect();
+            let snapshot_names: std::collections::HashSet<&str> =
+                snapshot.iter().map(|p| p.name.as_str()).collect();
+
+            let added = current_names.difference(&snapshot_names).count();
+            let removed = snapshot_names.difference(&current_names).count();
+
+            // Check for version changes (modified)
+            let mut modified = 0;
+            for pkg in &self.packages.packages {
+                if let Some(old_pkg) = snapshot.iter().find(|p| p.name == pkg.name) {
+                    if old_pkg.version != pkg.version {
+                        modified += 1;
+                    }
+                }
+            }
+
+            (added, removed, modified)
+        } else {
+            (0, 0, 0)
+        }
+    }
+
+    pub fn get_service_diff_stats(&self) -> (usize, usize, usize) {
+        // Returns (started, stopped, changed)
+        if let Some(ref snapshot) = self.snapshot_services {
+            let mut started = 0;
+            let mut stopped = 0;
+            let mut changed = 0;
+
+            for svc in &self.services {
+                if let Some(old_svc) = snapshot.iter().find(|s| s.name == svc.name) {
+                    if old_svc.state != svc.state {
+                        if svc.state == "running" && old_svc.state != "running" {
+                            started += 1;
+                        } else if svc.state != "running" && old_svc.state == "running" {
+                            stopped += 1;
+                        } else {
+                            changed += 1;
+                        }
+                    }
+                } else {
+                    // New service
+                    if svc.state == "running" {
+                        started += 1;
+                    }
+                }
+            }
+
+            // Check for removed services
+            for old_svc in snapshot {
+                if !self.services.iter().any(|s| s.name == old_svc.name) {
+                    if old_svc.state == "running" {
+                        stopped += 1;
+                    }
+                }
+            }
+
+            (started, stopped, changed)
+        } else {
+            (0, 0, 0)
+        }
     }
 
     pub fn add_bookmark(&mut self, item: String) {
