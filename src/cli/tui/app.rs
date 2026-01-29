@@ -232,6 +232,7 @@ pub struct App {
     pub show_detail: bool,
     pub sort_mode: SortMode,
     pub show_stats_bar: bool,
+    pub table_mode: bool, // Toggle between list and table view
     pub bookmarks: Vec<String>,
     pub search_history: Vec<String>,
     pub notification: Option<(String, u8)>, // (message, ticks_remaining)
@@ -457,6 +458,7 @@ impl App {
             show_detail: false,
             sort_mode: SortMode::Default,
             show_stats_bar: config.ui.show_stats_bar,
+            table_mode: false, // Start in list view by default
             bookmarks: Vec::new(),
             search_history: Vec::new(),
             notification: None,
@@ -1136,6 +1138,12 @@ impl App {
         self.show_stats_bar = !self.show_stats_bar;
         let state = if self.show_stats_bar { "shown" } else { "hidden" };
         self.show_notification(format!("Stats bar {}", state));
+    }
+
+    pub fn toggle_table_mode(&mut self) {
+        self.table_mode = !self.table_mode;
+        let mode = if self.table_mode { "Table" } else { "List" };
+        self.show_notification(format!("View mode: {}", mode));
     }
 
     pub fn add_bookmark(&mut self, item: String) {

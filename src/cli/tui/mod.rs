@@ -217,6 +217,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
                     KeyCode::Char('i') => app.toggle_stats_bar(),
+                    KeyCode::Char('t') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        app.toggle_table_mode();
+                    }
                     KeyCode::Char('m') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.toggle_multi_select();
                     }
