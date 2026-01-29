@@ -178,24 +178,30 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let filtered_fstab: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
-        app.fstab
-            .iter()
-            .filter(|(device, mountpoint, fstype)| {
+    // Get sorted indices
+    let sorted_indices = app.get_sorted_storage_indices();
+
+    // Apply filtering if searching
+    let filtered_indices: Vec<usize> = if app.is_searching() && !app.search_query.is_empty() {
+        sorted_indices
+            .into_iter()
+            .filter(|&idx| {
+                let (device, mountpoint, fstype) = &app.fstab[idx];
                 device.to_lowercase().contains(&app.search_query.to_lowercase())
                     || mountpoint.to_lowercase().contains(&app.search_query.to_lowercase())
                     || fstype.to_lowercase().contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
-        app.fstab.iter().collect()
+        sorted_indices
     };
 
-    let items: Vec<ListItem> = filtered_fstab
+    let items: Vec<ListItem> = filtered_indices
         .iter()
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)
-        .map(|(device, mountpoint, fstype)| {
+        .map(|&idx| {
+            let (device, mountpoint, fstype) = &app.fstab[idx];
             ListItem::new(Line::from(vec![
                 Span::styled(format!("{:25} ", device), Style::default().fg(LIGHT_ORANGE)),
                 Span::raw("→ "),
@@ -205,11 +211,18 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    // Sort indicator
+    let sort_indicator = if !matches!(app.sort_mode, crate::cli::tui::app::SortMode::Default) {
+        format!(" [Sort: {}] ", app.sort_mode.label())
+    } else {
+        String::new()
+    };
+
     let list = List::new(items)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 📁 Mount Points / fstab • {} showing of {} total ", filtered_fstab.len(), app.fstab.len()))
+            .title(format!(" 📁 Mount Points / fstab • {} showing of {} total{} ", filtered_indices.len(), app.fstab.len(), sort_indicator))
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
 
     f.render_widget(list, area);

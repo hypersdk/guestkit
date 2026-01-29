@@ -4,7 +4,7 @@
 use anyhow::Result;
 use chrono::{DateTime, Local};
 use guestkit::guestfs::inspect_enhanced::{
-    Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, PackageInfo,
+    Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, Package, PackageInfo,
     RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
 use guestkit::Guestfs;
@@ -124,17 +124,66 @@ impl View {
 /// Sort order for lists
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortMode {
+    Default,
     NameAsc,
     NameDesc,
-    Default,
+    VersionAsc,   // For packages
+    VersionDesc,
+    SizeAsc,      // For storage
+    SizeDesc,
+    StateAsc,     // For services
+    StateDesc,
+    UidAsc,       // For users
+    UidDesc,
+    EnabledFirst, // For services
+    DateAsc,      // For users, logs
+    DateDesc,
 }
 
 impl SortMode {
-    pub fn next(&self) -> Self {
-        match self {
-            SortMode::Default => SortMode::NameAsc,
-            SortMode::NameAsc => SortMode::NameDesc,
-            SortMode::NameDesc => SortMode::Default,
+    /// Get next sort mode for a specific view
+    pub fn next(&self, view: &View) -> Self {
+        match view {
+            View::Packages => match self {
+                SortMode::Default => SortMode::NameAsc,
+                SortMode::NameAsc => SortMode::NameDesc,
+                SortMode::NameDesc => SortMode::VersionAsc,
+                SortMode::VersionAsc => SortMode::VersionDesc,
+                SortMode::VersionDesc => SortMode::Default,
+                _ => SortMode::Default,
+            },
+            View::Services => match self {
+                SortMode::Default => SortMode::NameAsc,
+                SortMode::NameAsc => SortMode::NameDesc,
+                SortMode::NameDesc => SortMode::StateAsc,
+                SortMode::StateAsc => SortMode::StateDesc,
+                SortMode::StateDesc => SortMode::EnabledFirst,
+                SortMode::EnabledFirst => SortMode::Default,
+                _ => SortMode::Default,
+            },
+            View::Users => match self {
+                SortMode::Default => SortMode::NameAsc,
+                SortMode::NameAsc => SortMode::NameDesc,
+                SortMode::NameDesc => SortMode::UidAsc,
+                SortMode::UidAsc => SortMode::UidDesc,
+                SortMode::UidDesc => SortMode::Default,
+                _ => SortMode::Default,
+            },
+            View::Storage => match self {
+                SortMode::Default => SortMode::NameAsc,
+                SortMode::NameAsc => SortMode::NameDesc,
+                SortMode::NameDesc => SortMode::SizeAsc,
+                SortMode::SizeAsc => SortMode::SizeDesc,
+                SortMode::SizeDesc => SortMode::Default,
+                _ => SortMode::Default,
+            },
+            // Other views use simple name sorting
+            _ => match self {
+                SortMode::Default => SortMode::NameAsc,
+                SortMode::NameAsc => SortMode::NameDesc,
+                SortMode::NameDesc => SortMode::Default,
+                _ => SortMode::Default,
+            },
         }
     }
 
@@ -143,6 +192,17 @@ impl SortMode {
             SortMode::Default => "Default",
             SortMode::NameAsc => "Name ↑",
             SortMode::NameDesc => "Name ↓",
+            SortMode::VersionAsc => "Version ↑",
+            SortMode::VersionDesc => "Version ↓",
+            SortMode::SizeAsc => "Size ↑",
+            SortMode::SizeDesc => "Size ↓",
+            SortMode::StateAsc => "State ↑",
+            SortMode::StateDesc => "State ↓",
+            SortMode::UidAsc => "UID ↑",
+            SortMode::UidDesc => "UID ↓",
+            SortMode::EnabledFirst => "Enabled 1st",
+            SortMode::DateAsc => "Date ↑",
+            SortMode::DateDesc => "Date ↓",
         }
     }
 }
@@ -870,17 +930,28 @@ impl App {
                 "interfaces": self.network_interfaces,
                 "dns_servers": self.dns_servers,
             }),
-            View::Packages => json!({
-                "view": "packages",
-                "manager": self.packages.manager,
-                "count": self.packages.package_count,
-                "packages": self.packages.packages,
-            }),
-            View::Services => json!({
-                "view": "services",
-                "count": self.services.len(),
-                "services": self.services,
-            }),
+            View::Packages => {
+                // Get filtered/selected packages
+                let packages_to_export = self.get_filtered_export_packages();
+                json!({
+                    "view": "packages",
+                    "manager": self.packages.manager,
+                    "count": packages_to_export.len(),
+                    "total_count": self.packages.package_count,
+                    "filtered": packages_to_export.len() != self.packages.packages.len(),
+                    "packages": packages_to_export,
+                })
+            },
+            View::Services => {
+                let services_to_export = self.get_filtered_export_services();
+                json!({
+                    "view": "services",
+                    "count": services_to_export.len(),
+                    "total_count": self.services.len(),
+                    "filtered": services_to_export.len() != self.services.len(),
+                    "services": services_to_export,
+                })
+            },
             View::Databases => json!({
                 "view": "databases",
                 "count": self.databases.len(),
@@ -926,17 +997,28 @@ impl App {
                     "sections": all_sections,
                 })
             }
-            View::Storage => json!({
-                "view": "storage",
-                "fstab": self.fstab,
-                "lvm": self.lvm_info,
-                "raid": self.raid_arrays,
-            }),
-            View::Users => json!({
-                "view": "users",
-                "count": self.users.len(),
-                "users": self.users,
-            }),
+            View::Storage => {
+                let fstab_to_export = self.get_filtered_export_storage();
+                json!({
+                    "view": "storage",
+                    "fstab": fstab_to_export,
+                    "fstab_count": fstab_to_export.len(),
+                    "total_fstab_count": self.fstab.len(),
+                    "filtered": fstab_to_export.len() != self.fstab.len(),
+                    "lvm": self.lvm_info,
+                    "raid": self.raid_arrays,
+                })
+            },
+            View::Users => {
+                let users_to_export = self.get_filtered_export_users();
+                json!({
+                    "view": "users",
+                    "count": users_to_export.len(),
+                    "total_count": self.users.len(),
+                    "filtered": users_to_export.len() != self.users.len(),
+                    "users": users_to_export,
+                })
+            },
             View::Kernel => json!({
                 "view": "kernel",
                 "modules": {
@@ -1033,7 +1115,7 @@ impl App {
     }
 
     pub fn cycle_sort_mode(&mut self) {
-        self.sort_mode = self.sort_mode.next();
+        self.sort_mode = self.sort_mode.next(&self.current_view);
         // Reset scroll when sorting changes
         self.scroll_offset = 0;
         self.selected_index = 0;
@@ -1958,5 +2040,290 @@ impl App {
                 _ => f.as_str(),
             }.to_string()
         })
+    }
+
+    /// Get sorted package indices based on current sort mode
+    pub fn get_sorted_package_indices(&self) -> Vec<usize> {
+        let mut indices: Vec<usize> = (0..self.packages.packages.len()).collect();
+
+        match self.sort_mode {
+            SortMode::NameAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.packages.packages[a].name.to_lowercase()
+                        .cmp(&self.packages.packages[b].name.to_lowercase())
+                });
+            }
+            SortMode::NameDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.packages.packages[b].name.to_lowercase()
+                        .cmp(&self.packages.packages[a].name.to_lowercase())
+                });
+            }
+            SortMode::VersionAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.packages.packages[a].version.to_lowercase()
+                        .cmp(&self.packages.packages[b].version.to_lowercase())
+                });
+            }
+            SortMode::VersionDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.packages.packages[b].version.to_lowercase()
+                        .cmp(&self.packages.packages[a].version.to_lowercase())
+                });
+            }
+            _ => {} // Default order
+        }
+
+        indices
+    }
+
+    /// Get sorted service indices based on current sort mode
+    pub fn get_sorted_service_indices(&self) -> Vec<usize> {
+        let mut indices: Vec<usize> = (0..self.services.len()).collect();
+
+        match self.sort_mode {
+            SortMode::NameAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.services[a].name.to_lowercase()
+                        .cmp(&self.services[b].name.to_lowercase())
+                });
+            }
+            SortMode::NameDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.services[b].name.to_lowercase()
+                        .cmp(&self.services[a].name.to_lowercase())
+                });
+            }
+            SortMode::StateAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.services[a].state.cmp(&self.services[b].state)
+                });
+            }
+            SortMode::StateDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.services[b].state.cmp(&self.services[a].state)
+                });
+            }
+            SortMode::EnabledFirst => {
+                indices.sort_by(|&a, &b| {
+                    // Enabled first (true > false in reverse)
+                    self.services[b].enabled.cmp(&self.services[a].enabled)
+                        .then(self.services[a].name.to_lowercase()
+                            .cmp(&self.services[b].name.to_lowercase()))
+                });
+            }
+            _ => {} // Default order
+        }
+
+        indices
+    }
+
+    /// Get sorted user indices based on current sort mode
+    pub fn get_sorted_user_indices(&self) -> Vec<usize> {
+        let mut indices: Vec<usize> = (0..self.users.len()).collect();
+
+        match self.sort_mode {
+            SortMode::NameAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.users[a].username.to_lowercase()
+                        .cmp(&self.users[b].username.to_lowercase())
+                });
+            }
+            SortMode::NameDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.users[b].username.to_lowercase()
+                        .cmp(&self.users[a].username.to_lowercase())
+                });
+            }
+            SortMode::UidAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.users[a].uid.cmp(&self.users[b].uid)
+                });
+            }
+            SortMode::UidDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.users[b].uid.cmp(&self.users[a].uid)
+                });
+            }
+            _ => {} // Default order
+        }
+
+        indices
+    }
+
+    /// Get sorted storage (fstab) indices based on current sort mode
+    pub fn get_sorted_storage_indices(&self) -> Vec<usize> {
+        let mut indices: Vec<usize> = (0..self.fstab.len()).collect();
+
+        match self.sort_mode {
+            SortMode::NameAsc => {
+                indices.sort_by(|&a, &b| {
+                    self.fstab[a].0.to_lowercase()
+                        .cmp(&self.fstab[b].0.to_lowercase())
+                });
+            }
+            SortMode::NameDesc => {
+                indices.sort_by(|&a, &b| {
+                    self.fstab[b].0.to_lowercase()
+                        .cmp(&self.fstab[a].0.to_lowercase())
+                });
+            }
+            SortMode::SizeAsc => {
+                // For fstab, sort by mountpoint instead of size
+                indices.sort_by(|&a, &b| {
+                    self.fstab[a].1.to_lowercase()
+                        .cmp(&self.fstab[b].1.to_lowercase())
+                });
+            }
+            SortMode::SizeDesc => {
+                // For fstab, sort by mountpoint reverse
+                indices.sort_by(|&a, &b| {
+                    self.fstab[b].1.to_lowercase()
+                        .cmp(&self.fstab[a].1.to_lowercase())
+                });
+            }
+            _ => {} // Default order
+        }
+
+        indices
+    }
+
+    /// Get filtered/selected packages for export
+    fn get_filtered_export_packages(&self) -> Vec<&Package> {
+        // If multi-select mode with items selected, export only selected
+        if self.multi_select_mode && !self.selected_items.is_empty() {
+            return self.selected_items
+                .iter()
+                .filter_map(|&idx| self.packages.packages.get(idx))
+                .collect();
+        }
+
+        // Get sorted and filtered indices (respects search and filters)
+        let sorted_indices = self.get_sorted_package_indices();
+
+        // Apply search filter if active
+        let filtered_indices: Vec<usize> = if self.is_searching() && !self.search_query.is_empty() {
+            sorted_indices
+                .into_iter()
+                .filter(|&idx| {
+                    let pkg = &self.packages.packages[idx];
+                    pkg.name.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || pkg.version.contains(&self.search_query)
+                })
+                .collect()
+        } else {
+            sorted_indices
+        };
+
+        // Return packages in filtered order
+        filtered_indices
+            .iter()
+            .filter_map(|&idx| self.packages.packages.get(idx))
+            .collect()
+    }
+
+    /// Get filtered/selected services for export
+    fn get_filtered_export_services(&self) -> Vec<&SystemService> {
+        // If multi-select mode with items selected, export only selected
+        if self.multi_select_mode && !self.selected_items.is_empty() {
+            return self.selected_items
+                .iter()
+                .filter_map(|&idx| self.services.get(idx))
+                .collect();
+        }
+
+        // Get sorted and filtered indices
+        let sorted_indices = self.get_sorted_service_indices();
+
+        // Apply search filter if active
+        let filtered_indices: Vec<usize> = if self.is_searching() && !self.search_query.is_empty() {
+            sorted_indices
+                .into_iter()
+                .filter(|&idx| {
+                    let svc = &self.services[idx];
+                    svc.name.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || svc.state.to_lowercase().contains(&self.search_query.to_lowercase())
+                })
+                .collect()
+        } else {
+            sorted_indices
+        };
+
+        // Return services in filtered order
+        filtered_indices
+            .iter()
+            .filter_map(|&idx| self.services.get(idx))
+            .collect()
+    }
+
+    /// Get filtered/selected users for export
+    fn get_filtered_export_users(&self) -> Vec<&UserAccount> {
+        // If multi-select mode with items selected, export only selected
+        if self.multi_select_mode && !self.selected_items.is_empty() {
+            return self.selected_items
+                .iter()
+                .filter_map(|&idx| self.users.get(idx))
+                .collect();
+        }
+
+        // Get sorted and filtered indices
+        let sorted_indices = self.get_sorted_user_indices();
+
+        // Apply search filter if active
+        let filtered_indices: Vec<usize> = if self.is_searching() && !self.search_query.is_empty() {
+            sorted_indices
+                .into_iter()
+                .filter(|&idx| {
+                    let user = &self.users[idx];
+                    user.username.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || user.uid.contains(&self.search_query)
+                        || user.shell.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || user.home.to_lowercase().contains(&self.search_query.to_lowercase())
+                })
+                .collect()
+        } else {
+            sorted_indices
+        };
+
+        // Return users in filtered order
+        filtered_indices
+            .iter()
+            .filter_map(|&idx| self.users.get(idx))
+            .collect()
+    }
+
+    /// Get filtered/selected storage entries for export
+    fn get_filtered_export_storage(&self) -> Vec<&(String, String, String)> {
+        // If multi-select mode with items selected, export only selected
+        if self.multi_select_mode && !self.selected_items.is_empty() {
+            return self.selected_items
+                .iter()
+                .filter_map(|&idx| self.fstab.get(idx))
+                .collect();
+        }
+
+        // Get sorted and filtered indices
+        let sorted_indices = self.get_sorted_storage_indices();
+
+        // Apply search filter if active
+        let filtered_indices: Vec<usize> = if self.is_searching() && !self.search_query.is_empty() {
+            sorted_indices
+                .into_iter()
+                .filter(|&idx| {
+                    let (device, mountpoint, fstype) = &self.fstab[idx];
+                    device.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || mountpoint.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || fstype.to_lowercase().contains(&self.search_query.to_lowercase())
+                })
+                .collect()
+        } else {
+            sorted_indices
+        };
+
+        // Return fstab entries in filtered order
+        filtered_indices
+            .iter()
+            .filter_map(|&idx| self.fstab.get(idx))
+            .collect()
     }
 }
