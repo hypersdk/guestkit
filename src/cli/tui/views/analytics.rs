@@ -2,12 +2,12 @@
 //! Analytics view with charts and visualizations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{BarChart, Block, Borders, Paragraph, Sparkline},
+    widgets::{BarChart, Block, Borders, Gauge, Paragraph, Sparkline},
     Frame,
 };
 
@@ -15,6 +15,7 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(6),  // System health gauges
             Constraint::Length(10), // Package distribution chart
             Constraint::Length(8),  // Service status chart
             Constraint::Length(8),  // Security score chart
@@ -22,10 +23,96 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(area);
 
-    draw_package_distribution(f, chunks[0], app);
-    draw_service_status(f, chunks[1], app);
-    draw_security_scores(f, chunks[2], app);
-    draw_risk_trends(f, chunks[3], app);
+    draw_health_gauges(f, chunks[0], app);
+    draw_package_distribution(f, chunks[1], app);
+    draw_service_status(f, chunks[2], app);
+    draw_security_scores(f, chunks[3], app);
+    draw_risk_trends(f, chunks[4], app);
+}
+
+fn draw_health_gauges(f: &mut Frame, area: Rect, app: &App) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+        ])
+        .split(area);
+
+    // Security Health Gauge
+    let (critical, high, medium) = app.get_risk_summary();
+    let total_issues = critical + high + medium;
+    let security_health = if total_issues == 0 {
+        100
+    } else {
+        let penalty = (critical * 30) + (high * 10) + (medium * 3);
+        100u16.saturating_sub((penalty as u16).min(100))
+    };
+
+    let security_gauge = Gauge::default()
+        .block(Block::default()
+            .title(Span::styled("🔒 Security", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)))
+        .gauge_style(Style::default().fg(if security_health >= 80 {
+            SUCCESS_COLOR
+        } else if security_health >= 60 {
+            WARNING_COLOR
+        } else {
+            ERROR_COLOR
+        }))
+        .ratio(security_health as f64 / 100.0)
+        .label(Span::styled(
+            format!("{}%", security_health),
+            Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+        ));
+
+    f.render_widget(security_gauge, chunks[0]);
+
+    // Service Health Gauge
+    let total_services = app.services.len();
+    let enabled_services = app.services.iter().filter(|s| s.enabled).count();
+    let service_health = if total_services > 0 {
+        (enabled_services * 100 / total_services) as u16
+    } else {
+        0
+    };
+
+    let service_gauge = Gauge::default()
+        .block(Block::default()
+            .title(Span::styled("⚙️  Services", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)))
+        .gauge_style(Style::default().fg(SUCCESS_COLOR))
+        .ratio(service_health as f64 / 100.0)
+        .label(Span::styled(
+            format!("{}/{} enabled", enabled_services, total_services),
+            Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+        ));
+
+    f.render_widget(service_gauge, chunks[1]);
+
+    // Package Health Gauge (dev packages ratio)
+    let dev_packages = app.packages.packages.iter()
+        .filter(|p| p.name.contains("devel") || p.name.contains("-dev"))
+        .count();
+    let total_packages = app.packages.packages.len().max(1);
+    let package_ratio = (dev_packages * 100 / total_packages) as u16;
+
+    let package_gauge = Gauge::default()
+        .block(Block::default()
+            .title(Span::styled("📦 Packages", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)))
+        .gauge_style(Style::default().fg(INFO_COLOR))
+        .ratio(package_ratio as f64 / 100.0)
+        .label(Span::styled(
+            format!("{} total", total_packages),
+            Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+        ));
+
+    f.render_widget(package_gauge, chunks[2]);
 }
 
 fn draw_package_distribution(f: &mut Frame, area: Rect, app: &App) {
