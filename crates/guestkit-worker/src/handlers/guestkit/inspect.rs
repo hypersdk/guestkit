@@ -74,10 +74,66 @@ impl InspectHandler {
     }
 
     /// Verify image checksum if provided
+    /// Supports format: "sha256:hexhash" or just "hexhash" (defaults to SHA256)
     async fn verify_checksum(&self, path: &str, expected: &str) -> WorkerResult<bool> {
-        // TODO: Implement checksum verification
-        // For now, just log and return true
-        log::debug!("Checksum verification for {}: {} (not implemented)", path, expected);
+        use sha2::{Sha256, Digest};
+        use std::io::Read;
+
+        log::info!("Verifying checksum for image: {}", path);
+
+        // Parse checksum format
+        let (algorithm, expected_hash) = if expected.contains(':') {
+            let parts: Vec<&str> = expected.splitn(2, ':').collect();
+            if parts.len() != 2 {
+                return Err(WorkerError::ExecutionError(
+                    format!("Invalid checksum format: {}", expected)
+                ));
+            }
+            (parts[0].to_lowercase(), parts[1].to_lowercase())
+        } else {
+            // Default to SHA256 if no algorithm specified
+            ("sha256".to_string(), expected.to_lowercase())
+        };
+
+        // Only SHA256 is supported for now
+        if algorithm != "sha256" {
+            return Err(WorkerError::ExecutionError(
+                format!("Unsupported checksum algorithm: {}. Only 'sha256' is supported.", algorithm)
+            ));
+        }
+
+        // Open file and compute SHA256
+        let mut file = std::fs::File::open(path)
+            .map_err(|e| WorkerError::ExecutionError(
+                format!("Failed to open image for checksum verification: {}", e)
+            ))?;
+
+        let mut hasher = Sha256::new();
+        let mut buffer = vec![0u8; 8192]; // 8KB buffer for reading
+
+        loop {
+            let bytes_read = file.read(&mut buffer)
+                .map_err(|e| WorkerError::ExecutionError(
+                    format!("Failed to read image during checksum verification: {}", e)
+                ))?;
+
+            if bytes_read == 0 {
+                break;
+            }
+
+            hasher.update(&buffer[..bytes_read]);
+        }
+
+        let computed_hash = format!("{:x}", hasher.finalize());
+
+        log::debug!("Checksum verification - Expected: {}, Computed: {}", expected_hash, computed_hash);
+
+        if computed_hash != expected_hash {
+            log::error!("Checksum mismatch! Expected: {}, Got: {}", expected_hash, computed_hash);
+            return Ok(false);
+        }
+
+        log::info!("Checksum verification successful");
         Ok(true)
     }
 
@@ -99,11 +155,16 @@ impl InspectHandler {
 
         // Verify checksum if provided
         if let Some(ref checksum) = payload.image.checksum {
+            context.report_progress("validation", Some(10), "Verifying image checksum").await?;
             if !self.verify_checksum(&payload.image.path, checksum).await? {
+                context.record_checksum_verification("failure");
                 return Err(WorkerError::ExecutionError(
-                    "Image checksum verification failed".to_string()
+                    format!("Image checksum verification failed for {}. The image may be corrupted or tampered with.", payload.image.path)
                 ));
             }
+            context.record_checksum_verification("success");
+        } else {
+            context.record_checksum_verification("skipped");
         }
 
         context.report_progress("inspection", Some(20), "Starting VM inspection").await?;
@@ -422,5 +483,100 @@ mod tests {
         let handler = InspectHandler::new();
         assert_eq!(handler.operations(), vec!["guestkit.inspect"]);
         assert_eq!(handler.name(), "guestkit-inspect");
+    }
+
+    #[tokio::test]
+    async fn test_checksum_verification_valid() {
+        use std::io::Write;
+        let handler = InspectHandler::new();
+
+        // Create a temporary file with known content
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.img");
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        file.write_all(b"test content for checksum").unwrap();
+        drop(file);
+
+        // Compute the expected SHA256
+        // echo -n "test content for checksum" | sha256sum
+        // Expected: c8ce4e97a404b12b1d8f0e245f04ff607be1048b16d973c2f23bab86655c808b
+        let expected_hash = "c8ce4e97a404b12b1d8f0e245f04ff607be1048b16d973c2f23bab86655c808b";
+
+        // Test with sha256: prefix
+        let result = handler.verify_checksum(
+            test_file.to_str().unwrap(),
+            &format!("sha256:{}", expected_hash)
+        ).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Test without prefix (defaults to SHA256)
+        let result = handler.verify_checksum(
+            test_file.to_str().unwrap(),
+            expected_hash
+        ).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_checksum_verification_invalid() {
+        use std::io::Write;
+        let handler = InspectHandler::new();
+
+        // Create a temporary file
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.img");
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        file.write_all(b"test content").unwrap();
+        drop(file);
+
+        // Use an incorrect checksum
+        let wrong_hash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+        let result = handler.verify_checksum(
+            test_file.to_str().unwrap(),
+            &format!("sha256:{}", wrong_hash)
+        ).await;
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap()); // Should return false for mismatch
+    }
+
+    #[tokio::test]
+    async fn test_checksum_verification_unsupported_algorithm() {
+        use std::io::Write;
+        let handler = InspectHandler::new();
+
+        // Create a temporary file
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.img");
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        file.write_all(b"test content").unwrap();
+        drop(file);
+
+        // Try with unsupported algorithm
+        let result = handler.verify_checksum(
+            test_file.to_str().unwrap(),
+            "md5:abcdef123456"
+        ).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Unsupported checksum algorithm"));
+    }
+
+    #[tokio::test]
+    async fn test_checksum_verification_nonexistent_file() {
+        let handler = InspectHandler::new();
+
+        let result = handler.verify_checksum(
+            "/nonexistent/path/to/file.img",
+            "sha256:1234567890abcdef"
+        ).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Failed to open image"));
     }
 }

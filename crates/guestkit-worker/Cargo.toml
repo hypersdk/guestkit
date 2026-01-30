@@ -10,10 +10,10 @@ keywords = ["virtualization", "vm", "worker", "distributed"]
 
 [dependencies]
 # Job protocol
-guestkit-job-spec = { path = "../guestkit-job-spec" }
+guestkit-job-spec = { version = "0.1.0", path = "../guestkit-job-spec" }
 
 # Guestkit library for VM operations
-guestkit = { path = "../..", features = ["guest-inspect"] }
+guestkit = { version = "0.3.2", path = "../..", features = ["guest-inspect"] }
 
 # Core
 anyhow = "1.0"
@@ -45,8 +45,22 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 ulid = { version = "1.1", features = ["serde"] }
 dashmap = "6.1"
 
+# Cryptography (checksum verification)
+sha2 = "0.10"
+hex = "0.4"
+
+# Metrics (Prometheus)
+prometheus-client = "0.22"
+
+# HTTP server (for metrics endpoint)
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace"] }
+
 # CLI (for worker binary)
 clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json"] }
+prettytable-rs = "0.10"
 
 [dev-dependencies]
 tempfile = "3.0"
