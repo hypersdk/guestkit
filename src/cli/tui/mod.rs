@@ -73,6 +73,9 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     // Run the event loop
     let result = run_app(&mut terminal, &mut app);
 
+    // Cleanup guestfs handle
+    let _ = app.cleanup();
+
     // Restore terminal
     disable_raw_mode().context("Failed to disable raw mode")?;
 
@@ -293,6 +296,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.jump_menu_select();
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();
+                        } else if app.current_view == app::View::Files && !app.is_searching() {
+                            // Enter directory in Files view
+                            app.file_browser_enter();
                         } else if !app.is_searching() && !app.show_export_menu {
                             app.toggle_detail();
                         } else {
@@ -317,6 +323,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.export_input(c);
                         } else if app.is_searching() {
                             app.search_input(c);
+                        } else if app.current_view == app::View::Files && c == '.' {
+                            // Toggle hidden files in Files view
+                            app.file_browser_toggle_hidden();
                         } else if c.is_ascii_digit() {
                             // Quick jump to views with number keys 1-9
                             if let Some(digit) = c.to_digit(10) {
@@ -335,6 +344,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.export_backspace();
                         } else if app.is_searching() {
                             app.search_backspace();
+                        } else if app.current_view == app::View::Files {
+                            // Go to parent directory in Files view
+                            app.file_browser_go_up();
                         }
                     }
                     _ => {}

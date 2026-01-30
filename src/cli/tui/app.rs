@@ -313,6 +313,10 @@ pub struct App {
 
     // File browser state
     pub file_browser: Option<crate::cli::tui::views::files::FileBrowserState>,
+
+    // Guestfs handle for file operations (kept alive for Files view)
+    pub guestfs: Option<Guestfs>,
+    pub guestfs_root: Option<String>,
 }
 
 impl App {
@@ -416,7 +420,8 @@ impl App {
         let compliance_profile = ComplianceProfile.inspect(&mut guestfs, root).ok();
         let hardening_profile = HardeningProfile.inspect(&mut guestfs, root).ok();
 
-        guestfs.shutdown()?;
+        // Keep guestfs handle alive for file browser operations
+        // Don't shutdown - we'll need it for the Files view
 
         // Load configuration
         let config = TuiConfig::load();
@@ -532,7 +537,78 @@ impl App {
 
             config,
             file_browser: None,
+            guestfs: Some(guestfs),
+            guestfs_root: Some(root.to_string()),
         })
+    }
+
+    /// Cleanup guestfs handle on app exit
+    pub fn cleanup(&mut self) -> Result<()> {
+        if let Some(mut guestfs) = self.guestfs.take() {
+            guestfs.shutdown()?;
+        }
+        Ok(())
+    }
+
+    /// Initialize file browser with root directory
+    pub fn init_file_browser(&mut self) {
+        if self.file_browser.is_none() {
+            let mut browser = crate::cli::tui::views::files::FileBrowserState::default();
+            // Load initial directory
+            if let Some(ref guestfs) = self.guestfs {
+                let _ = browser.load_directory(guestfs);
+            }
+            self.file_browser = Some(browser);
+        }
+    }
+
+    /// Navigate into selected directory in file browser
+    pub fn file_browser_enter(&mut self) {
+        if let Some(ref mut browser) = self.file_browser {
+            if let Some(_new_path) = browser.enter_directory() {
+                // Reload directory after navigation
+                if let Some(ref guestfs) = self.guestfs {
+                    let _ = browser.load_directory(guestfs);
+                }
+            }
+        }
+    }
+
+    /// Navigate to parent directory in file browser
+    pub fn file_browser_go_up(&mut self) {
+        if let Some(ref mut browser) = self.file_browser {
+            browser.go_up();
+            // Reload directory after navigation
+            if let Some(ref guestfs) = self.guestfs {
+                let _ = browser.load_directory(guestfs);
+            }
+        }
+    }
+
+    /// Toggle hidden files in file browser
+    pub fn file_browser_toggle_hidden(&mut self) {
+        if let Some(ref mut browser) = self.file_browser {
+            browser.toggle_hidden();
+            // Reload directory to apply filter
+            if let Some(ref guestfs) = self.guestfs {
+                let _ = browser.load_directory(guestfs);
+            }
+        }
+    }
+
+    /// Move selection up in file browser
+    pub fn file_browser_up(&mut self) {
+        if let Some(ref mut browser) = self.file_browser {
+            browser.move_up();
+        }
+    }
+
+    /// Move selection down in file browser
+    pub fn file_browser_down(&mut self) {
+        if let Some(ref mut browser) = self.file_browser {
+            let visible_items = 20; // Approximate visible items
+            browser.move_down(visible_items);
+        }
     }
 
     pub fn next_view(&mut self) {
@@ -542,6 +618,11 @@ impl App {
         self.scroll_offset = 0;
         self.selected_index = 0;
         self.show_notification(format!("→ {}", self.current_view.title()));
+
+        // Initialize file browser if entering Files view
+        if self.current_view == View::Files {
+            self.init_file_browser();
+        }
     }
 
     pub fn previous_view(&mut self) {
@@ -551,6 +632,11 @@ impl App {
         self.scroll_offset = 0;
         self.selected_index = 0;
         self.show_notification(format!("← {}", self.current_view.title()));
+
+        // Initialize file browser if entering Files view
+        if self.current_view == View::Files {
+            self.init_file_browser();
+        }
     }
 
     pub fn toggle_help(&mut self) {
@@ -737,17 +823,27 @@ impl App {
     }
 
     pub fn scroll_up(&mut self) {
-        if self.scroll_offset > 0 {
-            self.scroll_offset -= 1;
-        }
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
+        // Special handling for Files view
+        if self.current_view == View::Files {
+            self.file_browser_up();
+        } else {
+            if self.scroll_offset > 0 {
+                self.scroll_offset -= 1;
+            }
+            if self.selected_index > 0 {
+                self.selected_index -= 1;
+            }
         }
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll_offset += 1;
-        self.selected_index += 1;
+        // Special handling for Files view
+        if self.current_view == View::Files {
+            self.file_browser_down();
+        } else {
+            self.scroll_offset += 1;
+            self.selected_index += 1;
+        }
     }
 
     pub fn page_up(&mut self) {
@@ -1144,6 +1240,11 @@ impl App {
             self.scroll_offset = 0;
             self.selected_index = 0;
             self.show_notification(format!("⚡ {} ({})", self.current_view.title(), index + 1));
+
+            // Initialize file browser if jumping to Files view
+            if self.current_view == View::Files {
+                self.init_file_browser();
+            }
         }
     }
 
