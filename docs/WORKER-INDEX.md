@@ -12,6 +12,7 @@ Documentation for the **guestkit-worker** distributed job processing system.
 - **[CLI Guide](CLI-GUIDE.md)** - Complete command-line interface reference
 - **[Docker Deployment](guides/DOCKER-QUICKSTART.md)** - Run worker in containers
 - **[Kubernetes Guide](guides/K8S-DEPLOYMENT.md)** - Deploy at scale
+- **[k9s Guide](guides/K9S-GUIDE.md)** - Manage Kubernetes with k9s
 
 ---
 
@@ -187,6 +188,7 @@ curl http://localhost:9090/metrics | grep guestkit
 ### Deployment
 - [Docker Guide](guides/DOCKER.md)
 - [Kubernetes Deployment](guides/K8S-DEPLOYMENT.md)
+- [k9s Guide](guides/K9S-GUIDE.md)
 - [Quickstart](guides/quickstart.md)
 
 ### Development
