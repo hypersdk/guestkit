@@ -106,6 +106,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         View::Kernel => ("🧩", "Kernel Configuration"),
         View::Logs => ("📋", "System Logs"),
         View::Profiles => ("🛡️ ", "Profile Reports"),
+        View::Files => ("📂", "File Browser"),
     };
 
     let header_text = vec![
@@ -246,6 +247,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Kernel => views::kernel::draw(f, area, app),
         View::Logs => views::logs::draw(f, area, app),
         View::Profiles => views::profiles::draw(f, area, app),
+        View::Files => views::files::draw(f, area, app),
     }
 }
 
