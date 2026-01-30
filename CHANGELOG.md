@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Interactive File Explorer 🔍
+
+#### Explore Command - Visual File Browser
+- **Three Access Methods**:
+  - Direct CLI: `guestctl explore vm.qcow2 [path]`
+  - Shell mode: `explore` or `ex` command in interactive shell
+  - TUI view: Integrated Files view accessible via Tab navigation
+- **Visual Navigation**: Color-coded files with emoji icons for instant file type recognition
+- **File Preview**: View file contents with line numbers (press `v`), 1MB size limit
+- **File Information**: Detailed metadata display (press `i`) showing size, permissions, timestamps
+- **Real-Time Filtering**: Live search as you type (press `/`) with case-insensitive matching
+- **Hidden Files Toggle**: Show/hide dotfiles (press `.`)
+- **Smart Sorting**: Sort by name, size, or modification time (press `s`)
+- **Vim-Like Navigation**: Keyboard shortcuts (j/k, arrow keys, Enter, Backspace)
+- **Persistent State**: File browser state maintained throughout TUI session
+- **Documentation**: Comprehensive guides (EXPLORE-COMMAND.md, EXPLORE-QUICKSTART.md, EXPLORE-COMPLETE-SUMMARY.md)
+
+#### TUI Files View Integration
+- **Seamless Integration**: New Files view added to TUI dashboard alongside Dashboard, Network, Packages, etc.
+- **Overlay Rendering**: Non-blocking preview and info popups
+- **Keyboard Handlers**: Dedicated key mappings for file operations (v, i, /, ., Enter, Backspace)
+- **Export Support**: File browser state can be exported to JSON/YAML
+- **Help Integration**: Context-sensitive help showing available actions
+
+#### Shell Explorer Enhancement
+- **REPL Mode**: `explore` command available in interactive shell
+- **Standalone Mode**: Direct launch from CLI without entering shell
+- **State Management**: ExplorerState tracks navigation, filtering, sorting
+- **Color-Coded Output**: Visual file type identification with colored emojis
+- **Cross-Platform**: Terminal UI works on Linux/macOS with crossterm
+
 ### Changed - Visual Refinements 🎨
 - **Orange Color Theme**: Switched primary accent color from yellow to orange (RGB 255, 165, 0) for better visual hierarchy
 - **Improved Readability**: Enhanced contrast for section headers and key information
