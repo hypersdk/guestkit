@@ -73,6 +73,17 @@ sudo dnf install guestkit-*.rpm
 # Or build from source (see RPM-BUILD.md)
 ```
 
+**Docker (recommended for automation/CI/CD):**
+```bash
+docker build -t guestkit:latest .
+docker run --privileged -v ./vms:/vms:ro guestkit:latest inspect /vms/vm.qcow2
+
+# Or use docker-compose
+docker-compose run guestkit inspect /vms/vm.qcow2 --output json
+```
+
+See [DOCKER.md](DOCKER.md) for detailed container deployment guide.
+
 **From source:**
 ```bash
 git clone https://github.com/ssahani/guestkit
