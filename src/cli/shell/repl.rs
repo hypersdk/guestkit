@@ -275,6 +275,9 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
                     "discover" | "disco" => {
                         commands::cmd_discover(&mut ctx, args)
                     }
+                    "explore" | "ex" => {
+                        commands::cmd_explore(&mut ctx, args)
+                    }
                     "report" => {
                         commands::cmd_report(&mut ctx, args)
                     }

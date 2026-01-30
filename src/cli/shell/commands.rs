@@ -504,6 +504,11 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}  - Show system health score", "health".green());
     println!("  {}   - Show security risks", "risks".green());
 
+    println!("\n{}", "Interactive Navigation:".yellow().bold());
+    println!("  {} - Interactive file explorer (TUI)", "explore, ex [path]".green());
+    println!("           Visual file browser with preview & actions");
+    println!("           Use ↑↓/j/k to navigate, Enter to open, h for help");
+
     println!("\n{}", "Overview & Visualization:".yellow().bold());
     println!("  {} - Beautiful system dashboard", "dashboard, dash".green());
     println!("  {} - Quick system summary", "summary, sum".green());
@@ -10422,6 +10427,29 @@ pub fn cmd_baseline(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     }
 
     println!();
+    Ok(())
+}
+
+/// Launch interactive file explorer
+pub fn cmd_explore(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
+    use super::explore::run_explorer;
+
+    let start_path = if !args.is_empty() {
+        Some(args[0])
+    } else {
+        None
+    };
+
+    println!("{} Launching file explorer...", "→".cyan());
+    println!("{} Use 'h' for help once inside", "ℹ".yellow());
+
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    run_explorer(ctx, start_path)?;
+
+    // Return to shell prompt
+    println!("\n{} Returned to shell", "✓".green());
+
     Ok(())
 }
 
