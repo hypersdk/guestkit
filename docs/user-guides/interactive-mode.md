@@ -185,6 +185,52 @@ guestctl> download /etc/hostname ./hostname.txt
 ✓ Downloaded /etc/hostname to ./hostname.txt
 ```
 
+#### `explore` (alias: `ex`) - Interactive file browser 🆕
+
+Launch a visual, interactive file explorer with rich features:
+
+```bash
+guestctl> explore /var/log
+
+┌─────────────────────────────────────────────────────────┐
+│ 📍 Path: /var/log  📊 Items: 42                         │
+├─────────────────────────────────────────────────────────┤
+│ ▸ 📁 ..                                           <DIR> │
+│   📁 audit                                        <DIR> │
+│   📁 journal                                      <DIR> │
+│ ▸ 📄 syslog                                    12.4 MB │
+│   📄 syslog.1                                   8.2 MB │
+│   📦 syslog.2.gz                                2.1 MB │
+│                                                         │
+│ [v] Preview  [i] Info  [/] Filter  [q] Quit           │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Features:**
+- **Visual navigation** with color-coded files and emoji icons
+- **File preview** (press `v`) - view file contents with line numbers
+- **File information** (press `i`) - detailed metadata and stats
+- **Real-time filtering** (press `/`) - live search as you type
+- **Hidden files toggle** (press `.`) - show/hide dotfiles
+- **Smart sorting** (press `s`) - by name, size, or date
+- **Vim-like navigation** - j/k or arrow keys, Enter to open
+
+**Keyboard Shortcuts:**
+- `↑↓` / `j k` - Navigate up/down
+- `Enter` - Enter directory
+- `Backspace` - Go to parent directory
+- `v` - Preview file contents
+- `i` - Show file information
+- `/` - Start real-time filter
+- `.` - Toggle hidden files
+- `s` - Cycle sort modes
+- `?` - Show help
+- `q` - Quit explorer
+
+**Usage:** `explore [path]` (defaults to current directory)
+
+**Tip:** Also available directly via CLI: `guestctl explore vm.qcow2 /path`
+
 ### System Inspection
 
 #### `packages` (alias: `pkg`) - List installed packages
@@ -300,6 +346,7 @@ GuestCtl Interactive Commands:
     find <pattern>  - Find files by name pattern
     stat <path>  - Show file information
     download <src> <dest>  - Download file from disk
+    explore, ex [path]  - Interactive file browser with preview 🆕
 
   System Inspection:
     packages, pkg [filter]  - List installed packages
