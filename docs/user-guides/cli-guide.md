@@ -619,6 +619,93 @@ ID_LIKE=debian
 
 ---
 
+### `explore` - Interactive File Browser 🆕
+
+Launch a visual, interactive file browser for exploring VM filesystems with rich features.
+
+**Usage:**
+```bash
+guestctl explore [OPTIONS] <DISK> [PATH]
+```
+
+**Options:**
+- None - the explorer has its own interactive keyboard controls
+
+**Examples:**
+```bash
+# Launch explorer at root directory
+sudo guestctl explore ubuntu.qcow2
+
+# Start at specific directory
+sudo guestctl explore ubuntu.qcow2 /var/log
+
+# Explore from interactive shell
+guestctl interactive ubuntu.qcow2
+guestctl> explore /etc
+```
+
+**Features:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📍 Path: /var/log  📊 Items: 42                         │
+├─────────────────────────────────────────────────────────┤
+│ ▸ 📁 ..                                           <DIR> │
+│   📁 audit                                        <DIR> │
+│   📁 journal                                      <DIR> │
+│ ▸ 📄 syslog                                    12.4 MB │
+│   📄 syslog.1                                   8.2 MB │
+│   📦 syslog.2.gz                                2.1 MB │
+│                                                         │
+│ [v] Preview  [i] Info  [/] Filter  [q] Quit           │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Interactive Features:**
+- **Visual navigation** - Color-coded files with emoji icons for file types
+- **File preview** (press `v`) - View file contents with line numbers
+- **File information** (press `i`) - Detailed metadata, size, permissions
+- **Real-time filtering** (press `/`) - Live search as you type
+- **Hidden files toggle** (press `.`) - Show/hide dotfiles
+- **Smart sorting** (press `s`) - By name, size, or modification time
+- **Vim-like navigation** - j/k or arrow keys
+
+**Keyboard Shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `↑↓` / `j k` | Navigate up/down |
+| `Enter` | Enter directory or open file |
+| `Backspace` | Go to parent directory |
+| `v` | Preview file contents (up to 1MB) |
+| `i` | Show file information |
+| `/` | Start real-time filter |
+| `.` | Toggle hidden files |
+| `s` | Cycle sort modes (name/size/date) |
+| `?` | Show help overlay |
+| `q` | Quit explorer |
+
+**Output:**
+The explorer provides an interactive terminal UI. File type icons:
+- 📁 Directories (blue)
+- 💻 Source code (yellow) - .rs, .py, .js, .ts, etc.
+- ⚙️ Config files (cyan) - .json, .yaml, .toml, .xml
+- 🔧 Scripts (green) - .sh, .bash
+- 📦 Archives (red) - .zip, .tar, .gz
+- 🖼️ Images (magenta) - .jpg, .png, .gif
+- 📄 Documents (white) - .txt, .md, .log
+
+**Availability:**
+- Direct CLI: `guestctl explore <disk> [path]`
+- Interactive shell: `explore` or `ex` command
+- TUI mode: Files view (accessible via Tab/number keys)
+
+**Documentation:**
+- Quick start: EXPLORE-QUICKSTART.md
+- Complete guide: EXPLORE-COMMAND.md
+- Full overview: EXPLORE-COMPLETE-SUMMARY.md
+
+---
+
 ## Advanced Analysis Commands
 
 GuestKit includes 28 advanced commands for forensics, security, threat hunting, compliance, and AI-powered analysis.
