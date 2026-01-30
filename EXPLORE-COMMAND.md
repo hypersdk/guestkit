@@ -26,11 +26,20 @@ explore /etc
 ex /var/log
 ```
 
-### Launch Directly (Future Enhancement)
+### Launch Directly from CLI ⭐ NEW!
 
 ```bash
-# Direct from main CLI (to be added)
+# Launch explorer directly on a disk image
 guestctl explore disk.qcow2
+
+# Start from specific path
+guestctl explore disk.qcow2 /etc
+
+# Using short alias
+guestctl ex vm-image.qcow2 /var/log
+
+# With verbose output
+guestctl explore --verbose disk.qcow2 /home
 ```
 
 ---
@@ -418,7 +427,7 @@ explore /var/www/html
 
 ### Integration Possibilities
 
-- [ ] Direct launch from main CLI: `guestctl explore disk.qcow2`
+- [x] **Direct launch from main CLI**: `guestctl explore disk.qcow2` ✅ **DONE!**
 - [ ] Integration with TUI mode (`guestctl tui`)
 - [ ] Bulk operations on selected files
 - [ ] Integration with compare/diff commands
@@ -608,10 +617,18 @@ The **explore** command brings modern, intuitive file browsing to VM inspection.
 - ✅ Zero configuration required
 
 **Get Started:**
+
+**Method 1: Direct Launch** (Fastest!)
+```bash
+guestctl explore your-vm.qcow2
+# Instantly start exploring!
+```
+
+**Method 2: From Shell**
 ```bash
 guestctl shell your-vm.qcow2
 guestctl> explore
-# Start exploring!
+# Start exploring from shell!
 ```
 
 ---

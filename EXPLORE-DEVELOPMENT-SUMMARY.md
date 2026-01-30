@@ -517,11 +517,18 @@ The explore command enhances guestkit's CLI capabilities, making filesystem expl
 
 **Status**: ✅ **COMPLETE AND READY FOR USE**
 
+**Enhancement**: ✅ **Direct CLI Integration Added!**
+
+The explore command is now available directly from the main CLI:
+```bash
+guestctl explore disk.qcow2 [path]
+guestctl ex vm.qcow2 /var/log  # Short alias
+```
+
 **Next Steps**:
 1. Manual testing with real VM images
 2. Gather user feedback
-3. Consider future enhancements
-4. Optionally add to main CLI: `guestctl explore disk.qcow2`
+3. Consider additional enhancements (multi-select, bookmarks, etc.)
 
 ---
 
