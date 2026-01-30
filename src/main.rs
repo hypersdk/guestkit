@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! guestctl CLI - Guest VM toolkit
 
+use anyhow::Context;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, shells};
+use colored::Colorize;
 use guestkit::{converters::DiskConverter, VERSION};
 use std::io;
 use std::path::PathBuf;
@@ -1307,6 +1309,17 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// Launch interactive file explorer (TUI mode)
+    #[command(alias = "ex")]
+    Explore {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Starting path in VM filesystem (default: /)
+        #[arg(default_value = "/")]
+        path: String,
+    },
+
     /// Execute commands from a script file (batch mode)
     #[command(alias = "batch")]
     Script {
@@ -1449,6 +1462,81 @@ enum SnapshotOperation {
     Delete,
     Revert,
     Info,
+}
+
+/// Run standalone file explorer (direct from CLI)
+fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool) -> anyhow::Result<()> {
+    use guestkit::Guestfs;
+    use cli::shell::commands::ShellContext;
+    use cli::shell::explore::run_explorer;
+
+    if verbose {
+        println!("{} Loading VM image: {}", "→".cyan(), image_path.display());
+    }
+
+    // Initialize guestfs
+    let mut guestfs = Guestfs::new()
+        .context("Failed to create Guestfs handle")?;
+
+    guestfs.add_drive_opts(
+        image_path.to_str().unwrap(),
+        false,
+        None
+    ).context("Failed to add drive")?;
+
+    guestfs.launch().context("Failed to launch guestfs")?;
+
+    // Inspect and mount
+    let roots = guestfs.inspect_os()
+        .context("Failed to inspect OS")?;
+
+    if roots.is_empty() {
+        anyhow::bail!("No operating systems found in disk image");
+    }
+
+    let root = &roots[0];
+
+    if verbose {
+        println!("{} Detected OS: {}", "→".cyan(), root.yellow());
+    }
+
+    let mounts = guestfs.inspect_get_mountpoints(root)
+        .context("Failed to get mountpoints")?;
+
+    for (mountpoint, device) in mounts {
+        if let Err(e) = guestfs.mount(&device, &mountpoint) {
+            eprintln!("{} Failed to mount {}: {}", "⚠".yellow(), mountpoint, e);
+        }
+    }
+
+    if verbose {
+        println!("{} VM filesystem mounted successfully", "✓".green());
+    }
+
+    // Get OS information for context
+    let os_product = guestfs.inspect_get_product_name(&root)
+        .unwrap_or_else(|_| "Unknown OS".to_string());
+
+    // Create shell context for explorer
+    let mut ctx = ShellContext::new(guestfs, root.to_string());
+    ctx.set_os_info(os_product);
+    ctx.current_path = start_path.to_string();
+
+    // Launch explorer
+    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan());
+    println!("{}", "║          GuestKit File Explorer (TUI Mode)              ║".cyan().bold());
+    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan());
+    println!();
+    println!("{} Press 'h' for help, 'q' to quit", "ℹ".yellow());
+    println!();
+
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    run_explorer(&mut ctx, Some(start_path))?;
+
+    println!("\n{} Explorer closed", "✓".green());
+
+    Ok(())
 }
 
 fn main() -> anyhow::Result<()> {
@@ -2190,6 +2278,10 @@ fn main() -> anyhow::Result<()> {
         Commands::Interactive { image } => {
             let mut session = cli::InteractiveSession::new(image)?;
             session.run()?;
+        }
+
+        Commands::Explore { image, path } => {
+            run_standalone_explorer(&image, &path, cli.verbose)?;
         }
 
         Commands::Script {
