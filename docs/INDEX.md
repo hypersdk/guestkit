@@ -24,6 +24,7 @@ Welcome to the GuestKit documentation! This index helps you find the information
 - **[Contributing Guide](development/CONTRIBUTING.md)** — How to contribute
 - **[Development Docs](development/)** — Development guides
 - **[Complete System Summary](development/COMPLETE-SYSTEM-SUMMARY.md)** — Full implementation overview
+- **[Future Enhancements](FUTURE-ENHANCEMENTS.md)** — Roadmap and planned features
 
 ### For Security
 - **[Security Policy](../SECURITY.md)** — Security practices and reporting
@@ -52,6 +53,7 @@ Main navigation:
 - **[WORKER-INDEX.md](WORKER-INDEX.md)** — Worker system documentation index
 - **[INDEX.md](INDEX.md)** — This file (complete navigation)
 - **[README.md](README.md)** — Main docs index (guestctl)
+- **[FUTURE-ENHANCEMENTS.md](FUTURE-ENHANCEMENTS.md)** — Roadmap and planned features
 
 ---
 

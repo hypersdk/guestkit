@@ -101,6 +101,7 @@ Complete implementation history:
 - **[Contributing Guide](development/CONTRIBUTING.md)**
 - **[Changelog](development/CHANGELOG.md)**
 - **[Commands Summary](development/COMMANDS_SUMMARY.md)**
+- **[Future Enhancements](FUTURE-ENHANCEMENTS.md)** — Roadmap and planned features
 
 ---
 
