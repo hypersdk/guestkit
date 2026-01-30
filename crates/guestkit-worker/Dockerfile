@@ -1,5 +1,5 @@
 # Multi-stage build for guestkit worker
-FROM rust:1.70-slim-bookworm AS builder
+FROM rust:1.82-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -9,12 +9,14 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace files
+# Copy only the worker crate files
+COPY crates/guestkit-job-spec /build/guestkit-job-spec
+COPY crates/guestkit-worker /build/guestkit-worker
+COPY src /build/src
 COPY Cargo.toml /build/
-COPY crates /build/crates
 
 # Build the worker in release mode
-WORKDIR /build/crates/guestkit-worker
+WORKDIR /build/guestkit-worker
 RUN cargo build --release --bin guestkit-worker
 
 # Runtime stage
@@ -39,7 +41,7 @@ RUN mkdir -p /var/lib/guestkit/jobs \
     && chown -R worker:worker /var/lib/guestkit
 
 # Copy binary
-COPY --from=builder /build/crates/guestkit-worker/target/release/guestkit-worker /usr/local/bin/
+COPY --from=builder /build/guestkit-worker/target/release/guestkit-worker /usr/local/bin/
 
 # Switch to worker user
 USER worker
