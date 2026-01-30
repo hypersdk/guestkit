@@ -138,6 +138,7 @@ Main navigation:
 | [Docker Test Results](guides/DOCKER-TEST-RESULTS.md) | Docker testing |
 | [Kubernetes Deployment](guides/K8S-DEPLOYMENT.md) | K8s deployment |
 | [K8s Success](guides/K8S-DEPLOYMENT-SUCCESS.md) | K8s deployment success |
+| [k9s Guide](guides/K9S-GUIDE.md) | Manage Kubernetes with k9s |
 
 ### Other Documentation
 
