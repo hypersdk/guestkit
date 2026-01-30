@@ -12,6 +12,10 @@ pub mod state;
 pub mod progress;
 pub mod result;
 pub mod handlers;
+pub mod metrics;
+pub mod metrics_server;
+pub mod api;
+pub mod cli;
 
 // Re-exports
 pub use error::{WorkerError, WorkerResult};

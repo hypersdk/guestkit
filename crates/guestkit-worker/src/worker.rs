@@ -9,6 +9,7 @@ use crate::handler::HandlerRegistry;
 use crate::result::ResultWriter;
 use crate::transport::JobTransport;
 use crate::capabilities::Capabilities;
+use crate::metrics::MetricsRegistry;
 
 /// Worker configuration
 #[derive(Debug, Clone)]
@@ -53,6 +54,7 @@ pub struct Worker {
     executor: Arc<JobExecutor>,
     transport: Box<dyn JobTransport>,
     running: Arc<AtomicBool>,
+    metrics: Option<Arc<MetricsRegistry>>,
 }
 
 impl Worker {
@@ -80,7 +82,23 @@ impl Worker {
             executor,
             transport,
             running: Arc::new(AtomicBool::new(false)),
+            metrics: None,
         })
+    }
+
+    /// Set metrics registry
+    pub fn with_metrics(&mut self, metrics: Arc<MetricsRegistry>) {
+        // Update executor with metrics
+        let result_writer = Arc::new(ResultWriter::new(&self.config.result_dir));
+        let executor = JobExecutor::new(
+            &self.config.worker_id,
+            self.registry.clone(),
+            result_writer,
+            &self.config.work_dir,
+        ).with_metrics(Arc::clone(&metrics));
+
+        self.executor = Arc::new(executor);
+        self.metrics = Some(metrics);
     }
 
     /// Start the worker

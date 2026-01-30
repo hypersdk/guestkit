@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use crate::error::{WorkerError, WorkerResult};
 use crate::progress::ProgressTracker;
+use crate::metrics::MetricsRegistry;
 
 /// Context provided to operation handlers
 #[derive(Debug, Clone)]
@@ -21,6 +22,9 @@ pub struct HandlerContext {
 
     /// Working directory
     pub work_dir: std::path::PathBuf,
+
+    /// Metrics registry (optional)
+    pub metrics: Option<Arc<MetricsRegistry>>,
 }
 
 impl HandlerContext {
@@ -36,7 +40,14 @@ impl HandlerContext {
             worker_id: worker_id.into(),
             progress,
             work_dir: work_dir.into(),
+            metrics: None,
         }
+    }
+
+    /// Attach metrics registry
+    pub fn with_metrics(mut self, metrics: Arc<MetricsRegistry>) -> Self {
+        self.metrics = Some(metrics);
+        self
     }
 
     /// Report progress
@@ -49,6 +60,13 @@ impl HandlerContext {
         self.progress
             .report(phase.into(), progress_percent, message.into())
             .await
+    }
+
+    /// Record checksum verification metric
+    pub fn record_checksum_verification(&self, status: &str) {
+        if let Some(ref metrics) = self.metrics {
+            metrics.record_checksum_verification(status);
+        }
     }
 }
 

@@ -9,6 +9,7 @@ use crate::handler::{HandlerRegistry, HandlerContext};
 use crate::progress::ProgressTracker;
 use crate::result::ResultWriter;
 use crate::state::{JobState, JobStateMachine};
+use crate::metrics::MetricsRegistry;
 use dashmap::DashMap;
 
 /// Job executor
@@ -27,6 +28,9 @@ pub struct JobExecutor {
 
     /// Idempotency cache (key -> result path)
     idempotency_cache: Arc<DashMap<String, String>>,
+
+    /// Metrics registry
+    metrics: Option<Arc<MetricsRegistry>>,
 }
 
 impl JobExecutor {
@@ -43,15 +47,28 @@ impl JobExecutor {
             result_writer,
             work_dir: work_dir.into(),
             idempotency_cache: Arc::new(DashMap::new()),
+            metrics: None,
         }
+    }
+
+    /// Set metrics registry
+    pub fn with_metrics(mut self, metrics: Arc<MetricsRegistry>) -> Self {
+        self.metrics = Some(metrics);
+        self
     }
 
     /// Execute a job
     pub async fn execute(&self, job: JobDocument) -> WorkerResult<()> {
         let job_id = job.job_id.clone();
+        let operation = job.operation.clone();
         let started_at = Utc::now();
 
         log::info!("Starting execution of job {}", job_id);
+
+        // Increment active jobs metric
+        if let Some(ref metrics) = self.metrics {
+            metrics.inc_active_jobs();
+        }
 
         // State machine
         let mut state = JobStateMachine::new();
@@ -112,6 +129,13 @@ impl JobExecutor {
 
                 log::info!("Job {} completed successfully", job_id);
 
+                // Record metrics
+                let duration = (Utc::now() - started_at).num_milliseconds() as f64 / 1000.0;
+                if let Some(ref metrics) = self.metrics {
+                    metrics.record_job_completion(&operation, "completed", duration);
+                    metrics.dec_active_jobs();
+                }
+
                 let result_path = self.result_writer
                     .write_success(
                         &job_id,
@@ -139,6 +163,13 @@ impl JobExecutor {
 
                 log::error!("Job {} failed: {}", job_id, e);
 
+                // Record metrics
+                let duration = (Utc::now() - started_at).num_milliseconds() as f64 / 1000.0;
+                if let Some(ref metrics) = self.metrics {
+                    metrics.record_job_completion(&operation, "failed", duration);
+                    metrics.dec_active_jobs();
+                }
+
                 self.result_writer
                     .write_failure(
                         &job_id,
@@ -159,6 +190,13 @@ impl JobExecutor {
                 state.transition(JobState::Timeout)?;
 
                 log::error!("Job {} timed out after {:?}", job_id, timeout);
+
+                // Record metrics
+                let duration = timeout.as_secs() as f64;
+                if let Some(ref metrics) = self.metrics {
+                    metrics.record_job_completion(&operation, "timeout", duration);
+                    metrics.dec_active_jobs();
+                }
 
                 self.result_writer
                     .write_failure(
@@ -225,15 +263,29 @@ impl JobExecutor {
         });
 
         // Create handler context
-        let context = HandlerContext::new(
+        let mut context = HandlerContext::new(
             job.job_id.clone(),
             self.worker_id.clone(),
             Arc::new(progress),
             self.work_dir.clone(),
         );
 
-        // Execute handler
+        // Attach metrics if available
+        if let Some(ref metrics) = self.metrics {
+            context = context.with_metrics(Arc::clone(metrics));
+        }
+
+        // Execute handler with metrics
+        let handler_name = handler.name();
+        let handler_start = std::time::Instant::now();
         let result = handler.execute(context.clone(), job.payload).await;
+        let handler_duration = handler_start.elapsed().as_secs_f64();
+
+        // Record handler metrics
+        if let Some(ref metrics) = self.metrics {
+            let status = if result.is_ok() { "success" } else { "error" };
+            metrics.record_handler_execution(handler_name, status, handler_duration);
+        }
 
         // Cleanup (always run, even on failure)
         if let Err(e) = handler.cleanup(&context).await {

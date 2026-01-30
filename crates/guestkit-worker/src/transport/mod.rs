@@ -5,8 +5,10 @@ use guestkit_job_spec::JobDocument;
 use crate::error::WorkerResult;
 
 pub mod file;
+pub mod http;
 
 pub use file::FileTransport;
+pub use http::HttpTransport;
 
 /// Job transport trait - defines how jobs are received and acknowledged
 #[async_trait]

@@ -522,7 +522,17 @@ pub struct ImageSpec {
     /// Image format (qcow2, vmdk, etc.)
     pub format: String,
 
-    /// Checksum for verification
+    /// Checksum for verification (SHA256)
+    ///
+    /// Supports two formats:
+    /// - `"sha256:hexhash"` - Explicit algorithm specification
+    /// - `"hexhash"` - Defaults to SHA256
+    ///
+    /// Example: `"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"`
+    ///
+    /// When provided, the worker will compute the SHA256 hash of the image file
+    /// and verify it matches the expected value before processing. This protects
+    /// against corrupted or tampered images.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub checksum: Option<String>,
 
