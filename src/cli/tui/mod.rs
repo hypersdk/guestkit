@@ -184,7 +184,12 @@ fn run_app<B: ratatui::backend::Backend>(
                 }
                 Event::Key(key) => match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => {
-                        if app.show_jump_menu {
+                        // Close file preview/info overlays first
+                        if app.show_file_preview {
+                            app.close_file_preview();
+                        } else if app.show_file_info {
+                            app.close_file_info();
+                        } else if app.show_jump_menu {
                             app.toggle_jump_menu();
                         } else if app.is_searching() {
                             app.cancel_search();
@@ -219,6 +224,14 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
+                    KeyCode::Char('v') if app.current_view == app::View::Files && !app.is_searching() => {
+                        // View file preview in Files view
+                        app.show_file_preview();
+                    }
+                    KeyCode::Char('i') if app.current_view == app::View::Files && !app.is_searching() => {
+                        // Show file info in Files view
+                        app.show_file_information();
+                    }
                     KeyCode::Char('i') => app.toggle_stats_bar(),
                     KeyCode::Char('t') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.toggle_table_mode();

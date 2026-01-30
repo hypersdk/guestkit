@@ -310,12 +310,14 @@ fn draw_footer(f: &mut Frame, area: Rect) {
         Span::raw(" Navigate  "),
         Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
         Span::raw(" Open  "),
+        Span::styled("v", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(" View  "),
+        Span::styled("i", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::raw(" Info  "),
         Span::styled(".", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
         Span::raw(" Hidden  "),
         Span::styled("Backspace", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Up  "),
-        Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Quit"),
+        Span::raw(" Up"),
     ]))
     .block(
         Block::default()
@@ -377,4 +379,42 @@ fn format_size(size: i64) -> String {
     } else {
         format!("{} B", size)
     }
+}
+
+/// Get the full path of the currently selected file
+pub fn get_selected_file_path(browser: &FileBrowserState) -> Option<String> {
+    if browser.entries.is_empty() {
+        return None;
+    }
+
+    let entry = &browser.entries[browser.selected];
+
+    // Skip ".." entry
+    if entry.name == ".." {
+        return None;
+    }
+
+    let path = if browser.current_path == "/" {
+        format!("/{}", entry.name)
+    } else {
+        format!("{}/{}", browser.current_path, entry.name)
+    };
+
+    Some(path)
+}
+
+/// Get information about the currently selected file
+pub fn get_selected_file_info(browser: &FileBrowserState) -> Option<&FileEntry> {
+    if browser.entries.is_empty() {
+        return None;
+    }
+
+    let entry = &browser.entries[browser.selected];
+
+    // Skip ".." entry
+    if entry.name == ".." {
+        return None;
+    }
+
+    Some(entry)
 }
