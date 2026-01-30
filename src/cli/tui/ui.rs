@@ -73,6 +73,14 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_detail_overlay(f, app);
     }
 
+    if app.show_file_preview {
+        draw_file_preview(f, app);
+    }
+
+    if app.show_file_info {
+        draw_file_info(f, app);
+    }
+
     if app.notification.is_some() {
         draw_notification(f, app);
     }
@@ -1583,6 +1591,131 @@ fn draw_context_menu(f: &mut Frame, app: &App) {
         f.render_widget(ratatui::widgets::Clear, area);
         f.render_widget(list, area);
     }
+}
+
+fn draw_file_preview(f: &mut Frame, app: &App) {
+    let area = centered_rect(80, 80, f.area());
+
+    // Prepare file content with line numbers
+    let lines: Vec<Line> = app
+        .file_preview_content
+        .lines()
+        .enumerate()
+        .take(100) // Show first 100 lines
+        .map(|(idx, line)| {
+            Line::from(vec![
+                Span::styled(
+                    format!("{:4} │ ", idx + 1),
+                    Style::default().fg(LIGHT_ORANGE),
+                ),
+                Span::styled(
+                    if line.len() > 120 {
+                        format!("{}...", &line[..120])
+                    } else {
+                        line.to_string()
+                    },
+                    Style::default().fg(TEXT_COLOR),
+                ),
+            ])
+        })
+        .collect();
+
+    let total_lines = app.file_preview_content.lines().count();
+    let showing_lines = lines.len();
+
+    let title = format!(
+        " 📄 File Preview: {} ({}/{} lines) ",
+        app.file_preview_path, showing_lines, total_lines
+    );
+
+    let paragraph = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(vec![Span::styled(
+                    title,
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                )])
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE)),
+        )
+        .style(Style::default().bg(Color::Black));
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(paragraph, area);
+
+    // Footer with help
+    let footer_area = Rect {
+        x: area.x,
+        y: area.y + area.height - 2,
+        width: area.width,
+        height: 2,
+    };
+
+    let footer = Paragraph::new(Line::from(vec![
+        Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
+        Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(" or ", Style::default().fg(TEXT_COLOR)),
+        Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(" to close", Style::default().fg(TEXT_COLOR)),
+    ]))
+    .alignment(Alignment::Center)
+    .style(Style::default().bg(Color::Black));
+
+    f.render_widget(footer, footer_area);
+}
+
+fn draw_file_info(f: &mut Frame, app: &App) {
+    let area = centered_rect(60, 40, f.area());
+
+    let lines: Vec<Line> = app
+        .file_info_content
+        .lines()
+        .map(|line| {
+            if let Some((key, value)) = line.split_once(": ") {
+                Line::from(vec![
+                    Span::styled(format!("{}: ", key), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::styled(value, Style::default().fg(TEXT_COLOR)),
+                ])
+            } else {
+                Line::from(Span::styled(line, Style::default().fg(TEXT_COLOR)))
+            }
+        })
+        .collect();
+
+    let paragraph = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(vec![Span::styled(
+                    " ℹ️  File Information ",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                )])
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE)),
+        )
+        .style(Style::default().bg(Color::Black));
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(paragraph, area);
+
+    // Footer with help
+    let footer_area = Rect {
+        x: area.x,
+        y: area.y + area.height - 2,
+        width: area.width,
+        height: 2,
+    };
+
+    let footer = Paragraph::new(Line::from(vec![
+        Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
+        Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(" or ", Style::default().fg(TEXT_COLOR)),
+        Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(" to close", Style::default().fg(TEXT_COLOR)),
+    ]))
+    .alignment(Alignment::Center)
+    .style(Style::default().bg(Color::Black));
+
+    f.render_widget(footer, footer_area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

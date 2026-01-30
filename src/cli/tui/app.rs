@@ -17,6 +17,23 @@ use crate::cli::profiles::{
     ProfileReport, SecurityProfile,
 };
 
+/// Format file size to human-readable format
+fn format_file_size(size: i64) -> String {
+    const KB: i64 = 1024;
+    const MB: i64 = KB * 1024;
+    const GB: i64 = MB * 1024;
+
+    if size >= GB {
+        format!("{:.2} GB", size as f64 / GB as f64)
+    } else if size >= MB {
+        format!("{:.2} MB", size as f64 / MB as f64)
+    } else if size >= KB {
+        format!("{:.2} KB", size as f64 / KB as f64)
+    } else {
+        format!("{} B", size)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
     Json,
@@ -224,6 +241,13 @@ pub struct App {
     pub multi_select_mode: bool,
     pub selected_items: HashSet<usize>, // Set of selected indices
     pub select_all: bool,
+
+    // File preview state
+    pub show_file_preview: bool,
+    pub file_preview_content: String,
+    pub file_preview_path: String,
+    pub show_file_info: bool,
+    pub file_info_content: String,
 
     // Quick filters
     pub active_filter: Option<String>,
@@ -456,6 +480,12 @@ impl App {
             selected_items: HashSet::new(),
             select_all: false,
 
+            show_file_preview: false,
+            file_preview_content: String::new(),
+            file_preview_path: String::new(),
+            show_file_info: false,
+            file_info_content: String::new(),
+
             active_filter: None,
             available_filters: vec![
                 "critical".to_string(),
@@ -609,6 +639,101 @@ impl App {
             let visible_items = 20; // Approximate visible items
             browser.move_down(visible_items);
         }
+    }
+
+    /// Show preview of selected file
+    pub fn show_file_preview(&mut self) {
+        use crate::cli::tui::views::files;
+
+        if let Some(ref browser) = self.file_browser {
+            if let Some(path) = files::get_selected_file_path(browser) {
+                if let Some(ref guestfs) = self.guestfs {
+                    // Check if it's a file (not directory)
+                    if let Ok(is_dir) = guestfs.is_dir(&path) {
+                        if is_dir {
+                            self.show_notification("Cannot preview directory".to_string());
+                            return;
+                        }
+                    }
+
+                    // Check file size - don't preview files > 1MB
+                    if let Ok(size) = guestfs.filesize(&path) {
+                        if size > 1024 * 1024 {
+                            self.show_notification(format!("File too large to preview ({} bytes)", size));
+                            return;
+                        }
+                    }
+
+                    // Read file content
+                    match guestfs.cat(&path) {
+                        Ok(content) => {
+                            self.file_preview_content = content;
+                            self.file_preview_path = path;
+                            self.show_file_preview = true;
+                        }
+                        Err(e) => {
+                            self.show_notification(format!("Error reading file: {}", e));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Show information about selected file
+    pub fn show_file_information(&mut self) {
+        use crate::cli::tui::views::files;
+
+        if let Some(ref browser) = self.file_browser {
+            if let Some(path) = files::get_selected_file_path(browser) {
+                if let Some(ref guestfs) = self.guestfs {
+                    let mut info = Vec::new();
+
+                    info.push(format!("Path: {}", path));
+
+                    // File type
+                    if let Ok(is_dir) = guestfs.is_dir(&path) {
+                        info.push(format!("Type: {}", if is_dir { "Directory" } else { "File" }));
+                    }
+
+                    // File size
+                    if let Ok(size) = guestfs.filesize(&path) {
+                        let size_str = format_file_size(size);
+                        info.push(format!("Size: {} ({} bytes)", size_str, size));
+                    }
+
+                    // Permissions
+                    if let Ok(stat) = guestfs.stat(&path) {
+                        info.push(format!("Mode: {:o}", stat.mode));
+                        info.push(format!("UID: {}", stat.uid));
+                        info.push(format!("GID: {}", stat.gid));
+                        info.push(format!("Blocks: {}", stat.blocks));
+                    }
+
+                    // File type detection
+                    if let Ok(file_type) = guestfs.file(&path) {
+                        info.push(format!("File Type: {}", file_type));
+                    }
+
+                    self.file_info_content = info.join("\n");
+                    self.show_file_info = true;
+                }
+            }
+        }
+    }
+
+
+    /// Close file preview
+    pub fn close_file_preview(&mut self) {
+        self.show_file_preview = false;
+        self.file_preview_content.clear();
+        self.file_preview_path.clear();
+    }
+
+    /// Close file info
+    pub fn close_file_info(&mut self) {
+        self.show_file_info = false;
+        self.file_info_content.clear();
     }
 
     pub fn next_view(&mut self) {
