@@ -1,7 +1,7 @@
 [package]
 name = "guestkit-worker"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
 description = "Worker daemon for distributed VM operations"

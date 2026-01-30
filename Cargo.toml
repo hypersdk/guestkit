@@ -1,7 +1,7 @@
 [package]
 name = "guestkit"
 version = "0.3.1"
-edition = "2024"
+edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
 description = "Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support"
