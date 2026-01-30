@@ -3,10 +3,9 @@
 
 use crate::cli::tui::app::App;
 use crate::cli::tui::ui::{
-    BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+    BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR, WARNING_COLOR,
 };
 use anyhow::Result;
-use colored::Colorize as _;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -51,7 +50,7 @@ impl Default for FileBrowserState {
 
 impl FileBrowserState {
     /// Load directory entries from guestfs
-    pub fn load_directory(&mut self, guestfs: &guestkit::Guestfs) -> Result<()> {
+    pub fn load_directory(&mut self, guestfs: &mut guestkit::Guestfs) -> Result<()> {
         let mut entries = Vec::new();
 
         // Add parent directory entry if not at root

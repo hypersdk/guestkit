@@ -6,7 +6,7 @@ use colored::Colorize;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    cursor::{self, MoveTo},
+    cursor::MoveTo,
     execute,
 };
 use std::io::{stdout, Write};

@@ -591,7 +591,7 @@ impl App {
         if self.file_browser.is_none() {
             let mut browser = crate::cli::tui::views::files::FileBrowserState::default();
             // Load initial directory
-            if let Some(ref guestfs) = self.guestfs {
+            if let Some(ref mut guestfs) = self.guestfs {
                 let _ = browser.load_directory(guestfs);
             }
             self.file_browser = Some(browser);
@@ -603,7 +603,7 @@ impl App {
         if let Some(ref mut browser) = self.file_browser {
             if let Some(_new_path) = browser.enter_directory() {
                 // Reload directory after navigation
-                if let Some(ref guestfs) = self.guestfs {
+                if let Some(ref mut guestfs) = self.guestfs {
                     let _ = browser.load_directory(guestfs);
                 }
             }
@@ -615,7 +615,7 @@ impl App {
         if let Some(ref mut browser) = self.file_browser {
             browser.go_up();
             // Reload directory after navigation
-            if let Some(ref guestfs) = self.guestfs {
+            if let Some(ref mut guestfs) = self.guestfs {
                 let _ = browser.load_directory(guestfs);
             }
         }
@@ -626,7 +626,7 @@ impl App {
         if let Some(ref mut browser) = self.file_browser {
             browser.toggle_hidden();
             // Reload directory to apply filter
-            if let Some(ref guestfs) = self.guestfs {
+            if let Some(ref mut guestfs) = self.guestfs {
                 let _ = browser.load_directory(guestfs);
             }
         }
@@ -653,7 +653,7 @@ impl App {
 
         if let Some(ref browser) = self.file_browser {
             if let Some(path) = files::get_selected_file_path(browser) {
-                if let Some(ref guestfs) = self.guestfs {
+                if let Some(ref mut guestfs) = self.guestfs {
                     // Check if it's a file (not directory)
                     if let Ok(is_dir) = guestfs.is_dir(&path) {
                         if is_dir {
@@ -692,7 +692,7 @@ impl App {
 
         if let Some(ref browser) = self.file_browser {
             if let Some(path) = files::get_selected_file_path(browser) {
-                if let Some(ref guestfs) = self.guestfs {
+                if let Some(ref mut guestfs) = self.guestfs {
                     let mut info = Vec::new();
 
                     info.push(format!("Path: {}", path));
@@ -1097,6 +1097,7 @@ impl App {
             View::Kernel => "kernel",
             View::Logs => "logs",
             View::Profiles => "profiles",
+            View::Files => "files",
         };
         self.export_filename = format!(
             "guestkit-{}.{}",
@@ -1369,6 +1370,29 @@ impl App {
                         "error": "No profile data available"
                     })
                 }
+            },
+            View::Files => {
+                // Export file browser state
+                let files = if let Some(ref browser) = self.file_browser {
+                    browser.entries.iter().map(|entry| {
+                        json!({
+                            "name": entry.name,
+                            "is_dir": entry.is_dir,
+                            "size": entry.size,
+                        })
+                    }).collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+
+                json!({
+                    "view": "files",
+                    "current_path": self.file_browser.as_ref().map(|b| &b.current_path).unwrap_or(&"/".to_string()),
+                    "filter": self.file_browser.as_ref().map(|b| &b.filter).unwrap_or(&String::new()),
+                    "show_hidden": self.file_browser.as_ref().map(|b| b.show_hidden).unwrap_or(false),
+                    "file_count": files.len(),
+                    "files": files,
+                })
             }
         }
     }
