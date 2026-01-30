@@ -211,6 +211,7 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
             View::Kernel => Some(app.kernel_modules.len()),
             View::Logs => None,
             View::Profiles => None,
+            View::Files => app.file_browser.as_ref().map(|b| b.entries.len()),
         };
 
         if let Some(n) = count {
@@ -771,6 +772,10 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
         View::Kernel => generate_kernel_details(app),
         View::Logs => generate_logs_details(app),
         View::Profiles => generate_profiles_details(app),
+        View::Files => {
+            // Files view doesn't use detail overlay - file preview/info overlays are used instead
+            vec![Line::from("Use 'v' to preview files and 'i' to view file information.")]
+        },
     };
 
     let detail = Paragraph::new(detail_text)
