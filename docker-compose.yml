@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  guestkit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: guestkit:latest
+    container_name: guestkit
+
+    # Required for device access and kernel module loading
+    privileged: true
+
+    # Alternative to privileged (more restrictive)
+    # cap_add:
+    #   - SYS_ADMIN
+    #   - MKNOD
+    #   - SYS_MODULE
+
+    # Mount VM images directory
+    volumes:
+      - ./vms:/vms:ro                    # VM images (read-only)
+      - ./output:/output                 # Output reports
+      - guestkit-cache:/cache            # Inspection cache
+      - guestkit-config:/config          # Configuration
+      - /dev:/dev                        # Device access (required)
+
+    # Environment variables
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}  # Optional: for AI features
+
+    # Network mode
+    network_mode: host
+
+    # Override default command
+    # command: inspect /vms/vm.qcow2 --output json
+
+volumes:
+  guestkit-cache:
+    driver: local
+  guestkit-config:
+    driver: local
