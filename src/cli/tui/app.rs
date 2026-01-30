@@ -73,6 +73,7 @@ pub enum View {
     Kernel,
     Logs,
     Profiles,
+    Files,
 }
 
 impl View {
@@ -95,6 +96,7 @@ impl View {
             View::Kernel => "Kernel",
             View::Logs => "Logs",
             View::Profiles => "Profiles",
+            View::Files => "Files",
         }
     }
 
@@ -117,6 +119,7 @@ impl View {
             View::Kernel,
             View::Logs,
             View::Profiles,
+            View::Files,
         ]
     }
 }
@@ -307,6 +310,9 @@ pub struct App {
     // Configuration
     #[allow(dead_code)]
     pub config: TuiConfig,
+
+    // File browser state
+    pub file_browser: Option<crate::cli::tui::views::files::FileBrowserState>,
 }
 
 impl App {
@@ -525,6 +531,7 @@ impl App {
             hardening_profile,
 
             config,
+            file_browser: None,
         })
     }
 
