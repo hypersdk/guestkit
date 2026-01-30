@@ -249,6 +249,10 @@ pub struct App {
     pub show_file_info: bool,
     pub file_info_content: String,
 
+    // File filter state
+    pub file_filtering: bool,
+    pub file_filter_input: String,
+
     // Quick filters
     pub active_filter: Option<String>,
     pub available_filters: Vec<String>,
@@ -485,6 +489,8 @@ impl App {
             file_preview_path: String::new(),
             show_file_info: false,
             file_info_content: String::new(),
+            file_filtering: false,
+            file_filter_input: String::new(),
 
             active_filter: None,
             available_filters: vec![
@@ -734,6 +740,50 @@ impl App {
     pub fn close_file_info(&mut self) {
         self.show_file_info = false;
         self.file_info_content.clear();
+    }
+
+    /// Start file filtering mode
+    pub fn start_file_filter(&mut self) {
+        self.file_filtering = true;
+        self.file_filter_input.clear();
+    }
+
+    /// Add character to file filter
+    pub fn file_filter_input_char(&mut self, c: char) {
+        if self.file_filtering {
+            self.file_filter_input.push(c);
+            // Apply filter in real-time
+            if let Some(ref mut browser) = self.file_browser {
+                browser.set_filter(self.file_filter_input.clone());
+            }
+        }
+    }
+
+    /// Remove last character from file filter
+    pub fn file_filter_backspace(&mut self) {
+        if self.file_filtering && !self.file_filter_input.is_empty() {
+            self.file_filter_input.pop();
+            // Apply filter in real-time
+            if let Some(ref mut browser) = self.file_browser {
+                browser.set_filter(self.file_filter_input.clone());
+            }
+        }
+    }
+
+    /// Finish file filtering
+    pub fn finish_file_filter(&mut self) {
+        self.file_filtering = false;
+        // Filter is already applied, just exit filter mode
+    }
+
+    /// Cancel file filtering
+    pub fn cancel_file_filter(&mut self) {
+        self.file_filtering = false;
+        self.file_filter_input.clear();
+        // Clear filter from browser
+        if let Some(ref mut browser) = self.file_browser {
+            browser.clear_filter();
+        }
     }
 
     pub fn next_view(&mut self) {

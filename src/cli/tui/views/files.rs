@@ -31,6 +31,8 @@ pub struct FileBrowserState {
     pub selected: usize,
     pub scroll_offset: usize,
     pub show_hidden: bool,
+    pub filter: String,
+    pub all_entries: Vec<FileEntry>, // Unfiltered entries cache
 }
 
 impl Default for FileBrowserState {
@@ -41,6 +43,8 @@ impl Default for FileBrowserState {
             selected: 0,
             scroll_offset: 0,
             show_hidden: false,
+            filter: String::new(),
+            all_entries: Vec::new(),
         }
     }
 }
@@ -102,11 +106,56 @@ impl FileBrowserState {
             }
         });
 
-        self.entries = entries;
-        self.selected = 0;
-        self.scroll_offset = 0;
+        // Store all entries
+        self.all_entries = entries;
+
+        // Apply filter if active
+        self.apply_filter();
 
         Ok(())
+    }
+
+    /// Apply current filter to entries
+    pub fn apply_filter(&mut self) {
+        if self.filter.is_empty() {
+            // No filter - show all entries
+            self.entries = self.all_entries.clone();
+        } else {
+            // Apply filter - case insensitive substring match
+            let filter_lower = self.filter.to_lowercase();
+            self.entries = self.all_entries
+                .iter()
+                .filter(|entry| {
+                    // Always show ".." entry
+                    if entry.name == ".." {
+                        return true;
+                    }
+                    entry.name.to_lowercase().contains(&filter_lower)
+                })
+                .cloned()
+                .collect();
+        }
+
+        // Reset selection if out of bounds
+        if self.selected >= self.entries.len() && !self.entries.is_empty() {
+            self.selected = self.entries.len() - 1;
+        }
+        if self.selected > 0 && self.entries.is_empty() {
+            self.selected = 0;
+        }
+        self.scroll_offset = 0;
+    }
+
+    /// Set filter and apply it
+    pub fn set_filter(&mut self, filter: String) {
+        self.filter = filter;
+        self.apply_filter();
+    }
+
+    /// Clear filter
+    pub fn clear_filter(&mut self) {
+        self.filter.clear();
+        self.apply_filter();
     }
 
     /// Navigate up one directory
@@ -190,30 +239,34 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
     draw_header(f, chunks[0], app);
     draw_file_list(f, chunks[1], app);
-    draw_footer(f, chunks[2]);
+    draw_footer(f, chunks[2], app);
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
-    let current_path = if let Some(ref browser) = app.file_browser {
-        browser.current_path.clone()
+    let (current_path, item_count, filter) = if let Some(ref browser) = app.file_browser {
+        (browser.current_path.clone(), browser.entries.len(), browser.filter.clone())
     } else {
-        "/".to_string()
+        ("/".to_string(), 0, String::new())
     };
 
-    let item_count = if let Some(ref browser) = app.file_browser {
-        browser.entries.len()
-    } else {
-        0
-    };
-
-    let header = Paragraph::new(Line::from(vec![
+    let mut spans = vec![
         Span::styled("📍 ", Style::default().fg(ORANGE)),
         Span::styled("Path: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
         Span::styled(&current_path, Style::default().fg(TEXT_COLOR)),
         Span::raw("  "),
         Span::styled("📊 ", Style::default().fg(ORANGE)),
         Span::styled(format!("Items: {}", item_count), Style::default().fg(TEXT_COLOR)),
-    ]))
+    ];
+
+    // Show filter if active
+    if !filter.is_empty() {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled("🔍 ", Style::default().fg(ORANGE)));
+        spans.push(Span::styled("Filter: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)));
+        spans.push(Span::styled(&filter, Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)));
+    }
+
+    let header = Paragraph::new(Line::from(spans))
     .block(
         Block::default()
             .borders(Borders::ALL)
@@ -304,28 +357,53 @@ fn draw_file_list(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(list, area);
 }
 
-fn draw_footer(f: &mut Frame, area: Rect) {
-    let help = Paragraph::new(Line::from(vec![
-        Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Navigate  "),
-        Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Open  "),
-        Span::styled("v", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" View  "),
-        Span::styled("i", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Info  "),
-        Span::styled(".", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Hidden  "),
-        Span::styled("Backspace", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        Span::raw(" Up"),
-    ]))
-    .block(
+fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
+    let is_filtering = app.file_browser.as_ref().map(|b| !b.filter.is_empty()).unwrap_or(false);
+
+    let help = if app.file_filtering {
+        // Show filter input mode
+        Paragraph::new(Line::from(vec![
+            Span::styled("🔍 Filter: ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(&app.file_filter_input, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
+            Span::styled("_", Style::default().fg(ORANGE)),
+            Span::raw("  "),
+            Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Cancel  "),
+            Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Apply"),
+        ]))
+    } else if is_filtering {
+        Paragraph::new(Line::from(vec![
+            Span::styled("🔍 ", Style::default().fg(ORANGE)),
+            Span::styled("Filter active", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw("  "),
+            Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Clear filter"),
+        ]))
+    } else {
+        Paragraph::new(Line::from(vec![
+            Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Navigate  "),
+            Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Open  "),
+            Span::styled("v", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" View  "),
+            Span::styled("i", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Info  "),
+            Span::styled("/", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Filter  "),
+            Span::styled(".", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw(" Hidden"),
+        ]))
+    };
+
+    let widget = help.block(
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR)),
     );
 
-    f.render_widget(help, area);
+    f.render_widget(widget, area);
 }
 
 /// Get icon and color for file type

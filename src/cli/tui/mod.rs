@@ -189,6 +189,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.close_file_preview();
                         } else if app.show_file_info {
                             app.close_file_info();
+                        } else if app.file_filtering {
+                            // Cancel file filter and clear it
+                            app.cancel_file_filter();
                         } else if app.show_jump_menu {
                             app.toggle_jump_menu();
                         } else if app.is_searching() {
@@ -266,7 +269,15 @@ fn run_app<B: ratatui::backend::Backend>(
                         let bookmark = format!("{} view", app.current_view.title());
                         app.add_bookmark(bookmark);
                     }
-                    KeyCode::Char('/') => app.start_search(),
+                    KeyCode::Char('/') => {
+                        if app.current_view == app::View::Files && !app.is_searching() {
+                            // Start file filter in Files view
+                            app.start_file_filter();
+                        } else {
+                            // Start search in other views
+                            app.start_search();
+                        }
+                    }
                     KeyCode::Left => {
                         if app.current_view == app::View::Profiles {
                             app.previous_profile_tab();
@@ -309,6 +320,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.jump_menu_select();
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();
+                        } else if app.file_filtering {
+                            // Finish file filter
+                            app.finish_file_filter();
                         } else if app.current_view == app::View::Files && !app.is_searching() {
                             // Enter directory in Files view
                             app.file_browser_enter();
@@ -334,6 +348,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             app.export_input(c);
+                        } else if app.file_filtering {
+                            // Add character to file filter
+                            app.file_filter_input_char(c);
                         } else if app.is_searching() {
                             app.search_input(c);
                         } else if app.current_view == app::View::Files && c == '.' {
@@ -355,6 +372,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.jump_menu_backspace();
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             app.export_backspace();
+                        } else if app.file_filtering {
+                            // Remove character from file filter
+                            app.file_filter_backspace();
                         } else if app.is_searching() {
                             app.search_backspace();
                         } else if app.current_view == app::View::Files {
