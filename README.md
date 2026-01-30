@@ -128,6 +128,7 @@ A professional dashboard for VM inspection with real-time visual analytics.
 
 * **📊 Multi-view dashboard**:
   - **Dashboard** — System overview with health score
+  - **Files** — Interactive file browser with preview and search 🆕
   - **Network** — Interfaces, DNS, firewall rules
   - **Packages** — Installed software, version tracking
   - **Services** — systemd services, status
@@ -330,6 +331,7 @@ guestctl interactive vm.qcow2
 | `stat <path>` | Show file/directory information |
 | `find <path> <name>` | Search for files |
 | `grep <pattern> <file>` | Search file contents |
+| `explore [path]` | **Interactive file explorer** with visual navigation 🆕 |
 | `download <src> <dest>` | Download file from VM disk |
 | `upload <src> <dest>` | Upload file to VM disk |
 | `mkdir <path>` | Create directory |
@@ -395,6 +397,79 @@ Recommended fix:
 - **Timing** — see how long each command takes
 - **Colorized output** — syntax highlighting for files
 - **Progress indicators** — for long-running operations
+
+### 🔍 Interactive File Explorer
+
+The `explore` command provides a visual, interactive file browser with rich features for navigating VM filesystems.
+
+#### Launch Methods
+
+**1. Direct CLI Access:**
+```bash
+# Launch explorer directly
+guestctl explore vm.qcow2 [/optional/path]
+
+# Start at specific directory
+guestctl explore vm.qcow2 /var/log
+```
+
+**2. From Interactive Shell:**
+```bash
+guestctl> explore /etc
+# or simply
+guestctl> ex
+```
+
+**3. TUI Files View:**
+Press `F` in the TUI to access the integrated file browser.
+
+#### Key Features
+
+- **Visual Navigation** — Color-coded files with emoji icons
+- **File Preview** — View file contents with syntax highlighting (press `v`)
+- **File Information** — Detailed stats and metadata (press `i`)
+- **Real-Time Filtering** — Live search as you type (press `/`)
+- **Hidden Files** — Toggle visibility (press `.`)
+- **Smart Sorting** — By name, size, or modification time (press `s`)
+
+#### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `↑↓` / `j k` | Navigate up/down |
+| `Enter` | Enter directory or open file |
+| `Backspace` | Go to parent directory |
+| `v` | Preview file contents |
+| `i` | Show file information |
+| `/` | Start real-time filter |
+| `.` | Toggle hidden files |
+| `s` | Cycle sort modes |
+| `?` | Show help |
+| `q` | Quit explorer |
+
+#### Example Workflow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📍 Path: /var/log  📊 Items: 42  🔍 Filter: syslog     │
+├─────────────────────────────────────────────────────────┤
+│ ▸ 📁 ..                                           <DIR> │
+│   📁 audit                                        <DIR> │
+│   📁 journal                                      <DIR> │
+│ ▸ 📄 syslog                                    12.4 MB │
+│   📄 syslog.1                                   8.2 MB │
+│   📦 syslog.2.gz                                2.1 MB │
+│                                                         │
+│ [v] Preview  [i] Info  [/] Filter  [q] Quit           │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### Documentation
+
+For comprehensive guides, see:
+- **[EXPLORE-QUICKSTART.md](EXPLORE-QUICKSTART.md)** — Quick start guide
+- **[EXPLORE-COMMAND.md](EXPLORE-COMMAND.md)** — Complete user manual
+- **[EXPLORE-COMPLETE-SUMMARY.md](EXPLORE-COMPLETE-SUMMARY.md)** — Full feature overview
 
 ---
 
