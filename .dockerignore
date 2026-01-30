@@ -61,9 +61,6 @@ RPM-BUILD.md
 # Integration tests
 integration/
 
-# Templates
-templates/
-
 # Scripts
 scripts/
 test_*.sh
