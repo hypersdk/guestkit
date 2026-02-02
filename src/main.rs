@@ -1037,6 +1037,36 @@ enum Commands {
         strict: bool,
     },
 
+    /// License compliance checking
+    License {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Output format (text, json, csv)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Prohibited licenses (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        prohibit: Vec<String>,
+
+        /// Show detailed package list
+        #[arg(long)]
+        details: bool,
+
+        /// Generate attribution notices
+        #[arg(long)]
+        attribution: bool,
+
+        /// Fail on prohibited licenses
+        #[arg(long)]
+        strict: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2221,6 +2251,27 @@ fn main() -> anyhow::Result<()> {
                 example_policy,
                 &format,
                 output.as_deref(),
+                strict,
+                cli.verbose,
+            )?;
+        }
+
+        Commands::License {
+            image,
+            format,
+            output,
+            prohibit,
+            details,
+            attribution,
+            strict,
+        } => {
+            license_command(
+                &image,
+                &format,
+                output.as_deref(),
+                &prohibit,
+                details,
+                attribution,
                 strict,
                 cli.verbose,
             )?;
