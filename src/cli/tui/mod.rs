@@ -10,7 +10,7 @@ pub mod views;
 
 use anyhow::{Context, Result};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -33,15 +33,8 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     // Setup terminal first for splash screen
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
-
-    // Enable mouse capture based on config
-    if config.ui.mouse_enabled {
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
-            .context("Failed to enter alternate screen")?;
-    } else {
-        execute!(stdout, EnterAlternateScreen)
-            .context("Failed to enter alternate screen")?;
-    }
+    execute!(stdout, EnterAlternateScreen)
+        .context("Failed to enter alternate screen")?;
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
@@ -78,22 +71,8 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
 
     // Restore terminal
     disable_raw_mode().context("Failed to disable raw mode")?;
-
-    // Disable mouse capture if it was enabled
-    if config.ui.mouse_enabled {
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)
         .context("Failed to leave alternate screen")?;
-    } else {
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen
-        )
-        .context("Failed to leave alternate screen")?;
-    }
 
     terminal.show_cursor().context("Failed to show cursor")?;
 

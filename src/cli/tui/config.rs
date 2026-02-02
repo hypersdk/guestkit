@@ -40,10 +40,6 @@ pub struct UiConfig {
     /// Color theme (currently only "default" supported)
     #[serde(default = "default_theme")]
     pub theme: String,
-
-    /// Enable mouse support
-    #[serde(default = "default_true")]
-    pub mouse_enabled: bool,
 }
 
 /// Behavior configuration
@@ -103,7 +99,6 @@ impl Default for UiConfig {
             splash_duration_ms: 800,
             show_stats_bar: true,
             theme: "default".to_string(),
-            mouse_enabled: false,
         }
     }
 }
@@ -219,7 +214,6 @@ mod tests {
     fn test_default_config() {
         let config = TuiConfig::default();
         assert!(config.ui.show_splash);
-        assert!(!config.ui.mouse_enabled); // Mouse disabled by default
         assert_eq!(config.ui.splash_duration_ms, 800);
         assert_eq!(config.behavior.max_bookmarks, 20);
         assert!(config.keybindings.vim_mode);
