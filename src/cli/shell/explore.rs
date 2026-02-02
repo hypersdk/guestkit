@@ -19,7 +19,6 @@ struct FileEntry {
     name: String,
     is_dir: bool,
     size: i64,
-    mode: Option<String>,
 }
 
 /// Explorer state
@@ -200,7 +199,6 @@ fn load_entries(ctx: &mut ShellContext, path: &str, show_hidden: bool) -> Result
             name: "..".to_string(),
             is_dir: true,
             size: 0,
-            mode: None,
         });
     }
 
@@ -232,7 +230,6 @@ fn load_entries(ctx: &mut ShellContext, path: &str, show_hidden: bool) -> Result
             name: file,
             is_dir,
             size,
-            mode: None,
         });
     }
 

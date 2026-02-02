@@ -20,7 +20,6 @@ pub struct FileEntry {
     pub name: String,
     pub is_dir: bool,
     pub size: i64,
-    pub mode: Option<String>,
 }
 
 /// File browser state for TUI
@@ -59,7 +58,6 @@ impl FileBrowserState {
                 name: "..".to_string(),
                 is_dir: true,
                 size: 0,
-                mode: None,
             });
         }
 
@@ -92,7 +90,6 @@ impl FileBrowserState {
                 name: file,
                 is_dir,
                 size,
-                mode: None,
             });
         }
 
@@ -478,20 +475,4 @@ pub fn get_selected_file_path(browser: &FileBrowserState) -> Option<String> {
     };
 
     Some(path)
-}
-
-/// Get information about the currently selected file
-pub fn get_selected_file_info(browser: &FileBrowserState) -> Option<&FileEntry> {
-    if browser.entries.is_empty() {
-        return None;
-    }
-
-    let entry = &browser.entries[browser.selected];
-
-    // Skip ".." entry
-    if entry.name == ".." {
-        return None;
-    }
-
-    Some(entry)
 }
