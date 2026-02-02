@@ -10473,3 +10473,76 @@ pub fn inventory_command(
 
     Ok(())
 }
+
+/// Validate disk image against policy
+pub fn validate_command(
+    image: &Path,
+    policy_path: Option<&Path>,
+    benchmark: Option<String>,
+    example_policy: bool,
+    format: &str,
+    output: Option<&Path>,
+    strict: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::validate::{self, Benchmark, Policy};
+
+    // Generate example policy if requested
+    if example_policy {
+        let policy = Policy::example();
+        let yaml = serde_yaml::to_string(&policy)?;
+        
+        if let Some(out_path) = output {
+            std::fs::write(out_path, yaml)?;
+            println!("✅ Example policy written to: {}", out_path.display());
+        } else {
+            println!("{}", yaml);
+        }
+        return Ok(());
+    }
+
+    // Load or create policy
+    let policy = if let Some(path) = policy_path {
+        if verbose {
+            println!("📋 Loading policy from: {}", path.display());
+        }
+        Policy::from_file(path)?
+    } else if let Some(bench) = benchmark {
+        if verbose {
+            println!("📋 Using benchmark: {}", bench);
+        }
+        let benchmark_type = Benchmark::from_str(&bench)
+            .ok_or_else(|| anyhow::anyhow!("Unknown benchmark: {}", bench))?;
+        benchmark_type.to_policy()
+    } else {
+        // Use example policy as default
+        if verbose {
+            println!("📋 Using example policy");
+        }
+        Policy::example()
+    };
+
+    // Run validation
+    let report = validate::validate_image(image, &policy, verbose)?;
+
+    // Format output
+    let output_text = match format {
+        "json" => serde_json::to_string_pretty(&report)?,
+        _ => validate::format_report(&report),
+    };
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, output_text)?;
+        println!("✅ Validation report written to: {}", out_path.display());
+    } else {
+        println!("{}", output_text);
+    }
+
+    // Exit with error if strict mode and failures found
+    if strict && report.summary.failed > 0 {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
