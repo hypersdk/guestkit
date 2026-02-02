@@ -17,6 +17,7 @@ pub mod plan;
 pub mod profiles;
 pub mod shell;
 pub mod tui;
+pub mod validate;
 
 pub use batch::*;
 pub use interactive::*;

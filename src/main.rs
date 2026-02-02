@@ -1007,6 +1007,36 @@ enum Commands {
         summary: bool,
     },
 
+    /// Validate disk image against policy
+    Validate {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Policy file path (YAML)
+        #[arg(short, long, value_name = "FILE")]
+        policy: Option<PathBuf>,
+
+        /// Use industry benchmark (cis-ubuntu, cis-rhel, nist, pci, hipaa)
+        #[arg(short, long, value_name = "BENCHMARK")]
+        benchmark: Option<String>,
+
+        /// Generate example policy file
+        #[arg(long)]
+        example_policy: bool,
+
+        /// Output format (text, json)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Fail on any validation failure
+        #[arg(long)]
+        strict: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2171,6 +2201,27 @@ fn main() -> anyhow::Result<()> {
                 include_cves,
                 severity,
                 summary,
+                cli.verbose,
+            )?;
+        }
+
+        Commands::Validate {
+            image,
+            policy,
+            benchmark,
+            example_policy,
+            format,
+            output,
+            strict,
+        } => {
+            validate_command(
+                &image,
+                policy.as_deref(),
+                benchmark,
+                example_policy,
+                &format,
+                output.as_deref(),
+                strict,
                 cli.verbose,
             )?;
         }
