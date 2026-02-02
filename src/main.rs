@@ -1067,6 +1067,28 @@ enum Commands {
         strict: bool,
     },
 
+    /// Generate infrastructure-as-code blueprints
+    Blueprint {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Blueprint format (terraform, ansible, kubernetes, compose)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "terraform")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Cloud provider for Terraform (aws, azure, gcp)
+        #[arg(long, value_name = "PROVIDER")]
+        provider: Option<String>,
+
+        /// Show verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2274,6 +2296,22 @@ fn main() -> anyhow::Result<()> {
                 attribution,
                 strict,
                 cli.verbose,
+            )?;
+        }
+
+        Commands::Blueprint {
+            image,
+            format,
+            output,
+            provider,
+            verbose,
+        } => {
+            blueprint_command(
+                &image,
+                &format,
+                output.as_deref(),
+                provider.as_deref(),
+                verbose || cli.verbose,
             )?;
         }
 

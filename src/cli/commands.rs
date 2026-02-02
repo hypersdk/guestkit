@@ -10599,3 +10599,53 @@ pub fn license_command(
 
     Ok(())
 }
+
+/// Generate infrastructure-as-code blueprints
+pub fn blueprint_command(
+    image: &Path,
+    format: &str,
+    output: Option<&Path>,
+    provider: Option<&str>,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::blueprint;
+
+    // Parse format
+    let blueprint_format = blueprint::BlueprintFormat::from_str(format)
+        .ok_or_else(|| anyhow::anyhow!("Invalid format: {}. Must be terraform, ansible, kubernetes, or compose", format))?;
+
+    if verbose {
+        println!("🔍 Analyzing image: {}", image.display());
+    }
+
+    // Analyze image
+    let analysis = blueprint::analyze_image(image, verbose)?;
+
+    if verbose {
+        println!("✅ Analysis complete");
+        println!("  OS: {} {}", analysis.os_name, analysis.os_version);
+        println!("  Hostname: {}", analysis.hostname);
+        println!("  Packages: {}", analysis.packages.len());
+        println!("  Services: {}", analysis.services.len());
+        println!("  Ports: {}", analysis.ports.len());
+        println!("  Volumes: {}", analysis.volumes.len());
+        println!();
+    }
+
+    // Generate blueprint
+    if verbose {
+        println!("📝 Generating {} blueprint...", format);
+    }
+
+    let blueprint_text = blueprint::generate_blueprint(&analysis, blueprint_format, provider)?;
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, &blueprint_text)?;
+        println!("✅ Blueprint written to: {}", out_path.display());
+    } else {
+        println!("{}", blueprint_text);
+    }
+
+    Ok(())
+}

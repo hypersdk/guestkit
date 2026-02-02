@@ -3,6 +3,7 @@
 
 pub mod ai;
 pub mod batch;
+pub mod blueprint;
 pub mod cache;
 pub mod commands;
 pub mod diff;
