@@ -10,6 +10,7 @@ pub mod errors;
 pub mod exporters;
 pub mod formatters;
 pub mod interactive;
+pub mod inventory;
 pub mod output;
 pub mod parallel;
 pub mod plan;

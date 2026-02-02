@@ -10423,3 +10423,53 @@ pub fn verify_command(
     g.shutdown().ok();
     Ok(())
 }
+
+/// Generate Software Bill of Materials (SBOM)
+pub fn inventory_command(
+    image: &Path,
+    format: &str,
+    output: Option<&str>,
+    include_licenses: bool,
+    include_files: bool,
+    include_cves: bool,
+    _severity: Option<String>,
+    summary: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::inventory::{self, SbomFormat};
+
+    if verbose {
+        println!("📋 Generating SBOM for: {}", image.display());
+    }
+
+    // Generate inventory
+    let inventory = inventory::generate_inventory(
+        image,
+        include_licenses,
+        include_cves,
+        include_files,
+    )?;
+
+    // Show summary if requested
+    if summary {
+        let summary_text = inventory::sbom::generate_summary(&inventory);
+        println!("{}", summary_text);
+    }
+
+    // Parse format
+    let sbom_format = SbomFormat::from_str(format)?;
+
+    if verbose {
+        println!("📤 Exporting as {} format...", format);
+    }
+
+    // Export inventory
+    inventory::export_inventory(&inventory, sbom_format, output)?;
+
+    if !summary && output.is_none() {
+        // If no summary shown and output to stdout, add a brief message
+        eprintln!("\n✅ SBOM generated successfully ({} packages)", inventory.statistics.total_packages);
+    }
+
+    Ok(())
+}

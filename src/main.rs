@@ -973,6 +973,40 @@ enum Commands {
         simulate_update: bool,
     },
 
+    /// Generate Software Bill of Materials (SBOM)
+    Inventory {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Output format (spdx, cyclonedx, json, csv)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "spdx")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Include license information
+        #[arg(long)]
+        include_licenses: bool,
+
+        /// Include file manifests
+        #[arg(long)]
+        include_files: bool,
+
+        /// Include CVE mappings
+        #[arg(long)]
+        include_cves: bool,
+
+        /// Filter CVEs by severity (critical, high, medium, low)
+        #[arg(long, value_name = "SEVERITY")]
+        severity: Option<String>,
+
+        /// Show summary before export
+        #[arg(short = 'S', long)]
+        summary: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2116,6 +2150,29 @@ fn main() -> anyhow::Result<()> {
             simulate_update,
         } => {
             patch_command(&image, check_cves, severity, export, simulate_update, cli.verbose)?;
+        }
+
+        Commands::Inventory {
+            image,
+            format,
+            output,
+            include_licenses,
+            include_files,
+            include_cves,
+            severity,
+            summary,
+        } => {
+            inventory_command(
+                &image,
+                &format,
+                output.as_deref().map(|p| p.to_str().unwrap()),
+                include_licenses,
+                include_files,
+                include_cves,
+                severity,
+                summary,
+                cli.verbose,
+            )?;
         }
 
         Commands::Audit {

@@ -1107,6 +1107,7 @@ dependencies = [
  "mockall",
  "nt_hive2",
  "num_cpus",
+ "once_cell",
  "owo-colors",
  "predicates",
  "printpdf",
