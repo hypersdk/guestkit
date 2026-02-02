@@ -10546,3 +10546,56 @@ pub fn validate_command(
 
     Ok(())
 }
+
+/// License compliance checking
+pub fn license_command(
+    image: &Path,
+    format: &str,
+    output: Option<&Path>,
+    prohibit: &[String],
+    details: bool,
+    attribution: bool,
+    strict: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::license;
+
+    // Scan licenses
+    let report = license::scan_licenses(image, prohibit, verbose)?;
+
+    if attribution {
+        // Generate attribution notices
+        let notices = license::generate_attribution(&report);
+        
+        if let Some(out_path) = output {
+            std::fs::write(out_path, notices)?;
+            println!("✅ Attribution notices written to: {}", out_path.display());
+        } else {
+            println!("{}", notices);
+        }
+        return Ok(());
+    }
+
+    // Format output
+    let output_text = match format {
+        "json" => serde_json::to_string_pretty(&report)?,
+        "csv" => license::reporter::format_csv(&report),
+        _ => license::reporter::format_report(&report, details),
+    };
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, output_text)?;
+        println!("✅ License report written to: {}", out_path.display());
+    } else {
+        println!("{}", output_text);
+    }
+
+    // Exit with error if strict mode and violations found
+    if strict && !report.violations.is_empty() {
+        eprintln!("❌ License compliance check failed: {} violations found", report.violations.len());
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
