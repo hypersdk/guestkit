@@ -156,8 +156,6 @@ pub enum SortMode {
     UidAsc,       // For users
     UidDesc,
     EnabledFirst, // For services
-    DateAsc,      // For users, logs
-    DateDesc,
 }
 
 impl SortMode {
@@ -221,8 +219,6 @@ impl SortMode {
             SortMode::UidAsc => "UID ↑",
             SortMode::UidDesc => "UID ↓",
             SortMode::EnabledFirst => "Enabled 1st",
-            SortMode::DateAsc => "Date ↑",
-            SortMode::DateDesc => "Date ↓",
         }
     }
 }
@@ -332,7 +328,6 @@ pub struct App {
 
     // Guestfs handle for file operations (kept alive for Files view)
     pub guestfs: Option<Guestfs>,
-    pub guestfs_root: Option<String>,
 }
 
 impl App {
@@ -551,7 +546,6 @@ impl App {
             config,
             file_browser: None,
             guestfs: Some(guestfs),
-            guestfs_root: Some(root.to_string()),
         })
     }
 
@@ -1852,14 +1846,6 @@ impl App {
         }
     }
 
-    /// Clear all selections
-    pub fn clear_selection(&mut self) {
-        self.selected_items.clear();
-        self.select_all = false;
-        self.multi_select_mode = false;
-        self.show_notification("Selection cleared".to_string());
-    }
-
     /// Check if item is selected
     pub fn is_item_selected(&self, index: usize) -> bool {
         self.selected_items.contains(&index)
@@ -1868,40 +1854,6 @@ impl App {
     /// Get count of selected items
     pub fn get_selected_count(&self) -> usize {
         self.selected_items.len()
-    }
-
-    /// Perform bulk action on selected items
-    pub fn bulk_action(&mut self, action: &str) {
-        if self.selected_items.is_empty() {
-            self.show_notification("No items selected".to_string());
-            return;
-        }
-
-        match action {
-            "export" => {
-                self.toggle_export_menu();
-                self.show_notification(format!("Exporting {} items", self.selected_items.len()));
-            }
-            "bookmark" => {
-                // Collect bookmarks first to avoid borrow conflict
-                let bookmarks: Vec<String> = self.selected_items.iter()
-                    .map(|idx| format!("{} item #{}", self.current_view.title(), idx))
-                    .collect();
-                let count = bookmarks.len();
-                for bookmark in bookmarks {
-                    self.add_bookmark(bookmark);
-                }
-                self.show_notification(format!("Bookmarked {} items", count));
-                self.clear_selection();
-            }
-            "delete" => {
-                // Placeholder for delete action
-                self.show_notification(format!("Delete {} items (not implemented)", self.selected_items.len()));
-            }
-            _ => {
-                self.show_notification(format!("Unknown action: {}", action));
-            }
-        }
     }
 
     /// Apply quick filter
