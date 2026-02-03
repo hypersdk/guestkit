@@ -10649,3 +10649,68 @@ pub fn blueprint_command(
 
     Ok(())
 }
+
+/// Plan migration
+pub fn migrate_command(
+    image: &Path,
+    target_type: &str,
+    target: &str,
+    version: Option<&str>,
+    format: &str,
+    output: Option<&Path>,
+    detailed: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::migrate;
+
+    // Parse migration type
+    let migration_type = migrate::MigrationTarget::from_str(target_type)
+        .ok_or_else(|| anyhow::anyhow!(
+            "Invalid migration type: {}. Must be os, cloud, or container", target_type
+        ))?;
+
+    if verbose {
+        println!("🔍 Analyzing source system: {}", image.display());
+    }
+
+    // Analyze source system
+    let source = migrate::analyze_source(image, verbose)?;
+
+    if verbose {
+        println!("✅ Analysis complete");
+        println!("  OS: {} {}", source.os_name, source.os_version);
+        println!("  Packages: {}", source.packages.len());
+        println!("  Services: {}", source.services.len());
+        println!();
+        println!("📋 Planning migration to {}...", target);
+    }
+
+    // Plan migration
+    let target_version = version.unwrap_or("latest");
+    let plan = migrate::plan_migration(&source, target, target_version, migration_type)?;
+
+    if verbose {
+        println!("✅ Migration plan generated");
+        println!("  Overall Risk: {:?}", plan.overall_risk);
+        println!("  Compatibility Score: {:.1}%", plan.compatibility_score);
+        println!("  Issues: {}", plan.issues.len());
+        println!();
+    }
+
+    // Format output
+    let output_text = match format {
+        "json" => serde_json::to_string_pretty(&plan)?,
+        "html" => migrate::reporter::format_html(&plan),
+        _ => migrate::reporter::format_report(&plan, detailed),
+    };
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, &output_text)?;
+        println!("✅ Migration plan written to: {}", out_path.display());
+    } else {
+        println!("{}", output_text);
+    }
+
+    Ok(())
+}

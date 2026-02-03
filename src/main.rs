@@ -1089,6 +1089,40 @@ enum Commands {
         verbose: bool,
     },
 
+    /// Plan OS migrations and platform changes
+    Migrate {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Migration target (os, cloud, container)
+        #[arg(short = 't', long, value_name = "TYPE", default_value = "os")]
+        target_type: String,
+
+        /// Target OS or platform
+        #[arg(long, value_name = "TARGET")]
+        target: String,
+
+        /// Target version
+        #[arg(long, value_name = "VERSION")]
+        version: Option<String>,
+
+        /// Output format (text, json, html)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Show detailed analysis
+        #[arg(long)]
+        detailed: bool,
+
+        /// Show verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2311,6 +2345,28 @@ fn main() -> anyhow::Result<()> {
                 &format,
                 output.as_deref(),
                 provider.as_deref(),
+                verbose || cli.verbose,
+            )?;
+        }
+
+        Commands::Migrate {
+            image,
+            target_type,
+            target,
+            version,
+            format,
+            output,
+            detailed,
+            verbose,
+        } => {
+            migrate_command(
+                &image,
+                &target_type,
+                &target,
+                version.as_deref(),
+                &format,
+                output.as_deref(),
+                detailed,
                 verbose || cli.verbose,
             )?;
         }
