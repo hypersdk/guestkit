@@ -7916,210 +7916,6 @@ pub fn recommend_command(
 }
 
 /// Dependency graph and impact analysis
-pub fn dependencies_command(
-    image: &PathBuf,
-    target: Option<String>,
-    graph_type: &str,
-    export_dot: Option<PathBuf>,
-    verbose: bool,
-) -> Result<()> {
-    use guestkit::core::ProgressReporter;
-    use guestkit::Guestfs;
-    use std::collections::{HashMap, HashSet};
-
-    let mut g = Guestfs::new()?;
-    g.set_verbose(verbose);
-
-    let progress = ProgressReporter::spinner("Loading disk image...");
-    g.add_drive_ro(image.to_str().unwrap())?;
-
-    progress.set_message("Launching appliance...");
-    g.launch()?;
-
-    // Mount filesystems
-    progress.set_message("Mounting filesystems...");
-    let roots = g.inspect_os().unwrap_or_default();
-    if !roots.is_empty() {
-        let root = &roots[0];
-        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
-            let mut mounts: Vec<_> = mountpoints.iter().collect();
-            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-            for (mount, device) in mounts {
-                g.mount_ro(device, mount).ok();
-            }
-        }
-    }
-
-    progress.set_message("Analyzing dependencies...");
-
-    println!("Dependency Analysis");
-    println!("==================");
-    println!("Type: {}", graph_type);
-    println!();
-
-    let mut dependencies: HashMap<String, Vec<String>> = HashMap::new();
-
-    match graph_type {
-        "packages" => {
-            println!("📦 Package Dependencies:");
-            println!();
-
-            // Simplified package dependency analysis
-            if !roots.is_empty() {
-                if let Ok(apps) = g.inspect_list_applications(&roots[0]) {
-                    println!("  Total packages installed: {}", apps.len());
-
-                    // Simulated dependency data
-                    let core_packages = vec!["libc6", "libssl", "systemd", "bash"];
-                    let mut dep_count: HashMap<&str, usize> = HashMap::new();
-
-                    for pkg in &core_packages {
-                        dep_count.insert(pkg, 0);
-                    }
-
-                    // Count simulated dependencies
-                    for app in apps.iter().take(100) {
-                        for core_pkg in &core_packages {
-                            if app.name.contains("lib") || app.name.contains("dev") {
-                                *dep_count.entry(core_pkg).or_insert(0) += 1;
-                            }
-                        }
-                    }
-
-                    println!();
-                    println!("  Most depended-upon packages:");
-                    let mut sorted_deps: Vec<_> = dep_count.iter().collect();
-                    sorted_deps.sort_by(|a, b| b.1.cmp(a.1));
-
-                    for (pkg, count) in sorted_deps.iter().take(10) {
-                        println!("    {} ← {} packages depend on this", pkg, count);
-                        dependencies.insert(pkg.to_string(), vec![format!("{} dependents", count)]);
-                    }
-                }
-            }
-        }
-
-        "services" => {
-            println!("⚙️  Service Dependencies:");
-            println!();
-
-            // Analyze systemd service dependencies
-            if g.is_dir("/etc/systemd/system").unwrap_or(false) {
-                println!("  Systemd service dependency graph:");
-                println!();
-
-                // Key services and their typical dependencies
-                let service_deps = vec![
-                    ("sshd.service", vec!["network.target", "syslog.target"]),
-                    ("docker.service", vec!["network.target", "firewalld.service"]),
-                    ("nginx.service", vec!["network.target", "syslog.target"]),
-                ];
-
-                for (service, deps) in service_deps {
-                    if g.exists(&format!("/etc/systemd/system/{}", service)).unwrap_or(false) {
-                        println!("  {} requires:", service);
-                        for dep in &deps {
-                            println!("    ← {}", dep);
-                        }
-                        dependencies.insert(service.to_string(), deps.iter().map(|s| s.to_string()).collect());
-                        println!();
-                    }
-                }
-            }
-        }
-
-        "network" => {
-            println!("🌐 Network Dependencies:");
-            println!();
-
-            // Analyze network configurations
-            if g.is_file("/etc/hosts").unwrap_or(false) {
-                if let Ok(content) = g.read_file("/etc/hosts") {
-                    if let Ok(text) = String::from_utf8(content) {
-                        let host_entries: HashSet<_> = text.lines()
-                            .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
-                            .collect();
-
-                        println!("  Static host mappings: {}", host_entries.len());
-                    }
-                }
-            }
-
-            // DNS dependencies
-            if g.is_file("/etc/resolv.conf").unwrap_or(false) {
-                if let Ok(content) = g.read_file("/etc/resolv.conf") {
-                    if let Ok(text) = String::from_utf8(content) {
-                        let nameservers: Vec<_> = text.lines()
-                            .filter(|l| l.starts_with("nameserver"))
-                            .collect();
-
-                        println!("  DNS servers: {}", nameservers.len());
-                        for ns in nameservers {
-                            println!("    {}", ns);
-                        }
-                    }
-                }
-            }
-        }
-
-        _ => {
-            anyhow::bail!("Unknown graph type. Available: packages, services, network");
-        }
-    }
-
-    progress.finish_and_clear();
-
-    // Impact analysis for specific target
-    if let Some(target_name) = target {
-        println!();
-        println!("Impact Analysis for: {}", target_name);
-        println!("====================={}", "=".repeat(target_name.len()));
-        println!();
-
-        if let Some(deps) = dependencies.get(&target_name) {
-            println!("  Direct dependencies: {}", deps.len());
-            for dep in deps {
-                println!("    • {}", dep);
-            }
-        }
-
-        println!();
-        println!("  ⚠️  Removing or modifying '{}' would impact:", target_name);
-        println!("      - {} direct dependents", dependencies.get(&target_name).map(|d| d.len()).unwrap_or(0));
-        println!("      - Potential cascade effects on dependent services");
-        println!("      - Recommendation: Test in staging before production changes");
-    }
-
-    // Export to Graphviz DOT format
-    if let Some(dot_path) = export_dot {
-        use std::fs::File;
-        use std::io::Write;
-
-        let mut output = File::create(&dot_path)?;
-        writeln!(output, "digraph dependencies {{")?;
-        writeln!(output, "  rankdir=LR;")?;
-        writeln!(output, "  node [shape=box];")?;
-        writeln!(output, "")?;
-
-        for (node, deps) in &dependencies {
-            for dep in deps {
-                writeln!(output, "  \"{}\" -> \"{}\";", node, dep)?;
-            }
-        }
-
-        writeln!(output, "}}")?;
-
-        println!();
-        println!("Dependency graph exported to: {}", dot_path.display());
-        println!("Visualize with: dot -Tpng {} -o graph.png", dot_path.display());
-    }
-
-    g.umount_all().ok();
-    g.shutdown().ok();
-    Ok(())
-}
-
-/// Predictive analysis and capacity planning
 pub fn predict_command(
     image: &PathBuf,
     metric: &str,
@@ -10763,6 +10559,71 @@ pub fn cost_command(
     if let Some(out_path) = output {
         std::fs::write(out_path, &output_text)?;
         println!("✅ Cost analysis written to: {}", out_path.display());
+    } else {
+        println!("{}", output_text);
+    }
+
+    Ok(())
+}
+
+/// Analyze dependencies
+pub fn dependencies_command(
+    image: &Path,
+    format: &str,
+    output: Option<&Path>,
+    detailed: bool,
+    package: Option<&str>,
+    reverse: bool,
+    max_depth: usize,
+    show_all: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::dependencies;
+
+    if verbose {
+        println!("🔍 Analyzing dependencies: {}", image.display());
+    }
+
+    // Analyze dependency graph
+    let graph = dependencies::analyze_dependencies(image, verbose)?;
+
+    if verbose {
+        println!("✅ Dependency analysis complete");
+        println!("   Packages: {}", graph.statistics.total_packages);
+        println!("   Dependencies: {}", graph.statistics.total_dependencies);
+        println!("   Circular: {}", graph.statistics.circular_dependencies);
+        println!();
+    }
+
+    // Format output based on requested format
+    let output_text = if let Some(pkg_name) = package {
+        // Show dependency tree for specific package
+        if reverse {
+            dependencies::visualizer::format_reverse_tree(&graph, pkg_name, max_depth)
+        } else {
+            dependencies::visualizer::format_tree(&graph, pkg_name, max_depth)
+        }
+    } else {
+        match format {
+            "dot" => dependencies::graph::export_dot(&graph, show_all),
+            "json" => dependencies::graph::export_json(&graph)?,
+            "csv" => dependencies::graph::export_csv(&graph),
+            "html" => dependencies::graph::export_html(&graph),
+            _ => dependencies::visualizer::format_report(&graph, detailed),
+        }
+    };
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, &output_text)?;
+        println!("✅ Dependency graph written to: {}", out_path.display());
+
+        // Print helpful message based on format
+        match format {
+            "dot" => println!("💡 Generate visualization: dot -Tpng {} -o graph.png", out_path.display()),
+            "html" => println!("💡 Open in browser: open {}", out_path.display()),
+            _ => {}
+        }
     } else {
         println!("{}", output_text);
     }
