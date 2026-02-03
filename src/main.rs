@@ -1153,6 +1153,7 @@ enum Commands {
         verbose: bool,
     },
 
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -1256,17 +1257,37 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Specific target to analyze
-        #[arg(short = 't', long)]
-        target: Option<String>,
+        /// Output format (text, dot, json, csv, html)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
 
-        /// Graph type (packages, services, network)
-        #[arg(short = 'g', long, default_value = "packages")]
-        graph_type: String,
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
 
-        /// Export to Graphviz DOT format
+        /// Show detailed package information
         #[arg(long)]
-        export_dot: Option<PathBuf>,
+        detailed: bool,
+
+        /// Package to analyze (show dependency tree for specific package)
+        #[arg(long, value_name = "PACKAGE")]
+        package: Option<String>,
+
+        /// Show reverse dependencies (what depends on package)
+        #[arg(long)]
+        reverse: bool,
+
+        /// Maximum tree depth
+        #[arg(long, value_name = "DEPTH", default_value = "5")]
+        max_depth: usize,
+
+        /// Show all packages in graph (default: top 50)
+        #[arg(long)]
+        show_all: bool,
+
+        /// Show verbose output
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Predictive analysis and capacity planning
@@ -2421,6 +2442,30 @@ fn main() -> anyhow::Result<()> {
             )?;
         }
 
+        Commands::Dependencies {
+            image,
+            format,
+            output,
+            detailed,
+            package,
+            reverse,
+            max_depth,
+            show_all,
+            verbose,
+        } => {
+            dependencies_command(
+                &image,
+                &format,
+                output.as_deref(),
+                detailed,
+                package.as_deref(),
+                reverse,
+                max_depth,
+                show_all,
+                verbose || cli.verbose,
+            )?;
+        }
+
         Commands::Audit {
             image,
             categories,
@@ -2470,11 +2515,26 @@ fn main() -> anyhow::Result<()> {
 
         Commands::Dependencies {
             image,
-            target,
-            graph_type,
-            export_dot,
+            format,
+            output,
+            detailed,
+            package,
+            reverse,
+            max_depth,
+            show_all,
+            verbose,
         } => {
-            dependencies_command(&image, target, &graph_type, export_dot, cli.verbose)?;
+            dependencies_command(
+                &image,
+                &format,
+                output.as_deref(),
+                detailed,
+                package.as_deref(),
+                reverse,
+                max_depth,
+                show_all,
+                verbose || cli.verbose,
+            )?;
         }
 
         Commands::Predict {
