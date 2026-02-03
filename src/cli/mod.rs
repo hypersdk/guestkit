@@ -6,6 +6,7 @@ pub mod batch;
 pub mod blueprint;
 pub mod cache;
 pub mod commands;
+pub mod cost;
 pub mod diff;
 pub mod errors;
 pub mod exporters;

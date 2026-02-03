@@ -10714,3 +10714,58 @@ pub fn migrate_command(
 
     Ok(())
 }
+
+/// Cloud cost analysis
+pub fn cost_command(
+    image: &Path,
+    provider_str: &str,
+    region: &str,
+    format: &str,
+    output: Option<&Path>,
+    detailed: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::cli::cost;
+
+    // Parse cloud provider
+    let provider = cost::CloudProvider::from_str(provider_str)
+        .ok_or_else(|| anyhow::anyhow!(
+            "Invalid cloud provider: {}. Must be aws, azure, or gcp", provider_str
+        ))?;
+
+    if verbose {
+        println!("💰 Analyzing costs for: {}", image.display());
+        println!("   Provider: {}", provider.as_str());
+        println!("   Region: {}", region);
+    }
+
+    // Analyze costs
+    let analysis = cost::analyze_costs(image, provider, region, verbose)?;
+
+    if verbose {
+        println!("✅ Cost analysis complete");
+        println!("   Current: ${:.2}/month", analysis.current_estimate.total_monthly);
+        println!("   Optimized: ${:.2}/month", analysis.optimized_estimate.total_monthly);
+        println!("   Savings: ${:.2}/month ({:.1}%)", 
+            analysis.total_monthly_savings,
+            analysis.savings_percentage);
+        println!();
+    }
+
+    // Format output
+    let output_text = match format {
+        "json" => serde_json::to_string_pretty(&analysis)?,
+        "csv" => cost::reporter::format_csv(&analysis),
+        _ => cost::reporter::format_report(&analysis, detailed),
+    };
+
+    // Write or print output
+    if let Some(out_path) = output {
+        std::fs::write(out_path, &output_text)?;
+        println!("✅ Cost analysis written to: {}", out_path.display());
+    } else {
+        println!("{}", output_text);
+    }
+
+    Ok(())
+}
