@@ -1123,6 +1123,36 @@ enum Commands {
         verbose: bool,
     },
 
+    /// Cloud cost optimization analysis
+    Cost {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Cloud provider (aws, azure, gcp)
+        #[arg(short = 'p', long, value_name = "PROVIDER", default_value = "aws")]
+        provider: String,
+
+        /// Cloud region
+        #[arg(short = 'r', long, value_name = "REGION", default_value = "us-east-1")]
+        region: String,
+
+        /// Output format (text, json, csv)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
+
+        /// Output file (stdout if not specified)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Show detailed analysis
+        #[arg(long)]
+        detailed: bool,
+
+        /// Show verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
     /// Comprehensive security audit with detailed reporting
     Audit {
         /// Disk image path
@@ -2364,6 +2394,26 @@ fn main() -> anyhow::Result<()> {
                 &target_type,
                 &target,
                 version.as_deref(),
+                &format,
+                output.as_deref(),
+                detailed,
+                verbose || cli.verbose,
+            )?;
+        }
+
+        Commands::Cost {
+            image,
+            provider,
+            region,
+            format,
+            output,
+            detailed,
+            verbose,
+        } => {
+            cost_command(
+                &image,
+                &provider,
+                &region,
                 &format,
                 output.as_deref(),
                 detailed,
