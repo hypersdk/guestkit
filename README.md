@@ -47,6 +47,7 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 - [Project Structure](#-project-structure)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
+- [Support](#-support)
 - [License](#-license)
 
 ---
@@ -1051,6 +1052,21 @@ This allows:
 - ✅ Private use
 - ⚠️ Must disclose source for modifications
 - ⚠️ Must use same license for derivatives
+
+---
+
+## 💬 Support
+
+### Community
+- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
+- **Documentation**: [docs/](docs/)
+- **Discussions**: [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
+
+### Security
+Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md) (contact: **ssahani@gmail.com**).
+
+### Maintainer & enterprise
+**Susant Sahani** — [ssahani@gmail.com](mailto:ssahani@gmail.com) for security follow-ups, enterprise support, consulting, or custom development. See also [Contributing](docs/development/CONTRIBUTING.md).
 
 ---
 

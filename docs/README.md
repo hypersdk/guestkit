@@ -4,6 +4,10 @@ Welcome to the GuestKit documentation! This directory contains all project docum
 
 📑 **Quick Index**: See [INDEX.md](INDEX.md) for a complete documentation map and quick navigation.
 
+### Contact & security
+- **[Security policy](../SECURITY.md)** (repository root) — how to report vulnerabilities privately
+- **Maintainer:** Susant Sahani (ssahani@gmail.com) — see [Contributing](development/CONTRIBUTING.md) for security reporting and maintainer topics
+
 ## 📚 Documentation Structure
 
 ### 🎯 [User Guides](user-guides/) - User-Facing Documentation
