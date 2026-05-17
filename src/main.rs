@@ -10,6 +10,7 @@ use std::io;
 use std::path::PathBuf;
 
 mod cli;
+mod enterprise_cta;
 use cli::commands::*;
 use cli::plan::PlanCommand;
 
@@ -17,7 +18,11 @@ use cli::plan::PlanCommand;
 #[derive(Parser)]
 #[command(name = "guestctl")]
 #[command(version = VERSION)]
-#[command(about = "Guest VM toolkit for disk inspection and manipulation", long_about = None)]
+#[command(
+    about = "Guest VM toolkit for disk inspection and manipulation",
+    long_about = None,
+    after_help = enterprise_cta::CLI_AFTER_HELP
+)]
 struct Cli {
     /// Verbose output
     #[arg(short, long, global = true)]
@@ -2734,6 +2739,10 @@ fn main() -> anyhow::Result<()> {
         Commands::Plan(plan_cmd) => {
             plan_cmd.execute()?;
         }
+    }
+
+    if !cli.quiet && !cli.machine_readable {
+        enterprise_cta::print_success_footer();
     }
 
     Ok(())

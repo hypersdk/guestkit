@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "🏢 Enterprise, sales & SLAs (Zyvor)"
+    url: https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit
+    about: Production migrations, VMware exit, licensing, and demos — not for GitHub Issues
+  - name: "📧 Email sales"
+    url: mailto:sales@zyvor.dev
+    about: sales@zyvor.dev — enterprise quotes and migration programs
+  - name: "📖 CE vs Enterprise"
+    url: https://github.com/hypersdk/guestkit/blob/main/docs/ce-vs-enterprise.md
+    about: When to use Community Edition vs contact Zyvor
+  - name: "💬 Discussions"
+    url: https://github.com/hypersdk/guestkit/discussions
+    about: Community questions and ideas
+  - name: "🔐 Security"
+    url: https://github.com/hypersdk/guestkit/blob/main/SECURITY.md
+    about: Report vulnerabilities privately (not for sales)

@@ -1103,7 +1103,7 @@ Use GitHub for bugs, contributions, and community questions:
 
 **Reach out to Zyvor for:** 100+ VM migrations · regulated or air-gapped environments · enterprise support contracts · integrated platform (not CE-only) features.
 
-📄 [Full enterprise guide](docs/zyvor-enterprise.md)
+📄 [CE vs Enterprise](docs/ce-vs-enterprise.md) · [Full enterprise guide](docs/zyvor-enterprise.md)
 
 ### Security
 Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md).
