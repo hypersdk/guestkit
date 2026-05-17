@@ -1076,7 +1076,9 @@ For enterprise support, consulting, demos, and migration planning:
 | | |
 |---|---|
 | **Website** | [https://zyvor.dev/](https://zyvor.dev/) |
-| **Contact** | [https://zyvor.dev/contact](https://zyvor.dev/contact) |
+| **Contact form** | [https://zyvor.dev/contact](https://zyvor.dev/contact) |
+| **Sales** | [sales@zyvor.dev](mailto:sales@zyvor.dev) |
+| **General inquiries** | [info@zyvor.dev](mailto:info@zyvor.dev) |
 
 ### Security
 Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md).
