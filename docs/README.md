@@ -12,7 +12,10 @@ Welcome to the GuestKit documentation! This directory contains all project docum
   </a>
 </p>
 
-- **Enterprise & commercial support:** [Zyvor AI Labs](https://zyvor.dev/) — [Contact form](https://zyvor.dev/contact) · [sales@zyvor.dev](mailto:sales@zyvor.dev) · [info@zyvor.dev](mailto:info@zyvor.dev)
+> **🏢 Enterprise & production** — This documentation covers the **Community Edition**. For SLAs, VMware exit, fleet migrations, and the full platform, **approach [zyvor.dev](https://zyvor.dev/)** (not GitHub Issues): [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev/contact](https://zyvor.dev/contact)
+
+- **[Enterprise & platform suite](zyvor-enterprise.md)** — HyperSDK, hyper2kvm, v9s, PacketWolf, and full product matrix
+- **Platform:** [zyvor.dev](https://zyvor.dev/) · **Sales:** [sales@zyvor.dev](mailto:sales@zyvor.dev) · **Info:** [info@zyvor.dev](mailto:info@zyvor.dev)
 - **[Security policy](../SECURITY.md)** (repository root) — how to report vulnerabilities privately
 - **Contributing:** see [Contributing](development/CONTRIBUTING.md)
 
