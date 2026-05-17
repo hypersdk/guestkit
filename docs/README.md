@@ -4,9 +4,17 @@ Welcome to the GuestKit documentation! This directory contains all project docum
 
 📑 **Quick Index**: See [INDEX.md](INDEX.md) for a complete documentation map and quick navigation.
 
-### Contact & security
+### Contact & support
+
+<p align="center">
+  <a href="https://zyvor.dev/">
+    <img src="img/zyvor-logo.webp" alt="Zyvor AI Labs" width="180">
+  </a>
+</p>
+
+- **Enterprise & commercial support:** [Zyvor AI Labs](https://zyvor.dev/) — [https://zyvor.dev/contact](https://zyvor.dev/contact)
 - **[Security policy](../SECURITY.md)** (repository root) — how to report vulnerabilities privately
-- **Maintainer:** Susant Sahani (ssahani@gmail.com) — see [Contributing](development/CONTRIBUTING.md) for security reporting and maintainer topics
+- **Contributing:** see [Contributing](development/CONTRIBUTING.md)
 
 ## 📚 Documentation Structure
 
@@ -174,7 +182,7 @@ Found an issue or want to improve documentation?
 
 - **Issues:** https://github.com/ssahani/guestkit/issues
 - **Discussions:** https://github.com/ssahani/guestkit/discussions
-- **Email:** ssahani@gmail.com
+- **Enterprise support:** [https://zyvor.dev/](https://zyvor.dev/) · [https://zyvor.dev/contact](https://zyvor.dev/contact)
 
 ## External Resources
 

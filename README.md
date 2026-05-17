@@ -1057,16 +1057,29 @@ This allows:
 
 ## 💬 Support
 
+<p align="center">
+  <a href="https://zyvor.dev/">
+    <img src="docs/img/zyvor-logo.webp" alt="Zyvor AI Labs" width="220">
+  </a>
+</p>
+
+**GuestKit** is part of the [HyperSDK Platform](https://zyvor.dev/) suite, engineered and supported by [Zyvor AI Labs](https://zyvor.dev/).
+
 ### Community
 - **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
 - **Documentation**: [docs/](docs/)
 - **Discussions**: [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
 
-### Security
-Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md) (contact: **ssahani@gmail.com**).
+### Enterprise & commercial support
+For enterprise support, consulting, demos, and migration planning:
 
-### Maintainer & enterprise
-**Susant Sahani** — [ssahani@gmail.com](mailto:ssahani@gmail.com) for security follow-ups, enterprise support, consulting, or custom development. See also [Contributing](docs/development/CONTRIBUTING.md).
+| | |
+|---|---|
+| **Website** | [https://zyvor.dev/](https://zyvor.dev/) |
+| **Contact** | [https://zyvor.dev/contact](https://zyvor.dev/contact) |
+
+### Security
+Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md).
 
 ---
 
