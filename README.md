@@ -13,7 +13,7 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
 
-> **🏢 Enterprise & production** — This repo is the **Community Edition** of GuestKit. For SLAs, VMware exit programs, fleet-scale migrations, air-gapped deployments, and the full **[HyperSDK Platform](https://zyvor.dev/)** ([HyperSDK](https://zyvor.dev/hypersdk) · [hyper2kvm](https://zyvor.dev/hyper2kvm) · [v9s](https://zyvor.dev/v9s) · [PacketWolf](https://zyvor.dev/packetwolf) · [more →](https://zyvor.dev/docs/products)), contact **[Zyvor AI Labs](https://zyvor.dev/)**: [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev/contact](https://zyvor.dev/contact)
+> **▶ [Watch the migration demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit)** (video + live dashboard) — then **[contact sales](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit)** for production. This repo is **Community Edition** only ([full platform →](https://zyvor.dev/?utm_source=github&utm_medium=guestkit))
 
 ---
 
@@ -1097,7 +1097,7 @@ Use GitHub for bugs, contributions, and community questions:
 | **[PacketWolf](https://zyvor.dev/packetwolf)** | eBPF network observability & traffic intelligence |
 | **[VMRogue](https://zyvor.dev/vmrogue)** · **[Aether](https://zyvor.dev/aether)** · **[Machina](https://zyvor.dev/machina)** | Build → deploy → host pipeline |
 
-→ [Compare all products](https://zyvor.dev/docs/products) · [Schedule a demo](https://zyvor.dev/contact?intent=demo)
+→ [Watch demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit) · [Compare products](https://zyvor.dev/docs/products) · [Contact sales](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit)
 
 **Enterprise via Zyvor:** SOC2-ready controls, RBAC/SSO, audit logging, SLA options, air-gapped migration, carbon-aware scheduling, partner/MSP programs, and professional services.
 
