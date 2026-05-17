@@ -6,6 +6,8 @@ authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
 description = "Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support"
 repository = "https://github.com/ssahani/guestkit"
+homepage = "https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit"
+documentation = "https://zyvor.dev/docs/products?utm_source=github&utm_medium=guestkit"
 keywords = ["virtualization", "vm", "disk", "qemu", "kvm"]
 categories = ["virtualization", "filesystem", "command-line-utilities"]
 

@@ -35,11 +35,12 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ssahani/guestkit"
-Repository = "https://github.com/ssahani/guestkit"
-Documentation = "https://github.com/ssahani/guestkit/tree/main/docs"
-"Bug Tracker" = "https://github.com/ssahani/guestkit/issues"
-Changelog = "https://github.com/ssahani/guestkit/blob/main/CHANGELOG.md"
+Homepage = "https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit"
+Repository = "https://github.com/hypersdk/guestkit"
+Documentation = "https://github.com/hypersdk/guestkit/tree/main/docs"
+"Bug Tracker" = "https://github.com/hypersdk/guestkit/issues"
+"Enterprise & sales" = "https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit"
+Changelog = "https://github.com/hypersdk/guestkit/releases"
 
 [tool.maturin]
 features = ["python-bindings"]
