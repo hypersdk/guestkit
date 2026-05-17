@@ -3,12 +3,12 @@
 > **A Pure-Rust VM Disk Toolkit** — inspect & manipulate VM disks **without booting them**
 > **🤖 AI-powered diagnostics** (optional) — ask *"why won't this boot?"* and get actionable fixes
 
-GuestKit is a production-ready toolkit for VM disk inspection and manipulation with **beautiful emoji-enhanced CLI output** and an **interactive TUI dashboard**. Built in pure Rust for safety and performance, it inspects VM disks in seconds and integrates cleanly with [hyper2kvm](https://github.com/ssahani/hyper2kvm) for migration workflows.
+GuestKit is a production-ready toolkit for VM disk inspection and manipulation with **beautiful emoji-enhanced CLI output** and an **interactive TUI dashboard**. Built in pure Rust for safety and performance, it inspects VM disks in seconds and integrates cleanly with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) for migration workflows.
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![CI](https://github.com/ssahani/guestkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/ci.yml)
-[![RPM Build](https://github.com/ssahani/guestkit/actions/workflows/rpm.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/rpm.yml)
+[![CI](https://github.com/hypersdk/guestkit/actions/workflows/ci.yml/badge.svg)](https://github.com/hypersdk/guestkit/actions/workflows/ci.yml)
+[![RPM Build](https://github.com/hypersdk/guestkit/actions/workflows/rpm.yml/badge.svg)](https://github.com/hypersdk/guestkit/actions/workflows/rpm.yml)
 [![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
@@ -89,7 +89,7 @@ See [DOCKER.md](DOCKER.md) for detailed container deployment guide.
 
 **From source:**
 ```bash
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 cargo build --release
 ```
@@ -988,7 +988,7 @@ Contributions are welcome! Here's how to get started:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 
 # Build
@@ -1071,9 +1071,9 @@ This allows:
 
 Use GitHub for bugs, contributions, and community questions:
 
-- **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/hypersdk/guestkit/issues)
 - **Documentation**: [docs/](docs/)
-- **Discussions**: [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
+- **Discussions**: [GitHub Discussions](https://github.com/hypersdk/guestkit/discussions)
 
 ### 🏢 Enterprise — approach [zyvor.dev](https://zyvor.dev/)
 
@@ -1116,8 +1116,8 @@ Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md)
 
 | CE repo | Enterprise product |
 |---------|-------------------|
-| [hypersdk](https://github.com/ssahani/hypersdk) | [HyperSDK Platform](https://zyvor.dev/hypersdk) — multi-cloud export |
-| [hyper2kvm](https://github.com/ssahani/hyper2kvm) | [hyper2kvm](https://zyvor.dev/hyper2kvm) — conversion & validation |
+| [hypersdk](https://github.com/hypersdk/hypersdk) | [HyperSDK Platform](https://zyvor.dev/hypersdk) — multi-cloud export |
+| [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | [hyper2kvm](https://zyvor.dev/hyper2kvm) — conversion & validation |
 | GuestKit (this repo) | [GuestKit](https://zyvor.dev/guestkit) — guest disk tooling |
 | — | [v9s](https://zyvor.dev/v9s) · [PacketWolf](https://zyvor.dev/packetwolf) · [full suite](https://zyvor.dev/docs/products) |
 
@@ -1127,8 +1127,8 @@ Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md)
 
 - **Documentation:** [docs/](docs/)
 - **Examples:** [examples/](examples/)
-- **Issue Tracker:** [GitHub Issues](https://github.com/ssahani/guestkit/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
+- **Issue Tracker:** [GitHub Issues](https://github.com/hypersdk/guestkit/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/hypersdk/guestkit/discussions)
 
 ---
 
@@ -1156,4 +1156,4 @@ GuestKit builds on the shoulders of giants:
 
 Made with ❤️ for reliable VM operations.
 
-**Questions?** Open an [issue](https://github.com/ssahani/guestkit/issues) or start a [discussion](https://github.com/ssahani/guestkit/discussions).
+**Questions?** Open an [issue](https://github.com/hypersdk/guestkit/issues) or start a [discussion](https://github.com/hypersdk/guestkit/discussions).

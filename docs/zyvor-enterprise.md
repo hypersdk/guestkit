@@ -54,4 +54,4 @@ Contact **sales@zyvor.dev** or [zyvor.dev/contact](https://zyvor.dev/contact) wh
 - Integrated platform features (dashboard, multi-tenant ops, full provider matrix)  
 - Demos, architecture reviews, or migration planning workshops  
 
-Community bugs and contributions stay on [GitHub Issues](https://github.com/ssahani/guestkit/issues).
+Community bugs and contributions stay on [GitHub Issues](https://github.com/hypersdk/guestkit/issues).
