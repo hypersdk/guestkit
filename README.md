@@ -13,6 +13,8 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
 
+> **🏢 Enterprise & production** — This repo is the **Community Edition** of GuestKit. For SLAs, VMware exit programs, fleet-scale migrations, air-gapped deployments, and the full **[HyperSDK Platform](https://zyvor.dev/)** ([HyperSDK](https://zyvor.dev/hypersdk) · [hyper2kvm](https://zyvor.dev/hyper2kvm) · [v9s](https://zyvor.dev/v9s) · [PacketWolf](https://zyvor.dev/packetwolf) · [more →](https://zyvor.dev/docs/products)), contact **[Zyvor AI Labs](https://zyvor.dev/)**: [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev/contact](https://zyvor.dev/contact)
+
 ---
 
 ## ✨ Highlights
@@ -1063,22 +1065,45 @@ This allows:
   </a>
 </p>
 
-**GuestKit** is part of the [HyperSDK Platform](https://zyvor.dev/) suite, engineered and supported by [Zyvor AI Labs](https://zyvor.dev/).
+**GuestKit** is the **Community Edition** guest-disk component of the [HyperSDK Platform](https://zyvor.dev/) (Zeus suite), engineered by [Zyvor AI Labs](https://zyvor.dev/).
 
-### Community
+### Community Edition (this repository)
+
+Use GitHub for bugs, contributions, and community questions:
+
 - **GitHub Issues**: [Report bugs](https://github.com/ssahani/guestkit/issues)
 - **Documentation**: [docs/](docs/)
 - **Discussions**: [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
 
-### Enterprise & commercial support
-For enterprise support, consulting, demos, and migration planning:
+### 🏢 Enterprise — approach [zyvor.dev](https://zyvor.dev/)
+
+**Production workloads, enterprise licensing, VMware exit programs, SLAs, and platform integration are provided by Zyvor — not via GitHub Issues.**
 
 | | |
 |---|---|
-| **Website** | [https://zyvor.dev/](https://zyvor.dev/) |
-| **Contact form** | [https://zyvor.dev/contact](https://zyvor.dev/contact) |
-| **Sales** | [sales@zyvor.dev](mailto:sales@zyvor.dev) |
+| **Platform** | **[zyvor.dev](https://zyvor.dev/)** |
+| **Sales & demos** | [sales@zyvor.dev](mailto:sales@zyvor.dev) |
 | **General inquiries** | [info@zyvor.dev](mailto:info@zyvor.dev) |
+| **Contact form** | [zyvor.dev/contact](https://zyvor.dev/contact) |
+
+#### HyperSDK Platform products
+
+| Product | Enterprise focus |
+|---------|------------------|
+| **[HyperSDK Platform](https://zyvor.dev/hypersdk)** | Multi-cloud export (10+ providers), APIs, scheduling, dashboard |
+| **[hyper2kvm](https://zyvor.dev/hyper2kvm)** | Conversion, VirtIO/boot repair, validation at scale |
+| **[GuestKit](https://zyvor.dev/guestkit)** | Offline inspect/repair, security profiles, fix plans |
+| **[v9s](https://zyvor.dev/v9s)** | KubeVirt & VM fleet operations on Kubernetes |
+| **[PacketWolf](https://zyvor.dev/packetwolf)** | eBPF network observability & traffic intelligence |
+| **[VMRogue](https://zyvor.dev/vmrogue)** · **[Aether](https://zyvor.dev/aether)** · **[Machina](https://zyvor.dev/machina)** | Build → deploy → host pipeline |
+
+→ [Compare all products](https://zyvor.dev/docs/products) · [Schedule a demo](https://zyvor.dev/contact?intent=demo)
+
+**Enterprise via Zyvor:** SOC2-ready controls, RBAC/SSO, audit logging, SLA options, air-gapped migration, carbon-aware scheduling, partner/MSP programs, and professional services.
+
+**Reach out to Zyvor for:** 100+ VM migrations · regulated or air-gapped environments · enterprise support contracts · integrated platform (not CE-only) features.
+
+📄 [Full enterprise guide](docs/zyvor-enterprise.md)
 
 ### Security
 Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md).
@@ -1087,8 +1112,14 @@ Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md)
 
 ## 🔗 Related Projects
 
-- **[hyper2kvm](https://github.com/ssahani/hyper2kvm)** — Production-grade VM migration toolkit (Hyper-V to KVM)
-- **[hypersdk](https://github.com/ssahani/hypersdk)** — High-performance hypervisor SDK (Go)
+**Community Edition (GitHub)** · **Enterprise platform ([zyvor.dev](https://zyvor.dev/))**
+
+| CE repo | Enterprise product |
+|---------|-------------------|
+| [hypersdk](https://github.com/ssahani/hypersdk) | [HyperSDK Platform](https://zyvor.dev/hypersdk) — multi-cloud export |
+| [hyper2kvm](https://github.com/ssahani/hyper2kvm) | [hyper2kvm](https://zyvor.dev/hyper2kvm) — conversion & validation |
+| GuestKit (this repo) | [GuestKit](https://zyvor.dev/guestkit) — guest disk tooling |
+| — | [v9s](https://zyvor.dev/v9s) · [PacketWolf](https://zyvor.dev/packetwolf) · [full suite](https://zyvor.dev/docs/products) |
 
 ---
 

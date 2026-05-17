@@ -10,6 +10,7 @@ Notable documentation and maintainer-contact updates for GuestKit.
 
 - Added [Zyvor AI Labs](https://zyvor.dev/) branding and logo (`docs/img/zyvor-logo.webp`) to the root [README](../../README.md) Support section and [docs/README.md](../README.md).
 - Enterprise and commercial support now directs to [https://zyvor.dev/](https://zyvor.dev/) and [https://zyvor.dev/contact](https://zyvor.dev/contact).
+- Added [zyvor-enterprise.md](../zyvor-enterprise.md) and README callouts for the HyperSDK Platform suite (HyperSDK, hyper2kvm, GuestKit, v9s, PacketWolf, etc.) with sales@zyvor.dev / info@zyvor.dev.
 
 ## April 2026
 
