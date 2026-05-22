@@ -36,8 +36,7 @@ jobs:
           sccache: 'true'
           manylinux: auto
           before-script-linux: |
-            # Install any system dependencies if needed
-            yum install -y openssl-devel || apt-get update && apt-get install -y libssl-dev
+            yum install -y openssl-devel
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4

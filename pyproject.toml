@@ -46,6 +46,7 @@ Changelog = "https://github.com/hypersdk/guestkit/releases"
 features = ["python-bindings"]
 module-name = "guestkit"
 include = ["guestkit.pyi"]
+# maturin builds the extension as cdylib via `cargo rustc --crate-type cdylib`
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
