@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Splash screen with ASCII art
+//! Splash screen — carbon surfaces, orange accent, Zyvor branding.
 
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, TEXT_COLOR};
+use crate::cli::tui::theme::{fill_background, ACCENT, ACCENT_SOFT, BORDER_MUTED, SURFACE, TEXT, TEXT_MUTED};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Modifier, Style},
@@ -10,82 +10,71 @@ use ratatui::{
     Frame,
 };
 
-pub fn draw_splash(f: &mut Frame) {
-    let area = f.area();
+/// Zyvor wordmark (terminal-safe ASCII). Logo reference: https://zyvor.dev
+const ZYVOR_LOGO: &[&str] = &[
+    "  ███████╗██╗   ██╗██╗   ██╗ ██████╗ ██████╗ ",
+    "  ╚══███╔╝╚██╗ ██╔╝██║   ██║██╔═══██╗██╔══██╗",
+    "    ██╔╝  ╚████╔╝ ██║   ██║██║   ██║██████╔╝",
+    "    ██║    ╚██╔╝  ╚██╗ ██╔╝██║   ██║██╔══██╗",
+    "    ███████╗██║    ╚████╔╝ ╚██████╔╝██║  ██║",
+    "    ╚══════╝╚═╝     ╚═══╝   ╚═════╝ ╚═╝  ╚═╝",
+];
 
+pub fn draw_splash(f: &mut Frame) {
+    f.render_widget(fill_background(), f.area());
+
+    let area = f.area();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(30),
-            Constraint::Percentage(40),
-            Constraint::Percentage(30),
+            Constraint::Percentage(25),
+            Constraint::Percentage(50),
+            Constraint::Percentage(25),
         ])
         .split(area);
 
     let logo_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(60),
-            Constraint::Percentage(20),
+            Constraint::Percentage(15),
+            Constraint::Percentage(70),
+            Constraint::Percentage(15),
         ])
         .split(chunks[1]);
 
-    let logo = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("   ██████╗ ██╗   ██╗███████╗███████╗████████╗", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("  ██╔════╝ ██║   ██║██╔════╝██╔════╝╚══██╔══╝", Style::default().fg(ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("  ██║  ███╗██║   ██║█████╗  ███████╗   ██║   ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("  ██║   ██║██║   ██║██╔══╝  ╚════██║   ██║   ", Style::default().fg(LIGHT_ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("  ╚██████╔╝╚██████╔╝███████╗███████║   ██║   ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("   ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ", Style::default().fg(ORANGE)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("       ██╗  ██╗██╗████████╗", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("       ██║ ██╔╝██║╚══██╔══╝", Style::default().fg(LIGHT_ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("       █████╔╝ ██║   ██║   ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("       ██╔═██╗ ██║   ██║   ", Style::default().fg(ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("       ██║  ██╗██║   ██║   ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("       ╚═╝  ╚═╝╚═╝   ╚═╝   ", Style::default().fg(LIGHT_ORANGE)),
-        ]),
-        Line::from(""),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("       VM Inspection & Analysis Tool", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::ITALIC)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("            Press any key to continue...", Style::default().fg(BORDER_COLOR)),
-        ]),
-    ];
+    let mut logo: Vec<Line> = Vec::new();
+    logo.push(Line::from(""));
+    for row in ZYVOR_LOGO {
+        logo.push(Line::from(Span::styled(
+            *row,
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+        )));
+    }
+    logo.push(Line::from(""));
+    logo.push(Line::from(vec![
+        Span::styled("  HyperSDK Platform  ", Style::default().fg(TEXT_MUTED)),
+        Span::styled("·", Style::default().fg(BORDER_MUTED)),
+        Span::styled("  zyvor.dev  ", Style::default().fg(ACCENT_SOFT)),
+    ]));
+    logo.push(Line::from(""));
+    logo.push(Line::from(vec![
+        Span::styled("  GuestKit  ", Style::default().fg(TEXT).add_modifier(Modifier::BOLD)),
+        Span::styled("VM inspection & analysis", Style::default().fg(TEXT_MUTED)),
+    ]));
+    logo.push(Line::from(""));
+    logo.push(Line::from(Span::styled(
+        "        Press any key to continue…",
+        Style::default().fg(TEXT_MUTED),
+    )));
 
     let splash = Paragraph::new(logo)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR)))
-        .alignment(Alignment::Center);
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_MUTED))
+                .style(Style::default().bg(SURFACE)),
+        );
 
     f.render_widget(splash, logo_chunks[1]);
 }

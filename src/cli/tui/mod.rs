@@ -5,6 +5,7 @@ pub mod app;
 pub mod config;
 pub mod events;
 pub mod splash;
+pub mod theme;
 pub mod ui;
 pub mod views;
 
@@ -61,16 +62,16 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
         std::thread::sleep(Duration::from_millis(config.ui.splash_duration_ms));
     }
 
-    // Show loading spinner during inspection with coral-terracotta orange theme
+    // Loading spinner — carbon accent (#FF7A00), ~120ms tick
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
         ProgressStyle::default_spinner()
-            .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
+            .template("{spinner:.rgb(255,122,0)} {msg:.rgb(125,133,144)}")
             .expect("valid spinner template")
             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
     );
-    spinner.set_message("🔍 Inspecting disk image and analyzing system...");
-    spinner.enable_steady_tick(Duration::from_millis(80));
+    spinner.set_message("Inspecting disk image…");
+    spinner.enable_steady_tick(Duration::from_millis(120));
 
     // Create app state (this is the slow part)
     let app = App::new(image_path.as_ref());
