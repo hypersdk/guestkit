@@ -10,55 +10,52 @@ env:
 
 jobs:
   create-release:
-    name: Create Release
+    name: Create GitHub Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Get version from tag
         id: get_version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - uses: actions/checkout@v4
 
       - name: Extract changelog
         id: changelog
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          # Extract changelog section for this version
-          sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' > release_notes.md
+          sed -n "/## \[${VERSION}\]/,/## \[/p" docs/development/CHANGELOG.md | sed '$d' > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "No changelog section for ${VERSION}" >&2
+            exit 1
+          fi
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
+          name: v${{ steps.get_version.outputs.version }}
           body_path: release_notes.md
           draft: false
           prerelease: false
+          generate_release_notes: false
 
   build-and-upload:
-    name: Build and Upload
+    name: Build and Upload Assets
     needs: create-release
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: guestkit
+          - target: x86_64-unknown-linux-gnu
             asset_name: guestkit-linux-x86_64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            artifact_name: guestkit
+          - target: x86_64-unknown-linux-musl
             asset_name: guestkit-linux-x86_64-musl
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: guestkit
+          - target: aarch64-unknown-linux-gnu
             asset_name: guestkit-linux-aarch64
 
     steps:
@@ -87,41 +84,29 @@ jobs:
           sudo apt-get install -y qemu-utils
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --bin guestkit
 
       - name: Strip binary
         run: |
-          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ]; then
-            strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-          elif [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            aarch64-linux-gnu-strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+          BIN=target/${{ matrix.target }}/release/guestkit
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            aarch64-linux-gnu-strip "$BIN"
+          elif command -v strip >/dev/null; then
+            strip "$BIN" || true
           fi
 
       - name: Create archive
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+          tar czf ${{ matrix.asset_name }}.tar.gz guestkit
           sha256sum ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.tar.gz.sha256
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.tar.gz
-          asset_name: ${{ matrix.asset_name }}.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.tar.gz.sha256
-          asset_name: ${{ matrix.asset_name }}.tar.gz.sha256
-          asset_content_type: text/plain
+          files: |
+            target/${{ matrix.target }}/release/${{ matrix.asset_name }}.tar.gz
+            target/${{ matrix.target }}/release/${{ matrix.asset_name }}.tar.gz.sha256
 
   publish-crate:
     name: Publish to crates.io
@@ -139,4 +124,4 @@ jobs:
           sudo apt-get install -y qemu-utils
 
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
+        run: cargo publish --locked --token "${{ secrets.CARGO_TOKEN }}"

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-05-22
+
+### Added
+- **Carbon control-plane TUI theme** — graphite surfaces (`#0B0E12`), orange accent (`#FF7A00`) on focus and risk states only
+- **Zyvor branding** on TUI splash (`zyvor.dev` wordmark)
+- **Risk-aware header border** — subtle red/amber glow from security issue counts
+- **Documentation hub** (`docs/INDEX.md`) with pruned user-facing docs
+
+### Changed
+- TUI footer uses muted key hints; orange reserved for primary actions
+- Default TUI theme config: `carbon`
+- README: open-source branding (removed Community Edition wording)
+
+### Fixed
+- TUI dashboard and issues views use consistent `content_block` pane styling
+
+## [Unreleased archive]
+
 ### Security & Correctness - Sixth-Pass Review (45 issues, 37 files)
 
 Comprehensive code review covering all 103K lines across 170 source files.

@@ -13,7 +13,7 @@ keywords = ["virtualization", "vm", "worker", "distributed"]
 guestkit-job-spec = { version = "0.1.0", path = "../guestkit-job-spec" }
 
 # Guestkit library for VM operations
-guestkit = { version = "0.3.2", path = "../..", features = ["guest-inspect"] }
+guestkit = { version = "0.3.3", path = "../..", features = ["guest-inspect"] }
 
 # Core
 anyhow = "1.0"
