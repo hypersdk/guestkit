@@ -41,10 +41,13 @@ Views without counts (Dashboard, Security, Profiles) show plain names.
 
 ## Technical Details
 
-### Files Modified
-- `src/cli/tui/mod.rs` - Splash screen integration, vim keybindings
-- `src/cli/tui/ui.rs` - View counts in tabs, help overlay updates
-- `src/cli/tui/splash.rs` - Removed dead_code attribute
+### Files (TUI module)
+- `src/cli/tui/mod.rs` — entry, event loop, fleet/refresh keys
+- `src/cli/tui/ui.rs` — layout chrome, overlays, stats bar, tabs, footer
+- `src/cli/tui/theme.rs` — carbon palette, themes, pane/gauge/sparkline helpers
+- `src/cli/tui/widgets.rs` — chips, severity rail, progress, donut, breadcrumbs
+- `src/cli/tui/views/dashboard.rs`, `views/issues.rs` — polished layouts
+- `src/cli/tui/config.rs` — `theme`, `show_emoji`, `density`, `icon_mode`
 
 ### Keyboard Event Handling
 Vim keybindings are context-aware and only activate when:
@@ -54,11 +57,16 @@ Vim keybindings are context-aware and only activate when:
 
 This prevents conflicts with text input.
 
-### Color Theme
-Consistent coral-terracotta orange theme (Pantone 7416 C):
-- Primary: RGB(222, 115, 86)
-- Dark: RGB(180, 85, 60)
-- Light: RGB(255, 145, 115)
+### Color Theme (Carbon)
+Control-plane palette inspired by Zellij / k9s — orange is reserved for focus and risk:
+- **Background**: `#0B0E12`
+- **Surface**: `#11151B` / raised `#161B22`
+- **Accent (focus / high risk)**: `#FF7A00`
+- **Borders (idle)**: `#2A2F38`
+- **Text**: `#DCE3EA` / muted `#7D8590`
+- **Semantic**: success `#3FB950`, warning `#D29922`, error `#F85149`
+
+Themes: `carbon` (default), `high-contrast`, `minimal` — set in `[ui] theme`.
 
 ## User Experience
 
@@ -112,6 +120,38 @@ Consistent coral-terracotta orange theme (Pantone 7416 C):
 - **Packages / Services** — `[` / `]` layout modes (list / split / detail) like Issues
 - **Publishing** — see [publishing.md](../development/publishing.md) for PyPI and crates.io secrets
 
+## Visual polish (May 2026)
+
+Shared design system and chrome refresh:
+
+### Design system (`theme.rs`, `widgets.rs`)
+- **Pane blocks** — muted borders; orange border/title only when focused or risk-gated
+- **Stat chips** — compact Pkgs / Svcs / Users / Risk / Bookmarks row
+- **List severity rail** — `▌` prefix on Issues (and reusable for other views)
+- **Progress bar** — staged load: `████░░░░ 4/7 Mounting image`
+- **Risk donut** — ASCII `[####····]` summary on Dashboard and Issues
+- **Empty state** — placeholder panel helper for views with no data
+
+### Chrome
+- **Header v2** — health %, breadcrumb (`Issues › critical`), truncated image path, fleet/compare hints
+- **Tabs** — custom row with `▸` on active tab (no full-width orange highlight)
+- **Footer** — muted hints; `cache` when inspect cache exists; loading/fleet indicators
+- **Modals** — dim layer behind palette, help, jump, global search
+- **Toast** — bottom-right notice panel
+
+### Views
+- **Dashboard** — 2-column grid, theme gauges/sparklines, health gauge + risk breakdown
+- **Issues** — donut summary, gauge breakdown, severity rails on findings list
+
+### Configuration
+```toml
+[ui]
+theme = "carbon"           # carbon | high-contrast | minimal
+show_emoji = true          # false = ASCII-only labels in chrome
+icon_mode = "emoji"        # emoji | ascii
+density = "comfortable"    # comfortable | compact (reserved)
+```
+
 ## Future Enhancements
 
 Fleet hot-reload without full guestfs teardown, wheel builds on macOS for all arch matrix legs. See [roadmap](../development/roadmap.md).
@@ -154,23 +194,30 @@ Create a config file to customize your TUI experience:
 
 ```toml
 [ui]
-show_splash = true              # Show splash screen on startup
-splash_duration_ms = 800        # Splash duration in milliseconds
-show_stats_bar = true           # Show statistics bar
-theme = "default"               # Color theme (currently only "default")
-mouse_enabled = true            # Enable mouse support
+show_splash = true
+splash_duration_ms = 800
+show_stats_bar = true
+theme = "carbon"                # carbon | high-contrast | minimal
+show_emoji = true
+icon_mode = "emoji"             # emoji | ascii
+density = "comfortable"
+mouse_enabled = true
+
+[views]
+pinned = ["dashboard", "issues", "files"]
+default_layout = "split"
 
 [behavior]
-default_view = "dashboard"      # Initial view on startup
-auto_refresh_seconds = 0        # Auto-refresh interval (0 = disabled)
-search_case_sensitive = false   # Search case-sensitive by default
-search_regex_mode = false       # Search regex mode by default
-max_bookmarks = 20              # Maximum bookmarks
-page_scroll_lines = 10          # Lines to scroll with Page Up/Down
+default_view = "dashboard"
+auto_refresh_seconds = 0
+search_case_sensitive = false
+search_regex_mode = false
+max_bookmarks = 20
+page_scroll_lines = 10
 
 [keybindings]
-vim_mode = true                 # Enable vim-style keybindings
-quick_jump_enabled = true       # Enable Ctrl+P quick jump menu
+vim_mode = true
+quick_jump_enabled = true
 ```
 
 ### Configuration Options
@@ -179,8 +226,15 @@ quick_jump_enabled = true       # Enable Ctrl+P quick jump menu
 - **show_splash**: Enable/disable splash screen (default: `true`)
 - **splash_duration_ms**: How long to show splash in milliseconds (default: `800`)
 - **show_stats_bar**: Show/hide the statistics bar (default: `true`)
-- **theme**: Color theme selection (default: `"default"`)
+- **theme**: `carbon`, `high-contrast`, or `minimal` (default: `carbon`)
+- **show_emoji**: Emoji in chrome labels (default: `true`; set `false` for ASCII-only)
+- **icon_mode**: Tab/header icons: `emoji` or `ascii` (default: `emoji`)
+- **density**: `comfortable` or `compact` (default: `comfortable`)
 - **mouse_enabled**: Enable/disable mouse support (default: `true`)
+
+#### View Settings (`[views]`)
+- **pinned**: Tab names shown first (default: dashboard, issues, files)
+- **default_layout**: `list`, `split`, or `detail` for layout-aware views
 
 #### Behavior Settings (`[behavior]`)
 - **default_view**: Which view to show on startup (default: `"dashboard"`)
@@ -240,10 +294,7 @@ The configuration file is automatically loaded from:
    mkdir -p ~/.config/guestkit
    ```
 
-2. Copy the example config:
-   ```bash
-   cp docs/tui-config-example.toml ~/.config/guestkit/tui.toml
-   ```
+2. Create `tui.toml` from the example in this document (Configuration File section).
 
 3. Edit to your preferences:
    ```bash
@@ -266,7 +317,7 @@ If no configuration file exists, the TUI uses built-in defaults:
 
 ## Credits
 
-- ASCII art logo created for GuestKit branding
-- Color scheme inspired by Pantone 7416 C (Coral/Terracotta)
+- ASCII art logo and Zyvor splash branding
+- Carbon palette inspired by Zellij / k9s control-plane UIs
 - Vim keybindings follow standard vim conventions
 - Configuration system uses TOML for human-friendly editing

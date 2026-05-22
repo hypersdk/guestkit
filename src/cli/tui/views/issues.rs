@@ -3,15 +3,13 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::{App, IssueRiskFilter, LayoutMode};
-use crate::cli::tui::ui::{
-    content_block, label_style, ACCENT, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE,
-    SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
-};
+use crate::cli::tui::theme::{self, content_block, label_style, ACCENT, ERROR, SUCCESS, TEXT, WARNING};
+use crate::cli::tui::widgets::{self, list_line_spans};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
+    widgets::{List, ListItem, Paragraph},
     Frame,
 };
 
@@ -126,13 +124,13 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     let total_issues = critical + high + medium;
 
     let overall_status = if critical > 0 {
-        ("CRITICAL", ERROR_COLOR)
+        ("CRITICAL", ERROR)
     } else if high > 0 {
-        ("HIGH RISK", WARNING_COLOR)
+        ("HIGH RISK", ACCENT)
     } else if medium > 0 {
-        ("MEDIUM", WARNING_COLOR)
+        ("MEDIUM", WARNING)
     } else {
-        ("HEALTHY", SUCCESS_COLOR)
+        ("HEALTHY", SUCCESS)
     };
 
     let filter_label = match app.issue_filter {
@@ -143,47 +141,40 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     };
 
     let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(5),
-            Constraint::Length(3),
-            Constraint::Length(3),
-            Constraint::Length(3),
-        ])
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
         .split(area);
 
-    let mut summary_lines = vec![
+    let (donut, donut_color) = widgets::risk_donut_ascii(critical, high, medium, 18);
+    let summary_lines = vec![
         Line::from(vec![
-            Span::styled("Status: ", label_style()),
+            Span::styled("Status ", label_style()),
             Span::styled(overall_status.0, Style::default().fg(overall_status.1).add_modifier(Modifier::BOLD)),
-            Span::raw("  │  "),
-            Span::styled("Filter: ", label_style()),
+            Span::styled("  filter ", label_style()),
             Span::styled(filter_label, Style::default().fg(ACCENT)),
-            Span::raw(" (f)"),
+            Span::styled(" (f)", label_style()),
         ]),
         Line::from(vec![
-            Span::styled("Total: ", label_style()),
-            Span::styled(format!("{}", total_issues), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(donut, Style::default().fg(donut_color)),
             Span::raw("  "),
-            Span::styled(format!("C:{} H:{} M:{}", critical, high, medium), label_style()),
+            Span::styled(format!("{total_issues} findings"), theme::value_style()),
+        ]),
+        Line::from(vec![
+            Span::styled(format!("C:{critical} "), Style::default().fg(ERROR)),
+            Span::styled(format!("H:{high} "), Style::default().fg(ACCENT)),
+            Span::styled(format!("M:{medium}"), Style::default().fg(WARNING)),
         ]),
     ];
 
-    if let Some(ref cmp) = app.compare_summary {
-        summary_lines.push(Line::from(vec![
-            Span::styled("Compare: ", label_style()),
-            Span::styled(&cmp.hostname, Style::default().fg(ACCENT)),
-            Span::raw(format!(
-                " — {} pkgs, C{} H{} M{}",
-                cmp.package_count, cmp.critical, cmp.high, cmp.medium
-            )),
-        ]));
-    }
-
     f.render_widget(
-        Paragraph::new(summary_lines).block(content_block("Security & compliance")),
+        Paragraph::new(summary_lines).block(content_block("Issues summary")),
         chunks[0],
     );
+
+    let row = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(1, 3), Constraint::Ratio(1, 3)])
+        .split(chunks[1]);
 
     let pct = |n: usize| -> u16 {
         if total_issues == 0 {
@@ -194,24 +185,15 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     };
 
     for (i, (label, n, color)) in [
-        ("Critical", critical, ERROR_COLOR),
-        ("High", high, WARNING_COLOR),
-        ("Medium", medium, INFO_COLOR),
+        ("Critical", critical, ERROR),
+        ("High", high, ACCENT),
+        ("Medium", medium, WARNING),
     ]
     .iter()
     .enumerate()
     {
-        let g = Gauge::default()
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(BORDER_COLOR))
-                    .title(format!(" {label} ")),
-            )
-            .gauge_style(Style::default().fg(*color))
-            .percent(pct(*n))
-            .label(format!("{n}"));
-        f.render_widget(g, chunks[i + 1]);
+        let g = theme::gauge_widget(label, pct(*n), &format!("{n}"), *color);
+        f.render_widget(g, row[i]);
     }
 }
 
@@ -236,29 +218,27 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
         .iter()
         .enumerate()
         .map(|(idx, row)| {
-            let (icon, color) = match row.risk {
-                Some(RiskLevel::Critical) => ("!!", ERROR_COLOR),
-                Some(RiskLevel::High) => ("! ", WARNING_COLOR),
-                Some(RiskLevel::Medium) => ("~ ", WARNING_COLOR),
-                _ => ("i ", INFO_COLOR),
+            let sev = match row.risk {
+                Some(RiskLevel::Critical) => Some('C'),
+                Some(RiskLevel::High) => Some('H'),
+                Some(RiskLevel::Medium) => Some('M'),
+                Some(RiskLevel::Low) => Some('L'),
+                _ => None,
             };
             let selected = idx == app.selected_index;
-            let style = if selected {
-                Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(TEXT_COLOR)
-            };
             ListItem::new(vec![
+                list_line_spans(
+                    selected,
+                    sev,
+                    vec![
+                        Span::styled(&row.section, Style::default().fg(TEXT)),
+                        Span::raw(" · "),
+                        Span::styled(&row.item, Style::default().fg(TEXT)),
+                    ],
+                ),
                 Line::from(vec![
-                    Span::styled(icon, Style::default().fg(color)),
                     Span::raw(" "),
-                    Span::styled(&row.section, Style::default().fg(ORANGE)),
-                    Span::raw(" • "),
-                    Span::styled(&row.item, style),
-                ]),
-                Line::from(vec![
-                    Span::raw("   "),
-                    Span::styled(&row.message, Style::default().fg(LIGHT_ORANGE)),
+                    Span::styled(&row.message, theme::label_style()),
                 ]),
             ])
         })
@@ -266,12 +246,7 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
         .take(area.height.saturating_sub(2) as usize)
         .collect();
 
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Findings "),
-    );
+    let list = List::new(items).block(content_block("Findings"));
     f.render_widget(list, area);
 }
 
@@ -287,7 +262,7 @@ fn draw_issue_detail(f: &mut Frame, area: Rect, app: &App) {
         vec![
             Line::from(vec![
                 Span::styled("Item: ", label_style()),
-                Span::styled(&row.item, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled(&row.item, Style::default().fg(TEXT).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
             Line::from(vec![
@@ -297,14 +272,14 @@ fn draw_issue_detail(f: &mut Frame, area: Rect, app: &App) {
             Line::from(""),
             Line::from(vec![
                 Span::styled("Remediation: ", label_style()),
-                Span::styled(&row.remediation, Style::default().fg(SUCCESS_COLOR)),
+                Span::styled(&row.remediation, Style::default().fg(SUCCESS)),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Copy fix: ", label_style()),
                 Span::styled(
                     format!("# guestkit inspect --profile security {}", app.image_path),
-                    Style::default().fg(INFO_COLOR),
+                    Style::default().fg(theme::INFO),
                 ),
             ]),
         ]

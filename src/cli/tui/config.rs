@@ -50,6 +50,18 @@ pub struct UiConfig {
     /// Tab icons: `emoji` or `ascii`
     #[serde(default = "default_icon_mode")]
     pub icon_mode: String,
+
+    /// Show emoji in labels (false = ASCII-only chrome)
+    #[serde(default = "default_true")]
+    pub show_emoji: bool,
+
+    /// Row density: `comfortable` or `compact`
+    #[serde(default = "default_density")]
+    pub density: String,
+}
+
+fn default_density() -> String {
+    "comfortable".to_string()
 }
 
 fn default_true() -> bool {
@@ -128,6 +140,8 @@ impl Default for UiConfig {
             theme: "carbon".to_string(),
             mouse_enabled: true,
             icon_mode: "emoji".to_string(),
+            show_emoji: true,
+            density: "comfortable".to_string(),
         }
     }
 }

@@ -12,6 +12,7 @@ pub mod loading;
 pub mod palette;
 pub mod splash;
 pub mod theme;
+pub mod widgets;
 pub mod ui;
 pub mod views;
 
