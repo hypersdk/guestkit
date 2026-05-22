@@ -6,6 +6,8 @@ cd "$ROOT"
 [[ -f "${ROOT}/.package-lib/package-ui.sh" ]] && source "${ROOT}/.package-lib/package-ui.sh"
 
 _PKG_SESSION_START=${SECONDS}
+pkg_install_welcome "guestkit"
+
 pkg_banner "GuestKit client install" "Offline VM disk inspection · not Kubernetes"
 pkg_step_init 4
 
@@ -27,6 +29,7 @@ pkg_step_done
 
 pkg_summary "Install complete"
 pkg_next_steps \
+  "https://zyvor.dev · © @zyvor 2026" \
   "./test-host.sh && ./test-selftest.sh --quick" \
   "./guestkit inspect /path/to/disk.qcow2" \
   "Docs: HOST_SETUP.txt · PREREQUISITES.txt"

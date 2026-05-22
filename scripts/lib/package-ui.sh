@@ -154,6 +154,31 @@ pkg_next_steps() {
     echo ""
 }
 
+# One-screen install guide shown at start of ./install.sh (hassle-free path).
+pkg_install_welcome() {
+    local product="$1"
+    echo ""
+    pkg_box_begin "Hassle-free install"
+    pkg_box_line "No git clone · no compile on this machine (Python bundles use venv/)"
+    pkg_box_line "1. You are already in the extracted tarball folder"
+    pkg_box_line "2. This script installs deps + verifies binaries"
+    pkg_box_line "3. Run ./test-package.sh when finished"
+    pkg_box_end
+    pkg_detail "Suite: https://zyvor.dev · © @zyvor 2026"
+    [[ -n "${product}" ]] && pkg_detail "Product: ${product}"
+    echo ""
+}
+
+pkg_install_done_message() {
+    local product="${1:-}"
+    pkg_summary "Install complete"
+    pkg_next_steps \
+        "Web UI footer: https://zyvor.dev · © @zyvor 2026" \
+        "Questions: https://zyvor.dev" \
+        "Remove: ./uninstall.sh --yes [--remove-dir]"
+    [[ -n "${product}" ]] && pkg_ok "Ready — ${product}"
+}
+
 pkg_source_ui() {
     local root="${1:-}"
     if [[ -f "${root}/.package-lib/package-ui.sh" ]]; then
