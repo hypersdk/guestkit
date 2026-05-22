@@ -459,7 +459,7 @@ pkg_install_welcome() {
     pkg_box_line "Help: cat HELP.txt  ·  ./install.sh --help"
     pkg_box_end
     pkg_detail "This server: $(pkg_primary_host_label)"
-    pkg_detail "Zyvor · https://zyvor.dev · © @zyvor 2026"
+    pkg_detail "zyvor.dev · © @zyvor 2026"
     echo ""
 }
 
