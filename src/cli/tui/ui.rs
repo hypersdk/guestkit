@@ -2,10 +2,15 @@
 //! UI rendering orchestration
 
 use super::app::{App, View};
+use super::theme::{self, fill_background, pane_block};
 use super::views;
+pub use super::theme::{
+    ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR, INFO_COLOR,
+    LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, SURFACE, TEXT_COLOR, TEXT_MUTED, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
         Block, Borders, List, ListItem, Paragraph, Tabs,
@@ -13,19 +18,8 @@ use ratatui::{
     Frame,
 };
 
-// Coral-Terracotta Orange color theme - Pantone 7416 C inspired
-pub const ORANGE: Color = Color::Rgb(222, 115, 86);        // Primary coral orange (Pantone 7416 C)
-pub const DARK_ORANGE: Color = Color::Rgb(180, 85, 60);    // Darker terracotta
-pub const LIGHT_ORANGE: Color = Color::Rgb(255, 145, 115); // Lighter coral
-pub const BG_COLOR: Color = Color::Reset;
-pub const TEXT_COLOR: Color = Color::Rgb(220, 220, 220);   // Softer white
-pub const BORDER_COLOR: Color = DARK_ORANGE;
-pub const SUCCESS_COLOR: Color = Color::Rgb(50, 205, 50);  // Brighter green
-pub const WARNING_COLOR: Color = Color::Rgb(255, 200, 0);  // Deeper yellow
-pub const ERROR_COLOR: Color = Color::Rgb(220, 50, 47);    // Deep red
-pub const INFO_COLOR: Color = Color::Rgb(100, 150, 255);   // Soft blue
-
 pub fn draw(f: &mut Frame, app: &App) {
+    f.render_widget(fill_background(), f.area());
     let constraints = if app.show_stats_bar {
         vec![
             Constraint::Length(3), // Header
@@ -115,26 +109,22 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
 
     let header_text = vec![
         Line::from(vec![
-            Span::styled("GuestKit", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(" - "),
-            Span::styled("VM Inspector", Style::default().fg(LIGHT_ORANGE)),
-            Span::raw("  │  "),
+            Span::styled("GuestKit", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(" · ", theme::label_style()),
+            Span::styled("Zyvor", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("  │  ", theme::label_style()),
             Span::raw(format!("{} ", view_icon)),
-            Span::styled(app.current_view.title(), Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": "),
-            Span::styled(view_desc, Style::default().fg(TEXT_COLOR)),
+            Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(": ", theme::label_style()),
+            Span::styled(view_desc, theme::value_style()),
         ]),
         Line::from(vec![
-            Span::styled("Image: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(&app.image_path, Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Image ", theme::label_style()),
+            Span::styled(&app.image_path, theme::value_style()),
         ]),
     ];
 
-    let header = Paragraph::new(header_text)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .style(Style::default().bg(BG_COLOR)));
+    let header = Paragraph::new(header_text).block(pane_block(" HyperSDK · guest inspect ", true));
 
     f.render_widget(header, area);
 }
@@ -143,8 +133,8 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
     let (critical, high, medium) = app.get_risk_summary();
 
     let stats_spans = vec![
-        Span::styled("📊 ", Style::default().fg(ORANGE)),
-        Span::styled("Pkgs:", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled("📊 ", Style::default().fg(TEXT_MUTED)),
+        Span::styled("Pkgs:", theme::label_style()),
         Span::styled(format!(" {} ", app.packages.package_count), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
         Span::raw("│ "),
         Span::styled("Svcs:", Style::default().fg(LIGHT_ORANGE)),
@@ -177,7 +167,7 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
     risk_spans.push(Span::styled(format!(" {} ", app.bookmarks.len()), Style::default().fg(INFO_COLOR)));
 
     let stats = Paragraph::new(Line::from(risk_spans))
-        .style(Style::default().bg(BG_COLOR).fg(TEXT_COLOR));
+        .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
 
     f.render_widget(stats, area);
 }
@@ -218,17 +208,10 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     }).collect();
 
     let tabs = Tabs::new(titles)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Navigation ")
-            .title_style(Style::default().fg(ORANGE)))
+        .block(pane_block("Navigation", false))
         .select(views.iter().position(|v| v == &app.current_view).unwrap_or(0))
-        .style(Style::default().fg(TEXT_COLOR))
-        .highlight_style(Style::default()
-            .fg(ORANGE)
-            .add_modifier(Modifier::BOLD)
-            .add_modifier(Modifier::UNDERLINED));
+        .style(Style::default().fg(TEXT_MUTED))
+        .highlight_style(theme::focus_style().add_modifier(Modifier::UNDERLINED));
 
     f.render_widget(tabs, area);
 }
@@ -302,7 +285,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     };
 
     let footer = Paragraph::new(Line::from(footer_text))
-        .style(Style::default().bg(BG_COLOR).fg(TEXT_COLOR));
+        .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
 
     f.render_widget(footer, area);
 }

@@ -36,7 +36,7 @@ pub struct UiConfig {
     /// Show stats bar at startup
     pub show_stats_bar: bool,
 
-    /// Color theme (currently only "default" supported)
+    /// Color theme (`carbon` = dark graphite + orange accent)
     pub theme: String,
 }
 
@@ -81,7 +81,7 @@ impl Default for UiConfig {
             show_splash: true,
             splash_duration_ms: 800,
             show_stats_bar: true,
-            theme: "default".to_string(),
+            theme: "carbon".to_string(),
         }
     }
 }
@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(ui.show_splash, true);
         assert_eq!(ui.splash_duration_ms, 800);
         assert_eq!(ui.show_stats_bar, true);
-        assert_eq!(ui.theme, "default");
+        assert_eq!(ui.theme, "carbon");
     }
 
     #[test]
