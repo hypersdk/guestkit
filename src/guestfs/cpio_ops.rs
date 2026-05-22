@@ -71,7 +71,7 @@ impl Guestfs {
 
         // Use piped commands instead of shell to prevent injection
         // Start find process
-        let find_child = Command::new("find")
+        let mut find_child = Command::new("find")
             .arg(".")
             .current_dir(&host_dir)
             .arg("-print")
@@ -81,6 +81,7 @@ impl Guestfs {
 
         let find_stdout = find_child
             .stdout
+            .take()
             .ok_or_else(|| Error::CommandFailed("Failed to capture find output".to_string()))?;
 
         // Start cpio process with find output as stdin
@@ -97,6 +98,9 @@ impl Guestfs {
         let cpio_output = cpio_child
             .wait_with_output()
             .map_err(|e| Error::CommandFailed(format!("Failed to wait for cpio: {}", e)))?;
+
+        // Wait for find child to prevent process leak
+        let _ = find_child.wait();
 
         if !cpio_output.status.success() {
             return Err(Error::CommandFailed(format!(
@@ -159,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_cpio_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

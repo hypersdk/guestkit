@@ -141,7 +141,7 @@ impl PlanPreview {
         }
 
         println!("  Risk: {} | Reversible: {}",
-            Self::colorize_risk(&op.risk),
+            Self::colorize_risk(op.risk.as_str()),
             if op.reversible { "Yes".green() } else { "No".red() }
         );
 
@@ -248,11 +248,312 @@ impl PlanPreview {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
+
+    fn create_test_plan() -> FixPlan {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        // Add a test operation
+        plan.add_operation(Operation {
+            id: "op-001".to_string(),
+            op_type: OperationType::FileEdit(FileEdit {
+                file: "/etc/ssh/sshd_config".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 15,
+                    before: "PermitRootLogin yes".to_string(),
+                    after: "PermitRootLogin no".to_string(),
+                    context: Some("# Authentication:\n".to_string()),
+                }],
+            }),
+            priority: Priority::High,
+            description: "Disable root login".to_string(),
+            risk: Priority::Medium,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        plan
+    }
 
     #[test]
     fn test_preview_creation() {
         let plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
         // Just ensure it doesn't panic
         PlanPreview::print_summary(&plan);
+    }
+
+    #[test]
+    fn test_risk_colorization_critical() {
+        let colored = PlanPreview::colorize_risk("critical");
+        assert!(colored.to_string().contains("critical"));
+    }
+
+    #[test]
+    fn test_risk_colorization_high() {
+        let colored = PlanPreview::colorize_risk("high");
+        assert!(colored.to_string().contains("high"));
+    }
+
+    #[test]
+    fn test_risk_colorization_medium() {
+        let colored = PlanPreview::colorize_risk("medium");
+        assert!(colored.to_string().contains("medium"));
+    }
+
+    #[test]
+    fn test_risk_colorization_low() {
+        let colored = PlanPreview::colorize_risk("low");
+        assert!(colored.to_string().contains("low"));
+    }
+
+    #[test]
+    fn test_risk_colorization_unknown() {
+        let colored = PlanPreview::colorize_risk("unknown");
+        assert!(colored.to_string().contains("unknown"));
+    }
+
+    #[test]
+    fn test_display_doesnt_panic() {
+        let plan = create_test_plan();
+        // Just ensure these methods don't panic
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_diff_doesnt_panic() {
+        let plan = create_test_plan();
+        PlanPreview::display_diff(&plan);
+    }
+
+    #[test]
+    fn test_print_summary_with_operations() {
+        let mut plan = create_test_plan();
+
+        // Add operations of different priorities
+        plan.add_operation(Operation {
+            id: "op-002".to_string(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: "echo test".to_string(),
+                expected_exit: 0,
+                timeout: None,
+            }),
+            priority: Priority::Critical,
+            description: "Critical operation".to_string(),
+            risk: Priority::High,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::print_summary(&plan);
+    }
+
+    #[test]
+    fn test_print_summary_empty_plan() {
+        let plan = FixPlan::new("empty.qcow2".to_string(), "test".to_string());
+        PlanPreview::print_summary(&plan);
+    }
+
+    #[test]
+    fn test_display_with_dependencies() {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        plan.add_operation(Operation {
+            id: "op-001".to_string(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: "echo first".to_string(),
+                expected_exit: 0,
+                timeout: None,
+            }),
+            priority: Priority::High,
+            description: "First operation".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        plan.add_operation(Operation {
+            id: "op-002".to_string(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: "echo second".to_string(),
+                expected_exit: 0,
+                timeout: None,
+            }),
+            priority: Priority::High,
+            description: "Second operation".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec!["op-001".to_string()],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_with_post_apply_actions() {
+        let mut plan = create_test_plan();
+
+        plan.post_apply.push(PostApplyAction::ServiceRestart {
+            services: vec!["sshd".to_string()],
+        });
+
+        plan.post_apply.push(PostApplyAction::Message {
+            message: "Configuration updated".to_string(),
+        });
+
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_package_install_operation() {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        plan.add_operation(Operation {
+            id: "op-pkg".to_string(),
+            op_type: OperationType::PackageInstall(PackageInstall {
+                packages: vec!["fail2ban".to_string(), "aide".to_string()],
+                estimated_size: Some("25MB".to_string()),
+            }),
+            priority: Priority::Medium,
+            description: "Install security packages".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_service_operation() {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        plan.add_operation(Operation {
+            id: "op-svc".to_string(),
+            op_type: OperationType::ServiceOperation(ServiceOperation {
+                service: "firewalld".to_string(),
+                state: Some("enabled".to_string()),
+                start: true,
+                restart: false,
+            }),
+            priority: Priority::High,
+            description: "Enable firewall".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_selinux_operation() {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        plan.add_operation(Operation {
+            id: "op-sel".to_string(),
+            op_type: OperationType::SelinuxMode(SELinuxMode {
+                file: "/etc/selinux/config".to_string(),
+                current: "permissive".to_string(),
+                target: "enforcing".to_string(),
+                warning: Some("Requires reboot".to_string()),
+            }),
+            priority: Priority::Critical,
+            description: "Set SELinux to enforcing".to_string(),
+            risk: Priority::Medium,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::display(&plan);
+    }
+
+    #[test]
+    fn test_display_all_operation_types() {
+        let mut plan = FixPlan::new("test.qcow2".to_string(), "security".to_string());
+
+        // FileEdit
+        plan.add_operation(Operation {
+            id: "op-001".to_string(),
+            op_type: OperationType::FileEdit(FileEdit {
+                file: "/etc/config".to_string(),
+                backup: true,
+                changes: vec![],
+            }),
+            priority: Priority::High,
+            description: "Edit config".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        // FileCopy
+        plan.add_operation(Operation {
+            id: "op-002".to_string(),
+            op_type: OperationType::FileCopy(FileCopy {
+                source: "/etc/default/config".to_string(),
+                destination: "/etc/config".to_string(),
+                backup: true,
+            }),
+            priority: Priority::Medium,
+            description: "Copy config".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        // DirectoryCreate
+        plan.add_operation(Operation {
+            id: "op-003".to_string(),
+            op_type: OperationType::DirectoryCreate(DirectoryCreate {
+                path: "/var/log/audit".to_string(),
+                mode: Some("0755".to_string()),
+            }),
+            priority: Priority::Low,
+            description: "Create directory".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        // FilePermissions
+        plan.add_operation(Operation {
+            id: "op-004".to_string(),
+            op_type: OperationType::FilePermissions(FilePermissions {
+                path: "/etc/shadow".to_string(),
+                mode: "0000".to_string(),
+                owner: Some("root".to_string()),
+                group: Some("root".to_string()),
+            }),
+            priority: Priority::High,
+            description: "Set permissions".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        PlanPreview::display(&plan);
     }
 }

@@ -19,7 +19,7 @@
 ## Files Created
 
 1. **Dockerfile** - Multi-stage build with Rust builder and Debian runtime
-2. **docker-entrypoint.sh** - Loads kernel modules and runs guestctl
+2. **docker-entrypoint.sh** - Loads kernel modules and runs guestkit
 3. **docker-compose.yml** - Orchestration with volumes and privileged mode
 4. **.dockerignore** - Optimizes build context
 5. **DOCKER.md** - Comprehensive deployment guide

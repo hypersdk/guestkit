@@ -19,7 +19,7 @@ Example:
 
 import sys
 import re
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def inspect_dpkg_packages(g, root):
     """Inspect packages on Debian/Ubuntu systems."""

@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use guestkit::cli::parallel::{ParallelInspector, InspectionConfig};
+//! use crate::cli::parallel::{ParallelInspector, InspectionConfig};
 //!
 //! let disks = vec!["vm1.qcow2", "vm2.qcow2", "vm3.qcow2"];
 //! let config = InspectionConfig::default();
@@ -29,7 +29,7 @@
 //! }
 //! ```
 
-use guestkit::core::{BinaryCache, CachedInspection, Error, Result};
+use crate::core::{BinaryCache, CachedInspection, Error, Result};
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -137,18 +137,15 @@ impl ParallelInspector {
     pub fn new(config: InspectionConfig) -> Self {
         // Configure rayon thread pool
         if config.max_workers > 0 {
-            rayon::ThreadPoolBuilder::new()
+            if let Err(e) = rayon::ThreadPoolBuilder::new()
                 .num_threads(config.max_workers)
                 .build_global()
-                .ok(); // Ignore error if already configured
+            {
+                eprintln!("Warning: Failed to configure thread pool: {}", e);
+            }
         }
 
         Self { config }
-    }
-
-    /// Create a new inspector with default configuration
-    pub fn default() -> Self {
-        Self::new(InspectionConfig::default())
     }
 
     /// Inspect multiple disks in parallel
@@ -265,16 +262,14 @@ impl ParallelInspector {
             println!("🔍 Cache miss - inspecting: {}", disk_path.display());
         }
 
-        // TODO: Replace with actual guestfs inspection
-        // For now, use placeholder inspection
         let (os_type, product_name) = self.perform_inspection(disk_path)?;
 
         // Save to cache if enabled
         if self.config.enable_cache {
             if let Ok(cache) = BinaryCache::new() {
-                let cached_inspection = CachedInspection::new(cache_key.clone());
-                // Note: We'll need to populate this with full inspection data
-                // For now, just save the basic structure
+                let mut cached_inspection = CachedInspection::new(cache_key.clone());
+                cached_inspection.os_info.os_type = os_type.clone();
+                cached_inspection.os_info.product_name = product_name.clone();
                 let _ = cache.save(&cache_key, &cached_inspection);
             }
         }
@@ -308,16 +303,30 @@ impl ParallelInspector {
         Ok(format!("{:x}", hash))
     }
 
-    /// Perform actual disk inspection (placeholder for guestfs)
-    fn perform_inspection(&self, _disk_path: &Path) -> Result<(String, String)> {
-        // TODO: Integrate with actual guestfs inspection
-        // This is a placeholder that will be replaced with real implementation
+    /// Perform actual disk inspection using Guestfs
+    fn perform_inspection(&self, disk_path: &Path) -> Result<(String, String)> {
+        let mut g = crate::guestfs::Guestfs::new()
+            .map_err(|e| Error::CommandFailed(format!("Failed to create guestfs handle: {}", e)))?;
 
-        // For now, return placeholder data
-        Ok((
-            "linux".to_string(),
-            "Ubuntu 22.04 LTS".to_string(),
-        ))
+        g.add_drive_ro(disk_path)
+            .map_err(|e| Error::CommandFailed(format!("Failed to add drive {}: {}", disk_path.display(), e)))?;
+
+        g.launch()
+            .map_err(|e| Error::CommandFailed(format!("Failed to launch guestfs: {}", e)))?;
+
+        let roots = g.inspect_os().unwrap_or_default();
+        if roots.is_empty() {
+            let _ = g.shutdown();
+            return Ok(("unknown".to_string(), "Unknown".to_string()));
+        }
+
+        let root = &roots[0];
+        let os_type = g.inspect_get_type(root).unwrap_or_else(|_| "unknown".to_string());
+        let product_name = g.inspect_get_product_name(root).unwrap_or_else(|_| "Unknown".to_string());
+
+        let _ = g.shutdown();
+
+        Ok((os_type, product_name))
     }
 
     /// Get the number of worker threads
@@ -342,7 +351,8 @@ impl ParallelInspector {
         println!("❌ Failed:        {}", failed);
         println!("💾 From cache:    {}", from_cache);
         println!("⏱️  Total time:    {:?}", total_duration);
-        println!("⚡ Avg per disk:  {:?}", total_duration / results.len() as u32);
+        let avg = if results.is_empty() { Duration::ZERO } else { total_duration / results.len() as u32 };
+        println!("⚡ Avg per disk:  {:?}", avg);
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     }
 }
@@ -389,13 +399,13 @@ impl ProgressiveInspector {
                 let result = inspector.inspect_single(path);
 
                 // Update progress
-                let mut count = progress.lock().unwrap();
+                let mut count = progress.lock().unwrap_or_else(|e| e.into_inner());
                 *count += 1;
                 let current = *count;
                 drop(count);
 
                 // Call progress callback
-                let mut cb = callback.lock().unwrap();
+                let mut cb = callback.lock().unwrap_or_else(|e| e.into_inner());
                 cb(current, total);
                 drop(cb);
 
@@ -404,6 +414,12 @@ impl ProgressiveInspector {
             .collect();
 
         Ok(results)
+    }
+}
+
+impl Default for ParallelInspector {
+    fn default() -> Self {
+        Self::new(InspectionConfig::default())
     }
 }
 
@@ -513,9 +529,9 @@ mod tests {
 
         let results = inspector.inspect_batch(&disks).unwrap();
         assert_eq!(results.len(), 2);
-        // With placeholder implementation, both should succeed
-        assert!(results[0].success);
-        assert!(results[1].success);
+        // Non-VM files will fail guestfs inspection
+        assert!(!results[0].success);
+        assert!(!results[1].success);
     }
 
     #[test]
@@ -594,12 +610,12 @@ mod tests {
         let inspector = ParallelInspector::default();
         let key1 = inspector.generate_cache_key(&disk).unwrap();
 
-        // Modify file
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        fs::write(&disk, b"modified").unwrap();
+        // Modify file with different size so the hash changes
+        // (mtime granularity may be too coarse for same-size writes)
+        fs::write(&disk, b"modified content with different length").unwrap();
         let key2 = inspector.generate_cache_key(&disk).unwrap();
 
-        // Modified file should have different key
+        // Modified file should have different key (different size)
         assert_ne!(key1, key2);
     }
 
@@ -659,7 +675,8 @@ mod tests {
         let results = inspector.inspect_batch(&[&disk]).unwrap();
 
         assert_eq!(results.len(), 1);
-        assert!(results[0].success);
+        // Non-VM dummy files fail guestfs inspection
+        assert!(!results[0].success);
     }
 
     #[test]
@@ -676,9 +693,10 @@ mod tests {
         let results = inspector.inspect_batch(&[&disk1, &disk2, &disk3]).unwrap();
 
         assert_eq!(results.len(), 3);
-        assert!(results[0].success);
+        // All fail: disk1/disk3 are dummy data, disk2 doesn't exist
+        assert!(!results[0].success);
         assert!(!results[1].success);
-        assert!(results[2].success);
+        assert!(!results[2].success);
     }
 
     #[test]
@@ -698,7 +716,8 @@ mod tests {
         let results = inspector.inspect_batch(&disk_refs).unwrap();
 
         assert_eq!(results.len(), 20);
-        assert!(results.iter().all(|r| r.success));
+        // All dummy files fail guestfs inspection
+        assert!(results.iter().all(|r| !r.success));
     }
 
     // ========== Configuration Tests ==========
@@ -885,8 +904,8 @@ mod tests {
         let results = inspector.inspect_batch(&[&disk]).unwrap();
 
         assert_eq!(results.len(), 1);
-        assert!(results[0].success);
-        assert!(!results[0].from_cache);
+        // Dummy file fails guestfs inspection
+        assert!(!results[0].success);
     }
 
     #[test]

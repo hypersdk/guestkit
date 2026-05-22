@@ -12,7 +12,7 @@ This example demonstrates all major features of the GuestKit Python bindings:
 """
 
 import sys
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def main():
     if len(sys.argv) < 2:

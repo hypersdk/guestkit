@@ -28,7 +28,7 @@ impl Guestfs {
     /// Get library version
     ///
     pub fn version(&self) -> Result<(i64, i64, i64)> {
-        // Return guestctl version
+        // Return guestkit version
         Ok((0, 1, 0))
     }
 
@@ -161,7 +161,7 @@ impl Guestfs {
     /// Get cache directory
     ///
     pub fn get_cachedir(&self) -> Result<String> {
-        Ok("/var/cache/guestctl".to_string())
+        Ok("/var/cache/guestkit".to_string())
     }
 
     /// Get temporary directory
@@ -190,13 +190,13 @@ impl Guestfs {
     /// Get program name
     ///
     pub fn get_program(&self) -> Result<String> {
-        Ok("guestctl".to_string())
+        Ok("guestkit".to_string())
     }
 
     /// Get library path
     ///
     pub fn get_path(&self) -> Result<String> {
-        Ok("/usr/lib/guestctl".to_string())
+        Ok("/usr/lib/guestkit".to_string())
     }
 
     /// Get HV (hypervisor) type
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_misc_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

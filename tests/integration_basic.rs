@@ -8,7 +8,8 @@ use std::fs;
 use std::path::Path;
 
 /// Helper to create a test disk image
-fn create_test_disk(path: &str, size_mb: u64) -> Result<(), Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+fn create_test_disk(path: &str, size_mb: i64) -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
     g.disk_create(path, "raw", size_mb * 1024 * 1024)?;
     Ok(())

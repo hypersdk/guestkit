@@ -16,43 +16,43 @@ Scan disk images for license compliance, detect violations, and generate attribu
 ### Basic License Scan
 
 ```bash
-guestctl license fedora.qcow2
+guestkit license fedora.qcow2
 ```
 
 ### Scan with Prohibited Licenses
 
 ```bash
-guestctl license ubuntu.qcow2 --prohibit AGPL-3.0 --prohibit GPL-3.0
+guestkit license ubuntu.qcow2 --prohibit AGPL-3.0 --prohibit GPL-3.0
 ```
 
 ### Show Detailed Package Information
 
 ```bash
-guestctl license debian.img --details
+guestkit license debian.img --details
 ```
 
 ### Generate Attribution Notices
 
 ```bash
-guestctl license centos.qcow2 --attribution
+guestkit license centos.qcow2 --attribution
 ```
 
 ### Export to JSON
 
 ```bash
-guestctl license rhel.img --format json --output licenses.json
+guestkit license rhel.img --format json --output licenses.json
 ```
 
 ### Export to CSV
 
 ```bash
-guestctl license ubuntu.qcow2 --format csv --output licenses.csv
+guestkit license ubuntu.qcow2 --format csv --output licenses.csv
 ```
 
 ### Strict Mode (Fail on Violations)
 
 ```bash
-guestctl license fedora.img --strict
+guestkit license fedora.img --strict
 ```
 
 ## Output Formats
@@ -249,24 +249,24 @@ Remediation: Separate components or relicense
 
 1. **Scan the image**:
    ```bash
-   guestctl license app.qcow2 --format json --output audit.json
+   guestkit license app.qcow2 --format json --output audit.json
    ```
 
 2. **Review violations**:
    ```bash
-   guestctl license app.qcow2 --details | grep "🔴\|🟠"
+   guestkit license app.qcow2 --details | grep "🔴\|🟠"
    ```
 
 3. **Generate attribution**:
    ```bash
-   guestctl license app.qcow2 --attribution --output NOTICES.txt
+   guestkit license app.qcow2 --attribution --output NOTICES.txt
    ```
 
 ### Policy Enforcement
 
 ```bash
 # Block AGPL and GPL-3.0
-guestctl license prod.img \
+guestkit license prod.img \
   --prohibit AGPL-3.0 \
   --prohibit GPL-3.0 \
   --strict
@@ -296,7 +296,7 @@ jobs:
 
       - name: Scan licenses
         run: |
-          guestctl license image.qcow2 \
+          guestkit license image.qcow2 \
             --prohibit AGPL-3.0 \
             --format json \
             --output licenses.json \
@@ -334,7 +334,7 @@ echo "libgpl-exception: Legal approved 2024-01-15" >> LICENSE_EXCEPTIONS.txt
 ### 4. Generate Attribution
 Include attribution in your distributions:
 ```bash
-guestctl license app.qcow2 --attribution --output THIRD_PARTY_NOTICES.txt
+guestkit license app.qcow2 --attribution --output THIRD_PARTY_NOTICES.txt
 ```
 
 ### 5. Track Changes
@@ -381,7 +381,7 @@ diff baseline-licenses.json current-licenses.json
 **Solution**:
 ```bash
 # Generate comprehensive attribution
-guestctl license app.qcow2 --attribution --output NOTICES.txt
+guestkit license app.qcow2 --attribution --output NOTICES.txt
 
 # Include in your distribution
 cp NOTICES.txt /path/to/release/
@@ -395,10 +395,10 @@ Combine license and SBOM data:
 
 ```bash
 # Generate SBOM
-guestctl inventory app.qcow2 --format spdx --output sbom.json
+guestkit inventory app.qcow2 --format spdx --output sbom.json
 
 # Check licenses
-guestctl license app.qcow2 --format json --output licenses.json
+guestkit license app.qcow2 --format json --output licenses.json
 
 # Combine for comprehensive audit
 jq -s '.[0] * .[1]' sbom.json licenses.json > full-audit.json
@@ -413,7 +413,7 @@ License checks in policy:
 rules:
   - name: no-agpl
     type: command_output
-    command: "guestctl license {image} --prohibit AGPL-3.0 --strict"
+    command: "guestkit license {image} --prohibit AGPL-3.0 --strict"
     expected_exit_code: 0
     severity: critical
 ```
@@ -427,17 +427,17 @@ rules:
 qemu-img info image.qcow2
 
 # Try different image
-guestctl license image.img
+guestkit license image.img
 ```
 
 ### Issue: "License detection failing"
 
 ```bash
 # Run with verbose output
-RUST_LOG=debug guestctl license image.qcow2
+RUST_LOG=debug guestkit license image.qcow2
 
 # Check if packages are installed
-guestctl inspect image.qcow2 | jq '.applications | length'
+guestkit inspect image.qcow2 | jq '.applications | length'
 ```
 
 ### Issue: "Too many unknown licenses"

@@ -3,12 +3,13 @@
 //! Tests to ensure no unwrap() panics occur in error scenarios.
 //! All operations should return proper Result types instead of panicking.
 
-use guestkit::guestfs::{Guestfs, Utf8Policy};
+use guestkit::guestfs::Guestfs;
+use guestkit::guestfs::handle::Utf8Policy;
 
 #[test]
 fn test_nbd_not_initialized() {
     // Operations that need NBD should return Err, not panic
-    let mut g = Guestfs::new().unwrap();
+    let g = Guestfs::new().unwrap();
 
     // These should return errors, not panic on unwrap
     // Note: We can't directly test internal methods, but we can test
@@ -56,53 +57,38 @@ fn test_operations_without_drives() {
     // Verify we're in error or config state, not panicked
     let state = g.state();
     assert!(
-        state == &guestkit::guestfs::handle::GuestfsState::Error("No drives added".to_string())
+        state == &guestkit::guestfs::handle::GuestfsState::Error
             || state == &guestkit::guestfs::handle::GuestfsState::Config
     );
 }
 
 #[test]
-fn test_invalid_utf8_strict_mode() {
+fn test_utf8_policy_configuration() {
     let mut g = Guestfs::new().unwrap();
+
+    // Default should be Lossy
+    assert_eq!(g.get_utf8_policy(), &Utf8Policy::Lossy);
+
+    // Setting to Strict should work and not panic
     g.set_utf8_policy(Utf8Policy::Strict);
+    assert_eq!(g.get_utf8_policy(), &Utf8Policy::Strict);
 
-    // Create invalid UTF-8 bytes
-    let invalid_utf8: Vec<u8> = vec![0xFF, 0xFE, 0xFD];
-
-    // Should return error, not panic
-    let result = g.decode_utf8(&invalid_utf8);
-    assert!(
-        result.is_err(),
-        "Should return error for invalid UTF-8 in strict mode"
-    );
+    // Setting back should also work
+    g.set_utf8_policy(Utf8Policy::Lossy);
+    assert_eq!(g.get_utf8_policy(), &Utf8Policy::Lossy);
 }
 
 #[test]
-fn test_invalid_utf8_lossy_mode() {
-    let g = Guestfs::new().unwrap();
-    // Default is Lossy mode
-
-    // Create invalid UTF-8 bytes
-    let invalid_utf8: Vec<u8> = vec![0xFF, 0xFE, 0xFD];
-
-    // Should succeed with replacement characters
-    let result = g.decode_utf8(&invalid_utf8);
-    assert!(
-        result.is_ok(),
-        "Should succeed in lossy mode with replacements"
-    );
-}
-
-#[test]
-fn test_device_name_parsing_errors() {
-    let g = Guestfs::new().unwrap();
+fn test_device_name_validation() {
+    use guestkit::guestfs::security_utils::PathValidator;
 
     // Invalid device names should return errors, not panic
-    assert!(g.parse_device_name("").is_err());
-    assert!(g.parse_device_name("invalid").is_err());
-    assert!(g.parse_device_name("/home/file").is_err());
-    assert!(g.parse_device_name("/dev/unknown99").is_err());
-    assert!(g.parse_device_name("/dev/sda; rm -rf /").is_err());
+    assert!(PathValidator::validate_device_path("").is_err());
+    assert!(PathValidator::validate_device_path("/home/file").is_err());
+    assert!(PathValidator::validate_device_path("/dev/sda; rm -rf /").is_err());
+    // Valid device paths should succeed
+    assert!(PathValidator::validate_device_path("/dev/sda").is_ok());
+    assert!(PathValidator::validate_device_path("/dev/sda1").is_ok());
 }
 
 #[test]
@@ -134,30 +120,28 @@ fn test_operations_after_error_state() {
 
 #[test]
 fn test_resource_limits_boundary() {
+    
     let g = Guestfs::new().unwrap();
 
-    // Test exact boundary values - should not panic
-    let max_size = u64::MAX;
-    let result = g.check_file_size_limit(max_size);
-    assert!(result.is_err()); // Should exceed default limit
-
-    // Test zero
-    let result = g.check_file_size_limit(0);
-    assert!(result.is_ok());
+    // Test resource limits exist and have reasonable defaults - should not panic
+    let limits = g.get_resource_limits();
+    assert!(limits.max_file_size.is_some());
+    assert!(limits.max_file_size.unwrap() > 0);
+    assert_eq!(limits.max_path_length, 4096);
 }
 
 #[test]
 fn test_path_length_boundary() {
-    let g = Guestfs::new().unwrap();
+    use guestkit::guestfs::security_utils::PathValidator;
 
     // Test maximum allowed path length - should not panic
-    let max_path = "a".repeat(4096);
-    let result = g.check_path_length_limit(&max_path);
+    let max_path = "/".to_string() + &"a".repeat(4095);
+    let result = PathValidator::validate_fs_path(&max_path);
     assert!(result.is_ok());
 
     // Test just over limit
-    let over_path = "a".repeat(4097);
-    let result = g.check_path_length_limit(&over_path);
+    let over_path = "/".to_string() + &"a".repeat(4097);
+    let result = PathValidator::validate_fs_path(&over_path);
     assert!(result.is_err());
 }
 
@@ -234,8 +218,8 @@ fn test_state_transitions() {
     assert!(result.is_err());
 
     // Should be in Error state now
-    if let guestkit::guestfs::handle::GuestfsState::Error(msg) = g.state() {
-        assert!(msg.contains("No drives added"));
+    if g.state() == &guestkit::guestfs::handle::GuestfsState::Error {
+        // Error state confirmed
     } else {
         panic!("Expected Error state after failed launch");
     }

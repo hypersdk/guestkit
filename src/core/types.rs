@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Common types for guestctl
+//! Common types for guestkit
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -29,17 +29,45 @@ impl DiskFormat {
             DiskFormat::Unknown => "unknown",
         }
     }
+}
 
+impl DiskFormat {
+    /// Parse a format string into a DiskFormat (convenience method).
+    /// Kept for backward compatibility with existing call sites.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "qcow2" => DiskFormat::Qcow2,
-            "raw" => DiskFormat::Raw,
-            "vmdk" => DiskFormat::Vmdk,
-            "vhd" => DiskFormat::Vhd,
-            "vhdx" => DiskFormat::Vhdx,
-            "vdi" => DiskFormat::Vdi,
-            _ => DiskFormat::Unknown,
+        match s.parse() {
+            Ok(v) => v,
+            Err(e) => match e {},  // Infallible — the match is exhaustive over Infallible
         }
+    }
+}
+
+impl std::str::FromStr for DiskFormat {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(if s.eq_ignore_ascii_case("qcow2") {
+            DiskFormat::Qcow2
+        } else if s.eq_ignore_ascii_case("raw") {
+            DiskFormat::Raw
+        } else if s.eq_ignore_ascii_case("vmdk") {
+            DiskFormat::Vmdk
+        } else if s.eq_ignore_ascii_case("vhd") {
+            DiskFormat::Vhd
+        } else if s.eq_ignore_ascii_case("vhdx") {
+            DiskFormat::Vhdx
+        } else if s.eq_ignore_ascii_case("vdi") {
+            DiskFormat::Vdi
+        } else {
+            DiskFormat::Unknown
+        })
+    }
+}
+
+impl std::fmt::Display for DiskFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

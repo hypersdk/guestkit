@@ -345,7 +345,7 @@ impl Guestfs {
     }
 
     /// Create tar with options
-    ///
+    #[allow(clippy::too_many_arguments)]
     pub fn tar_out_opts<P: AsRef<Path>>(
         &mut self,
         directory: &str,
@@ -633,7 +633,7 @@ mod tests {
 
     #[test]
     fn test_archive_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let g = Guestfs::new().unwrap();
         let _ = g;
     }
 }

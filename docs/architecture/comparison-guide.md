@@ -32,13 +32,13 @@ Compare two disk images and show detailed differences.
 
 ```bash
 # Basic diff
-guestctl diff vm-before.qcow2 vm-after.qcow2
+guestkit diff vm-before.qcow2 vm-after.qcow2
 
 # JSON output
-guestctl diff vm1.qcow2 vm2.qcow2 --output json
+guestkit diff vm1.qcow2 vm2.qcow2 --output json
 
 # YAML output
-guestctl diff vm1.qcow2 vm2.qcow2 --output yaml
+guestkit diff vm1.qcow2 vm2.qcow2 --output yaml
 ```
 
 ### What It Compares
@@ -172,10 +172,10 @@ Compare multiple VMs against a baseline to identify deviations.
 
 ```bash
 # Compare VMs against baseline
-guestctl compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
+guestkit compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
 
 # Compare all VMs in directory
-guestctl compare golden-image.qcow2 prod-*.qcow2
+guestkit compare golden-image.qcow2 prod-*.qcow2
 ```
 
 ### What It Compares
@@ -226,7 +226,7 @@ if [ ! -f "$BASELINE" ]; then
 fi
 
 # Compare current against baseline
-DRIFT=$(guestctl diff "$BASELINE" "$CURRENT" --output json | \
+DRIFT=$(guestkit diff "$BASELINE" "$CURRENT" --output json | \
     jq -r '[
         (.package_changes.added | length),
         (.package_changes.removed | length),
@@ -236,7 +236,7 @@ DRIFT=$(guestctl diff "$BASELINE" "$CURRENT" --output json | \
 
 if [ "$DRIFT" -gt 0 ]; then
     echo "ALERT: Configuration drift detected!"
-    guestctl diff "$BASELINE" "$CURRENT" > drift-report-$(date +%Y-%m-%d).txt
+    guestkit diff "$BASELINE" "$CURRENT" > drift-report-$(date +%Y-%m-%d).txt
     echo "Drift report saved"
 else
     echo "No drift detected"
@@ -256,7 +256,7 @@ AFTER="vm-after-deployment.qcow2"
 EXPECTED_PACKAGES=("nginx" "certbot")
 
 # Get diff
-guestctl diff "$BEFORE" "$AFTER" --output json > deployment-diff.json
+guestkit diff "$BEFORE" "$AFTER" --output json > deployment-diff.json
 
 # Validate expected packages were added
 for pkg in "${EXPECTED_PACKAGES[@]}"; do
@@ -287,7 +287,7 @@ for vm in prod-*.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
     # Compare against golden
-    guestctl diff "$GOLDEN" "$vm" --output json > "compliance-$NAME.json"
+    guestkit diff "$GOLDEN" "$vm" --output json > "compliance-$NAME.json"
 
     # Check for critical differences
     CRITICAL=$(jq -r '[
@@ -322,7 +322,7 @@ SOURCE="source-vm.qcow2"
 TARGET="migrated-vm.qcow2"
 
 # Compare source and target
-guestctl diff "$SOURCE" "$TARGET" --output json > migration-diff.json
+guestkit diff "$SOURCE" "$TARGET" --output json > migration-diff.json
 
 # Expected differences (hostname, IP)
 EXPECTED_DIFFS=$(jq -r '.os_changes | length' migration-diff.json)
@@ -359,7 +359,7 @@ for vm in web-*.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
     # Compare against baseline
-    DIFF=$(guestctl diff "$BASELINE" "$vm" --output json | \
+    DIFF=$(guestkit diff "$BASELINE" "$vm" --output json | \
         jq -r '[.package_changes.added | length, .package_changes.removed | length] | add')
 
     if [ "$DIFF" -gt 0 ]; then
@@ -404,13 +404,13 @@ REPORT_DIR="diff-$NAME1-vs-$NAME2"
 mkdir -p "$REPORT_DIR"
 
 # Text report
-guestctl diff "$VM1" "$VM2" > "$REPORT_DIR/diff-report.txt"
+guestkit diff "$VM1" "$VM2" > "$REPORT_DIR/diff-report.txt"
 
 # JSON for automation
-guestctl diff "$VM1" "$VM2" --output json > "$REPORT_DIR/diff-data.json"
+guestkit diff "$VM1" "$VM2" --output json > "$REPORT_DIR/diff-data.json"
 
 # YAML for readability
-guestctl diff "$VM1" "$VM2" --output yaml > "$REPORT_DIR/diff-data.yaml"
+guestkit diff "$VM1" "$VM2" --output yaml > "$REPORT_DIR/diff-data.yaml"
 
 # Extract package changes only
 jq '.package_changes' "$REPORT_DIR/diff-data.json" > "$REPORT_DIR/package-changes.json"
@@ -435,14 +435,14 @@ mkdir -p "$HISTORY_DIR"
 
 # Take snapshot of current state
 DATE=$(date +%Y-%m-%d)
-guestctl inspect "$VM" --output json > "$HISTORY_DIR/snapshot-$DATE.json"
+guestkit inspect "$VM" --output json > "$HISTORY_DIR/snapshot-$DATE.json"
 
 # Compare with previous day
 YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 if [ -f "$HISTORY_DIR/snapshot-$YESTERDAY.json" ]; then
     # Note: This compares snapshots, not live VMs
     # For live comparison, use:
-    # guestctl diff yesterday-vm.qcow2 today-vm.qcow2
+    # guestkit diff yesterday-vm.qcow2 today-vm.qcow2
 
     diff "$HISTORY_DIR/snapshot-$YESTERDAY.json" "$HISTORY_DIR/snapshot-$DATE.json" > "$HISTORY_DIR/changes-$DATE.diff"
 
@@ -478,8 +478,8 @@ REPORT_FILE="comparison-matrix-$(date +%Y-%m-%d).txt"
     echo "Date: $(date)"
     echo ""
 
-    # Run guestctl compare command
-    guestctl compare "$BASELINE" "${VMS[@]}"
+    # Run guestkit compare command
+    guestkit compare "$BASELINE" "${VMS[@]}"
 
     echo ""
     echo "=== Individual Diffs ==="
@@ -488,7 +488,7 @@ REPORT_FILE="comparison-matrix-$(date +%Y-%m-%d).txt"
     for vm in "${VMS[@]}"; do
         NAME=$(basename "$vm" .qcow2)
         echo "━━━ $NAME vs Baseline ━━━"
-        guestctl diff "$BASELINE" "$vm" | head -30
+        guestkit diff "$BASELINE" "$vm" | head -30
         echo ""
     done
 } | tee "$REPORT_FILE"

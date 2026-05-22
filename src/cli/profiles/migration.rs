@@ -3,7 +3,7 @@
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection};
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 
 pub struct MigrationProfile;
 
@@ -238,7 +238,7 @@ impl MigrationProfile {
             if let Ok(usage_map) = g.statvfs("/") {
                 let blocks = *usage_map.get("blocks").unwrap_or(&0);
                 let bsize = *usage_map.get("bsize").unwrap_or(&4096);
-                let total_gb = (blocks * bsize) / (1024 * 1024 * 1024);
+                let total_gb = (blocks / 1024).saturating_mul(bsize) / (1024 * 1024);
 
                 findings.push(Finding {
                     item: "Root Filesystem Size".to_string(),

@@ -97,8 +97,8 @@ The TUI is **already substantially implemented** with:
 ### 2.3 Improve Export Functionality
 **Effort:** 1-2 days
 
-- Actually implement HTML export (currently "coming soon")
-- Actually implement PDF export (currently "coming soon")
+- ~~Actually implement HTML export~~ ✅ Done
+- PDF export available via CLI (`guestkit inspect <image> --export pdf`)
 - Add export templates
 - Support exporting specific views vs full report
 - Add export history/recent exports
@@ -238,6 +238,10 @@ The TUI is **already substantially implemented** with:
 ---
 
 ## Testing Plan
+
+### Security Review
+
+The TUI code has been reviewed for security issues as part of a comprehensive 54-issue code audit. Fixes include scroll bounds checking, regex safety with proper error handling, and input validation for user-supplied data in views.
 
 ### Unit Tests
 - Test view rendering

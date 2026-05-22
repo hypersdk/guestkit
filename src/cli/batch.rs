@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Batch script execution for guestctl CLI
+//! Batch script execution for guestkit CLI
 
-use super::errors::errors;
+use super::errors::builders as errors;
 use anyhow::{Context, Result};
-use guestkit::Guestfs;
+use crate::Guestfs;
 use owo_colors::OwoColorize;
 use std::collections::HashMap;
 use std::fs;
@@ -49,7 +49,7 @@ impl BatchExecutor {
             println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
         }
         handle
-            .add_drive_ro(disk_path.to_str().unwrap())
+            .add_drive_ro(disk_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", disk_path.display()))?)
             .context("Failed to add drive")?;
 
         // Launch
@@ -59,7 +59,15 @@ impl BatchExecutor {
         handle.launch().context("Failed to launch guestfs")?;
 
         // Auto-inspect
-        let roots = handle.inspect_os().unwrap_or_default();
+        let roots = match handle.inspect_os() {
+            Ok(r) => r,
+            Err(e) => {
+                if verbose {
+                    eprintln!("  {} OS inspection failed: {}", "!".yellow(), e);
+                }
+                Vec::new()
+            }
+        };
         let current_root = roots.first().cloned();
 
         if verbose && current_root.is_some() {

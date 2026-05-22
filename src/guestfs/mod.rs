@@ -47,6 +47,7 @@ pub mod ldm_ops;
 pub mod link_ops;
 pub mod luks;
 pub mod lvm;
+pub mod lvm_clone;
 pub mod md_ops;
 pub mod metadata;
 pub mod minix_ops;

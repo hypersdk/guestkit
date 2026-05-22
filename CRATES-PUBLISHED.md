@@ -39,7 +39,7 @@ cargo add guestkit-job-spec
 **Description:** Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support
 
 **What's New in 0.3.2:**
-- ✅ Fixed library name (was `guestctl`, now `guestkit`)
+- ✅ Fixed library name (was `guestkit`, now `guestkit`)
 - ✅ Proper exports for Guestfs type
 - ✅ Compatible with guestkit-worker
 
@@ -160,7 +160,7 @@ guestkit v0.3.2
 
 The published guestkit 0.3.1 had a library name mismatch:
 - Package name: `guestkit`
-- Library name: `guestctl` (old name)
+- Library name: `guestkit` (old name)
 
 This caused import errors when trying to use:
 ```rust
@@ -335,7 +335,7 @@ guestkit-worker result <job-id>
 
 - **Documentation:** `docs/` directory
 - **Issues:** https://github.com/ssahani/guestkit/issues
-- **Maintainer:** Susant Sahani <ssahani@gmail.com>
+- **Maintainer:** Susant Sahani <ssahani@redhat.com>
 
 ### Reporting Issues
 

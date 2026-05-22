@@ -74,7 +74,7 @@ pub struct Operation {
     pub description: String,
 
     /// Risk level of this operation
-    pub risk: String,
+    pub risk: Priority,
 
     /// Whether this operation can be reversed
     pub reversible: bool,
@@ -438,5 +438,310 @@ mod tests {
         assert!(Priority::Critical < Priority::High);
         assert!(Priority::High < Priority::Medium);
         assert!(Priority::Medium < Priority::Low);
+    }
+
+    #[test]
+    fn test_priority_as_str() {
+        assert_eq!(Priority::Critical.as_str(), "critical");
+        assert_eq!(Priority::High.as_str(), "high");
+        assert_eq!(Priority::Medium.as_str(), "medium");
+        assert_eq!(Priority::Low.as_str(), "low");
+        assert_eq!(Priority::Info.as_str(), "info");
+    }
+
+    #[test]
+    fn test_priority_emoji() {
+        assert_eq!(Priority::Critical.emoji(), "🔴");
+        assert_eq!(Priority::High.emoji(), "🟠");
+        assert_eq!(Priority::Medium.emoji(), "🟡");
+        assert_eq!(Priority::Low.emoji(), "🟢");
+        assert_eq!(Priority::Info.emoji(), "ℹ️");
+    }
+
+    #[test]
+    fn test_plan_metadata_creation() {
+        let metadata = PlanMetadata {
+            author: "guestkit".to_string(),
+            review_required: true,
+            reversible: true,
+            description: Some("Test plan".to_string()),
+            tags: vec!["security".to_string(), "hardening".to_string()],
+        };
+
+        assert_eq!(metadata.author, "guestkit");
+        assert!(metadata.review_required);
+        assert!(metadata.reversible);
+        assert_eq!(metadata.tags.len(), 2);
+    }
+
+    #[test]
+    fn test_operation_creation() {
+        let op = Operation {
+            id: "op-001".to_string(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: "systemctl restart sshd".to_string(),
+                expected_exit: 0,
+                timeout: None,
+            }),
+            priority: Priority::High,
+            description: "Restart SSH service".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        };
+
+        assert_eq!(op.id, "op-001");
+        assert_eq!(op.priority, Priority::High);
+        assert!(op.reversible);
+    }
+
+    #[test]
+    fn test_file_edit_operation() {
+        let file_edit = FileEdit {
+            file: "/etc/ssh/sshd_config".to_string(),
+            backup: true,
+            changes: vec![
+                FileChange {
+                    line: 15,
+                    before: "PermitRootLogin yes".to_string(),
+                    after: "PermitRootLogin no".to_string(),
+                    context: None,
+                }
+            ],
+        };
+
+        assert_eq!(file_edit.file, "/etc/ssh/sshd_config");
+        assert!(file_edit.backup);
+        assert_eq!(file_edit.changes.len(), 1);
+    }
+
+    #[test]
+    fn test_package_install_operation() {
+        let pkg_install = PackageInstall {
+            packages: vec!["fail2ban".to_string(), "aide".to_string()],
+            estimated_size: Some("10MB".to_string()),
+        };
+
+        assert_eq!(pkg_install.packages.len(), 2);
+        assert!(pkg_install.packages.contains(&"fail2ban".to_string()));
+        assert_eq!(pkg_install.estimated_size, Some("10MB".to_string()));
+    }
+
+    #[test]
+    fn test_service_operation() {
+        let service_op = ServiceOperation {
+            service: "firewalld".to_string(),
+            state: Some("enabled".to_string()),
+            start: true,
+            restart: false,
+        };
+
+        assert_eq!(service_op.service, "firewalld");
+        assert_eq!(service_op.state, Some("enabled".to_string()));
+        assert!(service_op.start);
+    }
+
+    #[test]
+    fn test_selinux_mode() {
+        let selinux = SELinuxMode {
+            file: "/etc/selinux/config".to_string(),
+            current: "permissive".to_string(),
+            target: "enforcing".to_string(),
+            warning: None,
+        };
+
+        assert_eq!(selinux.file, "/etc/selinux/config");
+        assert_eq!(selinux.current, "permissive");
+        assert_eq!(selinux.target, "enforcing");
+    }
+
+    #[test]
+    fn test_file_change_structure() {
+        let change = FileChange {
+            line: 42,
+            before: "old value".to_string(),
+            after: "new value".to_string(),
+            context: Some("# Configuration".to_string()),
+        };
+
+        assert_eq!(change.line, 42);
+        assert_eq!(change.before, "old value");
+        assert_eq!(change.after, "new value");
+        assert!(change.context.is_some());
+    }
+
+    #[test]
+    fn test_post_apply_action_message() {
+        let action = PostApplyAction::Message {
+            message: "Configuration updated".to_string(),
+        };
+
+        match action {
+            PostApplyAction::Message { message } => {
+                assert_eq!(message, "Configuration updated");
+            }
+            _ => panic!("Expected Message variant"),
+        }
+    }
+
+    #[test]
+    fn test_post_apply_action_reboot() {
+        let action = PostApplyAction::RebootRequired {
+            reason: "Kernel update".to_string(),
+        };
+
+        match action {
+            PostApplyAction::RebootRequired { reason } => {
+                assert_eq!(reason, "Kernel update");
+            }
+            _ => panic!("Expected RebootRequired variant"),
+        }
+    }
+
+    #[test]
+    fn test_validation_check() {
+        let validation = ValidationCheck {
+            command: "systemctl is-active sshd".to_string(),
+            expected_exit: 0,
+            expected_output: None,
+        };
+
+        assert_eq!(validation.expected_exit, 0);
+        assert!(validation.expected_output.is_none());
+    }
+
+    #[test]
+    fn test_undo_info_command() {
+        let undo = UndoInfo::Command {
+            command: "systemctl stop service".to_string(),
+        };
+
+        match undo {
+            UndoInfo::Command { command } => {
+                assert_eq!(command, "systemctl stop service");
+            }
+            _ => panic!("Expected Command variant"),
+        }
+    }
+
+    #[test]
+    fn test_command_exec() {
+        let cmd = CommandExec {
+            command: "apt-get update".to_string(),
+            expected_exit: 0,
+            timeout: Some(300),
+        };
+
+        assert_eq!(cmd.command, "apt-get update");
+        assert_eq!(cmd.expected_exit, 0);
+        assert_eq!(cmd.timeout, Some(300));
+    }
+
+    #[test]
+    fn test_file_copy() {
+        let copy = FileCopy {
+            source: "/etc/default/sshd".to_string(),
+            destination: "/etc/ssh/sshd_config".to_string(),
+            backup: true,
+        };
+
+        assert_eq!(copy.source, "/etc/default/sshd");
+        assert_eq!(copy.destination, "/etc/ssh/sshd_config");
+        assert!(copy.backup);
+    }
+
+    #[test]
+    fn test_directory_create() {
+        let dir = DirectoryCreate {
+            path: "/var/log/audit".to_string(),
+            mode: Some("0755".to_string()),
+        };
+
+        assert_eq!(dir.path, "/var/log/audit");
+        assert_eq!(dir.mode, Some("0755".to_string()));
+    }
+
+    #[test]
+    fn test_file_permissions() {
+        let perms = FilePermissions {
+            path: "/etc/shadow".to_string(),
+            mode: "0000".to_string(),
+            owner: Some("root".to_string()),
+            group: Some("root".to_string()),
+        };
+
+        assert_eq!(perms.path, "/etc/shadow");
+        assert_eq!(perms.mode, "0000");
+        assert!(perms.owner.is_some());
+        assert!(perms.group.is_some());
+    }
+
+    #[test]
+    fn test_registry_edit() {
+        use serde_json::json;
+
+        let reg = RegistryEdit {
+            key: "HKLM\\SOFTWARE\\Test".to_string(),
+            value: "Setting".to_string(),
+            current_data: json!("Disabled"),
+            new_data: json!("Enabled"),
+            data_type: "REG_SZ".to_string(),
+        };
+
+        assert_eq!(reg.key, "HKLM\\SOFTWARE\\Test");
+        assert_eq!(reg.value, "Setting");
+        assert_eq!(reg.data_type, "REG_SZ");
+    }
+
+    #[test]
+    fn test_operation_with_dependencies() {
+        let op = Operation {
+            id: "op-002".to_string(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: "echo test".to_string(),
+                expected_exit: 0,
+                timeout: None,
+            }),
+            priority: Priority::Medium,
+            description: "Test operation".to_string(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec!["op-001".to_string()],
+            validation: None,
+            undo: None,
+        };
+
+        assert_eq!(op.depends_on.len(), 1);
+        assert_eq!(op.depends_on[0], "op-001");
+    }
+
+    #[test]
+    fn test_operation_with_validation() {
+        let op = Operation {
+            id: "op-003".to_string(),
+            op_type: OperationType::ServiceOperation(ServiceOperation {
+                service: "nginx".to_string(),
+                state: Some("enabled".to_string()),
+                start: false,
+                restart: true,
+            }),
+            priority: Priority::High,
+            description: "Restart nginx".to_string(),
+            risk: Priority::Medium,
+            reversible: true,
+            depends_on: vec![],
+            validation: Some(ValidationCheck {
+                command: "systemctl is-active nginx".to_string(),
+                expected_exit: 0,
+                expected_output: Some("active".to_string()),
+            }),
+            undo: None,
+        };
+
+        assert!(op.validation.is_some());
+        let validation = op.validation.unwrap();
+        assert_eq!(validation.expected_output, Some("active".to_string()));
     }
 }

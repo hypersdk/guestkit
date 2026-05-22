@@ -1,12 +1,12 @@
 # Frequently Asked Questions (FAQ)
 
-Common questions and answers about guestctl.
+Common questions and answers about guestkit.
 
 ## General Questions
 
-### What is guestctl?
+### What is guestkit?
 
-guestctl is a pure Rust toolkit for VM disk inspection and manipulation without booting the VM. It provides:
+guestkit is a pure Rust toolkit for VM disk inspection and manipulation without booting the VM. It provides:
 - Beautiful emoji-enhanced CLI output
 - Complete OS detection (Linux & Windows)
 - VM migration support (fstab/crypttab rewriter)
@@ -14,9 +14,9 @@ guestctl is a pure Rust toolkit for VM disk inspection and manipulation without 
 - Python bindings for automation
 - 578 disk image manipulation functions
 
-### How does guestctl compare to libguestfs?
+### How does guestkit compare to libguestfs?
 
-| Feature | guestctl | libguestfs |
+| Feature | guestkit | libguestfs |
 |---------|----------|------------|
 | **Language** | Pure Rust | C + bindings |
 | **Dependencies** | Minimal (qemu-img optional) | Many C libraries |
@@ -27,11 +27,11 @@ guestctl is a pure Rust toolkit for VM disk inspection and manipulation without 
 | **Visual Output** | Beautiful emojis + colors | Plain text |
 | **Migration** | Built-in fstab/crypttab rewriter | Manual scripting |
 
-**Bottom Line:** guestctl is easier to install, faster for common formats (RAW/IMG/ISO), and has better UX. libguestfs has been around longer and has complete API coverage.
+**Bottom Line:** guestkit is easier to install, faster for common formats (RAW/IMG/ISO), and has better UX. libguestfs has been around longer and has complete API coverage.
 
-### Why does guestctl require sudo?
+### Why does guestkit require sudo?
 
-guestctl requires elevated privileges for:
+guestkit requires elevated privileges for:
 - Mounting loop devices (`losetup`)
 - Loading NBD kernel module (`modprobe nbd`)
 - Accessing `/dev/nbd*` devices
@@ -40,27 +40,27 @@ guestctl requires elevated privileges for:
 **Exception:** Read-only operations with cached results don't need sudo:
 ```bash
 # First run needs sudo
-sudo guestctl inspect vm.qcow2 --cache
+sudo guestkit inspect vm.qcow2 --cache
 
 # Subsequent runs from cache (no sudo!)
-guestctl inspect vm.qcow2 --cache
+guestkit inspect vm.qcow2 --cache
 ```
 
-### Is guestctl production-ready?
+### Is guestkit production-ready?
 
-**Yes!** guestctl v0.3.1+ is production-ready with:
+**Yes!** guestkit v0.3.1+ is production-ready with:
 - 97.4% API implementation coverage (578 functions)
 - Comprehensive test suite with CI/CD
 - Used in [hyper2kvm](https://github.com/ssahani/hyper2kvm) for production VM migrations
 - Pure Rust for memory safety
 - Extensive documentation and examples
 
-### Can I use guestctl on running VMs?
+### Can I use guestkit on running VMs?
 
 **Read-only: Yes (with caution)**
 ```bash
 # Read-only inspection of running VM (risky but possible)
-guestctl inspect running-vm.qcow2
+guestkit inspect running-vm.qcow2
 ```
 
 **Read-write: NO!**
@@ -69,11 +69,11 @@ Never modify a disk image while the VM is running. This will cause:
 - Filesystem damage
 - Potential data loss
 
-**Best Practice:** Shut down VM before using guestctl for modifications.
+**Best Practice:** Shut down VM before using guestkit for modifications.
 
 ## Installation & Setup
 
-### How do I install guestctl?
+### How do I install guestkit?
 
 **From crates.io:**
 ```bash
@@ -85,12 +85,12 @@ cargo install guestkit
 git clone https://github.com/ssahani/guestkit
 cd guestkit
 cargo build --release
-sudo cp target/release/guestctl /usr/local/bin/
+sudo cp target/release/guestkit /usr/local/bin/
 ```
 
 **Python bindings:**
 ```bash
-pip install guestctl
+pip install guestkit
 ```
 
 ### What are the system requirements?
@@ -123,7 +123,7 @@ rustup update
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
-# Then install guestctl
+# Then install guestkit
 cargo install guestkit
 ```
 
@@ -133,21 +133,21 @@ cargo install guestkit
 
 ```bash
 # Basic inspection
-sudo guestctl inspect vm.qcow2
+sudo guestkit inspect vm.qcow2
 
 # With JSON output
-sudo guestctl inspect vm.qcow2 --output json
+sudo guestkit inspect vm.qcow2 --output json
 
 # With caching for speed
-sudo guestctl inspect vm.qcow2 --cache
+sudo guestkit inspect vm.qcow2 --cache
 ```
 
 ### Can I inspect Windows VMs?
 
-**Yes!** guestctl v0.3.1+ has full Windows support:
+**Yes!** guestkit v0.3.1+ has full Windows support:
 
 ```bash
-sudo guestctl inspect windows.qcow2
+sudo guestkit inspect windows.qcow2
 ```
 
 Output includes:
@@ -164,60 +164,60 @@ See [Windows Support Guide](windows-support.md) for details.
 
 ```bash
 # Extract single file
-sudo guestctl extract vm.qcow2 /etc/hostname ./hostname.txt
+sudo guestkit extract vm.qcow2 /etc/hostname ./hostname.txt
 
 # Or use interactive mode
-sudo guestctl interactive vm.qcow2
+sudo guestkit interactive vm.qcow2
 > mount /
 > download /etc/hostname ./hostname.txt
 > exit
 
 # Or use cat to view
-sudo guestctl cat vm.qcow2 /etc/hostname
+sudo guestkit cat vm.qcow2 /etc/hostname
 ```
 
 ### How do I list files in a VM?
 
 ```bash
 # List directory
-sudo guestctl list vm.qcow2 /etc
+sudo guestkit list vm.qcow2 /etc
 
 # Or interactive mode
-sudo guestctl interactive vm.qcow2
+sudo guestkit interactive vm.qcow2
 > mount /
 > ls /etc
 > exit
 ```
 
-### Why is guestctl slow on QCOW2 files?
+### Why is guestkit slow on QCOW2 files?
 
 **Reason:** QCOW2 requires NBD (Network Block Device) which is slower than loop devices.
 
 **Solutions:**
 1. **Use caching:**
    ```bash
-   sudo guestctl inspect vm.qcow2 --cache  # First run slow, subsequent fast
+   sudo guestkit inspect vm.qcow2 --cache  # First run slow, subsequent fast
    ```
 
 2. **Convert to RAW:**
    ```bash
    qemu-img convert -O raw vm.qcow2 vm.raw
-   sudo guestctl inspect vm.raw  # Much faster (loop device)
+   sudo guestkit inspect vm.raw  # Much faster (loop device)
    ```
 
 3. **Use parallel processing:**
    ```bash
-   sudo guestctl inspect-batch *.qcow2 --parallel 4
+   sudo guestkit inspect-batch *.qcow2 --parallel 4
    ```
 
 ### How do I compare two VMs?
 
 ```bash
 # Compare two VMs
-sudo guestctl diff vm1.qcow2 vm2.qcow2
+sudo guestkit diff vm1.qcow2 vm2.qcow2
 
 # Compare multiple VMs against baseline
-sudo guestctl compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
+sudo guestkit compare baseline.qcow2 vm1.qcow2 vm2.qcow2 vm3.qcow2
 ```
 
 ## Migration Questions
@@ -231,10 +231,10 @@ Complete workflow:
 qemu-img convert -f vhdx -O qcow2 vm.vhdx vm.qcow2
 
 # 2. Inspect and plan
-sudo guestctl inspect vm.qcow2 --profile migration
+sudo guestkit inspect vm.qcow2 --profile migration
 
 # 3. Modify configuration (Linux VMs)
-sudo guestctl interactive vm.qcow2
+sudo guestkit interactive vm.qcow2
 > mount /
 > command "sed -i 's/\/dev\/sda/\/dev\/vda/g' /etc/fstab"
 > exit
@@ -248,12 +248,12 @@ virt-install --name test --disk vm.qcow2 --import
 
 See [VM Migration Guide](vm-migration.md) for complete details.
 
-### Can guestctl rewrite fstab automatically?
+### Can guestkit rewrite fstab automatically?
 
 **Yes!** v0.3.1+ includes universal fstab/crypttab rewriter:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 use std::collections::HashMap;
 
 let mut g = Guestfs::new()?;
@@ -272,10 +272,10 @@ g.shutdown()?;
 
 ```bash
 # Inspect encrypted VM
-sudo guestctl inspect encrypted.qcow2
+sudo guestkit inspect encrypted.qcow2
 
 # Open LUKS volume
-sudo guestctl interactive encrypted.qcow2
+sudo guestkit interactive encrypted.qcow2
 > luks-open /dev/sda2 luks-root <passphrase>
 > mount /dev/mapper/luks-root /
 > # Make modifications
@@ -288,7 +288,7 @@ See [VM Migration Guide - Encrypted Volumes](vm-migration.md#encrypted-volume-mi
 
 ## Windows-Specific Questions
 
-### Does guestctl work with Windows VMs?
+### Does guestkit work with Windows VMs?
 
 **Yes!** Full Windows support in v0.3.1+:
 - Windows 7 through Windows 11
@@ -300,7 +300,7 @@ See [VM Migration Guide - Encrypted Volumes](vm-migration.md#encrypted-volume-mi
 
 ### How does Windows version detection work?
 
-guestctl reads Windows registry hives directly from disk:
+guestkit reads Windows registry hives directly from disk:
 
 ```rust
 // Internal implementation (simplified)
@@ -317,7 +317,7 @@ guestctl reads Windows registry hives directly from disk:
 
 ```bash
 # Interactive modification
-sudo guestctl interactive windows.qcow2
+sudo guestkit interactive windows.qcow2
 > mount C:
 > registry-set "HKLM\\SYSTEM\\..." "KeyName" "Value"
 > exit
@@ -352,19 +352,19 @@ See [Windows Support - VirtIO Drivers](windows-support.md#virtio-driver-injectio
 
 ### Why is first run slow, subsequent runs fast?
 
-**Caching!** guestctl caches inspection results:
+**Caching!** guestkit caches inspection results:
 
 ```bash
 # First run: ~30 seconds (full inspection)
-sudo guestctl inspect vm.qcow2 --cache
+sudo guestkit inspect vm.qcow2 --cache
 
 # Second run: <0.5 seconds (from cache)
-sudo guestctl inspect vm.qcow2 --cache
+sudo guestkit inspect vm.qcow2 --cache
 
 # Cache is invalidated if VM file changes
 ```
 
-**Cache location:** `~/.cache/guestctl/`
+**Cache location:** `~/.cache/guestkit/`
 
 ### How can I speed up batch processing?
 
@@ -372,10 +372,10 @@ sudo guestctl inspect vm.qcow2 --cache
 
 ```bash
 # Inspect 8 VMs in parallel (4 workers)
-sudo guestctl inspect-batch vm*.qcow2 --parallel 4 --cache
+sudo guestkit inspect-batch vm*.qcow2 --parallel 4 --cache
 
 # With progress bar
-sudo guestctl inspect-batch vm*.qcow2 --parallel 4 --cache --progress
+sudo guestkit inspect-batch vm*.qcow2 --parallel 4 --cache --progress
 ```
 
 **Performance:** 4x speedup with 4 workers, plus 60x from caching on subsequent runs.
@@ -394,21 +394,21 @@ sudo guestctl inspect-batch vm*.qcow2 --parallel 4 --cache --progress
 **Best of both worlds:**
 ```bash
 # Develop with QCOW2 (snapshots)
-guestctl inspect dev.qcow2
+guestkit inspect dev.qcow2
 
 # Deploy with RAW (performance)
 qemu-img convert -O raw dev.qcow2 prod.raw
-guestctl inspect prod.raw  # Fast!
+guestkit inspect prod.raw  # Fast!
 ```
 
 ## API & Development Questions
 
-### Can I use guestctl from Python?
+### Can I use guestkit from Python?
 
 **Yes!** Full Python bindings:
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 with Guestfs() as g:
     g.add_drive_ro("vm.qcow2")
@@ -422,7 +422,7 @@ with Guestfs() as g:
 
 **Installation:**
 ```bash
-pip install guestctl
+pip install guestkit
 ```
 
 See [Python Bindings Guide](python-bindings.md).
@@ -441,7 +441,7 @@ See [Python Bindings Guide](python-bindings.md).
 
 See [API Reference](../api/rust-reference.md) for complete list.
 
-### How do I contribute to guestctl?
+### How do I contribute to guestkit?
 
 ```bash
 # 1. Fork repository
@@ -489,7 +489,7 @@ free -h
 
 # 4. Try without KVM (slower)
 export LIBGUESTFS_BACKEND=direct
-sudo guestctl inspect vm.qcow2
+sudo guestkit inspect vm.qcow2
 ```
 
 ### "No OS detected" error?
@@ -503,10 +503,10 @@ sudo guestctl inspect vm.qcow2
 **Debug steps:**
 ```bash
 # Check disk structure
-sudo guestctl filesystems vm.qcow2
+sudo guestkit filesystems vm.qcow2
 
 # Try interactive mode
-sudo guestctl interactive vm.qcow2
+sudo guestkit interactive vm.qcow2
 > list-devices
 > list-partitions
 > mount /dev/sda1
@@ -515,7 +515,7 @@ sudo guestctl interactive vm.qcow2
 
 See [Troubleshooting Guide](troubleshooting.md).
 
-### Why can't guestctl access NBD devices?
+### Why can't guestkit access NBD devices?
 
 **Error:** "Could not load NBD module"
 
@@ -541,7 +541,7 @@ getenforce
 
 # Temporary fix
 sudo setenforce 0
-sudo guestctl inspect vm.qcow2
+sudo guestkit inspect vm.qcow2
 
 # Permanent fix (add SELinux policy)
 # Or disable SELinux in /etc/selinux/config
@@ -549,7 +549,7 @@ sudo guestctl inspect vm.qcow2
 
 ## Licensing Questions
 
-### What license is guestctl under?
+### What license is guestkit under?
 
 **LGPL-3.0-or-later** (GNU Lesser General Public License v3.0 or later)
 
@@ -560,15 +560,15 @@ sudo guestctl inspect vm.qcow2
 - ⚠️ Must share modifications if distributing
 - ⚠️ Must preserve license notices
 
-### Can I use guestctl in commercial products?
+### Can I use guestkit in commercial products?
 
 **Yes!** LGPL allows commercial use.
 
 **Requirements:**
 - Include LGPL license text
-- Credit guestctl project
-- If you modify guestctl itself, share modifications
-- If you just use guestctl as library, no source sharing required
+- Credit guestkit project
+- If you modify guestkit itself, share modifications
+- If you just use guestkit as library, no source sharing required
 
 ### Is there commercial support?
 
@@ -580,7 +580,7 @@ sudo guestctl inspect vm.qcow2
 
 ## Feature Requests
 
-### Will guestctl support feature X?
+### Will guestkit support feature X?
 
 Check the [Enhancement Roadmap](../development/enhancement-roadmap.md) for planned features.
 
@@ -599,7 +599,7 @@ gh issue create --title "Feature: My feature" --label enhancement
 **Current workaround:** Use threading in Python:
 ```python
 from concurrent.futures import ThreadPoolExecutor
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def inspect_vm(path):
     with Guestfs() as g:
@@ -611,7 +611,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
     results = executor.map(inspect_vm, vm_paths)
 ```
 
-### Will guestctl support ARM/aarch64?
+### Will guestkit support ARM/aarch64?
 
 **Partial support** in current version:
 - ✅ Can run on ARM hosts
@@ -638,18 +638,18 @@ gh issue create \
   --title "Bug: Description" \
   --label bug \
   --body "Steps to reproduce:
-1. Run guestctl inspect vm.qcow2
+1. Run guestkit inspect vm.qcow2
 2. Error occurs: ...
 
 Expected: ...
 Actual: ...
 
-Version: $(guestctl version)
+Version: $(guestkit version)
 OS: $(uname -a)"
 ```
 
 **Include:**
-- guestctl version
+- guestkit version
 - OS and version
 - Disk image format
 - Complete error message

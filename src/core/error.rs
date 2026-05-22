@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Error types for guestctl
+//! Error types for guestkit
 
 use std::io;
 use thiserror::Error;
 
-/// guestctl error types
+/// guestkit error types
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("I/O error: {0}")]
@@ -59,5 +59,5 @@ pub enum Error {
     Unknown(String),
 }
 
-/// Result type alias for guestctl operations
+/// Result type alias for guestkit operations
 pub type Result<T> = std::result::Result<T, Error>;

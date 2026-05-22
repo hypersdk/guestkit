@@ -26,7 +26,7 @@ pub fn format_report(report: &LicenseReport, show_details: bool) -> String {
     output.push_str("⚠️  Risk Summary\n");
     output.push_str("---------------\n");
     for (risk, count) in &report.risk_summary {
-        output.push_str(&format!("{} {}: {}\n", risk.emoji(), format!("{:?}", risk), count));
+        output.push_str(&format!("{} {:?}: {}\n", risk.emoji(), risk, count));
     }
     output.push_str(&format!("\n📈 Compliance Score: {:.1}%\n\n", report.statistics.compliance_score));
 

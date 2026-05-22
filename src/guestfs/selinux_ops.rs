@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_selinux_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

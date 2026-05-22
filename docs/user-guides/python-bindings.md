@@ -27,7 +27,7 @@ Python bindings for GuestCtl - Pure Rust toolkit for VM disk image inspection an
 ```bash
 # Clone repository
 git clone https://github.com/ssahani/guestkit
-cd guestctl
+cd guestkit
 
 # Install maturin (PyO3 build tool)
 pip install maturin
@@ -37,14 +37,14 @@ maturin develop --features python-bindings
 
 # Or build wheel for distribution
 maturin build --release --features python-bindings
-pip install target/wheels/guestctl-*.whl
+pip install target/wheels/guestkit-*.whl
 ```
 
 ### Verify Installation
 
 ```python
-import guestctl
-print(guestctl.__version__)
+import guestkit
+print(guestkit.__version__)
 ```
 
 ## Quick Start
@@ -52,7 +52,7 @@ print(guestctl.__version__)
 ### Basic Inspection
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 # Create handle
 g = Guestfs()

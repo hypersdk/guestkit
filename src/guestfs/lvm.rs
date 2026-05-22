@@ -45,8 +45,8 @@ impl Guestfs {
 
         // LVM filter to ONLY scan our device and reject all others
         // This prevents accidentally discovering host LVM volumes
-        // Escape forward slashes for the regex pattern
-        let escaped_path = device_path.replace("/", r"\/");
+        // Escape all regex metacharacters in the device path
+        let escaped_path = Self::escape_lvm_regex(&device_path);
         format!(
             r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#,
             escaped_path
@@ -70,7 +70,7 @@ impl Guestfs {
             mount_root.join("lvm")
         } else {
             std::path::PathBuf::from("/run")
-                .join(format!("guestctl-{}", std::process::id()))
+                .join(format!("guestkit-{}", std::process::id()))
                 .join("lvm")
         };
 
@@ -78,7 +78,7 @@ impl Guestfs {
             .map_err(|e| Error::CommandFailed(format!("Failed to create LVM directory: {}", e)))?;
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         // Get device filter to restrict LVM to our device only
         let lvm_filter = self.get_lvm_device_filter();
@@ -130,28 +130,17 @@ impl Guestfs {
             eprintln!("guestfs: vg_activate_all {}", activate);
         }
 
-        // If activating, record VGs for cleanup
-        if activate {
-            if let Ok(vgs) = self.vgs() {
-                for vg in vgs {
-                    if !self.activated_vgs.contains(&vg) {
-                        self.activated_vgs.push(vg);
-                    }
-                }
-            }
-        }
-
         // Get isolated LVM directory
         let lvm_dir = if let Some(mount_root) = &self.mount_root {
             mount_root.join("lvm")
         } else {
             std::path::PathBuf::from("/run")
-                .join(format!("guestctl-{}", std::process::id()))
+                .join(format!("guestkit-{}", std::process::id()))
                 .join("lvm")
         };
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         // Get device filter to restrict LVM to our device only
         let lvm_filter = self.get_lvm_device_filter();
@@ -201,6 +190,15 @@ impl Guestfs {
 
             // Brief additional sleep to ensure device nodes are ready
             std::thread::sleep(std::time::Duration::from_millis(200));
+
+            // Record activated VGs for cleanup (after activation succeeded)
+            if let Ok(vgs) = self.vgs() {
+                for vg in vgs {
+                    if !self.activated_vgs.contains(&vg) {
+                        self.activated_vgs.push(vg);
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -218,7 +216,10 @@ impl Guestfs {
         }
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
+
+        // Get device filter to restrict LVM to our device only
+        let lvm_filter = self.get_lvm_device_filter();
 
         for vg in volgroups {
             // Build vgchange command
@@ -234,6 +235,8 @@ impl Guestfs {
                 .arg("-a")
                 .arg(action)
                 .arg(vg)
+                .arg("--config")
+                .arg(&lvm_filter)
                 .output()
                 .map_err(|e| Error::CommandFailed(format!("Failed to run vgchange: {}", e)))?;
 
@@ -278,6 +281,9 @@ impl Guestfs {
             }
         }
 
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
         // Create logical volume
         let output = Command::new("lvcreate")
             .arg("-L")
@@ -285,6 +291,8 @@ impl Guestfs {
             .arg("-n")
             .arg(logvol)
             .arg(volgroup)
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run lvcreate: {}", e)))?;
 
@@ -309,10 +317,15 @@ impl Guestfs {
             eprintln!("guestfs: lvremove {}", device);
         }
 
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
         // Remove logical volume
         let output = Command::new("lvremove")
             .arg("-f") // Force, don't ask for confirmation
             .arg(device)
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to run lvremove: {}", e)))?;
 
@@ -333,6 +346,9 @@ impl Guestfs {
             eprintln!("guestfs: lvs_full");
         }
 
+        // Get device filter to restrict to our device only
+        let lvm_filter = self.get_lvm_device_filter();
+
         // Use lvs with specific output fields
         let output = Command::new("lvs")
             .arg("--noheadings")
@@ -342,6 +358,8 @@ impl Guestfs {
             .arg("lv_name,lv_uuid,lv_attr,lv_major,lv_minor,lv_kernel_major,lv_kernel_minor,lv_size,seg_count,origin,snap_percent,copy_percent,move_pv,lv_tags,mirror_log,modules")
             .arg("--units")
             .arg("b")
+            .arg("--config")
+            .arg(&lvm_filter)
             .output()
             .map_err(|e| Error::CommandFailed(format!("Failed to execute lvs: {}", e)))?;
 
@@ -371,19 +389,23 @@ impl Guestfs {
             let size_str = parts[7].trim().trim_end_matches('B');
             let lv_size = size_str.parse::<i64>().unwrap_or(0);
 
+            // Device major/minor of -1 means not applicable (e.g., inactive LV)
+            let parse_i64 = |s: &str| -> i64 { s.trim().parse().unwrap_or(-1) };
+            let parse_f32 = |s: &str| -> f32 { s.trim().parse().unwrap_or(0.0) };
+
             lvs.push(LV {
                 lv_name: parts[0].trim().to_string(),
                 lv_uuid: parts[1].trim().to_string(),
                 lv_attr: parts[2].trim().to_string(),
-                lv_major: parts[3].trim().parse::<i64>().unwrap_or(-1),
-                lv_minor: parts[4].trim().parse::<i64>().unwrap_or(-1),
-                lv_kernel_major: parts[5].trim().parse::<i64>().unwrap_or(-1),
-                lv_kernel_minor: parts[6].trim().parse::<i64>().unwrap_or(-1),
+                lv_major: parse_i64(parts[3]),
+                lv_minor: parse_i64(parts[4]),
+                lv_kernel_major: parse_i64(parts[5]),
+                lv_kernel_minor: parse_i64(parts[6]),
                 lv_size,
                 seg_count: parts[8].trim().parse::<i64>().unwrap_or(0),
                 origin: parts[9].trim().to_string(),
-                snap_percent: parts[10].trim().parse::<f32>().unwrap_or(0.0),
-                copy_percent: parts[11].trim().parse::<f32>().unwrap_or(0.0),
+                snap_percent: parse_f32(parts[10]),
+                copy_percent: parse_f32(parts[11]),
                 move_pv: parts[12].trim().to_string(),
                 lv_tags: parts[13].trim().to_string(),
                 mirror_log: parts[14].trim().to_string(),
@@ -407,7 +429,7 @@ impl Guestfs {
         let lvm_filter = self.get_lvm_device_filter();
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         // Build lvs command
         let mut cmd = if need_sudo {
@@ -456,7 +478,7 @@ impl Guestfs {
         let lvm_filter = self.get_lvm_device_filter();
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         // Build vgs command
         let mut cmd = if need_sudo {
@@ -505,7 +527,7 @@ impl Guestfs {
         let lvm_filter = self.get_lvm_device_filter();
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         // Build pvs command
         let mut cmd = if need_sudo {
@@ -548,7 +570,7 @@ mod tests {
 
     #[test]
     fn test_lvm_api_exists() {
-        let g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

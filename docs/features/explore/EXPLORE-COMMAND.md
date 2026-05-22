@@ -14,7 +14,7 @@ The `explore` command provides an intuitive, visual file browser for navigating 
 
 ```bash
 # Start guestkit interactive shell
-guestctl shell disk.qcow2
+guestkit shell disk.qcow2
 
 # Launch explorer from current directory
 explore
@@ -30,16 +30,16 @@ ex /var/log
 
 ```bash
 # Launch explorer directly on a disk image
-guestctl explore disk.qcow2
+guestkit explore disk.qcow2
 
 # Start from specific path
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # Using short alias
-guestctl ex vm-image.qcow2 /var/log
+guestkit ex vm-image.qcow2 /var/log
 
 # With verbose output
-guestctl explore --verbose disk.qcow2 /home
+guestkit explore --verbose disk.qcow2 /home
 ```
 
 ---
@@ -295,11 +295,11 @@ The explorer integrates seamlessly with other guestkit shell commands:
 
 ```bash
 # Example workflow
-guestctl> cd /var/www
-guestctl> explore         # Visual navigation
-guestctl> cat html/index.html    # View specific file
-guestctl> grep -r "TODO" .       # Search across files
-guestctl> tree 2                  # Directory tree view
+guestkit> cd /var/www
+guestkit> explore         # Visual navigation
+guestkit> cat html/index.html    # View specific file
+guestkit> grep -r "TODO" .       # Search across files
+guestkit> tree 2                  # Directory tree view
 ```
 
 ---
@@ -427,8 +427,8 @@ explore /var/www/html
 
 ### Integration Possibilities
 
-- [x] **Direct launch from main CLI**: `guestctl explore disk.qcow2` ✅ **DONE!**
-- [ ] Integration with TUI mode (`guestctl tui`)
+- [x] **Direct launch from main CLI**: `guestkit explore disk.qcow2` ✅ **DONE!**
+- [ ] Integration with TUI mode (`guestkit tui`)
 - [ ] Bulk operations on selected files
 - [ ] Integration with compare/diff commands
 - [ ] Quick actions menu (right-click simulation)
@@ -441,17 +441,17 @@ explore /var/www/html
 
 **Issue**: Command not recognized
 ```bash
-guestctl> explore
+guestkit> explore
 Unknown command: explore
 ```
 
 **Solution**: Ensure you're in the interactive shell mode:
 ```bash
 # Start shell first
-guestctl shell disk.qcow2
+guestkit shell disk.qcow2
 
 # Then use explore
-guestctl> explore
+guestkit> explore
 ```
 
 ### Colors Not Showing
@@ -500,8 +500,8 @@ export LANG=en_US.UTF-8
 ### Example 1: Security Configuration Review
 
 ```bash
-guestctl shell ubuntu.qcow2
-guestctl> explore /etc
+guestkit shell ubuntu.qcow2
+guestkit> explore /etc
 
 # Navigate to ssh config
 # Press 'v' on sshd_config
@@ -513,7 +513,7 @@ guestctl> explore /etc
 ### Example 2: Web Server Troubleshooting
 
 ```bash
-guestctl> explore /var/log/nginx
+guestkit> explore /var/log/nginx
 # Sort by size with 's'
 # View error.log with 'v'
 # Check access.log
@@ -524,7 +524,7 @@ guestctl> explore /var/log/nginx
 ### Example 3: Finding Large Log Files
 
 ```bash
-guestctl> explore /var/log
+guestkit> explore /var/log
 # Press 's' twice to sort by size
 # Top files are largest
 # Press 'i' to see exact sizes
@@ -534,7 +534,7 @@ guestctl> explore /var/log
 ### Example 4: User Account Audit
 
 ```bash
-guestctl> explore /home
+guestkit> explore /home
 # Check each user directory
 # Press '.' to show hidden files
 # Look for .ssh/authorized_keys
@@ -564,22 +564,22 @@ find /etc -name "*.conf"
 
 ```bash
 # Full-screen TUI
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 
 # Or shell with explorer
-guestctl shell disk.qcow2
-guestctl> explore
+guestkit shell disk.qcow2
+guestkit> explore
 ```
 
 ### With Inspection
 
 ```bash
 # High-level inspection
-guestctl inspect disk.qcow2
+guestkit inspect disk.qcow2
 
 # Then explore for details
-guestctl shell disk.qcow2
-guestctl> explore /var/log
+guestkit shell disk.qcow2
+guestkit> explore /var/log
 ```
 
 ---
@@ -620,14 +620,14 @@ The **explore** command brings modern, intuitive file browsing to VM inspection.
 
 **Method 1: Direct Launch** (Fastest!)
 ```bash
-guestctl explore your-vm.qcow2
+guestkit explore your-vm.qcow2
 # Instantly start exploring!
 ```
 
 **Method 2: From Shell**
 ```bash
-guestctl shell your-vm.qcow2
-guestctl> explore
+guestkit shell your-vm.qcow2
+guestkit> explore
 # Start exploring from shell!
 ```
 

@@ -1,10 +1,10 @@
-# guestctl Architecture (v0.3.1)
+# guestkit Architecture (v0.3.2)
 
 Complete **Pure Rust** implementation for guest VM operations and migration.
 
 ## Overview
 
-**guestctl** is a modern Rust library providing:
+**guestkit** is a modern Rust library providing:
 - **Disk format conversion** (qemu-img wrapper)
 - **Pure Rust disk image reading** (qcow2, raw, vmdk detection)
 - **Pure Rust partition table parsing** (MBR, GPT)
@@ -27,7 +27,7 @@ Complete **Pure Rust** implementation for guest VM operations and migration.
 ┌─────────────────────────────────────────────────────────┐
 │                    Applications                          │
 │  ┌───────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ guestctl CLI  │  │ hyper2kvm    │  │ Custom Apps  │ │
+│  │ guestkit CLI  │  │ hyper2kvm    │  │ Custom Apps  │ │
 │  └───────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
                              │
@@ -69,7 +69,7 @@ Complete **Pure Rust** implementation for guest VM operations and migration.
 
 ### `src/core/` - Core Utilities
 
-**Purpose:** Fundamental types and utilities used throughout guestctl
+**Purpose:** Fundamental types and utilities used throughout guestkit
 
 **Files:**
 - `error.rs` - Error types using thiserror
@@ -123,7 +123,7 @@ pub struct GuestIdentity {
 
 **Example:**
 ```rust
-use guestctl::disk::DiskReader;
+use guestkit::disk::DiskReader;
 
 let mut reader = DiskReader::open("/path/to/disk.qcow2")?;
 println!("Format: {:?}", reader.format());
@@ -142,7 +142,7 @@ reader.read_exact_at(0, &mut buffer)?; // Read MBR
 
 **Example:**
 ```rust
-use guestctl::disk::PartitionTable;
+use guestkit::disk::PartitionTable;
 
 let partition_table = PartitionTable::parse(&mut reader)?;
 for partition in partition_table.partitions() {
@@ -171,7 +171,7 @@ for partition in partition_table.partitions() {
 
 **Example:**
 ```rust
-use guestctl::disk::FileSystem;
+use guestkit::disk::FileSystem;
 
 let fs = FileSystem::detect(&mut reader, &partition)?;
 println!("Filesystem: {:?}", fs.fs_type());
@@ -213,7 +213,7 @@ Each filesystem has a unique signature (magic bytes) at specific offsets:
 
 **Example:**
 ```rust
-use guestctl::disk::LoopDevice;
+use guestkit::disk::LoopDevice;
 
 let mut loop_dev = LoopDevice::new()?;
 loop_dev.connect("/path/to/disk.raw", true)?; // read-only
@@ -248,7 +248,7 @@ if let Some(device_path) = loop_dev.device_path() {
 
 **Example:**
 ```rust
-use guestctl::disk::NbdDevice;
+use guestkit::disk::NbdDevice;
 
 let mut nbd = NbdDevice::new()?;
 nbd.connect("/path/to/disk.qcow2", true)?; // read-only
@@ -288,7 +288,7 @@ if LoopDevice::is_format_supported(&drive.path) {
 
 **Example:**
 ```rust
-use guestctl::converters::DiskConverter;
+use guestkit::converters::DiskConverter;
 
 let converter = DiskConverter::new();
 let result = converter.convert(
@@ -326,7 +326,7 @@ let result = converter.convert(
 
 **Example:**
 ```rust
-use guestctl::detectors::GuestDetector;
+use guestkit::detectors::GuestDetector;
 
 let detector = GuestDetector::new();
 let guest = detector.detect_from_image("/path/to/disk.qcow2")?;
@@ -353,9 +353,9 @@ maturin develop --features python-bindings
 
 **Usage:**
 ```python
-import guestctl_py
+import guestkit_py
 
-converter = guestctl_py.DiskConverter()
+converter = guestkit_py.DiskConverter()
 result = converter.convert(
     source="/path/to/vm.vmdk",
     output="/path/to/vm.qcow2",
@@ -467,7 +467,7 @@ mod tests {
 ```python
 # integration/tests/test_integration.py
 def test_version_command():
-    result = subprocess.run([guestctl_path, "version"], ...)
+    result = subprocess.run([guestkit_path, "version"], ...)
     assert result.returncode == 0
 ```
 
@@ -479,7 +479,7 @@ def test_version_command():
 /// # Examples
 ///
 /// ```no_run
-/// use guestctl::DiskConverter;
+/// use guestkit::DiskConverter;
 /// let converter = DiskConverter::new();
 /// let result = converter.convert(...)?;
 /// ```
@@ -516,21 +516,21 @@ pub async fn convert_async(...) -> Result<ConversionResult> {
 
 **Option 1: Python Subprocess**
 ```python
-from guestctl_wrapper import GuestkitWrapper
+from guestkit_wrapper import GuestkitWrapper
 wrapper = GuestkitWrapper()
 result = wrapper.convert(source, output, compress=True)
 ```
 
 **Option 2: PyO3 Native (Recommended)**
 ```python
-import guestctl_py
-converter = guestctl_py.DiskConverter()
+import guestkit_py
+converter = guestkit_py.DiskConverter()
 result = converter.convert(source, output, "qcow2", compress=True)
 ```
 
 **Option 3: Rust Library**
 ```rust
-use guestctl::DiskConverter;
+use guestkit::DiskConverter;
 let result = converter.convert(source, output, "qcow2", true, true)?;
 ```
 
@@ -600,4 +600,4 @@ All formats supported via qemu-img wrapper
 
 **Version:** 0.1.0
 **License:** LGPL-3.0-or-later
-**Author:** Susant Sahani <ssahani@gmail.com>
+**Author:** Susant Sahani <ssahani@redhat.com>

@@ -202,7 +202,7 @@ pub fn generate_recommendations(
     // Top opportunity
     if let Some(top_opp) = opportunities.iter()
         .filter(|o| o.priority == OptimizationPriority::High)
-        .max_by(|a, b| a.monthly_savings.partial_cmp(&b.monthly_savings).unwrap())
+        .max_by(|a, b| a.monthly_savings.partial_cmp(&b.monthly_savings).unwrap_or(std::cmp::Ordering::Equal))
     {
         recommendations.push(CostRecommendation {
             title: format!("Priority: {}", top_opp.category),

@@ -163,7 +163,7 @@ pub fn calculate_optimized_costs(
     provider: CloudProvider,
     _region: &str,
 ) -> ResourceEstimate {
-    let total_savings: f64 = opportunities.iter()
+    let _total_savings: f64 = opportunities.iter()
         .map(|o| o.monthly_savings)
         .sum();
 

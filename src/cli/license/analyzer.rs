@@ -8,6 +8,12 @@ use super::RiskLevel;
 pub struct LicenseAnalyzer {
 }
 
+impl Default for LicenseAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LicenseAnalyzer {
     pub fn new() -> Self {
         Self {}

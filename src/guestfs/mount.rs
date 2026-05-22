@@ -12,9 +12,96 @@ use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
 
+/// Check if we need sudo (i.e., not running as root).
+///
+/// # Safety
+/// `geteuid()` is a read-only syscall with no side effects; always safe to call.
+pub(crate) fn need_sudo() -> bool {
+    unsafe { libc::geteuid() != 0 }
+}
+
 impl Guestfs {
+    /// Resolve the device path, create mount root and mountpoint directory.
+    /// Shared setup for mount_ro(), mount(), and mount_options().
+    fn prepare_mount(
+        &mut self,
+        mountable: &str,
+        mountpoint: &str,
+    ) -> Result<(std::path::PathBuf, std::path::PathBuf)> {
+        self.ensure_ready()?;
+
+        // Check if this device is already mounted - prevent duplicate mounts
+        if self.mounted.contains_key(mountable) {
+            return Err(Error::InvalidState("already_mounted".to_string()));
+        }
+
+        // Determine the actual device path to mount
+        let device_partition = if mountable.starts_with("/dev/mapper/")
+            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3)
+        {
+            // LVM logical volume - use the path directly
+            std::path::PathBuf::from(mountable)
+        } else {
+            let partition_num = self.parse_device_name(mountable)?;
+
+            if let Some(loop_dev) = &self.loop_device {
+                if partition_num > 0 {
+                    loop_dev.partition_path(partition_num)
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                } else {
+                    loop_dev.device_path()
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                        .to_path_buf()
+                }
+            } else if let Some(nbd) = &self.nbd_device {
+                if partition_num > 0 {
+                    nbd.partition_path(partition_num)
+                } else {
+                    nbd.device_path().to_path_buf()
+                }
+            } else {
+                return Err(Error::InvalidState(
+                    "No block device available (neither loop nor NBD)".to_string(),
+                ));
+            }
+        };
+
+        // Create mount root if needed
+        if self.mount_root.is_none() {
+            let mount_dir = std::path::PathBuf::from("/run")
+                .join(format!("guestkit-{}", std::process::id()));
+            fs::create_dir_all(&mount_dir)
+                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
+            self.mount_root.get_or_insert(mount_dir);
+        }
+
+        // Build actual mount path
+        let mount_root = self
+            .mount_root
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
+        let actual_mountpoint = if mountpoint == "/" {
+            mount_root.clone()
+        } else {
+            mount_root.join(mountpoint.trim_start_matches('/'))
+        };
+
+        // Create mountpoint directory
+        fs::create_dir_all(&actual_mountpoint)
+            .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
+
+        Ok((device_partition, actual_mountpoint))
+    }
+
+    /// Record a successful mount in the mounted map.
+    fn record_mount(&mut self, mountable: &str, actual_mountpoint: &std::path::Path) {
+        self.mounted.insert(
+            mountable.to_string(),
+            actual_mountpoint.to_string_lossy().to_string(),
+        );
+    }
+
     /// Mount a filesystem read-only
-    ///
     ///
     /// # Arguments
     ///
@@ -33,84 +120,25 @@ impl Guestfs {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn mount_ro(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
-        self.ensure_ready()?;
-
         if self.verbose {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        // Check if this device is already mounted - prevent duplicate mounts
-        if self.mounted.contains_key(mountable) {
-            return Ok(());
-        }
-
-        // Determine the actual device path to mount
-        let device_partition = if mountable.starts_with("/dev/mapper/")
-            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3) {
-            // LVM logical volume (/dev/mapper/* or /dev/vgname/lvname) - use the path directly
-            // These device nodes are created by LVM on top of the underlying block device
-            std::path::PathBuf::from(mountable)
-        } else {
-            // Parse device name to get partition number
-            let partition_num = self.parse_device_name(mountable)?;
-
-            // Get the actual device path (loop or NBD)
-            if let Some(loop_dev) = &self.loop_device {
-                // Using loop device
-                if partition_num > 0 {
-                    loop_dev.partition_path(partition_num)
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
-                } else {
-                    loop_dev.device_path()
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
-                        .to_path_buf()
-                }
-            } else if let Some(nbd) = &self.nbd_device {
-                // Using NBD device
-                if partition_num > 0 {
-                    nbd.partition_path(partition_num)
-                } else {
-                    nbd.device_path().to_path_buf()
-                }
-            } else {
-                return Err(Error::InvalidState(
-                    "No block device available (neither loop nor NBD)".to_string(),
-                ));
-            }
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+            Ok(v) => v,
+            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+            Err(e) => return Err(e),
         };
 
-        // Create mount root if needed
-        if self.mount_root.is_none() {
-            // Use /run instead of /tmp for runtime mounts (tmpfs, faster, auto-cleanup)
-            let mount_dir = std::path::PathBuf::from("/run")
-                .join(format!("guestctl-{}", std::process::id()));
-            fs::create_dir_all(&mount_dir)
-                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
-            self.mount_root = Some(mount_dir);
-        }
-
-        // Build actual mount path
-        let mount_root = self
-            .mount_root
-            .as_ref()
-            .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
-        let actual_mountpoint = if mountpoint == "/" {
-            mount_root.clone()
-        } else {
-            mount_root.join(mountpoint.trim_start_matches('/'))
-        };
-
-        // Create mountpoint directory
-        fs::create_dir_all(&actual_mountpoint)
-            .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
-
-        // Check if we need sudo for mount
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = need_sudo();
 
         // Detect filesystem type to use appropriate mount options
         // Use the original mountable parameter, as device_partition might not exist yet (LVM)
         let fs_type = self.vfs_type(mountable)
-            .unwrap_or_else(|_| "auto".to_string());
+            .unwrap_or_else(|e| {
+                log::debug!("Could not detect filesystem type for {}: {}. Falling back to 'auto'.", mountable, e);
+                "auto".to_string()
+            });
 
         // Build mount command
         let mut cmd = if need_sudo {
@@ -128,7 +156,8 @@ impl Guestfs {
         let mount_opts = if fs_type.starts_with("ext") {
             "ro,noload"
         } else if fs_type == "xfs" {
-            "ro,norecovery"
+            // nouuid prevents failure when duplicate UUIDs exist (common with clones/LVM snapshots)
+            "ro,norecovery,nouuid"
         } else {
             "ro"
         };
@@ -142,18 +171,60 @@ impl Guestfs {
             .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
 
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(Error::CommandFailed(format!(
-                "Mount failed: {}. You may need sudo/root permissions.",
-                stderr
-            )));
+            // Retry with fallback options (inspired by vmcraft mount.py)
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+            // For XFS: try with just ro,norecovery (without nouuid)
+            // For ext: try ro without noload
+            // For unknown fs_type: try ro,norecovery then ro,norecovery,nouuid
+            let fallback_opts: &[&str] = if fs_type == "xfs" {
+                &["ro,norecovery"]
+            } else if fs_type.starts_with("ext") {
+                &["ro"]
+            } else {
+                &["ro,norecovery", "ro,norecovery,nouuid", "ro,noload"]
+            };
+
+            let mut mounted = false;
+            for opts in fallback_opts {
+                let mut retry_cmd = if need_sudo {
+                    let mut c = Command::new("sudo");
+                    c.arg("mount");
+                    c
+                } else {
+                    Command::new("mount")
+                };
+
+                let retry_out = retry_cmd
+                    .arg("-o")
+                    .arg(opts)
+                    .arg(&device_partition)
+                    .arg(&actual_mountpoint)
+                    .output();
+
+                if let Ok(out) = retry_out {
+                    if out.status.success() {
+                        if self.verbose {
+                            eprintln!(
+                                "guestfs: mount_ro {} succeeded with fallback options: {}",
+                                mountable, opts
+                            );
+                        }
+                        mounted = true;
+                        break;
+                    }
+                }
+            }
+
+            if !mounted {
+                return Err(Error::CommandFailed(format!(
+                    "Mount failed: {}. You may need sudo/root permissions.",
+                    stderr
+                )));
+            }
         }
 
-        // Record the mount
-        self.mounted.insert(
-            mountable.to_string(),
-            actual_mountpoint.to_string_lossy().to_string(),
-        );
+        self.record_mount(mountable, &actual_mountpoint);
 
         Ok(())
     }
@@ -161,7 +232,9 @@ impl Guestfs {
     /// Mount a filesystem read-write
     ///
     pub fn mount(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
-        self.ensure_ready()?;
+        if self.verbose {
+            eprintln!("guestfs: mount {} {}", mountable, mountpoint);
+        }
 
         // Check if readonly
         if let Some(drive) = self.drives.first() {
@@ -172,16 +245,38 @@ impl Guestfs {
             }
         }
 
-        // Verify partition exists
-        let _partition_num = self.parse_device_name(mountable)?;
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+            Ok(v) => v,
+            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+            Err(e) => return Err(e),
+        };
 
-        // Record the mount
-        self.mounted
-            .insert(mountable.to_string(), mountpoint.to_string());
+        let need_sudo = need_sudo();
 
-        if self.verbose {
-            eprintln!("guestfs: mount {} {}", mountable, mountpoint);
+        // Build mount command (read-write, no "ro" flag)
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("mount");
+            sudo_cmd
+        } else {
+            Command::new("mount")
+        };
+
+        let output = cmd
+            .arg(&device_partition)
+            .arg(&actual_mountpoint)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(Error::CommandFailed(format!(
+                "Mount failed: {}. You may need sudo/root permissions.",
+                stderr
+            )));
         }
+
+        self.record_mount(mountable, &actual_mountpoint);
 
         Ok(())
     }
@@ -201,7 +296,69 @@ impl Guestfs {
             );
         }
 
-        self.mount(mountable, mountpoint)
+        // Validate mount options: reject dangerous options
+        {
+            let options_lower = options.to_lowercase();
+            let dangerous = ["suid", "dev", "exec"];
+            for opt in options_lower.split(',') {
+                let opt = opt.trim();
+                for d in &dangerous {
+                    if opt == *d {
+                        return Err(Error::SecurityViolation(format!(
+                            "Mount option '{}' is not allowed for security reasons",
+                            opt
+                        )));
+                    }
+                }
+            }
+        }
+
+        // Check if readonly drive and options don't include "ro"
+        if let Some(drive) = self.drives.first() {
+            if drive.readonly && !options.contains("ro") {
+                return Err(Error::PermissionDenied(
+                    "Cannot mount read-write on read-only drive".to_string(),
+                ));
+            }
+        }
+
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+            Ok(v) => v,
+            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+            Err(e) => return Err(e),
+        };
+
+        let need_sudo = need_sudo();
+
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("mount");
+            sudo_cmd
+        } else {
+            Command::new("mount")
+        };
+
+        if !options.is_empty() {
+            cmd.arg("-o").arg(options);
+        }
+
+        let output = cmd
+            .arg(&device_partition)
+            .arg(&actual_mountpoint)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(Error::CommandFailed(format!(
+                "Mount failed: {}. You may need sudo/root permissions.",
+                stderr
+            )));
+        }
+
+        self.record_mount(mountable, &actual_mountpoint);
+
+        Ok(())
     }
 
     /// Mount with explicit VFS type
@@ -213,6 +370,8 @@ impl Guestfs {
         mountable: &str,
         mountpoint: &str,
     ) -> Result<()> {
+        self.ensure_ready()?;
+
         if self.verbose {
             eprintln!(
                 "guestfs: mount_vfs {} {} {} {}",
@@ -220,7 +379,121 @@ impl Guestfs {
             );
         }
 
-        self.mount(mountable, mountpoint)
+        // Validate VFS type against whitelist of known filesystem types
+        {
+            const ALLOWED_VFS_TYPES: &[&str] = &[
+                "proc", "sysfs", "devtmpfs", "tmpfs", "devpts", "cgroup", "cgroup2",
+                "securityfs", "debugfs", "tracefs", "configfs", "fusectl", "pstore",
+                "efivarfs", "bpf", "hugetlbfs", "mqueue", "overlay",
+            ];
+            if !vfstype.is_empty() && !ALLOWED_VFS_TYPES.contains(&vfstype) {
+                return Err(Error::SecurityViolation(format!(
+                    "VFS type '{}' is not in the allowed list: {}",
+                    vfstype,
+                    ALLOWED_VFS_TYPES.join(", ")
+                )));
+            }
+        }
+
+        // Check if readonly drive and options don't include "ro"
+        if let Some(drive) = self.drives.first() {
+            if drive.readonly && !options.contains("ro") {
+                return Err(Error::PermissionDenied(
+                    "Cannot mount read-write on read-only drive".to_string(),
+                ));
+            }
+        }
+
+        // Check if this device is already mounted
+        if self.mounted.contains_key(mountable) {
+            return Ok(());
+        }
+
+        // Determine the actual device path to mount
+        let device_partition = if mountable.starts_with("/dev/mapper/")
+            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3) {
+            std::path::PathBuf::from(mountable)
+        } else {
+            let partition_num = self.parse_device_name(mountable)?;
+
+            if let Some(loop_dev) = &self.loop_device {
+                if partition_num > 0 {
+                    loop_dev.partition_path(partition_num)
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                } else {
+                    loop_dev.device_path()
+                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                        .to_path_buf()
+                }
+            } else if let Some(nbd) = &self.nbd_device {
+                if partition_num > 0 {
+                    nbd.partition_path(partition_num)
+                } else {
+                    nbd.device_path().to_path_buf()
+                }
+            } else {
+                return Err(Error::InvalidState(
+                    "No block device available (neither loop nor NBD)".to_string(),
+                ));
+            }
+        };
+
+        // Create mount root if needed
+        if self.mount_root.is_none() {
+            let mount_dir = std::path::PathBuf::from("/run")
+                .join(format!("guestkit-{}", std::process::id()));
+            fs::create_dir_all(&mount_dir)
+                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
+            self.mount_root.get_or_insert(mount_dir);
+        }
+
+        let mount_root = self
+            .mount_root
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
+        let actual_mountpoint = if mountpoint == "/" {
+            mount_root.clone()
+        } else {
+            mount_root.join(mountpoint.trim_start_matches('/'))
+        };
+
+        fs::create_dir_all(&actual_mountpoint)
+            .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
+
+        let need_sudo = need_sudo();
+
+        let mut cmd = if need_sudo {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("mount");
+            sudo_cmd
+        } else {
+            Command::new("mount")
+        };
+
+        if !options.is_empty() {
+            cmd.arg("-o").arg(options);
+        }
+        if !vfstype.is_empty() {
+            cmd.arg("-t").arg(vfstype);
+        }
+
+        let output = cmd
+            .arg(&device_partition)
+            .arg(&actual_mountpoint)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(Error::CommandFailed(format!(
+                "Mount failed: {}. You may need sudo/root permissions.",
+                stderr
+            )));
+        }
+
+        self.record_mount(mountable, &actual_mountpoint);
+
+        Ok(())
     }
 
     /// Unmount a filesystem
@@ -248,7 +521,7 @@ impl Guestfs {
         }
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = need_sudo();
 
         // Unmount each
         for (dev, mountpoint) in to_unmount {
@@ -300,12 +573,17 @@ impl Guestfs {
         }
 
         // Check if we need sudo
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = need_sudo();
 
-        // Unmount all in reverse order (to handle nested mounts)
-        let mountpoints: Vec<String> = self.mounted.values().cloned().collect();
+        // Unmount deepest mounts first (sorted by path component count, descending)
+        let mut mountpoints: Vec<String> = self.mounted.values().cloned().collect();
+        mountpoints.sort_by(|a, b| {
+            let depth_a = a.matches('/').count();
+            let depth_b = b.matches('/').count();
+            depth_b.cmp(&depth_a)
+        });
 
-        for mountpoint in mountpoints.iter().rev() {
+        for mountpoint in &mountpoints {
             if self.trace {
                 eprintln!("guestfs: unmounting {}", mountpoint);
             }
@@ -442,11 +720,11 @@ impl Guestfs {
 
     /// Get mountpoints
     ///
-    pub fn mountpoints(&self) -> Result<HashMap<String, String>> {
+    pub fn mountpoints(&self) -> Result<&HashMap<String, String>> {
         self.ensure_ready()?;
 
         // Return device -> mountpoint mapping
-        Ok(self.mounted.clone())
+        Ok(&self.mounted)
     }
 
     /// Create a mountpoint
@@ -506,7 +784,7 @@ mod tests {
 
     #[test]
     fn test_mount_tracking() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // Setup would be needed here
     }
 }

@@ -9,7 +9,7 @@ Here's what I just built: **GuestCtl** - a Rust-powered VM inspection tool that 
 Watch this magic happen:
 
 ```bash
-$ sudo guestctl inspect photon.vmdk
+$ sudo guestkit inspect photon.vmdk
 
 ══════════════════════════════════════════════════════════════════════
 📀 Disk Image: ../hyper2kvm/photon.vmdk
@@ -92,7 +92,7 @@ Just shipped **GuestCtl** - a Rust tool that reads VM disks without booting them
 Here's a real example inspecting a VMware Photon OS disk:
 
 ```
-$ guestctl inspect photon.vmdk
+$ guestkit inspect photon.vmdk
 ══════════════════════════════════════════
 📀 Disk: photon.vmdk
 ✓ Found 1 operating system
@@ -114,19 +114,19 @@ Init: systemd
 **What you can do:**
 ```bash
 # List all filesystems
-guestctl filesystems disk.vmdk
+guestkit filesystems disk.vmdk
 
 # Extract configuration
-guestctl cat disk.vmdk /etc/ssh/sshd_config
+guestkit cat disk.vmdk /etc/ssh/sshd_config
 
 # Get package inventory
-guestctl packages disk.vmdk
+guestkit packages disk.vmdk
 
 # Interactive exploration
-guestctl interactive disk.vmdk
+guestkit interactive disk.vmdk
 
 # Batch automation
-guestctl script disk.vmdk audit.gk
+guestkit script disk.vmdk audit.gk
 ```
 
 **Why this matters:**
@@ -174,7 +174,7 @@ Traditional approach:
 **The Solution I Built:**
 
 ```bash
-$ guestctl inspect-batch *.vmdk --parallel 8
+$ guestkit inspect-batch *.vmdk --parallel 8
 
 Processing 50 VMs...
 ✓ 50/50 complete in 8 minutes
@@ -183,7 +183,7 @@ Processing 50 VMs...
 **Here's what it looks like in action:**
 
 ```
-$ guestctl inspect photon.vmdk
+$ guestkit inspect photon.vmdk
 
 ✓ Found VMware Photon OS/Linux 5.0
   Kernel: 6.18.5-200.fc43.x86_64
@@ -216,7 +216,7 @@ This started as "I need to check what's in this VM" and turned into a full toolk
 
 Sometimes the best tools come from solving your own pain points.
 
-**Coming soon:** PyPI package, Python bindings, REST API
+**Available now:** Python bindings, REST API, TUI mode, HTML/PDF export
 
 What's your VM inspection pain point?
 
@@ -259,13 +259,13 @@ All extracted from a `.vmdk` file. No VM boot required.
 **Try it yourself:**
 ```bash
 # Basic inspection
-guestctl inspect vm.vmdk
+guestkit inspect vm.vmdk
 
 # Interactive mode
-guestctl interactive vm.vmdk
+guestkit interactive vm.vmdk
 
 # Batch processing
-guestctl inspect-batch *.vmdk
+guestkit inspect-batch *.vmdk
 ```
 
 Open source. Production-ready. Coming to PyPI.
@@ -283,7 +283,7 @@ What would you inspect first? 👀
 Stop booting VMs just to check what OS they're running.
 
 ```bash
-$ guestctl inspect disk.vmdk
+$ guestkit inspect disk.vmdk
 ```
 
 Instant OS detection, package info, and system details.
@@ -341,3 +341,4 @@ GitHub: [link]
 3. Week 4: Python bindings announcement
 4. Week 5: HTML report showcase
 5. Week 6: PyPI launch announcement
+6. Security audit results: Highlight the comprehensive code review that fixed 54 security and correctness issues (8 critical, 11 high, 22 medium, 13 low). Great angle for building trust and demonstrating production readiness.

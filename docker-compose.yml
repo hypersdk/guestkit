@@ -36,6 +36,24 @@ services:
     # Override default command
     # command: inspect /vms/vm.qcow2 --output json
 
+  # LVM Worker - privileged container for LVM clone operations
+  lvm-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: lvm-worker
+    image: guestkit-lvm:latest
+    container_name: guestkit-lvm-worker
+    privileged: true
+    pid: host
+    network_mode: host
+    volumes:
+      - /dev:/dev
+      - /run/lvm:/run/lvm
+      - /run/udev:/run/udev
+      - /etc/lvm:/etc/lvm
+    command: ["sleep", "infinity"]
+
 volumes:
   guestkit-cache:
     driver: local

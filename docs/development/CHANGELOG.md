@@ -7,11 +7,167 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security & Correctness - Sixth-Pass Review (45 issues, 37 files)
+
+Comprehensive code review covering all 103K lines across 170 source files.
+Six parallel analysis passes: core infrastructure, guestfs bindings, CLI commands,
+shell/TUI, supporting modules, and a dedicated security audit.
+
+#### Critical Fixes (6)
+- **Command injection via `.sh()` bypass**: 46 hardcoded `.sh()` calls containing shell operators (`||`, `&&`, `>`, `|`) were silently failing because `.sh()` rejects these patterns. Added `sh_raw()` method for trusted hardcoded commands; migrated all affected calls in `interactive.rs` (`guestfs/command.rs`, `cli/interactive.rs`)
+- **UTF-8 panic in string slicing**: Package name/version truncation used byte-offset slicing (`&name[..35]`) which panics on multi-byte characters. Replaced with `chars().take(N).collect()` (`cli/commands/inspect.rs`)
+- **Division by zero in compliance score**: `total - skipped` could be zero when all validation rules are skipped. Changed guard from `total > 0` to `total > skipped` (`cli/validate/mod.rs`)
+- **Hardcoded `/dev/sda` device path**: Partition listing always queried `/dev/sda`, silently failing on VirtIO (`vda`), NVMe, or other device types. Now dynamically derives device from partition name (`cli/commands/inspect.rs`)
+- **Unsafe negative size cast**: `stat.size` (i64, can be -1) was cast to u64 without sign check, causing wraparound to massive values. Added `>= 0` guard (`cli/commands/disk_ops.rs`)
+- **Unreachable code in retry loop**: Replaced `unreachable!()` macro with structured `last_err` accumulator pattern, eliminating the unreachable code path entirely (`core/retry.rs`)
+
+#### High Fixes (7)
+- **Memory exhaustion via unbounded read**: `upload()` and `equal()` called `read_to_end()` without size limits. Added 100MB cap to prevent DoS from malicious guest images (`guestfs/transfer.rs`)
+- **Path traversal in file extract**: After joining relative paths, the canonical result was not verified to remain within the target directory. Added post-join canonical path boundary check (`cli/commands/file_ops.rs`)
+- **Silent mount failures in plan apply**: `g.mount()` errors were discarded with `let _ =`. Now logs mount failures (`cli/plan/apply.rs`)
+- **Octal permission parsing edge case**: `"0".trim_start_matches('0')` produced empty string causing parse failure. Parse full octal string and validate range 0-7777 (`cli/plan/apply.rs`)
+- **Shadow file username injection**: Usernames containing `:` would corrupt `/etc/shadow` format. Added colon validation (`cli/commands/security.rs`)
+- **OpenSSL child process timeout**: `wait_with_output()` could block forever. Added 30-second timeout with `try_wait()` polling and process kill on timeout (`cli/commands/security.rs`)
+- **GuestFS handle leak on error**: Early returns in `apply()` skipped `g.shutdown()`. Added cleanup on all error paths (`cli/plan/apply.rs`)
+
+#### Major Fixes (14)
+- **Mount code duplication eliminated**: Extracted `prepare_mount()`, `record_mount()`, and `need_sudo()` from near-identical code in `mount_ro()`, `mount()`, and `mount_options()`, removing ~120 lines of duplication (`guestfs/mount.rs`)
+- **22 repeated `unsafe { libc::geteuid() }` calls**: Extracted `pub(crate) fn need_sudo()` helper with safety documentation. Updated all call sites across 6 files (`guestfs/mount.rs`, `disk/nbd.rs`, `disk/loop_device.rs`, `guestfs/lvm.rs`, `guestfs/handle.rs`, `guestfs/device.rs`)
+- **HashMap clone on every `mountpoints()` call**: Changed return type from `HashMap<String, String>` (deep clone) to `&HashMap<String, String>` (zero-cost reference) (`guestfs/mount.rs`)
+- **Regex compilation in loop**: `update_clone_fstab()` compiled a new regex per UUID mapping. Pre-builds all regexes before the loop (`guestfs/lvm_clone.rs`)
+- **Silent `.nth().unwrap_or("")` chains**: Network config parsing used fallible indexing with empty-string fallback, silently corrupting parsed data. Replaced with `if let Some()` pattern matching (`guestfs/inspect_enhanced.rs`)
+- **Incorrect service state in blueprints**: `detect_services()` marked all services as `enabled: true` and `state: "active"` based solely on file existence. Now checks symlink in `multi-user.target.wants` for enabled state; uses `"installed"` instead of `"active"` (`cli/blueprint/mod.rs`)
+- **TUI scroll state desynchronization**: `scroll_up()` and `scroll_down()` updated `scroll_offset` and `selected_index` independently. Synchronized both fields (`cli/tui/app.rs`)
+- **Empty list crash in `scroll_bottom()`**: `saturating_sub(1)` on count=0 gave `usize::MAX`. Added early return for empty lists in all scroll/page methods (`cli/tui/app.rs`)
+- **Cache key TOCTOU and error swallowing**: `modified()` failure silently defaulted to epoch, causing cache key collisions. Now propagates errors (`cli/cache.rs`)
+- **BinaryCache fallback logging**: Improved warning when falling back to `/tmp` — now warns about reboot data loss (`core/binary_cache.rs`)
+- **Unsafe `set_var` extracted**: Moved 5 `std::env::set_var()` calls to dedicated `set_env_vars_before_threads()` with safety documentation (`main.rs`)
+- **File explorer scroll_offset not reset**: After filtering, `scroll_offset` could exceed entry count, causing rendering glitches (`cli/shell/explore.rs`)
+- **File size overflow**: `filesize()` silently capped at `i64::MAX`. Now returns `Err` for files exceeding `i64::MAX` (`guestfs/file_ops.rs`)
+- **LVM clone unreachable**: Replaced `unreachable!()` in `IsolationLevel::None` match arm with safe `return Ok(())` (`guestfs/lvm_clone.rs`)
+
+#### Minor Fixes (14)
+- **`OutputFormat` implements `FromStr` trait**: Replaced custom `from_str()` method (suppressing clippy warning) with proper `std::str::FromStr` implementation (`cli/output.rs`)
+- **Unnecessary string allocation in `DiskFormat` parsing**: Replaced `to_lowercase()` (allocates) with `eq_ignore_ascii_case()` (zero-alloc) (`core/types.rs`)
+- **Misleading forensic timeline**: Packages with no install timestamps were plotted at epoch 0 (1970). Removed from timeline entirely (`cli/commands/analysis.rs`)
+- **Thread panic tracking in batch**: Worker thread panics were logged but not counted. Now tracks and reports panic count (`cli/commands/batch.rs`)
+- **fstab field documentation**: Added comment documenting fstab(5) default behavior for dump/pass fields (`guestfs/fstab.rs`)
+- **LVM parse defaults documented**: Added comment explaining -1 sentinel for inactive LV device numbers (`guestfs/lvm.rs`)
+- **Version parsing logging**: Non-numeric version strings now log debug message instead of silently defaulting to 0 (`guestfs/inspect.rs`)
+- **ReadDir error swallowing**: `entries.flatten()` silently skipped IO errors. Now logs unreadable entries (`guestfs/file_ops.rs`)
+- **Symlink loop detection in recursive search**: Added `HashSet<String>` visited-path tracking to prevent infinite recursion (`cli/shell/commands/core.rs`)
+- **Excessive clones in HTML exporter**: Replaced 7 `Option::clone().unwrap_or_else(|| "Unknown".to_string())` with `as_deref().unwrap_or("Unknown")` (`cli/exporters/html.rs`)
+- **Progress template fallback**: Replaced `.expect()` on template parsing with `.unwrap_or_else(|| default_style())` to prevent panic if indicatif changes format (`core/progress.rs`)
+- **Blanket `#![allow(dead_code)]` removed**: Replaced module-level suppression with targeted `#[allow(dead_code)]` on specific unused constant (`cli/output.rs`)
+- **CommandExec review warning**: Generated bash scripts now include a `# [CommandExec] Review` comment before raw commands (`cli/plan/export.rs`)
+- **`#[allow(dead_code)]` on public struct removed**: `PlanGenerator` is public API; dead_code suppression was inappropriate (`cli/plan/generator.rs`)
+
+### Security & Correctness - Full Code Review Fixes (90 issues across 5 passes)
+
+#### Fifth-Pass Review (36 issues, 19 files)
+
+##### Critical Fixes (5)
+- **Password leak via `/proc/cmdline`**: Plaintext password no longer passed as CLI argument to `openssl passwd`; now piped via stdin (`cli/commands/security.rs`)
+- **Operator precedence bug in IOC matching**: `&&`/`||` precedence caused ALL lines to match for DOMAIN-type indicators (`cli/commands/security.rs`)
+- **Shell injection in package search**: Replaced `sh -c` with direct `command()` argv arrays for dnf/apt/pacman (`cli/interactive.rs`)
+- **Shell injection in cron commands**: Replaced `sh -c` with `command()` for crontab operations; added username validation (`cli/interactive.rs`)
+- **Broken sed command generation**: Separated `sed_escape()` from `shell_escape()` to prevent double-quoting inside sed expressions (`cli/plan/export.rs`)
+
+##### High Fixes (9)
+- **`resolve_guest_path()` canonicalize fix**: Handles non-existent paths by falling back to parent directory canonicalization, fixing `write()`/`mkdir()`/`touch()` for new files (`guestfs/file_ops.rs`)
+- **Mount options validation**: `mount_options()` now rejects dangerous options (`suid`, `dev`, `exec`) (`guestfs/mount.rs`)
+- **VFS type whitelist**: `mount_vfs()` validates against 18 known filesystem types (`guestfs/mount.rs`)
+- **Reverse mount order in 7 functions**: Fixed `clone`, `simulate`, `copy`, `rescue`, `optimize`, `repair`, `harden` commands (`cli/commands/disk_ops.rs`, `cli/commands/analysis.rs`, `cli/commands/inspect.rs`)
+- **Username validation**: Added `validate_username()` for all user management commands; rejects flag injection (`cli/interactive.rs`)
+- **Delete blocks critical paths**: `rm -rf` now refuses `/`, `/etc`, `/usr`, `/var`, `/boot` and 9 other system directories (`cli/interactive.rs`)
+- **Shell injection in diff**: Replaced `sh -c` with `command()` argv array (`cli/interactive.rs`)
+- **SSH key path traversal**: Uses `/etc/passwd` lookup instead of hardcoded `/home/{user}` (`cli/interactive.rs`)
+- **DEL character display**: Correctly renders as `^?` instead of invalid byte 191 (`cli/commands/file_ops.rs`)
+
+##### Medium Fixes (16)
+- **Readonly checks**: Added to `write_append()`, `cp_a()`, `cp_r()`, `rmdir()` (`guestfs/file_ops.rs`)
+- **Mount path matching**: Replaced substring match with field-based check to prevent false matches (`guestfs/handle.rs`)
+- **Bincode size limits**: Applied 100MB limit to `stats()` and `clear_older_than()` (`core/binary_cache.rs`)
+- **qemu-nbd process cleanup**: `disconnect()` now kills and waits on child process (`disk/nbd.rs`)
+- **Partition offset overflow**: Added `checked_add` for post-multiply additions (`disk/filesystem.rs`)
+- **HTML template detection**: Checks template content for HTML tags, not just name prefix (`export/template.rs`)
+- **Division by zero guard**: Protected `total_weight / 100` in score calculation (`cli/commands/analysis.rs`)
+- **Disk usage precision**: Fixed integer division order (`cli/commands/security.rs`)
+- **`page_down` bounds**: Clamped to item count (`cli/tui/app.rs`)
+- **Export path traversal**: Rejects `/` and `\` anywhere in filename (`cli/tui/app.rs`)
+- **Lexicographic mountpoint sort**: Correct for same-length different-hierarchy paths (`cli/shell/repl.rs`)
+- **`inspect_os()` error propagation**: Changed from `unwrap_or_default()` to `?` (`cli/plan/apply.rs`)
+- **Glob-to-regex escaping**: Complete regex metacharacter escaping (`cli/commands/file_ops.rs`)
+- **UID type consistency**: Changed to `u32` matching structured output (`cli/commands/inspect.rs`)
+- **Distro-aware package manager**: Migration planner selects dnf/apt/pacman/zypper based on OS (`cli/migrate/planner.rs`)
+- **Drop logging**: Shutdown failures now logged in guestfs handle Drop (`guestfs/handle.rs`)
+
+#### Fourth-Pass Review (54 issues, 33 files)
+
+#### Critical Fixes (8)
+- **Shell injection in bash export**: Added `shell_escape()` helper with single-quote wrapping to all interpolated values in generated bash scripts (`cli/plan/export.rs`)
+- **Broken `mount()` implementation**: `mount()`, `mount_options()`, and `mount_vfs()` now perform actual mount operations instead of only recording in hashmap (`guestfs/mount.rs`)
+- **Hand-rolled SHA-512 crypt replaced**: Replaced incorrect simplified SHA-512 password hashing with `openssl passwd -6` for correct `$6$salt$hash` generation (`cli/commands/security.rs`)
+- **Plaintext password temp file**: Password changes now pipe directly to `chpasswd` instead of writing to `/tmp` (`cli/interactive.rs`)
+- **sed injection in grep-replace**: Added escaping for `\`, `&`, and newlines in sed pattern/replacement strings (`cli/interactive.rs`)
+- **`rm -rf` without confirmation**: `delete` command now requires interactive y/n confirmation before proceeding (`cli/interactive.rs`)
+- **Shadow entry for nonexistent users**: Force-add now validates user exists in `/etc/passwd` before creating shadow entry (`cli/commands/security.rs`)
+
+#### High Severity Fixes (11)
+- **LVM device filter missing**: Added `--config` with device filter to `lvcreate`, `lvremove`, `lvs_full`, and `vg_activate` to prevent operating on host LVM (`guestfs/lvm.rs`)
+- **Shell injection in `sh()`**: Changed from warning to returning `Error::SecurityViolation`; added `|`, `;`, `>`, newline to dangerous patterns (`guestfs/command.rs`)
+- **Write ops on readonly images**: Added `self.readonly` check to 10 mutating methods: `write`, `mkdir`, `mkdir_p`, `touch`, `chmod`, `chown`, `rm`, `rm_rf`, `mv`, `cp` (`guestfs/file_ops.rs`)
+- **Inverted mount sort order**: Fixed `mount_all_ro` to mount shorter paths (parents) before longer paths (children) (`cli/commands/mod.rs`)
+- **Path traversal in file extraction**: Replaced `canonicalize()`-based check with `Path::components()` to reject `..` before any filesystem ops (`cli/commands/file_ops.rs`)
+- **Shadow backup auto-deleted**: Changed `into_temp_path()` to `into_temp_path().keep()` so backup files persist (`cli/commands/security.rs`)
+- **Path traversal in cache key**: Added key validation rejecting `/`, `\`, `..`, and non-alphanumeric characters (`core/binary_cache.rs`)
+- **TUI scroll out-of-bounds**: Added bounds checking to `scroll_down` and `scroll_bottom`; `get_filtered_count` now uses `packages.len()` (`cli/tui/app.rs`)
+- **Arbitrary command execution from plan**: Backup failure now returns error instead of continuing without backup (`cli/plan/apply.rs`)
+
+#### Medium Severity Fixes (22)
+- **`u64` to `i64` truncation**: Changed unsafe `as i64` casts to `i64::try_from().unwrap_or(i64::MAX)` in partition sizes and file sizes (`guestfs/device.rs`, `guestfs/file_ops.rs`)
+- **`touch()` mtime not updated**: Now calls `file.set_modified(SystemTime::now())` (`guestfs/file_ops.rs`)
+- **Shutdown state transition**: Set `state = Closed` before early returns in shutdown (`guestfs/handle.rs`)
+- **`umount_all()` ordering**: Mountpoints now sorted by depth (deepest first) before unmounting (`guestfs/mount.rs`)
+- **VG activation recording**: VGs recorded in `activated_vgs` only after successful activation (`guestfs/lvm.rs`)
+- **JSON/CSV injection**: Replaced string interpolation with `serde_json::Value::String()` in timeline, audit, and health exports (`cli/commands/analysis.rs`, `cli/commands/security.rs`)
+- **Read-write mount on read-only drives**: Changed 3 `g.mount()` calls to `g.mount_ro()` in disk_ops (`cli/commands/disk_ops.rs`)
+- **Regex denial of service**: Added 1000-char length limit and graceful error handling for user regex input (`cli/tui/app.rs`)
+- **Mountpoint sort in REPL**: Sorted mountpoints by path length before mounting (`cli/shell/repl.rs`)
+- **Guestfs errors swallowed**: `perform_inspection` now propagates errors instead of returning fake success (`cli/parallel.rs`)
+- **Thread pool warning**: `build_global()` failure now logged via `eprintln!` (`cli/parallel.rs`)
+- **False positive ZFS detection**: Replaced non-zero heuristic with ZFS uberblock magic number `0x00bab10c` (`disk/filesystem.rs`)
+- **LBA overflow**: Changed `start_lba * 512` to `checked_mul(512)` with error handling (`disk/filesystem.rs`)
+- **NBD Drop silent**: Now logs disconnect errors with device path (`disk/nbd.rs`)
+- **Bincode deserialization limit**: Added 100MB size limit to prevent memory exhaustion (`core/binary_cache.rs`)
+- **HTML template injection**: Added HTML escaping for `<`, `>`, `&`, `"` in variable values (`export/template.rs`)
+- **Incomplete markdown escaping**: Extended `md_escape()` to cover `\`, `[`, `]`, `(`, `)`, `*`, `_`, `` ` ``, `#` (`cli/exporters/markdown.rs`)
+- **YAML injection in Ansible export**: Plan data values now properly escaped (`cli/plan/export.rs`)
+- **SELinux line-by-line replacement**: Now skips comment lines starting with `#` (`cli/plan/apply.rs`)
+- **Cyclic dependency warning**: Topological sort now warns when operations are dropped (`cli/plan/apply.rs`)
+- **NBD `_read_only` naming**: Renamed misleading underscore-prefixed parameter (`disk/nbd.rs`)
+- **Loop device Drop logging**: Now logs device path and manual cleanup instructions on failure (`disk/loop_device.rs`)
+
+#### Low Severity Fixes (13)
+- **Non-UTF-8 filenames**: `ls()` now uses `to_string_lossy()` instead of silently skipping (`guestfs/file_ops.rs`)
+- **`realpath()` consistency**: Uses `find_root_mountpoint()` instead of ad-hoc lookup (`guestfs/file_ops.rs`)
+- **Conditional shutdown sleep**: Only sleeps if there were actual mounts to clean up (`guestfs/handle.rs`)
+- **`find0()` path validation**: Validates output path doesn't contain `..` and is absolute (`guestfs/file_ops.rs`)
+- **Package timestamp**: Changed from fake `Utc::now()` to `0` with explanatory comment (`cli/commands/analysis.rs`)
+- **Shadow trailing newline**: Shadow file now ends with `\n` per POSIX convention (`cli/commands/security.rs`)
+- **UID parse safety**: Changed `unwrap_or(0)` to `unwrap_or(-1)` to avoid false root coloring (`cli/interactive.rs`)
+- **Health score overflow**: Added `.min(255)` before `u8` cast (`cli/tui/app.rs`)
+- **Topological sort silent drop**: Warns when operations are dropped due to cycles (`cli/plan/apply.rs`)
+- **SELinux comment corruption**: Line-by-line replacement skips comments (`cli/plan/apply.rs`)
+- **Compatibility score deflation**: Denominator now uses `min(total, 50)` to match `take(50)` limit (`cli/migrate/planner.rs`)
+- **Oracle Linux false positive**: Changed `contains("ol")` to specific patterns (`detectors/guest_detector.rs`)
+- **`ensure_ready()` missing**: Added to `mount_options()` (`guestfs/mount.rs`)
+
 ### Added - Interactive File Explorer 🔍
 
 #### Explore Command - Visual File Browser
 - **Three Access Methods**:
-  - Direct CLI: `guestctl explore vm.qcow2 [path]`
+  - Direct CLI: `guestkit explore vm.qcow2 [path]`
   - Shell mode: `explore` or `ex` command in interactive shell
   - TUI view: Integrated Files view accessible via Tab navigation
 - **Visual Navigation**: Color-coded files with emoji icons for instant file type recognition
@@ -189,15 +345,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2026-01-23 - Quick Wins Sprint Complete ✅
 
-### Added - CLI Tool (guestctl)
+### Added - CLI Tool (guestkit)
 
 **NEW: Production-ready command-line tool** for disk image operations without mounting:
-- `guestctl inspect <disk>` - Detect and display OS information
-- `guestctl filesystems <disk>` - List block devices, partitions, filesystems
-- `guestctl packages <disk>` - List installed packages (dpkg, RPM, pacman)
-- `guestctl ls <disk> <path>` - List directory contents
-- `guestctl cat <disk> <path>` - Read and display files
-- `guestctl cp <disk>:<src> <dest>` - Copy files from disk to host
+- `guestkit inspect <disk>` - Detect and display OS information
+- `guestkit filesystems <disk>` - List block devices, partitions, filesystems
+- `guestkit packages <disk>` - List installed packages (dpkg, RPM, pacman)
+- `guestkit ls <disk> <path>` - List directory contents
+- `guestkit cat <disk> <path>` - Read and display files
+- `guestkit cp <disk>:<src> <dest>` - Copy files from disk to host
 
 **CLI Features:**
 - JSON output mode (`--json`) for scripting and automation
@@ -255,7 +411,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ubuntu 20.04, 22.04, 24.04
   - Debian 12 (Bookworm)
   - Fedora 39
-- **Automated testing** of all 6 guestctl commands
+- **Automated testing** of all 6 guestkit commands
 - **JSON output validation** with jq
 - **Distribution detection verification**
 - **File operations testing** (ls, cat, cp)
@@ -290,7 +446,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Binary renamed**: "guestkit" → "guestctl" for clarity and convention
+- **Binary renamed**: "guestkit" → "guestkit" for clarity and convention
 - **Version bumped**: 0.2.0 → 0.3.0
 - **User experience**: Transformed from library-only to user-friendly CLI tool
 
@@ -321,7 +477,7 @@ criterion = { version = "0.5", features = ["html_reports"] }  # dev-only
 ### Code Statistics
 
 - **Production code**: +3,500 lines
-  - CLI tool: 600 lines (src/bin/guestctl.rs)
+  - CLI tool: 600 lines (src/bin/guestkit.rs)
   - Progress system: 180 lines (src/core/progress.rs)
   - Diagnostics: 280 lines (src/core/diagnostics.rs)
   - Benchmarks: 400 lines (benches/operations.rs)
@@ -348,7 +504,7 @@ let roots = g.inspect_os()?;
 **After Quick Wins:**
 ```bash
 # One command, no coding required
-guestctl inspect disk.img
+guestkit inspect disk.img
 ```
 
 **Metrics**:

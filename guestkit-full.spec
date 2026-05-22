@@ -95,7 +95,7 @@ maturin build --release --strip
 
 %install
 # Install Rust binary
-install -Dm755 target/release/guestctl %{buildroot}%{_bindir}/guestctl
+install -Dm755 target/release/guestkit %{buildroot}%{_bindir}/guestkit
 
 %if %{with python}
 # Install Python bindings
@@ -120,17 +120,17 @@ cp -r examples/* %{buildroot}%{_docdir}/%{name}/examples/
 install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 
 # Install bash completion (if available)
-# install -Dm644 completions/guestctl.bash %{buildroot}%{_datadir}/bash-completion/completions/guestctl
+# install -Dm644 completions/guestkit.bash %{buildroot}%{_datadir}/bash-completion/completions/guestkit
 
 # Install zsh completion (if available)
-# install -Dm644 completions/_guestctl %{buildroot}%{_datadir}/zsh/site-functions/_guestctl
+# install -Dm644 completions/_guestkit %{buildroot}%{_datadir}/zsh/site-functions/_guestkit
 
 # Install fish completion (if available)
-# install -Dm644 completions/guestctl.fish %{buildroot}%{_datadir}/fish/vendor_completions.d/guestctl.fish
+# install -Dm644 completions/guestkit.fish %{buildroot}%{_datadir}/fish/vendor_completions.d/guestkit.fish
 
 %check
 # Run basic binary check
-%{buildroot}%{_bindir}/guestctl --version
+%{buildroot}%{_bindir}/guestkit --version
 
 # Run Rust tests (may require test fixtures)
 # cargo test --release --locked
@@ -143,16 +143,16 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %files
 %license LICENSE
 %doc README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
-%{_bindir}/guestctl
+%{_bindir}/guestkit
 %dir %{_docdir}/%{name}
 %{_docdir}/%{name}/README.md
 %{_docdir}/%{name}/CHANGELOG.md
 %{_docdir}/%{name}/CONTRIBUTING.md
 %{_docdir}/%{name}/SECURITY.md
 %{_docdir}/%{name}/docs/
-# %{_datadir}/bash-completion/completions/guestctl
-# %{_datadir}/zsh/site-functions/_guestctl
-# %{_datadir}/fish/vendor_completions.d/guestctl.fish
+# %{_datadir}/bash-completion/completions/guestkit
+# %{_datadir}/zsh/site-functions/_guestkit
+# %{_datadir}/fish/vendor_completions.d/guestkit.fish
 
 %if %{with python}
 %files -n python3-%{name}
@@ -165,7 +165,7 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
-* Mon Jan 27 2026 Susant Sahani <ssahani@gmail.com> - 0.3.1-1
+* Mon Jan 27 2026 Susant Sahani <ssahani@redhat.com> - 0.3.1-1
 - Initial RPM package for Fedora/RHEL
 - Interactive TUI dashboard with fuzzy jump navigation (Ctrl+P)
 - Security, compliance, hardening, performance profiles
@@ -181,21 +181,21 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Reorganized documentation structure
 - Removed libguestfs references (pure Rust implementation)
 
-* Sun Jan 26 2026 Susant Sahani <ssahani@gmail.com> - 0.3.0-1
+* Sun Jan 26 2026 Susant Sahani <ssahani@redhat.com> - 0.3.0-1
 - Add comprehensive TUI dashboard with multiple views
 - Add security analysis profiles (5 types)
 - Add enhanced inspection APIs
 - Improve documentation with examples
 - Add export formats (JSON, YAML, HTML, PDF)
 
-* Fri Jan 24 2026 Susant Sahani <ssahani@gmail.com> - 0.2.0-1
+* Fri Jan 24 2026 Susant Sahani <ssahani@redhat.com> - 0.2.0-1
 - Add Python bindings via PyO3
 - Add batch processing support with parallelization
 - Add inspection caching system
 - Improve error handling and reporting
 - Add retry mechanisms for operations
 
-* Thu Jan 23 2026 Susant Sahani <ssahani@gmail.com> - 0.1.0-1
+* Thu Jan 23 2026 Susant Sahani <ssahani@redhat.com> - 0.1.0-1
 - Initial release
 - Basic VM disk inspection functionality
 - Support for multiple disk formats (QCOW2, VMDK, etc.)

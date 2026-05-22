@@ -234,6 +234,10 @@ impl Guestfs {
             eprintln!("guestfs: fill {} {} {}", c, len, path);
         }
 
+        if len < 0 {
+            return Err(Error::InvalidOperation("fill length must be non-negative".to_string()));
+        }
+
         let host_path = self.resolve_guest_path(path)?;
 
         // Create pattern and write to file
@@ -249,6 +253,14 @@ impl Guestfs {
 
         if self.verbose {
             eprintln!("guestfs: fill_pattern {} {} {}", pattern, len, path);
+        }
+
+        if len < 0 {
+            return Err(Error::InvalidOperation("fill_pattern length must be non-negative".to_string()));
+        }
+
+        if pattern.is_empty() {
+            return Err(Error::InvalidOperation("fill pattern must not be empty".to_string()));
         }
 
         let host_path = self.resolve_guest_path(path)?;
@@ -399,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_disk_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

@@ -7,21 +7,21 @@ use super::Inventory;
 pub fn generate_summary(inventory: &Inventory) -> String {
     let mut summary = String::new();
 
-    summary.push_str(&format!("📦 Software Bill of Materials (SBOM)\n"));
-    summary.push_str(&format!("=====================================\n\n"));
+    summary.push_str("📦 Software Bill of Materials (SBOM)\n");
+    summary.push_str("=====================================\n\n");
     summary.push_str(&format!("Image: {}\n", inventory.image_path));
     summary.push_str(&format!("OS: {} {}\n", inventory.os_name, inventory.os_version));
     summary.push_str(&format!("Architecture: {}\n", inventory.architecture));
     summary.push_str(&format!("Scanned: {}\n\n", inventory.scanned_at));
 
-    summary.push_str(&format!("📊 Statistics\n"));
-    summary.push_str(&format!("-------------\n"));
+    summary.push_str("📊 Statistics\n");
+    summary.push_str("-------------\n");
     summary.push_str(&format!("Total Packages: {}\n", inventory.statistics.total_packages));
     summary.push_str(&format!("Total Size: {}\n\n", format_size(inventory.statistics.total_size)));
 
     if !inventory.statistics.vulnerabilities.is_empty() {
-        summary.push_str(&format!("⚠️  Vulnerabilities\n"));
-        summary.push_str(&format!("------------------\n"));
+        summary.push_str("⚠️  Vulnerabilities\n");
+        summary.push_str("------------------\n");
         for (severity, count) in &inventory.statistics.vulnerabilities {
             let emoji = match severity.as_str() {
                 "critical" => "🔴",
@@ -36,8 +36,8 @@ pub fn generate_summary(inventory: &Inventory) -> String {
     }
 
     if !inventory.statistics.licenses.is_empty() {
-        summary.push_str(&format!("⚖️  Licenses (Top 10)\n"));
-        summary.push_str(&format!("--------------------\n"));
+        summary.push_str("⚖️  Licenses (Top 10)\n");
+        summary.push_str("--------------------\n");
         let mut licenses: Vec<_> = inventory.statistics.licenses.iter().collect();
         licenses.sort_by(|a, b| b.1.cmp(a.1));
         for (license, count) in licenses.iter().take(10) {

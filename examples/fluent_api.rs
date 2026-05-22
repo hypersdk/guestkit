@@ -162,23 +162,19 @@ fn full_ergonomic_workflow() -> Result<(), Box<dyn Error>> {
     guest.part_add("/dev/sda", "p", 411648, -34)?;
 
     // Create VFAT filesystem on EFI partition
-    guest.mkfs("/dev/sda1").vfat().label("EFI").create()?;
+    guest.mkfs("vfat", "/dev/sda1")?;
+    guest.set_label("/dev/sda1", "EFI")?;
 
     // Create BTRFS filesystem on root
-    guest.mkfs("/dev/sda2").btrfs().label("rootfs").create()?;
+    guest.mkfs("btrfs", "/dev/sda2")?;
+    guest.set_label("/dev/sda2", "rootfs")?;
 
-    // Create BTRFS subvolumes (hypothetical, requires BTRFS support)
-    // guest.btrfs_subvolume_create("/", "@")?;
-    // guest.btrfs_subvolume_create("/", "@home")?;
-
-    // Mount with subvolume
-    guest
-        .mount_with("/dev/sda2", "/")
-        .subvolume("@")
-        .perform()?;
+    // Mount root partition
+    guest.mount("/dev/sda2", "/")?;
 
     // Mount EFI partition
-    guest.mount("/dev/sda1", "/boot/efi", None)?;
+    guest.mkdir("/boot/efi")?;
+    guest.mount("/dev/sda1", "/boot/efi")?;
 
     // Create directories
     guest.mkdir_p("/etc")?;

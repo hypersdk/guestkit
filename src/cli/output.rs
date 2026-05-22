@@ -7,26 +7,33 @@ use std::fmt;
 
 /// Output format options
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
+
 pub enum OutputFormat {
     Human,
     Json,
     Yaml,
 }
 
-impl OutputFormat {
-    #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+impl std::str::FromStr for OutputFormat {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
             "json" => OutputFormat::Json,
             "yaml" => OutputFormat::Yaml,
             _ => OutputFormat::Human,
-        }
+        })
+    }
+}
+
+impl OutputFormat {
+    /// Parse from string (convenience wrapper)
+    pub fn from_format_str(s: &str) -> Self {
+        s.parse().unwrap_or(OutputFormat::Human)
     }
 }
 
 /// Format output based on format type
-#[allow(dead_code)]
 pub fn format_output<T: Serialize + std::fmt::Debug>(
     data: &T,
     format: OutputFormat,
@@ -39,7 +46,6 @@ pub fn format_output<T: Serialize + std::fmt::Debug>(
 }
 
 /// Pretty print size in human readable format
-#[allow(dead_code)]
 pub fn format_size(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
@@ -60,7 +66,6 @@ pub fn format_size(bytes: u64) -> String {
 }
 
 /// Format duration in human readable format
-#[allow(dead_code)]
 pub fn format_duration(secs: f64) -> String {
     if secs >= 60.0 {
         let mins = (secs / 60.0).floor();
@@ -72,14 +77,13 @@ pub fn format_duration(secs: f64) -> String {
 }
 
 /// Table formatter for aligned output
-#[allow(dead_code)]
 pub struct Table {
     headers: Vec<String>,
     rows: Vec<Vec<String>>,
 }
 
 impl Table {
-    #[allow(dead_code)]
+    
     pub fn new(headers: Vec<String>) -> Self {
         Self {
             headers,
@@ -87,12 +91,12 @@ impl Table {
         }
     }
 
-    #[allow(dead_code)]
+    
     pub fn add_row(&mut self, row: Vec<String>) {
         self.rows.push(row);
     }
 
-    #[allow(dead_code)]
+    
     pub fn print(&self) {
         if self.headers.is_empty() {
             return;
@@ -134,7 +138,6 @@ impl Table {
 }
 
 /// Progress indicator for long operations
-#[allow(dead_code)]
 pub struct ProgressBar {
     total: u64,
     current: u64,
@@ -142,7 +145,7 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    #[allow(dead_code)]
+    
     pub fn new(total: u64) -> Self {
         Self {
             total,
@@ -151,20 +154,20 @@ impl ProgressBar {
         }
     }
 
-    #[allow(dead_code)]
+    
     pub fn update(&mut self, current: u64) {
         self.current = current;
         self.draw();
     }
 
-    #[allow(dead_code)]
+    
     pub fn finish(&mut self) {
         self.current = self.total;
         self.draw();
         println!();
     }
 
-    #[allow(dead_code)]
+    
     fn draw(&self) {
         let percentage = if self.total > 0 {
             (self.current as f64 / self.total as f64 * 100.0) as u8
@@ -173,10 +176,11 @@ impl ProgressBar {
         };
 
         let filled = if self.total > 0 {
-            ((self.current as f64 / self.total as f64) * self.width as f64) as usize
+            (((self.current.min(self.total)) as f64 / self.total as f64) * self.width as f64) as usize
         } else {
             0
         };
+        let filled = filled.min(self.width);
 
         let empty = self.width - filled;
 
@@ -188,7 +192,7 @@ impl ProgressBar {
         );
 
         use std::io::Write;
-        std::io::stdout().flush().ok();
+        let _ = std::io::stdout().flush();
     }
 }
 
@@ -216,16 +220,130 @@ mod tests {
         assert_eq!(format_duration(90.0), "1m 30.00s");
         assert_eq!(format_duration(150.75), "2m 30.75s");
     }
+
+    #[test]
+    fn test_format_size_zero() {
+        assert_eq!(format_size(0), "0 B");
+    }
+
+    #[test]
+    fn test_format_size_terabyte() {
+        let tb = 1024u64 * 1024 * 1024 * 1024;
+        let result = format_size(tb);
+        assert!(result.contains("TB"));
+        assert!(result.contains("1.00"));
+    }
+
+    #[test]
+    fn test_format_size_fractional() {
+        assert_eq!(format_size(1536), "1.50 KB"); // 1.5 KB
+        assert_eq!(format_size(1024 * 1024 + 512 * 1024), "1.50 MB"); // 1.5 MB
+    }
+
+    #[test]
+    fn test_format_duration_zero() {
+        assert_eq!(format_duration(0.0), "0.00s");
+    }
+
+    #[test]
+    fn test_format_duration_fractional_seconds() {
+        assert_eq!(format_duration(0.5), "0.50s");
+        assert_eq!(format_duration(5.25), "5.25s");
+    }
+
+    #[test]
+    fn test_format_duration_exact_minute() {
+        assert_eq!(format_duration(60.0), "1m 0.00s");
+        assert_eq!(format_duration(120.0), "2m 0.00s");
+    }
+
+    #[test]
+    fn test_format_duration_hours_as_minutes() {
+        // 1 hour = 60 minutes
+        let result = format_duration(3600.0);
+        assert!(result.contains("60m"));
+    }
+
+    #[test]
+    fn test_output_format_from_str_json() {
+        let format: OutputFormat = "json".parse().unwrap();
+        assert!(matches!(format, OutputFormat::Json));
+    }
+
+    #[test]
+    fn test_output_format_from_str_yaml() {
+        let format: OutputFormat = "yaml".parse().unwrap();
+        assert!(matches!(format, OutputFormat::Yaml));
+    }
+
+    #[test]
+    fn test_output_format_from_str_default() {
+        let format: OutputFormat = "invalid".parse().unwrap();
+        assert!(matches!(format, OutputFormat::Human));
+    }
+
+    #[test]
+    fn test_output_format_from_str_case_insensitive() {
+        assert!(matches!("JSON".parse::<OutputFormat>().unwrap(), OutputFormat::Json));
+        assert!(matches!("YAML".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml));
+        assert!(matches!("YaML".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml));
+    }
+
+    #[test]
+    fn test_table_creation() {
+        let table = Table::new(vec!["Name".to_string(), "Age".to_string()]);
+        assert_eq!(table.headers.len(), 2);
+        assert_eq!(table.rows.len(), 0);
+    }
+
+    #[test]
+    fn test_table_add_row() {
+        let mut table = Table::new(vec!["Name".to_string(), "Age".to_string()]);
+        table.add_row(vec!["Alice".to_string(), "30".to_string()]);
+        table.add_row(vec!["Bob".to_string(), "25".to_string()]);
+
+        assert_eq!(table.rows.len(), 2);
+    }
+
+    #[test]
+    fn test_progress_bar_creation() {
+        let bar = ProgressBar::new(100);
+        assert_eq!(bar.total, 100);
+        assert_eq!(bar.current, 0);
+        assert_eq!(bar.width, 50);
+    }
+
+    #[test]
+    fn test_progress_bar_update() {
+        let mut bar = ProgressBar::new(100);
+        bar.current = 50;
+        assert_eq!(bar.current, 50);
+    }
+
+    #[test]
+    fn test_progress_bar_display() {
+        let bar = ProgressBar::new(100);
+        let display = format!("{}", bar);
+        assert!(display.contains("Progress"));
+        assert!(display.contains("0/100"));
+    }
+
+    #[test]
+    fn test_progress_bar_zero_total() {
+        let bar = ProgressBar::new(0);
+        assert_eq!(bar.total, 0);
+        // Should handle division by zero gracefully
+    }
 }
 
 /// Colorized output helpers
-#[allow(dead_code)]
 pub mod colors {
     use super::*;
 
     // Coral-Terracotta Orange theme - Pantone 7416 C inspired
     const ORANGE_RGB: (u8, u8, u8) = (222, 115, 86);        // Primary coral orange
     const LIGHT_ORANGE_RGB: (u8, u8, u8) = (255, 145, 115); // Lighter coral
+    #[allow(dead_code)]
     const DARK_ORANGE_RGB: (u8, u8, u8) = (180, 85, 60);    // Darker terracotta
 
     /// Print success message with green checkmark

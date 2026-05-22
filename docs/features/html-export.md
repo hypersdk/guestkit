@@ -47,20 +47,20 @@ GuestCtl now generates professional, interactive HTML reports with modern featur
 
 ```bash
 # Export inspection results to HTML
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 
 # With caching for faster subsequent exports
-guestctl inspect vm.qcow2 --export html --export-output report.html --cache
+guestkit inspect vm.qcow2 --export html --export-output report.html --cache
 ```
 
 ### Advanced Usage
 
 ```bash
 # Inspect with profile and export to HTML
-guestctl inspect vm.qcow2 --profile security --export html --export-output security-report.html
+guestkit inspect vm.qcow2 --profile security --export html --export-output security-report.html
 
 # Batch inspection with HTML export
-guestctl inspect-batch vm*.qcow2 --parallel 4 --cache --output json > results.json
+guestkit inspect-batch vm*.qcow2 --parallel 4 --cache --output json > results.json
 # Then convert individual results to HTML
 ```
 
@@ -167,7 +167,7 @@ Charts are powered by Chart.js v4.4.0 from CDN:
 ### Security Audit Report
 ```bash
 # Generate comprehensive security audit
-guestctl inspect production-vm.qcow2 \
+guestkit inspect production-vm.qcow2 \
   --profile security \
   --export html \
   --export-output security-audit-2026-01-24.html \
@@ -178,7 +178,7 @@ guestctl inspect production-vm.qcow2 \
 ```bash
 # Inspect multiple VMs
 for vm in web*.qcow2; do
-  guestctl inspect "$vm" \
+  guestkit inspect "$vm" \
     --export html \
     --export-output "reports/$(basename $vm .qcow2)-report.html"
 done
@@ -189,7 +189,7 @@ done
 # GitHub Actions example
 - name: Inspect VM Image
   run: |
-    guestctl inspect build/image.qcow2 \
+    guestkit inspect build/image.qcow2 \
       --export html \
       --export-output inspection-report.html
 

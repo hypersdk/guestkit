@@ -136,32 +136,32 @@ let yaml = PlanExporter::to_yaml(&plan)?;
 
 ```bash
 # Generate fix plan from security profile
-guestctl profile security vm.qcow2 --plan security-fixes.yaml
+guestkit profile security vm.qcow2 --plan security-fixes.yaml
 
 # Preview the plan
-guestctl plan preview security-fixes.yaml
+guestkit plan preview security-fixes.yaml
 
 # Show as unified diff
-guestctl plan diff security-fixes.yaml
+guestkit plan diff security-fixes.yaml
 
 # Export as executable script
-guestctl plan export security-fixes.yaml --format bash > fixes.sh
-guestctl plan export security-fixes.yaml --format ansible > fixes.yml
+guestkit plan export security-fixes.yaml --format bash > fixes.sh
+guestkit plan export security-fixes.yaml --format ansible > fixes.yml
 
 # Validate plan (dry-run simulation)
-guestctl plan validate security-fixes.yaml
+guestkit plan validate security-fixes.yaml
 
 # Apply with confirmation prompts
-guestctl plan apply security-fixes.yaml --interactive
+guestkit plan apply security-fixes.yaml --interactive
 
 # Apply automatically (for automation)
-guestctl plan apply security-fixes.yaml --yes
+guestkit plan apply security-fixes.yaml --yes
 
 # Apply with backup
-guestctl plan apply security-fixes.yaml --backup /backup/vm-state
+guestkit plan apply security-fixes.yaml --backup /backup/vm-state
 
 # Rollback if needed
-guestctl plan rollback security-fixes.yaml
+guestkit plan rollback security-fixes.yaml
 ```
 
 ### Programmatic Usage
@@ -456,25 +456,25 @@ Rollback: Available for all operations
 ### 1. **Security Hardening**
 ```bash
 # Generate security fixes
-guestctl profile security prod-web.qcow2 --plan security.yaml
+guestkit profile security prod-web.qcow2 --plan security.yaml
 
 # Review and approve
-guestctl plan preview security.yaml
+guestkit plan preview security.yaml
 
 # Export for change control
-guestctl plan export security.yaml --format bash > security-fixes.sh
+guestkit plan export security.yaml --format bash > security-fixes.sh
 
 # Apply in maintenance window
-guestctl plan apply security.yaml --backup /backups/
+guestkit plan apply security.yaml --backup /backups/
 ```
 
 ### 2. **Fleet Management**
 ```bash
 # Generate plan from one VM
-guestctl profile security template.qcow2 --plan fleet-security.yaml
+guestkit profile security template.qcow2 --plan fleet-security.yaml
 
 # Export to Ansible
-guestctl plan export fleet-security.yaml --format ansible > fleet.yml
+guestkit plan export fleet-security.yaml --format ansible > fleet.yml
 
 # Apply to entire fleet
 ansible-playbook -i inventory fleet.yml
@@ -483,7 +483,7 @@ ansible-playbook -i inventory fleet.yml
 ### 3. **Compliance Automation**
 ```bash
 # Generate compliance fixes
-guestctl profile compliance vm.qcow2 --plan compliance.yaml
+guestkit profile compliance vm.qcow2 --plan compliance.yaml
 
 # Store in version control
 git add compliance.yaml
@@ -493,19 +493,19 @@ git commit -m "Add compliance fixes for Q1 2026"
 git push origin compliance-fixes
 
 # Apply after approval
-guestctl plan apply compliance.yaml
+guestkit plan apply compliance.yaml
 ```
 
 ### 4. **Migration Preparation**
 ```bash
 # Generate migration fixes
-guestctl profile migration hyperv-vm.vhdx --plan migration.yaml
+guestkit profile migration hyperv-vm.vhdx --plan migration.yaml
 
 # Preview changes
-guestctl plan preview migration.yaml
+guestkit plan preview migration.yaml
 
 # Export as runbook
-guestctl plan export migration.yaml --format bash > migration-runbook.sh
+guestkit plan export migration.yaml --format bash > migration-runbook.sh
 
 # Execute during migration
 bash migration-runbook.sh

@@ -210,7 +210,7 @@ Options:
 
 ```
 commit 9865141
-Author: Susant Sahani <ssahani@gmail.com>
+Author: Susant Sahani <ssahani@redhat.com>
 Date:   2026-01-30
 
 Fix Docker build for guestkit-worker

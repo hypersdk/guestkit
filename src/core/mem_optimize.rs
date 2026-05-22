@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Memory optimization utilities for guestctl
+//! Memory optimization utilities for guestkit
 //!
 //! This module provides optimized memory allocation patterns to improve
 //! performance by reducing reallocation overhead.

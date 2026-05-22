@@ -15,7 +15,13 @@ impl Guestfs {
         // Return list of drives added
         let mut devices = Vec::new();
         for (i, _) in self.drives.iter().enumerate() {
-            devices.push(format!("/dev/sd{}", (b'a' + i as u8) as char));
+            if i >= 26 {
+                return Err(Error::InvalidOperation(format!(
+                    "Too many drives ({}) - maximum 26 supported", self.drives.len()
+                )));
+            }
+            let letter = (b'a' + i as u8) as char;
+            devices.push(format!("/dev/sd{}", letter));
         }
 
         Ok(devices)
@@ -88,7 +94,7 @@ impl Guestfs {
         // For LVM volumes (/dev/mapper/* or /dev/vgname/lvname), use blkid directly
         if device.starts_with("/dev/mapper/") || (device.starts_with("/dev/") && device.matches('/').count() >= 3) {
             // Use blkid to detect filesystem type on LVM volumes
-            let need_sudo = unsafe { libc::geteuid() } != 0;
+            let need_sudo = crate::guestfs::mount::need_sudo();
 
             let mut cmd = if need_sudo {
                 let mut sudo_cmd = std::process::Command::new("sudo");
@@ -228,7 +234,7 @@ impl Guestfs {
                 .reader
                 .as_ref()
                 .ok_or_else(|| Error::InvalidState("Not launched".to_string()))?;
-            Ok(reader.size() as i64)
+            Ok(i64::try_from(reader.size()).unwrap_or(i64::MAX))
         } else {
             // Partition - calculate from partition table
             let partition_table = self.partition_table()?;
@@ -239,7 +245,9 @@ impl Guestfs {
                 .find(|p| p.number == partition_num)
                 .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partition_num)))?;
 
-            Ok((partition.size_sectors * 512) as i64)
+            // NOTE: Assumes 512-byte sectors. This is correct for most disks but may be
+            // inaccurate for devices with 4096-byte physical sectors (4Kn drives).
+            Ok(i64::try_from(partition.size_sectors.saturating_mul(512)).unwrap_or(i64::MAX))
         }
     }
 
@@ -256,10 +264,8 @@ impl Guestfs {
         let device = device.trim_start_matches("/dev/");
 
         // Convert variations to canonical form
-        if device.starts_with("hd") {
-            Ok(format!("/dev/sd{}", &device[2..]))
-        } else if device.starts_with("vd") {
-            Ok(format!("/dev/sd{}", &device[2..]))
+        if let Some(suffix) = device.strip_prefix("hd").or_else(|| device.strip_prefix("vd")) {
+            Ok(format!("/dev/sd{}", suffix))
         } else {
             Ok(format!("/dev/{}", device))
         }

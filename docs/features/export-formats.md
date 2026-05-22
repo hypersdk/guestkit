@@ -42,13 +42,13 @@ Generate self-contained, interactive HTML reports for documentation and complian
 
 ```bash
 # Basic HTML report
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 
 # With security profile
-guestctl inspect vm.qcow2 --profile security --export html --export-output security-audit.html
+guestkit inspect vm.qcow2 --profile security --export html --export-output security-audit.html
 
 # With migration profile
-guestctl inspect vm.qcow2 --profile migration --export html --export-output migration-plan.html
+guestkit inspect vm.qcow2 --profile migration --export html --export-output migration-plan.html
 ```
 
 ### What's Included
@@ -77,7 +77,7 @@ HTML reports include:
 
 ```bash
 # Generate report
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 
 # Open in browser (Linux)
 xdg-open report.html
@@ -93,7 +93,7 @@ start report.html
 
 ```bash
 # Method 1: Using wkhtmltopdf
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 wkhtmltopdf report.html report.pdf
 
 # Method 2: Using headless Chrome
@@ -155,15 +155,15 @@ Generate Git-friendly Markdown documents for version-controlled VM inventory.
 
 ```bash
 # Basic Markdown export
-guestctl inspect vm.qcow2 --export markdown --export-output inventory.md
+guestkit inspect vm.qcow2 --export markdown --export-output inventory.md
 
 # Track in Git
-guestctl inspect prod-vm.qcow2 --export markdown --export-output inventory/prod-vm.md
+guestkit inspect prod-vm.qcow2 --export markdown --export-output inventory/prod-vm.md
 git add inventory/prod-vm.md
 git commit -m "Update prod VM inventory"
 
 # Generate documentation site
-guestctl inspect vm.qcow2 --export markdown --export-output docs/infrastructure/vm-inventory.md
+guestkit inspect vm.qcow2 --export markdown --export-output docs/infrastructure/vm-inventory.md
 ```
 
 ### What's Included
@@ -313,12 +313,12 @@ No, they are mutually exclusive:
 
 ```bash
 # This will use export and ignore output format
-guestctl inspect vm.qcow2 --output json --export html --export-output report.html
+guestkit inspect vm.qcow2 --output json --export html --export-output report.html
 # Result: HTML report is generated, JSON output is not
 
 # For both, run twice:
-guestctl inspect vm.qcow2 --output json > data.json
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --output json > data.json
+guestkit inspect vm.qcow2 --export html --export-output report.html
 ```
 
 ## Use Cases
@@ -338,7 +338,7 @@ mkdir -p "$REPORT_DIR"
 for vm in prod-*.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
-    guestctl inspect "$vm" --profile security \
+    guestkit inspect "$vm" --profile security \
         --export html --export-output "$REPORT_DIR/$NAME-compliance.html"
 done
 
@@ -377,7 +377,7 @@ mkdir -p "$INVENTORY_DIR"
 for vm in *.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
-    guestctl inspect "$vm" --export markdown \
+    guestkit inspect "$vm" --export markdown \
         --export-output "$INVENTORY_DIR/$NAME.md"
 done
 
@@ -412,15 +412,15 @@ DOC_DIR="migration-$NAME-to-$TARGET_ENV"
 mkdir -p "$DOC_DIR"
 
 # HTML report for stakeholders
-guestctl inspect "$SOURCE_VM" --profile migration \
+guestkit inspect "$SOURCE_VM" --profile migration \
     --export html --export-output "$DOC_DIR/migration-overview.html"
 
 # Markdown checklist for engineers
-guestctl inspect "$SOURCE_VM" --profile migration \
+guestkit inspect "$SOURCE_VM" --profile migration \
     --export markdown --export-output "$DOC_DIR/migration-checklist.md"
 
 # JSON for automation
-guestctl inspect "$SOURCE_VM" --profile migration --output json \
+guestkit inspect "$SOURCE_VM" --profile migration --output json \
     > "$DOC_DIR/migration-data.json"
 
 # Create README
@@ -462,11 +462,11 @@ BASELINE_DIR="performance-baselines/$NAME"
 mkdir -p "$BASELINE_DIR"
 
 # Generate baseline report
-guestctl inspect "$VM" --profile performance \
+guestkit inspect "$VM" --profile performance \
     --export markdown --export-output "$BASELINE_DIR/baseline-$DATE.md"
 
 # Also save JSON for trending
-guestctl inspect "$VM" --profile performance --output json \
+guestkit inspect "$VM" --profile performance --output json \
     > "$BASELINE_DIR/baseline-$DATE.json"
 
 # Create comparison if previous baseline exists
@@ -494,21 +494,21 @@ OUTPUT_DIR="reports-$NAME"
 mkdir -p "$OUTPUT_DIR"
 
 # HTML report
-guestctl inspect "$VM" --export html --export-output "$OUTPUT_DIR/report.html"
+guestkit inspect "$VM" --export html --export-output "$OUTPUT_DIR/report.html"
 
 # Markdown documentation
-guestctl inspect "$VM" --export markdown --export-output "$OUTPUT_DIR/inventory.md"
+guestkit inspect "$VM" --export markdown --export-output "$OUTPUT_DIR/inventory.md"
 
 # JSON for automation
-guestctl inspect "$VM" --output json > "$OUTPUT_DIR/data.json"
+guestkit inspect "$VM" --output json > "$OUTPUT_DIR/data.json"
 
 # YAML for configuration
-guestctl inspect "$VM" --output yaml > "$OUTPUT_DIR/data.yaml"
+guestkit inspect "$VM" --output yaml > "$OUTPUT_DIR/data.yaml"
 
 # Profile reports
-guestctl inspect "$VM" --profile security --export html --export-output "$OUTPUT_DIR/security.html"
-guestctl inspect "$VM" --profile migration --export markdown --export-output "$OUTPUT_DIR/migration.md"
-guestctl inspect "$VM" --profile performance --export html --export-output "$OUTPUT_DIR/performance.html"
+guestkit inspect "$VM" --profile security --export html --export-output "$OUTPUT_DIR/security.html"
+guestkit inspect "$VM" --profile migration --export markdown --export-output "$OUTPUT_DIR/migration.md"
+guestkit inspect "$VM" --profile performance --export html --export-output "$OUTPUT_DIR/performance.html"
 
 echo "All reports generated in $OUTPUT_DIR/"
 ls -lh "$OUTPUT_DIR"
@@ -528,10 +528,10 @@ for vm in *.qcow2; do
     NAME=$(basename "$vm" .qcow2)
 
     # HTML for web viewing
-    guestctl inspect "$vm" --export html --export-output "$SITE_DIR/html/$NAME.html"
+    guestkit inspect "$vm" --export html --export-output "$SITE_DIR/html/$NAME.html"
 
     # Markdown for GitHub/GitLab
-    guestctl inspect "$vm" --export markdown --export-output "$SITE_DIR/markdown/$NAME.md"
+    guestkit inspect "$vm" --export markdown --export-output "$SITE_DIR/markdown/$NAME.md"
 done
 
 # Create index pages

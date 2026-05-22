@@ -1,5 +1,5 @@
 #!/bin/bash
-# Performance analysis tool for guestctl
+# Performance analysis tool for guestkit
 # Runs comprehensive performance analysis and identifies bottlenecks
 
 set -e
@@ -51,7 +51,7 @@ cat > "$REPORT_FILE" <<EOF
 
 ## Summary
 
-This report contains performance analysis for guestctl, including:
+This report contains performance analysis for guestkit, including:
 - Benchmark results
 - Bottleneck identification
 - Optimization recommendations

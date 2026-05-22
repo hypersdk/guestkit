@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines potential future enhancements for the guestkit-worker system and guestctl CLI. Items are organized by priority, complexity, and component.
+This document outlines potential future enhancements for the guestkit-worker system and guestkit CLI. Items are organized by priority, complexity, and component.
 
 ---
 
@@ -931,7 +931,7 @@ Have ideas for enhancements?
 
 - **GitHub Discussions**: https://github.com/ssahani/guestkit/discussions
 - **GitHub Issues**: https://github.com/ssahani/guestkit/issues
-- **Email**: ssahani@gmail.com
+- **Email**: ssahani@redhat.com
 
 ---
 

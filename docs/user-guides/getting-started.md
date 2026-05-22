@@ -1,8 +1,8 @@
-# guestctl Quick Start Guide
+# guestkit Quick Start Guide
 
 ## Project Overview
 
-**guestctl** (v0.3.1) is a pure Rust library and CLI tool for VM disk inspection and manipulation with beautiful terminal output. Features include:
+**guestkit** (v0.3.1) is a pure Rust library and CLI tool for VM disk inspection and manipulation with beautiful terminal output. Features include:
 
 - 🎯 **Killer Summary View** - See OS, version, architecture at a glance
 - 🪟 **Windows Registry Parsing** - Full Windows version detection
@@ -15,7 +15,7 @@ Designed to work seamlessly with [hyper2kvm](https://github.com/ssahani/hyper2kv
 ## Building
 
 ```bash
-cd ~/tt/guestctl
+cd ~/tt/guestkit
 
 # Build the project
 cargo build
@@ -56,13 +56,13 @@ cargo run -- -v convert --source vm.vmdk --output vm.qcow2
 
 ```toml
 [dependencies]
-guestctl = { path = "~/tt/guestctl" }
+guestkit = { path = "~/tt/guestkit" }
 ```
 
 ### Example Code
 
 ```rust
-use guestctl::converters::DiskConverter;
+use guestkit::converters::DiskConverter;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
@@ -109,10 +109,10 @@ cargo run --example retry_example
 
 ## Integration with hyper2kvm
 
-To use guestctl in hyper2kvm:
+To use guestkit in hyper2kvm:
 
-1. **Update hyper2kvm to use guestctl for disk operations**
-2. **Replace Python qemu-img calls with guestctl Rust calls**
+1. **Update hyper2kvm to use guestkit for disk operations**
+2. **Replace Python qemu-img calls with guestkit Rust calls**
 3. **Benefit from memory safety and performance**
 
 Example integration:
@@ -121,9 +121,9 @@ Example integration:
 # In hyper2kvm
 import subprocess
 
-# Call guestctl from Python
+# Call guestkit from Python
 result = subprocess.run([
-    "guestctl", "convert",
+    "guestkit", "convert",
     "--source", source_path,
     "--output", output_path,
     "--compress"
@@ -137,7 +137,7 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 fn convert_disk(source: String, output: String) -> PyResult<()> {
-    // Call guestctl converter
+    // Call guestkit converter
     Ok(())
 }
 ```
@@ -147,7 +147,7 @@ fn convert_disk(source: String, output: String) -> PyResult<()> {
 ### Project Structure
 
 ```
-guestctl/
+guestkit/
 ├── Cargo.toml          # Project configuration
 ├── src/
 │   ├── lib.rs          # Library entry point

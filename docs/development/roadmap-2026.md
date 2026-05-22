@@ -347,7 +347,7 @@
 ## Call to Action
 
 ### For Users
-1. **Try it:** `pip install guestctl` (coming this week!)
+1. **Try it:** `pip install guestkit` (coming this week!)
 2. **Report issues:** Help us improve
 3. **Share feedback:** What features do you need?
 4. **Spread the word:** Star on GitHub, share on social media

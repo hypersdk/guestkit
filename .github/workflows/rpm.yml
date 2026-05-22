@@ -115,10 +115,10 @@ jobs:
         run: |
           dnf install -y ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm
 
-      - name: Test guestctl binary
+      - name: Test guestkit binary
         run: |
-          guestctl --version
-          guestctl --help
+          guestkit --version
+          guestkit --help
 
       - name: Query package info
         run: |
@@ -227,8 +227,8 @@ jobs:
 
       - name: Test binaries
         run: |
-          guestctl --version
-          guestctl --help
+          guestkit --version
+          guestkit --help
 
       - name: Test Python bindings
         continue-on-error: true
@@ -327,8 +327,8 @@ jobs:
 
       - name: Verify installation
         run: |
-          which guestctl
-          guestctl --version
+          which guestkit
+          guestkit --version
 
       - name: Check package files
         run: |
@@ -336,7 +336,7 @@ jobs:
 
       - name: Test basic functionality
         run: |
-          guestctl --help | grep -q "inspect"
+          guestkit --help | grep -q "inspect"
           echo "✓ Basic functionality test passed"
 
   publish-copr:

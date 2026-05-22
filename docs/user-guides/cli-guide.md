@@ -1,6 +1,6 @@
 # GuestCtl CLI Guide (v0.3.1)
 
-`guestctl` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
+`guestkit` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
 
 ## What's New in v0.3.1
 
@@ -17,7 +17,7 @@
 cargo build --release
 
 # Binary location
-./target/release/guestctl
+./target/release/guestkit
 
 # Install globally (optional)
 cargo install --path .
@@ -27,27 +27,27 @@ cargo install --path .
 
 ```bash
 # Inspect a disk image
-sudo guestctl inspect ubuntu.qcow2
+sudo guestkit inspect ubuntu.qcow2
 
 # List filesystems
-sudo guestctl filesystems ubuntu.qcow2
+sudo guestkit filesystems ubuntu.qcow2
 
 # List packages
-sudo guestctl packages ubuntu.qcow2
+sudo guestkit packages ubuntu.qcow2
 
 # Copy a file
-sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
+sudo guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
 
 # List directory
-sudo guestctl ls ubuntu.qcow2 /etc
+sudo guestkit ls ubuntu.qcow2 /etc
 
 # Read file
-sudo guestctl cat ubuntu.qcow2 /etc/hostname
+sudo guestkit cat ubuntu.qcow2 /etc/hostname
 ```
 
 ## Supported Disk Formats
 
-guestctl automatically detects disk image formats and uses the optimal mounting method:
+guestkit automatically detects disk image formats and uses the optimal mounting method:
 
 ### Loop Device (Primary) - Default for Common Formats
 
@@ -57,9 +57,9 @@ guestctl automatically detects disk image formats and uses the optimal mounting 
 
 ```bash
 # These use loop device automatically (fast path)
-guestctl inspect disk.raw
-guestctl inspect ubuntu-22.04.img
-guestctl inspect debian.iso
+guestkit inspect disk.raw
+guestkit inspect ubuntu-22.04.img
+guestkit inspect debian.iso
 ```
 
 ### NBD Device (Fallback) - For Advanced Formats
@@ -70,9 +70,9 @@ guestctl inspect debian.iso
 
 ```bash
 # These use NBD device automatically (advanced formats)
-guestctl inspect vm.qcow2
-guestctl inspect windows.vmdk
-guestctl inspect virtualbox.vdi
+guestkit inspect vm.qcow2
+guestkit inspect windows.vmdk
+guestkit inspect virtualbox.vdi
 ```
 
 ### Format Conversion Tips
@@ -84,9 +84,9 @@ For better performance with repeated inspections, convert QCOW2 to RAW:
 qemu-img convert -O raw vm.qcow2 vm.raw
 
 # Inspect multiple times (fast)
-guestctl inspect vm.raw
-guestctl packages vm.raw
-guestctl filesystems vm.raw
+guestkit inspect vm.raw
+guestkit packages vm.raw
+guestkit filesystems vm.raw
 ```
 
 ### Verbose Mode
@@ -94,10 +94,10 @@ guestctl filesystems vm.raw
 Use `--trace` to see which method is being used:
 
 ```bash
-guestctl --trace inspect disk.raw
+guestkit --trace inspect disk.raw
 # Output: "guestfs: using loop device for raw disk format"
 
-guestctl --trace inspect disk.qcow2
+guestkit --trace inspect disk.qcow2
 # Output: "guestfs: using NBD for qcow2/vmdk/vdi/vhd disk format"
 ```
 
@@ -109,7 +109,7 @@ Detect and display operating system information from a disk image.
 
 **Usage:**
 ```bash
-guestctl inspect [OPTIONS] <DISK>
+guestkit inspect [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -118,10 +118,10 @@ guestctl inspect [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # Human-readable output
-sudo guestctl inspect ubuntu.qcow2
+sudo guestkit inspect ubuntu.qcow2
 
 # JSON output for jq processing
-sudo guestctl inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
+sudo guestkit inspect --json ubuntu.qcow2 | jq '.operating_systems[0].distro'
 ```
 
 **Output:**
@@ -172,7 +172,7 @@ Compare two disk images to identify configuration changes, package differences, 
 
 **Usage:**
 ```bash
-guestctl diff [OPTIONS] <IMAGE1> <IMAGE2>
+guestkit diff [OPTIONS] <IMAGE1> <IMAGE2>
 ```
 
 **Options:**
@@ -182,13 +182,13 @@ guestctl diff [OPTIONS] <IMAGE1> <IMAGE2>
 **Examples:**
 ```bash
 # Compare two versions of a VM
-sudo guestctl diff vm-before.qcow2 vm-after.qcow2
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2
 
 # JSON output for automation
-sudo guestctl diff vm-before.qcow2 vm-after.qcow2 --output json
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output json
 
 # YAML output
-sudo guestctl diff vm-before.qcow2 vm-after.qcow2 --output yaml
+sudo guestkit diff vm-before.qcow2 vm-after.qcow2 --output yaml
 ```
 
 **Output:**
@@ -270,7 +270,7 @@ Compare multiple VMs against a baseline to identify deviations and ensure consis
 
 **Usage:**
 ```bash
-guestctl compare <BASELINE> <IMAGES>...
+guestkit compare <BASELINE> <IMAGES>...
 ```
 
 **Options:**
@@ -279,10 +279,10 @@ guestctl compare <BASELINE> <IMAGES>...
 **Examples:**
 ```bash
 # Compare production VMs against golden image
-sudo guestctl compare golden-image.qcow2 prod-vm1.qcow2 prod-vm2.qcow2 prod-vm3.qcow2
+sudo guestkit compare golden-image.qcow2 prod-vm1.qcow2 prod-vm2.qcow2 prod-vm3.qcow2
 
 # Compare all VMs in a directory
-sudo guestctl compare baseline.qcow2 /var/lib/libvirt/images/*.qcow2
+sudo guestkit compare baseline.qcow2 /var/lib/libvirt/images/*.qcow2
 ```
 
 **Output:**
@@ -336,12 +336,12 @@ Use specialized profiles for focused inspection:
 
 **Usage:**
 ```bash
-guestctl inspect [OPTIONS] --profile <PROFILE> <IMAGE>
+guestkit inspect [OPTIONS] --profile <PROFILE> <IMAGE>
 ```
 
 **Security Profile Example:**
 ```bash
-sudo guestctl inspect --profile security webserver.qcow2
+sudo guestkit inspect --profile security webserver.qcow2
 ```
 
 **Output:**
@@ -377,12 +377,12 @@ Warnings: 3
 
 **Migration Profile Example:**
 ```bash
-sudo guestctl inspect --profile migration old-server.qcow2 --output json > migration-plan.json
+sudo guestkit inspect --profile migration old-server.qcow2 --output json > migration-plan.json
 ```
 
 **Performance Profile Example:**
 ```bash
-sudo guestctl inspect --profile performance database.qcow2
+sudo guestkit inspect --profile performance database.qcow2
 ```
 
 **Output:**
@@ -421,7 +421,7 @@ List all devices, partitions, and filesystems in a disk image.
 
 **Usage:**
 ```bash
-guestctl filesystems [OPTIONS] <DISK>
+guestkit filesystems [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -430,10 +430,10 @@ guestctl filesystems [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # Basic listing
-sudo guestctl filesystems ubuntu.qcow2
+sudo guestkit filesystems ubuntu.qcow2
 
 # Detailed information
-sudo guestctl filesystems --detailed ubuntu.qcow2
+sudo guestkit filesystems --detailed ubuntu.qcow2
 ```
 
 **Output:**
@@ -470,7 +470,7 @@ List all installed packages from a disk image.
 
 **Usage:**
 ```bash
-guestctl packages [OPTIONS] <DISK>
+guestkit packages [OPTIONS] <DISK>
 ```
 
 **Options:**
@@ -481,16 +481,16 @@ guestctl packages [OPTIONS] <DISK>
 **Examples:**
 ```bash
 # List all packages
-sudo guestctl packages ubuntu.qcow2
+sudo guestkit packages ubuntu.qcow2
 
 # Find nginx packages
-sudo guestctl packages --filter nginx ubuntu.qcow2
+sudo guestkit packages --filter nginx ubuntu.qcow2
 
 # Show first 20 packages
-sudo guestctl packages --limit 20 ubuntu.qcow2
+sudo guestkit packages --limit 20 ubuntu.qcow2
 
 # JSON output
-sudo guestctl packages --json ubuntu.qcow2 | jq '.packages[] | select(.name | contains("kernel"))'
+sudo guestkit packages --json ubuntu.qcow2 | jq '.packages[] | select(.name | contains("kernel"))'
 ```
 
 **Output:**
@@ -513,7 +513,7 @@ Copy files from a disk image to the local filesystem.
 
 **Usage:**
 ```bash
-guestctl cp <SOURCE> <DEST>
+guestkit cp <SOURCE> <DEST>
 ```
 
 **Source Format:** `disk.img:/path/to/file`
@@ -521,13 +521,13 @@ guestctl cp <SOURCE> <DEST>
 **Examples:**
 ```bash
 # Copy passwd file
-sudo guestctl cp ubuntu.qcow2:/etc/passwd ./passwd
+sudo guestkit cp ubuntu.qcow2:/etc/passwd ./passwd
 
 # Copy nginx config
-sudo guestctl cp ubuntu.qcow2:/etc/nginx/nginx.conf ./nginx.conf
+sudo guestkit cp ubuntu.qcow2:/etc/nginx/nginx.conf ./nginx.conf
 
 # Copy log file
-sudo guestctl cp ubuntu.qcow2:/var/log/syslog ./syslog
+sudo guestkit cp ubuntu.qcow2:/var/log/syslog ./syslog
 ```
 
 **Output:**
@@ -543,7 +543,7 @@ List files and directories inside a disk image.
 
 **Usage:**
 ```bash
-guestctl ls [OPTIONS] <DISK> [PATH]
+guestkit ls [OPTIONS] <DISK> [PATH]
 ```
 
 **Options:**
@@ -552,13 +552,13 @@ guestctl ls [OPTIONS] <DISK> [PATH]
 **Examples:**
 ```bash
 # List root directory
-sudo guestctl ls ubuntu.qcow2 /
+sudo guestkit ls ubuntu.qcow2 /
 
 # List /etc
-sudo guestctl ls ubuntu.qcow2 /etc
+sudo guestkit ls ubuntu.qcow2 /etc
 
 # Long format
-sudo guestctl ls --long ubuntu.qcow2 /etc
+sudo guestkit ls --long ubuntu.qcow2 /etc
 ```
 
 **Output (basic):**
@@ -589,27 +589,27 @@ Display the contents of a file from a disk image.
 
 **Usage:**
 ```bash
-guestctl cat <DISK> <PATH>
+guestkit cat <DISK> <PATH>
 ```
 
 **Examples:**
 ```bash
 # Read hostname
-sudo guestctl cat ubuntu.qcow2 /etc/hostname
+sudo guestkit cat ubuntu.qcow2 /etc/hostname
 
 # Read OS release
-sudo guestctl cat ubuntu.qcow2 /etc/os-release
+sudo guestkit cat ubuntu.qcow2 /etc/os-release
 
 # Read systemd service
-sudo guestctl cat ubuntu.qcow2 /etc/systemd/system/myapp.service
+sudo guestkit cat ubuntu.qcow2 /etc/systemd/system/myapp.service
 ```
 
 **Output:**
 ```
-$ sudo guestctl cat ubuntu.qcow2 /etc/hostname
+$ sudo guestkit cat ubuntu.qcow2 /etc/hostname
 webserver-01
 
-$ sudo guestctl cat ubuntu.qcow2 /etc/os-release
+$ sudo guestkit cat ubuntu.qcow2 /etc/os-release
 NAME="Ubuntu"
 VERSION="22.04 LTS (Jammy Jellyfish)"
 ID=ubuntu
@@ -625,7 +625,7 @@ Launch a visual, interactive file browser for exploring VM filesystems with rich
 
 **Usage:**
 ```bash
-guestctl explore [OPTIONS] <DISK> [PATH]
+guestkit explore [OPTIONS] <DISK> [PATH]
 ```
 
 **Options:**
@@ -634,14 +634,14 @@ guestctl explore [OPTIONS] <DISK> [PATH]
 **Examples:**
 ```bash
 # Launch explorer at root directory
-sudo guestctl explore ubuntu.qcow2
+sudo guestkit explore ubuntu.qcow2
 
 # Start at specific directory
-sudo guestctl explore ubuntu.qcow2 /var/log
+sudo guestkit explore ubuntu.qcow2 /var/log
 
 # Explore from interactive shell
-guestctl interactive ubuntu.qcow2
-guestctl> explore /etc
+guestkit interactive ubuntu.qcow2
+guestkit> explore /etc
 ```
 
 **Features:**
@@ -695,7 +695,7 @@ The explorer provides an interactive terminal UI. File type icons:
 - 📄 Documents (white) - .txt, .md, .log
 
 **Availability:**
-- Direct CLI: `guestctl explore <disk> [path]`
+- Direct CLI: `guestkit explore <disk> [path]`
 - Interactive shell: `explore` or `ex` command
 - TUI mode: Files view (accessible via Tab/number keys)
 
@@ -716,7 +716,7 @@ Build a comprehensive forensic timeline from multiple data sources including fil
 
 **Usage:**
 ```bash
-guestctl timeline [OPTIONS] <IMAGE>
+guestkit timeline [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -728,16 +728,16 @@ guestctl timeline [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Build full timeline
-sudo guestctl timeline disk.img
+sudo guestkit timeline disk.img
 
 # Timeline for specific time range
-sudo guestctl timeline --start-time 2024-01-01T00:00:00Z --end-time 2024-01-31T23:59:59Z disk.img
+sudo guestkit timeline --start-time 2024-01-01T00:00:00Z --end-time 2024-01-31T23:59:59Z disk.img
 
 # Timeline from specific sources
-sudo guestctl timeline -s files,packages,logs disk.img -f json
+sudo guestkit timeline -s files,packages,logs disk.img -f json
 
 # Export to CSV for analysis
-sudo guestctl timeline disk.img -f csv > timeline.csv
+sudo guestkit timeline disk.img -f csv > timeline.csv
 ```
 
 **Output:**
@@ -771,7 +771,7 @@ Generate unique cryptographic fingerprints of disk images for integrity verifica
 
 **Usage:**
 ```bash
-guestctl fingerprint [OPTIONS] <IMAGE>
+guestkit fingerprint [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -782,13 +782,13 @@ guestctl fingerprint [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Generate basic fingerprint
-sudo guestctl fingerprint disk.img
+sudo guestkit fingerprint disk.img
 
 # Deep fingerprint with SHA-512
-sudo guestctl fingerprint --deep --algorithm sha512 disk.img
+sudo guestkit fingerprint --deep --algorithm sha512 disk.img
 
 # Save fingerprint for later verification
-sudo guestctl fingerprint disk.img -o disk.fingerprint
+sudo guestkit fingerprint disk.img -o disk.fingerprint
 ```
 
 **Output:**
@@ -820,7 +820,7 @@ Detect configuration drift from a known baseline or policy.
 
 **Usage:**
 ```bash
-guestctl drift <BASELINE> <IMAGE>
+guestkit drift <BASELINE> <IMAGE>
 ```
 
 **Options:**
@@ -831,13 +831,13 @@ guestctl drift <BASELINE> <IMAGE>
 **Examples:**
 ```bash
 # Detect all drift
-sudo guestctl drift baseline.img production.img
+sudo guestkit drift baseline.img production.img
 
 # Only critical drift
-sudo guestctl drift --severity critical baseline.img production.img
+sudo guestkit drift --severity critical baseline.img production.img
 
 # Specific categories
-sudo guestctl drift -c packages,services baseline.img production.img --json
+sudo guestkit drift -c packages,services baseline.img production.img --json
 ```
 
 **Output:**
@@ -876,7 +876,7 @@ Scan disk images for Indicators of Compromise (IOCs) using threat intelligence f
 
 **Usage:**
 ```bash
-guestctl intelligence [OPTIONS] <IMAGE>
+guestkit intelligence [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -888,13 +888,13 @@ guestctl intelligence [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Scan with default feeds
-sudo guestctl intelligence disk.img
+sudo guestkit intelligence disk.img
 
 # Use custom IOC file
-sudo guestctl intelligence --ioc-file threats.json disk.img
+sudo guestkit intelligence --ioc-file threats.json disk.img
 
 # Check specific IOC types
-sudo guestctl intelligence -t hash,ip disk.img --output json
+sudo guestkit intelligence -t hash,ip disk.img --output json
 ```
 
 **Output:**
@@ -933,7 +933,7 @@ Scan for exposed credentials, API keys, passwords, and other secrets in disk ima
 
 **Usage:**
 ```bash
-guestctl secrets [OPTIONS] <IMAGE>
+guestkit secrets [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -945,16 +945,16 @@ guestctl secrets [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Scan for all secrets
-sudo guestctl secrets disk.img
+sudo guestkit secrets disk.img
 
 # Use custom patterns
-sudo guestctl secrets --patterns custom-secrets.txt disk.img
+sudo guestkit secrets --patterns custom-secrets.txt disk.img
 
 # Mask secrets in output
-sudo guestctl secrets --mask disk.img
+sudo guestkit secrets --mask disk.img
 
 # Exclude certain paths
-sudo guestctl secrets -e /var/log,/tmp disk.img
+sudo guestkit secrets -e /var/log,/tmp disk.img
 ```
 
 **Output:**
@@ -997,7 +997,7 @@ Detect malware, rootkits, and suspicious files using signature and behavior-base
 
 **Usage:**
 ```bash
-guestctl malware [OPTIONS] <IMAGE>
+guestkit malware [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1009,13 +1009,13 @@ guestctl malware [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Quick malware scan
-sudo guestctl malware disk.img
+sudo guestkit malware disk.img
 
 # Deep scan with YARA rules
-sudo guestctl malware --deep --yara malware.yar disk.img
+sudo guestkit malware --deep --yara malware.yar disk.img
 
 # Quarantine detected malware
-sudo guestctl malware -q ./quarantine disk.img
+sudo guestkit malware -q ./quarantine disk.img
 ```
 
 **Output:**
@@ -1062,7 +1062,7 @@ Hunt for evidence of tactics, techniques, and procedures (TTPs) based on the MIT
 
 **Usage:**
 ```bash
-guestctl hunt [OPTIONS] <IMAGE>
+guestkit hunt [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1074,16 +1074,16 @@ guestctl hunt [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Hunt for all TTPs
-sudo guestctl hunt disk.img
+sudo guestkit hunt disk.img
 
 # Hunt for persistence techniques
-sudo guestctl hunt -t persistence disk.img
+sudo guestkit hunt -t persistence disk.img
 
 # Hunt for specific techniques
-sudo guestctl hunt -i T1053,T1548 disk.img
+sudo guestkit hunt -i T1053,T1548 disk.img
 
 # Export to MITRE ATT&CK Navigator
-sudo guestctl hunt disk.img -f mitre-navigator > attack-layer.json
+sudo guestkit hunt disk.img -f mitre-navigator > attack-layer.json
 ```
 
 **Output:**
@@ -1137,7 +1137,7 @@ Reconstruct the sequence of events during a security incident or system failure.
 
 **Usage:**
 ```bash
-guestctl reconstruct [OPTIONS] <IMAGE>
+guestkit reconstruct [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1149,13 +1149,13 @@ guestctl reconstruct [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Reconstruct incident
-sudo guestctl reconstruct --incident-time 2024-01-15T14:30:00Z disk.img
+sudo guestkit reconstruct --incident-time 2024-01-15T14:30:00Z disk.img
 
 # 48-hour window with focus on network
-sudo guestctl reconstruct --window 48 --focus network disk.img
+sudo guestkit reconstruct --window 48 --focus network disk.img
 
 # Save detailed report
-sudo guestctl reconstruct disk.img -o incident-report.json
+sudo guestkit reconstruct disk.img -o incident-report.json
 ```
 
 **Output:**
@@ -1218,7 +1218,7 @@ Perform continuous verification checks based on zero-trust security principles.
 
 **Usage:**
 ```bash
-guestctl verify [OPTIONS] <IMAGE>
+guestkit verify [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1230,13 +1230,13 @@ guestctl verify [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Standard verification
-sudo guestctl verify disk.img
+sudo guestkit verify disk.img
 
 # Strict verification with custom policy
-sudo guestctl verify --level strict --policy security-policy.yaml disk.img
+sudo guestkit verify --level strict --policy security-policy.yaml disk.img
 
 # Paranoid mode (maximum checks)
-sudo guestctl verify -l paranoid disk.img
+sudo guestkit verify -l paranoid disk.img
 ```
 
 **Output:**
@@ -1297,7 +1297,7 @@ Comprehensive security audit and compliance checking against industry standards.
 
 **Usage:**
 ```bash
-guestctl audit [OPTIONS] <IMAGE>
+guestkit audit [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1309,13 +1309,13 @@ guestctl audit [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # General security audit
-sudo guestctl audit disk.img
+sudo guestkit audit disk.img
 
 # CIS benchmark compliance
-sudo guestctl audit -f cis disk.img
+sudo guestkit audit -f cis disk.img
 
 # PCI-DSS with remediation
-sudo guestctl audit -f pci-dss --remediate disk.img -o audit-report.json
+sudo guestkit audit -f pci-dss --remediate disk.img -o audit-report.json
 ```
 
 **Output:**
@@ -1376,7 +1376,7 @@ Check compliance against multiple regulatory frameworks simultaneously.
 
 **Usage:**
 ```bash
-guestctl compliance [OPTIONS] <IMAGE>
+guestkit compliance [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1388,13 +1388,13 @@ guestctl compliance [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Check all frameworks
-sudo guestctl compliance disk.img
+sudo guestkit compliance disk.img
 
 # Specific frameworks
-sudo guestctl compliance -f pci-dss,hipaa disk.img
+sudo guestkit compliance -f pci-dss,hipaa disk.img
 
 # Generate HTML report with evidence
-sudo guestctl compliance -f soc2 --evidence -r html disk.img > compliance.html
+sudo guestkit compliance -f soc2 --evidence -r html disk.img > compliance.html
 ```
 
 **Output:**
@@ -1450,7 +1450,7 @@ Detect anomalies and unusual patterns using machine learning models.
 
 **Usage:**
 ```bash
-guestctl anomaly [OPTIONS] <IMAGE>
+guestkit anomaly [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1462,13 +1462,13 @@ guestctl anomaly [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Detect anomalies with default model
-sudo guestctl anomaly disk.img
+sudo guestkit anomaly disk.img
 
 # Use isolation forest with high sensitivity
-sudo guestctl anomaly -m isolation-forest -s high disk.img
+sudo guestkit anomaly -m isolation-forest -s high disk.img
 
 # Train on baseline images
-sudo guestctl anomaly --baseline baseline1.img,baseline2.img disk.img
+sudo guestkit anomaly --baseline baseline1.img,baseline2.img disk.img
 ```
 
 **Output:**
@@ -1523,7 +1523,7 @@ Get AI-powered recommendations for security, performance, and configuration opti
 
 **Usage:**
 ```bash
-guestctl recommend [OPTIONS] <IMAGE>
+guestkit recommend [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1535,13 +1535,13 @@ guestctl recommend [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Get all recommendations
-sudo guestctl recommend disk.img
+sudo guestkit recommend disk.img
 
 # Focus on security
-sudo guestctl recommend -f security disk.img
+sudo guestkit recommend -f security disk.img
 
 # Only critical and actionable
-sudo guestctl recommend -p critical --actionable disk.img
+sudo guestkit recommend -p critical --actionable disk.img
 ```
 
 **Output:**
@@ -1622,7 +1622,7 @@ Use machine learning to predict future system states, failures, and resource nee
 
 **Usage:**
 ```bash
-guestctl predict [OPTIONS] <IMAGE>
+guestkit predict [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1634,13 +1634,13 @@ guestctl predict [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Predict potential failures
-sudo guestctl predict -t failures disk.img
+sudo guestkit predict -t failures disk.img
 
 # Predict capacity needs for 90 days
-sudo guestctl predict -t capacity -w 90 disk.img
+sudo guestkit predict -t capacity -w 90 disk.img
 
 # Performance predictions with high confidence
-sudo guestctl predict -t performance --confidence 0.95 disk.img
+sudo guestkit predict -t performance --confidence 0.95 disk.img
 ```
 
 **Output:**
@@ -1721,7 +1721,7 @@ Comprehensive system health check and diagnostics.
 
 **Usage:**
 ```bash
-guestctl health [OPTIONS] <IMAGE>
+guestkit health [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1733,13 +1733,13 @@ guestctl health [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Quick health check
-sudo guestctl health disk.img
+sudo guestkit health disk.img
 
 # Deep health check with all categories
-sudo guestctl health --deep disk.img
+sudo guestkit health --deep disk.img
 
 # Focus on specific categories
-sudo guestctl health -c disk,services disk.img
+sudo guestkit health -c disk,services disk.img
 ```
 
 **Output:**
@@ -1820,7 +1820,7 @@ Analyze and optimize system performance with automated recommendations.
 
 **Usage:**
 ```bash
-guestctl optimize [OPTIONS] <IMAGE>
+guestkit optimize [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1832,13 +1832,13 @@ guestctl optimize [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Analyze optimization opportunities
-sudo guestctl optimize disk.img
+sudo guestkit optimize disk.img
 
 # Optimize for web server workload
-sudo guestctl optimize --profile web-server disk.img
+sudo guestkit optimize --profile web-server disk.img
 
 # Generate optimization script
-sudo guestctl optimize disk.img -o optimize.sh
+sudo guestkit optimize disk.img -o optimize.sh
 ```
 
 **Output:**
@@ -1916,7 +1916,7 @@ Analyze network configuration, topology, and connections.
 
 **Usage:**
 ```bash
-guestctl network [OPTIONS] <IMAGE>
+guestkit network [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -1928,13 +1928,13 @@ guestctl network [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Analyze network configuration
-sudo guestctl network disk.img
+sudo guestkit network disk.img
 
 # Generate topology graph
-sudo guestctl network -g --export svg disk.img > topology.svg
+sudo guestkit network -g --export svg disk.img > topology.svg
 
 # Analyze specific aspect
-sudo guestctl network -t firewall disk.img
+sudo guestkit network -t firewall disk.img
 ```
 
 **Output:**
@@ -2010,7 +2010,7 @@ Create optimized clones of VM images with customization options.
 
 **Usage:**
 ```bash
-guestctl clone [OPTIONS] <SOURCE> <DEST>
+guestkit clone [OPTIONS] <SOURCE> <DEST>
 ```
 
 **Options:**
@@ -2023,13 +2023,13 @@ guestctl clone [OPTIONS] <SOURCE> <DEST>
 **Examples:**
 ```bash
 # Basic clone
-sudo guestctl clone source.img clone.img
+sudo guestkit clone source.img clone.img
 
 # Clone with sysprep and shrink
-sudo guestctl clone --sysprep --shrink source.img clone.img
+sudo guestkit clone --sysprep --shrink source.img clone.img
 
 # Clone with customization
-sudo guestctl clone -c customize.sh -n webserver-02 source.img clone.img
+sudo guestkit clone -c customize.sh -n webserver-02 source.img clone.img
 ```
 
 **Output:**
@@ -2091,7 +2091,7 @@ Automatically detect and repair common system issues.
 
 **Usage:**
 ```bash
-guestctl repair [OPTIONS] <IMAGE>
+guestkit repair [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2103,13 +2103,13 @@ guestctl repair [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Check for issues
-sudo guestctl repair --check-only disk.img
+sudo guestkit repair --check-only disk.img
 
 # Repair with backup
-sudo guestctl repair --backup ./backup disk.img
+sudo guestkit repair --backup ./backup disk.img
 
 # Automatic repair of specific categories
-sudo guestctl repair -a --categories filesystem,services disk.img
+sudo guestkit repair -a --categories filesystem,services disk.img
 ```
 
 **Output:**
@@ -2208,7 +2208,7 @@ Apply security hardening measures based on industry best practices.
 
 **Usage:**
 ```bash
-guestctl harden [OPTIONS] <IMAGE>
+guestkit harden [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2220,13 +2220,13 @@ guestctl harden [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Standard hardening
-sudo guestctl harden disk.img
+sudo guestkit harden disk.img
 
 # CIS benchmark hardening
-sudo guestctl harden -f cis disk.img
+sudo guestkit harden -f cis disk.img
 
 # Paranoid mode with dry-run
-sudo guestctl harden -p paranoid --dry-run disk.img
+sudo guestkit harden -p paranoid --dry-run disk.img
 ```
 
 **Output:**
@@ -2326,7 +2326,7 @@ Track how a system has evolved over time through multiple snapshots.
 
 **Usage:**
 ```bash
-guestctl evolve [OPTIONS] <IMAGES>...
+guestkit evolve [OPTIONS] <IMAGES>...
 ```
 
 **Options:**
@@ -2338,13 +2338,13 @@ guestctl evolve [OPTIONS] <IMAGES>...
 **Examples:**
 ```bash
 # Track evolution across snapshots
-sudo guestctl evolve snap1.img snap2.img snap3.img snap4.img
+sudo guestkit evolve snap1.img snap2.img snap3.img snap4.img
 
 # Timeline with graph
-sudo guestctl evolve -t -g snap*.img
+sudo guestkit evolve -t -g snap*.img
 
 # Track specific metrics
-sudo guestctl evolve -m packages,services snap*.img
+sudo guestkit evolve -m packages,services snap*.img
 ```
 
 **Output:**
@@ -2452,7 +2452,7 @@ Generate comprehensive AI-powered insights about the system state and patterns.
 
 **Usage:**
 ```bash
-guestctl insights [OPTIONS] <IMAGE>
+guestkit insights [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2464,13 +2464,13 @@ guestctl insights [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Generate comprehensive insights
-sudo guestctl insights disk.img
+sudo guestkit insights disk.img
 
 # Focus on security with context
-sudo guestctl insights -f security -c "production web server" disk.img
+sudo guestkit insights -f security -c "production web server" disk.img
 
 # Deep analysis with HTML report
-sudo guestctl insights -d comprehensive -o html disk.img > insights.html
+sudo guestkit insights -d comprehensive -o html disk.img > insights.html
 ```
 
 **Output:**
@@ -2647,7 +2647,7 @@ Analyze package dependencies, conflicts, and dependency chains.
 
 **Usage:**
 ```bash
-guestctl dependencies [OPTIONS] <IMAGE>
+guestkit dependencies [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2659,16 +2659,16 @@ guestctl dependencies [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Analyze all dependencies
-sudo guestctl dependencies disk.img
+sudo guestkit dependencies disk.img
 
 # Specific package dependency tree
-sudo guestctl dependencies -p nginx disk.img
+sudo guestkit dependencies -p nginx disk.img
 
 # Find circular dependencies
-sudo guestctl dependencies -t circular disk.img
+sudo guestkit dependencies -t circular disk.img
 
 # Visualize dependency graph
-sudo guestctl dependencies -p systemd --visualize disk.img > deps.dot
+sudo guestkit dependencies -p systemd --visualize disk.img > deps.dot
 ```
 
 **Output:**
@@ -2778,7 +2778,7 @@ Simulate various scenarios and predict outcomes (updates, failures, attacks).
 
 **Usage:**
 ```bash
-guestctl simulate [OPTIONS] <IMAGE>
+guestkit simulate [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2790,16 +2790,16 @@ guestctl simulate [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Simulate system update
-sudo guestctl simulate -s update disk.img
+sudo guestkit simulate -s update disk.img
 
 # Simulate disk failure
-sudo guestctl simulate -s failure -p "disk=/dev/sda" disk.img
+sudo guestkit simulate -s failure -p "disk=/dev/sda" disk.img
 
 # Simulate security attack
-sudo guestctl simulate -s attack -p "type=ransomware" disk.img
+sudo guestkit simulate -s attack -p "type=ransomware" disk.img
 
 # Simulate migration
-sudo guestctl simulate -s migration -p "target=aws" disk.img
+sudo guestkit simulate -s migration -p "target=aws" disk.img
 ```
 
 **Output:**
@@ -2904,7 +2904,7 @@ Generate reusable templates from existing disk images.
 
 **Usage:**
 ```bash
-guestctl template [OPTIONS] <IMAGE>
+guestkit template [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -2916,13 +2916,13 @@ guestctl template [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Generate Vagrant template
-sudo guestctl template -t vagrant -n webserver disk.img
+sudo guestkit template -t vagrant -n webserver disk.img
 
 # Generate cloud-init template
-sudo guestctl template -t cloud-init disk.img -o cloud-init.yaml
+sudo guestkit template -t cloud-init disk.img -o cloud-init.yaml
 
 # Generate Packer template
-sudo guestctl template -t packer disk.img -o webserver.pkr.hcl
+sudo guestkit template -t packer disk.img -o webserver.pkr.hcl
 ```
 
 **Output:**
@@ -3101,7 +3101,7 @@ Perform disaster recovery operations on failed or damaged systems.
 
 **Usage:**
 ```bash
-guestctl rescue [OPTIONS] <IMAGE>
+guestkit rescue [OPTIONS] <IMAGE>
 ```
 
 **Options:**
@@ -3113,16 +3113,16 @@ guestctl rescue [OPTIONS] <IMAGE>
 **Examples:**
 ```bash
 # Diagnose issues
-sudo guestctl rescue -m diagnose disk.img
+sudo guestkit rescue -m diagnose disk.img
 
 # Attempt automatic repair
-sudo guestctl rescue -m repair disk.img
+sudo guestkit rescue -m repair disk.img
 
 # Extract critical data
-sudo guestctl rescue -m extract -t ./recovered disk.img
+sudo guestkit rescue -m extract -t ./recovered disk.img
 
 # Full recovery with backup
-sudo guestctl rescue -m recover --backup ./backup disk.img
+sudo guestkit rescue -m recover --backup ./backup disk.img
 ```
 
 **Output:**
@@ -3258,8 +3258,8 @@ Enable detailed logging for debugging.
 
 ```bash
 # Any command with verbose output
-sudo guestctl -v inspect ubuntu.qcow2
-sudo guestctl --verbose filesystems ubuntu.qcow2
+sudo guestkit -v inspect ubuntu.qcow2
+sudo guestkit --verbose filesystems ubuntu.qcow2
 ```
 
 **Verbose Output:**
@@ -3281,16 +3281,16 @@ Many commands support `--json` output for easy parsing with `jq`:
 
 ```bash
 # Get OS type
-sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].type'
+sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].type'
 
 # Get hostname
-sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].hostname'
+sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].hostname'
 
 # Count packages
-sudo guestctl packages --json disk.img | jq '.total'
+sudo guestkit packages --json disk.img | jq '.total'
 
 # Filter packages by name
-sudo guestctl packages --json disk.img | jq '.packages[] | select(.name | contains("python"))'
+sudo guestkit packages --json disk.img | jq '.packages[] | select(.name | contains("python"))'
 ```
 
 ### Batch processing:
@@ -3299,11 +3299,11 @@ sudo guestctl packages --json disk.img | jq '.packages[] | select(.name | contai
 # Inspect multiple disks
 for disk in *.qcow2; do
     echo "=== $disk ==="
-    sudo guestctl inspect --json "$disk" | jq -r '.operating_systems[0].distro'
+    sudo guestkit inspect --json "$disk" | jq -r '.operating_systems[0].distro'
 done
 
 # Generate report
-sudo guestctl inspect --json disk.img | jq '{
+sudo guestkit inspect --json disk.img | jq '{
     hostname: .operating_systems[0].hostname,
     os: .operating_systems[0].distro,
     version: .operating_systems[0].version
@@ -3326,36 +3326,36 @@ sudo guestctl inspect --json disk.img | jq '{
 
 ```bash
 # Check OS version before deploying VM
-sudo guestctl inspect --json template.qcow2 | jq -r '.operating_systems[0].version'
+sudo guestkit inspect --json template.qcow2 | jq -r '.operating_systems[0].version'
 
 # Verify hostname is set correctly
-sudo guestctl cat template.qcow2 /etc/hostname
+sudo guestkit cat template.qcow2 /etc/hostname
 ```
 
 ### 2. Security Audit
 
 ```bash
 # List all installed packages
-sudo guestctl packages disk.img > installed-packages.txt
+sudo guestkit packages disk.img > installed-packages.txt
 
 # Check for specific vulnerable packages
-sudo guestctl packages --filter openssl disk.img
+sudo guestkit packages --filter openssl disk.img
 
 # Extract SSH keys
-sudo guestctl cp disk.img:/root/.ssh/authorized_keys ./authorized_keys
+sudo guestkit cp disk.img:/root/.ssh/authorized_keys ./authorized_keys
 ```
 
 ### 3. Troubleshooting
 
 ```bash
 # Check system logs without booting VM
-sudo guestctl cat disk.img /var/log/syslog > syslog.txt
+sudo guestkit cat disk.img /var/log/syslog > syslog.txt
 
 # List running services configuration
-sudo guestctl ls --long disk.img /etc/systemd/system
+sudo guestkit ls --long disk.img /etc/systemd/system
 
 # Extract config files for analysis
-sudo guestctl cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
+sudo guestkit cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
 ```
 
 ### 4. Inventory Management
@@ -3363,9 +3363,9 @@ sudo guestctl cp disk.img:/etc/nginx/nginx.conf ./nginx.conf
 ```bash
 # Generate inventory report
 for vm in /var/lib/libvirt/images/*.qcow2; do
-    hostname=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].hostname')
-    distro=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].distro')
-    version=$(sudo guestctl inspect --json "$vm" | jq -r '.operating_systems[0].version')
+    hostname=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].hostname')
+    distro=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].distro')
+    version=$(sudo guestkit inspect --json "$vm" | jq -r '.operating_systems[0].version')
     echo "$vm,$hostname,$distro,$version"
 done > vm-inventory.csv
 ```
@@ -3374,10 +3374,10 @@ done > vm-inventory.csv
 
 ```bash
 # Verify backup contains expected files
-sudo guestctl ls backup.img /home/user/important-data
+sudo guestkit ls backup.img /home/user/important-data
 
 # Extract specific files from backup
-sudo guestctl cp backup.img:/home/user/document.pdf ./recovered-document.pdf
+sudo guestkit cp backup.img:/home/user/document.pdf ./recovered-document.pdf
 ```
 
 ---
@@ -3394,10 +3394,10 @@ When scripting, always use `--json` output and parse with `jq`:
 
 ```bash
 # Good: Robust parsing
-distro=$(sudo guestctl inspect --json disk.img | jq -r '.operating_systems[0].distro')
+distro=$(sudo guestkit inspect --json disk.img | jq -r '.operating_systems[0].distro')
 
 # Bad: Fragile text parsing
-distro=$(sudo guestctl inspect disk.img | grep "Distribution:" | cut -d: -f2)
+distro=$(sudo guestkit inspect disk.img | grep "Distribution:" | cut -d: -f2)
 ```
 
 ### 3. Filter Before Limiting
@@ -3406,10 +3406,10 @@ When working with packages, filter first, then limit:
 
 ```bash
 # Good: Get all kernel packages
-sudo guestctl packages --filter kernel disk.img
+sudo guestkit packages --filter kernel disk.img
 
 # Less useful: Random 20 packages
-sudo guestctl packages --limit 20 disk.img
+sudo guestkit packages --limit 20 disk.img
 ```
 
 ### 4. Check for Errors
@@ -3417,7 +3417,7 @@ sudo guestctl packages --limit 20 disk.img
 Always check exit codes in scripts:
 
 ```bash
-if sudo guestctl inspect disk.img > /dev/null 2>&1; then
+if sudo guestkit inspect disk.img > /dev/null 2>&1; then
     echo "Disk is valid"
 else
     echo "Error: Invalid disk image"
@@ -3435,7 +3435,7 @@ fi
 
 **Solution:** Run with sudo:
 ```bash
-sudo guestctl inspect disk.img
+sudo guestkit inspect disk.img
 ```
 
 ### Appliance Failed to Launch
@@ -3451,7 +3451,7 @@ sudo guestctl inspect disk.img
 
 2. Enable verbose mode to see details:
    ```bash
-   sudo guestctl -v inspect disk.img
+   sudo guestkit -v inspect disk.img
    ```
 
 3. Ensure qemu-img is installed:
@@ -3472,7 +3472,7 @@ sudo guestctl inspect disk.img
 **Check:**
 ```bash
 # Check filesystem types
-sudo guestctl filesystems disk.img
+sudo guestkit filesystems disk.img
 
 # Verify disk is readable
 qemu-img info disk.img
@@ -3485,12 +3485,12 @@ qemu-img info disk.img
 **Solutions:**
 1. Verify file exists:
    ```bash
-   sudo guestctl ls disk.img /path/to
+   sudo guestkit ls disk.img /path/to
    ```
 
 2. Check filesystem is mounted:
    ```bash
-   sudo guestctl -v cat disk.img /path/to/file
+   sudo guestkit -v cat disk.img /path/to/file
    ```
 
 ---
@@ -3503,7 +3503,7 @@ JSON parsing is faster than human-readable output for large datasets:
 
 ```bash
 # Faster for 1000+ packages
-sudo guestctl packages --json disk.img | jq '.total'
+sudo guestkit packages --json disk.img | jq '.total'
 ```
 
 ### 2. Limit Results Early
@@ -3512,7 +3512,7 @@ Use `--limit` to avoid processing unnecessary data:
 
 ```bash
 # Only need 10 results
-sudo guestctl packages --limit 10 disk.img
+sudo guestkit packages --limit 10 disk.img
 ```
 
 ### 3. Filter Efficiently
@@ -3520,7 +3520,7 @@ sudo guestctl packages --limit 10 disk.img
 Combine filter and limit for best performance:
 
 ```bash
-sudo guestctl packages --filter nginx --limit 5 disk.img
+sudo guestkit packages --filter nginx --limit 5 disk.img
 ```
 
 ---
@@ -3535,7 +3535,7 @@ sudo guestctl packages --filter nginx --limit 5 disk.img
   hosts: localhost
   tasks:
     - name: Get OS information
-      shell: guestctl inspect --json /var/lib/libvirt/images/vm.qcow2
+      shell: guestkit inspect --json /var/lib/libvirt/images/vm.qcow2
       register: vm_info
       become: yes
 
@@ -3559,13 +3559,13 @@ for disk in /var/lib/libvirt/images/*.qcow2; do
     echo "Auditing: $disk"
 
     # Get OS info
-    info=$(sudo guestctl inspect --json "$disk")
+    info=$(sudo guestkit inspect --json "$disk")
 
     hostname=$(echo "$info" | jq -r '.operating_systems[0].hostname // "unknown"')
     distro=$(echo "$info" | jq -r '.operating_systems[0].distro // "unknown"')
 
     # Count packages
-    pkg_count=$(sudo guestctl packages --json "$disk" | jq '.total')
+    pkg_count=$(sudo guestkit packages --json "$disk" | jq '.total')
 
     echo "  Hostname: $hostname"
     echo "  OS: $distro"

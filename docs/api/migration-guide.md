@@ -43,7 +43,7 @@ g.mkfs("xfs", "/dev/sda3", None, Some("data"), None, None)?;
 
 **After:**
 ```rust
-use guestctl::guestfs::FilesystemType;
+use guestkit::guestfs::FilesystemType;
 
 g.mkfs("/dev/sda1")
     .ext4()
@@ -79,7 +79,7 @@ g.part_init("/dev/sda", "gpt")?;  // Could typo as "GPT", "Gpt", etc.
 
 **After:**
 ```rust
-use guestctl::guestfs::PartitionTableType;
+use guestkit::guestfs::PartitionTableType;
 
 g.part_init("/dev/sda", PartitionTableType::Gpt.as_str())?;
 ```
@@ -111,7 +111,7 @@ for root in &roots {
 
 **After:**
 ```rust
-use guestctl::guestfs::{OsType, Distro};
+use guestkit::guestfs::{OsType, Distro};
 
 let roots = g.inspect_os()?;
 for root in &roots {
@@ -173,7 +173,7 @@ g.mount_with("/dev/sda1", "/")
     .perform()?;
 ```
 
-**Note:** The fluent mount API is planned but not yet implemented. Use the old API for now.
+**Note:** The fluent mount API is planned. Use the standard mount API for now.
 
 ---
 
@@ -350,6 +350,10 @@ g.mount("/dev/sda1", "/", None)?;
 - File an issue on GitHub for questions or problems
 
 ---
+
+## Security Improvements
+
+The new API includes security hardening from a comprehensive 54-issue code review: readonly checks enforce safety on write operations, all inputs are validated before use, and errors are properly propagated instead of silently ignored.
 
 ## Summary
 

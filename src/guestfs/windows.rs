@@ -160,10 +160,8 @@ impl Guestfs {
         let product_name = self.inspect_get_product_name(root).unwrap_or_default();
 
         // Parse common Windows versions
-        let (major, minor) = if product_name.contains("Windows 11") {
+        let (major, minor) = if product_name.contains("Windows 11") || product_name.contains("Windows 10") {
             (10, 0) // Windows 11 is actually 10.0
-        } else if product_name.contains("Windows 10") {
-            (10, 0)
         } else if product_name.contains("Windows 8.1") {
             (6, 3)
         } else if product_name.contains("Windows 8") {
@@ -252,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_windows_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Performance tracking script for guestctl
+# Performance tracking script for guestkit
 # Runs benchmarks and tracks performance metrics over time
 
 set -e

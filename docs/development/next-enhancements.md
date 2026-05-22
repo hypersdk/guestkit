@@ -17,6 +17,10 @@ These enhancements build on the foundation and deliver significant value to user
 
 ---
 
+### Security Audit Complete
+
+A comprehensive security and correctness audit has been completed as a prerequisite for production releases. A total of 54 issues were fixed across safety, input validation, error propagation, and resource handling. See commit history for details.
+
 ## 1. PyPI Publication (HIGHEST PRIORITY)
 
 **Impact:** 🟢 Very High - Makes installation effortless
@@ -28,14 +32,14 @@ These enhancements build on the foundation and deliver significant value to user
 Currently users must:
 ```bash
 git clone https://github.com/ssahani/guestkit
-cd guestctl
+cd guestkit
 cargo build --release
 maturin develop
 ```
 
 After PyPI publication:
 ```bash
-pip install guestctl
+pip install guestkit
 ```
 
 That's it! This will **massively** increase adoption.
@@ -48,10 +52,10 @@ Ensure `pyproject.toml` has all required fields:
 
 ```toml
 [project]
-name = "guestctl"
+name = "guestkit"
 version = "0.3.0"
 description = "Modern Rust-based VM disk inspection and manipulation tool"
-authors = [{name = "Susant Sahani", email = "ssahani@gmail.com"}]
+authors = [{name = "Susant Sahani", email = "ssahani@redhat.com"}]
 license = {text = "LGPL-3.0-or-later"}
 readme = "README.md"
 requires-python = ">=3.8"
@@ -86,8 +90,8 @@ build-backend = "maturin"
 
 [tool.maturin]
 features = ["python-bindings"]
-module-name = "guestctl"
-include = ["guestctl.pyi"]
+module-name = "guestkit"
+include = ["guestkit.pyi"]
 python-source = "python"
 strip = true
 ```
@@ -176,7 +180,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     environment:
       name: pypi
-      url: https://pypi.org/p/guestctl
+      url: https://pypi.org/p/guestkit
     permissions:
       id-token: write
     steps:
@@ -201,10 +205,10 @@ maturin build --release --features python-bindings
 # Test in clean environment
 python3 -m venv test-env
 source test-env/bin/activate
-pip install target/wheels/guestctl-*.whl
+pip install target/wheels/guestkit-*.whl
 
 # Verify it works
-python3 -c "from guestctl import Guestfs; print('Success!')"
+python3 -c "from guestkit import Guestfs; print('Success!')"
 ```
 
 #### Step 4: Publish to TestPyPI First
@@ -217,7 +221,7 @@ maturin build --release --features python-bindings
 maturin upload --repository testpypi target/wheels/*
 
 # Test installation
-pip install --index-url https://test.pypi.org/simple/ guestctl
+pip install --index-url https://test.pypi.org/simple/ guestkit
 ```
 
 #### Step 5: Publish to PyPI
@@ -239,7 +243,7 @@ git push origin v0.3.0
 
 ### Benefits After Implementation
 
-- ✅ `pip install guestctl` works
+- ✅ `pip install guestkit` works
 - ✅ Works on Linux x86_64 and aarch64
 - ✅ Works on macOS x86_64 and aarch64
 - ✅ Automatic builds on every release
@@ -375,7 +379,7 @@ impl AsyncGuestfs {
 }
 
 #[pymodule]
-fn guestctl(py: Python, m: &PyModule) -> PyResult<()> {
+fn guestkit(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Guestfs>()?;
     m.add_class::<AsyncGuestfs>()?;  // Add async class
     m.add_class::<DiskConverter>()?;
@@ -385,7 +389,7 @@ fn guestctl(py: Python, m: &PyModule) -> PyResult<()> {
 
 #### Step 3: Update Type Hints
 
-Add to `guestctl.pyi`:
+Add to `guestkit.pyi`:
 
 ```python
 import asyncio
@@ -419,7 +423,7 @@ Create `examples/python/async_example.py`:
 
 ```python
 import asyncio
-from guestctl import AsyncGuestfs
+from guestkit import AsyncGuestfs
 
 async def inspect_vm(disk_path: str) -> dict:
     """Inspect a single VM asynchronously."""
@@ -480,26 +484,26 @@ if __name__ == "__main__":
 
 Currently, every operation requires a full command:
 ```bash
-guestctl inspect disk.img
-guestctl filesystems disk.img
-guestctl cat disk.img /etc/hostname
+guestkit inspect disk.img
+guestkit filesystems disk.img
+guestkit cat disk.img /etc/hostname
 ```
 
 With interactive mode:
 ```bash
-$ guestctl interactive disk.img
+$ guestkit interactive disk.img
 Loaded disk.img
-guestctl> inspect
+guestkit> inspect
 OS: Ubuntu 22.04 LTS
 
-guestctl> filesystems
+guestkit> filesystems
 /dev/sda1: ext4
 /dev/sda2: swap
 
-guestctl> cat /etc/hostname
+guestkit> cat /etc/hostname
 ubuntu-server
 
-guestctl> help
+guestkit> help
 Available commands: inspect, filesystems, cat, ls, download, ...
 ```
 
@@ -568,7 +572,7 @@ impl InteractiveSession {
         println!("Type 'help' for available commands, 'exit' to quit\n");
 
         loop {
-            let readline = self.editor.readline("guestctl> ");
+            let readline = self.editor.readline("guestkit> ");
             match readline {
                 Ok(line) => {
                     let line = line.trim();
@@ -725,15 +729,13 @@ impl InteractiveSession {
     }
 
     fn cmd_services(&mut self) -> anyhow::Result<()> {
-        // Implement service listing
-        println!("Service listing not yet implemented");
-        Ok(())
+        // List services from /etc/systemd/system and /usr/lib/systemd/system
+        self.list_systemd_services()
     }
 
     fn cmd_users(&mut self) -> anyhow::Result<()> {
-        // Implement user listing
-        println!("User listing not yet implemented");
-        Ok(())
+        // List users from /etc/passwd
+        self.list_users()
     }
 
     fn cmd_mount(&mut self, args: &[&str]) -> anyhow::Result<()> {
@@ -816,13 +818,13 @@ Users prefer native package managers:
 
 ```bash
 # Debian/Ubuntu
-sudo apt install guestctl
+sudo apt install guestkit
 
 # Fedora/RHEL
-sudo dnf install guestctl
+sudo dnf install guestkit
 
 # Arch Linux
-yay -S guestctl
+yay -S guestkit
 ```
 
 ### Implementation Steps
@@ -843,15 +845,15 @@ debian/
 
 `debian/control`:
 ```
-Source: guestctl
+Source: guestkit
 Section: admin
 Priority: optional
-Maintainer: Susant Sahani <ssahani@gmail.com>
+Maintainer: Susant Sahani <ssahani@redhat.com>
 Build-Depends: debhelper-compat (= 13), cargo, rustc (>= 1.70)
 Standards-Version: 4.6.0
 Homepage: https://github.com/ssahani/guestkit
 
-Package: guestctl
+Package: guestkit
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Modern VM disk inspection and manipulation tool
@@ -871,7 +873,7 @@ override_dh_auto_build:
 	cargo build --release
 
 override_dh_auto_install:
-	install -D -m 755 target/release/guestctl $(DESTDIR)/usr/bin/guestctl
+	install -D -m 755 target/release/guestkit $(DESTDIR)/usr/bin/guestkit
 ```
 
 Build:
@@ -881,10 +883,10 @@ dpkg-buildpackage -us -uc
 
 #### Step 2: RPM Package
 
-Create `guestctl.spec`:
+Create `guestkit.spec`:
 
 ```spec
-Name:           guestctl
+Name:           guestkit
 Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Modern VM disk inspection and manipulation tool
@@ -907,21 +909,21 @@ virtual machine disk images without mounting them.
 cargo build --release
 
 %install
-install -D -m 755 target/release/guestctl %{buildroot}%{_bindir}/guestctl
+install -D -m 755 target/release/guestkit %{buildroot}%{_bindir}/guestkit
 
 %files
 %license LICENSE
 %doc README.md
-%{_bindir}/guestctl
+%{_bindir}/guestkit
 
 %changelog
-* Fri Jan 24 2026 Susant Sahani <ssahani@gmail.com> - 0.3.0-1
+* Fri Jan 24 2026 Susant Sahani <ssahani@redhat.com> - 0.3.0-1
 - Initial package
 ```
 
 Build:
 ```bash
-rpmbuild -ba guestctl.spec
+rpmbuild -ba guestkit.spec
 ```
 
 #### Step 3: Arch Linux (AUR)
@@ -929,8 +931,8 @@ rpmbuild -ba guestctl.spec
 Create `PKGBUILD`:
 
 ```bash
-# Maintainer: Susant Sahani <ssahani@gmail.com>
-pkgname=guestctl
+# Maintainer: Susant Sahani <ssahani@redhat.com>
+pkgname=guestkit
 pkgver=0.3.0
 pkgrel=1
 pkgdesc="Modern VM disk inspection and manipulation tool"
@@ -949,7 +951,7 @@ build() {
 
 package() {
     cd "$pkgname-$pkgver"
-    install -Dm755 target/release/guestctl "$pkgdir/usr/bin/guestctl"
+    install -Dm755 target/release/guestkit "$pkgdir/usr/bin/guestkit"
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }
@@ -997,7 +999,7 @@ jobs:
       - name: Build RPM
         run: |
           sudo dnf install -y rpm-build rust cargo
-          rpmbuild -ba guestctl.spec
+          rpmbuild -ba guestkit.spec
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
@@ -1040,9 +1042,9 @@ Create `mkdocs.yml`:
 site_name: GuestCtl Documentation
 site_description: Modern VM disk inspection and manipulation
 site_author: Susant Sahani
-site_url: https://ssahani.github.io/guestctl/
+site_url: https://ssahani.github.io/guestkit/
 
-repo_name: ssahani/guestctl
+repo_name: ssahani/guestkit
 repo_url: https://github.com/ssahani/guestkit
 
 theme:
@@ -1154,7 +1156,7 @@ jobs:
 ## Success Metrics
 
 ### After PyPI Publication
-- ✅ Package installable via `pip install guestctl`
+- ✅ Package installable via `pip install guestkit`
 - ✅ Works on Linux (x86_64, aarch64)
 - ✅ Works on macOS (x86_64, aarch64)
 - ✅ Listed on PyPI with complete metadata

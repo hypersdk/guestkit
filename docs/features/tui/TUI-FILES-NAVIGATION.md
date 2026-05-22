@@ -490,7 +490,7 @@ $ cargo check --lib
 
 ```bash
 # Start TUI
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 
 # Navigate to Files view
 # Press Tab until you reach "Files" tab

@@ -75,8 +75,9 @@ impl fmt::Debug for EnhancedError {
 
 impl std::error::Error for EnhancedError {}
 
-/// Common error builders
-pub mod errors {
+/// Common error builders for consistent error messages with suggestions
+#[allow(dead_code)]
+pub mod builders {
     use super::*;
 
     /// Invalid command usage
@@ -109,7 +110,6 @@ pub mod errors {
     }
 
     /// File not found
-    #[allow(dead_code)]
     pub fn file_not_found(path: &str) -> EnhancedError {
         EnhancedError::new(format!("File not found: {}", path))
             .with_suggestion("Check that the file path is correct and the file exists")
@@ -117,7 +117,6 @@ pub mod errors {
     }
 
     /// Mount required
-    #[allow(dead_code)]
     pub fn mount_required() -> EnhancedError {
         EnhancedError::new("No filesystem is mounted")
             .with_suggestion("Mount a filesystem first before accessing files")
@@ -141,15 +140,13 @@ pub mod errors {
     }
 
     /// Permission denied
-    #[allow(dead_code)]
     pub fn permission_denied(operation: &str) -> EnhancedError {
         EnhancedError::new(format!("Permission denied: {}", operation))
             .with_suggestion("Try running with elevated privileges or check file permissions")
-            .with_example("sudo guestctl ...")
+            .with_example("sudo guestkit ...")
     }
 
     /// Disk image not found
-    #[allow(dead_code)]
     pub fn disk_not_found(path: &str) -> EnhancedError {
         EnhancedError::new(format!("Disk image not found: {}", path))
             .with_suggestion("Verify the disk image path exists and is accessible")
@@ -163,7 +160,6 @@ pub mod errors {
     }
 
     /// Invalid disk format
-    #[allow(dead_code)]
     pub fn invalid_format(path: &str) -> EnhancedError {
         EnhancedError::new(format!("Unable to recognize disk image format: {}", path))
             .with_suggestion("Supported formats: qcow2, raw, vmdk, vhd, vdi")
@@ -175,18 +171,16 @@ pub mod errors {
     }
 
     /// Cache error
-    #[allow(dead_code)]
     pub fn cache_error(message: &str) -> EnhancedError {
         EnhancedError::new(format!("Cache error: {}", message))
             .with_suggestion("Try clearing the cache or running without --cache")
             .with_examples(vec![
-                "guestctl cache-clear".to_string(),
-                "guestctl inspect vm.qcow2  # without --cache".to_string(),
+                "guestkit cache-clear".to_string(),
+                "guestkit inspect vm.qcow2  # without --cache".to_string(),
             ])
     }
 
     /// Export error
-    #[allow(dead_code)]
     pub fn export_error(format: &str, message: &str) -> EnhancedError {
         EnhancedError::new(format!("Export to {} failed: {}", format, message))
             .with_suggestion("Check that the output path is writable".to_string())
@@ -194,19 +188,17 @@ pub mod errors {
                 "# Verify output directory:".to_string(),
                 "ls -ld $(dirname output.html)".to_string(),
                 "# Try different output location:".to_string(),
-                "guestctl inspect vm.qcow2 --export html --export-output ~/report.html".to_string(),
+                "guestkit inspect vm.qcow2 --export html --export-output ~/report.html".to_string(),
             ])
     }
 
     /// Network error
-    #[allow(dead_code)]
     pub fn network_error(message: &str) -> EnhancedError {
         EnhancedError::new(format!("Network error: {}", message))
             .with_suggestion("Check your internet connection or try again later")
     }
 
     /// Timeout error
-    #[allow(dead_code)]
     pub fn timeout_error(operation: &str) -> EnhancedError {
         EnhancedError::new(format!("Operation timed out: {}", operation)).with_suggestion(
             "The operation took too long. Try with a smaller disk or increase timeout",
@@ -214,7 +206,6 @@ pub mod errors {
     }
 
     /// Insufficient space
-    #[allow(dead_code)]
     pub fn insufficient_space(required: &str) -> EnhancedError {
         EnhancedError::new("Insufficient disk space")
             .with_suggestion(format!("At least {} of free space is required", required))
@@ -226,7 +217,6 @@ pub mod errors {
     }
 
     /// Dependency missing
-    #[allow(dead_code)]
     pub fn dependency_missing(dependency: &str) -> EnhancedError {
         EnhancedError::new(format!("Required dependency not found: {}", dependency))
             .with_suggestion(format!("Install {} to use this feature", dependency))
@@ -239,14 +229,12 @@ pub mod errors {
     }
 
     /// Invalid argument
-    #[allow(dead_code)]
     pub fn invalid_argument(arg: &str, expected: &str) -> EnhancedError {
         EnhancedError::new(format!("Invalid argument: {}", arg))
             .with_suggestion(format!("Expected: {}", expected))
     }
 
     /// Feature not available
-    #[allow(dead_code)]
     pub fn feature_not_available(feature: &str, reason: &str) -> EnhancedError {
         EnhancedError::new(format!("Feature not available: {}", feature))
             .with_suggestion(reason.to_string())
@@ -270,7 +258,174 @@ mod tests {
 
     #[test]
     fn test_unknown_command() {
-        let err = errors::unknown_command("pac", &["packages", "pkg", "services"]);
+        let err = builders::unknown_command("pac", &["packages", "pkg", "services"]);
         assert!(err.message.contains("Unknown command"));
+    }
+
+    #[test]
+    fn test_enhanced_error_no_suggestion() {
+        let err = EnhancedError::new("Error message");
+        assert_eq!(err.message, "Error message");
+        assert!(err.suggestion.is_none());
+        assert_eq!(err.examples.len(), 0);
+    }
+
+    #[test]
+    fn test_enhanced_error_with_examples() {
+        let err = EnhancedError::new("Test")
+            .with_examples(vec!["example 1".to_string(), "example 2".to_string()]);
+
+        assert_eq!(err.examples.len(), 2);
+        assert_eq!(err.examples[0], "example 1");
+        assert_eq!(err.examples[1], "example 2");
+    }
+
+    #[test]
+    fn test_enhanced_error_display_format() {
+        let err = EnhancedError::new("Display test");
+        let display_str = format!("{}", err);
+        assert_eq!(display_str, "Display test");
+    }
+
+    #[test]
+    fn test_enhanced_error_debug_format() {
+        let err = EnhancedError::new("Debug test");
+        let debug_str = format!("{:?}", err);
+        assert_eq!(debug_str, "Debug test");
+    }
+
+    #[test]
+    fn test_invalid_usage_error() {
+        let err = builders::invalid_usage("ls", "ls [OPTIONS] [PATH]");
+        assert!(err.message.contains("Invalid usage"));
+        assert!(err.message.contains("ls"));
+        assert!(err.suggestion.is_some());
+    }
+
+    #[test]
+    fn test_file_not_found_error() {
+        let err = builders::file_not_found("/path/to/file");
+        assert!(err.message.contains("File not found"));
+        assert!(err.message.contains("/path/to/file"));
+        assert!(err.suggestion.is_some());
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_mount_required_error() {
+        let err = builders::mount_required();
+        assert!(err.message.contains("No filesystem is mounted"));
+        assert!(err.suggestion.is_some());
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_os_detection_failed_error() {
+        let err = builders::os_detection_failed();
+        assert!(err.message.contains("No operating system detected"));
+        assert!(err.suggestion.is_some());
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_permission_denied_error() {
+        let err = builders::permission_denied("reading file");
+        assert!(err.message.contains("Permission denied"));
+        assert!(err.message.contains("reading file"));
+        assert!(err.suggestion.is_some());
+    }
+
+    #[test]
+    fn test_disk_not_found_error() {
+        let err = builders::disk_not_found("/vm/disk.qcow2");
+        assert!(err.message.contains("Disk image not found"));
+        assert!(err.message.contains("/vm/disk.qcow2"));
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_invalid_format_error() {
+        let err = builders::invalid_format("disk.img");
+        assert!(err.message.contains("Unable to recognize"));
+        assert!(err.suggestion.is_some());
+        assert!(err.suggestion.as_ref().unwrap().contains("qcow2"));
+    }
+
+    #[test]
+    fn test_cache_error() {
+        let err = builders::cache_error("corrupted cache");
+        assert!(err.message.contains("Cache error"));
+        assert!(err.message.contains("corrupted cache"));
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_export_error() {
+        let err = builders::export_error("HTML", "write failed");
+        assert!(err.message.contains("Export to HTML failed"));
+        assert!(err.message.contains("write failed"));
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_network_error() {
+        let err = builders::network_error("connection refused");
+        assert!(err.message.contains("Network error"));
+        assert!(err.message.contains("connection refused"));
+        assert!(err.suggestion.is_some());
+    }
+
+    #[test]
+    fn test_timeout_error() {
+        let err = builders::timeout_error("inspection");
+        assert!(err.message.contains("Operation timed out"));
+        assert!(err.message.contains("inspection"));
+        assert!(err.suggestion.is_some());
+    }
+
+    #[test]
+    fn test_insufficient_space_error() {
+        let err = builders::insufficient_space("10 GB");
+        assert!(err.message.contains("Insufficient disk space"));
+        assert!(err.suggestion.as_ref().unwrap().contains("10 GB"));
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_dependency_missing_error() {
+        let err = builders::dependency_missing("libguestfs");
+        assert!(err.message.contains("Required dependency not found"));
+        assert!(err.message.contains("libguestfs"));
+        assert!(!err.examples.is_empty());
+    }
+
+    #[test]
+    fn test_invalid_argument_error() {
+        let err = builders::invalid_argument("--format", "json, yaml, or text");
+        assert!(err.message.contains("Invalid argument"));
+        assert!(err.message.contains("--format"));
+        assert!(err.suggestion.as_ref().unwrap().contains("json, yaml, or text"));
+    }
+
+    #[test]
+    fn test_feature_not_available_error() {
+        let err = builders::feature_not_available("AI assistant", "Requires --features ai");
+        assert!(err.message.contains("Feature not available"));
+        assert!(err.message.contains("AI assistant"));
+        assert!(err.suggestion.as_ref().unwrap().contains("Requires --features ai"));
+    }
+
+    #[test]
+    fn test_unknown_command_with_similar() {
+        let err = builders::unknown_command("serv", &["services", "service", "shell"]);
+        assert!(err.message.contains("Unknown command"));
+        assert!(err.message.contains("serv"));
+    }
+
+    #[test]
+    fn test_unknown_command_no_similar() {
+        let err = builders::unknown_command("xyz", &["abc", "def", "ghi"]);
+        assert!(err.message.contains("Unknown command"));
+        assert!(err.message.contains("xyz"));
     }
 }

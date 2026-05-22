@@ -6,7 +6,7 @@ pub mod rules;
 pub mod benchmarks;
 
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -88,7 +88,7 @@ impl ValidationSummary {
         let skipped = results.iter().filter(|r| r.status == ValidationStatus::Skip).count();
         let errors = results.iter().filter(|r| r.status == ValidationStatus::Error).count();
 
-        let compliance_score = if total > 0 {
+        let compliance_score = if total > skipped {
             (passed as f64 / (total - skipped) as f64) * 100.0
         } else {
             0.0
@@ -331,14 +331,14 @@ fn check_user_not_exists(g: &mut Guestfs, username: &str) -> Result<ValidationSt
 pub fn format_report(report: &ValidationReport) -> String {
     let mut output = String::new();
 
-    output.push_str(&format!("🔍 Policy Validation Report\n"));
-    output.push_str(&format!("==========================\n\n"));
+    output.push_str("🔍 Policy Validation Report\n");
+    output.push_str("==========================\n\n");
     output.push_str(&format!("Image: {}\n", report.image_path));
     output.push_str(&format!("Policy: {}\n", report.policy_name));
     output.push_str(&format!("Time: {}\n\n", report.timestamp));
 
-    output.push_str(&format!("📊 Summary\n"));
-    output.push_str(&format!("----------\n"));
+    output.push_str("📊 Summary\n");
+    output.push_str("----------\n");
     output.push_str(&format!("Total Rules: {}\n", report.summary.total_rules));
     output.push_str(&format!("✅ Passed: {}\n", report.summary.passed));
     output.push_str(&format!("❌ Failed: {}\n", report.summary.failed));
@@ -347,8 +347,8 @@ pub fn format_report(report: &ValidationReport) -> String {
     output.push_str(&format!("\n📈 Compliance Score: {:.1}%\n\n", report.summary.compliance_score));
 
     if report.summary.failed > 0 {
-        output.push_str(&format!("❌ Failed Checks\n"));
-        output.push_str(&format!("---------------\n"));
+        output.push_str("❌ Failed Checks\n");
+        output.push_str("---------------\n");
         for result in &report.results {
             if result.status == ValidationStatus::Fail {
                 output.push_str(&format!("  {} [{}] {}\n",
@@ -365,8 +365,8 @@ pub fn format_report(report: &ValidationReport) -> String {
     }
 
     if report.summary.warnings > 0 {
-        output.push_str(&format!("⚠️  Warnings\n"));
-        output.push_str(&format!("-----------\n"));
+        output.push_str("⚠️  Warnings\n");
+        output.push_str("-----------\n");
         for result in &report.results {
             if result.status == ValidationStatus::Warning {
                 output.push_str(&format!("  {} [{}] {}\n",
@@ -390,4 +390,262 @@ pub fn format_report(report: &ValidationReport) -> String {
     }
 
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validation_status_as_str() {
+        assert_eq!(ValidationStatus::Pass.as_str(), "PASS");
+        assert_eq!(ValidationStatus::Fail.as_str(), "FAIL");
+        assert_eq!(ValidationStatus::Warning.as_str(), "WARN");
+        assert_eq!(ValidationStatus::Skip.as_str(), "SKIP");
+        assert_eq!(ValidationStatus::Error.as_str(), "ERROR");
+    }
+
+    #[test]
+    fn test_validation_status_emoji() {
+        assert_eq!(ValidationStatus::Pass.emoji(), "✅");
+        assert_eq!(ValidationStatus::Fail.emoji(), "❌");
+        assert_eq!(ValidationStatus::Warning.emoji(), "⚠️");
+        assert_eq!(ValidationStatus::Skip.emoji(), "⏭️");
+        assert_eq!(ValidationStatus::Error.emoji(), "🔥");
+    }
+
+    #[test]
+    fn test_validation_result_creation() {
+        let result = ValidationResult {
+            rule_id: "SEC-001".to_string(),
+            rule_name: "SSH root login disabled".to_string(),
+            status: ValidationStatus::Pass,
+            message: "SSH configuration is secure".to_string(),
+            severity: "HIGH".to_string(),
+            remediation: Some("No action needed".to_string()),
+        };
+
+        assert_eq!(result.rule_id, "SEC-001");
+        assert_eq!(result.status, ValidationStatus::Pass);
+        assert_eq!(result.severity, "HIGH");
+        assert!(result.remediation.is_some());
+    }
+
+    #[test]
+    fn test_validation_summary_all_passed() {
+        let results = vec![
+            ValidationResult {
+                rule_id: "R1".to_string(),
+                rule_name: "Rule 1".to_string(),
+                status: ValidationStatus::Pass,
+                message: "OK".to_string(),
+                severity: "HIGH".to_string(),
+                remediation: None,
+            },
+            ValidationResult {
+                rule_id: "R2".to_string(),
+                rule_name: "Rule 2".to_string(),
+                status: ValidationStatus::Pass,
+                message: "OK".to_string(),
+                severity: "MEDIUM".to_string(),
+                remediation: None,
+            },
+        ];
+
+        let summary = ValidationSummary::new(&results);
+
+        assert_eq!(summary.total_rules, 2);
+        assert_eq!(summary.passed, 2);
+        assert_eq!(summary.failed, 0);
+        assert_eq!(summary.warnings, 0);
+        assert_eq!(summary.skipped, 0);
+        assert_eq!(summary.errors, 0);
+        assert_eq!(summary.compliance_score, 100.0);
+    }
+
+    #[test]
+    fn test_validation_summary_mixed_results() {
+        let results = vec![
+            ValidationResult {
+                rule_id: "R1".to_string(),
+                rule_name: "Rule 1".to_string(),
+                status: ValidationStatus::Pass,
+                message: "OK".to_string(),
+                severity: "HIGH".to_string(),
+                remediation: None,
+            },
+            ValidationResult {
+                rule_id: "R2".to_string(),
+                rule_name: "Rule 2".to_string(),
+                status: ValidationStatus::Fail,
+                message: "Failed".to_string(),
+                severity: "HIGH".to_string(),
+                remediation: Some("Fix this".to_string()),
+            },
+            ValidationResult {
+                rule_id: "R3".to_string(),
+                rule_name: "Rule 3".to_string(),
+                status: ValidationStatus::Warning,
+                message: "Warning".to_string(),
+                severity: "LOW".to_string(),
+                remediation: None,
+            },
+            ValidationResult {
+                rule_id: "R4".to_string(),
+                rule_name: "Rule 4".to_string(),
+                status: ValidationStatus::Skip,
+                message: "Skipped".to_string(),
+                severity: "MEDIUM".to_string(),
+                remediation: None,
+            },
+        ];
+
+        let summary = ValidationSummary::new(&results);
+
+        assert_eq!(summary.total_rules, 4);
+        assert_eq!(summary.passed, 1);
+        assert_eq!(summary.failed, 1);
+        assert_eq!(summary.warnings, 1);
+        assert_eq!(summary.skipped, 1);
+        assert_eq!(summary.errors, 0);
+        // Score = 1 passed / (4 total - 1 skipped) = 1/3 = 33.33%
+        assert!((summary.compliance_score - 33.33).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_validation_summary_empty() {
+        let results = vec![];
+        let summary = ValidationSummary::new(&results);
+
+        assert_eq!(summary.total_rules, 0);
+        assert_eq!(summary.passed, 0);
+        assert_eq!(summary.compliance_score, 0.0);
+    }
+
+    #[test]
+    fn test_validation_report_creation() {
+        let report = ValidationReport {
+            image_path: "/path/to/image.qcow2".to_string(),
+            policy_name: "CIS Benchmark".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 0.0,
+            },
+        };
+
+        assert_eq!(report.policy_name, "CIS Benchmark");
+        assert_eq!(report.results.len(), 0);
+    }
+
+    #[test]
+    fn test_format_report_contains_header() {
+        let report = ValidationReport {
+            image_path: "/test/image.qcow2".to_string(),
+            policy_name: "Test Policy".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 0.0,
+            },
+        };
+
+        let output = format_report(&report);
+
+        assert!(output.contains("Policy Validation Report"));
+        assert!(output.contains("/test/image.qcow2"));
+        assert!(output.contains("Test Policy"));
+        assert!(output.contains("Summary"));
+    }
+
+    #[test]
+    fn test_format_report_compliance_messages() {
+        // Excellent compliance
+        let report_excellent = ValidationReport {
+            image_path: "/test.qcow2".to_string(),
+            policy_name: "Test".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 95.0,
+            },
+        };
+        let output = format_report(&report_excellent);
+        assert!(output.contains("Excellent compliance"));
+
+        // Good compliance
+        let report_good = ValidationReport {
+            image_path: "/test.qcow2".to_string(),
+            policy_name: "Test".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 80.0,
+            },
+        };
+        let output = format_report(&report_good);
+        assert!(output.contains("Good compliance"));
+
+        // Poor compliance
+        let report_poor = ValidationReport {
+            image_path: "/test.qcow2".to_string(),
+            policy_name: "Test".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 60.0,
+            },
+        };
+        let output = format_report(&report_poor);
+        assert!(output.contains("Poor compliance"));
+
+        // Critical failure
+        let report_critical = ValidationReport {
+            image_path: "/test.qcow2".to_string(),
+            policy_name: "Test".to_string(),
+            timestamp: "2024-01-15T10:00:00Z".to_string(),
+            results: vec![],
+            summary: ValidationSummary {
+                total_rules: 0,
+                passed: 0,
+                failed: 0,
+                warnings: 0,
+                skipped: 0,
+                errors: 0,
+                compliance_score: 30.0,
+            },
+        };
+        let output = format_report(&report_critical);
+        assert!(output.contains("Critical compliance failure"));
+    }
 }

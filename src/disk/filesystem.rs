@@ -49,7 +49,12 @@ pub struct FileSystem {
 impl FileSystem {
     /// Detect filesystem from partition
     pub fn detect(reader: &mut DiskReader, partition: &Partition) -> Result<Self> {
-        let offset = partition.start_lba * 512;
+        let offset = partition.start_lba.checked_mul(512).ok_or_else(|| {
+            Error::Detection(format!(
+                "Integer overflow computing partition offset: start_lba={} * 512",
+                partition.start_lba
+            ))
+        })?;
 
         // Array of detector functions for cleaner dispatch
         let detectors: &[fn(&mut DiskReader, u64) -> Result<FileSystem>] = &[
@@ -66,6 +71,16 @@ impl FileSystem {
             Self::detect_iso9660,
             Self::detect_swap,
         ];
+
+        // Validate that offset won't overflow when detector functions add to it.
+        // The largest internal offset used is 0x8000 + 2048 = 34816 for ISO9660.
+        // We also need 65536 + 512 for btrfs/ufs. Check the largest (65536 + 1376).
+        if offset.checked_add(65536 + 1376).is_none() {
+            return Err(Error::Detection(format!(
+                "Partition offset {} is too large, would overflow during filesystem detection",
+                offset
+            )));
+        }
 
         // Try each detector in order
         for detector in detectors {
@@ -143,7 +158,7 @@ impl FileSystem {
         reader.read_exact_at(partition_offset, &mut boot_sector)?;
 
         // Check FAT32 signature "FAT32   " at offset 82
-        if boot_sector.len() > 90 && &boot_sector[82..90] == b"FAT32   " {
+        if boot_sector.len() >= 90 && &boot_sector[82..90] == b"FAT32   " {
             return Ok(Self {
                 fs_type: FileSystemType::Fat32,
                 label: None,
@@ -192,25 +207,22 @@ impl FileSystem {
 
     /// Detect ZFS filesystem
     fn detect_zfs(reader: &mut DiskReader, partition_offset: u64) -> Result<Self> {
+        // ZFS uberblock magic number: 0x00bab10c (little-endian: 0x0c, 0xb1, 0xba, 0x00)
+        const ZFS_UBERBLOCK_MAGIC: [u8; 4] = [0x0c, 0xb1, 0xba, 0x00];
+
         // ZFS has multiple labels at different offsets (128K, 256K, 512K, 1M)
-        // We'll check the first one at 128K
+        // Check the first uberblock at 128KB
         let label_offset = partition_offset + 131072; // 128KB
-        let mut buffer = vec![0u8; 512];
+        let mut buffer = vec![0u8; 4];
         reader.read_exact_at(label_offset, &mut buffer)?;
 
-        // Check for ZFS magic number (0x00bab10c at the start of the uberblock)
-        // ZFS is complex, we'll do a simple check
-        if buffer.len() >= 8 && u64::from_le_bytes(buffer[0..8].try_into().unwrap_or([0; 8])) != 0 {
-            // Simple heuristic - check for typical ZFS patterns
-            let label_offset2 = partition_offset + 262144; // 256KB
-            let mut buffer2 = vec![0u8; 512];
-            if reader.read_exact_at(label_offset2, &mut buffer2).is_ok() {
-                return Ok(Self {
-                    fs_type: FileSystemType::Zfs,
-                    label: None,
-                    uuid: None,
-                });
-            }
+        // Check for the ZFS uberblock magic number
+        if buffer[0..4] == ZFS_UBERBLOCK_MAGIC {
+            return Ok(Self {
+                fs_type: FileSystemType::Zfs,
+                label: None,
+                uuid: None,
+            });
         }
 
         Err(Error::Detection("Not a ZFS filesystem".to_string()))
@@ -221,7 +233,7 @@ impl FileSystem {
         // UFS superblock is at offset 8192 for UFS1, or 65536 for UFS2
         // Try UFS2 first (more modern)
         let superblock_offset = partition_offset + 65536;
-        let mut superblock = vec![0u8; 512];
+        let mut superblock = vec![0u8; 1376];
         reader.read_exact_at(superblock_offset, &mut superblock)?;
 
         // Check UFS2 magic: 0x19540119
@@ -243,6 +255,7 @@ impl FileSystem {
 
         // Try UFS1 at offset 8192
         let superblock_offset = partition_offset + 8192;
+        let mut superblock = vec![0u8; 1376];
         reader.read_exact_at(superblock_offset, &mut superblock)?;
 
         if superblock.len() >= 1376 {
@@ -272,15 +285,14 @@ impl FileSystem {
         reader.read_exact_at(header_offset, &mut header)?;
 
         // Check HFS+ signature "H+" or "HX" at offset 0-1
-        if header.len() >= 2 {
-            if (header[0] == b'H' && header[1] == b'+') || (header[0] == b'H' && header[1] == b'X') {
+        if header.len() >= 2
+            && header[0] == b'H' && (header[1] == b'+' || header[1] == b'X') {
                 return Ok(Self {
                     fs_type: FileSystemType::HfsPlus,
                     label: None,
                     uuid: None,
                 });
             }
-        }
 
         Err(Error::Detection("Not an HFS+ filesystem".to_string()))
     }
@@ -393,15 +405,11 @@ impl FileSystem {
         _partition: &Partition,
         path: &str,
     ) -> Result<Vec<u8>> {
-        // This is a simplified implementation
-        // A full implementation would need to:
-        // 1. Parse the filesystem structure (inodes, directories)
-        // 2. Navigate the directory tree
-        // 3. Read file blocks
-        //
-        // For now, we'll focus on detecting OS from common locations
+        // Direct file reading from raw filesystem blocks requires parsing the
+        // filesystem structure (superblock, inodes, directory entries, extent trees).
+        // This is handled by the mount-based path through guestfs instead.
         Err(Error::Detection(format!(
-            "File reading not yet implemented for path: {}",
+            "Direct file reading not supported for path: {} — use guestfs mount-based access instead",
             path
         )))
     }

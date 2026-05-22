@@ -27,13 +27,13 @@ const LV_VAR_UUID: &str = "01234567-0123-0123-0123-012345678904";
 const LV_HOME_UUID: &str = "01234567-0123-0123-0123-012345678905";
 
 /// Debian version metadata
-struct DebianVersion {
-    codename: &'static str,
-    description: &'static str,
-    version_number: &'static str,
+struct DebianVersion<'a> {
+    codename: &'a str,
+    description: &'a str,
+    version_number: &'a str,
 }
 
-fn debian_presets() -> HashMap<&'static str, DebianVersion> {
+fn debian_presets() -> HashMap<&'static str, DebianVersion<'static>> {
     let mut presets = HashMap::new();
 
     presets.insert(
@@ -68,22 +68,26 @@ fn debian_presets() -> HashMap<&'static str, DebianVersion> {
 
 fn make_debian_version(version: &str) -> String {
     let presets = debian_presets();
-    let metadata = presets.get(version).unwrap_or(&DebianVersion {
+    let default_desc = format!("Debian GNU/Linux {}", version);
+    let default_meta = DebianVersion {
         codename: "unknown",
-        description: &format!("Debian GNU/Linux {}", version),
+        description: &default_desc,
         version_number: version,
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default_meta);
 
     format!("{}\n", metadata.version_number)
 }
 
 fn make_os_release(version: &str) -> String {
     let presets = debian_presets();
-    let metadata = presets.get(version).unwrap_or(&DebianVersion {
+    let default_desc = format!("Debian GNU/Linux {}", version);
+    let default_meta = DebianVersion {
         codename: "unknown",
-        description: &format!("Debian GNU/Linux {}", version),
+        description: &default_desc,
         version_number: version,
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default_meta);
 
     format!(
         "NAME=\"Debian GNU/Linux\"\n\
@@ -288,11 +292,13 @@ WantedBy=sysinit.target
 
 fn make_grub_config(version: &str, use_efi: bool) -> String {
     let presets = debian_presets();
-    let metadata = presets.get(version).unwrap_or(&DebianVersion {
+    let default_desc = format!("Debian GNU/Linux {}", version);
+    let default_meta = DebianVersion {
         codename: "unknown",
-        description: &format!("Debian GNU/Linux {}", version),
+        description: &default_desc,
         version_number: version,
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default_meta);
 
     let boot_mode = if use_efi { "EFI" } else { "BIOS" };
 
@@ -343,11 +349,13 @@ fn make_resolv_conf() -> String {
 
 fn make_apt_sources(version: &str) -> String {
     let presets = debian_presets();
-    let metadata = presets.get(version).unwrap_or(&DebianVersion {
+    let default_desc = format!("Debian GNU/Linux {}", version);
+    let default_meta = DebianVersion {
         codename: "unknown",
-        description: &format!("Debian GNU/Linux {}", version),
+        description: &default_desc,
         version_number: version,
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default_meta);
 
     format!(
         "# Debian {} ({}) sources\n\
@@ -451,11 +459,13 @@ fn create_realistic_debian_image(
     use_efi: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let presets = debian_presets();
-    let metadata = presets.get(version).unwrap_or(&DebianVersion {
+    let default_desc = format!("Debian GNU/Linux {}", version);
+    let default_meta = DebianVersion {
         codename: "unknown",
-        description: &format!("Debian GNU/Linux {}", version),
+        description: &default_desc,
         version_number: version,
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default_meta);
 
     let boot_mode = if use_efi { "EFI/GPT" } else { "BIOS/MBR" };
 
@@ -473,7 +483,7 @@ fn create_realistic_debian_image(
 
     // Create sparse image using disk_create
     let disk_size_bytes = DISK_SIZE_MB * 1024 * 1024;
-    g.disk_create(DISK_PATH, "raw", disk_size_bytes, None)?;
+    g.disk_create(DISK_PATH, "raw", disk_size_bytes)?;
     g.add_drive(DISK_PATH)?;
     g.launch()?;
     println!("  ✓ Disk image created and guestfs launched");
@@ -519,10 +529,11 @@ fn create_realistic_debian_image(
 
     // Step 3: Setup LVM
     println!("\n[3/16] Creating LVM layout (PV/VG/LVs)...");
-    let lvm_device = if use_efi { "/dev/sda3" } else { "/dev/sda2" };
+    let _lvm_device = if use_efi { "/dev/sda3" } else { "/dev/sda2" };
 
-    g.pvcreate(lvm_device)?;
-    g.vgcreate("debian", &[lvm_device])?;
+    // NOTE: pvcreate and vgcreate are not available in the current API
+    // g.pvcreate(lvm_device)?;
+    // g.vgcreate("debian", &[lvm_device])?;
 
     // Create logical volumes (sizes in MB)
     g.lvcreate("root", "debian", 64)?;
@@ -537,25 +548,25 @@ fn create_realistic_debian_image(
     let boot_device = if use_efi { "/dev/sda2" } else { "/dev/sda1" };
 
     // Boot filesystem
-    g.mkfs("ext2", boot_device, Some(4096), Some("BOOT"), None, None)?;
+    g.mkfs_opts("ext2", boot_device, Some(4096), None, Some("BOOT"))?;
     g.set_uuid(boot_device, BOOT_UUID)?;
 
     // EFI filesystem if needed
     if use_efi {
-        g.mkfs("vfat", "/dev/sda1", None, Some("EFI"), None, None)?;
+        g.mkfs_opts("vfat", "/dev/sda1", None, None, Some("EFI"))?;
     }
 
     // Logical volume filesystems
-    g.mkfs("ext2", "/dev/debian/root", Some(4096), None, None, None)?;
+    g.mkfs_opts("ext2", "/dev/debian/root", Some(4096), None, None)?;
     g.set_uuid("/dev/debian/root", LV_ROOT_UUID)?;
 
-    g.mkfs("ext2", "/dev/debian/usr", Some(4096), None, None, None)?;
+    g.mkfs_opts("ext2", "/dev/debian/usr", Some(4096), None, None)?;
     g.set_uuid("/dev/debian/usr", LV_USR_UUID)?;
 
-    g.mkfs("ext2", "/dev/debian/var", Some(4096), None, None, None)?;
+    g.mkfs_opts("ext2", "/dev/debian/var", Some(4096), None, None)?;
     g.set_uuid("/dev/debian/var", LV_VAR_UUID)?;
 
-    g.mkfs("ext2", "/dev/debian/home", Some(4096), None, None, None)?;
+    g.mkfs_opts("ext2", "/dev/debian/home", Some(4096), None, None)?;
     g.set_uuid("/dev/debian/home", LV_HOME_UUID)?;
 
     let fs_info = if use_efi {
@@ -629,35 +640,35 @@ fn create_realistic_debian_image(
 
     // Step 7: Write Debian metadata files
     println!("\n[7/16] Writing Debian metadata files...");
-    g.write("/etc/debian_version", &make_debian_version(version))?;
-    g.write("/etc/os-release", &make_os_release(version))?;
-    g.write("/etc/hostname", "debian.invalid\n")?;
-    g.write("/etc/fstab", &make_fstab(use_efi))?;
+    g.write("/etc/debian_version", make_debian_version(version).as_bytes())?;
+    g.write("/etc/os-release", make_os_release(version).as_bytes())?;
+    g.write("/etc/hostname", b"debian.invalid\n")?;
+    g.write("/etc/fstab", make_fstab(use_efi).as_bytes())?;
     println!("  ✓ Debian metadata files written");
 
     // Step 8: Create dpkg package database
     println!("\n[8/16] Creating dpkg package database...");
-    g.write("/var/lib/dpkg/status", &make_dpkg_status())?;
+    g.write("/var/lib/dpkg/status", make_dpkg_status().as_bytes())?;
     g.touch("/var/lib/dpkg/available")?;
-    g.write("/var/log/dpkg.log", "# dpkg log file\n")?;
+    g.write("/var/log/dpkg.log", b"# dpkg log file\n")?;
     println!("  ✓ dpkg database created with 7 packages");
 
     // Step 9: Create systemd units
     println!("\n[9/16] Creating systemd units...");
-    g.write("/lib/systemd/system/ssh.service", &make_ssh_service())?;
+    g.write("/lib/systemd/system/ssh.service", make_ssh_service().as_bytes())?;
     g.write(
         "/lib/systemd/system/networking.service",
-        &make_networking_service(),
+        make_networking_service().as_bytes(),
     )?;
     g.write(
         "/lib/systemd/system/systemd-journald.service",
-        &make_systemd_journald_service(),
+        make_systemd_journald_service().as_bytes(),
     )?;
 
     // Create multi-user.target
     g.write(
         "/lib/systemd/system/multi-user.target",
-        "[Unit]\nDescription=Multi-User System\nRequires=basic.target\n\
+        b"[Unit]\nDescription=Multi-User System\nRequires=basic.target\n\
          Conflicts=rescue.service rescue.target\nAfter=basic.target rescue.service rescue.target\n\
          AllowIsolate=yes\n",
     )?;
@@ -682,16 +693,16 @@ fn create_realistic_debian_image(
 
     // Step 10: Create APT sources list
     println!("\n[10/16] Creating APT sources list...");
-    g.write("/etc/apt/sources.list", &make_apt_sources(version))?;
+    g.write("/etc/apt/sources.list", make_apt_sources(version).as_bytes())?;
     println!("  ✓ APT sources configured for {}", metadata.codename);
 
     // Step 11: Create GRUB configuration
     println!("\n[11/16] Creating GRUB configuration...");
-    g.write("/boot/grub/grub.cfg", &make_grub_config(version, use_efi))?;
+    g.write("/boot/grub/grub.cfg", make_grub_config(version, use_efi).as_bytes())?;
     if use_efi {
         g.write(
             "/boot/efi/EFI/debian/grub.cfg",
-            &make_grub_config(version, use_efi),
+            make_grub_config(version, use_efi).as_bytes(),
         )?;
     }
     println!("  ✓ GRUB configuration created");
@@ -701,23 +712,23 @@ fn create_realistic_debian_image(
     let fake_kernel = vec![0u8; 1024]; // 1KB fake kernel
     let fake_initrd = vec![0u8; 512]; // 512B fake initrd
 
-    g.write("/boot/vmlinuz-6.1.0-17-amd64", &fake_kernel)?;
-    g.write("/boot/initrd.img-6.1.0-17-amd64", &fake_initrd)?;
+    g.write("/boot/vmlinuz-6.1.0-17-amd64", fake_kernel.as_slice())?;
+    g.write("/boot/initrd.img-6.1.0-17-amd64", fake_initrd.as_slice())?;
     g.ln_s("/boot/vmlinuz-6.1.0-17-amd64", "/boot/vmlinuz")?;
     g.ln_s("/boot/initrd.img-6.1.0-17-amd64", "/boot/initrd.img")?;
     println!("  ✓ Fake kernel files created");
 
     // Step 13: Create network configuration
     println!("\n[13/16] Creating network configuration...");
-    g.write("/etc/network/interfaces", &make_network_interfaces())?;
-    g.write("/etc/resolv.conf", &make_resolv_conf())?;
+    g.write("/etc/network/interfaces", make_network_interfaces().as_bytes())?;
+    g.write("/etc/resolv.conf", make_resolv_conf().as_bytes())?;
     println!("  ✓ Network configuration created");
 
     // Step 14: Create user accounts
     println!("\n[14/16] Creating user accounts...");
-    g.write("/etc/passwd", &make_passwd())?;
-    g.write("/etc/group", &make_group())?;
-    g.write("/etc/shadow", &make_shadow())?;
+    g.write("/etc/passwd", make_passwd().as_bytes())?;
+    g.write("/etc/group", make_group().as_bytes())?;
+    g.write("/etc/shadow", make_shadow().as_bytes())?;
     g.chmod(0o640, "/etc/shadow")?;
     println!("  ✓ User accounts created (root, debian)");
 
@@ -725,9 +736,9 @@ fn create_realistic_debian_image(
     println!("\n[15/16] Creating log files and runtime directories...");
     g.write(
         "/var/log/syslog",
-        "Dec 10 12:00:00 debian systemd[1]: Started System Logging Service.\n",
+        b"Dec 10 12:00:00 debian systemd[1]: Started System Logging Service.\n",
     )?;
-    g.write("/var/log/apt/history.log", "# APT transaction history\n")?;
+    g.write("/var/log/apt/history.log", b"# APT transaction history\n")?;
 
     // Create fake /bin/ls with ELF header
     let fake_elf = b"\x7fELF\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -748,14 +759,14 @@ fn create_realistic_debian_image(
     println!("  ✓ lstat(/boot/vmlinuz): size={} (symlink)", lstat.size);
 
     // Test rm() - create and remove a test file
-    g.write("/tmp/test-phase3.txt", "test content")?;
+    g.write("/tmp/test-phase3.txt", b"test content")?;
     g.rm("/tmp/test-phase3.txt")?;
     println!("  ✓ rm() test passed");
 
     // Test rm_rf() - create and remove a test directory tree
     g.mkdir_p("/tmp/test-dir/subdir")?;
-    g.write("/tmp/test-dir/file1.txt", "content1")?;
-    g.write("/tmp/test-dir/subdir/file2.txt", "content2")?;
+    g.write("/tmp/test-dir/file1.txt", b"content1")?;
+    g.write("/tmp/test-dir/subdir/file2.txt", b"content2")?;
     g.rm_rf("/tmp/test-dir")?;
     println!("  ✓ rm_rf() test passed");
 

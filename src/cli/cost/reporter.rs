@@ -56,15 +56,15 @@ pub fn format_report(analysis: &CostAnalysis, detailed: bool) -> String {
         // Sort by savings amount (descending)
         let mut opportunities = analysis.savings_opportunities.clone();
         opportunities.sort_by(|a, b| {
-            b.monthly_savings.partial_cmp(&a.monthly_savings).unwrap()
+            b.monthly_savings.partial_cmp(&a.monthly_savings).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for opp in opportunities.iter().take(if detailed { 20 } else { 5 }) {
             output.push_str(&format!(
-                "\n{} {} [{}]\n",
+                "\n{} {} [{:?}]\n",
                 opp.priority.emoji(),
                 opp.category,
-                format!("{:?}", opp.effort)
+                opp.effort
             ));
             output.push_str(&format!("   {}\n", opp.description));
             output.push_str(&format!("   Current: ${:.2}/month\n", opp.current_cost));
@@ -109,7 +109,7 @@ pub fn format_report(analysis: &CostAnalysis, detailed: bool) -> String {
     }
 
     output.push_str(&format!("\nEstimated annual savings: ${:.2}\n", analysis.total_monthly_savings * 12.0));
-    output.push_str(&format!("Payback period for optimization work: < 1 month\n"));
+    output.push_str("Payback period for optimization work: < 1 month\n");
 
     output
 }
@@ -123,7 +123,7 @@ fn format_resource_estimate(output: &mut String, estimate: &ResourceEstimate) {
     output.push_str(&format!("  Compute: ${:.2}/month\n", estimate.compute_monthly));
     output.push_str(&format!("  Storage: ${:.2}/month\n", estimate.storage_monthly));
     output.push_str(&format!("  Network: ${:.2}/month\n", estimate.network_monthly));
-    output.push_str(&format!("  ────────────────────────\n"));
+    output.push_str("  ────────────────────────\n");
     output.push_str(&format!("  Total:   ${:.2}/month\n", estimate.total_monthly));
     output.push_str(&format!("  Annual:  ${:.2}/year\n", estimate.total_monthly * 12.0));
 }

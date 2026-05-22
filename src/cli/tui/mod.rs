@@ -25,23 +25,39 @@ use std::time::{Duration, Instant};
 
 pub use app::App;
 
+/// RAII guard to restore terminal state on drop (including panics)
+struct TerminalGuard;
+
+impl TerminalGuard {
+    fn new() -> Result<Self> {
+        enable_raw_mode().context("Failed to enable raw mode")?;
+        execute!(io::stdout(), EnterAlternateScreen)
+            .context("Failed to enter alternate screen")?;
+        Ok(Self)
+    }
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+    }
+}
+
 /// Run the TUI application
 pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     // Load configuration first
     let config = config::TuiConfig::load();
 
-    // Setup terminal first for splash screen
-    enable_raw_mode().context("Failed to enable raw mode")?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
+    // Setup terminal with RAII guard (restores on drop, including panics)
+    let _guard = TerminalGuard::new()?;
 
-    let backend = CrosstermBackend::new(stdout);
+    let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend).context("Failed to create terminal")?;
 
     // Show splash screen if enabled
     if config.ui.show_splash {
-        terminal.draw(|f| splash::draw_splash(f))?;
+        terminal.draw(splash::draw_splash)?;
         std::thread::sleep(Duration::from_millis(config.ui.splash_duration_ms));
     }
 
@@ -50,7 +66,7 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     spinner.set_style(
         ProgressStyle::default_spinner()
             .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
-            .unwrap()
+            .expect("valid spinner template")
             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
     );
     spinner.set_message("🔍 Inspecting disk image and analyzing system...");
@@ -69,11 +85,7 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     // Cleanup guestfs handle
     let _ = app.cleanup();
 
-    // Restore terminal
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
-
+    // Show cursor before guard drops and restores terminal
     terminal.show_cursor().context("Failed to show cursor")?;
 
     result

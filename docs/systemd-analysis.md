@@ -1,10 +1,10 @@
 # Systemd Analysis Guide
 
-This guide covers guestctl's comprehensive systemd analysis capabilities for deep VM inspection without running the VM.
+This guide covers guestkit's comprehensive systemd analysis capabilities for deep VM inspection without running the VM.
 
 ## Overview
 
-Guestctl provides three powerful commands for analyzing systemd-based Linux VMs:
+Guestkit provides three powerful commands for analyzing systemd-based Linux VMs:
 
 1. **`systemd-journal`** - Analyze systemd journal logs
 2. **`systemd-services`** - Inspect services and dependencies
@@ -22,32 +22,32 @@ Analyze systemd journal logs to troubleshoot issues, audit security events, and 
 
 ```bash
 # View all journal entries
-guestctl systemd-journal vm.qcow2
+guestkit systemd-journal vm.qcow2
 
 # Show only errors (priority 0-3)
-guestctl systemd-journal vm.qcow2 --errors
+guestkit systemd-journal vm.qcow2 --errors
 
 # Show only warnings (priority 4)
-guestctl systemd-journal vm.qcow2 --warnings
+guestkit systemd-journal vm.qcow2 --warnings
 
 # Display statistics summary
-guestctl systemd-journal vm.qcow2 --stats
+guestkit systemd-journal vm.qcow2 --stats
 ```
 
 ### Filtering Options
 
 ```bash
 # Filter by priority level (0=emerg, 3=err, 4=warning, 6=info)
-guestctl systemd-journal vm.qcow2 --priority 3
+guestkit systemd-journal vm.qcow2 --priority 3
 
 # Filter by systemd unit
-guestctl systemd-journal vm.qcow2 --unit sshd.service
+guestkit systemd-journal vm.qcow2 --unit sshd.service
 
 # Limit number of entries
-guestctl systemd-journal vm.qcow2 --limit 100
+guestkit systemd-journal vm.qcow2 --limit 100
 
 # Combine filters
-guestctl systemd-journal vm.qcow2 --unit nginx.service --priority 4 --limit 50
+guestkit systemd-journal vm.qcow2 --unit nginx.service --priority 4 --limit 50
 ```
 
 ### Priority Levels
@@ -84,7 +84,7 @@ Journal entries are displayed with color coding:
 The `--stats` flag provides a comprehensive overview:
 
 ```bash
-guestctl systemd-journal vm.qcow2 --stats
+guestkit systemd-journal vm.qcow2 --stats
 ```
 
 Output includes:
@@ -99,28 +99,28 @@ Output includes:
 **Security Audit:**
 ```bash
 # Find authentication failures
-guestctl systemd-journal vm.qcow2 --unit sshd.service --errors
+guestkit systemd-journal vm.qcow2 --unit sshd.service --errors
 
 # Check for sudo usage
-guestctl systemd-journal vm.qcow2 --unit sudo.service
+guestkit systemd-journal vm.qcow2 --unit sudo.service
 ```
 
 **Troubleshooting:**
 ```bash
 # Find all errors in the last boot
-guestctl systemd-journal vm.qcow2 --errors
+guestkit systemd-journal vm.qcow2 --errors
 
 # Check specific service issues
-guestctl systemd-journal vm.qcow2 --unit postgresql.service --warnings
+guestkit systemd-journal vm.qcow2 --unit postgresql.service --warnings
 ```
 
 **Forensics:**
 ```bash
 # Get journal statistics for investigation
-guestctl systemd-journal vm.qcow2 --stats
+guestkit systemd-journal vm.qcow2 --stats
 
 # List all critical events
-guestctl systemd-journal vm.qcow2 --priority 2
+guestkit systemd-journal vm.qcow2 --priority 2
 ```
 
 ---
@@ -133,13 +133,13 @@ Inspect systemd services, analyze dependencies, and identify issues.
 
 ```bash
 # List all services
-guestctl systemd-services vm.qcow2
+guestkit systemd-services vm.qcow2
 
 # Show only failed services
-guestctl systemd-services vm.qcow2 --failed
+guestkit systemd-services vm.qcow2 --failed
 
 # Show dependency tree for a service
-guestctl systemd-services vm.qcow2 --service sshd.service
+guestkit systemd-services vm.qcow2 --service sshd.service
 ```
 
 ### Service Listing
@@ -147,7 +147,7 @@ guestctl systemd-services vm.qcow2 --service sshd.service
 Default output shows all services with their state and description:
 
 ```bash
-guestctl systemd-services vm.qcow2
+guestkit systemd-services vm.qcow2
 ```
 
 Output format:
@@ -170,7 +170,7 @@ failed-service.service                             failed          Example faile
 For programmatic processing:
 
 ```bash
-guestctl systemd-services vm.qcow2 --output json > services.json
+guestkit systemd-services vm.qcow2 --output json > services.json
 ```
 
 ### Dependency Analysis
@@ -178,7 +178,7 @@ guestctl systemd-services vm.qcow2 --output json > services.json
 Show the full dependency tree for a service:
 
 ```bash
-guestctl systemd-services vm.qcow2 --service nginx.service
+guestkit systemd-services vm.qcow2 --service nginx.service
 ```
 
 Output shows:
@@ -192,7 +192,7 @@ Output shows:
 Generate Mermaid diagrams for visualization:
 
 ```bash
-guestctl systemd-services vm.qcow2 --service sshd.service --diagram > sshd-deps.md
+guestkit systemd-services vm.qcow2 --service sshd.service --diagram > sshd-deps.md
 ```
 
 The diagram shows:
@@ -205,7 +205,7 @@ The diagram shows:
 Quickly identify problematic services:
 
 ```bash
-guestctl systemd-services vm.qcow2 --failed
+guestkit systemd-services vm.qcow2 --failed
 ```
 
 Output includes:
@@ -218,29 +218,29 @@ Output includes:
 **Health Check:**
 ```bash
 # Quick scan for failed services
-guestctl systemd-services vm.qcow2 --failed
+guestkit systemd-services vm.qcow2 --failed
 
 # List all services for manual review
-guestctl systemd-services vm.qcow2
+guestkit systemd-services vm.qcow2
 ```
 
 **Dependency Analysis:**
 ```bash
 # Understand service startup order
-guestctl systemd-services vm.qcow2 --service postgresql.service
+guestkit systemd-services vm.qcow2 --service postgresql.service
 
 # Visualize complex dependencies
-guestctl systemd-services vm.qcow2 --service network.target --diagram
+guestkit systemd-services vm.qcow2 --service network.target --diagram
 ```
 
 **Migration Planning:**
 ```bash
 # Export service list for documentation
-guestctl systemd-services vm.qcow2 --output json > current-services.json
+guestkit systemd-services vm.qcow2 --output json > current-services.json
 
 # Compare services between VMs
-diff <(guestctl systemd-services vm1.qcow2 --output json) \
-     <(guestctl systemd-services vm2.qcow2 --output json)
+diff <(guestkit systemd-services vm1.qcow2 --output json) \
+     <(guestkit systemd-services vm2.qcow2 --output json)
 ```
 
 ---
@@ -253,19 +253,19 @@ Analyze boot performance, identify slow services, and get optimization recommend
 
 ```bash
 # Show boot timing and slowest services
-guestctl systemd-boot vm.qcow2
+guestkit systemd-boot vm.qcow2
 
 # Show top 20 slowest services
-guestctl systemd-boot vm.qcow2 --top 20
+guestkit systemd-boot vm.qcow2 --top 20
 
 # Get optimization recommendations
-guestctl systemd-boot vm.qcow2 --recommendations
+guestkit systemd-boot vm.qcow2 --recommendations
 
 # Display summary statistics
-guestctl systemd-boot vm.qcow2 --summary
+guestkit systemd-boot vm.qcow2 --summary
 
 # Generate boot timeline diagram
-guestctl systemd-boot vm.qcow2 --timeline > boot-timeline.md
+guestkit systemd-boot vm.qcow2 --timeline > boot-timeline.md
 ```
 
 ### Boot Timing Breakdown
@@ -301,7 +301,7 @@ systemd-networkd.service                           1.67s
 Get actionable advice for improving boot time:
 
 ```bash
-guestctl systemd-boot vm.qcow2 --recommendations
+guestkit systemd-boot vm.qcow2 --recommendations
 ```
 
 Example output:
@@ -325,7 +325,7 @@ Recommendations include:
 Detailed boot metrics:
 
 ```bash
-guestctl systemd-boot vm.qcow2 --summary
+guestkit systemd-boot vm.qcow2 --summary
 ```
 
 Output includes:
@@ -339,7 +339,7 @@ Output includes:
 Visualize the boot process:
 
 ```bash
-guestctl systemd-boot vm.qcow2 --timeline > timeline.md
+guestkit systemd-boot vm.qcow2 --timeline > timeline.md
 ```
 
 Generates a Mermaid Gantt chart showing:
@@ -359,19 +359,19 @@ Generates a Mermaid Gantt chart showing:
 **Performance Troubleshooting:**
 ```bash
 # Identify boot bottlenecks
-guestctl systemd-boot vm.qcow2 --top 20
+guestkit systemd-boot vm.qcow2 --top 20
 
 # Get specific recommendations
-guestctl systemd-boot vm.qcow2 --recommendations
+guestkit systemd-boot vm.qcow2 --recommendations
 ```
 
 **Optimization Validation:**
 ```bash
 # Before optimization
-guestctl systemd-boot vm-before.qcow2 --summary > before.txt
+guestkit systemd-boot vm-before.qcow2 --summary > before.txt
 
 # After optimization
-guestctl systemd-boot vm-after.qcow2 --summary > after.txt
+guestkit systemd-boot vm-after.qcow2 --summary > after.txt
 
 # Compare results
 diff before.txt after.txt
@@ -380,10 +380,10 @@ diff before.txt after.txt
 **Documentation:**
 ```bash
 # Generate boot timeline for documentation
-guestctl systemd-boot vm.qcow2 --timeline > docs/boot-analysis.md
+guestkit systemd-boot vm.qcow2 --timeline > docs/boot-analysis.md
 
 # Export metrics for reporting
-guestctl systemd-boot vm.qcow2 --summary > reports/boot-metrics.txt
+guestkit systemd-boot vm.qcow2 --summary > reports/boot-metrics.txt
 ```
 
 **Capacity Planning:**
@@ -391,7 +391,7 @@ guestctl systemd-boot vm.qcow2 --summary > reports/boot-metrics.txt
 # Analyze multiple VMs
 for vm in vm*.qcow2; do
     echo "=== $vm ===" >> boot-report.txt
-    guestctl systemd-boot "$vm" --summary >> boot-report.txt
+    guestkit systemd-boot "$vm" --summary >> boot-report.txt
     echo "" >> boot-report.txt
 done
 ```
@@ -414,18 +414,18 @@ echo "Analyzing $VM..."
 
 # Journal analysis
 echo "1. Extracting journal errors..."
-guestctl systemd-journal "$VM" --errors > "$REPORT_DIR/journal-errors.txt"
-guestctl systemd-journal "$VM" --stats > "$REPORT_DIR/journal-stats.txt"
+guestkit systemd-journal "$VM" --errors > "$REPORT_DIR/journal-errors.txt"
+guestkit systemd-journal "$VM" --stats > "$REPORT_DIR/journal-stats.txt"
 
 # Service analysis
 echo "2. Checking services..."
-guestctl systemd-services "$VM" --failed > "$REPORT_DIR/failed-services.txt"
-guestctl systemd-services "$VM" --output json > "$REPORT_DIR/services.json"
+guestkit systemd-services "$VM" --failed > "$REPORT_DIR/failed-services.txt"
+guestkit systemd-services "$VM" --output json > "$REPORT_DIR/services.json"
 
 # Boot performance
 echo "3. Analyzing boot performance..."
-guestctl systemd-boot "$VM" --summary > "$REPORT_DIR/boot-summary.txt"
-guestctl systemd-boot "$VM" --recommendations > "$REPORT_DIR/boot-recommendations.txt"
+guestkit systemd-boot "$VM" --summary > "$REPORT_DIR/boot-summary.txt"
+guestkit systemd-boot "$VM" --recommendations > "$REPORT_DIR/boot-recommendations.txt"
 
 echo "Audit complete! Results in $REPORT_DIR/"
 ```
@@ -443,17 +443,17 @@ echo ""
 
 # Check for failed authentication
 echo "Failed SSH Logins:"
-guestctl systemd-journal "$VM" --unit sshd.service --errors | grep -i "failed\|invalid" || echo "None found"
+guestkit systemd-journal "$VM" --unit sshd.service --errors | grep -i "failed\|invalid" || echo "None found"
 echo ""
 
 # Check for failed services
 echo "Failed Services:"
-guestctl systemd-services "$VM" --failed || echo "None found"
+guestkit systemd-services "$VM" --failed || echo "None found"
 echo ""
 
 # Check for critical journal entries
 echo "Critical Events:"
-guestctl systemd-journal "$VM" --priority 2 --limit 20 || echo "None found"
+guestkit systemd-journal "$VM" --priority 2 --limit 20 || echo "None found"
 ```
 
 ### Performance Baseline Creation
@@ -467,14 +467,14 @@ BASELINE_DIR="baseline-$(date +%Y%m%d)"
 mkdir -p "$BASELINE_DIR"
 
 # Capture boot metrics
-guestctl systemd-boot "$VM" --summary > "$BASELINE_DIR/boot-metrics.txt"
-guestctl systemd-boot "$VM" --top 30 > "$BASELINE_DIR/slow-services.txt"
+guestkit systemd-boot "$VM" --summary > "$BASELINE_DIR/boot-metrics.txt"
+guestkit systemd-boot "$VM" --top 30 > "$BASELINE_DIR/slow-services.txt"
 
 # Capture service status
-guestctl systemd-services "$VM" --output json > "$BASELINE_DIR/services.json"
+guestkit systemd-services "$VM" --output json > "$BASELINE_DIR/services.json"
 
 # Capture journal stats
-guestctl systemd-journal "$VM" --stats > "$BASELINE_DIR/journal-stats.txt"
+guestkit systemd-journal "$VM" --stats > "$BASELINE_DIR/journal-stats.txt"
 
 echo "Baseline saved to $BASELINE_DIR/"
 ```
@@ -489,13 +489,13 @@ The disk image doesn't contain a recognizable OS or partitions:
 
 ```bash
 # Verify image format
-guestctl detect vm.qcow2
+guestkit detect vm.qcow2
 
 # Check image integrity
 qemu-img check vm.qcow2
 
 # Try verbose mode
-guestctl -v systemd-journal vm.qcow2
+guestkit -v systemd-journal vm.qcow2
 ```
 
 ### "No journal entries found"
@@ -504,10 +504,10 @@ The VM doesn't use systemd or journal isn't available:
 
 ```bash
 # Check if systemd is used
-guestctl inspect vm.qcow2 | grep -i init
+guestkit inspect vm.qcow2 | grep -i init
 
 # Verify journal directory exists
-guestctl cat vm.qcow2 /var/log/journal
+guestkit cat vm.qcow2 /var/log/journal
 ```
 
 ### Empty Service List
@@ -516,8 +516,8 @@ Systemd directories aren't accessible or don't exist:
 
 ```bash
 # Check systemd directories
-guestctl cat vm.qcow2 /etc/systemd/system
-guestctl cat vm.qcow2 /lib/systemd/system
+guestkit cat vm.qcow2 /etc/systemd/system
+guestkit cat vm.qcow2 /lib/systemd/system
 ```
 
 ### "No service timing data available"
@@ -528,7 +528,7 @@ Boot timing data isn't available in the VM:
 # This is expected if the VM hasn't captured boot data
 # The command will show estimated timing instead
 # Use --summary to see estimated values
-guestctl systemd-boot vm.qcow2 --summary
+guestkit systemd-boot vm.qcow2 --summary
 ```
 
 ---
@@ -554,13 +554,13 @@ Analysis creates temporary directories automatically:
 For VMs with extensive journals:
 ```bash
 # Use filtering to reduce data
-guestctl systemd-journal vm.qcow2 --priority 4 --limit 1000
+guestkit systemd-journal vm.qcow2 --priority 4 --limit 1000
 
 # Focus on specific time periods
 # (Future enhancement - timestamp filtering)
 
 # Get stats first to understand volume
-guestctl systemd-journal vm.qcow2 --stats
+guestkit systemd-journal vm.qcow2 --stats
 ```
 
 ### Performance Considerations
@@ -574,14 +574,14 @@ guestctl systemd-journal vm.qcow2 --stats
 
 ```bash
 # Export for external analysis
-guestctl systemd-services vm.qcow2 --output json | jq '.[] | select(.state=="failed")'
+guestkit systemd-services vm.qcow2 --output json | jq '.[] | select(.state=="failed")'
 
 # Generate reports
-guestctl systemd-boot vm.qcow2 --timeline | pandoc -o boot-timeline.pdf
+guestkit systemd-boot vm.qcow2 --timeline | pandoc -o boot-timeline.pdf
 
 # Compare VMs
-diff <(guestctl systemd-services vm1.qcow2 --failed) \
-     <(guestctl systemd-services vm2.qcow2 --failed)
+diff <(guestkit systemd-services vm1.qcow2 --failed) \
+     <(guestkit systemd-services vm2.qcow2 --failed)
 ```
 
 ---
@@ -636,8 +636,8 @@ Including:
 ## Support
 
 For issues, feature requests, or questions:
-- GitHub Issues: https://github.com/ssahani/guestctl/issues
-- Documentation: https://github.com/ssahani/guestctl/tree/main/docs
+- GitHub Issues: https://github.com/ssahani/guestkit/issues
+- Documentation: https://github.com/ssahani/guestkit/tree/main/docs
 
 **Version:** 0.3.1+
 **Last Updated:** January 26, 2026

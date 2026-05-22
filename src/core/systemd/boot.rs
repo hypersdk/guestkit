@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use std::fs;
 
 /// Boot analyzer
+#[derive(Debug)]
 pub struct BootAnalyzer {
     analyzer: SystemdAnalyzer,
 }
@@ -167,7 +168,7 @@ impl BootAnalyzer {
 
         // Services
         diagram.push_str("    section Userspace\n");
-        for (_idx, service) in timing.services.iter().take(10).enumerate() {
+        for service in timing.services.iter().take(10) {
             let start = offset + service.start_offset;
             let end = start + service.activation_time;
 

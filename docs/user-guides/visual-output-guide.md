@@ -1,10 +1,10 @@
 # Visual Output Guide
 
-Complete reference for guestctl's beautiful terminal output system.
+Complete reference for guestkit's beautiful terminal output system.
 
 ## Overview
 
-guestctl v0.3.1+ features a sophisticated visual output system with:
+guestkit v0.3.1+ features a sophisticated visual output system with:
 - **Killer Summary View** - Quick boxed OS summary
 - **Emoji Icons** - Visual indicators for different components
 - **Color Coding** - Semantic colors for easy scanning
@@ -45,7 +45,7 @@ The summary box appears first, showing critical information at a glance:
 
 ## Color Coding System
 
-guestctl uses semantic colors to convey meaning:
+guestkit uses semantic colors to convey meaning:
 
 ### Primary Colors
 
@@ -314,14 +314,14 @@ Network Configuration:
 
 Rich terminal output with emojis and colors:
 ```bash
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 ```
 
 ### JSON Output
 
 Machine-readable structured data:
 ```bash
-guestctl inspect vm.qcow2 --output json
+guestkit inspect vm.qcow2 --output json
 ```
 
 **Features:**
@@ -334,14 +334,14 @@ guestctl inspect vm.qcow2 --output json
 
 Human-readable structured data:
 ```bash
-guestctl inspect vm.qcow2 --output yaml
+guestkit inspect vm.qcow2 --output yaml
 ```
 
 ### CSV Output
 
 Tabular data for spreadsheets:
 ```bash
-guestctl packages vm.qcow2 --output csv
+guestkit packages vm.qcow2 --output csv
 ```
 
 ## Progress Indicators
@@ -372,18 +372,18 @@ Converting disk format: [████████████████----] 8
 ```bash
 # Disable all colors
 export NO_COLOR=1
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Or use --no-color flag (planned for v0.4.0)
-guestctl inspect vm.qcow2 --no-color
+guestkit inspect vm.qcow2 --no-color
 ```
 
 ### Disable Emojis
 
 ```bash
 # Use ASCII-only output (planned for v0.4.0)
-export GUESTCTL_ASCII=1
-guestctl inspect vm.qcow2 --ascii
+export GUESTKIT_ASCII=1
+guestkit inspect vm.qcow2 --ascii
 ```
 
 **ASCII Mode Output:**
@@ -403,7 +403,7 @@ guestctl inspect vm.qcow2 --ascii
 
 Minimal output:
 ```bash
-guestctl inspect vm.qcow2 --quiet
+guestkit inspect vm.qcow2 --quiet
 # Only shows summary, no details
 ```
 
@@ -411,7 +411,7 @@ guestctl inspect vm.qcow2 --quiet
 
 Maximum detail:
 ```bash
-guestctl inspect vm.qcow2 --verbose
+guestkit inspect vm.qcow2 --verbose
 # Shows debug information, timing, internal operations
 ```
 
@@ -449,7 +449,7 @@ tmux set-window-option -g utf8 on
 ### Security Audit Colors
 
 ```bash
-guestctl inspect vm.qcow2 --profile security
+guestkit inspect vm.qcow2 --profile security
 ```
 
 **Color Meanings:**
@@ -462,7 +462,7 @@ guestctl inspect vm.qcow2 --profile security
 ### Migration Profile Colors
 
 ```bash
-guestctl inspect vm.qcow2 --profile migration
+guestkit inspect vm.qcow2 --profile migration
 ```
 
 **Color Highlights:**
@@ -477,23 +477,23 @@ guestctl inspect vm.qcow2 --profile migration
 
 ```bash
 # Use --output json for screen reader friendly output
-guestctl inspect vm.qcow2 --output json | jq
+guestkit inspect vm.qcow2 --output json | jq
 
 # Or YAML for structured text
-guestctl inspect vm.qcow2 --output yaml
+guestkit inspect vm.qcow2 --output yaml
 ```
 
 ### High Contrast Mode
 
 Planned for v0.4.0:
 ```bash
-guestctl inspect vm.qcow2 --high-contrast
+guestkit inspect vm.qcow2 --high-contrast
 ```
 
 ## Best Practices
 
 1. **Use JSON for automation** - No emojis or colors in JSON output
-2. **Pipe to less** - For long output: `guestctl inspect vm.qcow2 | less -R`
+2. **Pipe to less** - For long output: `guestkit inspect vm.qcow2 | less -R`
 3. **Save output** - Use `--output json > report.json` for archival
 4. **Check terminal support** - Verify UTF-8 and emoji support before relying on icons
 5. **Use verbose mode for debugging** - Get detailed operation information

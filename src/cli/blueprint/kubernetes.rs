@@ -17,7 +17,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     manifests.push_str("kind: Namespace\n");
     manifests.push_str("metadata:\n");
     manifests.push_str(&format!("  name: {}\n", app_name));
-    manifests.push_str("\n");
+    manifests.push('\n');
 
     // ConfigMap
     manifests.push_str("---\n");
@@ -30,7 +30,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     manifests.push_str(&format!("  hostname: {}\n", analysis.hostname));
     manifests.push_str(&format!("  os_name: \"{}\"\n", analysis.os_name));
     manifests.push_str(&format!("  os_version: \"{}\"\n", analysis.os_version));
-    manifests.push_str("\n");
+    manifests.push('\n');
 
     // PersistentVolumeClaims for volumes
     for (idx, volume) in analysis.volumes.iter().enumerate() {
@@ -46,7 +46,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         manifests.push_str("  resources:\n");
         manifests.push_str("    requests:\n");
         manifests.push_str(&format!("      storage: {}Gi\n", volume.size_gb.ceil() as u64));
-        manifests.push_str("\n");
+        manifests.push('\n');
     }
 
     // Deployment
@@ -116,7 +116,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         }
     }
 
-    manifests.push_str("\n");
+    manifests.push('\n');
 
     // Service
     let http_ports: Vec<_> = analysis.ports.iter()
@@ -151,7 +151,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         }
 
         manifests.push_str("  type: LoadBalancer\n");
-        manifests.push_str("\n");
+        manifests.push('\n');
 
         // Ingress for HTTP/HTTPS
         let has_http = analysis.ports.iter().any(|p| p.number == 80 || p.number == 443);

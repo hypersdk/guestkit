@@ -635,11 +635,11 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
                 ]),
                 Line::from(vec![
                     Span::styled("  3  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("HTML  - Rich formatted report (coming soon)")
+                    Span::raw("HTML  - Rich formatted report")
                 ]),
                 Line::from(vec![
                     Span::styled("  4  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("PDF   - Portable document (coming soon)")
+                    Span::raw("PDF   - Portable document (CLI only)")
                 ]),
                 Line::from(""),
                 Line::from(vec![
@@ -1400,10 +1400,11 @@ fn generate_topology_details(_app: &App) -> Vec<Line<'static>> {
 fn draw_notification(f: &mut Frame, app: &App) {
     if let Some((ref message, _)) = app.notification {
         // Calculate notification position (top-right corner)
+        let char_width = message.chars().count() as u16;
         let area = Rect {
-            x: f.area().width.saturating_sub(message.len() as u16 + 6),
+            x: f.area().width.saturating_sub(char_width + 6),
             y: 1,
-            width: message.len() as u16 + 4,
+            width: char_width + 4,
             height: 3,
         };
 
@@ -1543,7 +1544,8 @@ fn draw_file_preview(f: &mut Frame, app: &App) {
                 ),
                 Span::styled(
                     if line.len() > 120 {
-                        format!("{}...", &line[..120])
+                        let truncated: String = line.chars().take(120).collect();
+                        format!("{}...", truncated)
                     } else {
                         line.to_string()
                     },

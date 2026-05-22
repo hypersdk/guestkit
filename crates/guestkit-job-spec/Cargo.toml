@@ -2,7 +2,7 @@
 name = "guestkit-job-spec"
 version = "0.1.0"
 edition = "2021"
-authors = ["Susant Sahani <ssahani@gmail.com>"]
+authors = ["Susant Sahani <ssahani@redhat.com>"]
 license = "LGPL-3.0-or-later"
 description = "VM Operations Job Protocol specification and types"
 repository = "https://github.com/ssahani/guestkit"

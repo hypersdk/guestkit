@@ -49,16 +49,8 @@ impl Guestfs {
             return Err(Error::InvalidFormat("No command provided".to_string()));
         }
 
-        // Get root mount point
-        let root_mountpoint = self
-            .mounted
-            .get("/dev/sda1")
-            .or_else(|| self.mounted.get("/dev/sda2"))
-            .or_else(|| self.mounted.get("/dev/vda1"))
-            .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| {
-                Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
-            })?;
+        // Get root mount point (use centralized helper)
+        let root_mountpoint = self.find_root_mountpoint()?;
 
         // Execute command using chroot
         let output = Command::new("chroot")
@@ -91,8 +83,14 @@ impl Guestfs {
         Ok(output.lines().map(|s| s.to_string()).collect())
     }
 
-    /// Execute a shell command
+    /// Execute a shell command inside the guest via chroot
     ///
+    /// # Security
+    ///
+    /// The `command` string is passed directly to `/bin/sh -c` inside the
+    /// chroot. Callers must ensure the command string does not contain
+    /// unsanitized user input to prevent shell injection. For programmatic
+    /// use, prefer `command()` with explicit argument arrays.
     ///
     /// # Examples
     ///
@@ -105,6 +103,43 @@ impl Guestfs {
     /// let output = g.sh("cat /etc/hostname").unwrap();
     /// ```
     pub fn sh(&mut self, command: &str) -> Result<String> {
+        // Reject commands with null bytes
+        if command.contains('\0') {
+            return Err(Error::InvalidFormat(
+                "Shell command must not contain null bytes".to_string(),
+            ));
+        }
+
+        // Reject commands with dangerous shell metacharacters.
+        // Callers should use command() with explicit arg arrays for any input
+        // that could contain user-controlled data.
+        const DANGEROUS_PATTERNS: &[&str] = &["$(", "`", "&&", "||", ">>", "<<", "|", ";", ">", "\n", "\r"];
+        for pattern in DANGEROUS_PATTERNS {
+            if command.contains(pattern) {
+                return Err(Error::SecurityViolation(format!(
+                    "sh() command contains dangerous shell metacharacter '{}'. \
+                     Use command() with explicit args for untrusted input.",
+                    pattern.escape_default()
+                )));
+            }
+        }
+
+        self.command(&["/bin/sh", "-c", command])
+    }
+
+    /// Execute a shell command containing operators (||, &&, |, >, etc.)
+    /// that would be rejected by sh().
+    ///
+    /// # Safety contract
+    /// The command string MUST be a hardcoded developer-controlled literal,
+    /// never constructed from user input. Use command() with explicit arg
+    /// arrays for any user-controlled data.
+    pub fn sh_raw(&mut self, command: &str) -> Result<String> {
+        if command.contains('\0') {
+            return Err(Error::InvalidFormat(
+                "Shell command must not contain null bytes".to_string(),
+            ));
+        }
         self.command(&["/bin/sh", "-c", command])
     }
 
@@ -122,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_command_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let g = Guestfs::new().unwrap();
         // API structure test - will fail without implementation
         let _ = g;
     }

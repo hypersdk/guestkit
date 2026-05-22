@@ -11,6 +11,10 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
+/// ioctl constant for getting block device size (Linux x86/x86_64)
+#[cfg(target_os = "linux")]
+const BLKGETSIZE64: libc::c_ulong = 0x80081272;
+
 /// Loop device manager with performance optimizations
 ///
 /// # Performance Optimizations
@@ -43,7 +47,7 @@ impl LoopDevice {
     /// Create a new loop device manager
     pub fn new() -> Result<Self> {
         // Cache sudo check once
-        let need_sudo = unsafe { libc::geteuid() } != 0;
+        let need_sudo = crate::guestfs::mount::need_sudo();
 
         Ok(LoopDevice {
             device_path: None,
@@ -168,7 +172,6 @@ impl LoopDevice {
             // Check if device is readable and has non-zero size
             if let Ok(file) = std::fs::File::open(device_path) {
                 use std::os::unix::io::AsRawFd;
-                const BLKGETSIZE64: libc::c_ulong = 0x80081272;
 
                 let mut size_bytes: u64 = 0;
                 let result = unsafe {
@@ -296,7 +299,15 @@ impl LoopDevice {
 
 impl Drop for LoopDevice {
     fn drop(&mut self) {
-        let _ = self.disconnect();
+        if let Err(e) = self.disconnect() {
+            let dev = self.device_path.as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "<unknown>".to_string());
+            eprintln!(
+                "Warning: Failed to disconnect loop device {}: {}. Manual cleanup may be required: sudo losetup -d {}",
+                dev, e, dev
+            );
+        }
     }
 }
 
@@ -345,7 +356,7 @@ mod tests {
         let loop_dev = LoopDevice::new().unwrap();
 
         // Verify sudo check is cached (same as current euid)
-        let expected_need_sudo = unsafe { libc::geteuid() } != 0;
+        let expected_need_sudo = crate::guestfs::mount::need_sudo();
         assert_eq!(loop_dev.need_sudo, expected_need_sudo);
     }
 

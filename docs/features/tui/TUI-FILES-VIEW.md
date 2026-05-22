@@ -233,7 +233,7 @@ App {
 
 ```bash
 # Start TUI mode
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 
 # Navigate to Files view
 # Press '18' or cycle with Tab

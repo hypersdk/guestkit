@@ -27,6 +27,18 @@ impl Guestfs {
             );
         }
 
+        // Validate offset and transfer size
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if size < 0 || size as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                size, MAX_TRANSFER_SIZE
+            )));
+        }
+
         let host_path = self.resolve_guest_path(remote)?;
 
         // Read from remote file with offset
@@ -54,14 +66,26 @@ impl Guestfs {
     pub fn upload_offset(&mut self, local: &str, remote: &str, offset: i64) -> Result<()> {
         self.ensure_ready()?;
 
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
+
         if self.verbose {
             eprintln!("guestfs: upload_offset {} {} {}", local, remote, offset);
         }
 
         let host_path = self.resolve_guest_path(remote)?;
 
-        // Read from local file
+        // Read from local file (limit to 100MB to prevent memory exhaustion)
+        const MAX_UPLOAD_SIZE: u64 = 100 * 1024 * 1024;
         let mut local_file = File::open(local).map_err(Error::Io)?;
+        let file_size = local_file.metadata().map_err(Error::Io)?.len();
+        if file_size > MAX_UPLOAD_SIZE {
+            return Err(Error::InvalidOperation(format!(
+                "File size ({} bytes) exceeds maximum upload size ({} bytes)",
+                file_size, MAX_UPLOAD_SIZE
+            )));
+        }
 
         let mut buffer = Vec::new();
         local_file
@@ -72,6 +96,7 @@ impl Guestfs {
         let mut remote_file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&host_path)
             .map_err(Error::Io)?;
 
@@ -96,11 +121,24 @@ impl Guestfs {
     ) -> Result<()> {
         self.ensure_ready()?;
 
+        if srcoffset < 0 || destoffset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+        }
+
         if self.verbose {
             eprintln!(
                 "guestfs: copy_file_to_file {} {} {} {} {}",
                 src, dest, srcoffset, destoffset, size
             );
+        }
+
+        // Validate transfer size to prevent excessive memory allocation
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if size < 0 || size as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                size, MAX_TRANSFER_SIZE
+            )));
         }
 
         let host_src = self.resolve_guest_path(src)?;
@@ -120,6 +158,7 @@ impl Guestfs {
         let mut dest_file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&host_dest)
             .map_err(Error::Io)?;
 
@@ -163,7 +202,8 @@ impl Guestfs {
         let src_partition = format!(
             "{}p{}",
             nbd_device.device_path().display(),
-            src.chars().last().and_then(|c| c.to_digit(10)).unwrap_or(1)
+            src.chars().last().and_then(|c| c.to_digit(10))
+                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
         );
         let dest_partition = format!(
             "{}p{}",
@@ -171,7 +211,7 @@ impl Guestfs {
             dest.chars()
                 .last()
                 .and_then(|c| c.to_digit(10))
-                .unwrap_or(1)
+                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
         );
 
         // Use dd for device-to-device copy
@@ -209,11 +249,24 @@ impl Guestfs {
     ) -> Result<()> {
         self.ensure_ready()?;
 
+        if srcoffset < 0 || destoffset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+        }
+
         if self.verbose {
             eprintln!(
                 "guestfs: copy_file_to_device {} {} {} {} {}",
                 src, dest, srcoffset, destoffset, size
             );
+        }
+
+        // Validate transfer size to prevent excessive memory allocation
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if size < 0 || size as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                size, MAX_TRANSFER_SIZE
+            )));
         }
 
         let host_src = self.resolve_guest_path(src)?;
@@ -231,7 +284,7 @@ impl Guestfs {
             dest.chars()
                 .last()
                 .and_then(|c| c.to_digit(10))
-                .unwrap_or(1)
+                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
         );
 
         // Read from source file
@@ -271,11 +324,24 @@ impl Guestfs {
     ) -> Result<()> {
         self.ensure_ready()?;
 
+        if srcoffset < 0 || destoffset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+        }
+
         if self.verbose {
             eprintln!(
                 "guestfs: copy_device_to_file {} {} {} {} {}",
                 src, dest, srcoffset, destoffset, size
             );
+        }
+
+        // Validate transfer size to prevent excessive memory allocation
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if size < 0 || size as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                size, MAX_TRANSFER_SIZE
+            )));
         }
 
         self.setup_nbd_if_needed()?;
@@ -288,7 +354,8 @@ impl Guestfs {
         let src_partition = format!(
             "{}p{}",
             nbd_device.device_path().display(),
-            src.chars().last().and_then(|c| c.to_digit(10)).unwrap_or(1)
+            src.chars().last().and_then(|c| c.to_digit(10))
+                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
         );
 
         // Read from device
@@ -307,6 +374,7 @@ impl Guestfs {
         let mut dest_file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&host_dest)
             .map_err(Error::Io)?;
 
@@ -331,8 +399,18 @@ impl Guestfs {
         let host_file1 = self.resolve_guest_path(file1)?;
         let host_file2 = self.resolve_guest_path(file2)?;
 
+        const MAX_COMPARE_SIZE: u64 = 100 * 1024 * 1024;
         let mut f1 = File::open(&host_file1).map_err(Error::Io)?;
         let mut f2 = File::open(&host_file2).map_err(Error::Io)?;
+
+        let size1 = f1.metadata().map_err(Error::Io)?.len();
+        let size2 = f2.metadata().map_err(Error::Io)?.len();
+        if size1 > MAX_COMPARE_SIZE || size2 > MAX_COMPARE_SIZE {
+            return Err(Error::InvalidOperation(format!(
+                "File size exceeds maximum compare size ({} bytes)",
+                MAX_COMPARE_SIZE
+            )));
+        }
 
         let mut buf1 = Vec::new();
         let mut buf2 = Vec::new();
@@ -370,7 +448,7 @@ mod tests {
 
     #[test]
     fn test_transfer_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

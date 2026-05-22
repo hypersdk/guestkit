@@ -10,16 +10,16 @@ The fastest way to start exploring:
 
 ```bash
 # Basic usage
-guestctl explore disk.qcow2
+guestkit explore disk.qcow2
 
 # Start from specific path
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # With verbose output
-guestctl explore --verbose disk.qcow2
+guestkit explore --verbose disk.qcow2
 
 # Short alias
-guestctl ex vm.qcow2 /var/log
+guestkit ex vm.qcow2 /var/log
 ```
 
 ### When to use:
@@ -32,20 +32,20 @@ guestctl ex vm.qcow2 /var/log
 
 ## Method 2: From Interactive Shell
 
-Launch from within the guestctl shell:
+Launch from within the guestkit shell:
 
 ```bash
 # Start shell first
-guestctl shell disk.qcow2
+guestkit shell disk.qcow2
 
 # Then launch explorer
-guestctl> explore
+guestkit> explore
 
 # Or from specific path
-guestctl> explore /etc
+guestkit> explore /etc
 
 # Short alias
-guestctl> ex /var/log
+guestkit> ex /var/log
 ```
 
 ### When to use:
@@ -87,7 +87,7 @@ Backspace    Go to parent directory
 
 ```bash
 # Direct launch
-guestctl explore disk.qcow2 /var/log
+guestkit explore disk.qcow2 /var/log
 
 # In explorer:
 # Press 's' twice to sort by size
@@ -99,7 +99,7 @@ guestctl explore disk.qcow2 /var/log
 
 ```bash
 # Launch at /etc
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # In explorer:
 # Navigate to ssh config
@@ -111,7 +111,7 @@ guestctl explore disk.qcow2 /etc
 
 ```bash
 # Start from web root
-guestctl ex disk.qcow2 /var/www/html
+guestkit ex disk.qcow2 /var/www/html
 
 # In explorer:
 # Browse site structure
@@ -123,7 +123,7 @@ guestctl ex disk.qcow2 /var/www/html
 
 ```bash
 # Launch at /home
-guestctl explore disk.qcow2 /home
+guestkit explore disk.qcow2 /home
 
 # In explorer:
 # Navigate to user directory
@@ -165,20 +165,20 @@ Instead of navigating through directories, start where you need to be:
 
 ```bash
 # Direct to config files
-guestctl explore disk.qcow2 /etc/nginx
+guestkit explore disk.qcow2 /etc/nginx
 
 # Direct to logs
-guestctl explore disk.qcow2 /var/log/apache2
+guestkit explore disk.qcow2 /var/log/apache2
 
 # Direct to application
-guestctl explore disk.qcow2 /opt/myapp
+guestkit explore disk.qcow2 /opt/myapp
 ```
 
 ### 2. Use Filters Efficiently
 
 ```bash
 # Launch explorer
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # Press '/' and type: .conf
 # Shows only .conf files
@@ -218,7 +218,7 @@ guestctl explore disk.qcow2 /etc
 
 ```bash
 # Launch
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # Navigate to SSH config
 # Press 'v' on sshd_config
@@ -232,7 +232,7 @@ guestctl explore disk.qcow2 /etc
 
 ```bash
 # Launch with verbose
-guestctl explore --verbose disk.qcow2 /var/log
+guestkit explore --verbose disk.qcow2 /var/log
 
 # Sort by size ('s' twice)
 # View largest log ('v')
@@ -244,7 +244,7 @@ guestctl explore --verbose disk.qcow2 /var/log
 
 ```bash
 # Start from app directory
-guestctl explore disk.qcow2 /opt/myapp
+guestkit explore disk.qcow2 /opt/myapp
 
 # Browse structure
 # Check config files
@@ -256,17 +256,17 @@ guestctl explore disk.qcow2 /opt/myapp
 
 ```bash
 # Start shell
-guestctl shell disk.qcow2
+guestkit shell disk.qcow2
 
 # Use traditional commands
-guestctl> cat /etc/hosts
-guestctl> grep "error" /var/log/syslog
+guestkit> cat /etc/hosts
+guestkit> grep "error" /var/log/syslog
 
 # Launch explorer when needed
-guestctl> explore /etc/nginx
+guestkit> explore /etc/nginx
 
 # Exit explorer, back to shell
-guestctl> ls -la /var/www
+guestkit> ls -la /var/www
 ```
 
 ---
@@ -277,13 +277,13 @@ guestctl> ls -la /var/www
 
 **Problem:**
 ```bash
-$ guestctl explore disk.qcow2
+$ guestkit explore disk.qcow2
 Command 'explore' not found
 ```
 
-**Solution:** Make sure you're using the latest version of guestctl:
+**Solution:** Make sure you're using the latest version of guestkit:
 ```bash
-guestctl --version  # Should be v0.3.1 or later
+guestkit --version  # Should be v0.3.1 or later
 ```
 
 ### No OS Found
@@ -300,7 +300,7 @@ Error: No operating systems found in disk image
 
 Try with verbose to see more details:
 ```bash
-guestctl explore --verbose disk.qcow2
+guestkit explore --verbose disk.qcow2
 ```
 
 ### Colors Not Showing
@@ -323,10 +323,10 @@ export TERM=xterm-256color
 **Solution:** Start from a specific subdirectory instead of root:
 ```bash
 # Instead of:
-guestctl explore disk.qcow2 /
+guestkit explore disk.qcow2 /
 
 # Try:
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 ```
 
 ---
@@ -366,7 +366,7 @@ Once inside the explorer, press `h` or `?` to see:
 ### Direct Launch (Fastest!)
 
 ```bash
-guestctl explore disk.qcow2 [path]
+guestkit explore disk.qcow2 [path]
 ```
 
 **Pros:**
@@ -378,8 +378,8 @@ guestctl explore disk.qcow2 [path]
 ### Shell Mode
 
 ```bash
-guestctl shell disk.qcow2
-guestctl> explore [path]
+guestkit shell disk.qcow2
+guestkit> explore [path]
 ```
 
 **Pros:**
@@ -394,7 +394,7 @@ guestctl> explore [path]
 
 1. **Try it now:**
    ```bash
-   guestctl explore your-vm.qcow2
+   guestkit explore your-vm.qcow2
    ```
 
 2. **Explore common paths:**

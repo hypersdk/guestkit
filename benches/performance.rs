@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Performance benchmarks for guestctl operations
+//! Performance benchmarks for guestkit operations
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use std::time::Duration;
@@ -312,7 +312,7 @@ fn benchmark_batch_inspection(c: &mut Criterion) {
 
 /// Benchmark cache hit vs cache miss performance
 fn benchmark_cache_performance(c: &mut Criterion) {
-    use guestctl::core::BinaryCache;
+    use guestkit::core::BinaryCache;
     use serde::{Deserialize, Serialize};
     use tempfile::TempDir;
 
@@ -330,7 +330,7 @@ fn benchmark_cache_performance(c: &mut Criterion) {
     let cache = BinaryCache::with_dir(temp_dir.path().to_path_buf()).unwrap();
 
     // Create large mock data (simulating full VM inspection)
-    let large_data = guestctl::core::CachedInspection::new("test-key".to_string());
+    let large_data = guestkit::core::CachedInspection::new("test-key".to_string());
 
     // Save to cache first
     cache.save("large-inspection", &large_data).unwrap();
@@ -351,7 +351,7 @@ fn benchmark_cache_performance(c: &mut Criterion) {
             counter += 1;
 
             // Simulate inspection work
-            let data = guestctl::core::CachedInspection::new(key.clone());
+            let data = guestkit::core::CachedInspection::new(key.clone());
 
             // Save to cache
             cache.save(&key, &data).unwrap();

@@ -146,6 +146,11 @@ impl PartitionTable {
             .read_u32::<LittleEndian>()
             .map_err(Error::Io)?;
 
+        // Validate entry size to prevent excessive memory allocation or undersize entries
+        if !(48..=8192).contains(&entry_size) {
+            return Err(Error::Detection(format!("Invalid GPT entry size: {}", entry_size)));
+        }
+
         // Read partition entries
         let mut partitions = Vec::new();
         let entries_offset = partition_entries_lba * 512;
@@ -179,6 +184,10 @@ impl PartitionTable {
                 .map_err(Error::Io)?;
 
             if start_lba == 0 && end_lba == 0 {
+                continue;
+            }
+
+            if end_lba < start_lba {
                 continue;
             }
 

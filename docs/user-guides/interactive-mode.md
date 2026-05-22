@@ -9,21 +9,21 @@ GuestCtl's Interactive Mode provides a powerful REPL (Read-Eval-Print Loop) for 
 **Problem with standard mode:**
 ```bash
 # Each command launches the appliance (slow!)
-guestctl list disk.qcow2 /etc
-guestctl cat disk.qcow2 /etc/hostname
-guestctl list disk.qcow2 /var/log
+guestkit list disk.qcow2 /etc
+guestkit cat disk.qcow2 /etc/hostname
+guestkit list disk.qcow2 /var/log
 # 3 separate appliance launches = slow
 ```
 
 **Solution with interactive mode:**
 ```bash
 # Launch appliance once
-guestctl interactive disk.qcow2
+guestkit interactive disk.qcow2
 
 # Then run commands instantly
-guestctl> ls /etc
-guestctl> cat /etc/hostname
-guestctl> ls /var/log
+guestkit> ls /etc
+guestkit> cat /etc/hostname
+guestkit> ls /var/log
 # Same appliance, instant responses = fast!
 ```
 
@@ -33,10 +33,10 @@ guestctl> ls /var/log
 
 ```bash
 # Full command
-guestctl interactive disk.qcow2
+guestkit interactive disk.qcow2
 
 # Short alias
-guestctl repl disk.qcow2
+guestkit repl disk.qcow2
 ```
 
 ### Startup Sequence
@@ -54,7 +54,7 @@ Initializing GuestCtl Interactive Mode...
 
 Ready! Type 'help' for commands, 'exit' to quit.
 
-guestctl>
+guestkit>
 ```
 
 ## Available Commands
@@ -64,7 +64,7 @@ guestctl>
 #### `info` - Show disk and OS information
 
 ```bash
-guestctl> info
+guestkit> info
 
 Disk Information:
   Path: /path/to/disk.qcow2
@@ -82,7 +82,7 @@ Operating System:
 #### `filesystems` (alias: `fs`) - List available filesystems
 
 ```bash
-guestctl> filesystems
+guestkit> filesystems
 
 Available Filesystems:
 
@@ -93,7 +93,7 @@ Available Filesystems:
 #### `mount` - Mount a filesystem
 
 ```bash
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 ✓ Mounted /dev/sda1 at /
 ```
@@ -101,7 +101,7 @@ guestctl> mount /dev/sda1 /
 #### `umount` (alias: `unmount`) - Unmount a filesystem
 
 ```bash
-guestctl> umount /
+guestkit> umount /
 
 ✓ Unmounted /
 ```
@@ -109,7 +109,7 @@ guestctl> umount /
 #### `mounts` - Show mounted filesystems
 
 ```bash
-guestctl> mounts
+guestkit> mounts
 
 Mounted Filesystems:
 
@@ -121,7 +121,7 @@ Mounted Filesystems:
 #### `ls` - List directory contents
 
 ```bash
-guestctl> ls /etc
+guestkit> ls /etc
 
   hostname
   hosts
@@ -134,7 +134,7 @@ guestctl> ls /etc
 #### `cat` - Display file contents
 
 ```bash
-guestctl> cat /etc/hostname
+guestkit> cat /etc/hostname
 
 web-server
 ```
@@ -142,7 +142,7 @@ web-server
 #### `head` - Display first lines of file
 
 ```bash
-guestctl> head /var/log/syslog 10
+guestkit> head /var/log/syslog 10
 
 Jan 24 10:00:01 web-server systemd[1]: Started Session 1.
 Jan 24 10:00:02 web-server kernel: ...
@@ -154,7 +154,7 @@ Usage: `head <path> [lines]` (default: 10 lines)
 #### `find` - Find files by pattern
 
 ```bash
-guestctl> find '*.conf'
+guestkit> find '*.conf'
 
   /etc/nginx/nginx.conf
   /etc/ssh/sshd_config
@@ -167,7 +167,7 @@ guestctl> find '*.conf'
 #### `stat` - Show file information
 
 ```bash
-guestctl> stat /etc/hostname
+guestkit> stat /etc/hostname
 
 File Information:
   Path: /etc/hostname
@@ -180,7 +180,7 @@ File Information:
 #### `download` (alias: `dl`) - Download file from disk
 
 ```bash
-guestctl> download /etc/hostname ./hostname.txt
+guestkit> download /etc/hostname ./hostname.txt
 
 ✓ Downloaded /etc/hostname to ./hostname.txt
 ```
@@ -190,7 +190,7 @@ guestctl> download /etc/hostname ./hostname.txt
 Launch a visual, interactive file explorer with rich features:
 
 ```bash
-guestctl> explore /var/log
+guestkit> explore /var/log
 
 ┌─────────────────────────────────────────────────────────┐
 │ 📍 Path: /var/log  📊 Items: 42                         │
@@ -229,14 +229,14 @@ guestctl> explore /var/log
 
 **Usage:** `explore [path]` (defaults to current directory)
 
-**Tip:** Also available directly via CLI: `guestctl explore vm.qcow2 /path`
+**Tip:** Also available directly via CLI: `guestkit explore vm.qcow2 /path`
 
 ### System Inspection
 
 #### `packages` (alias: `pkg`) - List installed packages
 
 ```bash
-guestctl> packages
+guestkit> packages
 
   nginx 1.18.0 High performance web server
   postgresql-14 14.5-0ubuntu0.22.04.1 Object-relational SQL database
@@ -248,7 +248,7 @@ guestctl> packages
 
 Filter packages:
 ```bash
-guestctl> packages python
+guestkit> packages python
 
   python3 3.10.6-1~22.04 Interactive high-level object-oriented language
   python3-pip 22.0.2+dfsg-1 Package installer for Python
@@ -262,7 +262,7 @@ guestctl> packages python
 #### `services` (alias: `svc`) - List system services
 
 ```bash
-guestctl> services
+guestkit> services
 
 Enabled Services:
 
@@ -278,7 +278,7 @@ Enabled Services:
 #### `users` - List user accounts
 
 ```bash
-guestctl> users
+guestkit> users
 
 User Accounts:
 
@@ -299,7 +299,7 @@ User Accounts:
 #### `network` (alias: `net`) - Show network configuration
 
 ```bash
-guestctl> network
+guestkit> network
 
 Network Interfaces:
 
@@ -320,13 +320,13 @@ DNS Servers:
 #### `clear` (alias: `cls`) - Clear screen
 
 ```bash
-guestctl> clear
+guestkit> clear
 ```
 
 #### `help` (alias: `?`) - Show help
 
 ```bash
-guestctl> help
+guestkit> help
 
 GuestCtl Interactive Commands:
 
@@ -363,7 +363,7 @@ GuestCtl Interactive Commands:
 #### `exit` (aliases: `quit`, `q`) - Exit interactive mode
 
 ```bash
-guestctl> exit
+guestkit> exit
 Goodbye!
 ```
 
@@ -417,95 +417,95 @@ The appliance remains running for the duration of your interactive session:
 
 ```bash
 # 1. Start interactive mode
-guestctl interactive unknown-disk.qcow2
+guestkit interactive unknown-disk.qcow2
 
 # 2. Check what OS it is
-guestctl> info
+guestkit> info
 
 # 3. See filesystems
-guestctl> filesystems
+guestkit> filesystems
 
 # 4. Mount root filesystem
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 # 5. Look around
-guestctl> ls /
+guestkit> ls /
 
 # 6. Check installed software
-guestctl> packages | head -20
+guestkit> packages | head -20
 
 # 7. Check running services
-guestctl> services
+guestkit> services
 
 # 8. Done
-guestctl> exit
+guestkit> exit
 ```
 
 ### Extracting Configuration Files
 
 ```bash
-guestctl interactive web-server.qcow2
+guestkit interactive web-server.qcow2
 
 # Mount filesystem
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 # Find config files
-guestctl> find '*.conf'
+guestkit> find '*.conf'
 
 # Download what you need
-guestctl> download /etc/nginx/nginx.conf ./nginx.conf
-guestctl> download /etc/ssh/sshd_config ./sshd_config
+guestkit> download /etc/nginx/nginx.conf ./nginx.conf
+guestkit> download /etc/ssh/sshd_config ./sshd_config
 
-guestctl> exit
+guestkit> exit
 ```
 
 ### Security Audit
 
 ```bash
-guestctl interactive server.qcow2
+guestkit interactive server.qcow2
 
 # Check OS and version
-guestctl> info
+guestkit> info
 
 # List all users
-guestctl> users
+guestkit> users
 
 # Check enabled services
-guestctl> services
+guestkit> services
 
 # Look for suspicious packages
-guestctl> packages | grep -i hack
-guestctl> packages | grep -i backdoor
+guestkit> packages | grep -i hack
+guestkit> packages | grep -i backdoor
 
 # Check SSH config
-guestctl> cat /etc/ssh/sshd_config
+guestkit> cat /etc/ssh/sshd_config
 
 # Check cron jobs
-guestctl> ls /etc/cron.d
-guestctl> ls /var/spool/cron
+guestkit> ls /etc/cron.d
+guestkit> ls /var/spool/cron
 
-guestctl> exit
+guestkit> exit
 ```
 
 ### Troubleshooting Boot Issues
 
 ```bash
-guestctl interactive broken-vm.qcow2
+guestkit interactive broken-vm.qcow2
 
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 # Check boot configuration
-guestctl> cat /etc/fstab
-guestctl> cat /boot/grub/grub.cfg
+guestkit> cat /etc/fstab
+guestkit> cat /boot/grub/grub.cfg
 
 # Check for kernel panics
-guestctl> find '/var/log/kern*'
-guestctl> cat /var/log/kern.log
+guestkit> find '/var/log/kern*'
+guestkit> cat /var/log/kern.log
 
 # Check systemd
-guestctl> cat /etc/systemd/system.conf
+guestkit> cat /etc/systemd/system.conf
 
-guestctl> exit
+guestkit> exit
 ```
 
 ## Tips & Tricks
@@ -524,28 +524,28 @@ Shorter commands = faster workflow:
 Instead of scrolling through thousands of packages:
 ```bash
 # Bad: lists all 2000 packages
-guestctl> packages
+guestkit> packages
 
 # Good: filter to what you need
-guestctl> packages nginx
-guestctl> packages python
-guestctl> packages kernel
+guestkit> packages nginx
+guestkit> packages python
+guestkit> packages kernel
 ```
 
 ### 3. Use `find` for Discovery
 
 Don't know exact paths? Use find:
 ```bash
-guestctl> find '*.log'
-guestctl> find '*nginx*'
-guestctl> find '*.key'
+guestkit> find '*.log'
+guestkit> find '*nginx*'
+guestkit> find '*.key'
 ```
 
 ### 4. Combine with Shell
 
 Interactive mode output can be piped:
 ```bash
-guestctl interactive disk.qcow2 << EOF
+guestkit interactive disk.qcow2 << EOF
 packages
 EOF | grep python
 ```
@@ -554,15 +554,15 @@ EOF | grep python
 
 ```bash
 # Start session
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 # Download batch of files
-guestctl> download /etc/passwd ./passwd
-guestctl> download /etc/shadow ./shadow
-guestctl> download /etc/group ./group
+guestkit> download /etc/passwd ./passwd
+guestkit> download /etc/shadow ./shadow
+guestkit> download /etc/group ./group
 
 # All downloaded, exit
-guestctl> exit
+guestkit> exit
 ```
 
 ## Comparison with Standard Mode
@@ -602,14 +602,14 @@ Error: Failed to list directory: /etc
 2. Check correct mountpoint: `ls /` should work
 3. Try mounting root filesystem explicitly:
    ```bash
-   guestctl> filesystems
-   guestctl> mount /dev/sda1 /
+   guestkit> filesystems
+   guestkit> mount /dev/sda1 /
    ```
 
 ### Can't See Files
 
 ```
-guestctl> ls /etc
+guestkit> ls /etc
 0 entries
 ```
 
@@ -617,9 +617,9 @@ guestctl> ls /etc
 
 **Solution:**
 ```bash
-guestctl> filesystems  # See available filesystems
-guestctl> mount /dev/sda1 /  # Mount root
-guestctl> ls /etc  # Now works
+guestkit> filesystems  # See available filesystems
+guestkit> mount /dev/sda1 /  # Mount root
+guestkit> ls /etc  # Now works
 ```
 
 ## Limitations
@@ -647,7 +647,7 @@ Planned features for future releases:
 ### Quick Inspection
 
 ```bash
-$ guestctl interactive ubuntu-22.04.qcow2
+$ guestkit interactive ubuntu-22.04.qcow2
 
 Initializing GuestCtl Interactive Mode...
   → Loading disk: ubuntu-22.04.qcow2
@@ -657,7 +657,7 @@ Initializing GuestCtl Interactive Mode...
 
 Ready! Type 'help' for commands, 'exit' to quit.
 
-guestctl> info
+guestkit> info
 
 Disk Information:
   Path: ubuntu-22.04.qcow2
@@ -669,44 +669,44 @@ Operating System:
   Hostname: ubuntu-server
   Architecture: x86_64
 
-guestctl> packages python
+guestkit> packages python
 
   python3 3.10.6-1~22.04
   python3-pip 22.0.2+dfsg-1
   ...
 
-guestctl> exit
+guestkit> exit
 Goodbye!
 ```
 
 ### File Extraction Session
 
 ```bash
-$ guestctl repl production-db.qcow2
+$ guestkit repl production-db.qcow2
 
-guestctl> filesystems
+guestkit> filesystems
 
 Available Filesystems:
   /dev/sda1 ext4
 
-guestctl> mount /dev/sda1 /
+guestkit> mount /dev/sda1 /
 
 ✓ Mounted /dev/sda1 at /
 
-guestctl> find '*postgres*conf'
+guestkit> find '*postgres*conf'
 
   /etc/postgresql/14/main/postgresql.conf
   /etc/postgresql/14/main/pg_hba.conf
 
-guestctl> download /etc/postgresql/14/main/postgresql.conf ./postgresql.conf
+guestkit> download /etc/postgresql/14/main/postgresql.conf ./postgresql.conf
 
 ✓ Downloaded /etc/postgresql/14/main/postgresql.conf to ./postgresql.conf
 
-guestctl> download /etc/postgresql/14/main/pg_hba.conf ./pg_hba.conf
+guestkit> download /etc/postgresql/14/main/pg_hba.conf ./pg_hba.conf
 
 ✓ Downloaded /etc/postgresql/14/main/pg_hba.conf to ./pg_hba.conf
 
-guestctl> exit
+guestkit> exit
 Goodbye!
 ```
 

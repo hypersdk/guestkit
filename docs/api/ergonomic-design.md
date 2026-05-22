@@ -64,7 +64,7 @@ g.mkfs("etx4", "/dev/sda2", None, None, None, None)?;  // Typo! Won't catch unti
 
 **Fluent API** (enum-based):
 ```rust
-use guestctl::guestfs::FilesystemType;
+use guestkit::guestfs::FilesystemType;
 
 // Type-safe - compiler catches typos!
 g.mkfs("/dev/sda1")
@@ -161,7 +161,7 @@ for root in &roots {
 
 **Fluent API** (enums):
 ```rust
-use guestctl::guestfs::{OsType, Distro, PackageManager};
+use guestkit::guestfs::{OsType, Distro, PackageManager};
 
 let roots = g.inspect_os()?;
 for root in &roots {
@@ -208,7 +208,7 @@ g.part_init("/dev/sda", "gpt")?;  // String - could type "GPT", "Gpt", etc.
 
 **Fluent API**:
 ```rust
-use guestctl::guestfs::PartitionTableType;
+use guestkit::guestfs::PartitionTableType;
 
 g.part_init("/dev/sda", PartitionTableType::Gpt.as_str())?;
 // Or:
@@ -221,12 +221,12 @@ g.part_init("/dev/sda", PartitionTableType::Mbr.as_str())?;
 
 **Old:**
 ```rust
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 ```
 
 **New:**
 ```rust
-use guestctl::guestfs::{
+use guestkit::guestfs::{
     Guestfs,              // Main handle
     FilesystemType,       // Type-safe filesystems
     PartitionTableType,   // Type-safe partition tables

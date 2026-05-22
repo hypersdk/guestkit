@@ -1,6 +1,6 @@
 # Best Practices Guide
 
-Expert recommendations for using guestctl effectively and safely.
+Expert recommendations for using guestkit effectively and safely.
 
 ## General Principles
 
@@ -8,13 +8,13 @@ Expert recommendations for using guestctl effectively and safely.
 
 ```bash
 # Good: Read-only inspection (default)
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Good: Explicit read-only
-guestctl interactive vm.qcow2 --readonly
+guestkit interactive vm.qcow2 --readonly
 
 # Caution: Read-write mode (only when modifying)
-guestctl interactive vm.qcow2 --read-write
+guestkit interactive vm.qcow2 --read-write
 ```
 
 **Why:** Read-only mode prevents accidental modifications and allows safe inspection of running VMs.
@@ -29,7 +29,7 @@ cp vm.qcow2 vm.qcow2.backup
 qemu-img create -f qcow2 -b vm.qcow2 -F qcow2 vm-snapshot.qcow2
 
 # Then modify safely
-guestctl interactive vm.qcow2 --read-write
+guestkit interactive vm.qcow2 --read-write
 ```
 
 **Why:** Mistakes in VM modification can render systems unbootable.
@@ -38,16 +38,16 @@ guestctl interactive vm.qcow2 --read-write
 
 ```bash
 # Human reading: Pretty text (default)
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Automation/scripting: JSON
-guestctl inspect vm.qcow2 --output json | jq '.os.hostname'
+guestkit inspect vm.qcow2 --output json | jq '.os.hostname'
 
 # Documentation: HTML export
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 
 # Data analysis: CSV
-guestctl packages vm.qcow2 --output csv | sort
+guestkit packages vm.qcow2 --output csv | sort
 ```
 
 **Why:** Different formats serve different purposes efficiently.
@@ -56,13 +56,13 @@ guestctl packages vm.qcow2 --output csv | sort
 
 ```bash
 # First run: ~30 seconds
-guestctl inspect vm.qcow2 --cache
+guestkit inspect vm.qcow2 --cache
 
 # Subsequent runs: <0.5 seconds (60x faster!)
-guestctl inspect vm.qcow2 --cache
+guestkit inspect vm.qcow2 --cache
 
 # Clear cache when VM changes
-guestctl cache-clear
+guestkit cache-clear
 ```
 
 **Why:** Caching dramatically speeds up workflow for unchanged VMs.
@@ -71,13 +71,13 @@ guestctl cache-clear
 
 ```bash
 # Security audit
-guestctl inspect vm.qcow2 --profile security
+guestkit inspect vm.qcow2 --profile security
 
 # Migration planning
-guestctl inspect vm.qcow2 --profile migration
+guestkit inspect vm.qcow2 --profile migration
 
 # Performance analysis
-guestctl inspect vm.qcow2 --profile performance
+guestkit inspect vm.qcow2 --profile performance
 ```
 
 **Why:** Profiles focus on relevant information for your task.
@@ -103,7 +103,7 @@ qemu-img convert -f qcow2 -O raw vm.qcow2 vm.raw
 qemu-img convert -f vmdk -O qcow2 -c vm.vmdk vm.qcow2
 
 # For repeated inspections: Use RAW with loop device
-guestctl inspect vm.raw  # Fast: loop device used
+guestkit inspect vm.raw  # Fast: loop device used
 ```
 
 **Best Practice:** Use RAW for production VMs, QCOW2 for development/testing.
@@ -114,14 +114,14 @@ guestctl inspect vm.raw  # Fast: loop device used
 
 ```bash
 # 1. Complete inventory
-guestctl inspect source-vm.qcow2 --profile migration --output json > inventory.json
+guestkit inspect source-vm.qcow2 --profile migration --output json > inventory.json
 
 # 2. Check disk space
 du -sh source-vm.qcow2
 df -h /target/path
 
 # 3. Verify format compatibility
-guestctl detect source-vm.qcow2
+guestkit detect source-vm.qcow2
 
 # 4. Test migration on non-production copy first
 cp source-vm.qcow2 test-vm.qcow2
@@ -147,7 +147,7 @@ UUID=abc123... /     ext4  defaults  0 1
 
 ```bash
 # After migration, verify:
-guestctl inspect migrated-vm.qcow2
+guestkit inspect migrated-vm.qcow2
 # Check:
 # - OS detects correctly
 # - Network configuration present
@@ -164,7 +164,7 @@ virt-install --name test-boot --disk migrated-vm.qcow2 --import
 
 ```bash
 # Use loop devices for RAW/IMG/ISO (faster)
-guestctl inspect disk.raw  # Fast: loop device
+guestkit inspect disk.raw  # Fast: loop device
 
 # Convert QCOW2 to RAW for better performance
 qemu-img convert -O raw vm.qcow2 vm.raw
@@ -177,7 +177,7 @@ qemu-img convert -O qcow2 -c vm.qcow2 vm-optimized.qcow2
 
 ```bash
 # Inspect multiple VMs in parallel
-guestctl inspect-batch *.qcow2 --parallel 4 --cache
+guestkit inspect-batch *.qcow2 --parallel 4 --cache
 
 # Use parallel with cache for best performance
 # First run: 4x speedup (parallel)
@@ -188,10 +188,10 @@ guestctl inspect-batch *.qcow2 --parallel 4 --cache
 
 ```bash
 # For large VMs, use streaming operations
-guestctl cat large-vm.qcow2 /var/log/huge.log | grep ERROR
+guestkit cat large-vm.qcow2 /var/log/huge.log | grep ERROR
 
 # Instead of extracting entire file
-# Avoid: guestctl extract large-vm.qcow2 /var/log/huge.log ./huge.log
+# Avoid: guestkit extract large-vm.qcow2 /var/log/huge.log ./huge.log
 ```
 
 ## Security Best Practices
@@ -200,21 +200,21 @@ guestctl cat large-vm.qcow2 /var/log/huge.log | grep ERROR
 
 ```bash
 # Use read-only mode (no sudo required for inspection)
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Only use elevated privileges when necessary
-sudo guestctl interactive vm.qcow2 --read-write
+sudo guestkit interactive vm.qcow2 --read-write
 ```
 
 ### Secure Password Handling
 
 ```bash
 # Never hardcode passwords
-# Bad: echo "password123" | guestctl ...
+# Bad: echo "password123" | guestkit ...
 
 # Good: Use environment variables
 export LUKS_PASSPHRASE="$(pass show vm-encryption)"
-guestctl interactive encrypted-vm.qcow2
+guestkit interactive encrypted-vm.qcow2
 
 # Or prompt user
 read -s -p "Enter LUKS passphrase: " LUKS_PASS
@@ -224,7 +224,7 @@ read -s -p "Enter LUKS passphrase: " LUKS_PASS
 
 ```bash
 # When using --profile security, review findings
-guestctl inspect vm.qcow2 --profile security --output json > audit.json
+guestkit inspect vm.qcow2 --profile security --output json > audit.json
 
 # Check for:
 jq '.security.ssh_permit_root_login' audit.json     # Should be "no"
@@ -236,7 +236,7 @@ jq '.security.firewall_status' audit.json           # Should be "active"
 
 ```bash
 # Be cautious extracting files (malware risk)
-guestctl extract untrusted-vm.qcow2 /suspicious/file.exe ./malware-sample.exe
+guestkit extract untrusted-vm.qcow2 /suspicious/file.exe ./malware-sample.exe
 
 # Run in isolated environment or scan with antivirus
 clamscan ./malware-sample.exe
@@ -258,7 +258,7 @@ virt-win-reg windows.qcow2 --merge virtio-drivers.reg
 
 ```bash
 # Backup registry before modifications
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > download "C:\\Windows\\System32\\config\\SYSTEM" ./SYSTEM.backup
 > download "C:\\Windows\\System32\\config\\SOFTWARE" ./SOFTWARE.backup
@@ -274,7 +274,7 @@ guestctl interactive windows.qcow2
 
 ```bash
 # Check activation before migration
-guestctl inspect windows.qcow2 | grep -i activation
+guestkit inspect windows.qcow2 | grep -i activation
 
 # Document product key (if visible)
 # Re-activate after migration if needed
@@ -286,7 +286,7 @@ guestctl inspect windows.qcow2 | grep -i activation
 ### Always Use Context Managers
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 # Good: Automatic cleanup
 with Guestfs() as g:
@@ -307,7 +307,7 @@ g.shutdown()  # Must remember to call this!
 ### Error Handling
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 import logging
 
 def safe_inspect(image_path):
@@ -331,7 +331,7 @@ def safe_inspect(image_path):
 ### Type Hints
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 from typing import List, Optional
 
 def get_users(image_path: str) -> Optional[List[str]]:
@@ -365,14 +365,14 @@ if [[ ! -f "$IMAGE" ]]; then
 fi
 
 # Check file format
-FORMAT=$(guestctl detect "$IMAGE" --output json | jq -r '.format')
+FORMAT=$(guestkit detect "$IMAGE" --output json | jq -r '.format')
 if [[ "$FORMAT" == "unknown" ]]; then
     echo "Error: Unknown disk format: $IMAGE" >&2
     exit 1
 fi
 
 # Perform operation with error handling
-if ! guestctl inspect "$IMAGE" --output json > output.json; then
+if ! guestkit inspect "$IMAGE" --output json > output.json; then
     echo "Error: Inspection failed for $IMAGE" >&2
     exit 1
 fi
@@ -391,11 +391,11 @@ echo "Success: Inspection complete"
 ```bash
 # Enable verbose logging for troubleshooting
 export RUST_LOG=debug
-guestctl inspect vm.qcow2 2> debug.log
+guestkit inspect vm.qcow2 2> debug.log
 
 # Or selective logging
-export RUST_LOG=guestctl::guestfs=debug
-guestctl inspect vm.qcow2
+export RUST_LOG=guestkit::guestfs=debug
+guestkit inspect vm.qcow2
 ```
 
 ### CI/CD Integration
@@ -404,11 +404,11 @@ guestctl inspect vm.qcow2
 # GitHub Actions example
 - name: Inspect VM image
   run: |
-    # Install guestctl
+    # Install guestkit
     cargo install guestkit
 
     # Inspect test image
-    guestctl inspect test-vm.qcow2 --output json > inspection.json
+    guestkit inspect test-vm.qcow2 --output json > inspection.json
 
     # Validate expected configuration
     jq -e '.os.distribution == "ubuntu"' inspection.json
@@ -425,13 +425,13 @@ file vm.qcow2
 qemu-img info vm.qcow2
 
 # 2. Check format detection
-guestctl detect vm.qcow2
+guestkit detect vm.qcow2
 
 # 3. Inspect with verbose output
-guestctl inspect vm.qcow2 --verbose 2>&1 | tee debug.log
+guestkit inspect vm.qcow2 --verbose 2>&1 | tee debug.log
 
 # 4. Try interactive mode
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > ls
 > mount /
 > ls /
@@ -452,11 +452,11 @@ export LIBGUESTFS_BACKEND=direct
 **Problem:** "No operating system detected"
 ```bash
 # Solution: Check if disk is bootable
-guestctl filesystems vm.qcow2
-guestctl list vm.qcow2 /boot
+guestkit filesystems vm.qcow2
+guestkit list vm.qcow2 /boot
 
 # Verify boot configuration
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > cat /etc/fstab
 > ls /boot
@@ -468,17 +468,17 @@ guestctl interactive vm.qcow2
 
 ```bash
 # Create inspection reports
-guestctl inspect vm.qcow2 --export markdown --export-output inventory.md
+guestkit inspect vm.qcow2 --export markdown --export-output inventory.md
 
 # Include in documentation
-# VMs are self-documenting with guestctl!
+# VMs are self-documenting with guestkit!
 ```
 
 ### Version Control
 
 ```bash
 # Track VM configuration changes
-guestctl inspect vm.qcow2 --output json > vm-config-$(date +%Y%m%d).json
+guestkit inspect vm.qcow2 --output json > vm-config-$(date +%Y%m%d).json
 
 # Commit to git
 git add vm-config-*.json
@@ -497,7 +497,7 @@ diff <(jq -S . vm-config-old.json) <(jq -S . vm-config-new.json)
 cp production.qcow2 test-migration.qcow2
 
 # Perform migration
-guestctl interactive test-migration.qcow2 --read-write
+guestkit interactive test-migration.qcow2 --read-write
 # ... make changes ...
 
 # Verify boot
@@ -510,10 +510,10 @@ virt-install --name test --disk test-migration.qcow2 --import
 
 ```bash
 # Baseline inspection
-guestctl inspect vm.qcow2 --output json > baseline.json
+guestkit inspect vm.qcow2 --output json > baseline.json
 
 # After changes
-guestctl inspect vm.qcow2 --output json > modified.json
+guestkit inspect vm.qcow2 --output json > modified.json
 
 # Compare (should be minimal differences)
 diff <(jq -S . baseline.json) <(jq -S . modified.json)
@@ -525,7 +525,7 @@ diff <(jq -S . baseline.json) <(jq -S . modified.json)
 
 ```bash
 # Monthly security audit
-guestctl inspect vm.qcow2 --profile security --output json > audit-$(date +%Y-%m).json
+guestkit inspect vm.qcow2 --profile security --output json > audit-$(date +%Y-%m).json
 
 # Check for issues
 jq '.security.ssh_permit_root_login' audit-*.json
@@ -536,20 +536,20 @@ jq '.security.outdated_packages' audit-*.json
 
 ```bash
 # View cache statistics
-guestctl cache-stats
+guestkit cache-stats
 
 # Clear stale cache entries (run weekly)
-guestctl cache-clear --older-than 7d
+guestkit cache-clear --older-than 7d
 
 # Or clear all cache
-guestctl cache-clear
+guestkit cache-clear
 ```
 
-### Update guestctl
+### Update guestkit
 
 ```bash
 # Check version
-guestctl version
+guestkit version
 
 # Update to latest
 cargo install guestkit --force
@@ -577,7 +577,7 @@ cargo install --path .
 - [ ] Test incrementally, not all at once
 
 ### After Modification
-- [ ] Run `guestctl inspect` to verify
+- [ ] Run `guestkit inspect` to verify
 - [ ] Test boot in target environment
 - [ ] Document changes made
 - [ ] Update configuration management

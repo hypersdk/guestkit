@@ -32,9 +32,9 @@ impl Guestfs {
         for partition in partition_table.partitions() {
             parts.push(PartInfo {
                 part_num: partition.number as i32,
-                part_start: (partition.start_lba * 512) as i64,
-                part_end: ((partition.start_lba + partition.size_sectors) * 512) as i64,
-                part_size: (partition.size_sectors * 512) as i64,
+                part_start: partition.start_lba.saturating_mul(512) as i64,
+                part_end: partition.start_lba.saturating_add(partition.size_sectors).saturating_mul(512) as i64,
+                part_size: partition.size_sectors.saturating_mul(512) as i64,
             });
         }
 
@@ -124,7 +124,7 @@ impl Guestfs {
         let partition = partition_table
             .partitions()
             .iter()
-            .find(|p| p.number == partnum as u32)
+            .find(|p| partnum >= 0 && p.number == partnum as u32)
             .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partnum)))?;
 
         Ok(partition.bootable)
@@ -156,7 +156,7 @@ impl Guestfs {
         let partition = partition_table
             .partitions()
             .iter()
-            .find(|p| p.number == partnum as u32)
+            .find(|p| partnum >= 0 && p.number == partnum as u32)
             .ok_or_else(|| Error::NotFound(format!("Partition {} not found", partnum)))?;
 
         Ok(partition.type_id as i32)

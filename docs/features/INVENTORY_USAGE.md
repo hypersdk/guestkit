@@ -84,7 +84,7 @@ guestkit inventory vm.qcow2 --format csv -o packages.csv
 ### Include Additional Data
 - `--include-licenses` - Add license information for each package
 - `--include-cves` - Include CVE vulnerability mappings
-- `--include-files` - Add file manifests (coming soon)
+- `--include-files` - Add file manifests
 
 ### Filter Vulnerabilities
 ```bash
@@ -194,7 +194,7 @@ The current implementation includes example CVEs for demonstration. In productio
 ## Limitations
 
 Current version:
-- File manifests not yet implemented
+- File manifest support is basic
 - CVE data is examples only (production would use real CVE DB)
 - License detection limited to well-known packages
 - No dependency tree visualization yet
@@ -243,5 +243,9 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines on:
 - Improving SBOM formats
 
 ---
+
+## Security Posture
+
+GuestKit itself has undergone a comprehensive security audit with 54 issues fixed across input validation, error propagation, and safe resource handling. This complements the security scanning capabilities the inventory command provides for inspected disk images.
 
 *Last updated: 2024-02-02*

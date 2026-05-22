@@ -75,7 +75,9 @@ impl Guestfs {
         let partition_num = self.parse_device_name(device)?;
 
         // Get NBD partition device path
-        let nbd = self.nbd_device.as_ref().unwrap();
+        let nbd = self.nbd_device.as_ref().ok_or_else(|| {
+            Error::InvalidState("NBD device not initialized. Call setup_nbd_if_needed() first.".to_string())
+        })?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)
         } else {
@@ -263,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_checksum_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

@@ -4,11 +4,11 @@
 
 ```bash
 # Basic inspection
-guestctl inspect disk.qcow2
+guestkit inspect disk.qcow2
 
 # Verbose mode (detailed logging)
-guestctl inspect disk.qcow2 --verbose
-guestctl inspect disk.qcow2 -v
+guestkit inspect disk.qcow2 --verbose
+guestkit inspect disk.qcow2 -v
 ```
 
 ## 📋 What Gets Inspected
@@ -40,19 +40,19 @@ guestctl inspect disk.qcow2 -v
 
 ```bash
 # Inspect a QCOW2 image
-guestctl inspect vm-disk.qcow2
+guestkit inspect vm-disk.qcow2
 
 # Inspect with verbose logging
-guestctl inspect vm-disk.qcow2 -v 2>verbose.log
+guestkit inspect vm-disk.qcow2 -v 2>verbose.log
 
 # Inspect a RAW disk
-guestctl inspect disk.img
+guestkit inspect disk.img
 
 # Inspect and save output
-guestctl inspect disk.qcow2 > inspection-report.txt
+guestkit inspect disk.qcow2 > inspection-report.txt
 
 # Inspect with verbose to separate files
-guestctl inspect disk.qcow2 -v >report.txt 2>debug.log
+guestkit inspect disk.qcow2 -v >report.txt 2>debug.log
 ```
 
 ## 📊 Sample Output Sections
@@ -106,7 +106,7 @@ guestctl inspect disk.qcow2 -v >report.txt 2>debug.log
 ## 🔍 Verbose Output Examples
 
 ```bash
-$ guestctl inspect disk.qcow2 -v
+$ guestkit inspect disk.qcow2 -v
 
 [VERBOSE] Adding drive: disk.qcow2
 [VERBOSE] Launching QEMU appliance...
@@ -134,42 +134,42 @@ $ guestctl inspect disk.qcow2 -v
 ### 1. Filter Specific Information
 ```bash
 # Get only network info
-guestctl inspect disk.qcow2 | grep -A 20 "Network Configuration"
+guestkit inspect disk.qcow2 | grep -A 20 "Network Configuration"
 
 # Get only user accounts
-guestctl inspect disk.qcow2 | grep -A 30 "User Accounts"
+guestkit inspect disk.qcow2 | grep -A 30 "User Accounts"
 
 # Get OS summary
-guestctl inspect disk.qcow2 | grep -A 15 "Operating Systems"
+guestkit inspect disk.qcow2 | grep -A 15 "Operating Systems"
 ```
 
 ### 2. Compare Two VMs
 ```bash
 # Inspect both and compare
-guestctl inspect vm1.qcow2 > vm1-report.txt
-guestctl inspect vm2.qcow2 > vm2-report.txt
+guestkit inspect vm1.qcow2 > vm1-report.txt
+guestkit inspect vm2.qcow2 > vm2-report.txt
 diff vm1-report.txt vm2-report.txt
 ```
 
 ### 3. Extract Specific Data
 ```bash
 # Get hostname
-guestctl inspect disk.qcow2 | grep "Hostname:"
+guestkit inspect disk.qcow2 | grep "Hostname:"
 
 # Get installed kernels
-guestctl inspect disk.qcow2 | grep -A 5 "Installed kernels"
+guestkit inspect disk.qcow2 | grep -A 5 "Installed kernels"
 
 # Get enabled services
-guestctl inspect disk.qcow2 | grep -A 20 "Systemd Services"
+guestkit inspect disk.qcow2 | grep -A 20 "Systemd Services"
 ```
 
 ### 4. Debugging Issues
 ```bash
 # Full verbose output for troubleshooting
-guestctl inspect problematic.qcow2 -v 2>&1 | tee full-debug.log
+guestkit inspect problematic.qcow2 -v 2>&1 | tee full-debug.log
 
 # Check what failed
-guestctl inspect disk.qcow2 -v 2>&1 | grep -i "error\|failed"
+guestkit inspect disk.qcow2 -v 2>&1 | grep -i "error\|failed"
 ```
 
 ### 5. Automation
@@ -177,7 +177,7 @@ guestctl inspect disk.qcow2 -v 2>&1 | grep -i "error\|failed"
 # Inspect all QCOW2 files in directory
 for img in *.qcow2; do
     echo "=== $img ==="
-    guestctl inspect "$img"
+    guestkit inspect "$img"
     echo ""
 done > all-vms-report.txt
 ```
@@ -194,19 +194,19 @@ echo "Date: $(date)"
 echo "Disk: $DISK"
 echo ""
 
-guestctl inspect "$DISK" | grep -E "(Root:|Type:|Distribution:|Product:|Version:|Hostname:|Disk usage:)"
+guestkit inspect "$DISK" | grep -E "(Root:|Type:|Distribution:|Product:|Version:|Hostname:|Disk usage:)"
 ```
 
 ### Extract JSON-like Data (with jq-style parsing)
 ```bash
 # Get OS info as key-value pairs
-guestctl inspect disk.qcow2 | grep -A 10 "Operating Systems" | grep ":" | sed 's/^[[:space:]]*//'
+guestkit inspect disk.qcow2 | grep -A 10 "Operating Systems" | grep ":" | sed 's/^[[:space:]]*//'
 ```
 
 ## 🔧 Programmatic Usage (Rust)
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn inspect_vm(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -249,19 +249,19 @@ fn inspect_vm(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 ```bash
 # List files in VM
-guestctl list disk.qcow2 /etc
+guestkit list disk.qcow2 /etc
 
 # Extract file from VM
-guestctl extract disk.qcow2 /etc/hostname hostname.txt
+guestkit extract disk.qcow2 /etc/hostname hostname.txt
 
 # Execute command in VM (if supported)
-guestctl exec disk.qcow2 cat /etc/os-release
+guestkit exec disk.qcow2 cat /etc/os-release
 
 # Check filesystem
-guestctl fsck disk.qcow2
+guestkit fsck disk.qcow2
 
 # Show disk usage
-guestctl df disk.qcow2
+guestkit df disk.qcow2
 ```
 
 ## ⚡ Performance Tips

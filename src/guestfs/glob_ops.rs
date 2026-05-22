@@ -33,12 +33,10 @@ impl Guestfs {
         // Use glob crate for pattern matching
         match glob::glob(&host_pattern) {
             Ok(paths) => {
-                for entry in paths {
-                    if let Ok(path) = entry {
-                        // Convert back to guest path
-                        if let Some(path_str) = path.to_str() {
-                            matches.push(path_str.to_string());
-                        }
+                for path in paths.flatten() {
+                    // Convert back to guest path
+                    if let Some(path_str) = path.to_str() {
+                        matches.push(path_str.to_string());
                     }
                 }
             }
@@ -233,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_glob_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

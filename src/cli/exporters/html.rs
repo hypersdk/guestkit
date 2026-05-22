@@ -3,8 +3,8 @@
 
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
-use guestkit::export::{HtmlExporter, HtmlExportOptions};
-use guestkit::export::html::{InspectionData, FilesystemInfo, PackageInfo, UserInfo, NetworkInterface};
+use crate::export::{HtmlExporter, HtmlExportOptions};
+use crate::export::html::{InspectionData, FilesystemInfo, PackageInfo, UserInfo, NetworkInterface};
 use tempfile::NamedTempFile;
 
 /// Generate HTML report from inspection data using Chart.js
@@ -33,18 +33,18 @@ pub fn generate_html_report(report: &InspectionReport) -> Result<String> {
 
 /// Convert InspectionReport to InspectionData
 fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
-    let hostname = report.os.hostname.clone().unwrap_or_else(|| "Unknown".to_string());
-    let os_type = report.os.os_type.clone().unwrap_or_else(|| "Unknown".to_string());
-    let distribution = report.os.distribution.clone().unwrap_or_else(|| "Unknown".to_string());
+    let hostname = report.os.hostname.as_deref().unwrap_or("Unknown");
+    let os_type = report.os.os_type.as_deref().unwrap_or("Unknown");
+    let distribution = report.os.distribution.as_deref().unwrap_or("Unknown");
     let version = if let Some(ref v) = report.os.version {
         format!("{}.{}", v.major, v.minor)
     } else {
         "Unknown".to_string()
     };
-    let architecture = report.os.architecture.clone().unwrap_or_else(|| "Unknown".to_string());
-    let product_name = report.os.product_name.clone().unwrap_or_else(|| "Unknown".to_string());
-    let package_format = report.os.package_format.clone().unwrap_or_else(|| "Unknown".to_string());
-    let package_manager = report.os.package_manager.clone().unwrap_or_else(|| "Unknown".to_string());
+    let architecture = report.os.architecture.as_deref().unwrap_or("Unknown");
+    let product_name = report.os.product_name.as_deref().unwrap_or("Unknown");
+    let package_format = report.os.package_format.as_deref().unwrap_or("Unknown");
+    let package_manager = report.os.package_manager.as_deref().unwrap_or("Unknown");
 
     // Convert filesystems from storage/fstab_mounts
     let filesystems = if let Some(ref storage_section) = report.storage {
@@ -72,7 +72,7 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
             PackageInfo {
                 name: k.clone(),
                 version: format!("{} package", pkg_section.format),
-                arch: architecture.clone(),
+                arch: architecture.to_string(),
             }
         }).collect()
     } else {
@@ -112,14 +112,14 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
     };
 
     InspectionData {
-        hostname,
-        os_type,
-        distribution,
+        hostname: hostname.to_string(),
+        os_type: os_type.to_string(),
+        distribution: distribution.to_string(),
         version,
-        architecture,
-        product_name,
-        package_format,
-        package_manager,
+        architecture: architecture.to_string(),
+        product_name: product_name.to_string(),
+        package_format: package_format.to_string(),
+        package_manager: package_manager.to_string(),
         kernel_version: None, // Not available in current report format
         total_memory: None, // Not available in current report format
         vcpus: None, // Not available in current report format

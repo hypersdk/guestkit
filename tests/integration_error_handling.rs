@@ -3,7 +3,6 @@
 
 use guestkit::Guestfs;
 use std::fs;
-use std::path::Path;
 
 fn cleanup_disk(path: &str) {
     let _ = fs::remove_file(path);
@@ -113,7 +112,7 @@ fn test_error_double_mount() -> Result<(), Box<dyn std::error::Error>> {
     g.mount("/dev/sda1", "/")?;
 
     // Second mount to same location should error
-    let result = g.mount("/dev/sda1", "/");
+    let _result = g.mount("/dev/sda1", "/");
     // Implementation may allow this or error, both are valid
     // Just ensure it doesn't crash
 
@@ -141,11 +140,11 @@ fn test_error_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to write to invalid path (relative path)
     // Some implementations might accept this, but it's not recommended
-    let result = g.write("relative/path.txt", b"content");
+    let _result = g.write("relative/path.txt", b"content");
     // May succeed or fail depending on implementation
 
     // Try to write with path traversal
-    let result = g.write("/../etc/passwd", b"hacked");
+    let _result = g.write("/../etc/passwd", b"hacked");
     // Should fail or be sanitized
 
     g.umount("/")?;
@@ -228,7 +227,7 @@ fn test_error_unmount_not_mounted() -> Result<(), Box<dyn std::error::Error>> {
     g.launch()?;
 
     // Try to unmount without mounting
-    let result = g.umount("/");
+    let _result = g.umount("/");
     // May error or succeed (no-op), both are acceptable
 
     g.shutdown()?;

@@ -10,7 +10,7 @@ Usage:
 """
 
 import sys
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def format_size(bytes_val):
     """Format bytes into human-readable size."""
