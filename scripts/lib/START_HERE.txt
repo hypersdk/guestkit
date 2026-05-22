@@ -1,0 +1,13 @@
+Zyvor client bundle — START HERE
+================================
+
+  1. Read full help:     cat HELP.txt
+  2. Quick install:      ./install-everything.sh
+  3. Install options:    ./install-everything.sh --help
+
+More docs in this folder:
+  ZYVOR_INSTALL.txt   fastest path (no git clone)
+  QUICKSTART.txt      copy-paste commands
+  README.txt          what is in the archive
+
+zyvor.dev · © @zyvor 2026
