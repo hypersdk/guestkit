@@ -95,6 +95,15 @@ docker run --privileged -v ./vms:/vms:ro guestkit:latest inspect /vms/vm.qcow2
 
 See [Docker guide](docs/guides/DOCKER.md) · [Remote deploy](docs/guides/DEPLOY-REMOTE.md) (`make deploy-remote H=<host> U=root`)
 
+**Client tarball (no deploy scripts):** build on a Linux host and hand off `guestkit` + install/test scripts:
+
+```bash
+./scripts/package-binary-remote.sh HOST USER --fetch
+# Customer: tar xzf guestkit-*-linux-amd64.tar.gz && ./install.sh && ./test-host.sh
+```
+
+See [docs/PACKAGE_BINARY_REMOTE.md](docs/PACKAGE_BINARY_REMOTE.md).
+
 ### Essential commands
 
 | Goal | Command |
