@@ -1018,61 +1018,61 @@ fn setup_namespace_isolation(level: &IsolationLevel, verbose: bool) -> Result<()
         );
     }
 
-    // Build unshare flags
-    let flags = match level {
-        IsolationLevel::MountOnly => libc::CLONE_NEWNS,
-        IsolationLevel::Full => {
-            libc::CLONE_NEWNS
-                | libc::CLONE_NEWUTS
-                | libc::CLONE_NEWIPC
-                | libc::CLONE_NEWNET
-        }
-        // IsolationLevel::None is handled by early return above
-        IsolationLevel::None => return Ok(()),
-    };
-
-    // SAFETY: unshare() is a well-defined Linux syscall.
-    let ret = unsafe { libc::unshare(flags) };
-    if ret != 0 {
-        let err = std::io::Error::last_os_error();
-        return Err(Error::CommandFailed(format!(
-            "unshare({:#x}) failed: {} (are you root?)",
-            flags, err
-        )));
-    }
-
-    // Make the mount namespace private so mount events don't leak
-    let output = build_sudo_command("mount")
-        .arg("--make-rprivate")
-        .arg("/")
-        .output()
-        .map_err(|e| Error::CommandFailed(format!("mount --make-rprivate failed: {}", e)))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(Error::CommandFailed(format!(
-            "mount --make-rprivate / failed: {}",
-            stderr
-        )));
-    }
-
-    // For full isolation, set a unique hostname to avoid leaking the host name
-    if *level == IsolationLevel::Full {
-        if verbose {
-            eprintln!("lvm_clone: setting isolated hostname");
-        }
-        // SAFETY: sethostname is a well-defined syscall. The hostname is a
-        // compile-time constant with known length.
-        let hostname = b"lvm-clone-ns";
-        let ret = unsafe {
-            libc::sethostname(hostname.as_ptr() as *const libc::c_char, hostname.len())
+    #[cfg(target_os = "linux")]
+    {
+        let flags = match level {
+            IsolationLevel::MountOnly => libc::CLONE_NEWNS,
+            IsolationLevel::Full => {
+                libc::CLONE_NEWNS | libc::CLONE_NEWUTS | libc::CLONE_NEWIPC | libc::CLONE_NEWNET
+            }
+            IsolationLevel::None => return Ok(()),
         };
-        if ret != 0 && verbose {
-            eprintln!("lvm_clone: warning: sethostname failed (non-fatal)");
+
+        let ret = unsafe { libc::unshare(flags) };
+        if ret != 0 {
+            let err = std::io::Error::last_os_error();
+            return Err(Error::CommandFailed(format!(
+                "unshare({:#x}) failed: {} (are you root?)",
+                flags, err
+            )));
         }
+
+        let output = build_sudo_command("mount")
+            .arg("--make-rprivate")
+            .arg("/")
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("mount --make-rprivate failed: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(Error::CommandFailed(format!(
+                "mount --make-rprivate / failed: {}",
+                stderr
+            )));
+        }
+
+        if *level == IsolationLevel::Full {
+            if verbose {
+                eprintln!("lvm_clone: setting isolated hostname");
+            }
+            let hostname = b"lvm-clone-ns";
+            let ret = unsafe {
+                libc::sethostname(hostname.as_ptr() as *const libc::c_char, hostname.len())
+            };
+            if ret != 0 && verbose {
+                eprintln!("lvm_clone: warning: sethostname failed (non-fatal)");
+            }
+        }
+        Ok(())
     }
 
-    Ok(())
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = verbose;
+        Err(Error::CommandFailed(
+            "LVM namespace isolation is only supported on Linux".to_string(),
+        ))
+    }
 }
 
 /// Capture a snapshot of the host LVM state before isolation.

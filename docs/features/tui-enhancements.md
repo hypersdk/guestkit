@@ -104,9 +104,17 @@ Consistent coral-terracotta orange theme (Pantone 7416 C):
 - **Layout** — `[` previous layout, `]` next
 - **Palette** — Up/Down to select, Enter to run
 
+## Fleet, cache, and layout (latest)
+
+- **Fleet mode** — `guestkit tui vm.qcow2 --fleet ./images/` discovers `*.qcow2` etc.; sidebar; **N** / **P** switch images
+- **Inspect cache** — `~/.cache/guestkit/<hash>/inspect.json` speeds repeat opens (invalidated on image mtime)
+- **ASCII icons** — `icon_mode = "ascii"` in `tui.toml` for all tabs and headers
+- **Packages / Services** — `[` / `]` layout modes (list / split / detail) like Issues
+- **Publishing** — see [publishing.md](../development/publishing.md) for PyPI and crates.io secrets
+
 ## Future Enhancements
 
-Fleet mode (multi-image sidebar without full reload), nerd-font icons, serialized inspect cache. See [roadmap](../development/roadmap.md).
+Fleet hot-reload without full guestfs teardown, wheel builds on macOS for all arch matrix legs. See [roadmap](../development/roadmap.md).
 
 ## Usage
 

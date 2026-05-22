@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Services view - Systemd services viewer
 
-use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::app::{App, LayoutMode};
+use crate::cli::tui::ui::{
+    content_block, label_style, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE,
+    SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -34,7 +37,72 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     draw_service_summary(f, chunks[0], app);
-    draw_service_list(f, chunks[1], app);
+    match app.layout_mode {
+        LayoutMode::ListOnly => draw_service_list(f, chunks[1], app),
+        LayoutMode::DetailFull => draw_service_detail(f, chunks[1], app),
+        LayoutMode::SplitDetail => {
+            let split = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(58), Constraint::Percentage(42)])
+                .split(chunks[1]);
+            draw_service_list(f, split[0], app);
+            draw_service_detail(f, split[1], app);
+        }
+    }
+}
+
+fn filtered_service_indices(app: &App) -> Vec<usize> {
+    if app.is_searching() && !app.search_query.is_empty() {
+        let q = app.search_query.to_lowercase();
+        app.services
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| {
+                s.name.to_lowercase().contains(&q) || s.state.to_lowercase().contains(&q)
+            })
+            .map(|(i, _)| i)
+            .collect()
+    } else {
+        (0..app.services.len()).collect()
+    }
+}
+
+fn draw_service_detail(f: &mut Frame, area: Rect, app: &App) {
+    let indices = filtered_service_indices(app);
+    let lines = if let Some(&idx) = indices.get(app.selected_index) {
+        let svc = &app.services[idx];
+        vec![
+            Line::from(vec![
+                Span::styled("Unit: ", label_style()),
+                Span::styled(&svc.name, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::styled("State: ", label_style()),
+                Span::styled(&svc.state, Style::default().fg(if svc.state == "running" {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                })),
+            ]),
+            Line::from(vec![
+                Span::styled("Enabled: ", label_style()),
+                Span::raw(if svc.enabled { "yes" } else { "no" }),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Check: ", label_style()),
+                Span::raw(format!("systemctl status {}", svc.name)),
+            ]),
+        ]
+    } else {
+        vec![Line::from(Span::styled("Select a service", label_style()))]
+    };
+    f.render_widget(
+        Paragraph::new(lines)
+            .block(content_block("Service detail"))
+            .wrap(ratatui::widgets::Wrap { trim: true }),
+        area,
+    );
 }
 
 fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {

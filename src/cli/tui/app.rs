@@ -373,12 +373,16 @@ pub struct App {
     pub pinned_views: Vec<String>,
     pub help_context: bool,
     pub last_auto_refresh: Instant,
+
+    /// Fleet mode: multiple images (`N` / `P` to switch)
+    pub fleet_images: Vec<String>,
+    pub fleet_index: usize,
 }
 
 impl App {
     /// Legacy entry — prefer `bootstrap` + staged loading.
     pub fn new(image_path: &Path) -> Result<Self> {
-        Self::bootstrap(image_path, None)
+        Self::bootstrap(image_path, None, vec![image_path.to_path_buf()])
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -525,7 +529,13 @@ impl App {
             pinned_views,
             help_context: false,
             last_auto_refresh: Instant::now(),
+            fleet_images: Vec::new(),
+            fleet_index: 0,
         }
+    }
+
+    pub fn fleet_active(&self) -> bool {
+        self.fleet_images.len() > 1
     }
 
     /// Cleanup guestfs handle on app exit
@@ -1851,7 +1861,8 @@ impl App {
         let dest = std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join(base);
-        match guestfs.download(&path, dest.to_string_lossy().as_ref()) {
+        let dest_str = dest.display().to_string();
+        match guestfs.download(&path, &dest_str) {
             Ok(()) => self.show_notification(format!("Extracted → {}", dest.display())),
             Err(e) => self.show_notification(format!("Extract failed: {}", e)),
         }

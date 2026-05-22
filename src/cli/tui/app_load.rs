@@ -2,7 +2,8 @@
 //! Staged inspection loading, lazy views, and refresh for the TUI.
 
 use super::app::{App, CompareSummary, IssueRiskFilter, LayoutMode, View};
-use super::cache;
+use super::cache::{self, InspectCacheSnapshot, CACHE_VERSION};
+use super::icons;
 use super::loading::{LoadingStage, LoadingState};
 use super::palette::PaletteAction;
 use crate::cli::profiles::{
@@ -15,7 +16,7 @@ use crate::guestfs::inspect_enhanced::{
 use crate::Guestfs;
 use anyhow::Result;
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 impl View {
     pub fn name(self) -> &'static str {
@@ -95,7 +96,11 @@ impl View {
 
 impl App {
     /// Fast path: mount image and read OS metadata only.
-    pub fn bootstrap(image_path: &Path, compare_path: Option<&Path>) -> Result<Self> {
+    pub fn bootstrap(
+        image_path: &Path,
+        compare_path: Option<&Path>,
+        fleet_paths: Vec<PathBuf>,
+    ) -> Result<Self> {
         let config = super::config::TuiConfig::load();
         let mut guestfs = Guestfs::new()?;
         guestfs.add_drive_ro(image_path)?;
@@ -169,8 +174,120 @@ impl App {
             loaded_views,
         );
 
-        app.loading = Some(LoadingState::new());
+        app.fleet_images = fleet_paths
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect();
+        app.fleet_index = fleet_paths
+            .iter()
+            .position(|p| p.as_path() == image_path)
+            .unwrap_or(0);
+
+        if let Ok(Some(snap)) = cache::load_snapshot(image_path) {
+            app.apply_cache_snapshot(snap);
+            app.loading = None;
+            app.last_updated = chrono::Local::now();
+            app.show_notification("Loaded inspect data from cache".to_string());
+        } else {
+            app.loading = Some(LoadingState::new());
+        }
         Ok(app)
+    }
+
+    fn apply_cache_snapshot(&mut self, snap: InspectCacheSnapshot) {
+        self.os_name = snap.os_name;
+        self.os_version = snap.os_version;
+        self.hostname = snap.hostname;
+        self.kernel_version = snap.kernel_version;
+        self.architecture = snap.architecture;
+        self.init_system = snap.init_system;
+        self.timezone = snap.timezone;
+        self.locale = snap.locale;
+        self.network_interfaces = snap.network_interfaces;
+        self.dns_servers = snap.dns_servers;
+        self.packages = snap.packages;
+        self.services = snap.services;
+        self.firewall = snap.firewall;
+        self.security = snap.security;
+        self.users = snap.users;
+        self.security_profile = snap.security_profile;
+        self.compliance_profile = snap.compliance_profile;
+        self.hardening_profile = snap.hardening_profile;
+        for v in View::all() {
+            self.loaded_views.insert(*v);
+        }
+    }
+
+    fn build_cache_snapshot(&self, image_path: &Path) -> Result<InspectCacheSnapshot> {
+        let mtime = std::fs::metadata(image_path)
+            .ok()
+            .and_then(|m| {
+                m.modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+            })
+            .unwrap_or(0);
+        Ok(InspectCacheSnapshot {
+            version: CACHE_VERSION,
+            image_mtime: mtime,
+            os_name: self.os_name.clone(),
+            os_version: self.os_version.clone(),
+            hostname: self.hostname.clone(),
+            kernel_version: self.kernel_version.clone(),
+            architecture: self.architecture.clone(),
+            init_system: self.init_system.clone(),
+            timezone: self.timezone.clone(),
+            locale: self.locale.clone(),
+            network_interfaces: self.network_interfaces.clone(),
+            dns_servers: self.dns_servers.clone(),
+            packages: self.packages.clone(),
+            services: self.services.clone(),
+            firewall: self.firewall.clone(),
+            security: self.security.clone(),
+            users: self.users.clone(),
+            security_profile: self.security_profile.clone(),
+            compliance_profile: self.compliance_profile.clone(),
+            hardening_profile: self.hardening_profile.clone(),
+        })
+    }
+
+    pub fn fleet_next(&mut self) -> Result<()> {
+        if self.fleet_images.len() <= 1 {
+            return Ok(());
+        }
+        let next = (self.fleet_index + 1) % self.fleet_images.len();
+        self.switch_fleet_index(next)
+    }
+
+    pub fn fleet_previous(&mut self) -> Result<()> {
+        if self.fleet_images.len() <= 1 {
+            return Ok(());
+        }
+        let prev = if self.fleet_index == 0 {
+            self.fleet_images.len() - 1
+        } else {
+            self.fleet_index - 1
+        };
+        self.switch_fleet_index(prev)
+    }
+
+    pub fn switch_fleet_index(&mut self, index: usize) -> Result<()> {
+        if index >= self.fleet_images.len() {
+            return Ok(());
+        }
+        let fleet_paths: Vec<PathBuf> = self.fleet_images.iter().map(PathBuf::from).collect();
+        let compare = self.compare_image_path.clone();
+        let path = fleet_paths[index].clone();
+        let label = super::fleet::fleet_label(&path);
+
+        self.cleanup()?;
+        *self = Self::bootstrap(&path, compare.as_deref(), fleet_paths)?;
+        while self.loading.is_some() {
+            self.advance_loading()?;
+        }
+        self.show_notification(format!("Fleet → {}", label));
+        Ok(())
     }
 
     /// Advance one loading stage; returns true when fully loaded.
@@ -264,7 +381,9 @@ impl App {
                 }
                 self.loading = None;
                 self.last_updated = chrono::Local::now();
-                let _ = cache::write_cached_flag(&self._image_path_buf);
+                if let Ok(snap) = self.build_cache_snapshot(&self._image_path_buf) {
+                    let _ = cache::save_snapshot(&self._image_path_buf, &snap);
+                }
             }
             LoadingStage::Done => {}
         }
@@ -531,16 +650,8 @@ impl App {
     }
 
     fn tab_title_for(&self, v: View) -> String {
-        let icon = if self.config.ui.icon_mode == "ascii" {
-            ""
-        } else {
-            match v {
-                View::Dashboard => "📊 ",
-                View::Issues => "⚠️ ",
-                View::Files => "📂 ",
-                _ => "",
-            }
-        };
+        let ascii = self.config.ui.icon_mode == "ascii";
+        let icon = icons::view_icon(v, ascii);
         let count = match v {
             View::Network => Some(self.network_interfaces.len()),
             View::Packages => Some(self.packages.package_count),

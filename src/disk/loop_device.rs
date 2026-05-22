@@ -169,20 +169,25 @@ impl LoopDevice {
         })?;
 
         for _i in 0..50 {
-            // Check if device is readable and has non-zero size
             if let Ok(file) = std::fs::File::open(device_path) {
-                use std::os::unix::io::AsRawFd;
-
-                let mut size_bytes: u64 = 0;
-                let result = unsafe {
-                    libc::ioctl(
-                        file.as_raw_fd(),
-                        BLKGETSIZE64 as _,
-                        &mut size_bytes as *mut u64,
-                    )
-                };
-
-                if result == 0 && size_bytes > 0 {
+                #[cfg(target_os = "linux")]
+                {
+                    use std::os::unix::io::AsRawFd;
+                    let mut size_bytes: u64 = 0;
+                    let result = unsafe {
+                        libc::ioctl(
+                            file.as_raw_fd(),
+                            BLKGETSIZE64 as _,
+                            &mut size_bytes as *mut u64,
+                        )
+                    };
+                    if result == 0 && size_bytes > 0 {
+                        return Ok(());
+                    }
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    let _ = file;
                     return Ok(());
                 }
             }
