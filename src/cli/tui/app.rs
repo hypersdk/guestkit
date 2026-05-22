@@ -10,12 +10,12 @@ use crate::guestfs::inspect_enhanced::{
 use crate::Guestfs;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
+
+use super::loading::LoadingState;
 
 use super::config::TuiConfig;
-use crate::cli::profiles::{
-    ComplianceProfile, HardeningProfile, InspectionProfile, MigrationProfile, PerformanceProfile,
-    ProfileReport, SecurityProfile,
-};
+use crate::cli::profiles::ProfileReport;
 
 /// Format file size to human-readable format
 fn format_file_size(size: i64) -> String {
@@ -59,7 +59,7 @@ pub enum ExportMode {
     Error(String),   // error message
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum View {
     Dashboard,
     Analytics,
@@ -79,6 +79,35 @@ pub enum View {
     Logs,
     Profiles,
     Files,
+}
+
+/// Layout preset per view (`[` / `]` to cycle).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayoutMode {
+    ListOnly,
+    SplitDetail,
+    DetailFull,
+}
+
+/// Issues list risk filter (`f` in Issues view).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IssueRiskFilter {
+    All,
+    Critical,
+    High,
+    Medium,
+}
+
+/// Summary of `--compare` second image.
+#[derive(Debug, Clone)]
+pub struct CompareSummary {
+    pub path: String,
+    pub os_name: String,
+    pub hostname: String,
+    pub package_count: usize,
+    pub critical: usize,
+    pub high: usize,
+    pub medium: usize,
 }
 
 impl View {
@@ -315,132 +344,55 @@ pub struct App {
 
     // Guestfs handle for file operations (kept alive for Files view)
     pub guestfs: Option<Guestfs>,
+
+    // Progressive load & refresh
+    pub inspect_root: String,
+    pub loading: Option<LoadingState>,
+    pub loaded_views: HashSet<View>,
+    pub compare_image_path: Option<PathBuf>,
+    pub compare_summary: Option<CompareSummary>,
+
+    // UX enhancements
+    pub layout_mode: LayoutMode,
+    pub show_palette: bool,
+    pub palette_query: String,
+    pub palette_selected: usize,
+    pub global_search: bool,
+    pub issue_filter: IssueRiskFilter,
+    pub issue_detail_text: Option<String>,
+    pub pinned_views: Vec<String>,
+    pub help_context: bool,
+    pub last_auto_refresh: Instant,
 }
 
 impl App {
+    /// Legacy entry — prefer `bootstrap` + staged loading.
     pub fn new(image_path: &Path) -> Result<Self> {
-        let mut guestfs = Guestfs::new()?;
-        guestfs.add_drive_ro(image_path)?;
-        guestfs.launch()?;
+        Self::bootstrap(image_path, None)
+    }
 
-        let roots = guestfs.inspect_os()?;
-        let root = roots.first().ok_or_else(|| {
-            anyhow::anyhow!("No operating systems found in image")
-        })?;
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn empty_shell(
+        image_path: &Path,
+        compare_path: Option<&Path>,
+        config: TuiConfig,
+        guestfs: Guestfs,
+        inspect_root: String,
+        os_name: String,
+        os_version: String,
+        hostname: String,
+        kernel_version: String,
+        architecture: String,
+        init_system: String,
+        timezone: String,
+        locale: String,
+        current_view: View,
+        layout_mode: LayoutMode,
+        loaded_views: HashSet<View>,
+    ) -> Self {
+        let pinned_views = config.views.pinned.clone();
 
-        // Mount the root filesystem once before gathering all inspection data
-        guestfs.mount_ro(root, "/")?;
-
-        // Gather basic OS info
-        let os_name = guestfs.inspect_get_product_name(root)
-            .unwrap_or_else(|_| "Unknown".to_string());
-        let os_version = guestfs.inspect_get_product_variant(root)
-            .unwrap_or_else(|_| "Unknown".to_string());
-        let hostname = guestfs.inspect_get_hostname(root)
-            .unwrap_or_else(|_| "Unknown".to_string());
-        let kernel_version = if let (Ok(major), Ok(minor)) = (
-            guestfs.inspect_get_major_version(root),
-            guestfs.inspect_get_minor_version(root),
-        ) {
-            format!("{}.{}", major, minor)
-        } else {
-            "Unknown".to_string()
-        };
-        let architecture = guestfs.inspect_get_arch(root)
-            .unwrap_or_else(|_| "Unknown".to_string());
-
-        // Gather enhanced inspection data
-        let init_system = guestfs.inspect_init_system(root)
-            .unwrap_or_else(|_| "unknown".to_string());
-        let timezone = guestfs.inspect_timezone(root)
-            .unwrap_or_else(|_| "unknown".to_string());
-        let locale = guestfs.inspect_locale(root)
-            .unwrap_or_else(|_| "unknown".to_string());
-
-        let network_interfaces = guestfs.inspect_network(root)
-            .unwrap_or_default();
-        let dns_servers = guestfs.inspect_dns(root)
-            .unwrap_or_default();
-
-        let packages = guestfs.inspect_packages(root)
-            .unwrap_or_else(|_| PackageInfo {
-                manager: "unknown".to_string(),
-                package_count: 0,
-                packages: Vec::new(),
-            });
-
-        let services = guestfs.inspect_systemd_services(root)
-            .unwrap_or_default();
-        let databases = guestfs.inspect_databases(root)
-            .unwrap_or_default();
-        let web_servers = guestfs.inspect_web_servers(root)
-            .unwrap_or_default();
-        let firewall = guestfs.inspect_firewall(root)
-            .unwrap_or_else(|_| FirewallInfo {
-                firewall_type: "none".to_string(),
-                enabled: false,
-                rules_count: 0,
-                zones: Vec::new(),
-            });
-        let security = guestfs.inspect_security(root)
-            .unwrap_or_else(|_| SecurityInfo {
-                selinux: "unknown".to_string(),
-                apparmor: false,
-                fail2ban: false,
-                aide: false,
-                auditd: false,
-                ssh_keys: Vec::new(),
-            });
-
-        let hosts = guestfs.inspect_hosts(root)
-            .unwrap_or_default();
-        let fstab = guestfs.inspect_fstab(root)
-            .unwrap_or_default();
-
-        // User accounts
-        let users = guestfs.inspect_users(root)
-            .unwrap_or_default();
-
-        // Storage information
-        let lvm_info = guestfs.inspect_lvm(root).ok();
-        let raid_arrays = guestfs.inspect_raid(root).unwrap_or_default();
-
-        // Kernel configuration
-        let kernel_modules = guestfs.inspect_kernel_modules(root)
-            .unwrap_or_default();
-        let kernel_params = guestfs.inspect_kernel_params(root)
-            .unwrap_or_default();
-
-        // Execute profiles
-        let security_profile = SecurityProfile.inspect(&mut guestfs, root).ok();
-        let migration_profile = MigrationProfile.inspect(&mut guestfs, root).ok();
-        let performance_profile = PerformanceProfile.inspect(&mut guestfs, root).ok();
-        let compliance_profile = ComplianceProfile.inspect(&mut guestfs, root).ok();
-        let hardening_profile = HardeningProfile.inspect(&mut guestfs, root).ok();
-
-        // Keep guestfs handle alive for file browser operations
-        // Don't shutdown - we'll need it for the Files view
-
-        // Load configuration
-        let config = TuiConfig::load();
-
-        // Determine initial view from config
-        let current_view = match config.behavior.default_view.as_str() {
-            "network" => View::Network,
-            "packages" => View::Packages,
-            "services" => View::Services,
-            "databases" => View::Databases,
-            "webservers" => View::WebServers,
-            "security" => View::Security,
-            "issues" => View::Issues,
-            "storage" => View::Storage,
-            "users" => View::Users,
-            "kernel" => View::Kernel,
-            "profiles" => View::Profiles,
-            _ => View::Dashboard, // default to Dashboard
-        };
-
-        Ok(Self {
+        Self {
             current_view,
             show_help: false,
             searching: false,
@@ -507,33 +459,61 @@ impl App {
             timezone,
             locale,
 
-            network_interfaces,
-            dns_servers,
-            packages,
-            services,
-            databases,
-            web_servers,
-            firewall,
-            security,
-            users,
-            _hosts: hosts,
-            fstab,
-            lvm_info,
-            raid_arrays,
-
-            kernel_modules,
-            kernel_params,
-
-            security_profile,
-            migration_profile,
-            performance_profile,
-            compliance_profile,
-            hardening_profile,
-
+            network_interfaces: Vec::new(),
+            dns_servers: Vec::new(),
+            packages: PackageInfo {
+                manager: "loading…".to_string(),
+                package_count: 0,
+                packages: Vec::new(),
+            },
+            services: Vec::new(),
+            databases: Vec::new(),
+            web_servers: Vec::new(),
+            firewall: FirewallInfo {
+                firewall_type: "unknown".to_string(),
+                enabled: false,
+                rules_count: 0,
+                zones: Vec::new(),
+            },
+            security: SecurityInfo {
+                selinux: "unknown".to_string(),
+                apparmor: false,
+                fail2ban: false,
+                aide: false,
+                auditd: false,
+                ssh_keys: Vec::new(),
+            },
+            users: Vec::new(),
+            _hosts: Vec::new(),
+            fstab: Vec::new(),
+            lvm_info: None,
+            raid_arrays: Vec::new(),
+            kernel_modules: Vec::new(),
+            kernel_params: HashMap::new(),
+            security_profile: None,
+            migration_profile: None,
+            performance_profile: None,
+            compliance_profile: None,
+            hardening_profile: None,
             config,
             file_browser: None,
             guestfs: Some(guestfs),
-        })
+            inspect_root,
+            loading: None,
+            loaded_views,
+            compare_image_path: compare_path.map(Path::to_path_buf),
+            compare_summary: None,
+            layout_mode,
+            show_palette: false,
+            palette_query: String::new(),
+            palette_selected: 0,
+            global_search: false,
+            issue_filter: IssueRiskFilter::All,
+            issue_detail_text: None,
+            pinned_views,
+            help_context: false,
+            last_auto_refresh: Instant::now(),
+        }
     }
 
     /// Cleanup guestfs handle on app exit
@@ -749,35 +729,32 @@ impl App {
     }
 
     pub fn next_view(&mut self) {
-        let views = View::all();
-        let current_idx = views.iter().position(|v| v == &self.current_view).unwrap_or(0);
-        self.current_view = views[(current_idx + 1) % views.len()];
-        self.scroll_offset = 0;
-        self.selected_index = 0;
+        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
+        let current_idx = ordered
+            .iter()
+            .position(|v| v == &self.current_view)
+            .unwrap_or(0);
+        let next = ordered[(current_idx + 1) % ordered.len()];
+        self.set_view(next);
         self.show_notification(format!("→ {}", self.current_view.title()));
-
-        // Initialize file browser if entering Files view
-        if self.current_view == View::Files {
-            self.init_file_browser();
-        }
     }
 
     pub fn previous_view(&mut self) {
-        let views = View::all();
-        let current_idx = views.iter().position(|v| v == &self.current_view).unwrap_or(0);
-        self.current_view = views[(current_idx + views.len() - 1) % views.len()];
-        self.scroll_offset = 0;
-        self.selected_index = 0;
+        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
+        let current_idx = ordered
+            .iter()
+            .position(|v| v == &self.current_view)
+            .unwrap_or(0);
+        let prev = ordered[(current_idx + ordered.len() - 1) % ordered.len()];
+        self.set_view(prev);
         self.show_notification(format!("← {}", self.current_view.title()));
-
-        // Initialize file browser if entering Files view
-        if self.current_view == View::Files {
-            self.init_file_browser();
-        }
     }
 
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+        if self.show_help {
+            self.help_context = false;
+        }
     }
 
     pub fn start_search(&mut self) {
@@ -1038,13 +1015,24 @@ impl App {
     }
 
     pub fn on_tick(&mut self) {
-        // Handle periodic updates if needed
-        // Decrement notification timer
         if let Some((_, ref mut ticks)) = self.notification {
             if *ticks > 0 {
                 *ticks -= 1;
             } else {
                 self.notification = None;
+            }
+        }
+
+        if self.loading.is_some() {
+            let _ = self.advance_loading();
+            return;
+        }
+
+        let interval = self.config.behavior.auto_refresh_seconds;
+        if interval > 0 && !self.refreshing && !self.is_searching() && !self.show_palette {
+            if self.last_auto_refresh.elapsed().as_secs() >= interval {
+                let _ = self.reload_current_view(false);
+                self.last_auto_refresh = Instant::now();
             }
         }
     }
@@ -1445,16 +1433,21 @@ impl App {
     }
 
     pub fn jump_to_view(&mut self, index: usize) {
-        let views = View::all();
-        if index < views.len() {
-            self.current_view = views[index];
-            self.scroll_offset = 0;
-            self.selected_index = 0;
+        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
+        if index < ordered.len() {
+            let v = ordered[index];
+            self.set_view(v);
             self.show_notification(format!("⚡ {} ({})", self.current_view.title(), index + 1));
+        }
+    }
 
-            // Initialize file browser if jumping to Files view
-            if self.current_view == View::Files {
-                self.init_file_browser();
+    /// Mouse click: tab row (y≈4–6) changes view.
+    pub fn handle_mouse_click(&mut self, column: u16, row: u16) {
+        if row >= 3 && row <= 5 {
+            let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
+            let idx = (column as usize / 12).min(ordered.len().saturating_sub(1));
+            if idx < ordered.len() {
+                self.set_view(ordered[idx]);
             }
         }
     }
@@ -1669,17 +1662,59 @@ impl App {
         }
     }
 
-    /// Initiate refresh (note: actual refresh would need background thread)
-    pub fn start_refresh(&mut self) {
-        self.refreshing = true;
-        self.show_notification("Refreshing data...".to_string());
+    pub fn start_refresh(&mut self, full: bool) {
+        self.show_notification(if full {
+            "Full re-inspect…".to_string()
+        } else {
+            "Refreshing view…".to_string()
+        });
+        let _ = self.reload_current_view(full);
+        self.show_notification("✓ Data refreshed".to_string());
     }
 
-    /// Mark refresh as complete
     pub fn complete_refresh(&mut self) {
         self.refreshing = false;
         self.last_updated = Local::now();
-        self.show_notification("✓ Data refreshed".to_string());
+    }
+
+    pub fn toggle_palette(&mut self) {
+        self.show_palette = !self.show_palette;
+        if self.show_palette {
+            self.palette_query.clear();
+            self.palette_selected = 0;
+        }
+    }
+
+    pub fn palette_input(&mut self, c: char) {
+        self.palette_query.push(c);
+        self.palette_selected = 0;
+    }
+
+    pub fn palette_backspace(&mut self) {
+        self.palette_query.pop();
+        self.palette_selected = 0;
+    }
+
+    pub fn palette_execute(&mut self) {
+        use super::palette::parse_command;
+        let action = parse_command(&self.palette_query);
+        self.show_palette = false;
+        self.run_palette_action(action);
+    }
+
+    pub fn toggle_context_help(&mut self) {
+        self.help_context = !self.help_context;
+        if self.help_context {
+            self.show_help = true;
+        } else {
+            self.show_help = false;
+        }
+    }
+
+    pub fn start_global_search(&mut self) {
+        self.global_search = true;
+        self.searching = true;
+        self.search_query.clear();
     }
 
     /// Toggle case-sensitive search

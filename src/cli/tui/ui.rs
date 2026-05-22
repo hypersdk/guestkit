@@ -83,6 +83,14 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.show_jump_menu {
         draw_jump_menu(f, app);
     }
+
+    if app.show_palette {
+        draw_palette(f, app);
+    }
+
+    if app.loading.is_some() {
+        draw_loading_banner(f, app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -177,47 +185,75 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
-    let views = View::all();
-    let titles: Vec<String> = views.iter().map(|v| {
-        let count = match v {
-            View::Dashboard => None,
-            View::Analytics => None,
-            View::Timeline => None,
-            View::Recommendations => None,
-            View::Topology => None,
-            View::Network => Some(app.network_interfaces.len()),
-            View::Packages => Some(app.packages.package_count),
-            View::Services => Some(app.services.len()),
-            View::Databases => Some(app.databases.len()),
-            View::WebServers => Some(app.web_servers.len()),
-            View::Security => None,
-            View::Issues => {
-                let (critical, high, medium) = app.get_risk_summary();
-                let total = critical + high + medium;
-                if total > 0 { Some(total) } else { None }
-            },
-            View::Storage => Some(app.fstab.len()),
-            View::Users => Some(app.users.len()),
-            View::Kernel => Some(app.kernel_modules.len()),
-            View::Logs => None,
-            View::Profiles => None,
-            View::Files => app.file_browser.as_ref().map(|b| b.entries.len()),
-        };
-
-        if let Some(n) = count {
-            format!("{} ({})", v.title(), n)
-        } else {
-            v.title().to_string()
-        }
-    }).collect();
+    let ordered = app.tab_titles_ordered();
+    let titles: Vec<String> = ordered.iter().map(|(_, t)| t.clone()).collect();
+    let select = ordered
+        .iter()
+        .position(|(v, _)| *v == app.current_view)
+        .unwrap_or(0);
 
     let tabs = Tabs::new(titles)
-        .block(pane_block("Navigation", false))
-        .select(views.iter().position(|v| v == &app.current_view).unwrap_or(0))
+        .block(pane_block("Navigation (pinned first)", false))
+        .select(select)
         .style(Style::default().fg(TEXT_MUTED))
         .highlight_style(theme::focus_style().add_modifier(Modifier::UNDERLINED));
 
     f.render_widget(tabs, area);
+}
+
+fn draw_loading_banner(f: &mut Frame, app: &App) {
+    if let Some(ref loading) = app.loading {
+        let area = Rect {
+            x: f.area().x + 2,
+            y: f.area().y + 1,
+            width: f.area().width.saturating_sub(4),
+            height: 1,
+        };
+        let line = Line::from(vec![
+            Span::styled("◐ ", Style::default().fg(ACCENT)),
+            Span::styled(loading.progress_label(), theme::value_style()),
+        ]);
+        f.render_widget(Paragraph::new(line), area);
+    }
+}
+
+fn draw_palette(f: &mut Frame, app: &App) {
+    let area = centered_rect(70, 60, f.area());
+    f.render_widget(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ACCENT))
+            .title(" Command palette ")
+            .style(Style::default().bg(SURFACE)),
+        area,
+    );
+    let inner = Rect {
+        x: area.x + 2,
+        y: area.y + 1,
+        width: area.width.saturating_sub(4),
+        height: area.height.saturating_sub(2),
+    };
+    let cmds = super::palette::filtered_commands(&app.palette_query);
+    let mut lines = vec![Line::from(vec![
+        Span::styled(": ", Style::default().fg(ACCENT)),
+        Span::styled(&app.palette_query, theme::value_style()),
+    ])];
+    for (i, (name, desc)) in cmds.iter().take(inner.height as usize - 2).enumerate() {
+        let style = if i == app.palette_selected {
+            theme::focus_style()
+        } else {
+            Style::default().fg(TEXT_COLOR)
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {}  ", name), style),
+            Span::styled(*desc, theme::label_style()),
+        ]));
+    }
+    lines.push(Line::from(Span::styled(
+        "Enter run • Esc cancel",
+        theme::label_style(),
+    )));
+    f.render_widget(Paragraph::new(lines), inner);
 }
 
 fn draw_content(f: &mut Frame, area: Rect, app: &App) {
@@ -271,7 +307,9 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::styled(": search │ ", key_muted()),
             Span::styled("e", key_primary()),
             Span::styled(": export │ ", key_muted()),
-            Span::styled("h", key_primary()),
+            Span::styled(":", key_primary()),
+            Span::styled(": cmd │ ", key_muted()),
+            Span::styled("?", key_primary()),
             Span::styled(": help │ ", key_muted()),
             Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
             Span::styled(": quit │ ", key_muted()),
@@ -285,8 +323,27 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(footer, area);
 }
 
-fn draw_help_overlay(f: &mut Frame, _app: &App) {
-    let area = centered_rect(75, 85, f.area());
+fn draw_help_overlay(f: &mut Frame, app: &App) {
+    let area = centered_rect(75, if app.help_context { 45 } else { 85 }, f.area());
+
+    if app.help_context {
+        let ctx = context_help_for_view(app.current_view);
+        let help_text: Vec<Line> = ctx
+            .into_iter()
+            .map(|s| Line::from(Span::raw(s)))
+            .collect();
+        let block = Paragraph::new(help_text)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(ACCENT))
+                    .title(format!(" Help: {} ", app.current_view.title()))
+                    .style(Style::default().bg(SURFACE)),
+            )
+            .wrap(ratatui::widgets::Wrap { trim: true });
+        f.render_widget(block, area);
+        return;
+    }
 
     let help_text = vec![
         Line::from(vec![
@@ -1629,6 +1686,34 @@ fn draw_file_info(f: &mut Frame, app: &App) {
     .style(Style::default().bg(Color::Black));
 
     f.render_widget(footer, footer_area);
+}
+
+fn context_help_for_view(view: View) -> Vec<&'static str> {
+    match view {
+        View::Dashboard => vec![
+            "Dashboard — system overview and health meter.",
+            "r refresh view • Shift+R full re-inspect • Tab next view",
+            "[ ] cycle layout • : command palette • p profiles",
+        ],
+        View::Issues => vec![
+            "Issues — security findings from profiles.",
+            "f cycle risk filter • Enter detail • / search",
+            "e export report • Ctrl+M migration JSON bundle",
+        ],
+        View::Files => vec![
+            "Files — browse guest filesystem.",
+            "Enter open dir • v preview • i file info • . hidden toggle",
+            "/ filter path • Backspace parent dir",
+        ],
+        View::Packages => vec![
+            "Packages — installed packages.",
+            "s sort • c compare mode • m multi-select",
+        ],
+        _ => vec![
+            "j/k or arrows scroll • Tab switch view • q quit",
+            ": command palette • ? context help • h full help",
+        ],
+    }
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

@@ -2,8 +2,12 @@
 //! TUI (Terminal User Interface) module for interactive VM inspection
 
 pub mod app;
+pub mod app_load;
+pub mod cache;
 pub mod config;
 pub mod events;
+pub mod loading;
+pub mod palette;
 pub mod splash;
 pub mod theme;
 pub mod ui;
@@ -11,7 +15,7 @@ pub mod views;
 
 use anyhow::{Context, Result};
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyModifiers, MouseButton, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -46,8 +50,7 @@ impl Drop for TerminalGuard {
 }
 
 /// Run the TUI application
-pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
-    // Load configuration first
+pub fn run_tui<P: AsRef<Path>>(image_path: P, compare_image: Option<&Path>) -> Result<()> {
     let config = config::TuiConfig::load();
 
     // Setup terminal with RAII guard (restores on drop, including panics)
@@ -73,12 +76,9 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P) -> Result<()> {
     spinner.set_message("Inspecting disk image…");
     spinner.enable_steady_tick(Duration::from_millis(120));
 
-    // Create app state (this is the slow part)
-    let app = App::new(image_path.as_ref());
+    let mut app = App::bootstrap(image_path.as_ref(), compare_image)?;
 
     spinner.finish_and_clear();
-
-    let mut app = app?;
 
     // Run the event loop
     let result = run_app(&mut terminal, &mut app);
@@ -108,9 +108,12 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if event::poll(timeout)? {
             match event::read()? {
-                Event::Mouse(_) => {
-                    // Mouse support disabled
+                Event::Mouse(mouse) if app.config.ui.mouse_enabled => {
+                    if let MouseEventKind::Down(MouseButton::Left) = mouse.kind {
+                        app.handle_mouse_click(mouse.column, mouse.row);
+                    }
                 }
+                Event::Mouse(_) => {}
                 Event::Key(key) => match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => {
                         // Close file preview/info overlays first
@@ -121,6 +124,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         } else if app.file_filtering {
                             // Cancel file filter and clear it
                             app.cancel_file_filter();
+                        } else if app.show_palette {
+                            app.toggle_palette();
                         } else if app.show_jump_menu {
                             app.toggle_jump_menu();
                         } else if app.is_searching() {
@@ -138,9 +143,18 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
                     }
-                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) && app.config.keybindings.quick_jump_enabled => {
                         app.toggle_jump_menu();
                     }
+                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) && key.modifiers.contains(KeyModifiers::SHIFT) => {
+                        app.start_global_search();
+                    }
+                    KeyCode::Char(':') if !app.is_searching() => {
+                        app.toggle_palette();
+                    }
+                    KeyCode::Char('?') => app.toggle_context_help(),
+                    KeyCode::Char('[') if !app.is_searching() => app.cycle_layout_mode(),
+                    KeyCode::Char(']') if !app.is_searching() => app.cycle_layout_mode(),
                     KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
                         app.toggle_case_sensitive();
                     }
@@ -174,6 +188,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('m') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.toggle_multi_select();
                     }
+                    KeyCode::Char('f') if app.current_view == app::View::Issues && !app.is_searching() => {
+                        app.cycle_issue_filter();
+                    }
                     KeyCode::Char('f') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
                         app.cycle_filter();
                     }
@@ -186,12 +203,14 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char(' ') if app.multi_select_mode && !app.is_searching() => {
                         app.toggle_item_selection();
                     }
+                    KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::SHIFT) && !app.is_searching() => {
+                        app.start_refresh(true);
+                    }
                     KeyCode::Char('r') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
-                        // Trigger refresh
-                        app.start_refresh();
-                        // Note: In a real implementation, this would spawn a background task
-                        // For now, just update the timestamp
-                        app.complete_refresh();
+                        app.start_refresh(false);
+                    }
+                    KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => {
+                        let _ = app.export_migration_bundle();
                     }
                     KeyCode::Char('b') => {
                         // Bookmark current view
@@ -236,8 +255,8 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
                     // Vim-style navigation
-                    KeyCode::Char('k') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_up(),
-                    KeyCode::Char('j') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_down(),
+                    KeyCode::Char('k') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_up(),
+                    KeyCode::Char('j') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_down(),
                     KeyCode::Char('g') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_top(),
                     KeyCode::Char('G') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_bottom(),
                     KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_up(),
@@ -245,7 +264,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Enter => {
                         use app::ExportMode;
 
-                        if app.show_jump_menu {
+                        if app.show_palette {
+                            app.palette_execute();
+                        } else if app.show_jump_menu {
                             app.jump_menu_select();
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             let _ = app.execute_export();
@@ -264,7 +285,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char(c) => {
                         use app::{ExportFormat, ExportMode};
 
-                        if app.show_jump_menu {
+                        if app.show_palette {
+                            app.palette_input(c);
+                        } else if app.show_jump_menu {
                             app.jump_menu_input(c);
                         } else if matches!(app.export_mode, Some(ExportMode::Selecting)) {
                             // Handle format selection
@@ -297,7 +320,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Backspace => {
                         use app::ExportMode;
 
-                        if app.show_jump_menu {
+                        if app.show_palette {
+                            app.palette_backspace();
+                        } else if app.show_jump_menu {
                             app.jump_menu_backspace();
                         } else if matches!(app.export_mode, Some(ExportMode::EnteringFilename)) {
                             app.export_backspace();

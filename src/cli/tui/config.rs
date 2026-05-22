@@ -21,6 +21,10 @@ pub struct TuiConfig {
     /// Keybindings (future: allow custom bindings)
     #[serde(default)]
     pub keybindings: KeybindingsConfig,
+
+    /// View navigation (pinned tabs, icons)
+    #[serde(default)]
+    pub views: ViewsConfig,
 }
 
 /// UI appearance configuration
@@ -38,6 +42,46 @@ pub struct UiConfig {
 
     /// Color theme (`carbon` = dark graphite + orange accent)
     pub theme: String,
+
+    /// Enable mouse (tab click, list selection)
+    #[serde(default = "default_true")]
+    pub mouse_enabled: bool,
+
+    /// Tab icons: `emoji` or `ascii`
+    #[serde(default = "default_icon_mode")]
+    pub icon_mode: String,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_icon_mode() -> String {
+    "emoji".to_string()
+}
+
+/// View navigation preferences
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ViewsConfig {
+    /// Pinned tab names shown first (e.g. `["dashboard", "issues", "files"]`)
+    pub pinned: Vec<String>,
+
+    /// Default layout mode: `list`, `split`, `detail`
+    pub default_layout: String,
+}
+
+impl Default for ViewsConfig {
+    fn default() -> Self {
+        Self {
+            pinned: vec![
+                "dashboard".to_string(),
+                "issues".to_string(),
+                "files".to_string(),
+            ],
+            default_layout: "split".to_string(),
+        }
+    }
 }
 
 /// Behavior configuration
@@ -82,6 +126,8 @@ impl Default for UiConfig {
             splash_duration_ms: 800,
             show_stats_bar: true,
             theme: "carbon".to_string(),
+            mouse_enabled: true,
+            icon_mode: "emoji".to_string(),
         }
     }
 }
