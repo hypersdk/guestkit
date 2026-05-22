@@ -381,7 +381,7 @@ sudo python3 script.py image.img
 ### Advanced
 
 7. Combine multiple examples into custom tools
-8. Read the full API documentation: `docs/PYTHON_BINDINGS.md`
+8. Read the full API documentation: [docs/user-guides/python-bindings.md](../../docs/user-guides/python-bindings.md)
 9. Study the Rust ergonomic API for type-safe patterns
 
 ## Code Patterns
@@ -426,9 +426,9 @@ elif g.is_dir(path):
 
 ## Additional Resources
 
-- **Full Python API Documentation:** `docs/PYTHON_BINDINGS.md`
-- **Rust Ergonomic API Guide:** `docs/ERGONOMIC_API.md`
-- **Migration Guide:** `docs/MIGRATION_GUIDE.md`
+- **Python API:** [docs/user-guides/python-bindings.md](../../docs/user-guides/python-bindings.md)
+- **VM migration:** [docs/user-guides/vm-migration.md](../../docs/user-guides/vm-migration.md)
+- **Documentation index:** [docs/INDEX.md](../../docs/INDEX.md)
 - **Main README:** `README.md`
 - **GuestKit Documentation:** https://GuestKit.org/
 

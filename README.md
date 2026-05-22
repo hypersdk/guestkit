@@ -220,7 +220,7 @@ git clone https://github.com/hypersdk/guestkit && cd guestkit
 cargo test && cargo clippy && cargo fmt
 ```
 
-Bug reports and PRs welcome on GitHub. See [docs/development/](docs/development/) for deeper contributor notes.
+Bug reports and PRs welcome on GitHub. See [Contributing](docs/development/CONTRIBUTING.md).
 
 ## License
 

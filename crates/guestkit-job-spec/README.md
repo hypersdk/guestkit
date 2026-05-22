@@ -131,7 +131,7 @@ See the [examples/jobs](../../examples/jobs/) directory for complete examples:
 
 ## Documentation
 
-- [Job Protocol Specification](../../docs/job-protocol-v1.md) - Complete protocol docs
+- [Documentation](../../docs/INDEX.md)
 - [API Documentation](https://docs.rs/guestkit-job-spec) - Rust API docs
 
 ## License

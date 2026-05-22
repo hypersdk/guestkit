@@ -277,7 +277,7 @@ Transform GuestCtl into the **premier disk image manipulation toolkit** - faster
 ## How to Contribute
 
 ### Immediate Opportunities
-1. **Implement CLI tool** - See [`docs/QUICK_WINS.md`](docs/QUICK_WINS.md#priority-1-cli-tool)
+1. **CLI improvements** — see [CLI guide](../user-guides/cli-guide.md)
 2. **Add progress bars** - See implementation guide
 3. **Improve error messages** - Use miette for diagnostics
 4. **Write more examples** - Python/Rust cookbook recipes
