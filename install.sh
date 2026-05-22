@@ -101,6 +101,6 @@ echo "Submit a job:"
 echo "  guestkit-worker submit -o system.echo -j '{\"message\":\"hello\"}'"
 echo
 echo "Documentation:"
-echo "  docs/CLI-GUIDE.md"
-echo "  docs/WORKER-INDEX.md"
+echo "  docs/INDEX.md"
+echo "  docs/user-guides/cli-guide.md"
 echo

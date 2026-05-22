@@ -221,5 +221,5 @@ cargo run --bin guestkit-worker -- --max-concurrent 8
 ## See Also
 
 - [Worker README](../../crates/guestkit-worker/README.md)
-- [Job Protocol Spec](../../docs/job-protocol-v1.md)
+- [Documentation](../../docs/INDEX.md)
 - [Job Examples](../../examples/jobs/)

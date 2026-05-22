@@ -82,13 +82,7 @@ Consistent coral-terracotta orange theme (Pantone 7416 C):
 
 ## Future Enhancements
 
-See `docs/development/tui-development-plan.md` for:
-- Real-time updates
-- Enhanced search (regex, case-insensitive)
-- Charts and graphs
-- Mouse support
-- Comparison mode
-- And more...
+Planned improvements include real-time refresh, richer charts, and comparison mode. See [roadmap](../development/roadmap.md).
 
 ## Usage
 
