@@ -118,7 +118,7 @@ name = "guestkit"
 # Use rlib for normal Rust builds. For Python bindings, build with:
 #   cargo build --features python-bindings
 # and add cdylib to crate-type below.
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib"]
 
 [profile.release]
 opt-level = 3

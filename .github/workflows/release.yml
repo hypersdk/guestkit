@@ -55,8 +55,6 @@ jobs:
             asset_name: guestkit-linux-x86_64
           - target: x86_64-unknown-linux-musl
             asset_name: guestkit-linux-x86_64-musl
-          - target: aarch64-unknown-linux-gnu
-            asset_name: guestkit-linux-aarch64
 
     steps:
       - uses: actions/checkout@v4
