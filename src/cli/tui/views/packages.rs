@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Packages view - Installed packages browser
 
-use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::app::{App, LayoutMode};
+use crate::cli::tui::ui::{
+    content_block, label_style, BORDER_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR,
+    TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -44,7 +47,74 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     draw_package_summary(f, chunks[0], app);
-    draw_package_list(f, chunks[1], app);
+    match app.layout_mode {
+        LayoutMode::ListOnly => draw_package_list(f, chunks[1], app),
+        LayoutMode::DetailFull => draw_package_detail(f, chunks[1], app),
+        LayoutMode::SplitDetail => {
+            let split = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(58), Constraint::Percentage(42)])
+                .split(chunks[1]);
+            draw_package_list(f, split[0], app);
+            draw_package_detail(f, split[1], app);
+        }
+    }
+}
+
+fn filtered_package_indices(app: &App) -> Vec<usize> {
+    let sorted = app.get_sorted_package_indices();
+    if app.is_searching() && !app.search_query.is_empty() {
+        let q = app.search_query.to_lowercase();
+        sorted
+            .into_iter()
+            .filter(|&idx| {
+                let pkg = &app.packages.packages[idx];
+                pkg.name.to_lowercase().contains(&q) || pkg.version.contains(&app.search_query)
+            })
+            .collect()
+    } else {
+        sorted
+    }
+}
+
+fn draw_package_detail(f: &mut Frame, area: Rect, app: &App) {
+    let indices = filtered_package_indices(app);
+    let lines = if let Some(&idx) = indices.get(app.selected_index) {
+        let pkg = &app.packages.packages[idx];
+        vec![
+            Line::from(vec![
+                Span::styled("Name: ", label_style()),
+                Span::styled(&pkg.name, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::styled("Version: ", label_style()),
+                Span::styled(&pkg.version, Style::default().fg(SUCCESS_COLOR)),
+            ]),
+            Line::from(vec![
+                Span::styled("Manager: ", label_style()),
+                Span::styled(&pkg.manager, Style::default().fg(INFO_COLOR)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Query: ", label_style()),
+                Span::raw(format!(
+                    "rpm -q {} 2>/dev/null || dpkg -l {}",
+                    pkg.name, pkg.name
+                )),
+            ]),
+        ]
+    } else {
+        vec![Line::from(Span::styled(
+            "Select a package",
+            label_style(),
+        ))]
+    };
+    f.render_widget(
+        Paragraph::new(lines)
+            .block(content_block("Package detail"))
+            .wrap(ratatui::widgets::Wrap { trim: true }),
+        area,
+    );
 }
 
 fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {

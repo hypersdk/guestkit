@@ -6,6 +6,8 @@ pub mod app_load;
 pub mod cache;
 pub mod config;
 pub mod events;
+pub mod fleet;
+pub mod icons;
 pub mod loading;
 pub mod palette;
 pub mod splash;
@@ -50,7 +52,11 @@ impl Drop for TerminalGuard {
 }
 
 /// Run the TUI application
-pub fn run_tui<P: AsRef<Path>>(image_path: P, compare_image: Option<&Path>) -> Result<()> {
+pub fn run_tui<P: AsRef<Path>>(
+    image_path: P,
+    compare_image: Option<&Path>,
+    fleet_dir: Option<&Path>,
+) -> Result<()> {
     let config = config::TuiConfig::load();
 
     // Setup terminal with RAII guard (restores on drop, including panics)
@@ -76,7 +82,18 @@ pub fn run_tui<P: AsRef<Path>>(image_path: P, compare_image: Option<&Path>) -> R
     spinner.set_message("Inspecting disk image…");
     spinner.enable_steady_tick(Duration::from_millis(120));
 
-    let mut app = App::bootstrap(image_path.as_ref(), compare_image)?;
+    let fleet_list = fleet::build_fleet_list(image_path.as_ref(), fleet_dir)?;
+    let primary = fleet_list
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("no disk image"))?
+        .clone();
+    let mut app = App::bootstrap(&primary, compare_image, fleet_list)?;
+    if app.fleet_active() {
+        app.show_notification(format!(
+            "Fleet mode: {} images (N next, P previous)",
+            app.fleet_images.len()
+        ));
+    }
 
     spinner.finish_and_clear();
 
@@ -142,6 +159,12 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
+                    }
+                    KeyCode::Char('N') if app.fleet_active() && !app.is_searching() => {
+                        let _ = app.fleet_next();
+                    }
+                    KeyCode::Char('P') if app.fleet_active() && !app.is_searching() => {
+                        let _ = app.fleet_previous();
                     }
                     KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) && app.config.keybindings.quick_jump_enabled => {
                         app.toggle_jump_menu();

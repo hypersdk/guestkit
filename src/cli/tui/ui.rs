@@ -2,6 +2,7 @@
 //! UI rendering orchestration
 
 use super::app::{App, View};
+use std::path::Path;
 use super::theme::{self, fill_background, key_muted, key_primary, pane_block, pane_block_with_border, risk_border_color};
 use super::views;
 pub use super::theme::{
@@ -21,6 +22,18 @@ use ratatui::{
 
 pub fn draw(f: &mut Frame, app: &App) {
     f.render_widget(fill_background(), f.area());
+    let root = f.area();
+    let content_root = if app.fleet_active() {
+        let cols = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Length(22), Constraint::Min(0)])
+            .split(root);
+        draw_fleet_sidebar(f, cols[0], app);
+        cols[1]
+    } else {
+        root
+    };
+
     let constraints = if app.show_stats_bar {
         vec![
             Constraint::Length(3), // Header
@@ -41,7 +54,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(constraints)
-        .split(f.area());
+        .split(content_root);
 
     if app.show_stats_bar {
         draw_header(f, chunks[0], app);
@@ -97,28 +110,40 @@ pub fn draw(f: &mut Frame, app: &App) {
     }
 }
 
+fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
+    let ascii = app.config.ui.icon_mode == "ascii";
+    let mut lines: Vec<Line> = vec![Line::from(Span::styled(
+        " Fleet ",
+        Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+    ))];
+    for (i, path) in app.fleet_images.iter().enumerate() {
+        let name = super::fleet::fleet_label(Path::new(path));
+        let style = if i == app.fleet_index {
+            theme::focus_style()
+        } else {
+            Style::default().fg(TEXT_MUTED)
+        };
+        let marker = if i == app.fleet_index { "▶" } else { " " };
+        lines.push(Line::from(vec![
+            Span::raw(format!("{} ", marker)),
+            Span::styled(name, style),
+        ]));
+    }
+    lines.push(Line::from(Span::styled("N/P switch", theme::label_style())));
+    let block = Paragraph::new(lines).block(
+        pane_block("Images", false).title_style(Style::default().fg(if ascii {
+            TEXT_MUTED
+        } else {
+            ACCENT
+        })),
+    );
+    f.render_widget(block, area);
+}
+
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
-    // Get current view icon and description
-    let (view_icon, view_desc) = match app.current_view {
-        View::Dashboard => ("📊", "System Overview"),
-        View::Analytics => ("📈", "Analytics & Charts"),
-        View::Timeline => ("⏰", "System Timeline"),
-        View::Recommendations => ("💡", "Smart Recommendations"),
-        View::Topology => ("🏗️ ", "System Topology"),
-        View::Network => ("🌐", "Network Configuration"),
-        View::Packages => ("📦", "Installed Packages"),
-        View::Services => ("⚙️ ", "System Services"),
-        View::Databases => ("🗄️ ", "Database Installations"),
-        View::WebServers => ("🌐", "Web Server Installations"),
-        View::Security => ("🔒", "Security Features"),
-        View::Issues => ("⚠️ ", "Security Issues & Findings"),
-        View::Storage => ("💾", "Storage & Filesystems"),
-        View::Users => ("👥", "User Accounts"),
-        View::Kernel => ("🧩", "Kernel Configuration"),
-        View::Logs => ("📋", "System Logs"),
-        View::Profiles => ("🛡️ ", "Profile Reports"),
-        View::Files => ("📂", "File Browser"),
-    };
+    let ascii = app.config.ui.icon_mode == "ascii";
+    let view_icon = super::icons::view_icon(app.current_view, ascii);
+    let view_desc = super::icons::view_description(app.current_view);
 
     let header_text = vec![
         Line::from(vec![
@@ -284,7 +309,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
-    let footer_text = if app.is_searching() {
+    let footer_spans: Vec<Span> = if app.is_searching() {
         let mode_indicator = app.get_search_mode_indicator();
         vec![
             Span::styled("🔍 ", Style::default().fg(ORANGE)),
@@ -303,7 +328,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::raw(": Finish"),
         ]
     } else {
-        vec![
+        let mut spans = vec![
             Span::styled("⌨ ", key_muted()),
             Span::styled("Tab", key_primary()),
             Span::styled(": views │ ", key_muted()),
@@ -318,10 +343,16 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
             Span::styled(": quit │ ", key_muted()),
             Span::styled(app.get_time_since_update(), theme::value_style()),
-        ]
+        ];
+        if app.fleet_active() {
+            spans.push(Span::styled(" │ ", key_muted()));
+            spans.push(Span::styled("N/P", key_primary()));
+            spans.push(Span::styled(": fleet ", key_muted()));
+        }
+        spans
     };
 
-    let footer = Paragraph::new(Line::from(footer_text))
+    let footer = Paragraph::new(Line::from(footer_spans))
         .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
 
     f.render_widget(footer, area);

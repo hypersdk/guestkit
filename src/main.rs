@@ -1667,6 +1667,9 @@ enum Commands {
         /// Optional second image for comparison summary
         #[arg(long)]
         compare: Option<PathBuf>,
+        /// Directory of disk images for fleet mode (sidebar, N/P to switch)
+        #[arg(long)]
+        fleet: Option<PathBuf>,
     },
 
     /// Interactive shell for VM inspection (REPL mode)
@@ -2762,8 +2765,8 @@ fn main() -> anyhow::Result<()> {
             systemd_boot_command(&image, timeline, recommendations, summary, top, cli.verbose)?;
         }
 
-        Commands::Tui { image, compare } => {
-            guestkit::cli::tui::run_tui(&image, compare.as_deref())?;
+        Commands::Tui { image, compare, fleet } => {
+            guestkit::cli::tui::run_tui(&image, compare.as_deref(), fleet.as_deref())?;
         }
 
         Commands::Shell { image } => {
