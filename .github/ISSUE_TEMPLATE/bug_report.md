@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a Community Edition bug (not for sales or enterprise quotes)
+about: Report a bug in the open-source repo (not for sales or enterprise quotes)
 title: "[BUG] "
 labels: bug
 ---

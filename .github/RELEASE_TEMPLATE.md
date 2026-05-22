@@ -2,9 +2,9 @@
 
 <!-- Describe changes -->
 
-## Community Edition
+## Open source
 
-This release is the open-source **Community Edition** of GuestKit.
+This release is the open-source **GuestKit** toolkit on GitHub.
 
 ## Enterprise & production
 

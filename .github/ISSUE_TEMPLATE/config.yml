@@ -9,9 +9,9 @@ contact_links:
   - name: "📧 Email sales"
     url: mailto:sales@zyvor.dev
     about: sales@zyvor.dev — enterprise quotes and migration programs
-  - name: "📖 CE vs Enterprise"
+  - name: "📖 Open source vs Enterprise"
     url: https://github.com/hypersdk/guestkit/blob/main/docs/ce-vs-enterprise.md
-    about: When to use Community Edition vs contact Zyvor
+    about: When to use this GitHub repo vs contact Zyvor for production
   - name: "💬 Discussions"
     url: https://github.com/hypersdk/guestkit/discussions
     about: Community questions and ideas

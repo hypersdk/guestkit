@@ -1,7 +1,7 @@
-# Community Edition vs Enterprise (Zyvor)
+# Open source vs Enterprise (Zyvor)
 
-| | Community Edition (this repo) | Enterprise ([zyvor.dev](https://zyvor.dev/?utm_source=github&utm_medium=guestkit)) |
-|---|------------------------------|-------------------------------------------------------------------------------------|
+| | Open source (this repo) | Enterprise ([zyvor.dev](https://zyvor.dev/?utm_source=github&utm_medium=guestkit)) |
+|---|------------------------|-------------------------------------------------------------------------------------|
 | **Support** | GitHub Issues & Discussions | SLA, [sales@zyvor.dev](mailto:sales@zyvor.dev), professional services |
 | **Scope** | Single-VM / lab workflows | Fleet migrations, VMware exit programs, regulated environments |
 | **Platform** | GuestKit tooling | Full pipeline: [HyperSDK](https://zyvor.dev/hypersdk) → [hyper2kvm](https://zyvor.dev/hyper2kvm) → GuestKit → [v9s](https://zyvor.dev/v9s) → [PacketWolf](https://zyvor.dev/packetwolf) |
