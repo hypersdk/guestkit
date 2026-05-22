@@ -149,11 +149,12 @@ cp "\${LIB}/package-client-test.sh" "\${STAGE}/test-package.sh"
 cp "\${LIB}/package-host-test.sh" "\${STAGE}/test-host.sh"
 mkdir -p "\${STAGE}/.package-lib"
 cp "\${LIB}/package-ui.sh" "\${STAGE}/.package-lib/"
+cp "\${LIB}/install-everything.sh" "\${STAGE}/"
 cp "\${LIB}/package-uninstall-lib.sh" "\${STAGE}/.package-lib/"
 cp "\${LIB}/package-uninstall.sh" "\${STAGE}/uninstall.sh"
 cp "\${LIB}/HOST_SETUP.txt" "\${LIB}/PREREQUISITES.txt" "\${STAGE}/"
 chmod +x "\${STAGE}/install.sh" "\${STAGE}/install-client-deps.sh" \
-  "\${STAGE}/test-package.sh" "\${STAGE}/test-host.sh" "\${STAGE}/uninstall.sh"
+  "\${STAGE}/test-package.sh" "\${STAGE}/test-host.sh" "\${STAGE}/install-everything.sh" "\${STAGE}/uninstall.sh"
 
 cat > "\${STAGE}/QUICKSTART.txt" <<'QEOF'
 GuestKit — install guide
