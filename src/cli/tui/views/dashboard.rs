@@ -3,16 +3,15 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{
-    content_block, label_style, ACCENT, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, ORANGE,
-    SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
-};
+use crate::cli::tui::theme::{self, content_block, label_style, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING};
+use crate::cli::tui::theme::value_style;
+use crate::cli::tui::widgets;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     symbols,
     text::{Line, Span},
-    widgets::{BarChart, Block, Borders, Gauge, List, ListItem, Paragraph, Sparkline},
+    widgets::{BarChart, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 use std::cmp;
@@ -20,19 +19,16 @@ use std::cmp;
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(70),  // Left column
-            Constraint::Percentage(30),  // Right column (health meter)
-        ])
+        .constraints([Constraint::Percentage(68), Constraint::Percentage(32)])
         .split(area);
 
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // System info
-            Constraint::Length(8),  // Profile risk chart
-            Constraint::Length(8),  // Stats gauges
-            Constraint::Min(0),     // Quick info
+            Constraint::Length(7),
+            Constraint::Length(7),
+            Constraint::Length(9),
+            Constraint::Min(0),
         ])
         .split(main_chunks[0]);
 
@@ -44,84 +40,63 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
-    // Determine OS icon based on OS name
-    let os_icon = if app.os_name.to_lowercase().contains("windows") {
-        "🪟"
-    } else if app.os_name.to_lowercase().contains("ubuntu")
-        || app.os_name.to_lowercase().contains("debian")
-        || app.os_name.to_lowercase().contains("linux") {
-        "🐧"
-    } else if app.os_name.to_lowercase().contains("freebsd") {
-        "👿"
-    } else if app.os_name.to_lowercase().contains("macos")
-        || app.os_name.to_lowercase().contains("darwin") {
-        "🍎"
+    let emoji = theme::use_emoji(&app.config.ui);
+    let os_icon = if emoji {
+        if app.os_name.to_lowercase().contains("windows") {
+            "🪟"
+        } else if app.os_name.to_lowercase().contains("linux")
+            || app.os_name.to_lowercase().contains("ubuntu")
+            || app.os_name.to_lowercase().contains("debian")
+        {
+            "🐧"
+        } else if app.os_name.to_lowercase().contains("macos") {
+            "🍎"
+        } else {
+            "💻"
+        }
     } else {
-        "💻"
+        "[os]"
     };
 
     let mut info_lines = vec![
         Line::from(vec![
-            Span::raw(format!("{} ", os_icon)),
+            Span::raw(format!("{os_icon} ")),
             Span::styled("OS:         ", label_style()),
-            Span::styled(&app.os_name, Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(&app.os_name, Style::default().fg(SUCCESS).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::raw("🔢 "),
             Span::styled("Version:    ", label_style()),
-            Span::styled(&app.os_version, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(&app.os_version, value_style()),
         ]),
         Line::from(vec![
-            Span::raw("⚙️  "),
             Span::styled("Kernel:     ", label_style()),
-            Span::styled(&app.kernel_version, Style::default().fg(INFO_COLOR)),
+            Span::styled(&app.kernel_version, Style::default().fg(INFO)),
         ]),
         Line::from(vec![
-            Span::raw("🏗️  "),
-            Span::styled("Architecture: ", label_style()),
-            Span::styled(&app.architecture, Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled("Arch:       ", label_style()),
+            Span::styled(&app.architecture, Style::default().fg(WARNING).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::raw("🏷️  "),
             Span::styled("Hostname:   ", label_style()),
             Span::styled(&app.hostname, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::raw("🚀 "),
-            Span::styled("Init System:", label_style()),
-            Span::raw(" "),
-            Span::styled(&app.init_system, Style::default().fg(TEXT_COLOR)),
         ]),
     ];
 
     if let Some(ref cmp) = app.compare_summary {
-        info_lines.push(Line::from(""));
         info_lines.push(Line::from(vec![
-            Span::styled("⇄ Compare:  ", label_style()),
-            Span::styled(&cmp.hostname, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
-        ]));
-        info_lines.push(Line::from(vec![
-            Span::styled("   OS:       ", label_style()),
-            Span::styled(&cmp.os_name, Style::default().fg(INFO_COLOR)),
-            Span::raw(format!("  │  {} pkgs", cmp.package_count)),
-        ]));
-        info_lines.push(Line::from(vec![
-            Span::styled("   Risk:     ", label_style()),
-            Span::styled(
-                format!("C{} H{} M{}", cmp.critical, cmp.high, cmp.medium),
-                Style::default().fg(WARNING_COLOR),
-            ),
+            Span::styled("Compare:    ", label_style()),
+            Span::styled(&cmp.hostname, Style::default().fg(ACCENT)),
+            Span::raw(format!("  {} pkgs", cmp.package_count)),
         ]));
     }
 
-    let block = Paragraph::new(info_lines)
-        .block(content_block("📊 System Information"));
-
-    f.render_widget(block, area);
+    f.render_widget(
+        Paragraph::new(info_lines).block(content_block("System")),
+        area,
+    );
 }
 
 fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
-    // Convert risk levels to numeric values for bar chart
     fn risk_to_value(risk: Option<RiskLevel>) -> u64 {
         match risk {
             Some(RiskLevel::Critical) => 5,
@@ -133,28 +108,21 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
         }
     }
 
-
-    let security_risk = app.security_profile.as_ref().and_then(|p| p.overall_risk);
-    let migration_risk = app.migration_profile.as_ref().and_then(|p| p.overall_risk);
-    let performance_risk = app.performance_profile.as_ref().and_then(|p| p.overall_risk);
-    let compliance_risk = app.compliance_profile.as_ref().and_then(|p| p.overall_risk);
-    let hardening_risk = app.hardening_profile.as_ref().and_then(|p| p.overall_risk);
-
     let data = vec![
-        ("Sec", risk_to_value(security_risk)),
-        ("Mig", risk_to_value(migration_risk)),
-        ("Perf", risk_to_value(performance_risk)),
-        ("Comp", risk_to_value(compliance_risk)),
-        ("Hard", risk_to_value(hardening_risk)),
+        ("Sec", risk_to_value(app.security_profile.as_ref().and_then(|p| p.overall_risk))),
+        ("Mig", risk_to_value(app.migration_profile.as_ref().and_then(|p| p.overall_risk))),
+        ("Perf", risk_to_value(app.performance_profile.as_ref().and_then(|p| p.overall_risk))),
+        ("Comp", risk_to_value(app.compliance_profile.as_ref().and_then(|p| p.overall_risk))),
+        ("Hard", risk_to_value(app.hardening_profile.as_ref().and_then(|p| p.overall_risk))),
     ];
 
     let barchart = BarChart::default()
-        .block(content_block("🛡️  Profile Risk Levels • Press 'p' for Details"))
+        .block(content_block("Profile risk"))
         .data(&data)
-        .bar_width(8)
+        .bar_width(6)
         .bar_gap(2)
         .bar_style(label_style())
-        .value_style(Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD))
+        .value_style(value_style())
         .label_style(label_style())
         .bar_set(symbols::bar::NINE_LEVELS);
 
@@ -164,150 +132,52 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
 fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(33), Constraint::Percentage(33), Constraint::Percentage(34)])
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+        ])
         .split(area);
 
-    // Packages sparkline + gauge
+    let spark = |count: usize, seed: usize, base: usize, cap: usize| -> Vec<u64> {
+        (0..12)
+            .map(|i| {
+                let b = cmp::max(base, count.saturating_sub(cap));
+                (b + (i * seed + count) % 30) as u64
+            })
+            .collect()
+    };
+
     let pkg_count = app.packages.package_count;
-    let pkg_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Length(4)])
-        .split(chunks[0]);
-
-    // Generate sparkline data based on package count
-    let pkg_data: Vec<u64> = (0..15)
-        .map(|i| {
-            let base = cmp::max(10, pkg_count.saturating_sub(150));
-            let variance = (i * 7 + pkg_count) % 50;
-            (base + variance) as u64
-        })
-        .collect();
-
-    let pkg_sparkline = Sparkline::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📦 Package Trend ")
-            .title_style(Style::default().fg(ACCENT)))
-        .data(&pkg_data)
-        .style(Style::default().fg(ACCENT));
-
-    f.render_widget(pkg_sparkline, pkg_chunks[0]);
-
-    let pkg_label = format!("{} Packages", pkg_count);
-    let pkg_ratio = if pkg_count > 0 {
-        pkg_count.min(1000) as f64 / 1000.0
-    } else {
-        0.0
-    };
-
-    let packages_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 Total ")
-            .title_style(Style::default().fg(ACCENT)))
-        .gauge_style(Style::default().fg(ACCENT))
-        .label(pkg_label)
-        .ratio(pkg_ratio);
-
-    f.render_widget(packages_gauge, pkg_chunks[1]);
-
-    // Services sparkline + gauge
     let svc_count = app.services.len();
-    let svc_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Length(4)])
-        .split(chunks[1]);
-
-    // Generate sparkline data for services
-    let svc_data: Vec<u64> = (0..15)
-        .map(|i| {
-            let base = cmp::max(5, svc_count.saturating_sub(20));
-            let variance = (i * 3 + svc_count) % 15;
-            (base + variance) as u64
-        })
-        .collect();
-
-    let svc_sparkline = Sparkline::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" ⚡ Service Activity ")
-            .title_style(Style::default().fg(ACCENT)))
-        .data(&svc_data)
-        .style(Style::default().fg(SUCCESS_COLOR));
-
-    f.render_widget(svc_sparkline, svc_chunks[0]);
-
-    let svc_label = format!("{} Services", svc_count);
-    let svc_ratio = if svc_count > 0 {
-        svc_count.min(100) as f64 / 100.0
-    } else {
-        0.0
-    };
-
-    let services_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 Total ")
-            .title_style(Style::default().fg(ACCENT)))
-        .gauge_style(Style::default().fg(SUCCESS_COLOR))
-        .label(svc_label)
-        .ratio(svc_ratio);
-
-    f.render_widget(services_gauge, svc_chunks[1]);
-
-    // Network sparkline + gauge
     let net_count = app.network_interfaces.len();
-    let net_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Length(4)])
-        .split(chunks[2]);
 
-    // Generate sparkline data for network
-    let net_data: Vec<u64> = (0..15)
-        .map(|i| {
-            let base = cmp::max(1, net_count.saturating_sub(5));
-            let variance = (i * 2) % 3;
-            (base + variance) as u64
-        })
-        .collect();
-
-    let net_sparkline = Sparkline::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🌐 Network Traffic ")
-            .title_style(Style::default().fg(ACCENT)))
-        .data(&net_data)
-        .style(Style::default().fg(WARNING_COLOR));
-
-    f.render_widget(net_sparkline, net_chunks[0]);
-
-    let net_label = format!("{} Interfaces", net_count);
-    let net_ratio = if net_count > 0 {
-        net_count.min(10) as f64 / 10.0
-    } else {
-        0.0
-    };
-
-    let network_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 Total ")
-            .title_style(Style::default().fg(ACCENT)))
-        .gauge_style(Style::default().fg(WARNING_COLOR))
-        .label(net_label)
-        .ratio(net_ratio);
-
-    f.render_widget(network_gauge, net_chunks[1]);
+    for (i, (title, count, max, color)) in [
+        ("Packages", pkg_count, 1000, ACCENT),
+        ("Services", svc_count, 100, SUCCESS),
+        ("Network", net_count, 10, WARNING),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let col = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(4), Constraint::Length(4)])
+            .split(chunks[i]);
+        let data = spark(*count, 7 + i, 5, 50);
+        f.render_widget(
+            theme::sparkline_widget(&format!("{title} trend"), &data, theme::SPARKLINE_MUTED),
+            col[0],
+        );
+        let pct = ((*count).min(*max) as f64 / *max as f64 * 100.0) as u16;
+        f.render_widget(
+            theme::gauge_widget(title, pct, &format!("{count}"), *color),
+            col[1],
+        );
+    }
 }
 
 fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
-    // If in comparison mode, show diff stats
     if app.comparison_mode {
         draw_comparison_stats(f, area, app);
         return;
@@ -318,155 +188,97 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    // Security status
-    let security_items = vec![
-        create_status_item("SELinux", &app.security.selinux, &app.security.selinux != "disabled"),
-        create_status_item("AppArmor", if app.security.apparmor { "enabled" } else { "disabled" }, app.security.apparmor),
-        create_status_item("Firewall", &app.firewall.firewall_type, app.firewall.enabled),
-        create_status_item("fail2ban", if app.security.fail2ban { "installed" } else { "not found" }, app.security.fail2ban),
-        create_status_item("AIDE", if app.security.aide { "installed" } else { "not found" }, app.security.aide),
-        create_status_item("auditd", if app.security.auditd { "enabled" } else { "disabled" }, app.security.auditd),
-    ];
+    let apparmor = if app.security.apparmor {
+        "enabled".to_string()
+    } else {
+        "disabled".to_string()
+    };
+    let security_items: Vec<ListItem> = [
+        ("SELinux", app.security.selinux.as_str(), app.security.selinux != "disabled"),
+        ("AppArmor", apparmor.as_str(), app.security.apparmor),
+        (
+            "Firewall",
+            app.firewall.firewall_type.as_str(),
+            app.firewall.enabled,
+        ),
+    ]
+    .iter()
+    .map(|(n, s, ok)| status_item(n, s, *ok))
+    .collect();
 
-    let security_list = List::new(security_items)
-        .block(content_block("🔒 Security Features"));
+    f.render_widget(
+        List::new(security_items).block(content_block("Security")),
+        chunks[0],
+    );
 
-    f.render_widget(security_list, chunks[0]);
-
-    // Services/Apps status
     let mut app_items = Vec::new();
-
     if !app.databases.is_empty() {
-        let db_names: Vec<&str> = app.databases.iter().map(|d| d.name.as_str()).collect();
+        let names: Vec<&str> = app.databases.iter().map(|d| d.name.as_str()).collect();
         app_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Databases:   ", label_style()),
-            Span::styled(db_names.join(", "), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled("DB: ", label_style()),
+            Span::styled(names.join(", "), Style::default().fg(SUCCESS)),
         ])));
     }
-
-    if !app.web_servers.is_empty() {
-        let ws_names: Vec<&str> = app.web_servers.iter().map(|w| w.name.as_str()).collect();
-        app_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Web Servers: ", label_style()),
-            Span::styled(ws_names.join(", "), Style::default().fg(SUCCESS_COLOR)),
-        ])));
-    }
-
     app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("DNS Servers: ", label_style()),
-        Span::styled(format!("{}", app.dns_servers.len()), Style::default().fg(TEXT_COLOR)),
+        Span::styled("TZ: ", label_style()),
+        Span::styled(&app.timezone, Style::default().fg(TEXT)),
     ])));
 
-    app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("Timezone:    ", label_style()),
-        Span::styled(&app.timezone, Style::default().fg(TEXT_COLOR)),
-    ])));
-
-    app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("Locale:      ", label_style()),
-        Span::styled(&app.locale, Style::default().fg(TEXT_COLOR)),
-    ])));
-
-    let apps_list = List::new(app_items)
-        .block(content_block("🌐 System Details"));
-
-    f.render_widget(apps_list, chunks[1]);
+    f.render_widget(
+        List::new(app_items).block(content_block("Details")),
+        chunks[1],
+    );
 }
 
-fn create_status_item(name: &str, status: &str, enabled: bool) -> ListItem<'static> {
-    let (symbol, color) = if enabled {
-        ("✓", SUCCESS_COLOR)
-    } else {
-        ("✗", ERROR_COLOR)
-    };
-
+fn status_item(name: &str, status: &str, enabled: bool) -> ListItem<'static> {
+    let (sym, color) = if enabled { ("+", SUCCESS) } else { ("-", ERROR) };
     ListItem::new(Line::from(vec![
-        Span::styled(symbol.to_string(), Style::default().fg(color).add_modifier(Modifier::BOLD)),
-        Span::raw(" "),
-        Span::styled(format!("{:12} ", name), label_style()),
-        Span::styled(status.to_string(), Style::default().fg(TEXT_COLOR)),
+        Span::styled(sym, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+        Span::styled(format!(" {name:10} "), label_style()),
+        Span::styled(status.to_string(), Style::default().fg(TEXT)),
     ]))
 }
 
 fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
     let health_score = app.calculate_health_score();
-    let (status_text, _status_color) = app.get_health_status();
+    let (status_text, _) = app.get_health_status();
+    let health_color = widgets::health_score_color(health_score);
+    let (critical, high, medium) = app.get_risk_summary();
+    let (donut, donut_color) = widgets::risk_donut_ascii(critical, high, medium, 14);
 
-    let health_color = match health_score {
-        90..=100 => SUCCESS_COLOR,
-        75..=89 => WARNING_COLOR,
-        60..=74 => ORANGE,
-        _ => ERROR_COLOR,
-    };
-
-    // Create a vertical layout for the health meter
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(12),  // Large health gauge
-            Constraint::Min(0),      // Details
-        ])
+        .constraints([Constraint::Length(6), Constraint::Length(4), Constraint::Min(0)])
         .split(area);
 
-    // Large health percentage display
-    let score_text = format!("{}%", health_score);
-    let score_display = format!("        {}",  score_text);
-    let health_display = vec![
-        Line::from(""),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(&score_display, Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("      ═══════", Style::default().fg(health_color)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(format!("      {}", status_text), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
-        ]),
-    ];
+    let gauge = Gauge::default()
+        .block(content_block("Health"))
+        .gauge_style(Style::default().fg(health_color))
+        .percent(u16::from(health_score.min(100)))
+        .label(format!("{health_score}% {status_text}"));
 
-    let health_para = Paragraph::new(health_display)
-        .block(content_block("💊 System Health"))
-        .alignment(Alignment::Center);
+    f.render_widget(gauge, chunks[0]);
 
-    f.render_widget(health_para, chunks[0]);
+    f.render_widget(
+        Paragraph::new(vec![
+            Line::from(Span::styled(donut, Style::default().fg(donut_color))),
+            Line::from(vec![
+                Span::styled(format!("C:{critical} "), Style::default().fg(ERROR)),
+                Span::styled(format!("H:{high} "), Style::default().fg(ACCENT)),
+                Span::styled(format!("M:{medium}"), Style::default().fg(WARNING)),
+            ]),
+        ])
+        .alignment(Alignment::Center),
+        chunks[1],
+    );
 
-    // Health details
-    let (critical, high, medium) = app.get_risk_summary();
     let details = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("Score:    ", label_style()),
-            Span::styled(format!("{}/100", health_score), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
-        ])),
-        ListItem::new(Line::from("")),
-        ListItem::new(Line::from(vec![
-            Span::styled("🔴 Critical: ", Style::default().fg(ERROR_COLOR)),
-            Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-        ])),
-        ListItem::new(Line::from(vec![
-            Span::styled("🟠 High:     ", Style::default().fg(WARNING_COLOR)),
-            Span::styled(format!("{}", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-        ])),
-        ListItem::new(Line::from(vec![
-            Span::styled("🟡 Medium:   ", Style::default().fg(WARNING_COLOR)),
-            Span::styled(format!("{}", medium), Style::default().fg(WARNING_COLOR)),
-        ])),
-        ListItem::new(Line::from("")),
-        ListItem::new(Line::from(vec![
-            Span::styled("Press 8 for issues", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::ITALIC)),
+            Span::styled("Issues view ", label_style()),
+            Span::styled("8", Style::default().fg(ACCENT)),
         ])),
     ];
-
-    let details_list = List::new(details)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Details ")
-            .title_style(Style::default().fg(ACCENT)));
-
-    f.render_widget(details_list, chunks[1]);
+    f.render_widget(List::new(details).block(content_block("Risk")), chunks[2]);
 }
 
 fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
@@ -475,55 +287,43 @@ fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    // Package comparison stats
     let (pkg_added, pkg_removed, pkg_modified) = app.get_package_diff_stats();
-
     let package_items = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("📦 Packages", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Added ", label_style()),
+            Span::styled(format!("{pkg_added}"), Style::default().fg(SUCCESS)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Added:    ", label_style()),
-            Span::styled(format!("{}", pkg_added), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled("Removed ", label_style()),
+            Span::styled(format!("{pkg_removed}"), Style::default().fg(ERROR)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Removed:  ", label_style()),
-            Span::styled(format!("{}", pkg_removed), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-        ])),
-        ListItem::new(Line::from(vec![
-            Span::styled("  Modified: ", label_style()),
-            Span::styled(format!("{}", pkg_modified), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled("Modified ", label_style()),
+            Span::styled(format!("{pkg_modified}"), Style::default().fg(WARNING)),
         ])),
     ];
+    f.render_widget(
+        List::new(package_items).block(content_block("Package diff")),
+        chunks[0],
+    );
 
-    let package_list = List::new(package_items)
-        .block(content_block("📊 Package Changes"));
-
-    f.render_widget(package_list, chunks[0]);
-
-    // Service comparison stats
     let (svc_started, svc_stopped, svc_changed) = app.get_service_diff_stats();
-
     let service_items = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("⚙️  Services", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Started ", label_style()),
+            Span::styled(format!("{svc_started}"), Style::default().fg(SUCCESS)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Started:  ", label_style()),
-            Span::styled(format!("{}", svc_started), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled("Stopped ", label_style()),
+            Span::styled(format!("{svc_stopped}"), Style::default().fg(ERROR)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Stopped:  ", label_style()),
-            Span::styled(format!("{}", svc_stopped), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-        ])),
-        ListItem::new(Line::from(vec![
-            Span::styled("  Changed:  ", label_style()),
-            Span::styled(format!("{}", svc_changed), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled("Changed ", label_style()),
+            Span::styled(format!("{svc_changed}"), Style::default().fg(WARNING)),
         ])),
     ];
-
-    let service_list = List::new(service_items)
-        .block(content_block("📊 Service Changes"));
-
-    f.render_widget(service_list, chunks[1]);
+    f.render_widget(
+        List::new(service_items).block(content_block("Service diff")),
+        chunks[1],
+    );
 }

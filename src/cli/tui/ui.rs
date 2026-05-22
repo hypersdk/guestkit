@@ -3,7 +3,9 @@
 
 use super::app::{App, View};
 use std::path::Path;
+use super::cache;
 use super::theme::{self, fill_background, key_muted, key_primary, pane_block, pane_block_with_border, risk_border_color};
+use super::widgets::{self, progress_bar, stat_chip, truncate_path};
 use super::views;
 pub use super::theme::{
     content_block, ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR,
@@ -15,7 +17,7 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
-        Block, Borders, List, ListItem, Paragraph, Tabs,
+        Block, Borders, List, ListItem, Paragraph,
     },
     Frame,
 };
@@ -69,6 +71,19 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_footer(f, chunks[3], app);
     }
 
+    let modal_open = app.show_help
+        || app.show_export_menu
+        || app.show_detail
+        || app.show_file_preview
+        || app.show_file_info
+        || app.show_jump_menu
+        || app.show_palette
+        || (app.global_search && app.is_searching());
+
+    if modal_open {
+        widgets::render_dim_layer(f, f.area());
+    }
+
     if app.show_help {
         draw_help_overlay(f, app);
     }
@@ -89,10 +104,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_file_info(f, app);
     }
 
-    if app.notification.is_some() {
-        draw_notification(f, app);
-    }
-
     if app.show_jump_menu {
         draw_jump_menu(f, app);
     }
@@ -101,19 +112,22 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_palette(f, app);
     }
 
+    if app.global_search && app.is_searching() {
+        draw_global_search(f, app);
+    }
+
     if app.loading.is_some() {
         draw_loading_banner(f, app);
     }
 
-    if app.global_search && app.is_searching() {
-        draw_global_search(f, app);
+    if app.notification.is_some() {
+        draw_notification(f, app);
     }
 }
 
 fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
-    let ascii = app.config.ui.icon_mode == "ascii";
     let mut lines: Vec<Line> = vec![Line::from(Span::styled(
-        " Fleet ",
+        "Fleet",
         Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
     ))];
     for (i, path) in app.fleet_images.iter().enumerate() {
@@ -123,91 +137,83 @@ fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
         } else {
             Style::default().fg(TEXT_MUTED)
         };
-        let marker = if i == app.fleet_index { "▶" } else { " " };
+        let marker = if i == app.fleet_index { "▌" } else { " " };
         lines.push(Line::from(vec![
-            Span::raw(format!("{} ", marker)),
-            Span::styled(name, style),
+            Span::styled(marker, Style::default().fg(if i == app.fleet_index { ACCENT } else { TEXT_MUTED })),
+            Span::styled(format!(" {name}"), style),
         ]));
     }
-    lines.push(Line::from(Span::styled("N/P switch", theme::label_style())));
-    let block = Paragraph::new(lines).block(
-        pane_block("Images", false).title_style(Style::default().fg(if ascii {
-            TEXT_MUTED
-        } else {
-            ACCENT
-        })),
-    );
+    lines.push(Line::from(Span::styled("N / P", theme::label_style())));
+    let block = Paragraph::new(lines).block(pane_block("Images", false));
     f.render_widget(block, area);
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
-    let ascii = app.config.ui.icon_mode == "ascii";
+    let emoji = theme::use_emoji(&app.config.ui);
+    let ascii = !emoji || app.config.ui.icon_mode == "ascii";
     let view_icon = super::icons::view_icon(app.current_view, ascii);
     let view_desc = super::icons::view_description(app.current_view);
+    let image_short = truncate_path(&app.image_path, 48);
+    let health = app.calculate_health_score();
+    let health_color = widgets::health_score_color(health);
 
-    let header_text = vec![
-        Line::from(vec![
-            Span::styled("GuestKit", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
-            Span::styled(" · ", theme::label_style()),
-            Span::styled("Zyvor", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("  │  ", theme::label_style()),
-            Span::raw(format!("{} ", view_icon)),
-            Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
-            Span::styled(": ", theme::label_style()),
-            Span::styled(view_desc, theme::value_style()),
-        ]),
-        Line::from(vec![
-            Span::styled("Image ", theme::label_style()),
-            Span::styled(&app.image_path, theme::value_style()),
-        ]),
+    let mut line1 = vec![
+        Span::styled("GuestKit", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(" · ", theme::label_style()),
+        Span::styled("Zyvor", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled("  │  ", theme::label_style()),
+        Span::raw(format!("{} ", view_icon)),
+        Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(": ", theme::label_style()),
+        Span::styled(view_desc, theme::value_style()),
+        Span::styled("  │  ", theme::label_style()),
+        Span::styled(format!("{}%", health), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
     ];
+    if let Some(crumb) = widgets::breadcrumb_line(app) {
+        line1.push(Span::styled("  │  ", theme::label_style()));
+        line1.push(Span::styled(crumb, theme::label_style()));
+    }
+
+    let mut line2 = vec![
+        Span::styled("Image ", theme::label_style()),
+        Span::styled(image_short, theme::value_style()),
+    ];
+    if app.fleet_active() {
+        line2.push(Span::styled(
+            format!("  │  fleet {}/{}", app.fleet_index + 1, app.fleet_images.len()),
+            theme::label_style(),
+        ));
+    }
+    if app.comparison_mode {
+        line2.push(Span::styled("  │  compare", Style::default().fg(ACCENT)));
+    }
 
     let (critical, high, medium) = app.get_risk_summary();
     let header_border = risk_border_color(critical, high, medium);
-    let header = Paragraph::new(header_text)
-        .block(pane_block_with_border(" HyperSDK · zyvor.dev · GuestKit ", header_border));
+    let header = Paragraph::new(vec![Line::from(line1), Line::from(line2)])
+        .block(pane_block_with_border(" HyperSDK · zyvor.dev ", header_border));
 
     f.render_widget(header, area);
 }
 
 fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
     let (critical, high, medium) = app.get_risk_summary();
+    let emoji = theme::use_emoji(&app.config.ui);
 
-    let stats_spans = vec![
-        Span::styled("📊 ", Style::default().fg(TEXT_MUTED)),
-        Span::styled("Pkgs:", theme::label_style()),
-        Span::styled(format!(" {} ", app.packages.package_count), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
-        Span::raw("│ "),
-        Span::styled("Svcs:", Style::default().fg(LIGHT_ORANGE)),
-        Span::styled(format!(" {} ", app.services.len()), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
-        Span::raw("│ "),
-        Span::styled("Users:", Style::default().fg(LIGHT_ORANGE)),
-        Span::styled(format!(" {} ", app.users.len()), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
-        Span::raw("│ "),
-        Span::styled("Risk:", Style::default().fg(LIGHT_ORANGE)),
+    let mut spans = vec![
+        stat_chip("Pkgs", &app.packages.package_count.to_string(), SUCCESS_COLOR),
         Span::raw(" "),
+        stat_chip("Svcs", &app.services.len().to_string(), SUCCESS_COLOR),
+        Span::raw(" "),
+        stat_chip("Users", &app.users.len().to_string(), INFO_COLOR),
+        Span::raw(" "),
+        Span::styled(" Risk ", theme::label_style()),
     ];
+    spans.extend(widgets::risk_dots(critical, high, medium, emoji));
+    spans.push(Span::raw(" "));
+    spans.push(stat_chip("Bm", &app.bookmarks.len().to_string(), INFO_COLOR));
 
-    let mut risk_spans = stats_spans;
-
-    if critical > 0 {
-        risk_spans.push(Span::styled(format!("🔴{} ", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)));
-    }
-    if high > 0 {
-        risk_spans.push(Span::styled(format!("🟠{} ", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)));
-    }
-    if medium > 0 {
-        risk_spans.push(Span::styled(format!("🟡{} ", medium), Style::default().fg(WARNING_COLOR)));
-    }
-    if critical == 0 && high == 0 && medium == 0 {
-        risk_spans.push(Span::styled("✓ OK", Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)));
-    }
-
-    risk_spans.push(Span::raw("│ "));
-    risk_spans.push(Span::styled("Bookmarks:", Style::default().fg(LIGHT_ORANGE)));
-    risk_spans.push(Span::styled(format!(" {} ", app.bookmarks.len()), Style::default().fg(INFO_COLOR)));
-
-    let stats = Paragraph::new(Line::from(risk_spans))
+    let stats = Paragraph::new(Line::from(spans))
         .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
 
     f.render_widget(stats, area);
@@ -215,39 +221,58 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
     let ordered = app.tab_titles_ordered();
-    let titles: Vec<String> = ordered.iter().map(|(_, t)| t.clone()).collect();
-    let select = ordered
-        .iter()
-        .position(|(v, _)| *v == app.current_view)
-        .unwrap_or(0);
-
-    let tabs = Tabs::new(titles)
-        .block(pane_block("Navigation (pinned first)", false))
-        .select(select)
-        .style(Style::default().fg(TEXT_MUTED))
-        .highlight_style(theme::focus_style().add_modifier(Modifier::UNDERLINED));
-
+    let mut tab_spans: Vec<Span> = Vec::new();
+    for (i, (view, title)) in ordered.iter().enumerate() {
+        if i > 0 {
+            tab_spans.push(Span::raw("  "));
+        }
+        let selected = *view == app.current_view;
+        if selected {
+            tab_spans.push(Span::styled(
+                format!("▸ {title} "),
+                theme::focus_style().add_modifier(Modifier::UNDERLINED),
+            ));
+        } else {
+            tab_spans.push(Span::styled(
+                format!("  {title}  "),
+                Style::default().fg(TEXT_MUTED),
+            ));
+        }
+    }
+    let tabs = Paragraph::new(Line::from(tab_spans))
+        .block(pane_block("Views", false));
     f.render_widget(tabs, area);
 }
 
 fn draw_loading_banner(f: &mut Frame, app: &App) {
     if let Some(ref loading) = app.loading {
+        use super::loading::LoadingStage;
         let area = Rect {
-            x: f.area().x + 2,
-            y: f.area().y + 1,
-            width: f.area().width.saturating_sub(4),
-            height: 1,
+            x: f.area().x + 1,
+            y: f.area().height.saturating_sub(3),
+            width: f.area().width.saturating_sub(2),
+            height: 2,
         };
+        let idx = loading.stage.index() + 1;
+        let bar = progress_bar(idx, LoadingStage::TOTAL, &loading.message, area.width.saturating_sub(24));
         let line = Line::from(vec![
-            Span::styled("◐ ", Style::default().fg(ACCENT)),
-            Span::styled(loading.progress_label(), theme::value_style()),
+            Span::styled(bar, theme::value_style()),
         ]);
-        f.render_widget(Paragraph::new(line), area);
+        f.render_widget(
+            Paragraph::new(line).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(ACCENT))
+                    .style(Style::default().bg(SURFACE)),
+            ),
+            area,
+        );
     }
 }
 
 fn draw_palette(f: &mut Frame, app: &App) {
     let area = centered_rect(70, 60, f.area());
+    f.render_widget(ratatui::widgets::Clear, area);
     f.render_widget(
         Block::default()
             .borders(Borders::ALL)
@@ -329,25 +354,29 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         ]
     } else {
         let mut spans = vec![
-            Span::styled("⌨ ", key_muted()),
             Span::styled("Tab", key_primary()),
-            Span::styled(": views │ ", key_muted()),
+            Span::styled(" views ", key_muted()),
             Span::styled("/", key_primary()),
-            Span::styled(": search │ ", key_muted()),
-            Span::styled("e", key_primary()),
-            Span::styled(": export │ ", key_muted()),
+            Span::styled(" find ", key_muted()),
             Span::styled(":", key_primary()),
-            Span::styled(": cmd │ ", key_muted()),
-            Span::styled("?", key_primary()),
-            Span::styled(": help │ ", key_muted()),
+            Span::styled(" palette ", key_muted()),
+            Span::styled("r", key_primary()),
+            Span::styled(" refresh ", key_muted()),
             Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-            Span::styled(": quit │ ", key_muted()),
+            Span::styled(" quit ", key_muted()),
             Span::styled(app.get_time_since_update(), theme::value_style()),
         ];
+        if cache::read_cached_flag(std::path::Path::new(&app.image_path)) {
+            spans.push(Span::styled(" │ ", key_muted()));
+            spans.push(Span::styled("cache", Style::default().fg(SUCCESS_COLOR)));
+        }
+        if app.loading.is_some() {
+            spans.push(Span::styled(" │ loading", Style::default().fg(ACCENT)));
+        }
         if app.fleet_active() {
             spans.push(Span::styled(" │ ", key_muted()));
             spans.push(Span::styled("N/P", key_primary()));
-            spans.push(Span::styled(": fleet ", key_muted()));
+            spans.push(Span::styled(" fleet", key_muted()));
         }
         spans
     };
@@ -1469,28 +1498,26 @@ fn generate_topology_details(_app: &App) -> Vec<Line<'static>> {
 
 fn draw_notification(f: &mut Frame, app: &App) {
     if let Some((ref message, _)) = app.notification {
-        // Calculate notification position (top-right corner)
-        let char_width = message.chars().count() as u16;
+        let char_width = message.chars().count().max(12) as u16;
         let area = Rect {
-            x: f.area().width.saturating_sub(char_width + 6),
-            y: 1,
-            width: char_width + 4,
+            x: f.area().width.saturating_sub(char_width + 8),
+            y: f.area().height.saturating_sub(4),
+            width: char_width + 6,
             height: 3,
         };
 
-        let notification_text = vec![
-            Line::from(vec![
-                Span::styled(message.clone(), Style::default().fg(TEXT_COLOR))
-            ]),
-        ];
-
-        let notification = Paragraph::new(notification_text)
-            .block(Block::default()
+        let notification = Paragraph::new(Line::from(Span::styled(
+            message.clone(),
+            theme::value_style(),
+        )))
+        .block(
+            Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-                .style(Style::default().bg(Color::Black)))
-            .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
-            .alignment(Alignment::Center);
+                .border_style(Style::default().fg(ACCENT))
+                .title(" notice ")
+                .style(Style::default().bg(SURFACE)),
+        )
+        .alignment(Alignment::Center);
 
         f.render_widget(ratatui::widgets::Clear, area);
         f.render_widget(notification, area);

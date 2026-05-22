@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **TUI visual polish** — shared `widgets.rs` (stat chips, severity rail, progress bar, risk donut)
+- **Theme variants** — `high-contrast` and `minimal` via `[ui] theme` in `tui.toml`
+- **Config** — `show_emoji`, `density` under `[ui]`
+
+### Changed
+- TUI header, stats bar, tabs, footer, loading bar, fleet sidebar, and modal dim layer
+- Dashboard and Issues views use carbon gauges, sparklines, and risk summary donut
+- Documentation: [tui-enhancements.md](../features/tui-enhancements.md) updated for carbon theme and visual polish
+
 ## [0.3.3] - 2026-05-22
 
 ### Added
