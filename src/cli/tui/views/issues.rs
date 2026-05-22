@@ -3,7 +3,10 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    content_block, label_style, ACCENT, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE,
+    ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -53,11 +56,11 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     // Header with overall status
     let summary_lines = vec![
         Line::from(vec![
-            Span::styled("Overall Status: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled("Overall Status: ", label_style().add_modifier(Modifier::BOLD)),
             Span::styled(overall_status.0, Style::default().fg(overall_status.1).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled("Total Issues: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Total Issues: ", label_style()),
             Span::styled(format!("{}", total_issues), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
             Span::raw("  │  "),
             Span::styled("🔴 Critical: ", Style::default().fg(ERROR_COLOR)),
@@ -71,12 +74,7 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
         ]),
     ];
 
-    let summary = Paragraph::new(summary_lines)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" ⚠️  Security & Compliance Issues ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+    let summary = Paragraph::new(summary_lines).block(content_block("Security & compliance"));
 
     f.render_widget(summary, chunks[0]);
 
