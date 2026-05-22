@@ -6,7 +6,7 @@
 <p align="center">
   <a href="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml"><img src="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://crates.io/crates/guestkit"><img src="https://img.shields.io/crates/v/guestkit.svg" alt="Crates.io"></a>
-  <a href="https://pypi.org/project/guestkit/"><img src="https://img.shields.io/pypi/v/guestkit.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/hypersdk-guestkit/"><img src="https://img.shields.io/pypi/v/hypersdk-guestkit.svg" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/rust-1.70%2B-orange.svg" alt="Rust 1.70+">
   <a href="https://www.gnu.org/licenses/lgpl-3.0"><img src="https://img.shields.io/badge/License-LGPL_v3-blue.svg" alt="LGPL-3.0"></a>
 </p>
@@ -35,7 +35,7 @@ Built in **Rust** for safety and speed. Pairs with **[hyper2kvm](https://github.
 | Migration surprises at first power-on | fstab/crypttab analysis and fix plans before cutover |
 
 ```bash
-cargo install guestkit    # or: pip install guestkit
+cargo install guestkit    # or: pip install hypersdk-guestkit
 guestkit inspect vm.qcow2
 guestkit tui vm.qcow2       # interactive dashboard
 guestkit inspect vm.qcow2 --profile security
@@ -83,7 +83,7 @@ guestkit inspect vm.qcow2 --profile security
 cargo install guestkit
 
 # Python
-pip install guestkit
+pip install hypersdk-guestkit
 
 # From source
 git clone https://github.com/hypersdk/guestkit && cd guestkit && cargo build --release
