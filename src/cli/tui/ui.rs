@@ -2,15 +2,16 @@
 //! UI rendering orchestration
 
 use super::app::{App, View};
-use super::theme::{self, fill_background, pane_block};
+use super::theme::{self, fill_background, key_muted, key_primary, pane_block, pane_block_with_border, risk_border_color};
 use super::views;
 pub use super::theme::{
-    ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR, INFO_COLOR,
-    LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, SURFACE, TEXT_COLOR, TEXT_MUTED, WARNING_COLOR,
+    content_block, ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR,
+    focus_style, INFO_COLOR, label_style, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, SURFACE,
+    TEXT_COLOR, TEXT_MUTED, value_style, WARNING_COLOR,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
         Block, Borders, List, ListItem, Paragraph, Tabs,
@@ -124,7 +125,10 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         ]),
     ];
 
-    let header = Paragraph::new(header_text).block(pane_block(" HyperSDK · guest inspect ", true));
+    let (critical, high, medium) = app.get_risk_summary();
+    let header_border = risk_border_color(critical, high, medium);
+    let header = Paragraph::new(header_text)
+        .block(pane_block_with_border(" HyperSDK · zyvor.dev · GuestKit ", header_border));
 
     f.render_widget(header, area);
 }
@@ -260,27 +264,18 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         ]
     } else {
         vec![
-            Span::styled("⌨  ", Style::default().fg(ORANGE)),
-            Span::styled("1-9", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Jump │ "),
-            Span::styled("r", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Refresh │ "),
-            Span::styled("s", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Sort ["),
-            Span::styled(app.sort_mode.label(), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("] │ "),
-            Span::styled("/", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Search │ "),
-            Span::styled("b", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Bookmark │ "),
-            Span::styled("e", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Export │ "),
-            Span::styled("h", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Help │ "),
+            Span::styled("⌨ ", key_muted()),
+            Span::styled("Tab", key_primary()),
+            Span::styled(": views │ ", key_muted()),
+            Span::styled("/", key_primary()),
+            Span::styled(": search │ ", key_muted()),
+            Span::styled("e", key_primary()),
+            Span::styled(": export │ ", key_muted()),
+            Span::styled("h", key_primary()),
+            Span::styled(": help │ ", key_muted()),
             Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Quit │ "),
-            Span::styled("⏱  ", Style::default().fg(INFO_COLOR)),
-            Span::styled(app.get_time_since_update(), Style::default().fg(TEXT_COLOR)),
+            Span::styled(": quit │ ", key_muted()),
+            Span::styled(app.get_time_since_update(), theme::value_style()),
         ]
     };
 

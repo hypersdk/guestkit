@@ -3,7 +3,10 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    content_block, label_style, ACCENT, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, ORANGE,
+    SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -60,43 +63,39 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
     let info_lines = vec![
         Line::from(vec![
             Span::raw(format!("{} ", os_icon)),
-            Span::styled("OS:         ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("OS:         ", label_style()),
             Span::styled(&app.os_name, Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
             Span::raw("🔢 "),
-            Span::styled("Version:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Version:    ", label_style()),
             Span::styled(&app.os_version, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
             Span::raw("⚙️  "),
-            Span::styled("Kernel:     ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Kernel:     ", label_style()),
             Span::styled(&app.kernel_version, Style::default().fg(INFO_COLOR)),
         ]),
         Line::from(vec![
             Span::raw("🏗️  "),
-            Span::styled("Architecture: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Architecture: ", label_style()),
             Span::styled(&app.architecture, Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
             Span::raw("🏷️  "),
-            Span::styled("Hostname:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.hostname, Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled("Hostname:   ", label_style()),
+            Span::styled(&app.hostname, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
             Span::raw("🚀 "),
-            Span::styled("Init System:", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Init System:", label_style()),
             Span::raw(" "),
             Span::styled(&app.init_system, Style::default().fg(TEXT_COLOR)),
         ]),
     ];
 
     let block = Paragraph::new(info_lines)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 System Information ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+        .block(content_block("📊 System Information"));
 
     f.render_widget(block, area);
 }
@@ -130,17 +129,13 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
     ];
 
     let barchart = BarChart::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🛡️  Profile Risk Levels • Press 'p' for Details ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(content_block("🛡️  Profile Risk Levels • Press 'p' for Details"))
         .data(&data)
         .bar_width(8)
         .bar_gap(2)
-        .bar_style(Style::default().fg(LIGHT_ORANGE))
+        .bar_style(label_style())
         .value_style(Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD))
-        .label_style(Style::default().fg(LIGHT_ORANGE))
+        .label_style(label_style())
         .bar_set(symbols::bar::NINE_LEVELS);
 
     f.render_widget(barchart, area);
@@ -173,9 +168,9 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 📦 Package Trend ")
-            .title_style(Style::default().fg(ORANGE)))
+            .title_style(Style::default().fg(ACCENT)))
         .data(&pkg_data)
-        .style(Style::default().fg(ORANGE));
+        .style(Style::default().fg(ACCENT));
 
     f.render_widget(pkg_sparkline, pkg_chunks[0]);
 
@@ -191,8 +186,8 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 📊 Total ")
-            .title_style(Style::default().fg(ORANGE)))
-        .gauge_style(Style::default().fg(ORANGE))
+            .title_style(Style::default().fg(ACCENT)))
+        .gauge_style(Style::default().fg(ACCENT))
         .label(pkg_label)
         .ratio(pkg_ratio);
 
@@ -219,7 +214,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" ⚡ Service Activity ")
-            .title_style(Style::default().fg(ORANGE)))
+            .title_style(Style::default().fg(ACCENT)))
         .data(&svc_data)
         .style(Style::default().fg(SUCCESS_COLOR));
 
@@ -237,7 +232,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 📊 Total ")
-            .title_style(Style::default().fg(ORANGE)))
+            .title_style(Style::default().fg(ACCENT)))
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .label(svc_label)
         .ratio(svc_ratio);
@@ -265,7 +260,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 🌐 Network Traffic ")
-            .title_style(Style::default().fg(ORANGE)))
+            .title_style(Style::default().fg(ACCENT)))
         .data(&net_data)
         .style(Style::default().fg(WARNING_COLOR));
 
@@ -283,7 +278,7 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 📊 Total ")
-            .title_style(Style::default().fg(ORANGE)))
+            .title_style(Style::default().fg(ACCENT)))
         .gauge_style(Style::default().fg(WARNING_COLOR))
         .label(net_label)
         .ratio(net_ratio);
@@ -314,11 +309,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
     ];
 
     let security_list = List::new(security_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🔒 Security Features ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+        .block(content_block("🔒 Security Features"));
 
     f.render_widget(security_list, chunks[0]);
 
@@ -328,7 +319,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
     if !app.databases.is_empty() {
         let db_names: Vec<&str> = app.databases.iter().map(|d| d.name.as_str()).collect();
         app_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Databases:   ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Databases:   ", label_style()),
             Span::styled(db_names.join(", "), Style::default().fg(SUCCESS_COLOR)),
         ])));
     }
@@ -336,32 +327,28 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
     if !app.web_servers.is_empty() {
         let ws_names: Vec<&str> = app.web_servers.iter().map(|w| w.name.as_str()).collect();
         app_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Web Servers: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Web Servers: ", label_style()),
             Span::styled(ws_names.join(", "), Style::default().fg(SUCCESS_COLOR)),
         ])));
     }
 
     app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("DNS Servers: ", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled("DNS Servers: ", label_style()),
         Span::styled(format!("{}", app.dns_servers.len()), Style::default().fg(TEXT_COLOR)),
     ])));
 
     app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("Timezone:    ", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled("Timezone:    ", label_style()),
         Span::styled(&app.timezone, Style::default().fg(TEXT_COLOR)),
     ])));
 
     app_items.push(ListItem::new(Line::from(vec![
-        Span::styled("Locale:      ", Style::default().fg(LIGHT_ORANGE)),
+        Span::styled("Locale:      ", label_style()),
         Span::styled(&app.locale, Style::default().fg(TEXT_COLOR)),
     ])));
 
     let apps_list = List::new(app_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🌐 System Details ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+        .block(content_block("🌐 System Details"));
 
     f.render_widget(apps_list, chunks[1]);
 }
@@ -376,7 +363,7 @@ fn create_status_item(name: &str, status: &str, enabled: bool) -> ListItem<'stat
     ListItem::new(Line::from(vec![
         Span::styled(symbol.to_string(), Style::default().fg(color).add_modifier(Modifier::BOLD)),
         Span::raw(" "),
-        Span::styled(format!("{:12} ", name), Style::default().fg(LIGHT_ORANGE)),
+        Span::styled(format!("{:12} ", name), label_style()),
         Span::styled(status.to_string(), Style::default().fg(TEXT_COLOR)),
     ]))
 }
@@ -421,11 +408,7 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
     ];
 
     let health_para = Paragraph::new(health_display)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 💊 System Health ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(content_block("💊 System Health"))
         .alignment(Alignment::Center);
 
     f.render_widget(health_para, chunks[0]);
@@ -434,7 +417,7 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
     let (critical, high, medium) = app.get_risk_summary();
     let details = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("Score:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("Score:    ", label_style()),
             Span::styled(format!("{}/100", health_score), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from("")),
@@ -461,7 +444,7 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" Details ")
-            .title_style(Style::default().fg(ORANGE)));
+            .title_style(Style::default().fg(ACCENT)));
 
     f.render_widget(details_list, chunks[1]);
 }
@@ -477,28 +460,24 @@ fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
 
     let package_items = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("📦 Packages", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled("📦 Packages", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Added:    ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Added:    ", label_style()),
             Span::styled(format!("{}", pkg_added), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Removed:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Removed:  ", label_style()),
             Span::styled(format!("{}", pkg_removed), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Modified: ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Modified: ", label_style()),
             Span::styled(format!("{}", pkg_modified), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
         ])),
     ];
 
     let package_list = List::new(package_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 Package Changes ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+        .block(content_block("📊 Package Changes"));
 
     f.render_widget(package_list, chunks[0]);
 
@@ -507,28 +486,24 @@ fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
 
     let service_items = vec![
         ListItem::new(Line::from(vec![
-            Span::styled("⚙️  Services", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled("⚙️  Services", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Started:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Started:  ", label_style()),
             Span::styled(format!("{}", svc_started), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Stopped:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Stopped:  ", label_style()),
             Span::styled(format!("{}", svc_stopped), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
         ])),
         ListItem::new(Line::from(vec![
-            Span::styled("  Changed:  ", Style::default().fg(LIGHT_ORANGE)),
+            Span::styled("  Changed:  ", label_style()),
             Span::styled(format!("{}", svc_changed), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
         ])),
     ];
 
     let service_list = List::new(service_items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📊 Service Changes ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+        .block(content_block("📊 Service Changes"));
 
     f.render_widget(service_list, chunks[1]);
 }

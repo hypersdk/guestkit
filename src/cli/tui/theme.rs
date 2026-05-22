@@ -55,6 +55,44 @@ pub fn pane_block(title: &str, focused: bool) -> Block<'_> {
         .style(Style::default().bg(SURFACE))
 }
 
+/// Standard content pane (muted chrome).
+pub fn content_block(title: &str) -> Block<'_> {
+    pane_block(title, false)
+}
+
+/// Border color from issue severity — context-aware glow, not full-panel orange.
+pub fn risk_border_color(critical: usize, high: usize, medium: usize) -> Color {
+    if critical > 0 {
+        ERROR
+    } else if high > 0 {
+        ACCENT
+    } else if medium > 0 {
+        WARNING
+    } else {
+        BORDER_MUTED
+    }
+}
+
+/// Keyboard hint: accent only for primary actions.
+pub fn key_primary() -> Style {
+    Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
+}
+
+/// Keyboard hint: muted for secondary bindings.
+pub fn key_muted() -> Style {
+    Style::default().fg(TEXT_MUTED)
+}
+
+/// Pane with explicit border color (e.g. risk-aware header).
+pub fn pane_block_with_border(title: &str, border: Color) -> Block<'_> {
+    Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border))
+        .title(format!(" {title} "))
+        .title_style(Style::default().fg(TEXT_MUTED))
+        .style(Style::default().bg(SURFACE))
+}
+
 /// Title style for in-pane headings (muted, not orange).
 pub fn label_style() -> Style {
     Style::default().fg(TEXT_MUTED)
