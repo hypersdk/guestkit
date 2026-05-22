@@ -1,0 +1,13 @@
+Zyvor client bundle — hassle-free install
+=======================================
+
+No git clone. No compile on this machine (unless noted for Python venv bundles).
+
+  1. tar xzf PRODUCT-*-linux-amd64.tar.gz
+  2. cd PRODUCT-*-linux-amd64
+  3. ./install.sh
+  4. ./test-package.sh
+
+Web UI footer shows Zyvor branding: https://zyvor.dev · © @zyvor 2026
+
+Questions: https://zyvor.dev
