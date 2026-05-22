@@ -77,24 +77,39 @@ fi
 # ── System Dependencies ─────────────────────────────────────────────────────
 section "System Dependencies"
 
-# libguestfs
+# libguestfs (optional for GuestKit — pure Rust; useful for guestfish/virt tools on host)
 LIBGUESTFS_FOUND=false
-for path in /usr/lib64/libguestfs.so /usr/lib/x86_64-linux-gnu/libguestfs.so.0 \
-            /usr/lib/libguestfs.so /usr/lib/aarch64-linux-gnu/libguestfs.so.0; do
-    if [ -f "$path" ]; then
+shopt -s nullglob 2>/dev/null || true
+for path in /usr/lib64/libguestfs.so* /usr/lib/x86_64-linux-gnu/libguestfs.so* \
+            /usr/lib/libguestfs.so* /usr/lib/aarch64-linux-gnu/libguestfs.so*; do
+    if [ -e "$path" ]; then
         LIBGUESTFS_FOUND=true
-        pass "libguestfs: $path"
+        pass "libguestfs library: $path"
         break
     fi
 done
-$LIBGUESTFS_FOUND || fail "libguestfs not found (install libguestfs or libguestfs-dev)"
+if command -v guestfish &>/dev/null; then
+    LIBGUESTFS_FOUND=true
+    pass "guestfish found: $(command -v guestfish) (libguestfs-tools)"
+fi
+if ldconfig -p 2>/dev/null | grep -q libguestfs; then
+    LIBGUESTFS_FOUND=true
+    pass "libguestfs: registered in ldconfig"
+fi
+if ! $LIBGUESTFS_FOUND; then
+    if [ "${GUESTKIT_SELFTEST_STRICT:-0}" = "1" ]; then
+        fail "libguestfs not found (dnf install libguestfs libguestfs-tools)"
+    else
+        warn "libguestfs C library/tools not detected (GuestKit uses pure Rust + qemu; optional on host)"
+    fi
+fi
 
 # QEMU tools
 for tool in qemu-img qemu-nbd; do
     if command -v "$tool" &>/dev/null; then
         pass "$tool found: $(command -v "$tool")"
     else
-        fail "$tool not found (install qemu-utils or qemu-img)"
+        fail "$tool not found (install qemu-img or qemu-utils; on EL9 qemu-nbd is in qemu-img)"
     fi
 done
 
@@ -230,8 +245,8 @@ if [ -f "$REPO_DIR/Cargo.toml" ]; then
         warn "no compiled binary found (run: cargo build --release)"
     fi
 
-    # Check test results
-    if command -v cargo &>/dev/null; then
+    # Clippy only when explicitly requested (slow; not required on deploy hosts)
+    if [ "${GUESTKIT_SELFTEST_CLIPPY:-0}" = "1" ] && command -v cargo &>/dev/null; then
         CLIPPY_OK=$(cd "$REPO_DIR" && cargo clippy --lib 2>&1 | grep -c "^warning\|^error" || true)
         if [ "$CLIPPY_OK" -eq 0 ]; then
             pass "clippy: zero warnings"
