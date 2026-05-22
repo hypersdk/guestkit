@@ -1,13 +1,26 @@
-Zyvor client bundle — hassle-free install
-=======================================
+Zyvor client bundle — automatic install
+=========================================
 
-No git clone. No compile on this machine (unless noted for Python venv bundles).
+No git clone. No compile on this machine (Python products ship a ready venv/).
 
+FASTEST (recommended)
   1. tar xzf PRODUCT-*-linux-amd64.tar.gz
   2. cd PRODUCT-*-linux-amd64
-  3. ./install.sh
-  4. ./test-package.sh
+  3. ./install-everything.sh
 
-Web UI footer shows Zyvor branding: https://zyvor.dev · © @zyvor 2026
+Same steps manually
+  ./install.sh
+  ./test-package.sh
 
-Questions: https://zyvor.dev
+Kubernetes products (VMRogue, v9s, Ragnarok, Aether, IronWolf, PacketWolf)
+  install auto-detects kubeconfig: $KUBECONFIG, ~/.kube/config, k3s, kubeadm, MicroK8s
+  override: ./install.sh --kubeconfig /path/to/config
+  or: ZYVOR_KUBECONFIG=/path/to/config ./install-everything.sh
+  non-interactive: ZYVOR_NONINTERACTIVE=1 ./install.sh
+
+Machina hypervisor hosts also run production setup automatically (systemd + firewall).
+Or: sudo ./install-full.sh --open-firewall
+
+Open the URL printed at the end (uses this server's LAN IP, not localhost).
+
+Branding: https://zyvor.dev · © @zyvor 2026
