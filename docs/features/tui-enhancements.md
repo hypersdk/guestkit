@@ -80,9 +80,23 @@ Consistent coral-terracotta orange theme (Pantone 7416 C):
 - No performance impact during normal operation
 - Tab count calculation is O(1) - just reading existing data
 
+## 2026 enhancements (implemented)
+
+- **Progressive loading** — staged inspect with on-screen progress banner
+- **Real refresh** — `r` reloads current view; `Shift+R` full re-inspect; `auto_refresh_seconds` in config
+- **Command palette** — `:` for goto/export/refresh/pin
+- **Pinned tabs** — configure `[views] pinned` in `tui.toml`; pin with palette `pin view`
+- **Layout modes** — `[` / `]` cycle list / split / detail (Issues view)
+- **Issue filters** — `f` cycles All / Critical / High / Medium; split detail pane with remediation
+- **Compare image** — `guestkit tui disk.qcow2 --compare other.qcow2`
+- **Migration handoff** — `Ctrl+M` writes `guestkit-migration-<host>.json`
+- **Mouse** — click tab row to switch views (`mouse_enabled` in config)
+- **Context help** — `?` view-specific; `h` full reference
+- **Inspect cache flag** — `~/.cache/guestkit/<hash>/inspect.ok` after successful load
+
 ## Future Enhancements
 
-Planned improvements include real-time refresh, richer charts, and comparison mode. See [roadmap](../development/roadmap.md).
+Fleet mode (multi-image sidebar), nerd-font icons, deeper Files extract-to-host. See [roadmap](../development/roadmap.md).
 
 ## Usage
 

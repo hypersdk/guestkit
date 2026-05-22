@@ -1664,6 +1664,9 @@ enum Commands {
     Tui {
         /// Disk image path
         image: PathBuf,
+        /// Optional second image for comparison summary
+        #[arg(long)]
+        compare: Option<PathBuf>,
     },
 
     /// Interactive shell for VM inspection (REPL mode)
@@ -2759,8 +2762,8 @@ fn main() -> anyhow::Result<()> {
             systemd_boot_command(&image, timeline, recommendations, summary, top, cli.verbose)?;
         }
 
-        Commands::Tui { image } => {
-            guestkit::cli::tui::run_tui(&image)?;
+        Commands::Tui { image, compare } => {
+            guestkit::cli::tui::run_tui(&image, compare.as_deref())?;
         }
 
         Commands::Shell { image } => {
