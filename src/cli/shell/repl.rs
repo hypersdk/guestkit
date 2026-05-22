@@ -13,7 +13,7 @@ use crate::Guestfs;
 /// Run interactive shell
 pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan());
-    println!("{}", "║          GuestKit Interactive Shell v0.3.2              ║".cyan().bold());
+    println!("{}", format!("║          GuestKit Interactive Shell v{:<19} ║", crate::VERSION).cyan().bold());
     println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan());
     println!();
     println!("{} Loading VM image...", "→".cyan());

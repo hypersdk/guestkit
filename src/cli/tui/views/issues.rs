@@ -4,8 +4,8 @@
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
 use crate::cli::tui::ui::{
-    content_block, label_style, ACCENT, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE,
-    ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+    content_block, label_style, BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE,
+    SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
