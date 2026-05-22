@@ -91,6 +91,10 @@ pub fn draw(f: &mut Frame, app: &App) {
     if app.loading.is_some() {
         draw_loading_banner(f, app);
     }
+
+    if app.global_search && app.is_searching() {
+        draw_global_search(f, app);
+    }
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app: &App) {
@@ -1462,61 +1466,69 @@ fn draw_notification(f: &mut Frame, app: &App) {
     }
 }
 
+fn draw_global_search(f: &mut Frame, app: &App) {
+    let area = centered_rect(65, 50, f.area());
+    f.render_widget(ratatui::widgets::Clear, area);
+    let mut lines = vec![Line::from(vec![
+        Span::styled("Global search ", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(&app.search_query, theme::value_style()),
+    ])];
+    if app.global_search_hits.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No matches yet — keep typing",
+            theme::label_style(),
+        )));
+    }
+    for (i, hit) in app.global_search_hits.iter().take(12).enumerate() {
+        let style = if i == app.global_search_selected {
+            theme::focus_style()
+        } else {
+            Style::default().fg(TEXT_COLOR)
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {} ", hit.view.title()), Style::default().fg(ORANGE)),
+            Span::styled(&hit.label, style),
+        ]));
+    }
+    let block = Paragraph::new(lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ACCENT))
+            .title(" Ctrl+Shift+P ")
+            .style(Style::default().bg(SURFACE)),
+    );
+    f.render_widget(block, area);
+}
+
 fn draw_jump_menu(f: &mut Frame, app: &App) {
     let area = centered_rect(50, 60, f.area());
 
-    // Get filtered views
-    let filtered_views = app.get_filtered_views();
-
-    // Create list items
-    let items: Vec<ListItem> = filtered_views.iter().enumerate().map(|(idx, (view_idx, _view, highlighted))| {
+    let entries = app.get_grouped_jump_entries();
+    let mut items: Vec<ListItem> = Vec::new();
+    let mut last_group = String::new();
+    for (idx, (group, _view, title)) in entries.iter().enumerate() {
+        if group != &last_group {
+            items.push(ListItem::new(Line::from(Span::styled(
+                format!("── {} ──", group),
+                Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD),
+            ))));
+            last_group = group.clone();
+        }
         let is_selected = idx == app.jump_selected_index;
-
-        // Parse highlighted string to create spans
-        let mut spans = vec![];
-        let mut current_text = String::new();
-        let mut chars = highlighted.chars().peekable();
-
-        while let Some(c) = chars.next() {
-            if c == '[' {
-                // Push accumulated text
-                if !current_text.is_empty() {
-                    spans.push(Span::raw(current_text.clone()));
-                    current_text.clear();
-                }
-                // Get highlighted char
-                if let Some(highlighted_char) = chars.next() {
-                    if chars.next() == Some(']') {
-                        spans.push(Span::styled(
-                            highlighted_char.to_string(),
-                            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
-                        ));
-                    }
-                }
-            } else {
-                current_text.push(c);
-            }
-        }
-        if !current_text.is_empty() {
-            spans.push(Span::raw(current_text));
-        }
-
         let line = if is_selected {
             Line::from(vec![
                 Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(format!("{} ", view_idx + 1), Style::default().fg(INFO_COLOR)),
-            ].into_iter().chain(spans.into_iter().map(|s| {
-                s.style(Style::default().add_modifier(Modifier::BOLD))
-            })).collect::<Vec<_>>())
+                Span::styled(title.as_str(), theme::focus_style()),
+            ])
         } else {
             Line::from(vec![
                 Span::raw("   "),
-                Span::styled(format!("{} ", view_idx + 1), Style::default().fg(Color::DarkGray)),
-            ].into_iter().chain(spans).collect::<Vec<_>>())
+                Span::styled(title.as_str(), Style::default().fg(TEXT_COLOR)),
+                Span::styled(format!("  [{}]", group), theme::label_style()),
+            ])
         };
-
-        ListItem::new(line)
-    }).collect();
+        items.push(ListItem::new(line));
+    }
 
     let list = List::new(items)
         .block(Block::default()
@@ -1698,6 +1710,7 @@ fn context_help_for_view(view: View) -> Vec<&'static str> {
         View::Issues => vec![
             "Issues — security findings from profiles.",
             "f cycle risk filter • Enter detail • / search",
+            "x extract file to cwd • v preview • i info",
             "e export report • Ctrl+M migration JSON bundle",
         ],
         View::Files => vec![

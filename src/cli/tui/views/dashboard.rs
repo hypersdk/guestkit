@@ -60,7 +60,7 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
         "💻"
     };
 
-    let info_lines = vec![
+    let mut info_lines = vec![
         Line::from(vec![
             Span::raw(format!("{} ", os_icon)),
             Span::styled("OS:         ", label_style()),
@@ -93,6 +93,26 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
             Span::styled(&app.init_system, Style::default().fg(TEXT_COLOR)),
         ]),
     ];
+
+    if let Some(ref cmp) = app.compare_summary {
+        info_lines.push(Line::from(""));
+        info_lines.push(Line::from(vec![
+            Span::styled("⇄ Compare:  ", label_style()),
+            Span::styled(&cmp.hostname, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+        ]));
+        info_lines.push(Line::from(vec![
+            Span::styled("   OS:       ", label_style()),
+            Span::styled(&cmp.os_name, Style::default().fg(INFO_COLOR)),
+            Span::raw(format!("  │  {} pkgs", cmp.package_count)),
+        ]));
+        info_lines.push(Line::from(vec![
+            Span::styled("   Risk:     ", label_style()),
+            Span::styled(
+                format!("C{} H{} M{}", cmp.critical, cmp.high, cmp.medium),
+                Style::default().fg(WARNING_COLOR),
+            ),
+        ]));
+    }
 
     let block = Paragraph::new(info_lines)
         .block(content_block("📊 System Information"));

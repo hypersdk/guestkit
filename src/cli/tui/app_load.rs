@@ -462,7 +462,19 @@ impl App {
         let name = self.current_view.name().to_string();
         if !self.pinned_views.contains(&name) {
             self.pinned_views.push(name.clone());
-            self.show_notification(format!("Pinned {}", self.current_view.title()));
+            if !self.config.views.pinned.contains(&name) {
+                self.config.views.pinned.push(name);
+                if let Err(e) = self.config.save() {
+                    self.show_notification(format!("Pin saved locally; config write failed: {}", e));
+                } else {
+                    self.show_notification(format!(
+                        "Pinned {} (saved to tui.toml)",
+                        self.current_view.title()
+                    ));
+                }
+            } else {
+                self.show_notification(format!("Pinned {}", self.current_view.title()));
+            }
         }
     }
 
