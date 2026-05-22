@@ -189,8 +189,50 @@ pkg_env_bootstrap() {
     fi
 }
 
+# Root of extracted tarball (set by install.sh / install-everything.sh before parsing args).
+PKG_INSTALL_ROOT="${PKG_INSTALL_ROOT:-}"
+
+# Print bundled HELP.txt or built-in summary.
+pkg_customer_help() {
+    local root="${PKG_INSTALL_ROOT:-.}"
+    if [[ -f "${root}/HELP.txt" ]]; then
+        cat "${root}/HELP.txt"
+        return 0
+    fi
+    pkg_install_builtin_help
+}
+
+pkg_install_builtin_help() {
+    cat <<'EOF'
+Zyvor client bundle — install help
+==================================
+
+Documentation in this folder:
+  START_HERE.txt      begin here
+  HELP.txt            all scripts (run: cat HELP.txt)
+  ZYVOR_INSTALL.txt   fastest install path
+  QUICKSTART.txt      step-by-step commands
+  README.txt          archive contents
+
+Recommended:
+  ./install-everything.sh
+
+Options:
+  --kubeconfig PATH       Kubernetes: use this kubeconfig (skips auto-detect)
+  ZYVOR_KUBECONFIG=PATH   same as --kubeconfig
+  ZYVOR_NONINTERACTIVE=1   do not prompt for kubeconfig
+  ZYVOR_AUTO_INSTALL=0     skip bundled install-full.sh when present
+
+Other scripts:
+  ./install.sh --help
+  ./uninstall.sh --help
+  ./test-package.sh --help
+
+https://zyvor.dev · © @zyvor 2026
+EOF
+}
+
 # Optional flags for ./install.sh and ./install-everything.sh
-#   --kubeconfig PATH | ZYVOR_KUBECONFIG=PATH | prompt when TTY
 pkg_parse_install_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -203,28 +245,35 @@ pkg_parse_install_args() {
                 shift
                 ;;
             -h | --help)
-                pkg_install_args_help
+                pkg_customer_help
                 exit 0
                 ;;
             *)
-                pkg_warn "Unknown option: $1 (try --help)"
+                pkg_warn "Unknown option: $1 (try --help or cat HELP.txt)"
                 shift
                 ;;
         esac
     done
 }
 
+# Legacy name — scripts may still call this.
 pkg_install_args_help() {
-    cat <<'EOF'
-Install options:
-  --kubeconfig PATH     Use this kubeconfig file (skips auto-detect)
-  ZYVOR_KUBECONFIG=PATH Same as --kubeconfig
-  ZYVOR_NONINTERACTIVE=1 Do not prompt for kubeconfig if none found
+    pkg_customer_help
+}
 
-Kubernetes products auto-detect (in order):
-  $KUBECONFIG, ~/.kube/config, /etc/rancher/k3s/k3s.yaml,
-  /etc/kubernetes/admin.conf, MicroK8s client.config
-EOF
+# --help for test-*.sh wrappers in the tarball.
+pkg_script_help() {
+    local script_name="${1:-this script}"
+    local root="${PKG_INSTALL_ROOT:-.}"
+    if [[ -f "${root}/HELP.txt" ]]; then
+        echo "${script_name} — see HELP.txt in this folder:"
+        echo ""
+        sed -n "/^=== ${script_name} ===/,/^=== /p" "${root}/HELP.txt" | sed '$d'
+        echo ""
+        echo "Full guide: cat HELP.txt"
+    else
+        echo "Run ./install-everything.sh or see README.txt / QUICKSTART.txt"
+    fi
 }
 
 pkg_kube_user_home() {
@@ -407,6 +456,7 @@ pkg_install_welcome() {
     pkg_box_line "We install OS deps, create config, verify binaries, run tests"
     pkg_box_line "Faster path: ./install-everything.sh (same + host/production checks)"
     pkg_box_line "Kubernetes products: auto-detect kubeconfig (or --kubeconfig PATH)"
+    pkg_box_line "Help: cat HELP.txt  ·  ./install.sh --help"
     pkg_box_end
     pkg_detail "This server: $(pkg_primary_host_label)"
     pkg_detail "Zyvor · https://zyvor.dev · © @zyvor 2026"
@@ -457,7 +507,7 @@ pkg_install_finish() {
     if [[ ${#extras[@]} -gt 0 ]]; then
         steps+=("${extras[@]}")
     fi
-    steps+=("Re-run checks: ./test-package.sh" "Remove: ./uninstall.sh --yes [--remove-dir]")
+    steps+=("Help: cat HELP.txt" "Re-run checks: ./test-package.sh" "Remove: ./uninstall.sh --yes [--remove-dir]")
     pkg_next_steps "${steps[@]}"
 }
 

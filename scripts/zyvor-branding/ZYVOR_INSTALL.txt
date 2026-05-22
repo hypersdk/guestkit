@@ -3,10 +3,16 @@ Zyvor client bundle — automatic install
 
 No git clone. No compile on this machine (Python products ship a ready venv/).
 
+HELP (bundled in every tarball)
+  cat START_HERE.txt     begin here
+  cat HELP.txt           every script explained
+  ./install-everything.sh --help
+
 FASTEST (recommended)
   1. tar xzf PRODUCT-*-linux-amd64.tar.gz
   2. cd PRODUCT-*-linux-amd64
-  3. ./install-everything.sh
+  3. cat START_HERE.txt
+  4. ./install-everything.sh
 
 Same steps manually
   ./install.sh
