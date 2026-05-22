@@ -19,6 +19,11 @@ pkg_remote_phase() {
     printf "%s━━ %s ━━%s\n" "${PKG_C_BOLD}${PKG_C_BLUE}" "${phase}" "${PKG_C_RESET}"
 }
 
+# Prefer this over "Sync source" — customer tarball has no source tree.
+pkg_remote_sync_build_host() {
+    pkg_remote_phase "Sync to build host"
+}
+
 pkg_remote_kv() {
     pkg_detail "$1: $2"
 }
