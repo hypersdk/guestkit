@@ -169,6 +169,61 @@ pkg_install_welcome() {
     echo ""
 }
 
+# Best-effort routable IPv4 for install URLs (default-route source, then first global UP iface).
+pkg_primary_ipv4() {
+    local ip=""
+    if command -v ip >/dev/null 2>&1; then
+        ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}')
+        if [[ -z "${ip}" || "${ip}" == "127.0.0.1" ]]; then
+            ip=$(
+                ip -4 -o addr show scope global up 2>/dev/null | awk '
+                    $2 !~ /^(lo|docker|virbr|veth|br-|cni|flannel|tailscale|wg)/ {
+                        split($4, a, "/"); print a[1]; exit
+                    }'
+            )
+        fi
+    fi
+    if [[ -z "${ip}" ]]; then
+        ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+    if [[ -n "${ip}" && "${ip}" != "127.0.0.1" ]]; then
+        echo "${ip}"
+    else
+        echo "127.0.0.1"
+    fi
+}
+
+# Human label, e.g. 212.8.252.194 (eno2)
+pkg_primary_host_label() {
+    local ip iface
+    ip=$(pkg_primary_ipv4)
+    if [[ "${ip}" == "127.0.0.1" ]]; then
+        echo "localhost"
+        return 0
+    fi
+    iface=$(
+        ip -4 -o addr show scope global 2>/dev/null | awk -v want="${ip}" '
+            { split($4, a, "/"); if (a[1] == want) { print $2; exit } }'
+    )
+    if [[ -n "${iface}" ]]; then
+        echo "${ip} (${iface})"
+    else
+        echo "${ip}"
+    fi
+}
+
+# scheme://host:port with detected host (http or https).
+pkg_access_url() {
+    local scheme="${1:-http}" port="${2:-80}"
+    local ip
+    ip=$(pkg_primary_ipv4)
+    if [[ "${ip}" == "127.0.0.1" ]]; then
+        echo "${scheme}://localhost:${port}"
+    else
+        echo "${scheme}://${ip}:${port}"
+    fi
+}
+
 pkg_install_done_message() {
     local product="${1:-}"
     pkg_summary "Install complete"
