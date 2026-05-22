@@ -17,6 +17,8 @@ fi
 PRODUCT_NAME="${PRODUCT_NAME:-$(basename "${ROOT}" | sed 's/-linux-amd64$//')}"
 _PKG_SESSION_START=${SECONDS}
 
+pkg_parse_install_args "$@"
+
 pkg_banner "${PRODUCT_NAME} — full automatic install" "Zyvor client bundle · https://zyvor.dev"
 pkg_detail "No git clone · no compile on this machine (Python bundles ship venv/)"
 echo ""
@@ -27,7 +29,7 @@ if [[ ! -x ./install.sh ]]; then
 fi
 
 pkg_phase "Core install (dependencies, config, binaries)"
-./install.sh
+./install.sh "$@"
 
 if [[ -x ./test-host.sh ]]; then
   pkg_phase "Host preflight (libvirt / KVM / tools)"
