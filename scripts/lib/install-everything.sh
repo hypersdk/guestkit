@@ -15,6 +15,7 @@ if [[ -f "${ROOT}/.package-lib/product.meta" ]]; then
 fi
 
 PRODUCT_NAME="${PRODUCT_NAME:-$(basename "${ROOT}" | sed 's/-linux-amd64$//')}"
+export PKG_INSTALL_ROOT="${ROOT}"
 _PKG_SESSION_START=${SECONDS}
 
 pkg_parse_install_args "$@"
@@ -60,7 +61,8 @@ if [[ -n "${ACCESS_SCHEME:-}" && -n "${ACCESS_PORT:-}" ]]; then
   pkg_install_finish "${PRODUCT_NAME}" "${ACCESS_SCHEME}" "${ACCESS_PORT}" "${ACCESS_PATH:-}" ${_finish_extras[@]+"${_finish_extras[@]}"}
 else
   pkg_summary "${PRODUCT_NAME} — install finished"
-  pkg_next_steps \
+    pkg_next_steps \
     "https://zyvor.dev · © @zyvor 2026" \
+    "Help: cat HELP.txt · START_HERE.txt" \
     "See README.txt and QUICKSTART.txt in this folder"
 fi

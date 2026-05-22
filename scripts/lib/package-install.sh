@@ -2,8 +2,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
+export PKG_INSTALL_ROOT="${ROOT}"
 # shellcheck source=/dev/null
 [[ -f "${ROOT}/.package-lib/package-ui.sh" ]] && source "${ROOT}/.package-lib/package-ui.sh"
+
+pkg_parse_install_args "$@"
 
 _PKG_SESSION_START=${SECONDS}
 pkg_install_welcome "GuestKit"
@@ -30,6 +33,7 @@ pkg_step_done
 pkg_summary "GuestKit — ready"
 pkg_next_steps \
   "https://zyvor.dev · © @zyvor 2026" \
+  "Help: cat HELP.txt · ./install.sh --help" \
   "Try: ./guestkit inspect /path/to/disk.qcow2" \
   "./test-selftest.sh --quick (if bundled)" \
   "Docs: HOST_SETUP.txt · PREREQUISITES.txt" \

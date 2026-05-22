@@ -155,6 +155,9 @@ cp "\${LIB}/package-uninstall.sh" "\${STAGE}/uninstall.sh"
 cp "\${LIB}/HOST_SETUP.txt" "\${LIB}/PREREQUISITES.txt" "\${STAGE}/"
 chmod +x "\${STAGE}/install.sh" "\${STAGE}/install-client-deps.sh" \
   "\${STAGE}/test-package.sh" "\${STAGE}/test-host.sh" "\${STAGE}/install-everything.sh" "\${STAGE}/uninstall.sh"
+chmod +x "\${LIB}/write-customer-help.sh"
+"\${LIB}/write-customer-help.sh" "\${STAGE}" "GuestKit" host
+cp "\${LIB}/START_HERE.txt" "\${STAGE}/"
 
 cat > "\${STAGE}/QUICKSTART.txt" <<'QEOF'
 GuestKit — install guide
@@ -179,6 +182,8 @@ cat > "\${STAGE}/README.txt" <<README_EOF
 GuestKit ${VERSION} — Linux amd64 client bundle
 ===============================================
 
+START: cat START_HERE.txt  |  full help: cat HELP.txt
+
 NOT KUBERNETES — inspects offline VM disk images on this Linux host.
 
 FILES
@@ -200,7 +205,7 @@ ORDER: ./install.sh → ./test-host.sh → ./guestkit inspect <image>
 UNINSTALL: ./uninstall.sh --yes [--remove-dir]
 README_EOF
 
-for req in install.sh uninstall.sh README.txt QUICKSTART.txt HOST_SETUP.txt PREREQUISITES.txt \
+for req in HELP.txt START_HERE.txt install.sh uninstall.sh README.txt QUICKSTART.txt HOST_SETUP.txt PREREQUISITES.txt \
   install-client-deps.sh test-host.sh test-package.sh test-selftest.sh guestkit guestkit.env.example; do
   test -e "\${STAGE}/\${req}" || { echo "bundle missing \${req}" >&2; exit 1; }
 done
