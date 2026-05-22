@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
-echo "== GuestKit package test =="
-test -x ./guestkit || { echo "FAIL: ./guestkit missing"; exit 1; }
-./guestkit --version && echo "  OK: guestkit --version"
-./guestkit --help >/dev/null 2>&1 && echo "  OK: guestkit --help"
-if [ -x ./test-host.sh ]; then
-  ./test-host.sh || echo "  WARN: test-host.sh — see HOST_SETUP.txt"
-fi
-if [ -x ./test-selftest.sh ]; then
-  ./test-selftest.sh --quick && echo "  OK: test-selftest.sh --quick" || echo "  WARN: test-selftest.sh (see HOST_SETUP.txt)"
-fi
-echo "Done."
+# shellcheck source=/dev/null
+[[ -f "${ROOT}/.package-lib/package-ui.sh" ]] && source "${ROOT}/.package-lib/package-ui.sh"
+
+_PKG_SESSION_START=${SECONDS}
+pkg_counters_reset
+pkg_banner "GuestKit package test" "CLI · libguestfs · optional selftest"
+
+[[ -x ./guestkit ]] && { ./guestkit --version; pkg_ok "guestkit --version"; } || pkg_fail "guestkit"
+[[ -x ./test-host.sh ]] && { ./test-host.sh || pkg_warn "test-host.sh"; }
+[[ -x ./test-selftest.sh ]] && { ./test-selftest.sh --quick && pkg_ok "test-selftest.sh --quick" || pkg_warn "test-selftest.sh"; }
+
+pkg_summary "Package test"
+[[ "${_PKG_COUNTERS_FAIL}" -eq 0 ]]

@@ -1,6 +1,30 @@
 # shellcheck shell=bash
 # Shared client uninstall helpers — sourced by uninstall.sh in the tarball.
 
+_pu_msg() {
+    if declare -f pkg_ok >/dev/null 2>&1; then
+        pkg_ok "$@"
+    else
+        echo "  $*"
+    fi
+}
+
+_pu_step() {
+    if declare -f pkg_step >/dev/null 2>&1; then
+        pkg_step "$@"
+    else
+        echo "► $*"
+    fi
+}
+
+_pu_info() {
+    if declare -f pkg_info >/dev/null 2>&1; then
+        pkg_info "$@"
+    else
+        echo "  $*"
+    fi
+}
+
 package_uninstall_usage() {
     cat <<'EOF'
 Usage: ./uninstall.sh [options]
@@ -72,7 +96,7 @@ package_uninstall_remove_local_configs() {
         [[ -z "${f}" ]] && continue
         if [[ -f "${root}/${f}" ]]; then
             rm -f "${root}/${f}"
-            echo "  removed ${root}/${f}"
+            _pu_msg "removed ${root}/${f}"
         fi
     done
     if [[ -f "${root}/.client-install-state" ]]; then
@@ -87,9 +111,9 @@ package_uninstall_remove_system_paths() {
         [[ -z "${path}" ]] && continue
         if [[ -e "${path}" ]]; then
             if [[ "${path}" == /etc/* || "${path}" == /var/* || "${path}" == /usr/* ]]; then
-                sudo rm -rf "${path}" 2>/dev/null && echo "  removed ${path}" || echo "  could not remove ${path} (sudo?)"
+                sudo rm -rf "${path}" 2>/dev/null && _pu_msg "removed ${path}" || _pu_info "could not remove ${path} (sudo?)"
             else
-                rm -rf "${path}" 2>/dev/null && echo "  removed ${path}" || true
+                rm -rf "${path}" 2>/dev/null && _pu_msg "removed ${path}" || true
             fi
         fi
     done
@@ -102,7 +126,7 @@ package_uninstall_remove_systemd() {
         sudo systemctl stop "${u}" 2>/dev/null || true
         sudo systemctl disable "${u}" 2>/dev/null || true
         sudo rm -f "/etc/systemd/system/${u}" "/usr/lib/systemd/system/${u}" 2>/dev/null || true
-        echo "  stopped/disabled ${u}"
+        _pu_msg "stopped/disabled ${u}"
     done
     sudo systemctl daemon-reload 2>/dev/null || true
 }
@@ -130,7 +154,7 @@ rm -rf '${root}'
 echo "Removed bundle directory: ${root}"
 EOS
     chmod +x "${tmp}"
-    echo "  scheduling removal of ${root}..."
+    _pu_info "scheduling removal of ${root}…"
     nohup "${tmp}" >/dev/null 2>&1 &
 }
 
@@ -141,30 +165,38 @@ package_uninstall_main() {
     package_uninstall_parse_args "$@"
 
     ROOT="${root}"
+    _PKG_SESSION_START=${SECONDS}
 
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════╗"
-    printf '║  %-54s ║\n' "${product} client uninstall"
-    echo "╚══════════════════════════════════════════════════════════╝"
-    echo ""
-    echo "  Bundle: ${ROOT}"
-    echo ""
+    if declare -f pkg_banner >/dev/null 2>&1; then
+        pkg_counters_reset
+        pkg_banner "${product} client uninstall" "Bundle: ${ROOT}"
+    else
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════╗"
+        printf '║  %-54s ║\n' "${product} client uninstall"
+        echo "╚══════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "  Bundle: ${ROOT}"
+        echo ""
+    fi
 
     package_uninstall_confirm "Stop running processes and remove client install?" || {
-        echo "Cancelled."
+        _pu_info "Cancelled."
         exit 0
     }
 
-    echo "► Stopping processes…"
+    _pu_step "Stopping processes"
     package_uninstall_stop_processes "${ROOT}"
+    declare -f pkg_step_done >/dev/null 2>&1 && pkg_step_done
 
     if [[ "${KEEP_CONFIG}" != true ]]; then
-        echo "► Removing configuration…"
+        _pu_step "Removing configuration"
         package_uninstall_remove_local_configs "${ROOT}"
         package_uninstall_remove_system_paths
         package_uninstall_remove_systemd
+        declare -f pkg_step_done >/dev/null 2>&1 && pkg_step_done
     else
-        echo "► Keeping configuration (--keep-config)"
+        _pu_info "Keeping configuration (--keep-config)"
     fi
 
     package_uninstall_purge_deps_note "${ROOT}"
@@ -172,17 +204,29 @@ package_uninstall_main() {
     if [[ "${REMOVE_DIR}" == true ]]; then
         package_uninstall_confirm "Delete entire bundle directory ${ROOT}?" || exit 0
         package_uninstall_remove_bundle_dir "${ROOT}"
-        echo ""
-        echo "  Bundle directory will be removed momentarily."
+        if declare -f pkg_summary >/dev/null 2>&1; then
+            pkg_summary "Uninstall complete"
+            pkg_next_steps "Bundle directory will be removed in a few seconds"
+        else
+            echo ""
+            echo "  Bundle directory will be removed momentarily."
+        fi
         exit 0
     fi
 
-    echo ""
-    echo "══════════════════════════════════════════════════════════"
-    echo "  Uninstall complete (binaries in this folder are unchanged)."
-    echo "  To delete the whole package folder:"
-    echo "    ./uninstall.sh --yes --remove-dir"
-    echo "  Or: cd .. && rm -rf $(basename "${ROOT}")"
-    echo "══════════════════════════════════════════════════════════"
+    if declare -f pkg_summary >/dev/null 2>&1; then
+        pkg_summary "Uninstall complete"
+        pkg_next_steps \
+            "Binaries in this folder are unchanged" \
+            "Delete folder: ./uninstall.sh --yes --remove-dir" \
+            "Or: cd .. && rm -rf $(basename "${ROOT}")"
+    else
+        echo ""
+        echo "══════════════════════════════════════════════════════════"
+        echo "  Uninstall complete (binaries in this folder are unchanged)."
+        echo "  To delete the whole package folder:"
+        echo "    ./uninstall.sh --yes --remove-dir"
+        echo "══════════════════════════════════════════════════════════"
+    fi
     exit 0
 }
