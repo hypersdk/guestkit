@@ -1,51 +1,32 @@
 #!/usr/bin/env bash
-# GuestKit — one-command client install (extracted tarball).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
+# shellcheck source=/dev/null
+[[ -f "${ROOT}/.package-lib/package-ui.sh" ]] && source "${ROOT}/.package-lib/package-ui.sh"
 
-echo ""
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║  GuestKit client install                                 ║"
-echo "╚══════════════════════════════════════════════════════════╝"
-echo ""
+_PKG_SESSION_START=${SECONDS}
+pkg_banner "GuestKit client install" "Offline VM disk inspection · not Kubernetes"
+pkg_step_init 4
 
-echo "► Step 1/4 — Host dependencies (libguestfs, qemu, nbd)…"
-if [ -x ./install-client-deps.sh ]; then
-  sudo ./install-client-deps.sh || echo "  (fix deps manually if needed)"
-else
-  echo "  install-client-deps.sh not found — skip"
-fi
+pkg_step "Host dependencies (libguestfs, qemu, nbd)"
+sudo ./install-client-deps.sh 2>/dev/null || ./install-client-deps.sh || pkg_warn "deps issues"
+pkg_step_done
 
-echo ""
-echo "► Step 2/4 — Configuration…"
-if [ -f guestkit.env.example ] && [ ! -f guestkit.env ]; then
-  cp guestkit.env.example guestkit.env
-  echo "  Created guestkit.env (optional settings)"
-elif [ -f guestkit.env ]; then
-  echo "  guestkit.env already exists"
-fi
+pkg_step "Configuration"
+[[ -f guestkit.env.example ]] && [[ ! -f guestkit.env ]] && cp guestkit.env.example guestkit.env && pkg_ok "guestkit.env created" || pkg_ok "config OK"
+pkg_step_done
 
-echo ""
-echo "► Step 3/4 — Verify binary…"
-test -x ./guestkit || { echo "ERROR: ./guestkit missing"; exit 1; }
-./guestkit --version
-echo "  OK: guestkit binary"
+pkg_step "Verify binary"
+[[ -x ./guestkit ]] && ./guestkit --version && pkg_ok "guestkit" || { pkg_fail "guestkit"; exit 1; }
+pkg_step_done
 
-echo ""
-echo "► Step 4/4 — Smoke test…"
-[ -x ./test-package.sh ] && ./test-package.sh || true
+pkg_step "Tests"
+[[ -x ./test-package.sh ]] && ./test-package.sh || true
+pkg_step_done
 
-echo ""
-echo "══════════════════════════════════════════════════════════"
-echo "  Install complete."
-echo ""
-echo "  Inspect a disk image:"
-echo "    ./guestkit inspect /path/to/disk.qcow2"
-echo "    ./guestkit tui /path/to/disk.qcow2"
-echo ""
-echo "  Host checks:  ./test-host.sh"
-echo "  Full checks:  ./test-selftest.sh"
-echo "  Docs:         HOST_SETUP.txt  PREREQUISITES.txt"
-echo "  Remove:       ./uninstall.sh --yes [--remove-dir]"
-echo "══════════════════════════════════════════════════════════"
+pkg_summary "Install complete"
+pkg_next_steps \
+  "./test-host.sh && ./test-selftest.sh --quick" \
+  "./guestkit inspect /path/to/disk.qcow2" \
+  "Docs: HOST_SETUP.txt · PREREQUISITES.txt"

@@ -54,23 +54,26 @@ RSYNC_EXCLUDES=(
     --exclude='venv/'
 )
 
-log() { printf '  %s\n' "$*"; }
-step() { echo ""; printf '── %s\n' "$*"; }
+# shellcheck source=lib/package-remote-ui.sh
+source "${SCRIPT_DIR}/lib/package-remote-ui.sh"
+
+pkg_remote_banner "GuestKit" "${VERSION}" "${REMOTE}" "${ARCH}"
 
 if [[ "${GUESTKIT_REMOTE_SKIP_SSH_CHECK:-}" != "1" ]]; then
-    step "Preflight: SSH (${REMOTE})"
+    pkg_remote_phase "Preflight"
     ssh -o BatchMode=yes -o ConnectTimeout="${SSH_TIMEOUT}" -o StrictHostKeyChecking=accept-new "${REMOTE}" "true"
-    log "SSH OK"
+    pkg_ok "SSH ${REMOTE}"
 fi
 
-step "Sync source → ${HOST}:${BUILD_DIR}"
+pkg_remote_phase "Sync source"
+pkg_remote_kv "Build dir" "${BUILD_DIR}"
 ssh "${REMOTE}" "mkdir -p '${BUILD_DIR}'"
 rsync -az --delete "${RSYNC_EXCLUDES[@]}" \
     -e "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -o ServerAliveCountMax=120" \
     "${REPO_DIR}/" "${REMOTE}:${BUILD_DIR}/"
 
 if ! $SKIP_DEPS; then
-    step "Install build dependencies on remote"
+    pkg_remote_phase "Build dependencies"
     ssh "${REMOTE}" bash -s <<REMOTE_DEPS
 set -euo pipefail
 cd '${BUILD_DIR}'
@@ -95,12 +98,13 @@ BUILD_NEEDED=true
 if $REUSE_BUILD; then
     if ssh "${REMOTE}" "test -x '${BUILD_DIR}/target/release/guestkit'"; then
         BUILD_NEEDED=false
-        log "Reusing existing build (--reuse-build)"
+        pkg_ok "Reusing target/release/guestkit (--reuse-build)"
     fi
 fi
 
 if $BUILD_NEEDED; then
-    step "Build on remote (cargo release)"
+    pkg_remote_phase "Compile (cargo release)"
+    pkg_info "Rust release build…"
     ssh "${REMOTE}" bash -s <<REMOTE_BUILD
 set -euo pipefail
 cd '${BUILD_DIR}'
@@ -110,7 +114,8 @@ test -x target/release/guestkit
 REMOTE_BUILD
 fi
 
-step "Assemble tarball in ${OUT_DIR}"
+pkg_remote_phase "Assemble customer bundle"
+pkg_remote_kv "Output" "${OUT_DIR}/${ARTIFACT}"
 ssh "${REMOTE}" bash -s <<REMOTE_PACK
 set -euo pipefail
 OUT_DIR='${OUT_DIR}'
@@ -143,6 +148,7 @@ cp "\${LIB}/package-client-install.sh" "\${STAGE}/install-client-deps.sh"
 cp "\${LIB}/package-client-test.sh" "\${STAGE}/test-package.sh"
 cp "\${LIB}/package-host-test.sh" "\${STAGE}/test-host.sh"
 mkdir -p "\${STAGE}/.package-lib"
+cp "\${LIB}/package-ui.sh" "\${STAGE}/.package-lib/"
 cp "\${LIB}/package-uninstall-lib.sh" "\${STAGE}/.package-lib/"
 cp "\${LIB}/package-uninstall.sh" "\${STAGE}/uninstall.sh"
 cp "\${LIB}/HOST_SETUP.txt" "\${LIB}/PREREQUISITES.txt" "\${STAGE}/"
@@ -202,23 +208,17 @@ ls -lh "\${ARTIFACT}.tar.gz"
 "\${STAGE}/guestkit" --version
 REMOTE_PACK
 
-REMOTE_TARBALL="${OUT_DIR}/${ARTIFACT}.tar.gz"
-step "Package ready"
-log "Remote: ${REMOTE}:${REMOTE_TARBALL}"
+TARBALL="${ARTIFACT}.tar.gz"
+REMOTE_TARBALL="${OUT_DIR}/${TARBALL}"
 
 if $FETCH; then
-    step "Fetch → ${LOCAL_DIST}/"
+    pkg_remote_phase "Fetch to laptop"
     mkdir -p "${LOCAL_DIST}"
     scp -o StrictHostKeyChecking=no \
         "${REMOTE}:${REMOTE_TARBALL}" \
-        "${REMOTE}:${OUT_DIR}/${ARTIFACT}.tar.gz.sha256" \
+        "${REMOTE}:${OUT_DIR}/${TARBALL}.sha256" \
         "${LOCAL_DIST}/"
-    (cd "${LOCAL_DIST}" && shasum -a 256 -c "${ARTIFACT}.tar.gz.sha256" 2>/dev/null || sha256sum -c "${ARTIFACT}.tar.gz.sha256")
+    (cd "${LOCAL_DIST}" && shasum -a 256 -c "${TARBALL}.sha256" 2>/dev/null || sha256sum -c "${TARBALL}.sha256") && pkg_ok "Checksum verified"
 fi
 
-echo ""
-echo "════════════════════════════════════════"
-echo "  GuestKit package complete"
-echo "  Archive: ${REMOTE_TARBALL}"
-echo "  Docs:    docs/PACKAGE_BINARY_REMOTE.md"
-echo "════════════════════════════════════════"
+pkg_remote_done "GuestKit" "${REMOTE}:${REMOTE_TARBALL}" "${REMOTE}:${OUT_DIR}/${TARBALL}.sha256"
