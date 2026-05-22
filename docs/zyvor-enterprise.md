@@ -6,7 +6,7 @@
   </a>
 </p>
 
-This repository ships the **Community Edition** of **GuestKit**. For production migrations, SLAs, and the full platform, contact **[Zyvor AI Labs](https://zyvor.dev/)**.
+This repository ships the open-source **GuestKit** toolkit. For production migrations, SLAs, and the full platform, contact **[Zyvor AI Labs](https://zyvor.dev/)**.
 
 ## Contact Zyvor
 

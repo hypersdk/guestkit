@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a Community Edition enhancement
+about: Suggest an enhancement for the open-source repo
 title: "[FEATURE] "
 labels: enhancement
 ---
