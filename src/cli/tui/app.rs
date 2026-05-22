@@ -98,6 +98,14 @@ pub enum IssueRiskFilter {
     Medium,
 }
 
+/// Cross-view search hit (Ctrl+Shift+P).
+#[derive(Debug, Clone)]
+pub struct GlobalSearchHit {
+    pub view: View,
+    pub index: usize,
+    pub label: String,
+}
+
 /// Summary of `--compare` second image.
 #[derive(Debug, Clone)]
 pub struct CompareSummary {
@@ -358,6 +366,8 @@ pub struct App {
     pub palette_query: String,
     pub palette_selected: usize,
     pub global_search: bool,
+    pub global_search_hits: Vec<GlobalSearchHit>,
+    pub global_search_selected: usize,
     pub issue_filter: IssueRiskFilter,
     pub issue_detail_text: Option<String>,
     pub pinned_views: Vec<String>,
@@ -508,6 +518,8 @@ impl App {
             palette_query: String::new(),
             palette_selected: 0,
             global_search: false,
+            global_search_hits: Vec::new(),
+            global_search_selected: 0,
             issue_filter: IssueRiskFilter::All,
             issue_detail_text: None,
             pinned_views,
@@ -763,13 +775,15 @@ impl App {
     }
 
     pub fn cancel_search(&mut self) {
-        // Save to history before clearing
         if !self.search_query.is_empty() {
             self.add_to_search_history(self.search_query.clone());
-            self.show_notification("Search saved to history".to_string());
         }
         self.searching = false;
+        self.global_search = false;
+        self.global_search_hits.clear();
+        self.global_search_selected = 0;
         self.search_query.clear();
+        self.search_results.clear();
     }
 
     pub fn is_searching(&self) -> bool {
@@ -778,14 +792,18 @@ impl App {
 
     pub fn search_input(&mut self, c: char) {
         self.search_query.push(c);
-        if self.live_filter_enabled {
+        if self.global_search {
+            self.update_global_search();
+        } else if self.live_filter_enabled {
             self.update_search_results();
         }
     }
 
     pub fn search_backspace(&mut self) {
         self.search_query.pop();
-        if self.live_filter_enabled {
+        if self.global_search {
+            self.update_global_search();
+        } else if self.live_filter_enabled {
             self.update_search_results();
         }
     }
@@ -795,6 +813,100 @@ impl App {
         self.live_filter_enabled = !self.live_filter_enabled;
         let status = if self.live_filter_enabled { "enabled" } else { "disabled" };
         self.show_notification(format!("Live filter {}", status));
+    }
+
+    /// Search hostname, packages, services, users, and profile findings.
+    pub fn update_global_search(&mut self) {
+        self.global_search_hits.clear();
+        self.global_search_selected = 0;
+        if self.search_query.is_empty() {
+            return;
+        }
+        let q = self.search_query.to_lowercase();
+
+        if self.hostname.to_lowercase().contains(&q) {
+            self.global_search_hits.push(GlobalSearchHit {
+                view: View::Dashboard,
+                index: 0,
+                label: format!("hostname: {}", self.hostname),
+            });
+        }
+
+        for (idx, pkg) in self.packages.packages.iter().enumerate().take(500) {
+            if pkg.name.to_lowercase().contains(&q) {
+                self.global_search_hits.push(GlobalSearchHit {
+                    view: View::Packages,
+                    index: idx,
+                    label: format!("package: {} {}", pkg.name, pkg.version),
+                });
+            }
+        }
+        for (idx, svc) in self.services.iter().enumerate().take(200) {
+            if svc.name.to_lowercase().contains(&q) {
+                self.global_search_hits.push(GlobalSearchHit {
+                    view: View::Services,
+                    index: idx,
+                    label: format!("service: {} ({})", svc.name, svc.state),
+                });
+            }
+        }
+        for (idx, user) in self.users.iter().enumerate() {
+            if user.username.to_lowercase().contains(&q) {
+                self.global_search_hits.push(GlobalSearchHit {
+                    view: View::Users,
+                    index: idx,
+                    label: format!("user: {}", user.username),
+                });
+            }
+        }
+        if let Some(ref profile) = self.security_profile {
+            for section in &profile.sections {
+                for (fidx, finding) in section.findings.iter().enumerate() {
+                    if finding.item.to_lowercase().contains(&q)
+                        || finding.message.to_lowercase().contains(&q)
+                    {
+                        self.global_search_hits.push(GlobalSearchHit {
+                            view: View::Issues,
+                            index: fidx,
+                            label: format!("issue: {} — {}", finding.item, finding.message),
+                        });
+                    }
+                }
+            }
+        }
+
+        let n = self.global_search_hits.len();
+        self.show_notification(format!("Global: {} hit(s)", n));
+    }
+
+    pub fn global_search_next(&mut self) {
+        if !self.global_search_hits.is_empty() {
+            self.global_search_selected =
+                (self.global_search_selected + 1) % self.global_search_hits.len();
+        }
+    }
+
+    pub fn global_search_prev(&mut self) {
+        if !self.global_search_hits.is_empty() {
+            self.global_search_selected = if self.global_search_selected == 0 {
+                self.global_search_hits.len() - 1
+            } else {
+                self.global_search_selected - 1
+            };
+        }
+    }
+
+    pub fn global_search_activate(&mut self) {
+        if let Some(hit) = self.global_search_hits.get(self.global_search_selected).cloned() {
+            self.set_view(hit.view);
+            self.selected_index = hit.index;
+            self.scroll_offset = hit.index.saturating_sub(5);
+            self.global_search = false;
+            self.searching = false;
+            self.search_query.clear();
+            self.global_search_hits.clear();
+            self.show_notification(format!("→ {}", hit.label));
+        }
     }
 
     /// Update search results based on current query
@@ -1715,6 +1827,48 @@ impl App {
         self.global_search = true;
         self.searching = true;
         self.search_query.clear();
+        self.global_search_hits.clear();
+        self.show_notification("Global search — type query, Enter to jump".to_string());
+    }
+
+    /// Extract selected file from guest image to host cwd.
+    pub fn file_browser_extract(&mut self) {
+        use crate::cli::tui::views::files;
+        let Some(ref browser) = self.file_browser else {
+            return;
+        };
+        let Some(path) = files::get_selected_file_path(browser) else {
+            return;
+        };
+        let Some(ref mut guestfs) = self.guestfs else {
+            return;
+        };
+        if guestfs.is_dir(&path).unwrap_or(false) {
+            self.show_notification("Cannot extract a directory (use cp in shell)".to_string());
+            return;
+        }
+        let base = path.rsplit('/').next().unwrap_or("extracted");
+        let dest = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(base);
+        match guestfs.download(&path, dest.to_string_lossy().as_ref()) {
+            Ok(()) => self.show_notification(format!("Extracted → {}", dest.display())),
+            Err(e) => self.show_notification(format!("Extract failed: {}", e)),
+        }
+    }
+
+    pub fn cycle_layout_mode_backward(&mut self) {
+        self.layout_mode = match self.layout_mode {
+            LayoutMode::ListOnly => LayoutMode::DetailFull,
+            LayoutMode::SplitDetail => LayoutMode::ListOnly,
+            LayoutMode::DetailFull => LayoutMode::SplitDetail,
+        };
+        let label = match self.layout_mode {
+            LayoutMode::ListOnly => "List",
+            LayoutMode::SplitDetail => "Split",
+            LayoutMode::DetailFull => "Detail",
+        };
+        self.show_notification(format!("Layout: {}", label));
     }
 
     /// Toggle case-sensitive search
@@ -1768,90 +1922,52 @@ impl App {
         self.jump_selected_index = 0; // Reset selection when query changes
     }
 
-    /// Get filtered views based on jump query
-    pub fn get_filtered_views(&self) -> Vec<(usize, View, String)> {
+    /// Grouped quick-jump entries: (group name, view, display title).
+    pub fn get_grouped_jump_entries(&self) -> Vec<(String, View, String)> {
         let views = View::all();
-
-        if self.jump_query.is_empty() {
-            // Show all views with their index
-            return views.iter().enumerate()
-                .map(|(idx, v)| (idx, *v, v.title().to_string()))
-                .collect();
-        }
-
-        // Fuzzy matching: check if query chars appear in order in the view title
         let query_lower = self.jump_query.to_lowercase();
-        views.iter().enumerate()
-            .filter_map(|(idx, v)| {
-                let title = v.title();
-                let title_lower = title.to_lowercase();
 
-                // Simple fuzzy match: all query chars must appear in order
-                let mut query_chars = query_lower.chars();
-                let mut current_query_char = query_chars.next();
-
-                for title_char in title_lower.chars() {
-                    if let Some(qc) = current_query_char {
-                        if qc == title_char {
-                            current_query_char = query_chars.next();
-                        }
-                    }
+        let mut entries: Vec<(String, View, String)> = views
+            .iter()
+            .filter(|v| {
+                if query_lower.is_empty() {
+                    return true;
                 }
-
-                // If we consumed all query chars, it's a match
-                if current_query_char.is_none() {
-                    // Highlight matching characters
-                    let mut highlighted = String::new();
-                    let mut query_chars = query_lower.chars().peekable();
-
-                    for tc in title.chars() {
-                        if let Some(&qc) = query_chars.peek() {
-                            if tc.to_lowercase().to_string() == qc.to_string() {
-                                highlighted.push_str(&format!("[{}]", tc));
-                                query_chars.next();
-                            } else {
-                                highlighted.push(tc);
-                            }
-                        } else {
-                            highlighted.push(tc);
-                        }
-                    }
-
-                    Some((idx, *v, highlighted))
-                } else {
-                    None
-                }
+                let title = v.title().to_lowercase();
+                let group = v.group().to_lowercase();
+                title.contains(&query_lower) || group.contains(&query_lower)
             })
-            .collect()
+            .map(|v| (v.group().to_string(), *v, v.title().to_string()))
+            .collect();
+
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+        entries
     }
 
     /// Navigate jump menu selection
     pub fn jump_menu_next(&mut self) {
-        let filtered_count = self.get_filtered_views().len();
-        if filtered_count > 0 {
-            self.jump_selected_index = (self.jump_selected_index + 1) % filtered_count;
+        let n = self.get_grouped_jump_entries().len();
+        if n > 0 {
+            self.jump_selected_index = (self.jump_selected_index + 1) % n;
         }
     }
 
     pub fn jump_menu_previous(&mut self) {
-        let filtered_count = self.get_filtered_views().len();
-        if filtered_count > 0 {
-            if self.jump_selected_index == 0 {
-                self.jump_selected_index = filtered_count - 1;
+        let n = self.get_grouped_jump_entries().len();
+        if n > 0 {
+            self.jump_selected_index = if self.jump_selected_index == 0 {
+                n - 1
             } else {
-                self.jump_selected_index -= 1;
-            }
+                self.jump_selected_index - 1
+            };
         }
     }
 
-    /// Execute jump to selected view
     pub fn jump_menu_select(&mut self) {
-        let filtered_views = self.get_filtered_views();
-        if let Some((_, view, _)) = filtered_views.get(self.jump_selected_index) {
-            self.current_view = *view;
-            self.scroll_offset = 0;
-            self.selected_index = 0;
+        if let Some((_, view, _)) = self.get_grouped_jump_entries().get(self.jump_selected_index) {
+            let view = *view;
             self.show_jump_menu = false;
+            self.set_view(view);
             self.show_notification(format!("→ {}", view.title()));
         }
     }

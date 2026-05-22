@@ -94,9 +94,19 @@ Consistent coral-terracotta orange theme (Pantone 7416 C):
 - **Context help** — `?` view-specific; `h` full reference
 - **Inspect cache flag** — `~/.cache/guestkit/<hash>/inspect.ok` after successful load
 
+## Follow-up (latest)
+
+- **Global search** — `Ctrl+Shift+P`, cross-view hits overlay, Enter to jump
+- **Grouped jump menu** — Ctrl+P sections: Overview / System / Security
+- **Files extract** — `x` downloads selected file to host cwd via `guestfs.download`
+- **Compare on dashboard** — `--compare` summary in system info panel
+- **Pin persists** — `pin view` writes to `~/.config/guestkit/tui.toml`
+- **Layout** — `[` previous layout, `]` next
+- **Palette** — Up/Down to select, Enter to run
+
 ## Future Enhancements
 
-Fleet mode (multi-image sidebar), nerd-font icons, deeper Files extract-to-host. See [roadmap](../development/roadmap.md).
+Fleet mode (multi-image sidebar without full reload), nerd-font icons, serialized inspect cache. See [roadmap](../development/roadmap.md).
 
 ## Usage
 

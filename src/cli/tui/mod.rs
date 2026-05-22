@@ -153,7 +153,7 @@ fn run_app<B: ratatui::backend::Backend>(
                         app.toggle_palette();
                     }
                     KeyCode::Char('?') => app.toggle_context_help(),
-                    KeyCode::Char('[') if !app.is_searching() => app.cycle_layout_mode(),
+                    KeyCode::Char('[') if !app.is_searching() => app.cycle_layout_mode_backward(),
                     KeyCode::Char(']') if !app.is_searching() => app.cycle_layout_mode(),
                     KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
                         app.toggle_case_sensitive();
@@ -170,6 +170,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char('s') => app.cycle_sort_mode(),
+                    KeyCode::Char('x') if app.current_view == app::View::Files && !app.is_searching() => {
+                        app.file_browser_extract();
+                    }
                     KeyCode::Char('v') if app.current_view == app::View::Files && !app.is_searching() => {
                         // View file preview in Files view
                         app.show_file_preview();
@@ -237,14 +240,27 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                     }
                     KeyCode::Up => {
-                        if app.show_jump_menu {
+                        if app.show_palette {
+                            if app.palette_selected > 0 {
+                                app.palette_selected -= 1;
+                            }
+                        } else if app.global_search && app.is_searching() {
+                            app.global_search_prev();
+                        } else if app.show_jump_menu {
                             app.jump_menu_previous();
                         } else {
                             app.scroll_up();
                         }
                     }
                     KeyCode::Down => {
-                        if app.show_jump_menu {
+                        if app.show_palette {
+                            let n = crate::cli::tui::palette::filtered_commands(&app.palette_query).len();
+                            if n > 0 {
+                                app.palette_selected = (app.palette_selected + 1) % n;
+                            }
+                        } else if app.global_search && app.is_searching() {
+                            app.global_search_next();
+                        } else if app.show_jump_menu {
                             app.jump_menu_next();
                         } else {
                             app.scroll_down();
@@ -264,7 +280,9 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Enter => {
                         use app::ExportMode;
 
-                        if app.show_palette {
+                        if app.global_search && app.is_searching() {
+                            app.global_search_activate();
+                        } else if app.show_palette {
                             app.palette_execute();
                         } else if app.show_jump_menu {
                             app.jump_menu_select();
