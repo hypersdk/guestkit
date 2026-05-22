@@ -5,7 +5,7 @@
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 
 pub struct HardeningProfile;
 
@@ -307,9 +307,9 @@ impl HardeningProfile {
                             });
                         } else {
                             let missing = vec![
-                                (!has_noexec).then(|| "noexec"),
-                                (!has_nosuid).then(|| "nosuid"),
-                                (!has_nodev).then(|| "nodev"),
+                                (!has_noexec).then_some("noexec"),
+                                (!has_nosuid).then_some("nosuid"),
+                                (!has_nodev).then_some("nodev"),
                             ].into_iter().flatten().collect::<Vec<_>>().join(",");
 
                             findings.push(Finding {

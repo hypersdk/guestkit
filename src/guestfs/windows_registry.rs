@@ -97,7 +97,7 @@ pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
         Err(_) => return Ok(applications),
     };
 
-    for app_key in (&*subkeys_ref).iter() {
+    for app_key in subkeys_ref.iter() {
         let app_key_ref = app_key.borrow();
 
         // Extract application information from values
@@ -107,7 +107,7 @@ pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
         let mut install_location = None;
 
         for kv in app_key_ref.values() {
-            match kv.name().as_ref() {
+            match kv.name() {
                 "DisplayName" => {
                     if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
                         name = data.clone();
@@ -197,7 +197,7 @@ pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
         Err(_) => return Ok(services),
     };
 
-    for svc_key in (&*subkeys_ref).iter() {
+    for svc_key in subkeys_ref.iter() {
         let svc_key_ref = svc_key.borrow();
         let svc_name = svc_key_ref.name().to_string();
 
@@ -207,7 +207,7 @@ pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
         let mut image_path = String::new();
 
         for kv in svc_key_ref.values() {
-            match kv.name().as_ref() {
+            match kv.name() {
                 "DisplayName" => {
                     if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
                         display_name = data.clone();
@@ -314,7 +314,7 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
         Err(_) => return Ok(adapters),
     };
 
-    for if_key in (&*subkeys_ref).iter() {
+    for if_key in subkeys_ref.iter() {
         let if_key_ref = if_key.borrow();
         let adapter_guid = if_key_ref.name().to_string();
 
@@ -324,7 +324,7 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
         let mut dns_servers = Vec::new();
 
         for kv in if_key_ref.values() {
-            match kv.name().as_ref() {
+            match kv.name() {
                 "EnableDHCP" => {
                     // DHCP enabled is a DWORD (1 = enabled, 0 = disabled)
                     if let RegistryValue::RegDWord(val) = kv.value() {
@@ -456,7 +456,7 @@ pub fn get_windows_version(hive_path: &Path) -> Result<(String, String, String)>
         // Get value name
         let name = kv.name();
 
-        match name.as_ref() {
+        match name {
             "ProductName" => {
                 // Read string value (e.g., "Windows 10 Pro", "Windows 11 Home")
                 use nt_hive2::RegistryValue;
@@ -528,17 +528,12 @@ pub fn parse_installed_updates(hive_path: &Path) -> Result<Vec<WindowsUpdateInfo
         )));
     }
 
-    // TODO: Parse registry keys:
+    // Registry parsing requires nt_hive2 crate for reading Windows registry hives.
+    // Keys to parse:
     // - SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages
     // - SOFTWARE\Microsoft\Windows NT\CurrentVersion\HotFix
-
-    Ok(vec![WindowsUpdateInfo {
-        kb_number: "Registry".to_string(),
-        title: "Update registry detected".to_string(),
-        description: "Full parsing pending".to_string(),
-        installed_date: "Unknown".to_string(),
-        update_type: "Registry".to_string(),
-    }])
+    // For now, return empty since we cannot parse registry binary format without nt_hive2.
+    Ok(vec![])
 }
 
 /// Parse CBS.log for component-based servicing updates
@@ -580,39 +575,60 @@ pub fn parse_update_datastore(datastore_path: &Path) -> Result<Vec<WindowsUpdate
         )));
     }
 
-    // TODO: Parse ESE database (Extensible Storage Engine)
-    // This requires ESE database parsing which is complex
-    // For now, just detect presence
-
-    Ok(vec![WindowsUpdateInfo {
-        kb_number: "DataStore".to_string(),
-        title: "Windows Update Database".to_string(),
-        description: format!("Update database found at {}", datastore_path.display()),
-        installed_date: "Unknown".to_string(),
-        update_type: "Database".to_string(),
-    }])
+    // ESE database (Extensible Storage Engine) parsing requires a dedicated ESE parser.
+    // Without one, we cannot extract update history from DataStore.edb.
+    Ok(vec![])
 }
 
 /// Detect hotfixes from file system
 pub fn detect_hotfixes_from_filesystem(windows_dir: &Path) -> Result<Vec<WindowsUpdateInfo>> {
     let mut hotfixes = Vec::new();
 
-    // Check common hotfix directories
-    let hotfix_dirs = vec![
-        windows_dir.join("$hf_mig$"),
-        windows_dir.join("$NtUninstall"),
-    ];
+    // $NtUninstall directories contain per-KB subdirectories like $NtUninstallKB123456$
+    let nt_uninstall_prefix = "$NtUninstall";
+    if let Ok(entries) = std::fs::read_dir(windows_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.starts_with(nt_uninstall_prefix) && entry.path().is_dir() {
+                // Extract KB number from directory name like "$NtUninstallKB123456$"
+                let inner = name_str
+                    .trim_start_matches(nt_uninstall_prefix)
+                    .trim_end_matches('$');
+                if !inner.is_empty() {
+                    hotfixes.push(WindowsUpdateInfo {
+                        kb_number: inner.to_string(),
+                        title: format!("{} (uninstall data present)", inner),
+                        description: format!("Found at {}", entry.path().display()),
+                        installed_date: "Unknown".to_string(),
+                        update_type: "Hotfix".to_string(),
+                    });
+                }
+            }
+        }
+    }
 
-    for dir in hotfix_dirs {
-        if dir.exists() {
-            // Directory exists, indicates hotfixes were installed
-            hotfixes.push(WindowsUpdateInfo {
-                kb_number: "Hotfix".to_string(),
-                title: "Hotfix directory detected".to_string(),
-                description: format!("Found at {}", dir.display()),
-                installed_date: "Unknown".to_string(),
-                update_type: "Hotfix".to_string(),
-            });
+    // $hf_mig$ directory indicates hotfix migration data exists
+    let hf_mig = windows_dir.join("$hf_mig$");
+    if hf_mig.exists() && hf_mig.is_dir() {
+        // Count subdirectories as an approximation of hotfix count
+        if let Ok(entries) = std::fs::read_dir(&hf_mig) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+                if let Some(kb_start) = name_str.find("KB") {
+                    let kb_part = &name_str[kb_start..];
+                    let kb_end = kb_part.find(|c: char| !c.is_alphanumeric()).unwrap_or(kb_part.len());
+                    let kb_number = &kb_part[..kb_end];
+                    hotfixes.push(WindowsUpdateInfo {
+                        kb_number: kb_number.to_string(),
+                        title: format!("{} (migration data)", kb_number),
+                        description: format!("Found at {}", entry.path().display()),
+                        installed_date: "Unknown".to_string(),
+                        update_type: "Hotfix".to_string(),
+                    });
+                }
+            }
         }
     }
 
@@ -633,10 +649,9 @@ pub struct WindowsEventEntry {
 
 /// Parse Windows Event Log (.evtx) file
 ///
-/// TODO: Full implementation using evtx crate (pending log feature conflict resolution)
-/// For now, detects presence of event log files
+/// Full EVTX parsing requires the evtx crate, which currently has log crate
+/// feature conflicts. Returns empty until evtx crate integration is resolved.
 pub fn parse_evtx_file(evtx_path: &Path, _limit: usize) -> Result<Vec<WindowsEventEntry>> {
-    // Verify file exists
     if !evtx_path.exists() {
         return Err(Error::NotFound(format!(
             "EVTX file not found: {}",
@@ -644,36 +659,9 @@ pub fn parse_evtx_file(evtx_path: &Path, _limit: usize) -> Result<Vec<WindowsEve
         )));
     }
 
-    // Get file metadata
-    let metadata = std::fs::metadata(evtx_path).map_err(Error::Io)?;
-
-    let file_size = metadata.len();
-    let channel_name = evtx_path
-        .file_stem()
-        .and_then(|n| n.to_str())
-        .unwrap_or("Unknown");
-
-    // Return stub event indicating file was detected
-    Ok(vec![WindowsEventEntry {
-        event_id: 0,
-        level: "Information".to_string(),
-        source: "EventLog Parser".to_string(),
-        message: format!(
-            "Event log file detected: {} ({} bytes). Full parsing will be available when evtx crate integration is complete.",
-            channel_name, file_size
-        ),
-        time_created: "Unknown".to_string(),
-        computer: "Unknown".to_string(),
-        channel: channel_name.to_string(),
-    }])
-
-    // TODO: Implement full EVTX parsing with evtx crate
-    // Waiting for resolution of log crate feature conflicts
-    // The evtx crate (https://crates.io/crates/evtx) provides:
-    // - Fast, safe EVTX parsing in pure Rust
-    // - XML and JSON output
-    // - Support for recovery of corrupted logs
-    // - 1600x faster than Python alternatives
+    // EVTX binary format parsing requires the evtx crate.
+    // Cannot extract events without it.
+    Ok(vec![])
 }
 
 /// Parse System event log for boot times and errors
@@ -692,13 +680,3 @@ pub fn parse_application_events(evtx_path: &Path) -> Result<Vec<WindowsEventEntr
     parse_evtx_file(evtx_path, 50)
 }
 
-// TODO: Full registry parsing implementation using nt_hive2
-// The nt_hive2 API requires:
-// 1. use nt_hive2::{Hive, SubPath, HiveParseMode};
-// 2. let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)?;
-// 3. let root = hive.root_key_node()?;
-// 4. let key = root.subpath(path, &mut hive)?.unwrap();
-// 5. Handle Rc<RefCell<KeyNode>> return types
-// 6. Parse values with correct type conversions
-//
-// This will be implemented when we have Windows VM images for testing

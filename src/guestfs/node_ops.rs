@@ -196,6 +196,10 @@ impl Guestfs {
             eprintln!("guestfs: truncate_size {} {}", path, size);
         }
 
+        if size < 0 {
+            return Err(Error::InvalidOperation("truncate size must be non-negative".to_string()));
+        }
+
         let host_path = self.resolve_guest_path(path)?;
 
         let file = std::fs::OpenOptions::new()
@@ -276,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_node_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Interactive REPL mode for guestctl CLI
+//! Interactive REPL mode for guestkit CLI
 
-use super::errors::errors;
+use super::errors::builders as errors;
 use anyhow::{Context, Result};
-use guestkit::Guestfs;
+use crate::Guestfs;
 use owo_colors::OwoColorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -17,11 +17,11 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-/// Get the history directory path (~/.guestctl/history/)
+/// Get the history directory path (~/.guestkit/history/)
 fn get_history_dir() -> Result<PathBuf> {
     let home =
         dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
-    let history_dir = home.join(".guestctl").join("history");
+    let history_dir = home.join(".guestkit").join("history");
 
     // Create directory if it doesn't exist
     if !history_dir.exists() {
@@ -46,7 +46,7 @@ fn get_history_file(disk_path: &Path) -> Result<PathBuf> {
     disk_path.to_string_lossy().hash(&mut hasher);
     let hash = hasher.finish();
 
-    let filename = format!("guestctl-{:x}.history", hash);
+    let filename = format!("guestkit-{:x}.history", hash);
     Ok(history_dir.join(filename))
 }
 
@@ -262,7 +262,7 @@ impl Completer for GuestkitHelper {
             if command == "mount" && parts.len() == 3 {
                 let prefix = parts.last().unwrap_or(&"");
 
-                let mount_points = vec!["/mnt", "/mnt/", "/tmp/mnt", "/tmp/mnt/"];
+                let mount_points = ["/mnt", "/mnt/", "/tmp/mnt", "/tmp/mnt/"];
 
                 let matches: Vec<Pair> = mount_points
                     .iter()
@@ -314,6 +314,35 @@ impl Completer for GuestkitHelper {
     }
 }
 
+/// Validate a username to prevent injection attacks
+fn validate_username(username: &str) -> bool {
+    !username.is_empty()
+        && !username.starts_with('-')
+        && username.len() <= 32
+        && username
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.')
+}
+
+/// Look up a user's home directory from /etc/passwd inside the guest
+fn lookup_home_dir(handle: &mut Guestfs, username: &str) -> String {
+    if username == "root" {
+        return "/root".to_string();
+    }
+    // Try to read /etc/passwd and extract home directory
+    if let Ok(content) = handle.read_file("/etc/passwd") {
+        let content_str = String::from_utf8_lossy(&content);
+        for line in content_str.lines() {
+            let fields: Vec<&str> = line.split(':').collect();
+            if fields.len() >= 6 && fields[0] == username {
+                return fields[5].to_string();
+            }
+        }
+    }
+    // Fallback to /home/{username}
+    format!("/home/{}", username)
+}
+
 /// Interactive session state
 pub struct InteractiveSession {
     handle: Guestfs,
@@ -338,7 +367,7 @@ impl InteractiveSession {
         // Add drive
         println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
         handle
-            .add_drive_ro(disk_path.to_str().unwrap())
+            .add_drive_ro(disk_path.to_str().ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?)
             .context("Failed to add drive")?;
 
         // Launch
@@ -430,7 +459,7 @@ impl InteractiveSession {
     /// Run the interactive session
     pub fn run(&mut self) -> Result<()> {
         loop {
-            let prompt = format!("{}> ", "guestctl".truecolor(222, 115, 86).bold());
+            let prompt = format!("{}> ", "guestkit".truecolor(222, 115, 86).bold());
 
             match self.editor.readline(&prompt) {
                 Ok(line) => {
@@ -1086,7 +1115,13 @@ impl InteractiveSession {
 
         let path = args[0];
         let lines = if args.len() > 1 {
-            args[1].parse::<usize>().unwrap_or(10)
+            match args[1].parse::<usize>() {
+                Ok(n) => n,
+                Err(_) => {
+                    println!("{} Invalid line count '{}', using default 10", "Warning:".yellow().bold(), args[1]);
+                    10
+                }
+            }
         } else {
             10
         };
@@ -1213,8 +1248,8 @@ impl InteractiveSession {
 
             println!();
             if filtered.is_empty() {
-                if filter.is_some() {
-                    println!("No packages found matching '{}'", filter.unwrap());
+                if let Some(f) = &filter {
+                    println!("No packages found matching '{}'", f);
                 } else {
                     println!("No packages found");
                 }
@@ -1292,7 +1327,7 @@ impl InteractiveSession {
             println!();
 
             for user in &users {
-                let uid: i32 = user.uid.parse().unwrap_or(0);
+                let uid: i32 = user.uid.parse().unwrap_or(-1);
                 let color = if uid == 0 {
                     owo_colors::Style::new().red().bold()
                 } else if uid >= 1000 {
@@ -1403,15 +1438,17 @@ impl InteractiveSession {
             return Ok(());
         }
 
-        if self.current_root.is_none() {
-            println!();
-            println!("{} No OS detected. Cannot run AI diagnostics.", "Error:".red().bold());
-            println!();
-            return Ok(());
-        }
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                println!();
+                println!("{} No OS detected. Cannot run AI diagnostics.", "Error:".red().bold());
+                println!();
+                return Ok(());
+            }
+        };
 
         let query = args.join(" ");
-        let root = self.current_root.as_ref().unwrap();
 
         println!();
         println!("{} {}", "🤖".bold(), "Analyzing VM...".truecolor(222, 115, 86));
@@ -1617,23 +1654,33 @@ Always explain WHAT the command does and WHY it's needed.
         let content = self.handle.read_file(remote_path)
             .with_context(|| format!("Failed to read file: {}", remote_path))?;
 
-        // Create temp file
-        let temp_dir = std::env::temp_dir();
-        let temp_file = temp_dir.join(format!("guestkit-edit-{}", remote_path.replace('/', "_")));
-        std::fs::write(&temp_file, &content)?;
+        // Create temp file securely using tempfile crate to avoid symlink attacks
+        let temp_file = tempfile::Builder::new()
+            .prefix("guestkit-edit-")
+            .suffix(".tmp")
+            .tempfile()
+            .with_context(|| "Failed to create temporary file for editing")?;
+        std::fs::write(temp_file.path(), &content)?;
 
-        // Open in editor
+        // Open in editor - validate editor is a simple command name
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
-        println!("  {} Opening {} in {}...", "→".truecolor(222, 115, 86), remote_path, editor);
+        let editor_name = std::path::Path::new(&editor)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("vi");
+        if editor.contains(';') || editor.contains('&') || editor.contains('|') || editor.contains('$') {
+            anyhow::bail!("EDITOR contains unsafe characters: {}", editor);
+        }
+        println!("  {} Opening {} in {}...", "→".truecolor(222, 115, 86), remote_path, editor_name);
 
         let status = std::process::Command::new(&editor)
-            .arg(&temp_file)
+            .arg(temp_file.path())
             .status()
             .with_context(|| format!("Failed to launch editor: {}", editor))?;
 
         if status.success() {
             // Upload modified file
-            let modified_content = std::fs::read(&temp_file)?;
+            let modified_content = std::fs::read(temp_file.path())?;
             self.handle.write(remote_path, &modified_content)
                 .with_context(|| format!("Failed to write back to VM: {}", remote_path))?;
 
@@ -1642,8 +1689,7 @@ Always explain WHAT the command does and WHY it's needed.
             println!("  {} Edit cancelled", "⚠".truecolor(222, 115, 86));
         }
 
-        // Cleanup
-        let _ = std::fs::remove_file(&temp_file);
+        // temp_file is automatically cleaned up when dropped
         println!();
 
         Ok(())
@@ -1694,12 +1740,15 @@ Always explain WHAT the command does and WHY it's needed.
 
         let username = args[0];
 
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Creating user {}...", "→".truecolor(222, 115, 86), username.bright_white().bold());
 
         // Create user using useradd command
-        let cmd = format!("useradd -m -s /bin/bash {}", username);
-        self.handle.sh(&cmd)
+        self.handle.command(&["useradd", "-m", "-s", "/bin/bash", username])
             .with_context(|| format!("Failed to create user: {}", username))?;
 
         println!("  {} User {} created successfully", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
@@ -1721,12 +1770,15 @@ Always explain WHAT the command does and WHY it's needed.
 
         let username = args[0];
 
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Deleting user {}...", "→".truecolor(222, 115, 86), username.bright_white().bold());
 
         // Delete user and their home directory
-        let cmd = format!("userdel -r {}", username);
-        self.handle.sh(&cmd)
+        self.handle.command(&["userdel", "-r", username])
             .with_context(|| format!("Failed to delete user: {}", username))?;
 
         println!("  {} User {} deleted", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
@@ -1761,10 +1813,12 @@ Always explain WHAT the command does and WHY it's needed.
 
         println!("  {} Setting password...", "→".truecolor(222, 115, 86));
 
-        // Set password using chpasswd
-        let cmd = format!("echo '{}:{}' | chpasswd", username, password);
-        self.handle.sh(&cmd)
-            .with_context(|| format!("Failed to set password for {}", username))?;
+        // Pipe password directly to chpasswd via echo to avoid plaintext temp files
+        let passwd_input = format!("{}:{}", username, password);
+        let escaped_input = passwd_input.replace('\'', "'\\''");
+        let result = self.handle.command(&["sh", "-c", &format!("echo '{}' | chpasswd", escaped_input)]);
+
+        result.with_context(|| format!("Failed to set password for {}", username))?;
 
         println!("  {} Password set successfully for {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
         println!();
@@ -1785,11 +1839,14 @@ Always explain WHAT the command does and WHY it's needed.
         let username = args[0];
         let group = args[1];
 
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Adding {} to group {}...", "→".truecolor(222, 115, 86), username.bright_white(), group.bright_white());
 
-        let cmd = format!("usermod -a -G {} {}", group, username);
-        self.handle.sh(&cmd)
+        self.handle.command(&["usermod", "-a", "-G", group, username])
             .with_context(|| format!("Failed to add {} to group {}", username, group))?;
 
         println!("  {} User {} added to group {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white(), group.bright_white());
@@ -1813,7 +1870,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("{} Groups for {}:", "→".truecolor(222, 115, 86).bold(), username.bright_white());
 
-        let output = self.handle.sh(&format!("groups {}", username))
+        let output = self.handle.command(&["groups", username])
             .with_context(|| format!("Failed to get groups for {}", username))?;
 
         println!("  {}", output.trim().bright_white());
@@ -1837,6 +1894,10 @@ Always explain WHAT the command does and WHY it's needed.
         let username = args[0];
         let keyfile = args[1];
 
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Adding SSH key for {}...", "→".truecolor(222, 115, 86), username.bright_white());
 
@@ -1844,19 +1905,15 @@ Always explain WHAT the command does and WHY it's needed.
         let key_content = std::fs::read_to_string(keyfile)
             .with_context(|| format!("Failed to read key file: {}", keyfile))?;
 
-        // Determine home directory
-        let home_dir = if username == "root" {
-            "/root".to_string()
-        } else {
-            format!("/home/{}", username)
-        };
+        // Determine home directory from /etc/passwd
+        let home_dir = lookup_home_dir(&mut self.handle, username);
 
         let ssh_dir = format!("{}/.ssh", home_dir);
         let authorized_keys = format!("{}/authorized_keys", ssh_dir);
 
         // Create .ssh directory
         let _ = self.handle.mkdir_p(&ssh_dir);
-        self.handle.sh(&format!("chmod 700 {}", ssh_dir))?;
+        self.handle.command(&["chmod", "700", &ssh_dir])?;
 
         // Append key to authorized_keys
         let mut existing_keys = String::new();
@@ -1870,8 +1927,8 @@ Always explain WHAT the command does and WHY it's needed.
         existing_keys.push_str(&key_content);
 
         self.handle.write(&authorized_keys, existing_keys.as_bytes())?;
-        self.handle.sh(&format!("chmod 600 {}", authorized_keys))?;
-        self.handle.sh(&format!("chown -R {} {}", username, ssh_dir))?;
+        self.handle.command(&["chmod", "600", &authorized_keys])?;
+        self.handle.command(&["chown", "-R", username, &ssh_dir])?;
 
         println!("  {} SSH key added for {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
         println!();
@@ -1894,11 +1951,11 @@ Always explain WHAT the command does and WHY it's needed.
         let index: usize = args[1].parse()
             .with_context(|| "Invalid key index")?;
 
-        let home_dir = if username == "root" {
-            "/root".to_string()
-        } else {
-            format!("/home/{}", username)
-        };
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
+        let home_dir = lookup_home_dir(&mut self.handle, username);
 
         let authorized_keys = format!("{}/.ssh/authorized_keys", home_dir);
 
@@ -1945,11 +2002,11 @@ Always explain WHAT the command does and WHY it's needed.
 
         let username = args[0];
 
-        let home_dir = if username == "root" {
-            "/root".to_string()
-        } else {
-            format!("/home/{}", username)
-        };
+        if !validate_username(username) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
+        let home_dir = lookup_home_dir(&mut self.handle, username);
 
         let authorized_keys = format!("{}/.ssh/authorized_keys", home_dir);
 
@@ -1997,7 +2054,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Enabling SSH service...", "→".truecolor(222, 115, 86));
 
         // Try systemctl first, fall back to service command
-        let result = self.handle.sh("systemctl enable sshd || systemctl enable ssh || chkconfig sshd on");
+        let result = self.handle.sh_raw("systemctl enable sshd || systemctl enable ssh || chkconfig sshd on");
 
         match result {
             Ok(_) => {
@@ -2146,8 +2203,10 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Enabling {}...", "→".truecolor(222, 115, 86), service.bright_white());
 
-        let cmd = format!("systemctl enable {} || chkconfig {} on", service, service);
-        self.handle.sh(&cmd)?;
+        // Try systemctl first, then chkconfig
+        if self.handle.command(&["systemctl", "enable", service]).is_err() {
+            let _ = self.handle.command(&["chkconfig", service, "on"]);
+        }
 
         println!("  {} Service {} enabled", "✓".truecolor(222, 115, 86).bold(), service.bright_white());
         println!();
@@ -2170,8 +2229,10 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Disabling {}...", "→".truecolor(222, 115, 86), service.bright_white());
 
-        let cmd = format!("systemctl disable {} || chkconfig {} off", service, service);
-        self.handle.sh(&cmd)?;
+        // Try systemctl first, then chkconfig
+        if self.handle.command(&["systemctl", "disable", service]).is_err() {
+            let _ = self.handle.command(&["chkconfig", service, "off"]);
+        }
 
         println!("  {} Service {} disabled", "✓".truecolor(222, 115, 86).bold(), service.bright_white());
         println!();
@@ -2218,7 +2279,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Copying {} to {}...", "→".truecolor(222, 115, 86), source.bright_white(), dest.bright_white());
 
-        self.handle.sh(&format!("cp -r {} {}", source, dest))?;
+        self.handle.command(&["cp", "-r", source, dest])?;
 
         println!("  {} Copy complete", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2242,7 +2303,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Moving {} to {}...", "→".truecolor(222, 115, 86), source.bright_white(), dest.bright_white());
 
-        self.handle.sh(&format!("mv {} {}", source, dest))?;
+        self.handle.command(&["mv", source, dest])?;
 
         println!("  {} Move complete", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2263,11 +2324,33 @@ Always explain WHAT the command does and WHY it's needed.
 
         let path = args[0];
 
+        // Block deletion of critical system paths
+        let blocked_paths = [
+            "/", "/etc", "/usr", "/var", "/boot", "/home", "/root",
+            "/bin", "/sbin", "/lib", "/lib64", "/dev", "/proc", "/sys",
+        ];
+        let normalized = path.trim_end_matches('/');
+        if blocked_paths.iter().any(|&bp| normalized == bp || path == bp) {
+            anyhow::bail!("Refusing to delete protected system path: {}", path);
+        }
+
         println!();
         println!("{} Delete {}? This cannot be undone!", "⚠".red().bold(), path.bright_white());
+        print!("  Type 'yes' to confirm: ");
+        std::io::Write::flush(&mut std::io::stdout())?;
+
+        let mut confirmation = String::new();
+        std::io::stdin().read_line(&mut confirmation)?;
+        let confirmation = confirmation.trim().to_lowercase();
+        if confirmation != "y" && confirmation != "yes" {
+            println!("  {} Cancelled", "✗".red());
+            println!();
+            return Ok(());
+        }
+
         println!("  {} Deleting...", "→".truecolor(222, 115, 86));
 
-        self.handle.sh(&format!("rm -rf {}", path))?;
+        self.handle.command(&["rm", "-rf", path])?;
 
         println!("  {} Deleted successfully", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2311,10 +2394,15 @@ Always explain WHAT the command does and WHY it's needed.
         let mode = args[0];
         let path = args[1];
 
+        // Validate mode is a valid octal or symbolic mode
+        if !mode.chars().all(|c| c.is_ascii_digit() || "ugorwxXst+-=,".contains(c)) {
+            anyhow::bail!("Invalid chmod mode: {}", mode);
+        }
+
         println!();
         println!("  {} Setting permissions {} on {}...", "→".truecolor(222, 115, 86), mode.bright_white(), path.bright_white());
 
-        self.handle.sh(&format!("chmod {} {}", mode, path))?;
+        self.handle.command(&["chmod", mode, path])?;
 
         println!("  {} Permissions updated", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2335,10 +2423,15 @@ Always explain WHAT the command does and WHY it's needed.
         let owner = args[0];
         let path = args[1];
 
+        // Validate owner format (user or user:group)
+        if !owner.chars().all(|c| c.is_alphanumeric() || c == ':' || c == '_' || c == '-' || c == '.') {
+            anyhow::bail!("Invalid owner format: {}", owner);
+        }
+
         println!();
         println!("  {} Changing owner of {} to {}...", "→".truecolor(222, 115, 86), path.bright_white(), owner.bright_white());
 
-        self.handle.sh(&format!("chown -R {} {}", owner, path))?;
+        self.handle.command(&["chown", "-R", owner, path])?;
 
         println!("  {} Owner updated", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2355,8 +2448,17 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Finding files larger than {} in {}...", "→".truecolor(222, 115, 86), min_size.bright_white(), path.bright_white());
         println!();
 
-        let cmd = format!("find {} -type f -size +{} -exec ls -lh {{}} \\; 2>/dev/null | awk '{{print $5, $9}}' | sort -hr | head -20", path, min_size);
-        match self.handle.sh(&cmd) {
+        // Validate min_size to prevent injection (should be digits optionally followed by b/k/M/G/T/P)
+        if !min_size.chars().all(|c| c.is_ascii_digit() || "bckMGTP".contains(c)) {
+            eprintln!("Error: Invalid size format: {}", min_size);
+            return Ok(());
+        }
+
+        // Use shell quoting to prevent injection
+        let script = format!("find '{}' -type f -size +'{}' -exec ls -lh {{}} \\; 2>/dev/null | awk '{{print $5, $9}}' | sort -hr | head -20",
+            path.replace('\'', "'\\''"),
+            min_size.replace('\'', "'\\''"));
+        match self.handle.sh_raw(&script) {
             Ok(output) => {
                 if output.is_empty() {
                     println!("  No large files found");
@@ -2381,8 +2483,9 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Analyzing disk usage for {}...", "→".truecolor(222, 115, 86), path.bright_white());
         println!();
 
-        let cmd = format!("du -h --max-depth=1 {} 2>/dev/null | sort -hr | head -20", path);
-        match self.handle.sh(&cmd) {
+        let script = format!("du -h --max-depth=1 '{}' 2>/dev/null | sort -hr | head -20",
+            path.replace('\'', "'\\''"));
+        match self.handle.sh_raw(&script) {
             Ok(output) => {
                 println!("{}", output);
             }
@@ -2411,7 +2514,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Creating symlink {} -> {}...", "→".truecolor(222, 115, 86), link.bright_white(), target.bright_white());
 
-        self.handle.sh(&format!("ln -sf {} {}", target, link))?;
+        self.handle.command(&["ln", "-sf", target, link])?;
 
         println!("  {} Symlink created", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2437,18 +2540,26 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Installing package {}...", "→".truecolor(222, 115, 86), package.bright_white());
 
         // Detect package manager and use appropriate command
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let cmd = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            format!("dnf install -y {}", package)
+        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+            self.handle.command(&["dnf", "install", "-y", package])
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            format!("apt-get update && apt-get install -y {}", package)
+            // For apt-get, need to update first, then install
+            let _ = self.handle.command(&["apt-get", "update"]);
+            self.handle.command(&["apt-get", "install", "-y", package])
         } else {
-            format!("yum install -y {}", package)
+            self.handle.command(&["yum", "install", "-y", package])
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(_) => {
                 println!("  {} Package installed successfully", "✓".truecolor(222, 115, 86).bold());
             }
@@ -2476,18 +2587,24 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Removing package {}...", "→".truecolor(222, 115, 86), package.bright_white());
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let cmd = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            format!("dnf remove -y {}", package)
+        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+            self.handle.command(&["dnf", "remove", "-y", package])
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            format!("apt-get remove -y {}", package)
+            self.handle.command(&["apt-get", "remove", "-y", package])
         } else {
-            format!("yum remove -y {}", package)
+            self.handle.command(&["yum", "remove", "-y", package])
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(_) => {
                 println!("  {} Package removed successfully", "✓".truecolor(222, 115, 86).bold());
             }
@@ -2505,7 +2622,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Updating package lists...", "→".truecolor(222, 115, 86));
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         let cmd = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
@@ -2516,7 +2639,7 @@ Always explain WHAT the command does and WHY it's needed.
             "yum update -y"
         };
 
-        match self.handle.sh(cmd) {
+        match self.handle.sh_raw(cmd) {
             Ok(_) => {
                 println!("  {} System updated successfully", "✓".truecolor(222, 115, 86).bold());
             }
@@ -2545,18 +2668,25 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Searching for packages matching '{}'...", "→".truecolor(222, 115, 86), keyword.bright_white());
         println!();
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let cmd = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            format!("dnf search {} 2>/dev/null | head -30", keyword)
+        // Use command() with argv array to avoid shell injection
+        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+            self.handle.command(&["dnf", "search", keyword])
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            format!("apt-cache search {} | head -30", keyword)
+            self.handle.command(&["apt-cache", "search", keyword])
         } else {
-            format!("yum search {} 2>/dev/null | head -30", keyword)
+            self.handle.command(&["pacman", "-Ss", keyword])
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(output) => {
                 println!("{}", output);
             }
@@ -2590,13 +2720,16 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Adding firewall rule for {}...", "→".truecolor(222, 115, 86), rule.bright_white());
 
         // Try firewalld first, fall back to ufw
-        let cmd1 = format!("firewall-cmd --permanent --add-port={} 2>/dev/null || firewall-cmd --permanent --add-service={} 2>/dev/null", rule, rule);
-        let cmd2 = "firewall-cmd --reload 2>/dev/null";
-        let cmd3 = format!("ufw allow {} 2>/dev/null", rule);
+        let port_result = self.handle.command(&["firewall-cmd", "--permanent", &format!("--add-port={}", rule)]);
+        let service_result = if port_result.is_err() {
+            self.handle.command(&["firewall-cmd", "--permanent", &format!("--add-service={}", rule)])
+        } else {
+            port_result
+        };
 
-        if self.handle.sh(&cmd1).is_ok() && self.handle.sh(&cmd2).is_ok() {
+        if service_result.is_ok() && self.handle.command(&["firewall-cmd", "--reload"]).is_ok() {
             println!("  {} Firewall rule added (firewalld)", "✓".truecolor(222, 115, 86).bold());
-        } else if self.handle.sh(&cmd3).is_ok() {
+        } else if self.handle.command(&["ufw", "allow", rule]).is_ok() {
             println!("  {} Firewall rule added (ufw)", "✓".truecolor(222, 115, 86).bold());
         } else {
             println!("  {} No firewall detected or rule add failed", "⚠".yellow());
@@ -2621,13 +2754,16 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Removing firewall rule for {}...", "→".truecolor(222, 115, 86), rule.bright_white());
 
-        let cmd1 = format!("firewall-cmd --permanent --remove-port={} 2>/dev/null || firewall-cmd --permanent --remove-service={} 2>/dev/null", rule, rule);
-        let cmd2 = "firewall-cmd --reload 2>/dev/null";
-        let cmd3 = format!("ufw delete allow {} 2>/dev/null", rule);
+        let port_result = self.handle.command(&["firewall-cmd", "--permanent", &format!("--remove-port={}", rule)]);
+        let service_result = if port_result.is_err() {
+            self.handle.command(&["firewall-cmd", "--permanent", &format!("--remove-service={}", rule)])
+        } else {
+            port_result
+        };
 
-        if self.handle.sh(&cmd1).is_ok() && self.handle.sh(&cmd2).is_ok() {
+        if service_result.is_ok() && self.handle.command(&["firewall-cmd", "--reload"]).is_ok() {
             println!("  {} Firewall rule removed (firewalld)", "✓".truecolor(222, 115, 86).bold());
-        } else if self.handle.sh(&cmd3).is_ok() {
+        } else if self.handle.command(&["ufw", "delete", "allow", rule]).is_ok() {
             println!("  {} Firewall rule removed (ufw)", "✓".truecolor(222, 115, 86).bold());
         } else {
             println!("  {} No firewall detected or rule removal failed", "⚠".yellow());
@@ -2644,15 +2780,15 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         // Try firewalld
-        if let Ok(output) = self.handle.sh("firewall-cmd --list-all 2>/dev/null") {
+        if let Ok(output) = self.handle.sh_raw("firewall-cmd --list-all 2>/dev/null") {
             println!("{}", output);
         }
         // Try ufw
-        else if let Ok(output) = self.handle.sh("ufw status verbose 2>/dev/null") {
+        else if let Ok(output) = self.handle.sh_raw("ufw status verbose 2>/dev/null") {
             println!("{}", output);
         }
         // Try iptables
-        else if let Ok(output) = self.handle.sh("iptables -L -n 2>/dev/null") {
+        else if let Ok(output) = self.handle.sh_raw("iptables -L -n 2>/dev/null") {
             println!("{}", output);
         } else {
             println!("  {} No firewall detected", "⚠".yellow());
@@ -2678,18 +2814,34 @@ Always explain WHAT the command does and WHY it's needed.
         let user = args[0];
         let schedule_and_cmd = args[1..].join(" ");
 
+        if !validate_username(user) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Adding cron job for {}...", "→".truecolor(222, 115, 86), user.bright_white());
 
-        let cmd = format!("(crontab -u {} -l 2>/dev/null; echo '{}') | crontab -u {} -", user, schedule_and_cmd, user);
+        // Read existing crontab, add new entry, write back
+        let temp_cron = "/tmp/.guestkit_cron_tmp";
+        // Use command array to avoid shell injection
+        let existing = self.handle.command(&["crontab", "-u", user, "-l"]).unwrap_or_default();
+        let new_crontab = if existing.trim().is_empty() {
+            format!("{}\n", schedule_and_cmd)
+        } else {
+            format!("{}\n{}\n", existing.trim(), schedule_and_cmd)
+        };
 
-        match self.handle.sh(&cmd) {
+        match self.handle.write(temp_cron, new_crontab.as_bytes()) {
             Ok(_) => {
-                println!("  {} Cron job added", "✓".truecolor(222, 115, 86).bold());
+                let result = self.handle.command(&["crontab", "-u", user, temp_cron]);
+                let _ = self.handle.command(&["rm", "-f", temp_cron]);
+
+                match result {
+                    Ok(_) => println!("  {} Cron job added", "✓".truecolor(222, 115, 86).bold()),
+                    Err(e) => println!("  {} Failed to add cron job: {}", "✗".red(), e),
+                }
             }
-            Err(e) => {
-                println!("  {} Failed to add cron job: {}", "✗".red(), e);
-            }
+            Err(e) => println!("  {} Failed to write cron file: {}", "✗".red(), e),
         }
 
         println!();
@@ -2700,11 +2852,15 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_cron_list(&mut self, args: &[&str]) -> Result<()> {
         let user = if args.is_empty() { "root" } else { args[0] };
 
+        if !validate_username(user) {
+            anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
+        }
+
         println!();
         println!("  {} Cron jobs for {}:", "→".truecolor(222, 115, 86), user.bright_white());
         println!();
 
-        match self.handle.sh(&format!("crontab -u {} -l 2>/dev/null", user)) {
+        match self.handle.command(&["crontab", "-u", user, "-l"]) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  No cron jobs found");
@@ -2729,11 +2885,11 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Cleaning old logs...", "→".truecolor(222, 115, 86));
 
         // Clear old journal logs
-        let _ = self.handle.sh("journalctl --vacuum-time=7d 2>/dev/null");
+        let _ = self.handle.sh_raw("journalctl --vacuum-time=7d 2>/dev/null");
 
         // Clear old log files
-        let _ = self.handle.sh("find /var/log -type f -name '*.log.*' -mtime +30 -delete 2>/dev/null");
-        let _ = self.handle.sh("find /var/log -type f -name '*.gz' -mtime +30 -delete 2>/dev/null");
+        let _ = self.handle.sh_raw("find /var/log -type f -name '*.log.*' -mtime +30 -delete 2>/dev/null");
+        let _ = self.handle.sh_raw("find /var/log -type f -name '*.gz' -mtime +30 -delete 2>/dev/null");
 
         println!("  {} Logs cleaned", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2746,15 +2902,21 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Cleaning package cache...", "→".truecolor(222, 115, 86));
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            let _ = self.handle.sh("dnf clean all 2>/dev/null");
+            let _ = self.handle.sh_raw("dnf clean all 2>/dev/null");
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            let _ = self.handle.sh("apt-get clean 2>/dev/null");
+            let _ = self.handle.sh_raw("apt-get clean 2>/dev/null");
         } else {
-            let _ = self.handle.sh("yum clean all 2>/dev/null");
+            let _ = self.handle.sh_raw("yum clean all 2>/dev/null");
         }
 
         println!("  {} Package cache cleaned", "✓".truecolor(222, 115, 86).bold());
@@ -2768,8 +2930,8 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Cleaning temporary files...", "→".truecolor(222, 115, 86));
 
-        let _ = self.handle.sh("rm -rf /tmp/* 2>/dev/null");
-        let _ = self.handle.sh("rm -rf /var/tmp/* 2>/dev/null");
+        let _ = self.handle.sh_raw("rm -rf /tmp/* 2>/dev/null");
+        let _ = self.handle.sh_raw("rm -rf /var/tmp/* 2>/dev/null");
 
         println!("  {} Temporary files cleaned", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2782,16 +2944,22 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Removing old kernels...", "→".truecolor(222, 115, 86));
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            match self.handle.sh("dnf remove -y $(dnf repoquery --installonly --latest-limit=-2 -q) 2>/dev/null") {
+            match self.handle.sh_raw("dnf remove -y $(dnf repoquery --installonly --latest-limit=-2 -q) 2>/dev/null") {
                 Ok(_) => println!("  {} Old kernels removed", "✓".truecolor(222, 115, 86).bold()),
                 Err(_) => println!("  {} No old kernels to remove", "→".truecolor(222, 115, 86)),
             }
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            let _ = self.handle.sh("apt-get autoremove --purge -y 2>/dev/null");
+            let _ = self.handle.sh_raw("apt-get autoremove --purge -y 2>/dev/null");
             println!("  {} Old kernels removed", "✓".truecolor(222, 115, 86).bold());
         }
 
@@ -2818,8 +2986,10 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Viewing logs for {}...", "→".truecolor(222, 115, 86), service.bright_white());
         println!();
 
-        let cmd = format!("journalctl -u {} -n {} --no-pager 2>/dev/null", service, lines);
-        match self.handle.sh(&cmd) {
+        let script = format!("journalctl -u '{}' -n '{}' --no-pager 2>/dev/null",
+            service.replace('\'', "'\\''"),
+            lines.replace('\'', "'\\''"));
+        match self.handle.sh_raw(&script) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  No logs found for service");
@@ -2829,8 +2999,10 @@ Always explain WHAT the command does and WHY it's needed.
             }
             Err(_) => {
                 // Fallback to syslog
-                let cmd = format!("grep {} /var/log/syslog 2>/dev/null | tail -n {}", service, lines);
-                if let Ok(output) = self.handle.sh(&cmd) {
+                let fallback = format!("grep '{}' /var/log/syslog 2>/dev/null | tail -n '{}'",
+                    service.replace('\'', "'\\''"),
+                    lines.replace('\'', "'\\''"));
+                if let Ok(output) = self.handle.sh_raw(&fallback) {
                     println!("{}", output);
                 } else {
                     println!("  No logs found");
@@ -2848,7 +3020,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Checking for failed services...", "→".truecolor(222, 115, 86));
         println!();
 
-        match self.handle.sh("systemctl list-units --failed --no-pager 2>/dev/null") {
+        match self.handle.sh_raw("systemctl list-units --failed --no-pager 2>/dev/null") {
             Ok(output) => {
                 if output.contains("0 loaded units listed") {
                     println!("  {} No failed services", "✓".green().bold());
@@ -2871,13 +3043,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Analyzing boot time...", "→".truecolor(222, 115, 86));
         println!();
 
-        match self.handle.sh("systemd-analyze 2>/dev/null") {
+        match self.handle.sh_raw("systemd-analyze 2>/dev/null") {
             Ok(output) => {
                 println!("{}", output);
                 println!();
 
                 // Show critical chain
-                if let Ok(chain) = self.handle.sh("systemd-analyze critical-chain 2>/dev/null | head -20") {
+                if let Ok(chain) = self.handle.sh_raw("systemd-analyze critical-chain 2>/dev/null | head -20") {
                     println!("{}", "Critical Chain:".bright_white().bold());
                     println!("{}", chain);
                 }
@@ -2908,8 +3080,8 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Setting locale to {}...", "→".truecolor(222, 115, 86), locale.bright_white());
 
-        let cmd = format!("localectl set-locale LANG={} 2>/dev/null", locale);
-        match self.handle.sh(&cmd) {
+        let lang_arg = format!("LANG={}", locale);
+        match self.handle.command(&["localectl", "set-locale", &lang_arg]) {
             Ok(_) => {
                 // Also update /etc/locale.conf
                 let content = format!("LANG={}\n", locale);
@@ -2947,7 +3119,7 @@ Always explain WHAT the command does and WHY it's needed.
         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
         let backup_path = format!("{}.backup.{}", path, timestamp);
 
-        self.handle.sh(&format!("cp -p {} {}", path, backup_path))?;
+        self.handle.command(&["cp", "-p", path, &backup_path])?;
 
         println!("  {} Backup created: {}", "✓".truecolor(222, 115, 86).bold(), backup_path.bright_white());
         println!();
@@ -2963,8 +3135,9 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Finding backups in {}...", "→".truecolor(222, 115, 86), path.bright_white());
         println!();
 
-        let cmd = format!("find {} -name '*.backup.*' -o -name '*.bak' 2>/dev/null | sort", path);
-        match self.handle.sh(&cmd) {
+        let script = format!("find '{}' -name '*.backup.*' -o -name '*.bak' 2>/dev/null | sort",
+            path.replace('\'', "'\\''"));
+        match self.handle.sh_raw(&script) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  No backups found");
@@ -3054,7 +3227,7 @@ Always explain WHAT the command does and WHY it's needed.
 
                 let mut success = false;
                 for cmd in commands {
-                    if self.handle.sh(cmd).is_ok() {
+                    if self.handle.sh_raw(cmd).is_ok() {
                         success = true;
                         break;
                     }
@@ -3096,13 +3269,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Configuring {} with IP {}...", "→".truecolor(222, 115, 86), iface.bright_white(), ip.bright_white());
 
-        // Try NetworkManager first, then netplan, then traditional ifcfg
-        let nm_cmd = format!("nmcli con mod {} ipv4.addresses {}/{} ipv4.method manual", iface, ip, netmask);
-        let ifcfg_content = format!("DEVICE={}\nBOOTPROTO=static\nIPADDR={}\nNETMASK={}\nONBOOT=yes\n", iface, ip, netmask);
-
-        if self.handle.sh(&nm_cmd).is_ok() {
+        // Try NetworkManager first using command() to avoid injection
+        let addr_spec = format!("{}/{}", ip, netmask);
+        if self.handle.command(&["nmcli", "con", "mod", iface, "ipv4.addresses", &addr_spec, "ipv4.method", "manual"]).is_ok() {
             println!("  {} IP configured (NetworkManager)", "✓".truecolor(222, 115, 86).bold());
         } else {
+            // Fallback to writing ifcfg file directly
+            let ifcfg_content = format!("DEVICE={}\nBOOTPROTO=static\nIPADDR={}\nNETMASK={}\nONBOOT=yes\n", iface, ip, netmask);
             let _ = self.handle.write(&format!("/etc/sysconfig/network-scripts/ifcfg-{}", iface), ifcfg_content.as_bytes());
             println!("  {} IP configured (ifcfg)", "✓".truecolor(222, 115, 86).bold());
         }
@@ -3153,12 +3326,18 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Adding route to {} via {}...", "→".truecolor(222, 115, 86), dest.bright_white(), gateway.bright_white());
 
-        let cmd = format!("ip route add {} via {}", dest, gateway);
-        self.handle.sh(&cmd)?;
+        self.handle.command(&["ip", "route", "add", dest, "via", gateway])?;
 
-        // Make persistent
+        // Make persistent by appending to route file using write API
         let route_content = format!("{} via {}\n", dest, gateway);
-        let _ = self.handle.sh(&format!("echo '{}' >> /etc/sysconfig/network-scripts/route-eth0", route_content));
+        let route_file = "/etc/sysconfig/network-scripts/route-eth0";
+        let existing = self.handle.read_file(route_file).unwrap_or_default();
+        let mut new_content = String::from_utf8_lossy(&existing).to_string();
+        if !new_content.ends_with('\n') && !new_content.is_empty() {
+            new_content.push('\n');
+        }
+        new_content.push_str(&route_content);
+        let _ = self.handle.write(route_file, new_content.as_bytes());
 
         println!("  {} Route added", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -3181,8 +3360,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Enabling DHCP on {}...", "→".truecolor(222, 115, 86), iface.bright_white());
 
-        let nm_cmd = format!("nmcli con mod {} ipv4.method auto", iface);
-        if self.handle.sh(&nm_cmd).is_ok() {
+        if self.handle.command(&["nmcli", "con", "mod", iface, "ipv4.method", "auto"]).is_ok() {
             println!("  {} DHCP enabled (NetworkManager)", "✓".truecolor(222, 115, 86).bold());
         } else {
             let ifcfg = format!("DEVICE={}\nBOOTPROTO=dhcp\nONBOOT=yes\n", iface);
@@ -3205,10 +3383,26 @@ Always explain WHAT the command does and WHY it's needed.
         let cmd = if args.is_empty() {
             "ps aux | head -50".to_string()
         } else {
-            format!("ps aux | grep -i {}", args[0])
+            // For grep filter, use command to run ps, then filter output in Rust
+            match self.handle.command(&["ps", "aux"]) {
+                Ok(output) => {
+                    let filter = args[0].to_lowercase();
+                    let filtered: Vec<&str> = output.lines()
+                        .filter(|line| line.to_lowercase().contains(&filter))
+                        .collect();
+                    println!("{}", filtered.join("\n"));
+                    println!();
+                    return Ok(());
+                }
+                Err(e) => {
+                    println!("  {} {}", "Error:".red(), e);
+                    println!();
+                    return Ok(());
+                }
+            }
         };
 
-        match self.handle.sh(&cmd) {
+        match self.handle.sh_raw(&cmd) {
             Ok(output) => println!("{}", output),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3234,8 +3428,12 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Killing process {}...", "→".truecolor(222, 115, 86), pid.bright_white());
 
-        let cmd = format!("kill {} {}", signal, pid);
-        match self.handle.sh(&cmd) {
+        let result = if signal.is_empty() {
+            self.handle.command(&["kill", pid])
+        } else {
+            self.handle.command(&["kill", signal, pid])
+        };
+        match result {
             Ok(_) => println!("  {} Process killed", "✓".truecolor(222, 115, 86).bold()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3251,7 +3449,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         let cmd = "ps aux --sort=-%cpu | head -15";
-        if let Ok(output) = self.handle.sh(cmd) {
+        if let Ok(output) = self.handle.sh_raw(cmd) {
             println!("{}", output);
         }
 
@@ -3268,7 +3466,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         let cmd = "ss -tulpn 2>/dev/null || netstat -tulpn 2>/dev/null";
-        match self.handle.sh(cmd) {
+        match self.handle.sh_raw(cmd) {
             Ok(output) => println!("{}", output),
             Err(_) => println!("  {} Unable to scan ports", "⚠".yellow()),
         }
@@ -3284,7 +3482,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         let cmd = "find / -type f -perm -002 ! -path '/proc/*' ! -path '/sys/*' 2>/dev/null | head -50";
-        match self.handle.sh(cmd) {
+        match self.handle.sh_raw(cmd) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  {} No world-writable files found", "✓".green().bold());
@@ -3306,7 +3504,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         let cmd = "find / -type f \\( -perm -4000 -o -perm -2000 \\) ! -path '/proc/*' ! -path '/sys/*' 2>/dev/null";
-        match self.handle.sh(cmd) {
+        match self.handle.sh_raw(cmd) {
             Ok(output) => println!("{}", output),
             Err(_) => println!("  {} Audit failed", "✗".red()),
         }
@@ -3320,7 +3518,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Checking for security updates...", "→".truecolor(222, 115, 86));
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         let cmd = if distro.contains("fedora") || distro.contains("rhel") {
@@ -3332,7 +3536,7 @@ Always explain WHAT the command does and WHY it's needed.
         };
 
         println!();
-        match self.handle.sh(cmd) {
+        match self.handle.sh_raw(cmd) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  {} No security updates available", "✓".green().bold());
@@ -3356,13 +3560,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         // Check for MySQL/MariaDB
-        if let Ok(output) = self.handle.sh("mysql -e 'SHOW DATABASES;' 2>/dev/null") {
+        if let Ok(output) = self.handle.sh_raw("mysql -e 'SHOW DATABASES;' 2>/dev/null") {
             println!("{}", "MySQL/MariaDB:".bright_white().bold());
             println!("{}", output);
         }
 
         // Check for PostgreSQL
-        if let Ok(output) = self.handle.sh("sudo -u postgres psql -l 2>/dev/null") {
+        if let Ok(output) = self.handle.sh_raw("sudo -u postgres psql -l 2>/dev/null") {
             println!("{}", "PostgreSQL:".bright_white().bold());
             println!("{}", output);
         }
@@ -3392,16 +3596,19 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Backing up database {}...", "→".truecolor(222, 115, 86), db.bright_white());
 
-        let cmd = match db_type {
-            "mysql" => format!("mysqldump {} > {}", db, backup_file),
-            "postgres" => format!("sudo -u postgres pg_dump {} > {}", db, backup_file),
+        let result = match db_type {
+            "mysql" => self.handle.command(&["mysqldump", "--result-file", &backup_file, db]),
+            "postgres" => {
+                // For postgres, we need to use sudo -u postgres pg_dump
+                self.handle.command(&["sudo", "-u", "postgres", "pg_dump", "-f", &backup_file, db])
+            }
             _ => {
                 println!("  {} Unknown database type", "✗".red());
                 return Ok(());
             }
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(_) => {
                 println!("  {} Backup created: {}", "✓".truecolor(222, 115, 86).bold(), backup_file.bright_white());
             }
@@ -3437,8 +3644,20 @@ Always explain WHAT the command does and WHY it's needed.
             replacement.bright_white(),
             file.bright_white());
 
-        let cmd = format!("sed -i 's/{}/{}/g' {}", pattern, replacement, file);
-        match self.handle.sh(&cmd) {
+        // Escape special sed characters in pattern and replacement
+        let pattern_escaped = pattern
+            .replace('\\', "\\\\")
+            .replace('/', "\\/")
+            .replace('&', "\\&")
+            .replace('\n', "\\n");
+        let replacement_escaped = replacement
+            .replace('\\', "\\\\")
+            .replace('/', "\\/")
+            .replace('&', "\\&")
+            .replace('\n', "\\n");
+        let sed_expr = format!("s/{}/{}/g", pattern_escaped, replacement_escaped);
+
+        match self.handle.command(&["sed", "-i", &sed_expr, file]) {
             Ok(_) => println!("  {} Replacement complete", "✓".truecolor(222, 115, 86).bold()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3464,8 +3683,9 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Comparing {} and {}...", "→".truecolor(222, 115, 86), file1.bright_white(), file2.bright_white());
         println!();
 
-        let cmd = format!("diff -u {} {}", file1, file2);
-        match self.handle.sh(&cmd) {
+        // Use command() with argv array to avoid shell injection
+        // diff returns exit code 1 when files differ, which is not an error
+        match self.handle.command(&["diff", "-u", file1, file2]) {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  {} Files are identical", "✓".green().bold());
@@ -3473,10 +3693,14 @@ Always explain WHAT the command does and WHY it's needed.
                     println!("{}", output);
                 }
             }
-            Err(_) => {
-                // diff returns non-zero when files differ, which is normal
-                if let Ok(output) = self.handle.sh(&format!("diff -u {} {} 2>&1", file1, file2)) {
-                    println!("{}", output);
+            Err(e) => {
+                // diff returns exit code 1 when files differ - check if the error
+                // message contains diff output (indicating files differ, not a real error)
+                let err_msg = format!("{}", e);
+                if err_msg.contains("---") || err_msg.contains("+++") {
+                    println!("{}", err_msg);
+                } else {
+                    println!("  {} Failed to compare files: {}", "✗".red(), e);
                 }
             }
         }
@@ -3494,13 +3718,28 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Directory tree for {}:", "→".truecolor(222, 115, 86), path.bright_white());
         println!();
 
-        // Try tree command first, fall back to find
-        let cmd1 = format!("tree -L {} {} 2>/dev/null", depth, path);
-        let cmd2 = format!("find {} -maxdepth {} -print 2>/dev/null | head -50", path, depth);
+        // Try tree command first, fall back to find - use command() to avoid shell injection
+        if let Ok(output) = self.handle.sh_raw("command -v tree >/dev/null 2>&1 && echo yes || echo no") {
+            if output.trim() == "yes" {
+                if let Ok(tree_output) = self.handle.command(&["tree", "-L", depth, path]) {
+                    println!("{}", tree_output);
+                    println!();
+                    return Ok(());
+                }
+            }
+        }
 
-        if let Ok(output) = self.handle.sh(&cmd1) {
-            println!("{}", output);
-        } else if let Ok(output) = self.handle.sh(&cmd2) {
+        // Fallback to find
+        // Validate depth is numeric to prevent injection
+        if depth.parse::<u32>().is_err() {
+            eprintln!("Error: Invalid depth: {}", depth);
+            return Ok(());
+        }
+
+        let script = format!("find '{}' -maxdepth {} -print 2>/dev/null | head -50",
+            path.replace('\'', "'\\''"),
+            depth.replace('\'', "'\\''"));
+        if let Ok(output) = self.handle.sh_raw(&script) {
             println!("{}", output);
         } else {
             println!("  {} Unable to generate tree", "⚠".yellow());
@@ -3524,14 +3763,13 @@ Always explain WHAT the command does and WHY it's needed.
         let output = if args.len() > 1 {
             args[1].to_string()
         } else {
-            format!("{}.tar.gz", path.trim_end_matches('/').split('/').last().unwrap_or("archive"))
+            format!("{}.tar.gz", path.trim_end_matches('/').split('/').next_back().unwrap_or("archive"))
         };
 
         println!();
         println!("  {} Compressing {} to {}...", "→".truecolor(222, 115, 86), path.bright_white(), output.bright_white());
 
-        let cmd = format!("tar czf {} {}", output, path);
-        match self.handle.sh(&cmd) {
+        match self.handle.command(&["tar", "czf", &output, path]) {
             Ok(_) => println!("  {} Archive created: {}", "✓".truecolor(222, 115, 86).bold(), output.bright_white()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3556,17 +3794,17 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Extracting {} to {}...", "→".truecolor(222, 115, 86), archive.bright_white(), dest.bright_white());
 
-        let cmd = if archive.ends_with(".tar.gz") || archive.ends_with(".tgz") {
-            format!("tar xzf {} -C {}", archive, dest)
+        let result = if archive.ends_with(".tar.gz") || archive.ends_with(".tgz") {
+            self.handle.command(&["tar", "xzf", archive, "-C", dest])
         } else if archive.ends_with(".tar.bz2") {
-            format!("tar xjf {} -C {}", archive, dest)
+            self.handle.command(&["tar", "xjf", archive, "-C", dest])
         } else if archive.ends_with(".zip") {
-            format!("unzip {} -d {}", archive, dest)
+            self.handle.command(&["unzip", archive, "-d", dest])
         } else {
-            format!("tar xf {} -C {}", archive, dest)
+            self.handle.command(&["tar", "xf", archive, "-C", dest])
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(_) => println!("  {} Extraction complete", "✓".truecolor(222, 115, 86).bold()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3593,13 +3831,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Cloning repository...", "→".truecolor(222, 115, 86));
 
-        let cmd = if path.is_empty() {
-            format!("git clone {}", url)
+        let result = if path.is_empty() {
+            self.handle.command(&["git", "clone", url])
         } else {
-            format!("git clone {} {}", url, path)
+            self.handle.command(&["git", "clone", url, path])
         };
 
-        match self.handle.sh(&cmd) {
+        match result {
             Ok(_) => println!("  {} Repository cloned", "✓".truecolor(222, 115, 86).bold()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3615,8 +3853,8 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
         println!("  {} Updating repository in {}...", "→".truecolor(222, 115, 86), path.bright_white());
 
-        let cmd = format!("cd {} && git pull", path);
-        match self.handle.sh(&cmd) {
+        // Use git -C to change directory safely without using shell cd
+        match self.handle.command(&["git", "-C", path, "pull"]) {
             Ok(output) => {
                 println!("{}", output);
                 println!("  {} Repository updated", "✓".truecolor(222, 115, 86).bold());
@@ -3643,12 +3881,29 @@ Always explain WHAT the command does and WHY it's needed.
 
         let value = args[0];
 
+        // Validate that value is numeric to prevent injection
+        if value.parse::<u32>().is_err() {
+            println!();
+            println!("  {} Invalid swappiness value: must be a number between 0-100", "✗".red());
+            println!();
+            return Ok(());
+        }
+
         println!();
         println!("  {} Setting swappiness to {}...", "→".truecolor(222, 115, 86), value.bright_white());
 
-        let _ = self.handle.sh(&format!("sysctl vm.swappiness={}", value));
+        let sysctl_arg = format!("vm.swappiness={}", value);
+        let _ = self.handle.command(&["sysctl", &sysctl_arg]);
+
+        // Append to sysctl.conf using write API instead of echo
         let content = format!("vm.swappiness={}\n", value);
-        let _ = self.handle.sh(&format!("echo '{}' >> /etc/sysctl.conf", content));
+        let existing = self.handle.read_file("/etc/sysctl.conf").unwrap_or_default();
+        let mut new_content = String::from_utf8_lossy(&existing).to_string();
+        if !new_content.ends_with('\n') && !new_content.is_empty() {
+            new_content.push('\n');
+        }
+        new_content.push_str(&content);
+        let _ = self.handle.write("/etc/sysctl.conf", new_content.as_bytes());
 
         println!("  {} Swappiness set to {}", "✓".truecolor(222, 115, 86).bold(), value.bright_white());
         println!();
@@ -3662,15 +3917,15 @@ Always explain WHAT the command does and WHY it's needed.
         println!("{}", "System Tuning Parameters:".bright_white().bold());
         println!();
 
-        if let Ok(swappiness) = self.handle.sh("sysctl vm.swappiness 2>/dev/null") {
+        if let Ok(swappiness) = self.handle.sh_raw("sysctl vm.swappiness 2>/dev/null") {
             println!("  {}", swappiness);
         }
 
-        if let Ok(cache_pressure) = self.handle.sh("sysctl vm.vfs_cache_pressure 2>/dev/null") {
+        if let Ok(cache_pressure) = self.handle.sh_raw("sysctl vm.vfs_cache_pressure 2>/dev/null") {
             println!("  {}", cache_pressure);
         }
 
-        if let Ok(scheduler) = self.handle.sh("cat /sys/block/sda/queue/scheduler 2>/dev/null") {
+        if let Ok(scheduler) = self.handle.sh_raw("cat /sys/block/sda/queue/scheduler 2>/dev/null") {
             println!("  I/O Scheduler: {}", scheduler.trim());
         }
 
@@ -3686,7 +3941,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!("{}", "Web Server Setup Wizard".bright_white().bold());
         println!();
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         println!("  {} Installing Nginx...", "→".truecolor(222, 115, 86));
@@ -3699,14 +3960,14 @@ Always explain WHAT the command does and WHY it's needed.
             "yum install -y nginx"
         };
 
-        if self.handle.sh(install_cmd).is_ok() {
-            let _ = self.handle.sh("systemctl enable nginx");
+        if self.handle.sh_raw(install_cmd).is_ok() {
+            let _ = self.handle.sh_raw("systemctl enable nginx");
             println!("  {} Nginx installed and enabled", "✓".truecolor(222, 115, 86).bold());
 
             // Open firewall
-            let _ = self.handle.sh("firewall-cmd --permanent --add-service=http 2>/dev/null");
-            let _ = self.handle.sh("firewall-cmd --permanent --add-service=https 2>/dev/null");
-            let _ = self.handle.sh("firewall-cmd --reload 2>/dev/null");
+            let _ = self.handle.sh_raw("firewall-cmd --permanent --add-service=http 2>/dev/null");
+            let _ = self.handle.sh_raw("firewall-cmd --permanent --add-service=https 2>/dev/null");
+            let _ = self.handle.sh_raw("firewall-cmd --reload 2>/dev/null");
             println!("  {} Firewall configured", "✓".truecolor(222, 115, 86).bold());
         } else {
             println!("  {} Installation failed", "✗".red());
@@ -3724,7 +3985,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!("{} Database Setup Wizard ({})", "→".truecolor(222, 115, 86).bold(), db_type.bright_white());
         println!();
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         let install_cmd = match db_type {
@@ -3754,7 +4021,7 @@ Always explain WHAT the command does and WHY it's needed.
 
         println!("  {} Installing {}...", "→".truecolor(222, 115, 86), db_type.bright_white());
 
-        if self.handle.sh(install_cmd).is_ok() {
+        if self.handle.sh_raw(install_cmd).is_ok() {
             let service = if db_type.contains("mysql") || db_type.contains("mariadb") {
                 "mariadb"
             } else {
@@ -3762,10 +4029,10 @@ Always explain WHAT the command does and WHY it's needed.
             };
 
             if db_type.contains("postgres") {
-                let _ = self.handle.sh("postgresql-setup --initdb 2>/dev/null || postgresql-setup initdb 2>/dev/null");
+                let _ = self.handle.sh_raw("postgresql-setup --initdb 2>/dev/null || postgresql-setup initdb 2>/dev/null");
             }
 
-            let _ = self.handle.sh(&format!("systemctl enable {}", service));
+            let _ = self.handle.command(&["systemctl", "enable", service]);
             println!("  {} {} installed and enabled", "✓".truecolor(222, 115, 86).bold(), db_type.bright_white());
         } else {
             println!("  {} Installation failed", "✗".red());
@@ -3781,7 +4048,13 @@ Always explain WHAT the command does and WHY it's needed.
         println!("{}", "Docker Setup Wizard".bright_white().bold());
         println!();
 
-        let root = self.current_root.as_ref().unwrap();
+        let root = match self.current_root.as_ref() {
+            Some(r) => r,
+            None => {
+                eprintln!("Error: No operating system detected in disk image");
+                return Ok(());
+            }
+        };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         println!("  {} Installing Docker...", "→".truecolor(222, 115, 86));
@@ -3794,8 +4067,8 @@ Always explain WHAT the command does and WHY it's needed.
             "yum install -y docker"
         };
 
-        if self.handle.sh(install_cmd).is_ok() {
-            let _ = self.handle.sh("systemctl enable docker");
+        if self.handle.sh_raw(install_cmd).is_ok() {
+            let _ = self.handle.sh_raw("systemctl enable docker");
             println!("  {} Docker installed and enabled", "✓".truecolor(222, 115, 86).bold());
         } else {
             println!("  {} Installation failed", "✗".red());
@@ -3814,22 +4087,22 @@ Always explain WHAT the command does and WHY it's needed.
         println!();
 
         // Memory
-        if let Ok(mem) = self.handle.sh("free -h | grep Mem") {
+        if let Ok(mem) = self.handle.sh_raw("free -h | grep Mem") {
             println!("{} {}", "Memory:".bright_white().bold(), mem.trim());
         }
 
         // Disk usage
-        if let Ok(disk) = self.handle.sh("df -h / | tail -1") {
+        if let Ok(disk) = self.handle.sh_raw("df -h / | tail -1") {
             println!("{} {}", "Root Disk:".bright_white().bold(), disk.trim());
         }
 
         // Load average
-        if let Ok(load) = self.handle.sh("uptime | awk -F'load average:' '{print $2}'") {
+        if let Ok(load) = self.handle.sh_raw("uptime | awk -F'load average:' '{print $2}'") {
             println!("{} {}", "Load Average:".bright_white().bold(), load.trim());
         }
 
         // Process count
-        if let Ok(procs) = self.handle.sh("ps aux | wc -l") {
+        if let Ok(procs) = self.handle.sh_raw("ps aux | wc -l") {
             println!("{} {}", "Processes:".bright_white().bold(), procs.trim());
         }
 
@@ -3843,9 +4116,9 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Network interface statistics:", "→".truecolor(222, 115, 86));
         println!();
 
-        if let Ok(output) = self.handle.sh("ip -s link 2>/dev/null") {
+        if let Ok(output) = self.handle.sh_raw("ip -s link 2>/dev/null") {
             println!("{}", output);
-        } else if let Ok(output) = self.handle.sh("ifconfig -s 2>/dev/null") {
+        } else if let Ok(output) = self.handle.sh_raw("ifconfig -s 2>/dev/null") {
             println!("{}", output);
         }
 
@@ -3871,7 +4144,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} SELinux context for {}:", "→".truecolor(222, 115, 86), path.bright_white());
         println!();
 
-        match self.handle.sh(&format!("ls -Z {} 2>/dev/null", path)) {
+        match self.handle.command(&["ls", "-Z", path]) {
             Ok(output) => println!("{}", output),
             Err(_) => println!("  {} SELinux not available", "⚠".yellow()),
         }
@@ -3886,7 +4159,7 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Recent SELinux denials:", "→".truecolor(222, 115, 86));
         println!();
 
-        match self.handle.sh("ausearch -m avc -ts recent 2>/dev/null | head -50") {
+        match self.handle.sh_raw("ausearch -m avc -ts recent 2>/dev/null | head -50") {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  {} No recent denials", "✓".green().bold());
@@ -3896,7 +4169,7 @@ Always explain WHAT the command does and WHY it's needed.
             }
             Err(_) => {
                 // Try journalctl
-                if let Ok(output) = self.handle.sh("journalctl -t setroubleshoot --since '1 hour ago' 2>/dev/null") {
+                if let Ok(output) = self.handle.sh_raw("journalctl -t setroubleshoot --since '1 hour ago' 2>/dev/null") {
                     if output.trim().is_empty() {
                         println!("  {} No recent denials", "✓".green().bold());
                     } else {
@@ -3925,7 +4198,7 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         let name = args[0];
-        let template_dir = "/var/lib/guestctl/templates";
+        let template_dir = "/var/lib/guestkit/templates";
 
         println!();
         println!("  {} Saving template '{}'...", "→".truecolor(222, 115, 86), name.bright_white());
@@ -3933,19 +4206,21 @@ Always explain WHAT the command does and WHY it's needed.
         let _ = self.handle.mkdir_p(template_dir);
 
         // Save important configs
-        let configs = vec![
-            "/etc/hostname",
+        let configs = ["/etc/hostname",
             "/etc/hosts",
             "/etc/resolv.conf",
-            "/etc/sysconfig/network-scripts/ifcfg-*",
-        ];
+            "/etc/sysconfig/network-scripts/ifcfg-*"];
 
         use chrono::Local;
         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
         let template_file = format!("{}/{}_{}.tar.gz", template_dir, name, timestamp);
 
-        let cmd = format!("tar czf {} {} 2>/dev/null", template_file, configs.join(" "));
-        match self.handle.sh(&cmd) {
+        // Build tar command with proper escaping
+        let mut tar_args = vec!["tar", "czf", &template_file];
+        let config_vec: Vec<&str> = configs.to_vec();
+        tar_args.extend(config_vec);
+
+        match self.handle.command(&tar_args) {
             Ok(_) => println!("  {} Template saved: {}", "✓".truecolor(222, 115, 86).bold(), template_file.bright_white()),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }

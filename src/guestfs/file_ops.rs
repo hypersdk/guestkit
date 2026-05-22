@@ -13,12 +13,22 @@ use std::path::{Path, PathBuf};
 
 impl Guestfs {
     /// Find the root mountpoint (internal helper)
-    fn find_root_mountpoint(&self) -> Result<&str> {
+    ///
+    /// Uses a deterministic selection: checks common root device names first,
+    /// then falls back to the mountpoint with the shortest path (most likely root).
+    pub(crate) fn find_root_mountpoint(&self) -> Result<&str> {
+        // Try well-known root device names first
+        let well_known = ["/dev/sda1", "/dev/sda2", "/dev/vda1", "/dev/hda1", "/dev/xvda1"];
+        for dev in &well_known {
+            if let Some(mp) = self.mounted.get(*dev) {
+                return Ok(mp.as_str());
+            }
+        }
+
+        // Fall back to the mountpoint with the shortest path (deterministic, likely root)
         self.mounted
-            .get("/dev/sda1")
-            .or_else(|| self.mounted.get("/dev/sda2"))
-            .or_else(|| self.mounted.get("/dev/vda1"))
-            .or_else(|| self.mounted.values().next())
+            .values()
+            .min_by_key(|mp| mp.len())
             .ok_or_else(|| {
                 Error::InvalidState("No filesystem mounted. Call mount_ro() first.".to_string())
             })
@@ -44,15 +54,33 @@ impl Guestfs {
         let candidate_path = PathBuf::from(root_mountpoint).join(guest_path_clean);
 
         // 4. Canonicalize path to resolve symlinks and get absolute path
-        // Note: canonicalize() requires the path to exist
-        let canonical = candidate_path.canonicalize().map_err(|e| {
-            // If path doesn't exist, return NotFound instead of generic error
-            if e.kind() == std::io::ErrorKind::NotFound {
-                Error::NotFound(format!("Path does not exist: {}", guest_path))
-            } else {
-                Error::Io(e)
+        // Note: canonicalize() requires the path to exist, so we handle
+        // non-existent paths by canonicalizing the parent and appending the filename.
+        let canonical = match candidate_path.canonicalize() {
+            Ok(p) => p,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Path doesn't exist yet (e.g., write(), mkdir(), touch() for new files).
+                // Try canonicalizing the parent directory and appending the filename.
+                if let (Some(parent), Some(file_name)) =
+                    (candidate_path.parent(), candidate_path.file_name())
+                {
+                    match parent.canonicalize() {
+                        Ok(canonical_parent) => canonical_parent.join(file_name),
+                        Err(_) => {
+                            // Parent also doesn't exist; use the constructed path directly.
+                            // This allows mkdir_p to create deeply nested directories.
+                            candidate_path.clone()
+                        }
+                    }
+                } else {
+                    return Err(Error::NotFound(format!(
+                        "Path does not exist: {}",
+                        guest_path
+                    )));
+                }
             }
-        })?;
+            Err(e) => return Err(Error::Io(e)),
+        };
 
         // 5. Get canonical root for security check
         let root_canonical = PathBuf::from(root_mountpoint).canonicalize().map_err(|e| {
@@ -142,6 +170,12 @@ impl Guestfs {
     pub fn write(&mut self, path: &str, content: &[u8]) -> Result<()> {
         self.ensure_ready()?;
 
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot write to file on read-only filesystem".to_string(),
+            ));
+        }
+
         if self.verbose {
             eprintln!("guestfs: write {} ({} bytes)", path, content.len());
         }
@@ -155,6 +189,12 @@ impl Guestfs {
     ///
     pub fn mkdir(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot create directory on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: mkdir {}", path);
@@ -170,6 +210,12 @@ impl Guestfs {
     ///
     pub fn mkdir_p(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot create directory on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: mkdir_p {}", path);
@@ -196,9 +242,10 @@ impl Guestfs {
         })?;
 
         let mut names = Vec::new();
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                names.push(name.to_string());
+        for entry in entries {
+            match entry {
+                Ok(e) => names.push(e.file_name().to_string_lossy().to_string()),
+                Err(e) => log::debug!("Skipping unreadable directory entry: {}", e),
             }
         }
 
@@ -247,13 +294,22 @@ impl Guestfs {
         let metadata = fs::metadata(&host_path)
             .map_err(|e| Error::NotFound(format!("Failed to get size of {}: {}", file, e)))?;
 
-        Ok(metadata.len() as i64)
+        let len = metadata.len();
+        i64::try_from(len).map_err(|_| {
+            Error::InvalidOperation(format!("File size {} exceeds i64::MAX", len))
+        })
     }
 
     /// Remove directory
     ///
     pub fn rmdir(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot remove directory on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.trace {
             eprintln!("guestfs: rmdir {}", path);
@@ -270,6 +326,12 @@ impl Guestfs {
     pub fn touch(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot touch file on read-only filesystem".to_string(),
+            ));
+        }
+
         if self.verbose {
             eprintln!("guestfs: touch {}", path);
         }
@@ -281,13 +343,13 @@ impl Guestfs {
             fs::File::create(&host_path)
                 .map_err(|e| Error::CommandFailed(format!("Failed to touch {}: {}", path, e)))?;
         } else {
-            // Update timestamp - use filetime crate or just write/truncate
+            // Update mtime to current time
             let file = fs::OpenOptions::new()
                 .write(true)
                 .open(&host_path)
                 .map_err(|e| Error::CommandFailed(format!("Failed to touch {}: {}", path, e)))?;
-            // Just opening for write updates the timestamp
-            drop(file);
+            file.set_modified(std::time::SystemTime::now())
+                .map_err(|e| Error::CommandFailed(format!("Failed to update mtime for {}: {}", path, e)))?;
         }
 
         Ok(())
@@ -297,6 +359,12 @@ impl Guestfs {
     ///
     pub fn chmod(&mut self, mode: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot chmod on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: chmod {:o} {}", mode, path);
@@ -324,6 +392,12 @@ impl Guestfs {
     ///
     pub fn chown(&mut self, owner: i32, group: i32, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot chown on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: chown {}:{} {}", owner, group, path);
@@ -364,12 +438,7 @@ impl Guestfs {
             .map_err(|e| Error::NotFound(format!("Failed to resolve path {}: {}", path, e)))?;
 
         // Convert back to guest path by stripping the mount root prefix
-        let root_mountpoint = self
-            .mounted
-            .get("/dev/sda1")
-            .or_else(|| self.mounted.get("/dev/sda2"))
-            .or_else(|| self.mounted.values().next())
-            .ok_or_else(|| Error::InvalidState("No filesystem mounted".to_string()))?;
+        let root_mountpoint = self.find_root_mountpoint()?;
 
         let canonical_str = canonical.to_string_lossy();
         let guest_path = canonical_str
@@ -391,6 +460,12 @@ impl Guestfs {
     pub fn cp(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot copy file on read-only filesystem".to_string(),
+            ));
+        }
+
         if self.trace {
             eprintln!("guestfs: cp {} {}", src, dest);
         }
@@ -409,6 +484,12 @@ impl Guestfs {
     ///
     pub fn cp_a(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot copy file on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: cp_a {} {}", src, dest);
@@ -442,6 +523,12 @@ impl Guestfs {
     pub fn cp_r(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot copy file on read-only filesystem".to_string(),
+            ));
+        }
+
         if self.verbose {
             eprintln!("guestfs: cp_r {} {}", src, dest);
         }
@@ -473,6 +560,12 @@ impl Guestfs {
     ///
     pub fn mv(&mut self, src: &str, dest: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot move file on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: mv {} {}", src, dest);
@@ -533,6 +626,12 @@ impl Guestfs {
     ///
     pub fn write_append(&mut self, path: &str, content: &[u8]) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot write_append: filesystem is read-only".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: write_append {} ({} bytes)", path, content.len());
@@ -671,6 +770,19 @@ impl Guestfs {
             eprintln!("guestfs: find0 {} {}", directory, files);
         }
 
+        // Validate output path: must not contain ".." and must be an absolute path
+        if files.contains("..") {
+            return Err(Error::SecurityViolation(
+                "Output path must not contain '..'".to_string(),
+            ));
+        }
+        let files_path = Path::new(files);
+        if !files_path.is_absolute() {
+            return Err(Error::InvalidFormat(
+                "Output path must be absolute".to_string(),
+            ));
+        }
+
         let host_path = self.resolve_guest_path(directory)?;
 
         // Use find command with -print0 to get NUL-separated output
@@ -737,6 +849,12 @@ impl Guestfs {
     pub fn rm(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
 
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot remove file on read-only filesystem".to_string(),
+            ));
+        }
+
         if self.verbose {
             eprintln!("guestfs: rm {}", path);
         }
@@ -761,6 +879,12 @@ impl Guestfs {
     ///
     pub fn rm_rf(&mut self, path: &str) -> Result<()> {
         self.ensure_ready()?;
+
+        if self.readonly {
+            return Err(Error::PermissionDenied(
+                "Cannot remove on read-only filesystem".to_string(),
+            ));
+        }
 
         if self.verbose {
             eprintln!("guestfs: rm_rf {}", path);
@@ -787,7 +911,7 @@ mod tests {
 
     #[test]
     fn test_file_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

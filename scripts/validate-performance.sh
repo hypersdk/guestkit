@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: LGPL-3.0-or-later
-# Performance validation script for guestctl
+# Performance validation script for guestkit
 #
 # This script runs performance validation tests and compares against baseline.
 

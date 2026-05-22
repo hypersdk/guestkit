@@ -268,7 +268,7 @@ fn analyze_package_compatibility(
 
 fn analyze_service_compatibility(
     source: &SourceSystem,
-    issues: &mut Vec<MigrationIssue>,
+    _issues: &mut Vec<MigrationIssue>,
     changes: &mut Vec<RequiredChange>,
 ) {
     for service in &source.services {
@@ -305,12 +305,66 @@ fn generate_recommendations(_source: &SourceSystem, _target_os: &str, recommenda
     recommendations.push("Have rollback plan ready".to_string());
 }
 
+/// Determine the package manager commands for a given OS name.
+/// Returns (update_cmds, upgrade_cmd, cleanup_cmd).
+fn package_manager_for_os(os_name: &str) -> (&'static str, Vec<String>, String, String) {
+    let os_lower = os_name.to_lowercase();
+    if os_lower.contains("centos") || os_lower.contains("rhel") || os_lower.contains("rocky")
+        || os_lower.contains("alma") || os_lower.contains("fedora")
+    {
+        ("dnf", vec![
+            "dnf check-update || true".to_string(),
+            "dnf upgrade -y".to_string(),
+        ], "dnf system-upgrade download --releasever={}".to_string(),
+           "dnf autoremove -y".to_string())
+    } else if os_lower.contains("arch") {
+        ("pacman", vec![
+            "pacman -Syu --noconfirm".to_string(),
+        ], "pacman -Syu --noconfirm".to_string(),
+           "pacman -Rns $(pacman -Qdtq) --noconfirm || true".to_string())
+    } else if os_lower.contains("suse") || os_lower.contains("opensuse") {
+        ("zypper", vec![
+            "zypper refresh".to_string(),
+            "zypper update -y".to_string(),
+        ], "zypper dup -y".to_string(),
+           "zypper clean".to_string())
+    } else {
+        // Default to apt for debian/ubuntu and unknown
+        ("apt", vec![
+            "apt update && apt upgrade -y".to_string(),
+            "apt dist-upgrade -y".to_string(),
+        ], "do-release-upgrade -d".to_string(),
+           "apt autoremove -y".to_string())
+    }
+}
+
 fn generate_migration_steps(
     source: &SourceSystem,
     target_os: &str,
     target_version: &str,
     steps: &mut Vec<MigrationStep>,
 ) {
+    // Determine package manager from target OS, falling back to source OS
+    let (_, update_cmds, upgrade_cmd_template, cleanup_cmd) = {
+        let target_lower = target_os.to_lowercase();
+        if target_lower.contains("centos") || target_lower.contains("rhel")
+            || target_lower.contains("rocky") || target_lower.contains("alma")
+            || target_lower.contains("fedora") || target_lower.contains("debian")
+            || target_lower.contains("ubuntu") || target_lower.contains("arch")
+            || target_lower.contains("suse") || target_lower.contains("opensuse")
+        {
+            package_manager_for_os(target_os)
+        } else {
+            package_manager_for_os(&source.os_name)
+        }
+    };
+
+    let upgrade_cmd = if upgrade_cmd_template.contains("{}") {
+        upgrade_cmd_template.replace("{}", target_version)
+    } else {
+        upgrade_cmd_template
+    };
+
     steps.push(MigrationStep {
         order: 1,
         phase: "Preparation".to_string(),
@@ -327,10 +381,7 @@ fn generate_migration_steps(
         order: 2,
         phase: "Pre-upgrade".to_string(),
         description: "Update package repository".to_string(),
-        commands: vec![
-            "apt update && apt upgrade -y".to_string(),
-            "apt dist-upgrade -y".to_string(),
-        ],
+        commands: update_cmds,
         validation: "Check for errors in package updates".to_string(),
         rollback: Some("Restore from snapshot".to_string()),
     });
@@ -339,9 +390,7 @@ fn generate_migration_steps(
         order: 3,
         phase: "Upgrade".to_string(),
         description: format!("Upgrade to {} {}", target_os, target_version),
-        commands: vec![
-            format!("do-release-upgrade -d"),
-        ],
+        commands: vec![upgrade_cmd],
         validation: "Verify OS version after reboot".to_string(),
         rollback: Some("Boot from previous kernel".to_string()),
     });
@@ -352,7 +401,7 @@ fn generate_migration_steps(
         description: "Verify services and applications".to_string(),
         commands: vec![
             "systemctl status".to_string(),
-            "apt autoremove -y".to_string(),
+            cleanup_cmd,
         ],
         validation: "Check all critical services are running".to_string(),
         rollback: None,
@@ -376,10 +425,10 @@ fn generate_cloud_migration_steps(provider: &str, _source: &SourceSystem, steps:
         phase: "Upload".to_string(),
         description: format!("Upload image to {}", provider),
         commands: match provider {
-            "aws" => vec!["aws ec2 import-image --disk-container file://containers.json".to_string()],
-            "azure" => vec!["az vm import --resource-group rg --name vm --source vm.vhd".to_string()],
-            "gcp" => vec!["gcloud compute images create image --source-uri gs://bucket/vm.raw".to_string()],
-            _ => vec!["# Cloud-specific upload command".to_string()],
+            "aws" => vec!["aws ec2 import-image --disk-container file://containers.json  # Edit containers.json with your S3 bucket".to_string()],
+            "azure" => vec!["az vm import --resource-group <RESOURCE_GROUP> --name <VM_NAME> --source vm.vhd".to_string()],
+            "gcp" => vec!["gcloud compute images create <IMAGE_NAME> --source-uri gs://<BUCKET>/vm.raw".to_string()],
+            _ => vec!["# Cloud-specific upload command — consult provider documentation".to_string()],
         },
         validation: "Verify image import success".to_string(),
         rollback: Some("Delete imported image".to_string()),
@@ -390,10 +439,10 @@ fn generate_cloud_migration_steps(provider: &str, _source: &SourceSystem, steps:
         phase: "Deploy".to_string(),
         description: "Create instance from image".to_string(),
         commands: match provider {
-            "aws" => vec!["aws ec2 run-instances --image-id ami-xxx --instance-type t3.medium".to_string()],
-            "azure" => vec!["az vm create --resource-group rg --name vm --image image".to_string()],
-            "gcp" => vec!["gcloud compute instances create vm --image image".to_string()],
-            _ => vec!["# Cloud-specific instance creation".to_string()],
+            "aws" => vec!["aws ec2 run-instances --image-id <AMI_ID> --instance-type <INSTANCE_TYPE>  # Replace with your AMI ID".to_string()],
+            "azure" => vec!["az vm create --resource-group <RESOURCE_GROUP> --name <VM_NAME> --image <IMAGE_NAME>".to_string()],
+            "gcp" => vec!["gcloud compute instances create <VM_NAME> --image <IMAGE_NAME>".to_string()],
+            _ => vec!["# Cloud-specific instance creation — consult provider documentation".to_string()],
         },
         validation: "Verify instance is running".to_string(),
         rollback: Some("Terminate instance".to_string()),
@@ -453,10 +502,12 @@ fn calculate_compatibility_score(
         .filter(|i| i.severity == RiskLevel::Critical)
         .count();
 
-    let base_score = (compatible as f64 / total_packages as f64) * 100.0;
+    // Denominator must match the number of packages actually checked (capped at 50)
+    let checked_packages = total_packages.min(50);
+    let base_score = (compatible as f64 / checked_packages as f64) * 100.0;
     let penalty = (critical_issues as f64) * 10.0;
 
-    (base_score - penalty).max(0.0).min(100.0)
+    (base_score - penalty).clamp(0.0, 100.0)
 }
 
 fn estimate_effort(

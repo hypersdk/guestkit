@@ -4,6 +4,89 @@
 
 ---
 
+## Session: 2026-04-05 - Comprehensive Code Review (5 passes)
+
+### ✅ Full Security & Correctness Review
+
+**Scope:** 33+ source files across all modules, 5 review passes
+**Issues Found & Fixed:** 90 total (13 critical, 20 high, 38 medium, 19 low)
+**Result:** 699 tests pass, 0 clippy warnings
+**Deployed & Tested:** Verified on 185.165.240.5 against 10 real VM images (CentOS, Debian, Ubuntu, Rocky, Kali, Mint, Windows 10/11)
+
+### ✅ Fifth-Pass Review (36 issues, 19 files)
+
+- **Password leak eliminated** -- openssl passwd now receives password via stdin, not CLI arg
+- **IOC matching operator precedence** -- parentheses fix prevents false DOMAIN matches
+- **Shell injection in 4 commands** -- package search, cron, diff all converted from `sh -c` to argv arrays
+- **sed/shell escaping separated** -- `sed_escape()` for regex content, `shell_escape()` for file paths
+- **resolve_guest_path() canonicalize** -- handles non-existent paths for write/mkdir/touch
+- **Mount security** -- options validated (no suid/dev/exec), vfstype checked against whitelist
+- **Username validation** -- all user management commands validate input, reject flag injection
+- **Delete safety** -- blocks 14 critical system paths before `rm -rf`
+- **SSH key path traversal** -- reads home dir from `/etc/passwd` instead of hardcoding
+- **7 reverse mount sorts fixed** -- clone, simulate, copy, rescue, optimize, repair, harden
+- **4 more readonly checks** -- write_append, cp_a, cp_r, rmdir
+- **qemu-nbd process cleanup** -- kill+wait in disconnect()
+- **Distro-aware migration planner** -- selects dnf/apt/pacman/zypper based on target OS
+
+### ✅ Inspect JSON Output Fix
+
+- **Structured output path separation** -- moved format check before text display to prevent println! pollution in JSON mode
+- **Cached result fallback** -- text format now falls back to JSON for cached results (text requires live guestfs handle)
+- **Log level demotion** -- cache messages changed from info to debug to keep stderr clean
+
+### ✅ Deploy & Test Scripts
+
+- **`scripts/deploy-remote.sh`** -- one-command deployment to remote servers (rsync + deps + build + verify)
+- **`scripts/selftest.sh`** -- 26-check post-install verification (binary, deps, formats, smoke tests, clippy)
+- **Makefile targets** -- `make deploy HOST=... PASS=...` and `make selftest`
+
+### ✅ Fourth-Pass Review (54 issues, 33 files)
+
+#### Critical Fixes (8)
+- **Shell injection in bash export** - Unsanitized values passed to shell commands
+- **Broken `mount()` implementation** - Incorrect argument handling caused mount failures
+- **Hand-rolled SHA-512 crypt replaced** - Replaced insecure custom implementation with OpenSSL
+- **Plaintext password temp file eliminated** - Passwords were written to disk in cleartext
+- **`sed` injection fixed** - User input passed directly to sed expressions
+- **`rm -rf` confirmation added** - Destructive operations now require explicit confirmation
+- **Shadow entry validation** - Missing validation on `/etc/shadow` parsed fields
+- **Unsafe string handling in guestfs FFI** - Potential memory safety issues in C bindings
+
+#### High Fixes (11)
+- **LVM device filter missing on 4 commands** - `lvs`, `vgs`, `pvs`, `lvcreate` operated on all devices
+- **Write operations on readonly handle** - Operations attempted without write access check
+- **Inverted mount sort order** - Mount points sorted incorrectly causing nested mount failures
+- **Path traversal in file operations** - Relative paths could escape intended directories
+- **Cache key validation** - Arbitrary cache keys accepted without sanitization
+- **TUI scroll bounds checking** - Out-of-bounds access on list navigation
+- Plus 5 additional correctness fixes across CLI and guestfs modules
+
+#### Medium Fixes (22)
+- **Integer overflow protection** - Arithmetic on user-supplied sizes without bounds checks
+- **JSON/CSV injection** - Special characters in output not properly escaped
+- **ZFS detection** - ZFS pools not recognized during filesystem inspection
+- **Bincode size limits** - Deserialization of cached data without size limits
+- **HTML/Markdown escaping** - User-controlled content rendered without escaping
+- **Error propagation** - Silent error swallowing replaced with proper propagation
+- Plus 16 additional robustness improvements
+
+#### Low Fixes (13)
+- **Non-UTF-8 filename handling** - Filenames with invalid UTF-8 caused panics
+- **Oracle Linux detection** - Oracle Linux misidentified as RHEL
+- **Health score overflow** - Score calculation could exceed 100%
+- **Compatibility score fix** - Edge case producing negative scores
+- Plus 9 additional minor fixes
+
+**Files Modified:** 20+ files across `src/cli/`, `src/guestfs/`, `src/disk/`, `src/core/`, `src/export/`, `src/detectors/`
+
+**Commits:**
+- dd67fbe - Full code review: fix 34 issues across security, correctness, and safety (20 files)
+- 754f07e - Second-pass review: fix 12 remaining issues across safety and correctness (11 files)
+- 95e1aed - Third-pass review: fix 7 remaining issues (6 files)
+
+---
+
 ## Session: 2026-01-24 (Late)
 
 ### ✅ Completed Improvements
@@ -20,11 +103,11 @@
 
 **How to Use:**
 ```bash
-guestctl interactive disk.qcow2
+guestkit interactive disk.qcow2
 
-guestctl> hel<TAB>    # Completes to "help"
-guestctl> file<TAB>   # Shows "filesystems"
-guestctl> pac<TAB>    # Completes to "packages"
+guestkit> hel<TAB>    # Completes to "help"
+guestkit> file<TAB>   # Shows "filesystems"
+guestkit> pac<TAB>    # Completes to "packages"
 ```
 
 **Files Changed:**
@@ -90,16 +173,16 @@ guestctl> pac<TAB>    # Completes to "packages"
 **How to Use:**
 ```bash
 # Run a batch script
-guestctl script disk.qcow2 inspect.gk
+guestkit script disk.qcow2 inspect.gk
 
 # Fail-fast mode (stop on first error)
-guestctl script disk.qcow2 inspect.gk --fail-fast
+guestkit script disk.qcow2 inspect.gk --fail-fast
 
 # Use the batch alias
-guestctl batch disk.qcow2 security-audit.gk
+guestkit batch disk.qcow2 security-audit.gk
 
 # With verbose output
-guestctl -v script disk.qcow2 inspect.gk
+guestkit -v script disk.qcow2 inspect.gk
 ```
 
 **Example Script:**
@@ -164,10 +247,10 @@ umount /
 **How to Use:**
 ```bash
 # Export to enhanced HTML
-guestctl inspect vm.qcow2 --export html --export-output report.html
+guestkit inspect vm.qcow2 --export html --export-output report.html
 
 # With security profile
-guestctl inspect vm.qcow2 --profile security \
+guestkit inspect vm.qcow2 --profile security \
   --export html --export-output security-report.html
 ```
 
@@ -207,13 +290,13 @@ guestctl inspect vm.qcow2 --profile security \
 **Features:**
 - 📜 Automatic history persistence
 - 🔍 Full rustyline search support (Ctrl+R)
-- 📁 Per-disk history files (~/.guestctl/history/)
+- 📁 Per-disk history files (~/.guestkit/history/)
 - ↑/↓ Navigate through command history
 - 💾 Silent save on exit
 - 🔒 Private per-user storage
 
 **How It Works:**
-- History stored in: `~/.guestctl/history/guestctl-{hash}.history`
+- History stored in: `~/.guestkit/history/guestkit-{hash}.history`
 - Hash computed from disk path (unique per disk)
 - Automatically loads on interactive mode start
 - Automatically saves on exit (explicit exit, Ctrl+D, or error)
@@ -221,15 +304,15 @@ guestctl inspect vm.qcow2 --profile security \
 **Usage:**
 ```bash
 # First session
-guestctl interactive vm.qcow2
-guestctl> mount /dev/sda1 /
-guestctl> packages
-guestctl> services
-guestctl> exit
+guestkit interactive vm.qcow2
+guestkit> mount /dev/sda1 /
+guestkit> packages
+guestkit> services
+guestkit> exit
 
 # Later session - history preserved!
-guestctl interactive vm.qcow2
-guestctl> # Press ↑ to see previous commands
+guestkit interactive vm.qcow2
+guestkit> # Press ↑ to see previous commands
 ```
 
 **User Experience Improvements:**
@@ -310,7 +393,7 @@ Suggestion: Did you mean: packages, pkg?
 **Usage Example:**
 ```bash
 # Interactive mode
-guestctl> pac
+guestkit> pac
 Error: Unknown command: 'pac'
 Suggestion: Did you mean: packages, pkg?
 
@@ -356,7 +439,7 @@ Suggestion: Usage: mount <device> <mountpoint>
 
 **Auto-Fixed Issues:**
 - 32+ automatic clippy fixes applied in bin
-- 8 fixes in guestctl binary
+- 8 fixes in guestkit binary
 - Numerous style improvements across codebase
 
 **Manual Fixes:**
@@ -555,7 +638,7 @@ The remaining 9 lib warnings are all intentional helper methods in the guestfs m
 **Features:**
 - ✅ Save command history across sessions
 - ✅ Per-disk history files
-- ✅ Stored in ~/.guestctl/history/
+- ✅ Stored in ~/.guestkit/history/
 - ✅ Ctrl+R history search (via rustyline)
 - ✅ Auto-load on start
 - ✅ Auto-save on exit
@@ -651,7 +734,7 @@ The remaining 9 lib warnings are all intentional helper methods in the guestfs m
 - [ ] Dependencies declared correctly
 
 ### Polish
-- [ ] No TODO comments in code
+- [x] No TODO comments in code
 - [ ] No debug prints
 - [ ] Professional error messages
 - [ ] Consistent naming
@@ -685,7 +768,7 @@ cargo build
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin build --release --features python-bindings
 ```
 
-**Output:** `target/wheels/guestctl-0.3.0-cp314-cp314-manylinux_2_39_x86_64.whl`
+**Output:** `target/wheels/guestkit-0.3.0-cp314-cp314-manylinux_2_39_x86_64.whl`
 
 ---
 

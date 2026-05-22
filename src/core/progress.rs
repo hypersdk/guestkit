@@ -18,7 +18,7 @@ impl ProgressReporter {
         bar.set_style(
             ProgressStyle::default_bar()
                 .template("{msg}\n{spinner:.rgb(222,115,86)} [{elapsed_precise}] [{wide_bar:.rgb(222,115,86)/rgb(255,145,115)}] {bytes}/{total_bytes} ({eta})")
-                .unwrap()
+                .unwrap_or_else(|_| ProgressStyle::default_bar())
                 .progress_chars("━╸─"),
         );
         bar.set_message(message.to_string());
@@ -36,7 +36,7 @@ impl ProgressReporter {
         bar.set_style(
             ProgressStyle::default_spinner()
                 .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
-                .unwrap()
+                .unwrap_or_else(|_| ProgressStyle::default_spinner())
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
         );
         bar.set_message(message.to_string());
@@ -103,7 +103,7 @@ impl MultiProgressReporter {
         bar.set_style(
             ProgressStyle::default_bar()
                 .template("{msg}\n{spinner:.rgb(222,115,86)} [{elapsed_precise}] [{wide_bar:.rgb(222,115,86)/rgb(255,145,115)}] {bytes}/{total_bytes} ({eta})")
-                .unwrap()
+                .unwrap_or_else(|_| ProgressStyle::default_bar())
                 .progress_chars("━╸─"),
         );
         bar.set_message(message.to_string());
@@ -121,7 +121,7 @@ impl MultiProgressReporter {
         bar.set_style(
             ProgressStyle::default_spinner()
                 .template("{spinner:.rgb(222,115,86)} {msg:.rgb(222,115,86)}")
-                .unwrap()
+                .unwrap_or_else(|_| ProgressStyle::default_spinner())
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
         );
         bar.set_message(message.to_string());

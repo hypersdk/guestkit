@@ -169,7 +169,7 @@ impl Guestfs {
             GuestfsState::Config => Ok(0),
             GuestfsState::Launching => Ok(1),
             GuestfsState::Ready => Ok(2),
-            GuestfsState::Error(_) => Ok(3),
+            GuestfsState::Error => Ok(3),
             GuestfsState::Closed => Ok(4),
         }
     }
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_internal_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

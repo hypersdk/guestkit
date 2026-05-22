@@ -2,7 +2,7 @@
 //! Inspection profiles for focused use cases
 
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 
 pub mod compliance;
@@ -134,4 +134,144 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
             "System hardening recommendations with actionable remediation steps",
         ),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_risk_level_display() {
+        assert_eq!(RiskLevel::Critical.to_string(), "CRITICAL");
+        assert_eq!(RiskLevel::High.to_string(), "HIGH");
+        assert_eq!(RiskLevel::Medium.to_string(), "MEDIUM");
+        assert_eq!(RiskLevel::Low.to_string(), "LOW");
+        assert_eq!(RiskLevel::Info.to_string(), "INFO");
+    }
+
+    #[test]
+    fn test_risk_level_ordering() {
+        // Test that risk levels can be compared
+        assert_eq!(RiskLevel::High, RiskLevel::High);
+        assert_ne!(RiskLevel::High, RiskLevel::Low);
+    }
+
+    #[test]
+    fn test_finding_status_display() {
+        assert_eq!(FindingStatus::Pass.to_string(), "✓");
+        assert_eq!(FindingStatus::Warning.to_string(), "⚠");
+        assert_eq!(FindingStatus::Fail.to_string(), "✗");
+        assert_eq!(FindingStatus::Info.to_string(), "ℹ");
+    }
+
+    #[test]
+    fn test_finding_creation() {
+        let finding = Finding {
+            item: "SSH Configuration".to_string(),
+            status: FindingStatus::Pass,
+            message: "SSH root login is disabled".to_string(),
+            risk_level: Some(RiskLevel::High),
+        };
+
+        assert_eq!(finding.item, "SSH Configuration");
+        assert_eq!(finding.status, FindingStatus::Pass);
+        assert_eq!(finding.risk_level, Some(RiskLevel::High));
+    }
+
+    #[test]
+    fn test_report_section_creation() {
+        let section = ReportSection {
+            title: "Network Security".to_string(),
+            findings: vec![
+                Finding {
+                    item: "Firewall".to_string(),
+                    status: FindingStatus::Pass,
+                    message: "Firewall enabled".to_string(),
+                    risk_level: Some(RiskLevel::High),
+                },
+            ],
+        };
+
+        assert_eq!(section.title, "Network Security");
+        assert_eq!(section.findings.len(), 1);
+    }
+
+    #[test]
+    fn test_profile_report_creation() {
+        let report = ProfileReport {
+            profile_name: "Security".to_string(),
+            sections: vec![],
+            overall_risk: Some(RiskLevel::Medium),
+            summary: Some("System has moderate security issues".to_string()),
+        };
+
+        assert_eq!(report.profile_name, "Security");
+        assert_eq!(report.overall_risk, Some(RiskLevel::Medium));
+        assert!(report.summary.is_some());
+    }
+
+    #[test]
+    fn test_get_profile_security() {
+        let profile = get_profile("security");
+        assert!(profile.is_some());
+    }
+
+    #[test]
+    fn test_get_profile_migration() {
+        let profile = get_profile("migration");
+        assert!(profile.is_some());
+    }
+
+    #[test]
+    fn test_get_profile_case_insensitive() {
+        let profile1 = get_profile("SECURITY");
+        let profile2 = get_profile("Security");
+        let profile3 = get_profile("security");
+
+        assert!(profile1.is_some());
+        assert!(profile2.is_some());
+        assert!(profile3.is_some());
+    }
+
+    #[test]
+    fn test_get_profile_invalid() {
+        let profile = get_profile("nonexistent");
+        assert!(profile.is_none());
+    }
+
+    #[test]
+    fn test_list_profiles_count() {
+        let profiles = list_profiles();
+        assert_eq!(profiles.len(), 5);
+    }
+
+    #[test]
+    fn test_list_profiles_contains_all() {
+        let profiles = list_profiles();
+        let names: Vec<&str> = profiles.iter().map(|(name, _)| *name).collect();
+
+        assert!(names.contains(&"security"));
+        assert!(names.contains(&"migration"));
+        assert!(names.contains(&"performance"));
+        assert!(names.contains(&"compliance"));
+        assert!(names.contains(&"hardening"));
+    }
+
+    #[test]
+    fn test_finding_status_equality() {
+        assert_eq!(FindingStatus::Pass, FindingStatus::Pass);
+        assert_ne!(FindingStatus::Pass, FindingStatus::Fail);
+    }
+
+    #[test]
+    fn test_finding_without_risk_level() {
+        let finding = Finding {
+            item: "Info item".to_string(),
+            status: FindingStatus::Info,
+            message: "Informational message".to_string(),
+            risk_level: None,
+        };
+
+        assert!(finding.risk_level.is_none());
+    }
 }

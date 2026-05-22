@@ -46,7 +46,7 @@ fn draw_user_summary(f: &mut Frame, area: Rect, app: &App) {
     }).count();
     let normal_count = app.users.iter().filter(|u| {
         let uid: i32 = u.uid.parse().unwrap_or(99999);
-        uid >= 1000 && uid < 65534
+        (1000..65534).contains(&uid)
     }).count();
     let total_count = app.users.len();
 

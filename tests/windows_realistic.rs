@@ -279,7 +279,7 @@ fn create_realistic_windows_image(
 
     // Create sparse image
     let disk_size_bytes = DISK_SIZE_MB * 1024 * 1024;
-    g.disk_create(DISK_PATH, "raw", disk_size_bytes, None)?;
+    g.disk_create(DISK_PATH, "raw", disk_size_bytes)?;
     g.add_drive(DISK_PATH)?;
     g.launch()?;
     println!("  ✓ Disk image created and guestfs launched");
@@ -328,12 +328,12 @@ fn create_realistic_windows_image(
     // Step 3: Create filesystems
     println!("\n[3/16] Creating filesystems...");
     if use_efi {
-        g.mkfs("vfat", "/dev/sda1", None, Some("SYSTEM"), None, None)?;
-        g.mkfs("ntfs", "/dev/sda3", None, Some("Windows"), None, None)?;
+        g.mkfs("vfat", "/dev/sda1")?;
+        g.mkfs("ntfs", "/dev/sda3")?;
         println!("  ✓ Filesystems: vfat (ESP) + NTFS (Windows)");
     } else {
-        g.mkfs("ntfs", "/dev/sda1", None, Some("SYSTEM"), None, None)?;
-        g.mkfs("ntfs", "/dev/sda2", None, Some("Windows"), None, None)?;
+        g.mkfs("ntfs", "/dev/sda1")?;
+        g.mkfs("ntfs", "/dev/sda2")?;
         println!("  ✓ Filesystems: NTFS (System Reserved) + NTFS (Windows)");
     }
 
@@ -392,48 +392,48 @@ fn create_realistic_windows_image(
     println!("\n[6/16] Creating Windows registry files...");
     g.write(
         "/Windows/System32/config/SYSTEM",
-        &make_system_registry(version_meta),
+        make_system_registry(version_meta).as_bytes(),
     )?;
     g.write(
         "/Windows/System32/config/SOFTWARE",
-        &make_software_registry(),
+        make_software_registry().as_bytes(),
     )?;
-    g.write("/Windows/System32/config/SAM", "SAM Registry Hive\n")?;
+    g.write("/Windows/System32/config/SAM", b"SAM Registry Hive\n")?;
     g.write(
         "/Windows/System32/config/SECURITY",
-        "SECURITY Registry Hive\n",
+        b"SECURITY Registry Hive\n",
     )?;
     g.write(
         "/Windows/System32/config/DEFAULT",
-        "DEFAULT Registry Hive\n",
+        b"DEFAULT Registry Hive\n",
     )?;
     println!("  ✓ Registry hives created");
 
     // Step 7: Create boot configuration
     println!("\n[7/16] Creating boot configuration...");
     if use_efi {
-        g.write("/Windows/Boot/EFI/BCD", &make_boot_bcd())?;
-        g.write("/EFI/Microsoft/Boot/BCD", &make_boot_bcd())?;
+        g.write("/Windows/Boot/EFI/BCD", make_boot_bcd().as_bytes())?;
+        g.write("/EFI/Microsoft/Boot/BCD", make_boot_bcd().as_bytes())?;
     } else {
-        g.write("/Windows/Boot/PCAT/BCD", &make_boot_bcd())?;
+        g.write("/Windows/Boot/PCAT/BCD", make_boot_bcd().as_bytes())?;
     }
     println!("  ✓ Boot configuration created");
 
     // Step 8: Create Windows system files
     println!("\n[8/16] Creating Windows system files...");
-    g.write("/Windows/System32/drivers/etc/hosts", &make_hosts_file())?;
+    g.write("/Windows/System32/drivers/etc/hosts", make_hosts_file().as_bytes())?;
     g.write(
         "/Windows/Panther/unattend.xml",
-        &make_unattend_xml(version_meta),
+        make_unattend_xml(version_meta).as_bytes(),
     )?;
 
     // Create version info file
     g.write(
         "/Windows/System32/version.txt",
-        &format!(
+        format!(
             "{}\nVersion {}\nBuild {}\n",
             version_meta.product_name, version_meta.version, version_meta.build
-        ),
+        ).as_bytes(),
     )?;
 
     println!("  ✓ Windows system files created");
@@ -442,7 +442,7 @@ fn create_realistic_windows_image(
     println!("\n[9/16] Creating Windows services...");
     for (service_name, service_config) in make_windows_services() {
         let service_path = format!("/Windows/System32/config/services/{}.ini", service_name);
-        g.write(&service_path, service_config)?;
+        g.write(&service_path, service_config.as_bytes())?;
     }
     println!("  ✓ Windows services configured");
 
@@ -471,24 +471,24 @@ fn create_realistic_windows_image(
     println!("\n[11/16] Creating event logs...");
     g.write(
         "/Windows/System32/winevt/Logs/System.evtx",
-        "Windows Event Log\n",
+        b"Windows Event Log\n",
     )?;
     g.write(
         "/Windows/System32/winevt/Logs/Application.evtx",
-        "Windows Event Log\n",
+        b"Windows Event Log\n",
     )?;
     g.write(
         "/Windows/System32/winevt/Logs/Security.evtx",
-        "Windows Event Log\n",
+        b"Windows Event Log\n",
     )?;
     println!("  ✓ Event logs created");
 
     // Step 12: Create user profiles
     println!("\n[12/16] Creating user profiles...");
-    g.write("/Users/Administrator/NTUSER.DAT", "User Registry Hive\n")?;
+    g.write("/Users/Administrator/NTUSER.DAT", b"User Registry Hive\n")?;
     g.write(
         "/Users/Administrator/Desktop/desktop.ini",
-        "[.ShellClassInfo]\nLocalizedResourceName=@%SystemRoot%\\system32\\shell32.dll,-21769\n",
+        b"[.ShellClassInfo]\nLocalizedResourceName=@%SystemRoot%\\system32\\shell32.dll,-21769\n",
     )?;
     println!("  ✓ User profiles created");
 
@@ -497,15 +497,15 @@ fn create_realistic_windows_image(
     g.mkdir_p("/Windows/SoftwareDistribution/Download")?;
     g.write(
         "/Windows/SoftwareDistribution/DataStore/DataStore.edb",
-        "Windows Update Database\n",
+        b"Windows Update Database\n",
     )?;
     println!("  ✓ Windows Update metadata created");
 
     // Step 14: Create pagefile placeholder
     println!("\n[14/16] Creating system files...");
-    g.write("/pagefile.sys", "Windows Page File\n")?;
-    g.write("/hiberfil.sys", "Windows Hibernation File\n")?;
-    g.write("/swapfile.sys", "Windows Swap File\n")?;
+    g.write("/pagefile.sys", b"Windows Page File\n")?;
+    g.write("/hiberfil.sys", b"Windows Hibernation File\n")?;
+    g.write("/swapfile.sys", b"Windows Swap File\n")?;
     println!("  ✓ System files created");
 
     // Step 15: Test Phase 3 APIs
@@ -519,14 +519,14 @@ fn create_realistic_windows_image(
     );
 
     // Test rm()
-    g.write("/Temp/test-phase3.txt", "test content")?;
+    g.write("/Temp/test-phase3.txt", b"test content")?;
     g.rm("/Temp/test-phase3.txt")?;
     println!("  ✓ rm() test passed");
 
     // Test rm_rf()
     g.mkdir_p("/Temp/test-dir/subdir")?;
-    g.write("/Temp/test-dir/file1.txt", "content1")?;
-    g.write("/Temp/test-dir/subdir/file2.txt", "content2")?;
+    g.write("/Temp/test-dir/file1.txt", b"content1")?;
+    g.write("/Temp/test-dir/subdir/file2.txt", b"content2")?;
     g.rm_rf("/Temp/test-dir")?;
     println!("  ✓ rm_rf() test passed");
 
@@ -535,7 +535,7 @@ fn create_realistic_windows_image(
     g.mkdir_p("/ProgramData/Microsoft/Windows Defender")?;
     g.write(
         "/ProgramData/Microsoft/Windows Defender/platform.ini",
-        "[Windows Defender]\nVersion=4.18.24010.12\n",
+        b"[Windows Defender]\nVersion=4.18.24010.12\n",
     )?;
     println!("  ✓ Windows Defender configured");
 
@@ -660,10 +660,10 @@ fn test_windows_ntfs_features() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test file existence
     println!("  Testing file existence...");
-    assert!(g.is_file("/Windows/System32/cmd.exe", None)?);
+    assert!(g.is_file("/Windows/System32/cmd.exe")?);
     println!("    ✓ cmd.exe exists");
 
-    assert!(g.is_dir("/Program Files", None)?);
+    assert!(g.is_dir("/Program Files")?);
     println!("    ✓ Program Files is a directory");
 
     g.shutdown()?;

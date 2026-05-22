@@ -74,6 +74,7 @@ impl Default for JournalStats {
 }
 
 /// Journal reader
+#[derive(Debug)]
 pub struct JournalReader {
     analyzer: SystemdAnalyzer,
 }

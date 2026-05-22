@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! # guestctl
+//! # guestkit
 //!
 //! A Guest VM toolkit for disk inspection and manipulation.
 //!
@@ -32,7 +32,7 @@
 //!
 //! ## Architecture
 //!
-//! guestctl is organized into focused modules:
+//! guestkit is organized into focused modules:
 //!
 //! - `core` - Error types, retry logic, common types
 //! - `converters` - Disk format conversion
@@ -43,6 +43,7 @@
 //! - `fixers` - Guest OS repair operations
 //! - `cli` - Command-line interface
 
+pub mod cli;
 pub mod converters;
 pub mod core;
 pub mod disk;

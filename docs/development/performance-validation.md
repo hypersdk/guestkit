@@ -1,6 +1,6 @@
 # Performance Validation Framework
 
-This document describes the performance validation framework for guestctl, which helps validate performance improvements and detect regressions.
+This document describes the performance validation framework for guestkit, which helps validate performance improvements and detect regressions.
 
 ## Overview
 

@@ -6,7 +6,7 @@ pub mod estimator;
 pub mod reporter;
 
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -19,6 +19,7 @@ pub enum CloudProvider {
 }
 
 impl CloudProvider {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "aws" => Some(Self::AWS),
@@ -393,5 +394,78 @@ fn determine_workload_profile(metrics: &SystemMetrics) -> WorkloadProfile {
         has_database: metrics.has_database,
         has_cache: metrics.has_cache,
         has_web_server: metrics.has_web_server,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_workload_profile_creation() {
+        let profile = WorkloadProfile {
+            cpu_usage_percent: 60.0,
+            memory_usage_percent: 70.0,
+            storage_type: "ssd".to_string(),
+            network_egress_gb: 500.0,
+            has_database: true,
+            has_cache: false,
+            has_web_server: true,
+        };
+        
+        assert_eq!(profile.cpu_usage_percent, 60.0);
+        assert_eq!(profile.has_database, true);
+        assert_eq!(profile.storage_type, "ssd");
+    }
+
+    #[test]
+    fn test_resource_estimate_monthly_calculation() {
+        let estimate = ResourceEstimate {
+            instance_type: "t3.medium".to_string(),
+            vcpus: 2,
+            memory_gb: 4.0,
+            storage_gb: 50.0,
+            compute_monthly: 30.0,
+            storage_monthly: 5.0,
+            network_monthly: 10.0,
+            total_monthly: 45.0,
+        };
+        
+        assert_eq!(estimate.total_monthly, 45.0);
+        assert_eq!(
+            estimate.total_monthly,
+            estimate.compute_monthly + estimate.storage_monthly + estimate.network_monthly
+        );
+    }
+
+    #[test]
+    fn test_savings_opportunity_creation() {
+        let opportunity = SavingsOpportunity {
+            category: "Right-sizing".to_string(),
+            description: "Reduce instance size".to_string(),
+            current_cost: 100.0,
+            optimized_cost: 50.0,
+            monthly_savings: 50.0,
+            effort: OptimizationEffort::Low,
+            priority: OptimizationPriority::High,
+        };
+        
+        assert_eq!(opportunity.category, "Right-sizing");
+        assert_eq!(opportunity.monthly_savings, 50.0);
+        assert_eq!(opportunity.current_cost - opportunity.optimized_cost, opportunity.monthly_savings);
+    }
+
+    #[test]
+    fn test_cost_recommendation_creation() {
+        let recommendation = CostRecommendation {
+            title: "Use Reserved Instances".to_string(),
+            description: "Save up to 70% with 1-year commitment".to_string(),
+            estimated_savings: 200.0,
+            implementation_steps: vec!["Purchase RI".to_string()],
+        };
+        
+        assert_eq!(recommendation.title, "Use Reserved Instances");
+        assert_eq!(recommendation.estimated_savings, 200.0);
+        assert_eq!(recommendation.implementation_steps.len(), 1);
     }
 }

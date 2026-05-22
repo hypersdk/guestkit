@@ -32,13 +32,11 @@ fn draw_security_tools(f: &mut Frame, area: Rect, app: &App) {
         create_status_item("auditd", if app.security.auditd { "enabled" } else { "disabled" }, app.security.auditd),
     ];
 
-    let enabled_count = vec![
-        app.security.selinux != "disabled",
+    let enabled_count = [app.security.selinux != "disabled",
         app.security.apparmor,
         app.security.fail2ban,
         app.security.aide,
-        app.security.auditd,
-    ].iter().filter(|&&x| x).count();
+        app.security.auditd].iter().filter(|&&x| x).count();
 
     let list = List::new(items)
         .block(Block::default()

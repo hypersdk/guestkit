@@ -8,20 +8,24 @@ use rustyline::DefaultEditor;
 use std::path::Path;
 
 use super::commands::{self, ShellContext};
-use guestkit::Guestfs;
+use crate::Guestfs;
 
 /// Run interactive shell
 pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan());
-    println!("{}", "║          GuestKit Interactive Shell v0.3.1              ║".cyan().bold());
+    println!("{}", "║          GuestKit Interactive Shell v0.3.2              ║".cyan().bold());
     println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan());
     println!();
     println!("{} Loading VM image...", "→".cyan());
 
     // Initialize guestfs
     let mut guestfs = Guestfs::new().context("Failed to create Guestfs handle")?;
-    guestfs.add_drive_opts(image_path.as_ref().to_str().unwrap(), false, None)
-        .context("Failed to add drive")?;
+    guestfs.add_drive_opts(
+        image_path.as_ref().to_str()
+            .ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?,
+        false,
+        None,
+    ).context("Failed to add drive")?;
     guestfs.launch().context("Failed to launch guestfs")?;
 
     // Inspect and mount
@@ -33,8 +37,12 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     let root = &roots[0];
     println!("{} Detected OS: {}", "→".cyan(), root.yellow());
 
-    let mounts = guestfs.inspect_get_mountpoints(root)
+    let mounts_map = guestfs.inspect_get_mountpoints(root)
         .context("Failed to get mountpoints")?;
+
+    // Sort by mountpoint path length (shortest first) to ensure parents are mounted before children
+    let mut mounts: Vec<_> = mounts_map.into_iter().collect();
+    mounts.sort_by(|(a, _), (b, _)| a.cmp(b));
 
     for (mountpoint, device) in mounts {
         if let Err(e) = guestfs.mount(&device, &mountpoint) {
@@ -52,7 +60,7 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     let mut ctx = ShellContext::new(guestfs, root.to_string());
 
     // Get OS information for context
-    let os_product = ctx.guestfs.inspect_get_product_name(&root)
+    let os_product = ctx.guestfs.inspect_get_product_name(root)
         .unwrap_or_else(|_| "Unknown OS".to_string());
     ctx.set_os_info(os_product);
 
@@ -64,7 +72,12 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
         .map(|p| p.join(".guestkit_history"))
         .unwrap_or_else(|| std::path::PathBuf::from(".guestkit_history"));
 
-    let _ = rl.load_history(&history_path);
+    if let Err(e) = rl.load_history(&history_path) {
+        // ReadlineError::Io with NotFound is expected on first run
+        if !matches!(&e, ReadlineError::Io(io_err) if io_err.kind() == std::io::ErrorKind::NotFound) {
+            eprintln!("{} Failed to load history: {}", "Warning:".yellow(), e);
+        }
+    }
 
     // REPL loop
     loop {
@@ -421,7 +434,9 @@ pub fn run_interactive_shell<P: AsRef<Path>>(image_path: P) -> Result<()> {
     }
 
     // Save history
-    let _ = rl.save_history(&history_path);
+    if let Err(e) = rl.save_history(&history_path) {
+        eprintln!("{} Failed to save history: {}", "Warning:".yellow(), e);
+    }
 
     // Shutdown
     ctx.guestfs.shutdown()?;
@@ -590,7 +605,7 @@ fn cmd_health(_ctx: &mut ShellContext) {
     println!("\n{}", "System Health Score".yellow().bold());
     println!("{}", "─".repeat(60).cyan());
     println!("\n{} This command requires full TUI mode.", "Note:".yellow());
-    println!("{} Run 'guestctl tui <image>' for complete health analysis", "Tip:".cyan());
+    println!("{} Run 'guestkit tui <image>' for complete health analysis", "Tip:".cyan());
     println!();
 }
 
@@ -598,6 +613,6 @@ fn cmd_risks(_ctx: &mut ShellContext) {
     println!("\n{}", "Security Risks".yellow().bold());
     println!("{}", "─".repeat(60).cyan());
     println!("\n{} This command requires full TUI mode.", "Note:".yellow());
-    println!("{} Run 'guestctl tui <image>' to view security issues", "Tip:".cyan());
+    println!("{} Run 'guestkit tui <image>' to view security issues", "Tip:".cyan());
     println!();
 }

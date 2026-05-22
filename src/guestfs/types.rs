@@ -53,6 +53,7 @@ impl FilesystemType {
     }
 
     /// Parse from string
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "ext2" => Some(FilesystemType::Ext2),
@@ -133,9 +134,10 @@ pub enum OsType {
     Unknown,
 }
 
-impl OsType {
-    pub fn from_str(s: &str) -> Self {
-        match s {
+impl std::str::FromStr for OsType {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s {
             "linux" => OsType::Linux,
             "windows" => OsType::Windows,
             "hurd" => OsType::Hurd,
@@ -144,7 +146,16 @@ impl OsType {
             "openbsd" => OsType::OpenBsd,
             "minix" => OsType::Minix,
             _ => OsType::Unknown,
-        }
+        })
+    }
+}
+
+impl OsType {
+    /// Parse from string (convenience method for backward compatibility)
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Self {
+        // Safe: FromStr impl is Infallible (always returns Ok with Unknown fallback)
+        s.parse().unwrap_or(OsType::Unknown)
     }
 
     pub fn as_str(&self) -> &'static str {
@@ -186,9 +197,10 @@ pub enum Distro {
     Unknown,
 }
 
-impl Distro {
-    pub fn from_str(s: &str) -> Self {
-        match s {
+impl std::str::FromStr for Distro {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s {
             "ubuntu" => Distro::Ubuntu,
             "debian" => Distro::Debian,
             "fedora" => Distro::Fedora,
@@ -202,7 +214,16 @@ impl Distro {
             "void" => Distro::Void,
             "nixos" => Distro::Nixos,
             _ => Distro::Unknown,
-        }
+        })
+    }
+}
+
+impl Distro {
+    /// Parse from string (convenience method for backward compatibility)
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Self {
+        // Safe: FromStr impl is Infallible (always returns Ok with Unknown fallback)
+        s.parse().unwrap_or(Distro::Unknown)
     }
 
     pub fn as_str(&self) -> &'static str {
@@ -256,6 +277,7 @@ pub enum PackageManager {
 }
 
 impl PackageManager {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "deb" | "dpkg" => Some(PackageManager::Dpkg),

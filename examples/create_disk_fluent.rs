@@ -9,7 +9,7 @@
 //! Usage:
 //!   sudo cargo run --example create_disk_fluent
 
-use guestkit::guestfs::{FilesystemType, Guestfs, PartitionTableType};
+use guestkit::guestfs::{Guestfs, PartitionTableType};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create sparse disk image
     println!("[2/8] Creating {} MB disk image...", disk_size_mb);
     let disk_size_bytes = (disk_size_mb * 1024 * 1024) as i64;
-    guest.disk_create(disk_path, "raw", disk_size_bytes, None)?;
+    guest.disk_create(disk_path, "raw", disk_size_bytes)?;
 
     // Add drive and launch
     println!("[3/8] Adding drive and launching...");
@@ -61,25 +61,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create filesystems using fluent API - type-safe and self-documenting!
     println!("[6/8] Creating filesystems...");
 
-    // VFAT for EFI - fluent builder makes it clear
-    guest
-        .mkfs("/dev/sda1")
-        .vfat() // Type-safe filesystem type
-        .label("EFI") // Clear parameter names
-        .create()?;
+    // VFAT for EFI
+    guest.mkfs("vfat", "/dev/sda1")?;
+    guest.set_label("/dev/sda1", "EFI")?;
 
-    // BTRFS for root - demonstrates different filesystem
-    guest
-        .mkfs("/dev/sda2")
-        .btrfs() // Another type-safe option
-        .label("rootfs")
-        .create()?;
+    // BTRFS for root
+    guest.mkfs("btrfs", "/dev/sda2")?;
+    guest.set_label("/dev/sda2", "rootfs")?;
 
     // Mount filesystems
     println!("[7/8] Mounting filesystems...");
-    guest.mount("/dev/sda2", "/", None)?;
+    guest.mount("/dev/sda2", "/")?;
     guest.mkdir("/boot/efi")?;
-    guest.mount("/dev/sda1", "/boot/efi", None)?;
+    guest.mount("/dev/sda1", "/boot/efi")?;
 
     // Create directory structure
     println!("[8/8] Setting up directory structure...");

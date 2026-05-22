@@ -125,7 +125,7 @@ The inspect command now organizes information into logical sections similar to s
 
 #### Before
 ```bash
-$ guestctl inspect disk.qcow2 -v
+$ guestkit inspect disk.qcow2 -v
 guestfs: read_file /etc/os-release
 guestfs: read_file /usr/lib/os-release
 guestfs: is_file /etc/hostname
@@ -145,7 +145,7 @@ guestfs: shutdown complete
 
 #### After (with `-v`)
 ```bash
-$ guestctl inspect disk.qcow2 -v
+$ guestkit inspect disk.qcow2 -v
 ══════════════════════════════════════════════════════════════════════
 📀 Disk Image: disk.qcow2
 ══════════════════════════════════════════════════════════════════════
@@ -208,22 +208,22 @@ unicode-width = "0.1"     # Text width calculations
 
 ### Basic Inspection
 ```bash
-$ guestctl inspect ubuntu.qcow2
+$ guestkit inspect ubuntu.qcow2
 ```
 
 ### Detailed Filesystems
 ```bash
-$ guestctl filesystems rhel.qcow2 --detailed
+$ guestkit filesystems rhel.qcow2 --detailed
 ```
 
 ### Verbose Mode (High-Level)
 ```bash
-$ guestctl inspect photon.qcow2 -v
+$ guestkit inspect photon.qcow2 -v
 ```
 
 ### Trace Mode (Full Debug)
 ```bash
-$ guestctl inspect disk.qcow2 --trace
+$ guestkit inspect disk.qcow2 --trace
 ```
 
 ## Design Principles

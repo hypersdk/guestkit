@@ -59,11 +59,11 @@ Check this out - inspecting a VMware Photon OS disk in under 5 seconds:
 
 This is what happens when you combine systems programming with UX design principles. Tools don't have to be ugly to be powerful.
 
-**Coming soon:**
+**Now available:**
 - Network configuration detection
 - Service inventory
 - Python bindings for automation
-- HTML/JSON export for reporting
+- HTML/JSON/PDF export for reporting
 
 Open source (LGPL-3.0). Built with #Rust. Designed for real-world use.
 
@@ -109,7 +109,7 @@ Example - inspecting a VMware Photon OS VMDK:
 ```bash
 # Audit 100 VMs for security compliance
 for vm in *.vmdk; do
-  guestctl inspect "$vm" --profile security
+  guestkit inspect "$vm" --profile security
 done
 # Total time: ~15 minutes vs hours of manual work
 ```
@@ -165,7 +165,7 @@ Traditional approach:
 **The Solution I Built:**
 
 ```bash
-guestctl inspect vm-stack.vmdk
+guestkit inspect vm-stack.vmdk
 ```
 
 **Output (in 5 seconds):**
@@ -241,7 +241,7 @@ What's your VM inspection pain point?
 
 One command:
 ```bash
-guestctl inspect photon.vmdk
+guestkit inspect photon.vmdk
 ```
 
 5 seconds later:
@@ -297,6 +297,7 @@ Try it: github.com/ssahani/guestkit
 2. Week 2: Customer success story
 3. Week 3: Python bindings demo
 4. Week 4: Comparison with alternatives
+5. Security & code quality: Post about the 54-issue security audit results -- builds credibility and trust, especially for enterprise/security-conscious audiences.
 
 **Hashtag strategy:**
 - Primary: #Rust #DevOps #OpenSource

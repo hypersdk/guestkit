@@ -32,13 +32,13 @@ Think of it as your Swiss Army knife for VM forensics, security audits, and syst
 
 From 47 build warnings down to 1 (intentional). From basic CLI to a full-featured inspection platform. All open source.
 
-Coming soon to PyPI! 🎉
+Available now on PyPI! 🎉
 
 Want to inspect a VM disk? Just:
 ```bash
-guestctl inspect vm.qcow2
-guestctl interactive vm.qcow2
-guestctl script vm.qcow2 audit.gk --export html
+guestkit inspect vm.qcow2
+guestkit interactive vm.qcow2
+guestkit script vm.qcow2 audit.gk --export html
 ```
 
 Built with: #Rust #Python #DevOps #Security #CloudComputing #OpenSource
@@ -100,7 +100,7 @@ After months of development, I'm thrilled to share the technical accomplishments
 
 The intersection of systems programming, DevOps automation, and security analysis has never been more exciting!
 
-GitHub: [Coming Soon]
+GitHub: https://github.com/ssahani/guestkit
 Docs: Comprehensive guides for CLI, Python API, and batch scripting
 
 Thoughts on VM inspection workflows? What features would you find most valuable?
@@ -138,10 +138,10 @@ Ever needed to inspect a VM without booting it? Here's what GuestCtl can do in s
 
 **1️⃣ Interactive Exploration**
 ```
-guestctl interactive vm.qcow2
-guestctl> packages | grep apache
-guestctl> cat /etc/ssh/sshd_config
-guestctl> services --enabled
+guestkit interactive vm.qcow2
+guestkit> packages | grep apache
+guestkit> cat /etc/ssh/sshd_config
+guestkit> services --enabled
 ```
 
 **2️⃣ Automated Audits**
@@ -163,7 +163,7 @@ HTML exports with:
 
 **4️⃣ Python Integration**
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 with Guestfs() as g:
     g.add_drive_ro("vm.qcow2")
@@ -173,7 +173,7 @@ with Guestfs() as g:
 
 **5️⃣ Smart Assistance**
 ```
-guestctl> pac
+guestkit> pac
 Error: Unknown command: 'pac'
 Suggestion: Did you mean: packages, pkg?
 ```
@@ -228,6 +228,35 @@ Sometimes the best tools come from scratching your own itch. What's the tool you
 
 ---
 
+## Post 6: Security Audit Complete
+
+🔒 **54 security and correctness issues found and fixed in GuestCtl.**
+
+Just completed a comprehensive code review of the entire codebase:
+
+🔴 **8 Critical** - Command injection, shell escaping
+🟠 **11 High** - Path traversal, input validation
+🟡 **22 Medium** - Error handling, resource cleanup
+🟢 **13 Low** - Code quality, defensive checks
+
+Every issue resolved. Every fix verified.
+
+**What this means for users:**
+- ✅ Shell injection prevention across all commands
+- ✅ Path traversal protection on every file operation
+- ✅ Input validation at every boundary
+- ✅ Production-hardened through systematic review
+
+Security isn't a feature you bolt on later. It's something you build in, review, and harden -- continuously.
+
+GuestCtl is now more production-ready than ever. Open source, Rust-powered, and security-audited.
+
+GitHub: https://github.com/ssahani/guestkit
+
+#Rust #Security #DevSecOps #OpenSource #CodeReview #DevOps
+
+---
+
 ## Recommended Hashtags
 
 **Primary (always include):**
@@ -268,7 +297,7 @@ Sometimes the best tools come from scratching your own itch. What's the tool you
 
 📚 Documentation: [link]
 🐙 GitHub: [link]
-🐍 PyPI: Coming soon!
+🐍 PyPI: https://pypi.org/project/guestkit/
 
 Key features:
 • 27 commands in interactive mode

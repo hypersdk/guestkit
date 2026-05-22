@@ -113,14 +113,14 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build guestctl
+      - name: Build guestkit
         run: |
-          cargo build --bin guestctl --release
-          ./target/release/guestctl --version
+          cargo build --bin guestkit --release
+          ./target/release/guestkit --version
 
       - name: Test CLI - inspect
         run: |
-          sudo ./target/release/guestctl inspect \
+          sudo ./target/release/guestkit inspect \
             test-images/${{ matrix.os }}.img | tee inspect-output.txt
 
           # Verify expected output
@@ -129,7 +129,7 @@ jobs:
 
       - name: Test CLI - inspect JSON
         run: |
-          sudo ./target/release/guestctl inspect --json \
+          sudo ./target/release/guestkit inspect --json \
             test-images/${{ matrix.os }}.img > inspect.json
 
           cat inspect.json | jq '.'
@@ -141,7 +141,7 @@ jobs:
 
       - name: Test CLI - filesystems
         run: |
-          sudo ./target/release/guestctl filesystems \
+          sudo ./target/release/guestkit filesystems \
             test-images/${{ matrix.os }}.img | tee fs-output.txt
 
           # Should list devices and partitions
@@ -150,7 +150,7 @@ jobs:
 
       - name: Test CLI - filesystems detailed
         run: |
-          sudo ./target/release/guestctl filesystems --detailed \
+          sudo ./target/release/guestkit filesystems --detailed \
             test-images/${{ matrix.os }}.img | tee fs-detailed.txt
 
           # Should show sizes and UUIDs
@@ -159,7 +159,7 @@ jobs:
 
       - name: Test CLI - packages
         run: |
-          sudo ./target/release/guestctl packages \
+          sudo ./target/release/guestkit packages \
             test-images/${{ matrix.os }}.img > packages-output.txt || true
 
           if [ -s packages-output.txt ]; then
@@ -171,7 +171,7 @@ jobs:
 
       - name: Test CLI - ls root
         run: |
-          sudo ./target/release/guestctl ls \
+          sudo ./target/release/guestkit ls \
             test-images/${{ matrix.os }}.img / | tee ls-output.txt
 
           # Should contain standard directories
@@ -181,7 +181,7 @@ jobs:
 
       - name: Test CLI - cat file
         run: |
-          sudo ./target/release/guestctl cat \
+          sudo ./target/release/guestkit cat \
             test-images/${{ matrix.os }}.img /etc/hostname | tee hostname.txt
 
           [ -s hostname.txt ]
@@ -189,7 +189,7 @@ jobs:
 
       - name: Test CLI - copy file
         run: |
-          sudo ./target/release/guestctl cp \
+          sudo ./target/release/guestkit cp \
             "test-images/${{ matrix.os }}.img:/etc/hostname" \
             ./copied-hostname.txt
 

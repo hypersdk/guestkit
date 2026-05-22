@@ -33,7 +33,7 @@ struct ExplorerState {
     panel_height: u16,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum SortMode {
     Name,
     Size,
@@ -94,6 +94,23 @@ impl ExplorerState {
         self.entries.get(self.selected)
     }
 
+    /// Get the parent directory path
+    fn parent_path(&self) -> String {
+        let parts: Vec<&str> = self.current_path.rsplitn(2, '/').collect();
+        if parts.len() > 1 && !parts[1].is_empty() {
+            format!("/{}", parts[1])
+        } else {
+            "/".to_string()
+        }
+    }
+
+    /// Reset navigation state after changing directory
+    fn reset_navigation(&mut self) {
+        self.selected = 0;
+        self.scroll_offset = 0;
+        self.filter.clear();
+    }
+
     fn apply_filter(&mut self) {
         if !self.filter.is_empty() {
             self.entries.retain(|e| {
@@ -103,6 +120,7 @@ impl ExplorerState {
 
         if self.selected >= self.entries.len() {
             self.selected = self.entries.len().saturating_sub(1);
+            self.scroll_offset = 0;
         }
     }
 
@@ -124,7 +142,7 @@ impl ExplorerState {
                 self.entries.sort_by(|a, b| {
                     let ext_a = get_extension(&a.name);
                     let ext_b = get_extension(&b.name);
-                    ext_a.cmp(&ext_b).then(a.name.cmp(&b.name))
+                    ext_a.cmp(ext_b).then(a.name.cmp(&b.name))
                 });
             }
         }
@@ -135,21 +153,16 @@ fn get_extension(name: &str) -> &str {
     name.rsplit('.').next().unwrap_or("")
 }
 
-fn format_size(size: i64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-    let mut size = size as f64;
-    let mut unit_idx = 0;
-
-    while size >= 1024.0 && unit_idx < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_idx += 1;
-    }
-
-    if unit_idx == 0 {
-        format!("{} {}", size as i64, UNITS[unit_idx])
+fn join_path(base: &str, name: &str) -> String {
+    if base == "/" {
+        format!("/{}", name)
     } else {
-        format!("{:.2} {}", size, UNITS[unit_idx])
+        format!("{}/{}", base, name)
     }
+}
+
+fn format_size(size: i64) -> String {
+    crate::cli::output::format_size(size as u64)
 }
 
 fn get_file_icon(entry: &FileEntry) -> &'static str {
@@ -212,11 +225,7 @@ fn load_entries(ctx: &mut ShellContext, path: &str, show_hidden: bool) -> Result
             continue;
         }
 
-        let full_path = if path == "/" {
-            format!("/{}", file)
-        } else {
-            format!("{}/{}", path, file)
-        };
+        let full_path = join_path(path, &file);
 
         // Get file stats
         let is_dir = ctx.guestfs.is_dir(&full_path).unwrap_or(false);
@@ -245,7 +254,7 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
     // Header
     println!("{}", "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan());
     println!("{}", format!("║ {} GuestKit File Explorer - {}",
-        "📂".to_string(),
+        "📂",
         ctx.get_os_info()).cyan());
     println!("{}", "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan());
 
@@ -357,20 +366,20 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
 fn show_help() -> Result<()> {
     println!("\n{}", "╔════════════════════ Explorer Help ═══════════════════╗".bright_cyan().bold());
     println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} Navigation                                       ║", "📖".to_string()).cyan());
+    println!("{}", format!("║ {} Navigation                                       ║", "📖").cyan());
     println!("{}", "║   ↑/↓ or k/j    - Move selection up/down              ║".cyan());
     println!("{}", "║   PgUp/PgDn     - Page up/down                        ║".cyan());
     println!("{}", "║   Enter         - Enter directory / view file        ║".cyan());
     println!("{}", "║   Backspace     - Go to parent directory             ║".cyan());
     println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} Actions                                         ║", "⚡".to_string()).cyan());
+    println!("{}", format!("║ {} Actions                                         ║", "⚡").cyan());
     println!("{}", "║   v             - View file content                  ║".cyan());
     println!("{}", "║   i             - Show file info                     ║".cyan());
     println!("{}", "║   /             - Filter files                       ║".cyan());
     println!("{}", "║   .             - Toggle hidden files                ║".cyan());
     println!("{}", "║   s             - Cycle sort mode                    ║".cyan());
     println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} General                                         ║", "🔧".to_string()).cyan());
+    println!("{}", format!("║ {} General                                         ║", "🔧").cyan());
     println!("{}", "║   h or ?        - Show this help                     ║".cyan());
     println!("{}", "║   q or Esc      - Exit explorer                      ║".cyan());
     println!("{}", "║   Ctrl+C        - Force exit                         ║".cyan());
@@ -520,31 +529,20 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                             // Navigate into directory
                             let new_path = if entry.name == ".." {
                                 // Go to parent
-                                let parts: Vec<&str> = state.current_path.rsplitn(2, '/').collect();
-                                if parts.len() > 1 && !parts[1].is_empty() {
-                                    format!("/{}", parts[1])
-                                } else {
-                                    "/".to_string()
-                                }
+                                state.parent_path()
                             } else {
                                 // Go into subdirectory
-                                if state.current_path == "/" {
-                                    format!("/{}", entry.name)
-                                } else {
-                                    format!("{}/{}", state.current_path, entry.name)
-                                }
+                                join_path(&state.current_path, &entry.name)
                             };
 
                             state.current_path = new_path;
                             state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
                             state.sort_entries();
-                            state.selected = 0;
-                            state.scroll_offset = 0;
-                            state.filter.clear();
+                            state.reset_navigation();
                         } else {
                             // View file
                             disable_raw_mode()?;
-                            let file_path = format!("{}/{}", state.current_path, entry.name);
+                            let file_path = join_path(&state.current_path, &entry.name);
                             let _ = view_file(ctx, &file_path);
                             enable_raw_mode()?;
                         }
@@ -554,19 +552,10 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                 // Go to parent
                 (KeyCode::Backspace, _) => {
                     if state.current_path != "/" {
-                        let parts: Vec<&str> = state.current_path.rsplitn(2, '/').collect();
-                        let new_path = if parts.len() > 1 && !parts[1].is_empty() {
-                            format!("/{}", parts[1])
-                        } else {
-                            "/".to_string()
-                        };
-
-                        state.current_path = new_path;
+                        state.current_path = state.parent_path();
                         state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
                         state.sort_entries();
-                        state.selected = 0;
-                        state.scroll_offset = 0;
-                        state.filter.clear();
+                        state.reset_navigation();
                     }
                 }
 
@@ -575,11 +564,7 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                     if let Some(entry) = state.get_selected_entry().cloned() {
                         if !entry.is_dir && entry.name != ".." {
                             disable_raw_mode()?;
-                            let file_path = if state.current_path == "/" {
-                                format!("/{}", entry.name)
-                            } else {
-                                format!("{}/{}", state.current_path, entry.name)
-                            };
+                            let file_path = join_path(&state.current_path, &entry.name);
                             let _ = view_file(ctx, &file_path);
                             enable_raw_mode()?;
                         }
@@ -591,11 +576,7 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                     if let Some(entry) = state.get_selected_entry().cloned() {
                         if entry.name != ".." {
                             disable_raw_mode()?;
-                            let file_path = if state.current_path == "/" {
-                                format!("/{}", entry.name)
-                            } else {
-                                format!("{}/{}", state.current_path, entry.name)
-                            };
+                            let file_path = join_path(&state.current_path, &entry.name);
                             let _ = show_file_info(ctx, &file_path, &entry);
                             enable_raw_mode()?;
                         }
@@ -608,8 +589,7 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                     state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
                     state.sort_entries();
                     state.apply_filter();
-                    state.selected = 0;
-                    state.scroll_offset = 0;
+                    state.reset_navigation();
                 }
 
                 // Cycle sort mode
@@ -630,8 +610,7 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                         state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
                         state.sort_entries();
                         state.apply_filter();
-                        state.selected = 0;
-                        state.scroll_offset = 0;
+                        state.reset_navigation();
                     }
                     enable_raw_mode()?;
                 }
@@ -659,4 +638,442 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_entry(name: &str, is_dir: bool, size: i64) -> FileEntry {
+        FileEntry {
+            name: name.to_string(),
+            is_dir,
+            size,
+        }
+    }
+
+    #[test]
+    fn test_explorer_state_creation() {
+        let state = ExplorerState::new("/home".to_string());
+        assert_eq!(state.current_path, "/home");
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.scroll_offset, 0);
+        assert_eq!(state.filter, "");
+        assert_eq!(state.show_hidden, false);
+        assert!(matches!(state.sort_by, SortMode::Name));
+    }
+
+    #[test]
+    fn test_navigate_up() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("file1.txt", false, 100),
+            create_test_entry("file2.txt", false, 200),
+            create_test_entry("file3.txt", false, 300),
+        ];
+        state.selected = 2;
+
+        state.navigate_up();
+        assert_eq!(state.selected, 1);
+
+        state.navigate_up();
+        assert_eq!(state.selected, 0);
+
+        // Should not go below 0
+        state.navigate_up();
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_navigate_down() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("file1.txt", false, 100),
+            create_test_entry("file2.txt", false, 200),
+            create_test_entry("file3.txt", false, 300),
+        ];
+        state.selected = 0;
+
+        state.navigate_down();
+        assert_eq!(state.selected, 1);
+
+        state.navigate_down();
+        assert_eq!(state.selected, 2);
+
+        // Should not go beyond last entry
+        state.navigate_down();
+        assert_eq!(state.selected, 2);
+    }
+
+    #[test]
+    fn test_navigate_down_empty_list() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![];
+        state.selected = 0;
+
+        state.navigate_down();
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_page_down() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.panel_height = 10;
+        state.entries = (0..50)
+            .map(|i| create_test_entry(&format!("file{}.txt", i), false, i * 100))
+            .collect();
+        state.selected = 0;
+
+        state.page_down();
+        // Should move down by panel_height - 2 = 8
+        assert_eq!(state.selected, 8);
+
+        state.page_down();
+        assert_eq!(state.selected, 16);
+    }
+
+    #[test]
+    fn test_page_up() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.panel_height = 10;
+        state.entries = (0..50)
+            .map(|i| create_test_entry(&format!("file{}.txt", i), false, i * 100))
+            .collect();
+        state.selected = 20;
+        state.scroll_offset = 15;
+
+        state.page_up();
+        // Should move up by panel_height - 2 = 8
+        assert_eq!(state.selected, 12);
+        assert_eq!(state.scroll_offset, 7);
+    }
+
+    #[test]
+    fn test_page_up_at_start() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.panel_height = 10;
+        state.entries = (0..50)
+            .map(|i| create_test_entry(&format!("file{}.txt", i), false, i * 100))
+            .collect();
+        state.selected = 5;
+        state.scroll_offset = 0;
+
+        state.page_up();
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.scroll_offset, 0);
+    }
+
+    #[test]
+    fn test_get_selected_entry() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("file1.txt", false, 100),
+            create_test_entry("file2.txt", false, 200),
+        ];
+        state.selected = 1;
+
+        let entry = state.get_selected_entry().unwrap();
+        assert_eq!(entry.name, "file2.txt");
+    }
+
+    #[test]
+    fn test_get_selected_entry_out_of_bounds() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![create_test_entry("file1.txt", false, 100)];
+        state.selected = 5;
+
+        let entry = state.get_selected_entry();
+        assert!(entry.is_none());
+    }
+
+    #[test]
+    fn test_apply_filter() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("readme.txt", false, 100),
+            create_test_entry("config.yaml", false, 200),
+            create_test_entry("data.txt", false, 300),
+        ];
+        state.filter = "txt".to_string();
+
+        state.apply_filter();
+
+        assert_eq!(state.entries.len(), 2);
+        assert!(state.entries.iter().any(|e| e.name == "readme.txt"));
+        assert!(state.entries.iter().any(|e| e.name == "data.txt"));
+        assert!(!state.entries.iter().any(|e| e.name == "config.yaml"));
+    }
+
+    #[test]
+    fn test_apply_filter_case_insensitive() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("README.TXT", false, 100),
+            create_test_entry("Config.YAML", false, 200),
+        ];
+        state.filter = "readme".to_string();
+
+        state.apply_filter();
+
+        assert_eq!(state.entries.len(), 1);
+        assert_eq!(state.entries[0].name, "README.TXT");
+    }
+
+    #[test]
+    fn test_apply_filter_adjusts_selection() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("file1.txt", false, 100),
+            create_test_entry("file2.txt", false, 200),
+            create_test_entry("image.png", false, 300),
+        ];
+        state.selected = 2; // Pointing to image.png
+        state.filter = "txt".to_string();
+
+        state.apply_filter();
+
+        // Should adjust selected to last valid index (1)
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_apply_filter_empty_filter() {
+        let mut state = ExplorerState::new("/".to_string());
+        let original_entries = vec![
+            create_test_entry("file1.txt", false, 100),
+            create_test_entry("file2.txt", false, 200),
+        ];
+        state.entries = original_entries.clone();
+        state.filter = "".to_string();
+
+        state.apply_filter();
+
+        // Empty filter should not filter anything
+        assert_eq!(state.entries.len(), 2);
+    }
+
+    #[test]
+    fn test_sort_by_name() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("zebra.txt", false, 100),
+            create_test_entry("apple.txt", false, 200),
+            create_test_entry("banana", true, 0),
+        ];
+        state.sort_by = SortMode::Name;
+
+        state.sort_entries();
+
+        // Directories should come first, then alphabetical
+        assert_eq!(state.entries[0].name, "banana");
+        assert!(state.entries[0].is_dir);
+        assert_eq!(state.entries[1].name, "apple.txt");
+        assert_eq!(state.entries[2].name, "zebra.txt");
+    }
+
+    #[test]
+    fn test_sort_by_size() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("small.txt", false, 100),
+            create_test_entry("large.txt", false, 1000),
+            create_test_entry("medium.txt", false, 500),
+        ];
+        state.sort_by = SortMode::Size;
+
+        state.sort_entries();
+
+        // Should be sorted by size descending
+        assert_eq!(state.entries[0].name, "large.txt");
+        assert_eq!(state.entries[1].name, "medium.txt");
+        assert_eq!(state.entries[2].name, "small.txt");
+    }
+
+    #[test]
+    fn test_sort_by_type() {
+        let mut state = ExplorerState::new("/".to_string());
+        state.entries = vec![
+            create_test_entry("file.txt", false, 100),
+            create_test_entry("image.png", false, 200),
+            create_test_entry("data.txt", false, 300),
+            create_test_entry("config.yaml", false, 400),
+        ];
+        state.sort_by = SortMode::Type;
+
+        state.sort_entries();
+
+        // Should be sorted by extension, then name
+        // png, txt (2 files), yaml
+        let extensions: Vec<&str> = state.entries.iter()
+            .map(|e| get_extension(&e.name))
+            .collect();
+
+        // txt files should be together
+        assert!(extensions.windows(2).any(|w| w[0] == "txt" && w[1] == "txt"));
+    }
+
+    #[test]
+    fn test_get_extension() {
+        assert_eq!(get_extension("file.txt"), "txt");
+        assert_eq!(get_extension("archive.tar.gz"), "gz");
+        assert_eq!(get_extension("no_extension"), "no_extension");
+        assert_eq!(get_extension(".hidden"), "hidden");
+        assert_eq!(get_extension("file."), "");
+    }
+
+    #[test]
+    fn test_format_size_bytes() {
+        assert_eq!(format_size(0), "0 B");
+        assert_eq!(format_size(500), "500 B");
+        assert_eq!(format_size(1023), "1023 B");
+    }
+
+    #[test]
+    fn test_format_size_kilobytes() {
+        assert_eq!(format_size(1024), "1.00 KB");
+        assert_eq!(format_size(1536), "1.50 KB");
+        assert_eq!(format_size(2048), "2.00 KB");
+    }
+
+    #[test]
+    fn test_format_size_megabytes() {
+        assert_eq!(format_size(1024 * 1024), "1.00 MB");
+        assert_eq!(format_size(1024 * 1024 + 512 * 1024), "1.50 MB");
+    }
+
+    #[test]
+    fn test_format_size_gigabytes() {
+        assert_eq!(format_size(1024 * 1024 * 1024), "1.00 GB");
+        assert_eq!(format_size(2 * 1024 * 1024 * 1024), "2.00 GB");
+    }
+
+    #[test]
+    fn test_format_size_terabytes() {
+        let tb = 1024i64 * 1024 * 1024 * 1024;
+        assert_eq!(format_size(tb), "1.00 TB");
+        assert_eq!(format_size(2 * tb), "2.00 TB");
+    }
+
+    #[test]
+    fn test_get_file_icon_directory() {
+        let entry = create_test_entry("folder", true, 0);
+        assert_eq!(get_file_icon(&entry), "📁");
+    }
+
+    #[test]
+    fn test_get_file_icon_text_files() {
+        assert_eq!(get_file_icon(&create_test_entry("readme.txt", false, 100)), "📄");
+        assert_eq!(get_file_icon(&create_test_entry("notes.md", false, 100)), "📄");
+        assert_eq!(get_file_icon(&create_test_entry("debug.log", false, 100)), "📄");
+    }
+
+    #[test]
+    fn test_get_file_icon_code_files() {
+        assert_eq!(get_file_icon(&create_test_entry("main.rs", false, 100)), "💻");
+        assert_eq!(get_file_icon(&create_test_entry("script.py", false, 100)), "💻");
+        assert_eq!(get_file_icon(&create_test_entry("app.js", false, 100)), "💻");
+    }
+
+    #[test]
+    fn test_get_file_icon_config_files() {
+        assert_eq!(get_file_icon(&create_test_entry("config.json", false, 100)), "⚙️ ");
+        assert_eq!(get_file_icon(&create_test_entry("settings.yaml", false, 100)), "⚙️ ");
+        assert_eq!(get_file_icon(&create_test_entry("data.xml", false, 100)), "⚙️ ");
+    }
+
+    #[test]
+    fn test_get_file_icon_images() {
+        assert_eq!(get_file_icon(&create_test_entry("photo.jpg", false, 100)), "🖼️ ");
+        assert_eq!(get_file_icon(&create_test_entry("icon.png", false, 100)), "🖼️ ");
+        assert_eq!(get_file_icon(&create_test_entry("logo.svg", false, 100)), "🖼️ ");
+    }
+
+    #[test]
+    fn test_get_file_icon_pdf() {
+        assert_eq!(get_file_icon(&create_test_entry("document.pdf", false, 100)), "📕");
+    }
+
+    #[test]
+    fn test_get_file_icon_archives() {
+        assert_eq!(get_file_icon(&create_test_entry("archive.zip", false, 100)), "📦");
+        assert_eq!(get_file_icon(&create_test_entry("backup.tar", false, 100)), "📦");
+        assert_eq!(get_file_icon(&create_test_entry("data.gz", false, 100)), "📦");
+    }
+
+    #[test]
+    fn test_get_file_icon_scripts() {
+        assert_eq!(get_file_icon(&create_test_entry("build.sh", false, 100)), "🔧");
+        assert_eq!(get_file_icon(&create_test_entry("deploy.bash", false, 100)), "🔧");
+    }
+
+    #[test]
+    fn test_get_file_icon_config() {
+        assert_eq!(get_file_icon(&create_test_entry("app.conf", false, 100)), "🔐");
+        assert_eq!(get_file_icon(&create_test_entry("server.config", false, 100)), "🔐");
+    }
+
+    #[test]
+    fn test_get_file_icon_default() {
+        assert_eq!(get_file_icon(&create_test_entry("unknown.xyz", false, 100)), "📝");
+    }
+
+    #[test]
+    fn test_get_file_color_directory() {
+        let entry = create_test_entry("folder", true, 0);
+        assert_eq!(get_file_color(&entry), colored::Color::Blue);
+    }
+
+    #[test]
+    fn test_get_file_color_hidden() {
+        let entry = create_test_entry(".hidden", false, 100);
+        assert_eq!(get_file_color(&entry), colored::Color::BrightBlack);
+    }
+
+    #[test]
+    fn test_get_file_color_executables() {
+        assert_eq!(get_file_color(&create_test_entry("script.sh", false, 100)), colored::Color::Green);
+        assert_eq!(get_file_color(&create_test_entry("script.py", false, 100)), colored::Color::Green);
+    }
+
+    #[test]
+    fn test_get_file_color_source_code() {
+        assert_eq!(get_file_color(&create_test_entry("main.rs", false, 100)), colored::Color::Yellow);
+        assert_eq!(get_file_color(&create_test_entry("app.c", false, 100)), colored::Color::Yellow);
+    }
+
+    #[test]
+    fn test_get_file_color_text() {
+        assert_eq!(get_file_color(&create_test_entry("readme.txt", false, 100)), colored::Color::White);
+        assert_eq!(get_file_color(&create_test_entry("notes.md", false, 100)), colored::Color::White);
+    }
+
+    #[test]
+    fn test_get_file_color_config() {
+        assert_eq!(get_file_color(&create_test_entry("config.yaml", false, 100)), colored::Color::Cyan);
+        assert_eq!(get_file_color(&create_test_entry("data.json", false, 100)), colored::Color::Cyan);
+    }
+
+    #[test]
+    fn test_get_file_color_archives() {
+        assert_eq!(get_file_color(&create_test_entry("archive.tar", false, 100)), colored::Color::Red);
+        assert_eq!(get_file_color(&create_test_entry("data.zip", false, 100)), colored::Color::Red);
+    }
+
+    #[test]
+    fn test_file_entry_clone() {
+        let entry = create_test_entry("test.txt", false, 100);
+        let cloned = entry.clone();
+
+        assert_eq!(entry.name, cloned.name);
+        assert_eq!(entry.is_dir, cloned.is_dir);
+        assert_eq!(entry.size, cloned.size);
+    }
+
+    #[test]
+    fn test_sort_mode_equality() {
+        assert_eq!(SortMode::Name, SortMode::Name);
+        assert_eq!(SortMode::Size, SortMode::Size);
+        assert_eq!(SortMode::Type, SortMode::Type);
+        assert_ne!(SortMode::Name, SortMode::Size);
+    }
 }

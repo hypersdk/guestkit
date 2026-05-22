@@ -8,6 +8,10 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
+/// ioctl constant for getting block device size (Linux x86/x86_64)
+#[cfg(target_os = "linux")]
+const BLKGETSIZE64: libc::c_ulong = 0x80081272;
+
 /// Disk image reader
 pub struct DiskReader {
     file: File,
@@ -31,7 +35,6 @@ impl DiskReader {
             #[cfg(target_os = "linux")]
             {
                 use std::os::unix::io::AsRawFd;
-                const BLKGETSIZE64: libc::c_ulong = 0x80081272;
 
                 let mut size_bytes: u64 = 0;
                 let result = unsafe {
@@ -51,8 +54,7 @@ impl DiskReader {
             #[cfg(not(target_os = "linux"))]
             {
                 // Fallback for non-Linux: try seeking (might not work)
-                use std::io::{Seek, SeekFrom};
-                file.seek(SeekFrom::End(0)).map_err(|e| Error::Io(e))?
+                file.seek(SeekFrom::End(0)).map_err(Error::Io)?
             }
         } else {
             // For regular files, use metadata
@@ -60,7 +62,6 @@ impl DiskReader {
         };
 
         // Reset to start
-        use std::io::{Seek, SeekFrom};
         file.seek(SeekFrom::Start(0)).map_err(Error::Io)?;
 
         Ok(Self { file, format, size })
@@ -163,8 +164,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_disk_reader_creation() {
-        // Test that the reader struct can be created
-        assert!(true);
+    fn test_block_device_detection() {
+        // Regular files should not be detected as block devices
+        assert!(!DiskReader::is_block_device(std::path::Path::new("/etc/hosts")));
+        assert!(!DiskReader::is_block_device(std::path::Path::new("/nonexistent")));
     }
 }

@@ -109,7 +109,7 @@ impl Guestfs {
     }
 
     /// Admin XFS filesystem
-    ///
+    #[allow(clippy::too_many_arguments)]
     pub fn xfs_admin(
         &mut self,
         device: &str,
@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_xfs_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

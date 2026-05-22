@@ -44,7 +44,7 @@ pub fn export_dot(graph: &DependencyGraph, show_all: bool) -> String {
         ));
     }
 
-    dot.push_str("\n");
+    dot.push('\n');
 
     // Add edges
     for dep in &graph.dependencies {

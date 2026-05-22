@@ -16,8 +16,8 @@ GuestCtl's interactive mode now automatically saves your command history across 
 - **Ctrl+S** - Forward search through history
 
 ### 💾 Storage Location
-- **Directory:** `~/.guestctl/history/`
-- **Format:** `guestctl-{hash}.history`
+- **Directory:** `~/.guestkit/history/`
+- **Format:** `guestkit-{hash}.history`
 - **Encoding:** Plain text, one command per line
 
 ## Usage
@@ -28,19 +28,19 @@ Just use interactive mode normally - history is saved automatically:
 
 ```bash
 # Start interactive session
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 
-guestctl> mount /dev/sda1 /
-guestctl> packages
-guestctl> services
-guestctl> exit
+guestkit> mount /dev/sda1 /
+guestkit> packages
+guestkit> services
+guestkit> exit
 
 # Start again - your history is preserved!
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 
-guestctl> # Press ↑ to see "services"
-guestctl> # Press ↑ again to see "packages"
-guestctl> # Press ↑ again to see "mount /dev/sda1 /"
+guestkit> # Press ↑ to see "services"
+guestkit> # Press ↑ again to see "packages"
+guestkit> # Press ↑ again to see "mount /dev/sda1 /"
 ```
 
 ### Reverse Search (Ctrl+R)
@@ -48,7 +48,7 @@ guestctl> # Press ↑ again to see "mount /dev/sda1 /"
 Search through history interactively:
 
 ```bash
-guestctl> # Press Ctrl+R
+guestkit> # Press Ctrl+R
 (reverse-i-search)`pack': packages
 
 # Type more to narrow search
@@ -63,33 +63,33 @@ Each disk image has its own history file:
 
 ```bash
 # Working with production VM
-guestctl interactive prod-web-01.qcow2
-guestctl> mount /dev/sda1 /
-guestctl> packages grep nginx
-guestctl> exit
+guestkit interactive prod-web-01.qcow2
+guestkit> mount /dev/sda1 /
+guestkit> packages grep nginx
+guestkit> exit
 
 # Working with staging VM (different history)
-guestctl interactive staging-web-01.qcow2
-guestctl> mount /dev/vda1 /
-guestctl> services
-guestctl> exit
+guestkit interactive staging-web-01.qcow2
+guestkit> mount /dev/vda1 /
+guestkit> services
+guestkit> exit
 
 # Return to production - original history preserved
-guestctl interactive prod-web-01.qcow2
-guestctl> # Press ↑ to see "packages grep nginx"
+guestkit interactive prod-web-01.qcow2
+guestkit> # Press ↑ to see "packages grep nginx"
 ```
 
 ## How It Works
 
 ### History Files
 
-History files are stored in `~/.guestctl/history/` with unique names based on the disk path:
+History files are stored in `~/.guestkit/history/` with unique names based on the disk path:
 
 ```
-~/.guestctl/history/
-├── guestctl-a1b2c3d4e5f6g7h8.history  # prod-web-01.qcow2
-├── guestctl-9i8h7g6f5e4d3c2b.history  # staging-web-01.qcow2
-└── guestctl-1a2b3c4d5e6f7g8h.history  # dev-db-01.qcow2
+~/.guestkit/history/
+├── guestkit-a1b2c3d4e5f6g7h8.history  # prod-web-01.qcow2
+├── guestkit-9i8h7g6f5e4d3c2b.history  # staging-web-01.qcow2
+└── guestkit-1a2b3c4d5e6f7g8h.history  # dev-db-01.qcow2
 ```
 
 The hash is generated from the disk path, ensuring:
@@ -120,33 +120,33 @@ When you exit (via `exit`, `quit`, or Ctrl+D):
 View history file directly:
 ```bash
 # Find your history file
-ls -lah ~/.guestctl/history/
+ls -lah ~/.guestkit/history/
 
 # View contents
-cat ~/.guestctl/history/guestctl-*.history
+cat ~/.guestkit/history/guestkit-*.history
 
 # Count commands
-wc -l ~/.guestctl/history/guestctl-*.history
+wc -l ~/.guestkit/history/guestkit-*.history
 ```
 
 ### Clear History for Specific Disk
 
 ```bash
 # Remove specific history file
-rm ~/.guestctl/history/guestctl-a1b2c3d4e5f6g7h8.history
+rm ~/.guestkit/history/guestkit-a1b2c3d4e5f6g7h8.history
 
 # Or clear all history
-rm -rf ~/.guestctl/history/
+rm -rf ~/.guestkit/history/
 ```
 
 ### Export History
 
 ```bash
 # Copy history for backup
-cp ~/.guestctl/history/guestctl-*.history ~/backups/
+cp ~/.guestkit/history/guestkit-*.history ~/backups/
 
 # Share common commands with team
-cat ~/.guestctl/history/guestctl-*.history | \
+cat ~/.guestkit/history/guestkit-*.history | \
   grep "^mount\|^packages\|^services" > team-workflow.txt
 ```
 
@@ -156,32 +156,32 @@ cat ~/.guestctl/history/guestctl-*.history | \
 
 **1. Build Custom Inspection Sequences:**
 ```bash
-guestctl> mount /dev/sda1 /
-guestctl> packages | grep apache
-guestctl> services | grep httpd
-guestctl> cat /etc/httpd/conf/httpd.conf
-guestctl> exit
+guestkit> mount /dev/sda1 /
+guestkit> packages | grep apache
+guestkit> services | grep httpd
+guestkit> cat /etc/httpd/conf/httpd.conf
+guestkit> exit
 
 # Next time: Just use ↑ to replay entire sequence!
 ```
 
 **2. Debug Iteratively:**
 ```bash
-guestctl> find /var/log
-guestctl> cat /var/log/messages | grep error
-guestctl> cat /var/log/syslog | grep failed
+guestkit> find /var/log
+guestkit> cat /var/log/messages | grep error
+guestkit> cat /var/log/syslog | grep failed
 # Each refinement is saved for next session
 ```
 
 **3. Create Reusable Patterns:**
 ```bash
 # First session - explore and refine
-guestctl> packages | grep -i sec
-guestctl> packages | grep -i audit
-guestctl> packages | grep -i firewall
+guestkit> packages | grep -i sec
+guestkit> packages | grep -i audit
+guestkit> packages | grep -i firewall
 
 # Later sessions - reuse best pattern
-guestctl> # Press Ctrl+R, type "packages", select best one
+guestkit> # Press Ctrl+R, type "packages", select best one
 ```
 
 ### Search Shortcuts
@@ -204,12 +204,12 @@ editor.set_max_history_size(500)?;  // Keep 500 commands
 
 ### History File Location
 
-Default: `~/.guestctl/history/`
+Default: `~/.guestkit/history/`
 
 To change (requires code modification):
 ```rust
 // In src/cli/interactive.rs - get_history_dir()
-let history_dir = home.join(".config").join("guestctl").join("history");
+let history_dir = home.join(".config").join("guestkit").join("history");
 ```
 
 ## Troubleshooting
@@ -221,7 +221,7 @@ let history_dir = home.join(".config").join("guestctl").join("history");
 **Solutions:**
 1. Check directory permissions:
    ```bash
-   ls -ld ~/.guestctl/history/
+   ls -ld ~/.guestkit/history/
    # Should be writable by your user
    ```
 
@@ -240,11 +240,11 @@ let history_dir = home.join(".config").join("guestctl").join("history");
 **Solution:**
 ```bash
 # Backup corrupted file
-mv ~/.guestctl/history/guestctl-*.history \
-   ~/.guestctl/history/backup/
+mv ~/.guestkit/history/guestkit-*.history \
+   ~/.guestkit/history/backup/
 
 # Start fresh (history auto-creates new file)
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 ```
 
 ### Multiple Disk Paths Point to Same Disk
@@ -254,10 +254,10 @@ guestctl interactive vm.qcow2
 **Solution:** Use consistent path:
 ```bash
 # Always use absolute path
-guestctl interactive /vms/prod-web-01.qcow2
+guestkit interactive /vms/prod-web-01.qcow2
 
 # Or always use relative path
-cd /vms && guestctl interactive prod-web-01.qcow2
+cd /vms && guestkit interactive prod-web-01.qcow2
 ```
 
 ## Privacy & Security
@@ -268,25 +268,25 @@ History files store commands in plain text. If working with sensitive data:
 
 **Option 1 - Clear After Session:**
 ```bash
-guestctl interactive secure-vm.qcow2
+guestkit interactive secure-vm.qcow2
 # ... do work ...
-guestctl> exit
+guestkit> exit
 
 # Immediately clear
-rm ~/.guestctl/history/guestctl-*.history
+rm ~/.guestkit/history/guestkit-*.history
 ```
 
 **Option 2 - Disable for Specific Session:**
 ```bash
 # Start with read-only home directory mount
-HOME=/tmp/readonly-home guestctl interactive vm.qcow2
+HOME=/tmp/readonly-home guestkit interactive vm.qcow2
 # History won't save (directory not writable)
 ```
 
 **Option 3 - Use Batch Mode Instead:**
 ```bash
 # For sensitive workflows, use script files
-guestctl script secure-vm.qcow2 workflow.gk
+guestkit script secure-vm.qcow2 workflow.gk
 # No history saved
 ```
 
@@ -318,7 +318,7 @@ History is useful for development but not CI/CD:
 - name: Inspect VM
   run: |
     # Use batch mode for deterministic execution
-    guestctl script vm.qcow2 inspect.gk
+    guestkit script vm.qcow2 inspect.gk
 ```
 
 ### Team Knowledge Sharing
@@ -326,7 +326,7 @@ History is useful for development but not CI/CD:
 Extract common patterns:
 ```bash
 # Collect useful commands
-cat ~/.guestctl/history/guestctl-*.history | \
+cat ~/.guestkit/history/guestkit-*.history | \
   sort | uniq -c | sort -rn | head -20 > common-commands.txt
 
 # Share with team
@@ -338,7 +338,7 @@ cat ~/.guestctl/history/guestctl-*.history | \
 New team members can learn from history:
 ```bash
 # Show common inspection workflow
-cat ~/.guestctl/history/guestctl-*.history | head -10
+cat ~/.guestkit/history/guestkit-*.history | head -10
 # Example output:
 # mount /dev/sda1 /
 # filesystems

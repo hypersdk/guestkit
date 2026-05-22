@@ -130,7 +130,7 @@ impl GuestDetector {
                                 distro = Some("kali".to_string());
                             }
                             // Oracle Linux
-                            else if l.contains("ol") || l.contains("oracle") {
+                            else if l.contains("oraclelinux") || l.contains("oracle") || l.starts_with("ol_") || l.starts_with("ol-") || l == "ol" {
                                 os_name = "Oracle Linux".to_string();
                                 distro = Some("oracle".to_string());
                             }
@@ -147,13 +147,17 @@ impl GuestDetector {
                         // Try to refine based on partition type GUID if available
                         if let Some(guid) = partition.type_guid.as_ref() {
                             let g = guid.to_lowercase();
-                            if g.contains("a503") {
+                            // Match against known BSD partition type GUIDs (full prefix match)
+                            // FreeBSD UFS: 516e7cb4-6ecf-11d6-8ff8-00022d09712b
+                            // NetBSD FFS:  49f48d5a-b10e-11dc-b99b-0019d1879648
+                            // OpenBSD:     824cc7a0-36a8-11e3-890a-952519ad3f61
+                            if g.starts_with("516e7cb4") || g.contains("a503") {
                                 os_type = GuestType::FreeBSD;
                                 os_name = "FreeBSD".to_string();
-                            } else if g.contains("a501") {
+                            } else if g.starts_with("49f48d5a") || g.contains("a501") {
                                 os_type = GuestType::NetBSD;
                                 os_name = "NetBSD".to_string();
-                            } else if g.contains("a600") {
+                            } else if g.starts_with("824cc7a0") || g.contains("a600") {
                                 os_type = GuestType::OpenBSD;
                                 os_name = "OpenBSD".to_string();
                             }

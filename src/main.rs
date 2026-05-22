@@ -1,28 +1,21 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! guestctl CLI - Guest VM toolkit
+//! guestkit CLI - Guest VM toolkit
 
 use anyhow::Context;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, shells};
 use colored::Colorize;
+use guestkit::cli::commands::*;
+use guestkit::cli::plan::PlanCommand;
 use guestkit::{converters::DiskConverter, VERSION};
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-mod cli;
-mod enterprise_cta;
-use cli::commands::*;
-use cli::plan::PlanCommand;
-
-/// guestctl - Guest VM toolkit for disk inspection and manipulation
+/// guestkit - Guest VM toolkit for disk inspection and manipulation
 #[derive(Parser)]
-#[command(name = "guestctl")]
+#[command(name = "guestkit")]
 #[command(version = VERSION)]
-#[command(
-    about = "Guest VM toolkit for disk inspection and manipulation",
-    long_about = None,
-    after_help = enterprise_cta::CLI_AFTER_HELP
-)]
+#[command(about = "Guest VM toolkit for disk inspection and manipulation", long_about = None)]
 struct Cli {
     /// Verbose output
     #[arg(short, long, global = true)]
@@ -263,7 +256,7 @@ enum Commands {
         output: PathBuf,
 
         /// Output format (qcow2, raw, vmdk, vhd, vdi)
-        #[arg(short, long, default_value = "qcow2")]
+        #[arg(short, long, default_value = "qcow2", value_parser = ["qcow2", "raw", "vmdk", "vhd", "vdi"])]
         format: String,
 
         /// Enable compression (qcow2 only)
@@ -291,12 +284,12 @@ enum Commands {
         preallocate: bool,
 
         /// Compression level (1-9, higher = better compression)
-        #[arg(long, value_name = "LEVEL")]
+        #[arg(long, value_name = "LEVEL", value_parser = clap::value_parser!(u8).range(1..=9))]
         compression_level: Option<u8>,
 
         /// Buffer size in MB for I/O operations
-        #[arg(long, value_name = "SIZE", default_value = "4")]
-        buffer_size: usize,
+        #[arg(long, value_name = "SIZE", default_value = "4", value_parser = clap::value_parser!(u64).range(1..=1024))]
+        buffer_size: u64,
     },
 
     /// Create a new disk image
@@ -309,7 +302,7 @@ enum Commands {
         size: u64,
 
         /// Disk format (raw, qcow2, vmdk, vhd, vdi)
-        #[arg(short, long, default_value = "raw")]
+        #[arg(short, long, default_value = "raw", value_parser = ["raw", "qcow2", "vmdk", "vhd", "vdi"])]
         format: String,
     },
 
@@ -320,7 +313,7 @@ enum Commands {
         image: PathBuf,
 
         /// Specific device to check (optional)
-        #[arg(short, long)]
+        #[arg(long)]
         device: Option<String>,
     },
 
@@ -351,8 +344,8 @@ enum Commands {
         images: Vec<PathBuf>,
 
         /// Number of parallel workers (default: 4)
-        #[arg(short, long, default_value = "4")]
-        parallel: usize,
+        #[arg(short, long, default_value = "4", value_parser = clap::value_parser!(u64).range(1..=64))]
+        parallel: u64,
 
         /// Output format (text, json, yaml)
         #[arg(short, long, value_name = "FORMAT")]
@@ -378,7 +371,7 @@ enum Commands {
         image: PathBuf,
 
         /// Show detailed information
-        #[arg(short, long)]
+        #[arg(long)]
         detailed: bool,
     },
 
@@ -397,7 +390,7 @@ enum Commands {
         limit: Option<usize>,
 
         /// Output as JSON
-        #[arg(short, long)]
+        #[arg(long)]
         json: bool,
     },
 
@@ -528,7 +521,7 @@ enum Commands {
         image: PathBuf,
 
         /// Scan type (packages, config, permissions, all)
-        #[arg(short = 't', long, default_value = "all")]
+        #[arg(short = 't', long, default_value = "all", value_parser = ["packages", "config", "permissions", "all"])]
         scan_type: String,
 
         /// Severity threshold (low, medium, high, critical)
@@ -558,8 +551,8 @@ enum Commands {
         test_type: String,
 
         /// Block size for I/O operations (in KB)
-        #[arg(short = 'b', long, default_value = "4")]
-        block_size: usize,
+        #[arg(short = 'b', long, default_value = "4", value_parser = clap::value_parser!(u64).range(1..=65536))]
+        block_size: u64,
 
         /// Duration of test in seconds
         #[arg(long, default_value = "10")]
@@ -627,8 +620,8 @@ enum Commands {
         min_size: u64,
 
         /// Maximum number of results
-        #[arg(short = 'n', long, default_value = "20")]
-        max_results: usize,
+        #[arg(short = 'n', long, default_value = "20", value_parser = clap::value_parser!(u64).range(1..=10000))]
+        max_results: u64,
 
         /// Human-readable sizes
         #[arg(short = 'H', long)]
@@ -751,7 +744,7 @@ enum Commands {
         ignore_paths: Vec<String>,
 
         /// Drift threshold percentage (0-100)
-        #[arg(short = 't', long, default_value = "20")]
+        #[arg(short = 't', long, default_value = "20", value_parser = clap::value_parser!(u8).range(0..=100))]
         threshold: u8,
 
         /// Generate detailed report
@@ -865,7 +858,7 @@ enum Commands {
         show_dns: bool,
 
         /// Export as JSON
-        #[arg(short = 'j', long)]
+        #[arg(long)]
         export_json: bool,
     },
 
@@ -909,7 +902,7 @@ enum Commands {
         yara_rules: Option<PathBuf>,
 
         /// Quarantine suspicious files
-        #[arg(short = 'q', long)]
+        #[arg(long)]
         quarantine: bool,
     },
 
@@ -927,17 +920,19 @@ enum Commands {
         detailed: bool,
 
         /// Export as JSON
-        #[arg(short = 'j', long)]
+        #[arg(long)]
         export_json: Option<PathBuf>,
     },
 
     /// Clone disk image with customizations
     Clone {
-        /// Source disk image
-        source: PathBuf,
+        /// Source disk image (required unless --lvm)
+        #[arg(required_unless_present = "lvm")]
+        source: Option<PathBuf>,
 
-        /// Destination disk image
-        dest: PathBuf,
+        /// Destination disk image (required unless --lvm)
+        #[arg(required_unless_present = "lvm")]
+        dest: Option<PathBuf>,
 
         /// Run sysprep (generalize image)
         #[arg(short = 's', long)]
@@ -954,6 +949,70 @@ enum Commands {
         /// Preserve user accounts and history
         #[arg(long)]
         preserve_users: bool,
+
+        /// Use LVM cloning mode (clone host logical volumes directly)
+        #[arg(long)]
+        lvm: bool,
+
+        /// Source volume group name (requires --lvm)
+        #[arg(long, value_name = "VG", requires = "lvm")]
+        source_vg: Option<String>,
+
+        /// Source logical volume name (requires --lvm)
+        #[arg(long, value_name = "LV", requires = "lvm")]
+        source_lv: Option<String>,
+
+        /// Target volume group (defaults to source VG; requires --lvm)
+        #[arg(long, value_name = "VG", requires = "lvm")]
+        target_vg: Option<String>,
+
+        /// Regenerate filesystem UUIDs on the clone
+        #[arg(long, default_value_t = true, requires = "lvm")]
+        regenerate_uuids: bool,
+
+        /// Update /etc/fstab inside the clone with new UUIDs
+        #[arg(long, requires = "lvm")]
+        update_fstab: bool,
+
+        /// Update GRUB bootloader config with new UUIDs
+        #[arg(long, requires = "lvm")]
+        update_bootloader: bool,
+
+        /// Dry-run: validate parameters without performing the clone
+        #[arg(long, requires = "lvm")]
+        dry_run: bool,
+
+        /// LVM snapshot size (e.g. "10G"; requires --lvm)
+        #[arg(long, value_name = "SIZE", requires = "lvm")]
+        snapshot_size: Option<String>,
+
+        /// Name for the cloned LV (defaults to {source_lv}-clone; requires --lvm)
+        #[arg(long, value_name = "NAME", requires = "lvm")]
+        clone_name: Option<String>,
+
+        /// Update /etc/crypttab inside the clone with new UUIDs
+        #[arg(long, requires = "lvm")]
+        update_crypttab: bool,
+
+        /// Regenerate initramfs after UUID changes (requires chroot tools)
+        #[arg(long, requires = "lvm")]
+        regenerate_initramfs: bool,
+
+        /// Namespace isolation level: none, mount, full (mount+pid+uts+ipc+net)
+        #[arg(long, requires = "lvm", default_value = "none", value_parser = ["none", "mount", "full"])]
+        isolation_level: String,
+
+        /// Run post-clone security verification
+        #[arg(long, requires = "lvm")]
+        verify_security: bool,
+
+        /// Regenerate GRUB config via grub-mkconfig inside the clone
+        #[arg(long, requires = "lvm")]
+        regenerate_grub: bool,
+
+        /// Verify boot configuration (kernel, initramfs, GRUB) after changes
+        #[arg(long, requires = "lvm")]
+        verify_boot: bool,
     },
 
     /// Security patch analysis and CVE detection
@@ -1088,10 +1147,6 @@ enum Commands {
         /// Cloud provider for Terraform (aws, azure, gcp)
         #[arg(long, value_name = "PROVIDER")]
         provider: Option<String>,
-
-        /// Show verbose output
-        #[arg(short, long)]
-        verbose: bool,
     },
 
     /// Plan OS migrations and platform changes
@@ -1122,10 +1177,6 @@ enum Commands {
         /// Show detailed analysis
         #[arg(long)]
         detailed: bool,
-
-        /// Show verbose output
-        #[arg(short, long)]
-        verbose: bool,
     },
 
     /// Cloud cost optimization analysis
@@ -1152,12 +1203,7 @@ enum Commands {
         /// Show detailed analysis
         #[arg(long)]
         detailed: bool,
-
-        /// Show verbose output
-        #[arg(short, long)]
-        verbose: bool,
     },
-
 
     /// Comprehensive security audit with detailed reporting
     Audit {
@@ -1289,10 +1335,6 @@ enum Commands {
         /// Show all packages in graph (default: top 50)
         #[arg(long)]
         show_all: bool,
-
-        /// Show verbose output
-        #[arg(short, long)]
-        verbose: bool,
     },
 
     /// Predictive analysis and capacity planning
@@ -1345,11 +1387,11 @@ enum Commands {
         change_type: String,
 
         /// Target (package name, config file, service name, etc.)
-        #[arg(short = 'T', long)]
+        #[arg(long)]
         target: String,
 
         /// Dry run - simulate without making changes
-        #[arg(short = 'd', long, default_value = "true")]
+        #[arg(long)]
         dry_run: bool,
 
         /// Include comprehensive risk assessment
@@ -1363,7 +1405,7 @@ enum Commands {
         image: PathBuf,
 
         /// Risk dimensions to check (security, compliance, reliability, performance, maintainability)
-        #[arg(short = 'd', long, value_delimiter = ',')]
+        #[arg(long, value_delimiter = ',')]
         dimensions: Vec<String>,
 
         /// Custom weights (format: security=40,compliance=30,...)
@@ -1586,7 +1628,7 @@ enum Commands {
         failed: bool,
 
         /// Generate Mermaid diagram for dependencies
-        #[arg(short, long)]
+        #[arg(long)]
         diagram: bool,
 
         /// Output format (text, json)
@@ -1671,10 +1713,10 @@ enum SnapshotOperation {
 }
 
 /// Run standalone file explorer (direct from CLI)
-fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool) -> anyhow::Result<()> {
+fn run_standalone_explorer(image_path: &Path, start_path: &str, verbose: bool) -> anyhow::Result<()> {
     use guestkit::Guestfs;
-    use cli::shell::commands::ShellContext;
-    use cli::shell::explore::run_explorer;
+    use guestkit::cli::shell::commands::ShellContext;
+    use guestkit::cli::shell::explore::run_explorer;
 
     if verbose {
         println!("{} Loading VM image: {}", "→".cyan(), image_path.display());
@@ -1685,7 +1727,7 @@ fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool
         .context("Failed to create Guestfs handle")?;
 
     guestfs.add_drive_opts(
-        image_path.to_str().unwrap(),
+        image_path.to_str().ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?,
         false,
         None
     ).context("Failed to add drive")?;
@@ -1720,7 +1762,7 @@ fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool
     }
 
     // Get OS information for context
-    let os_product = guestfs.inspect_get_product_name(&root)
+    let os_product = guestfs.inspect_get_product_name(root)
         .unwrap_or_else(|_| "Unknown OS".to_string());
 
     // Create shell context for explorer
@@ -1736,8 +1778,6 @@ fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool
     println!("{} Press 'h' for help, 'q' to quit", "ℹ".yellow());
     println!();
 
-    std::thread::sleep(std::time::Duration::from_millis(800));
-
     run_explorer(&mut ctx, Some(start_path))?;
 
     println!("\n{} Explorer closed", "✓".green());
@@ -1745,43 +1785,39 @@ fn run_standalone_explorer(image_path: &PathBuf, start_path: &str, verbose: bool
     Ok(())
 }
 
+/// Set environment variables based on CLI flags.
+///
+/// # Safety
+/// Must be called before any threads are spawned (no async runtime, no thread pool).
+/// `std::env::set_var` is unsafe in multi-threaded contexts.
+unsafe fn set_env_vars_before_threads(cli: &Cli) -> anyhow::Result<()> {
+    if cli.debug {
+        std::env::set_var("GUESTKIT_DEBUG", "1");
+    }
+    if cli.no_color || cli.machine_readable {
+        std::env::set_var("NO_COLOR", "1");
+    }
+    if cli.read_only {
+        std::env::set_var("GUESTKIT_READONLY", "1");
+    }
+    if let Some(ref cache_dir) = cli.cache_dir {
+        std::env::set_var("GUESTKIT_CACHE_DIR", cache_dir.to_str().ok_or_else(|| anyhow::anyhow!("Cache directory path contains invalid UTF-8"))?);
+    }
+    if cli.timeout > 0 {
+        std::env::set_var("GUESTKIT_TIMEOUT", cli.timeout.to_string());
+    }
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    // Setup global environment variables
-    if cli.debug {
-        // SAFETY: Setting an environment variable in single-threaded initialization is safe
-        unsafe {
-            std::env::set_var("GUESTCTL_DEBUG", "1");
-        }
-    }
-
-    if cli.no_color || cli.machine_readable {
-        // SAFETY: Setting an environment variable in single-threaded initialization is safe
-        unsafe {
-            std::env::set_var("NO_COLOR", "1");
-        }
-    }
-
-    if cli.read_only {
-        // SAFETY: Setting an environment variable in single-threaded initialization is safe
-        unsafe {
-            std::env::set_var("GUESTCTL_READONLY", "1");
-        }
-    }
-
-    if let Some(ref cache_dir) = cli.cache_dir {
-        // SAFETY: Setting an environment variable in single-threaded initialization is safe
-        unsafe {
-            std::env::set_var("GUESTCTL_CACHE_DIR", cache_dir.to_str().unwrap_or_default());
-        }
-    }
-
-    if cli.timeout > 0 {
-        // SAFETY: Setting an environment variable in single-threaded initialization is safe
-        unsafe {
-            std::env::set_var("GUESTCTL_TIMEOUT", cli.timeout.to_string());
-        }
+    // Setup global environment variables.
+    // SAFETY: These set_var calls happen in main() before any threads are spawned
+    // or the async runtime is created. Clap parsing is synchronous and single-threaded.
+    // This function must not be moved after tokio runtime initialization.
+    unsafe {
+        set_env_vars_before_threads(&cli)?;
     }
 
     // Setup logging
@@ -1820,7 +1856,7 @@ fn main() -> anyhow::Result<()> {
             depth: _,
             save_report: _,
         } => {
-            use cli::formatters::OutputFormat;
+            use guestkit::cli::formatters::OutputFormat;
             let output_format = output
                 .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
@@ -1845,7 +1881,7 @@ fn main() -> anyhow::Result<()> {
             image2,
             output,
         } => {
-            use cli::formatters::OutputFormat;
+            use guestkit::cli::formatters::OutputFormat;
             let output_format = output
                 .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
@@ -1993,18 +2029,18 @@ fn main() -> anyhow::Result<()> {
             output,
             no_cache,
         } => {
-            use cli::formatters::OutputFormat;
+            use guestkit::cli::formatters::OutputFormat;
             let output_format = output
                 .as_ref()
                 .map(|s| s.parse::<OutputFormat>())
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            inspect_batch(&images, parallel, cli.verbose, output_format, !no_cache)?;  // Cache enabled by default
+            inspect_batch(&images, parallel as usize, cli.verbose, output_format, !no_cache)?;  // Cache enabled by default
         }
 
         Commands::CacheClear => {
-            use cli::cache::InspectionCache;
+            use guestkit::cli::cache::InspectionCache;
             let cache = InspectionCache::new()?;
             let count = cache.clear_all()?;
 
@@ -2012,7 +2048,7 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::CacheStats => {
-            use cli::cache::InspectionCache;
+            use guestkit::cli::cache::InspectionCache;
             let cache = InspectionCache::new()?;
             let stats = cache.stats()?;
 
@@ -2125,7 +2161,7 @@ fn main() -> anyhow::Result<()> {
             duration,
             iterations,
         } => {
-            benchmark_command(&image, &test_type, block_size, duration, iterations, cli.verbose)?;
+            benchmark_command(&image, &test_type, block_size as usize, duration, iterations, cli.verbose)?;
         }
 
         Commands::Snapshot {
@@ -2162,7 +2198,7 @@ fn main() -> anyhow::Result<()> {
             max_results,
             human_readable,
         } => {
-            find_large_command(&image, &path, min_size, max_results, human_readable, cli.verbose)?;
+            find_large_command(&image, &path, min_size, max_results as usize, human_readable, cli.verbose)?;
         }
 
         Commands::Copy {
@@ -2310,8 +2346,48 @@ fn main() -> anyhow::Result<()> {
             hostname,
             remove_keys,
             preserve_users,
+            lvm,
+            source_vg,
+            source_lv,
+            target_vg,
+            regenerate_uuids,
+            update_fstab,
+            update_bootloader,
+            dry_run,
+            snapshot_size,
+            clone_name,
+            update_crypttab,
+            regenerate_initramfs,
+            isolation_level,
+            verify_security,
+            regenerate_grub,
+            verify_boot,
         } => {
-            clone_command(&source, &dest, sysprep, hostname, remove_keys, preserve_users, cli.verbose)?;
+            if lvm {
+                lvm_clone_command(
+                    source_vg,
+                    source_lv,
+                    clone_name,
+                    target_vg,
+                    regenerate_uuids,
+                    update_fstab,
+                    update_bootloader,
+                    update_crypttab,
+                    hostname,
+                    dry_run,
+                    snapshot_size,
+                    regenerate_initramfs,
+                    &isolation_level,
+                    verify_security,
+                    regenerate_grub,
+                    verify_boot,
+                    cli.verbose,
+                )?;
+            } else {
+                let source = source.ok_or_else(|| anyhow::anyhow!("SOURCE is required for disk image clone"))?;
+                let dest = dest.ok_or_else(|| anyhow::anyhow!("DEST is required for disk image clone"))?;
+                clone_command(&source, &dest, sysprep, hostname, remove_keys, preserve_users, cli.verbose)?;
+            }
         }
 
         Commands::Patch {
@@ -2337,7 +2413,7 @@ fn main() -> anyhow::Result<()> {
             inventory_command(
                 &image,
                 &format,
-                output.as_deref().map(|p| p.to_str().unwrap()),
+                output.as_deref().and_then(|p| p.to_str()),
                 include_licenses,
                 include_files,
                 include_cves,
@@ -2394,14 +2470,13 @@ fn main() -> anyhow::Result<()> {
             format,
             output,
             provider,
-            verbose,
         } => {
             blueprint_command(
                 &image,
                 &format,
                 output.as_deref(),
                 provider.as_deref(),
-                verbose || cli.verbose,
+                cli.verbose,
             )?;
         }
 
@@ -2413,7 +2488,6 @@ fn main() -> anyhow::Result<()> {
             format,
             output,
             detailed,
-            verbose,
         } => {
             migrate_command(
                 &image,
@@ -2423,7 +2497,7 @@ fn main() -> anyhow::Result<()> {
                 &format,
                 output.as_deref(),
                 detailed,
-                verbose || cli.verbose,
+                cli.verbose,
             )?;
         }
 
@@ -2434,7 +2508,6 @@ fn main() -> anyhow::Result<()> {
             format,
             output,
             detailed,
-            verbose,
         } => {
             cost_command(
                 &image,
@@ -2443,7 +2516,7 @@ fn main() -> anyhow::Result<()> {
                 &format,
                 output.as_deref(),
                 detailed,
-                verbose || cli.verbose,
+                cli.verbose,
             )?;
         }
 
@@ -2456,7 +2529,6 @@ fn main() -> anyhow::Result<()> {
             reverse,
             max_depth,
             show_all,
-            verbose,
         } => {
             dependencies_command(
                 &image,
@@ -2467,7 +2539,7 @@ fn main() -> anyhow::Result<()> {
                 reverse,
                 max_depth,
                 show_all,
-                verbose || cli.verbose,
+                cli.verbose,
             )?;
         }
 
@@ -2516,30 +2588,6 @@ fn main() -> anyhow::Result<()> {
             apply,
         } => {
             recommend_command(&image, focus, &priority, apply, cli.verbose)?;
-        }
-
-        Commands::Dependencies {
-            image,
-            format,
-            output,
-            detailed,
-            package,
-            reverse,
-            max_depth,
-            show_all,
-            verbose,
-        } => {
-            dependencies_command(
-                &image,
-                &format,
-                output.as_deref(),
-                detailed,
-                package.as_deref(),
-                reverse,
-                max_depth,
-                show_all,
-                verbose || cli.verbose,
-            )?;
         }
 
         Commands::Predict {
@@ -2636,15 +2684,15 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::Version => {
-            println!("guestctl {}", VERSION);
+            println!("guestkit {}", VERSION);
             println!("A modern VM disk inspection and manipulation toolkit");
             println!();
-            println!("Project: https://github.com/ssahani/guestctl");
+            println!("Project: https://github.com/ssahani/guestkit");
             println!("License: LGPL-3.0-or-later");
         }
 
         Commands::Interactive { image } => {
-            let mut session = cli::InteractiveSession::new(image)?;
+            let mut session = guestkit::cli::InteractiveSession::new(image)?;
             session.run()?;
         }
 
@@ -2657,7 +2705,7 @@ fn main() -> anyhow::Result<()> {
             script,
             fail_fast,
         } => {
-            let mut executor = cli::BatchExecutor::new(image, fail_fast, cli.verbose)?;
+            let mut executor = guestkit::cli::BatchExecutor::new(image, fail_fast, cli.verbose)?;
             let report = executor.execute_script(&script)?;
             report.print();
             std::process::exit(report.exit_code());
@@ -2712,37 +2760,33 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::Tui { image } => {
-            cli::tui::run_tui(&image)?;
+            guestkit::cli::tui::run_tui(&image)?;
         }
 
         Commands::Shell { image } => {
-            cli::shell::run_interactive_shell(&image)?;
+            guestkit::cli::shell::run_interactive_shell(&image)?;
         }
 
         Commands::Ai { image, query } => {
-            cli::ai::run_ai_assistant(&image, &query)?;
+            guestkit::cli::ai::run_ai_assistant(&image, &query)?;
         }
 
         Commands::Completion { shell } => {
             let mut cmd = Cli::command();
             match shell {
-                CompletionShell::Bash => generate(shells::Bash, &mut cmd, "guestctl", &mut io::stdout()),
-                CompletionShell::Zsh => generate(shells::Zsh, &mut cmd, "guestctl", &mut io::stdout()),
-                CompletionShell::Fish => generate(shells::Fish, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::Bash => generate(shells::Bash, &mut cmd, "guestkit", &mut io::stdout()),
+                CompletionShell::Zsh => generate(shells::Zsh, &mut cmd, "guestkit", &mut io::stdout()),
+                CompletionShell::Fish => generate(shells::Fish, &mut cmd, "guestkit", &mut io::stdout()),
                 CompletionShell::PowerShell => {
-                    generate(shells::PowerShell, &mut cmd, "guestctl", &mut io::stdout())
+                    generate(shells::PowerShell, &mut cmd, "guestkit", &mut io::stdout())
                 }
-                CompletionShell::Elvish => generate(shells::Elvish, &mut cmd, "guestctl", &mut io::stdout()),
+                CompletionShell::Elvish => generate(shells::Elvish, &mut cmd, "guestkit", &mut io::stdout()),
             }
         }
 
         Commands::Plan(plan_cmd) => {
             plan_cmd.execute()?;
         }
-    }
-
-    if !cli.quiet && !cli.machine_readable {
-        enterprise_cta::print_success_footer();
     }
 
     Ok(())

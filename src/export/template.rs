@@ -22,6 +22,14 @@ pub enum TemplateLevel {
     Detailed,
 }
 
+/// Escape HTML special characters to prevent template injection
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
 /// Template engine for report generation
 pub struct TemplateEngine {
     templates: HashMap<String, String>,
@@ -131,18 +139,34 @@ impl TemplateEngine {
 
         let mut result = template.to_string();
 
+        // Determine if this is an HTML template so we can escape values.
+        // Check both the template name and the template content for HTML indicators.
+        let template_lower = template.to_lowercase();
+        let is_html = template_name.starts_with("html")
+            || template_lower.contains("<html")
+            || template_lower.contains("<body")
+            || template_lower.contains("<div")
+            || template_lower.contains("<!doctype");
+
         // Replace all variables in the format {{variable_name}}
         for (key, value) in variables {
             let placeholder = format!("{{{{{}}}}}", key);
-            result = result.replace(&placeholder, value);
+            let safe_value = if is_html {
+                html_escape(value)
+            } else {
+                value.clone()
+            };
+            result = result.replace(&placeholder, &safe_value);
         }
 
-        // Check for unresolved variables
+        // Check for unresolved variables — treat as an error so callers
+        // don't silently produce output with literal {{variable}} strings
         if result.contains("{{") && result.contains("}}") {
             let unresolved = self.find_unresolved_variables(&result);
             if !unresolved.is_empty() {
-                eprintln!(
-                    "Warning: Unresolved template variables: {}",
+                anyhow::bail!(
+                    "Template '{}' has unresolved variables: {}",
+                    template_name,
                     unresolved.join(", ")
                 );
             }
@@ -297,7 +321,6 @@ mod tests {
 
     #[test]
     fn test_render_template() {
-        let engine = TemplateEngine::new();
         let mut vars = HashMap::new();
         vars.insert("hostname".to_string(), "test-vm".to_string());
         vars.insert("os_type".to_string(), "linux".to_string());

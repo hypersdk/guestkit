@@ -18,6 +18,19 @@ impl Guestfs {
             eprintln!("guestfs: pread {} {} {}", path, count, offset);
         }
 
+        // Validate transfer size to prevent excessive memory allocation
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if count < 0 || count as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                count, MAX_TRANSFER_SIZE
+            )));
+        }
+
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
+
         let host_path = self.resolve_guest_path(path)?;
         let mut file = File::open(&host_path).map_err(Error::Io)?;
 
@@ -40,7 +53,20 @@ impl Guestfs {
             eprintln!("guestfs: pread_device {} {} {}", device, count, offset);
         }
 
+        // Validate transfer size to prevent excessive memory allocation
+        const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if count < 0 || count as u64 > MAX_TRANSFER_SIZE as u64 {
+            return Err(Error::InvalidOperation(format!(
+                "Transfer size {} exceeds maximum of {} bytes",
+                count, MAX_TRANSFER_SIZE
+            )));
+        }
+
         self.setup_nbd_if_needed()?;
+
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
 
         let nbd_device_path = self
             .nbd_device
@@ -74,6 +100,10 @@ impl Guestfs {
             );
         }
 
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
+
         let host_path = self.resolve_guest_path(path)?;
         let mut file = std::fs::OpenOptions::new()
             .write(true)
@@ -104,6 +134,10 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
+        if offset < 0 {
+            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+        }
+
         let nbd_device_path = self
             .nbd_device
             .as_ref()
@@ -130,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_pread_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

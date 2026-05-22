@@ -1,10 +1,10 @@
 # Windows Support Guide
 
-Comprehensive guide for working with Windows VMs in guestctl.
+Comprehensive guide for working with Windows VMs in guestkit.
 
 ## Overview
 
-guestctl v0.3.1+ provides extensive Windows support including:
+guestkit v0.3.1+ provides extensive Windows support including:
 - **Registry Parsing** - Direct Windows registry access for version detection
 - **Full Version Detection** - Accurate Windows edition and build identification
 - **Driver Management** - VirtIO driver injection for KVM migration
@@ -16,11 +16,11 @@ guestctl v0.3.1+ provides extensive Windows support including:
 
 ### Automatic Detection
 
-guestctl automatically detects Windows versions through registry parsing:
+guestkit automatically detects Windows versions through registry parsing:
 
 ```bash
 # Inspect Windows VM
-sudo guestctl inspect windows.qcow2
+sudo guestkit inspect windows.qcow2
 ```
 
 **Output:**
@@ -59,10 +59,10 @@ sudo guestctl inspect windows.qcow2
 
 ### Registry-Based Detection
 
-guestctl reads Windows registry hives to extract version information:
+guestkit reads Windows registry hives to extract version information:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn detect_windows_version() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -99,7 +99,7 @@ fn detect_windows_version() -> Result<(), Box<dyn std::error::Error>> {
 Access Windows registry directly from disk image:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn read_registry() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -147,7 +147,7 @@ Windows registry hives locations:
 Modify Windows registry before boot:
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 g = Guestfs()
 g.add_drive("windows.qcow2")
@@ -180,7 +180,7 @@ g.shutdown()
 
 ```bash
 # List all Windows users
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount /
 > inspect-users
 ```
@@ -282,7 +282,7 @@ virt-win-reg windows.qcow2 --merge virtio-drivers.reg
 
 ```bash
 # Mount Windows image
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 
 # Use DISM to inject drivers
@@ -305,7 +305,7 @@ virt-win-reg windows.qcow2 --list 'HKLM\SYSTEM\CurrentControlSet\Services' | gre
 
 ```bash
 # Inspect Windows services
-guestctl inspect windows.qcow2 --profile security --output json | jq '.services'
+guestkit inspect windows.qcow2 --profile security --output json | jq '.services'
 ```
 
 ### Detect Running Services
@@ -338,7 +338,7 @@ fn list_windows_services() -> Result<(), Box<dyn std::error::Error>> {
 ### Disable Windows Services
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def disable_windows_update(image_path):
     g = Guestfs()
@@ -364,7 +364,7 @@ def disable_windows_update(image_path):
 
 ```bash
 # Change Windows computer name
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > registry-set "HKLM\\SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ComputerName" "ComputerName" "NEW-HOSTNAME"
 > registry-set "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" "Hostname" "NEW-HOSTNAME"
@@ -374,7 +374,7 @@ guestctl interactive windows.qcow2
 ### Network Configuration
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def configure_windows_network(image_path):
     g = Guestfs()
@@ -406,7 +406,7 @@ def configure_windows_network(image_path):
 
 ```bash
 # Set Windows timezone
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > registry-set "HKLM\\SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation" "TimeZoneKeyName" "Pacific Standard Time"
 > exit
@@ -440,11 +440,11 @@ fn check_windows_activation() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Product Key Management
 
-**Note:** guestctl can read but not activate Windows. Use official Microsoft tools for activation.
+**Note:** guestkit can read but not activate Windows. Use official Microsoft tools for activation.
 
 ```bash
 # Read current product key (partial)
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > registry-get "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" "DigitalProductId"
 > exit
@@ -456,7 +456,7 @@ guestctl interactive windows.qcow2
 
 ```bash
 # List installed applications
-guestctl packages windows.qcow2
+guestkit packages windows.qcow2
 ```
 
 **Output:**
@@ -518,13 +518,13 @@ fn get_windows_system_info() -> Result<(), Box<dyn std::error::Error>> {
 
 ```bash
 # Check if Windows has been generalized
-guestctl inspect windows.qcow2 --profile migration | jq '.sysprep_status'
+guestkit inspect windows.qcow2 --profile migration | jq '.sysprep_status'
 ```
 
 ### Prepare for Cloning
 
 ```python
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 def sysprep_windows(image_path):
     """Prepare Windows for cloning (manual sysprep required before this)"""
@@ -556,7 +556,7 @@ def sysprep_windows(image_path):
 
 ```bash
 # Extract Windows event logs
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > download "C:\\Windows\\System32\\winevt\\Logs\\System.evtx" ./system.evtx
 > download "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx" ./application.evtx
@@ -614,7 +614,7 @@ slmgr /ato
 # F8 during boot → Safe Mode
 
 # Or modify registry to boot Safe Mode
-guestctl interactive windows.qcow2
+guestkit interactive windows.qcow2
 > mount C:
 > registry-set "HKLM\\SYSTEM\\CurrentControlSet\\Control\\SafeBoot\\Minimal" "Enabled" 1
 > exit

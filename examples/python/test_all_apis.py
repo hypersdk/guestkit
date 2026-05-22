@@ -52,23 +52,23 @@ TEST_IMAGES = [
 TESTS = [
     {
         "name": "OS Inspection",
-        "cmd": ["cargo", "run", "--bin", "guestctl", "--", "inspect"],
+        "cmd": ["cargo", "run", "--bin", "guestkit", "--", "inspect"],
     },
     {
         "name": "List Filesystems",
-        "cmd": ["cargo", "run", "--bin", "guestctl", "--", "filesystems"],
+        "cmd": ["cargo", "run", "--bin", "guestkit", "--", "filesystems"],
     },
     {
         "name": "List Packages",
-        "cmd": ["cargo", "run", "--bin", "guestctl", "--", "packages"],
+        "cmd": ["cargo", "run", "--bin", "guestkit", "--", "packages"],
     },
     {
         "name": "List Root Directory",
-        "cmd": ["sudo", "/home/ssahani/tt/guestkit/target/release/guestctl", "ls"],
+        "cmd": ["sudo", "/home/ssahani/tt/guestkit/target/release/guestkit", "ls"],
     },
     {
         "name": "Read /etc/os-release",
-        "cmd": ["sudo", "/home/ssahani/tt/guestkit/target/release/guestctl", "cat"],
+        "cmd": ["sudo", "/home/ssahani/tt/guestkit/target/release/guestkit", "cat"],
     },
 ]
 

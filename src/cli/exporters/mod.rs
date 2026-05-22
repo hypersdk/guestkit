@@ -18,6 +18,7 @@ pub enum ExportFormat {
 }
 
 impl ExportFormat {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "html" => Ok(ExportFormat::Html),
@@ -58,4 +59,72 @@ pub fn export_report(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_export_format_from_str_html() {
+        let format = ExportFormat::from_str("html").unwrap();
+        assert_eq!(format.extension(), "html");
+    }
+
+    #[test]
+    fn test_export_format_from_str_markdown() {
+        assert!(ExportFormat::from_str("markdown").is_ok());
+        assert!(ExportFormat::from_str("md").is_ok());
+
+        let format = ExportFormat::from_str("md").unwrap();
+        assert_eq!(format.extension(), "md");
+    }
+
+    #[test]
+    fn test_export_format_from_str_pdf() {
+        let format = ExportFormat::from_str("pdf").unwrap();
+        assert_eq!(format.extension(), "pdf");
+    }
+
+    #[test]
+    fn test_export_format_from_str_case_insensitive() {
+        assert!(ExportFormat::from_str("HTML").is_ok());
+        assert!(ExportFormat::from_str("Html").is_ok());
+        assert!(ExportFormat::from_str("MARKDOWN").is_ok());
+        assert!(ExportFormat::from_str("Pdf").is_ok());
+    }
+
+    #[test]
+    fn test_export_format_from_str_invalid() {
+        assert!(ExportFormat::from_str("json").is_err());
+        assert!(ExportFormat::from_str("xml").is_err());
+        assert!(ExportFormat::from_str("txt").is_err());
+        assert!(ExportFormat::from_str("").is_err());
+    }
+
+    #[test]
+    fn test_export_format_extension_html() {
+        let format = ExportFormat::Html;
+        assert_eq!(format.extension(), "html");
+    }
+
+    #[test]
+    fn test_export_format_extension_markdown() {
+        let format = ExportFormat::Markdown;
+        assert_eq!(format.extension(), "md");
+    }
+
+    #[test]
+    fn test_export_format_extension_pdf() {
+        let format = ExportFormat::Pdf;
+        assert_eq!(format.extension(), "pdf");
+    }
+
+    #[test]
+    fn test_markdown_aliases() {
+        let md_format = ExportFormat::from_str("md").unwrap();
+        let markdown_format = ExportFormat::from_str("markdown").unwrap();
+
+        assert_eq!(md_format.extension(), markdown_format.extension());
+    }
 }

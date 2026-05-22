@@ -28,12 +28,12 @@ impl InspectionCache {
             .or_else(|_| std::env::var("USERPROFILE"))
             .context("Could not determine home directory")?;
 
-        Ok(PathBuf::from(home).join(".cache").join("guestctl"))
+        Ok(PathBuf::from(home).join(".cache").join("guestkit"))
     }
 
     /// Generate cache key for a disk image
     fn cache_key(&self, image_path: &Path) -> Result<String> {
-        // Get absolute path
+        // Get absolute path and metadata atomically from same path
         let abs_path = fs::canonicalize(image_path)
             .with_context(|| format!("Could not canonicalize path: {}", image_path.display()))?;
 
@@ -43,9 +43,9 @@ impl InspectionCache {
 
         let mtime = metadata
             .modified()
-            .unwrap_or(SystemTime::UNIX_EPOCH)
+            .with_context(|| format!("Could not read modification time: {}", abs_path.display()))?
             .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
+            .with_context(|| "System time before UNIX epoch")?
             .as_secs();
 
         let size = metadata.len();
@@ -173,5 +173,76 @@ mod tests {
         let key2 = cache.cache_key(temp_file.path()).unwrap();
 
         assert_eq!(key1, key2);
+    }
+
+    #[test]
+    fn test_cache_stats_creation() {
+        let stats = CacheStats {
+            entries: 10,
+            total_bytes: 2048,
+        };
+
+        assert_eq!(stats.entries, 10);
+        assert_eq!(stats.total_bytes, 2048);
+    }
+
+    #[test]
+    fn test_cache_stats_size_human_kb() {
+        let stats = CacheStats {
+            entries: 5,
+            total_bytes: 10240, // 10 KB
+        };
+
+        let size_str = stats.size_human();
+        assert!(size_str.contains("KB"));
+        assert!(size_str.contains("10.0"));
+    }
+
+    #[test]
+    fn test_cache_stats_size_human_mb() {
+        let stats = CacheStats {
+            entries: 5,
+            total_bytes: 2097152, // 2 MB
+        };
+
+        let size_str = stats.size_human();
+        assert!(size_str.contains("MB"));
+        assert!(size_str.contains("2.0"));
+    }
+
+    #[test]
+    fn test_cache_stats_size_human_small() {
+        let stats = CacheStats {
+            entries: 1,
+            total_bytes: 512,
+        };
+
+        let size_str = stats.size_human();
+        assert!(size_str.contains("KB"));
+        assert!(size_str.contains("0.5"));
+    }
+
+    #[test]
+    fn test_cache_stats_size_human_zero() {
+        let stats = CacheStats {
+            entries: 0,
+            total_bytes: 0,
+        };
+
+        let size_str = stats.size_human();
+        assert!(size_str.contains("KB"));
+        assert!(size_str.contains("0.0"));
+    }
+
+    #[test]
+    fn test_cache_key_is_hex_string() {
+        let cache = InspectionCache::new().unwrap();
+        let temp_file = NamedTempFile::new().unwrap();
+
+        let key = cache.cache_key(temp_file.path()).unwrap();
+
+        // SHA256 hash should be 64 hex characters
+        assert_eq!(key.len(), 64);
+        assert!(key.chars().all(|c| c.is_ascii_hexdigit()));
     }
 }

@@ -21,8 +21,8 @@ impl Guestfs {
         let content = std::fs::read_to_string(&host_path).map_err(Error::Io)?;
 
         // Parse sed expression (simple s/pattern/replacement/flags)
-        if expression.starts_with("s/") {
-            let parts: Vec<&str> = expression[2..].splitn(3, '/').collect();
+        if let Some(expr_body) = expression.strip_prefix("s/") {
+            let parts: Vec<&str> = expr_body.splitn(3, '/').collect();
             if parts.len() >= 2 {
                 let pattern = parts[0];
                 let replacement = parts[1];
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_sed_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

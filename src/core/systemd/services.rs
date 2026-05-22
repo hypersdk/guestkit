@@ -8,6 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Service analyzer
+#[derive(Debug)]
 pub struct ServiceAnalyzer {
     analyzer: SystemdAnalyzer,
 }
@@ -151,7 +152,7 @@ impl ServiceAnalyzer {
         let mut visited = HashSet::new();
 
         if let Some(service) = services.iter().find(|s| s.name == service_name) {
-            self.build_dependency_tree(&services, service, &mut tree, &mut visited, 0);
+            Self::build_dependency_tree(&services, service, &mut tree, &mut visited, 0);
         }
 
         Ok(tree)
@@ -159,7 +160,6 @@ impl ServiceAnalyzer {
 
     /// Recursively build dependency tree
     fn build_dependency_tree(
-        &self,
         all_services: &[ServiceInfo],
         service: &ServiceInfo,
         tree: &mut DependencyTree,
@@ -176,7 +176,7 @@ impl ServiceAnalyzer {
         for req in &service.dependencies.requires {
             if let Some(dep_service) = all_services.iter().find(|s| s.name == *req) {
                 let mut dep_tree = DependencyTree::new(req.clone());
-                self.build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
+                Self::build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
                 tree.dependencies.push(dep_tree);
             }
         }
@@ -186,7 +186,7 @@ impl ServiceAnalyzer {
             if let Some(dep_service) = all_services.iter().find(|s| s.name == *want) {
                 if !visited.contains(want) {
                     let mut dep_tree = DependencyTree::new(want.clone());
-                    self.build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
+                    Self::build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
                     tree.dependencies.push(dep_tree);
                 }
             }
@@ -228,7 +228,7 @@ impl ServiceAnalyzer {
 
     /// Sanitize node ID for Mermaid
     fn sanitize_node_id(&self, name: &str) -> String {
-        name.replace('.', "_").replace('-', "_")
+        name.replace(['.', '-'], "_")
     }
 }
 

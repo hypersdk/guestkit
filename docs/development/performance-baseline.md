@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document establishes the performance baseline for guestctl and tracks progress toward the Q1 2026 goal of achieving 20%+ overall performance improvement.
+This document establishes the performance baseline for guestkit and tracks progress toward the Q1 2026 goal of achieving 20%+ overall performance improvement.
 
 ## Measurement Methodology
 

@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_swap_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

@@ -6,9 +6,9 @@ GuestCtl supports multiple output formats for inspection results, enabling integ
 
 ### JSON (Machine-Readable)
 ```bash
-guestctl inspect disk.qcow2 --output json
+guestkit inspect disk.qcow2 --output json
 # or
-guestctl inspect disk.qcow2 -o json
+guestkit inspect disk.qcow2 -o json
 ```
 
 **Use cases:**
@@ -20,20 +20,20 @@ guestctl inspect disk.qcow2 -o json
 **Example:**
 ```bash
 # Get hostname from JSON output
-guestctl inspect disk.qcow2 -o json | jq '.os.hostname'
+guestkit inspect disk.qcow2 -o json | jq '.os.hostname'
 
 # Extract all network interfaces
-guestctl inspect disk.qcow2 -o json | jq '.network.interfaces[]'
+guestkit inspect disk.qcow2 -o json | jq '.network.interfaces[]'
 
 # Check if cloud-init is present
-guestctl inspect disk.qcow2 -o json | jq '.system_config.cloud_init'
+guestkit inspect disk.qcow2 -o json | jq '.system_config.cloud_init'
 ```
 
 ### YAML (Configuration-Friendly)
 ```bash
-guestctl inspect disk.qcow2 --output yaml
+guestkit inspect disk.qcow2 --output yaml
 # or
-guestctl inspect disk.qcow2 -o yaml
+guestkit inspect disk.qcow2 -o yaml
 ```
 
 **Use cases:**
@@ -45,17 +45,17 @@ guestctl inspect disk.qcow2 -o yaml
 **Example:**
 ```bash
 # Get OS type from YAML
-guestctl inspect disk.qcow2 -o yaml | yq '.os.os_type'
+guestkit inspect disk.qcow2 -o yaml | yq '.os.os_type'
 
 # Extract network configuration
-guestctl inspect disk.qcow2 -o yaml | yq '.network'
+guestkit inspect disk.qcow2 -o yaml | yq '.network'
 ```
 
 ### Text (Human-Readable, Default)
 ```bash
-guestctl inspect disk.qcow2
+guestkit inspect disk.qcow2
 # or explicitly:
-guestctl inspect disk.qcow2 --output text
+guestkit inspect disk.qcow2 --output text
 ```
 
 **Use cases:**
@@ -65,9 +65,9 @@ guestctl inspect disk.qcow2 --output text
 
 ### CSV (Tabular Data)
 ```bash
-guestctl inspect disk.qcow2 --output csv
+guestkit inspect disk.qcow2 --output csv
 # or
-guestctl inspect disk.qcow2 -o csv
+guestkit inspect disk.qcow2 -o csv
 ```
 
 **Use cases:**
@@ -79,12 +79,12 @@ guestctl inspect disk.qcow2 -o csv
 **Example:**
 ```bash
 # Extract user accounts as CSV
-guestctl inspect disk.qcow2 -o csv > users.csv
+guestkit inspect disk.qcow2 -o csv > users.csv
 
 # Compare packages across multiple VMs
 for vm in *.qcow2; do
   echo "=== $vm ===" >> all-vms.csv
-  guestctl inspect "$vm" -o csv >> all-vms.csv
+  guestkit inspect "$vm" -o csv >> all-vms.csv
 done
 ```
 
@@ -251,7 +251,7 @@ windows:  # Only present for Windows systems
 ### Ansible Integration
 ```yaml
 - name: Inspect VM disk
-  command: guestctl inspect /path/to/vm.qcow2 --output json
+  command: guestkit inspect /path/to/vm.qcow2 --output json
   register: vm_inspection
 
 - name: Parse inspection results
@@ -269,7 +269,7 @@ windows:  # Only present for Windows systems
 ### Terraform Data Source
 ```hcl
 data "external" "vm_inspection" {
-  program = ["guestctl", "inspect", var.disk_image, "--output", "json"]
+  program = ["guestkit", "inspect", var.disk_image, "--output", "json"]
 }
 
 output "vm_hostname" {
@@ -282,7 +282,7 @@ output "vm_hostname" {
 #!/bin/bash
 
 # Inspect disk and extract key information
-INSPECTION=$(guestctl inspect disk.qcow2 --output json)
+INSPECTION=$(guestkit inspect disk.qcow2 --output json)
 
 HOSTNAME=$(echo "$INSPECTION" | jq -r '.os.hostname')
 OS_TYPE=$(echo "$INSPECTION" | jq -r '.os.os_type')
@@ -304,7 +304,7 @@ fi
 #!/bin/bash
 
 # Inspect Windows VM and extract security information
-INSPECTION=$(guestctl inspect windows-server.qcow2 --output json)
+INSPECTION=$(guestkit inspect windows-server.qcow2 --output json)
 
 # Check installed updates
 UPDATES=$(echo "$INSPECTION" | jq -r '.windows.updates[].kb')
@@ -328,7 +328,7 @@ import json
 
 # Run inspection
 result = subprocess.run(
-    ["guestctl", "inspect", "disk.qcow2", "--output", "json"],
+    ["guestkit", "inspect", "disk.qcow2", "--output", "json"],
     capture_output=True,
     text=True
 )

@@ -1,10 +1,10 @@
 # VM Migration Guide
 
-Complete guide for migrating VMs across platforms using guestctl.
+Complete guide for migrating VMs across platforms using guestkit.
 
 ## Overview
 
-guestctl v0.3.1+ provides powerful VM migration capabilities through:
+guestkit v0.3.1+ provides powerful VM migration capabilities through:
 - **Universal fstab/crypttab Rewriter** - Modify disk mount configurations
 - **Device Path Translation** - Automatic device mapping (e.g., /dev/sda → /dev/vda)
 - **Windows Registry Modification** - Update Windows system configurations
@@ -28,15 +28,15 @@ guestctl v0.3.1+ provides powerful VM migration capabilities through:
 
 ```bash
 # 1. Convert disk format (if needed)
-guestctl convert vm.vmdk --output vm.qcow2 --format qcow2
+guestkit convert vm.vmdk --output vm.qcow2 --format qcow2
 
 # 2. Inspect source VM
-guestctl inspect vm.qcow2 --output json > source-vm.json
+guestkit inspect vm.qcow2 --output json > source-vm.json
 
 # 3. Perform migration modifications (see detailed sections below)
 
 # 4. Verify migrated VM
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 ```
 
 ## Detailed Migration Scenarios
@@ -49,7 +49,7 @@ Complete workflow for migrating Windows or Linux VMs from Hyper-V to KVM.
 
 ```bash
 # Install required tools
-sudo dnf install qemu-img guestctl
+sudo dnf install qemu-img guestkit
 
 # Export Hyper-V VM (Windows PowerShell on Hyper-V host)
 Export-VM -Name "MyVM" -Path "C:\Exports"
@@ -65,14 +65,14 @@ qemu-img convert -f vhdx -O qcow2 \
   -p
 
 # Verify conversion
-guestctl detect vm.qcow2
+guestkit detect vm.qcow2
 ```
 
 #### Step 2: Inspect Source Configuration
 
 ```bash
 # Get complete VM inventory
-guestctl inspect vm.qcow2 --profile migration --output json > vm-inventory.json
+guestkit inspect vm.qcow2 --profile migration --output json > vm-inventory.json
 
 # Key information to note:
 # - OS type and version
@@ -86,7 +86,7 @@ guestctl inspect vm.qcow2 --profile migration --output json > vm-inventory.json
 For Linux VMs, update device references:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 use std::collections::HashMap;
 
 fn migrate_hyperv_to_kvm() -> Result<(), Box<dyn std::error::Error>> {
@@ -148,13 +148,13 @@ Windows Registry Editor Version 5.00
 
 ```bash
 # For Linux VMs - update network interface names
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > cat /etc/network/interfaces  # or /etc/sysconfig/network-scripts/
 > # Note interface names (eth0 → ens3)
 > exit
 
-# Use guestctl to update network configs
+# Use guestkit to update network configs
 # (Automated network migration coming in v0.4.0)
 ```
 
@@ -184,8 +184,8 @@ virsh console migrated-vm
 # Option A: Convert VMDK directly
 qemu-img convert -f vmdk -O qcow2 vm.vmdk vm.qcow2
 
-# Option B: Use guestctl
-guestctl convert vm.vmdk --output vm.qcow2 --format qcow2 --compress
+# Option B: Use guestkit
+guestkit convert vm.vmdk --output vm.qcow2 --format qcow2 --compress
 ```
 
 #### Step 2: Device Path Migration
@@ -194,7 +194,7 @@ VMware uses different device naming:
 
 ```python
 # Python migration script
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 g = Guestfs()
 g.add_drive("vm.qcow2")
@@ -223,7 +223,7 @@ g.shutdown()
 
 ```bash
 # Interactive mode
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > command "dpkg --purge open-vm-tools"  # Debian/Ubuntu
 > command "rpm -e open-vm-tools"        # RHEL/Fedora
@@ -263,7 +263,7 @@ qemu-img convert -f raw -O qcow2 \
 Physical servers need hardware driver changes:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn adapt_p2v_hardware() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -318,7 +318,7 @@ aws s3 cp s3://my-bucket/vm.vmdk .
 qemu-img convert -f vmdk -O qcow2 vm.vmdk vm.qcow2
 
 # 3. Remove AWS-specific configuration
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > command "systemctl disable amazon-ssm-agent"
 > command "rm -f /etc/cloud/cloud.cfg.d/91-aws.cfg"
@@ -340,7 +340,7 @@ az disk create --resource-group myRG --name myDisk --source vm.vhd
 Migrating LUKS encrypted volumes:
 
 ```rust
-use guestctl::guestfs::Guestfs;
+use guestkit::guestfs::Guestfs;
 
 fn migrate_luks_volumes() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -372,10 +372,10 @@ fn migrate_luks_volumes() -> Result<(), Box<dyn std::error::Error>> {
 
 ```bash
 # Inspect LVM configuration
-guestctl inspect vm.qcow2 --profile migration | jq '.lvm'
+guestkit inspect vm.qcow2 --profile migration | jq '.lvm'
 
-# Migration with guestctl
-guestctl interactive vm.qcow2
+# Migration with guestkit
+guestkit interactive vm.qcow2
 > lvm-scan
 > lvs
 > # Note volume group and logical volume names
@@ -422,7 +422,7 @@ fn migrate_multi_disk() -> Result<(), Box<dyn std::error::Error>> {
 - [ ] Backup original VM
 - [ ] Document current configuration (network, storage, services)
 - [ ] Check disk space on target
-- [ ] Verify guestctl version (0.3.1+)
+- [ ] Verify guestkit version (0.3.1+)
 - [ ] Test migration on non-production VM first
 
 ### During Migration
@@ -456,7 +456,7 @@ fn migrate_multi_disk() -> Result<(), Box<dyn std::error::Error>> {
 
 **Solution:**
 ```bash
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /boot
 > cat /boot/grub/grub.cfg  # Check device references
 > # Update grub.cfg manually or regenerate
@@ -471,7 +471,7 @@ guestctl interactive vm.qcow2
 **Solution:**
 ```bash
 # Update network configuration
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > ls /etc/sysconfig/network-scripts/  # RHEL/Fedora
 > ls /etc/network/interfaces.d/        # Debian/Ubuntu
@@ -495,7 +495,7 @@ guestctl interactive vm.qcow2
 **Solution:**
 ```bash
 # Use UUIDs instead of device paths in crypttab
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > cat /etc/crypttab
 > # Update to use UUID= instead of /dev/sdXN
@@ -535,7 +535,7 @@ guestctl interactive vm.qcow2
 # Run in VM after first boot
 
 # Trim/discard (Linux)
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 > mount /
 > command "fstrim -av"
 > exit
@@ -570,7 +570,7 @@ qemu-img convert -f vhdx -O qcow2 -p "$SOURCE_VHDX" "$OUTPUT_QCOW2"
 
 # Step 2: Inspect VM
 echo "[2/5] Inspecting VM..."
-guestctl inspect "$OUTPUT_QCOW2" --output json > migration-report.json
+guestkit inspect "$OUTPUT_QCOW2" --output json > migration-report.json
 
 # Step 3: Detect OS type
 OS_TYPE=$(jq -r '.operating_systems[0].os_type' migration-report.json)
@@ -579,7 +579,7 @@ echo "Detected OS: $OS_TYPE"
 # Step 4: Modify configuration
 if [ "$OS_TYPE" = "linux" ]; then
     echo "[3/5] Updating Linux configuration..."
-    guestctl interactive "$OUTPUT_QCOW2" <<EOF
+    guestkit interactive "$OUTPUT_QCOW2" <<EOF
 mount /
 command "sed -i 's/\/dev\/sda/\/dev\/vda/g' /etc/fstab"
 command "update-grub"
@@ -608,7 +608,7 @@ echo "  3. Verify network and services"
 2. **Test on non-production first** - Validate migration process with test VM
 3. **Document source configuration** - Capture complete inventory with `--profile migration`
 4. **Use UUIDs for mounts** - More reliable than device paths across platforms
-5. **Verify after each step** - Use `guestctl inspect` to check changes
+5. **Verify after each step** - Use `guestkit inspect` to check changes
 6. **Keep migration logs** - Save all output for troubleshooting
 7. **Plan for rollback** - Have recovery plan if migration fails
 

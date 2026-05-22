@@ -17,7 +17,7 @@ pub fn detect_circular_dependencies(
     let mut adj_list: HashMap<String, Vec<String>> = HashMap::new();
     for dep in dependencies {
         adj_list.entry(dep.from.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(dep.to.clone());
     }
 
@@ -96,7 +96,7 @@ pub fn detect_conflicts(
     for pkg in packages {
         let base_name = pkg.name.split(':').next().unwrap_or(&pkg.name);
         version_map.entry(base_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(pkg.version.clone());
     }
 
@@ -141,7 +141,7 @@ pub fn detect_conflicts(
 
 /// Find packages on critical path to a target
 pub fn find_critical_path(
-    packages: &[Package],
+    _packages: &[Package],
     dependencies: &[Dependency],
     target: &str,
 ) -> Vec<String> {
@@ -152,7 +152,7 @@ pub fn find_critical_path(
     let mut reverse_adj: HashMap<String, Vec<String>> = HashMap::new();
     for dep in dependencies {
         reverse_adj.entry(dep.to.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(dep.from.clone());
     }
 
@@ -179,7 +179,7 @@ pub fn find_critical_path(
 /// Calculate package importance based on dependents
 pub fn calculate_importance(packages: &[Package]) -> HashMap<String, f64> {
     let mut importance = HashMap::new();
-    let total = packages.len() as f64;
+    let total = (packages.len().max(1)) as f64;
 
     for pkg in packages {
         // Importance based on number of packages that depend on this

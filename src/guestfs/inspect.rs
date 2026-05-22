@@ -183,14 +183,24 @@ impl Guestfs {
     /// Root validation: mount RO and check for strong OS markers.
     ///
     /// This is the key upgrade that reduces false positives (/home, data disks, etc.).
+    /// Mount failures are treated as "not a valid root" (returns `Ok(false)`) rather
+    /// than propagating errors, because LVM volumes on read-only NBD devices may
+    /// fail to mount for benign reasons (e.g. dirty XFS log).
     fn validate_root_partition(&mut self, dev: &str) -> Result<bool> {
         // Check if this device is already mounted (at any mountpoint)
-        // The mounted HashMap is device->mountpoint, so we check if the device is a key
         let was_mounted = self.mounted.contains_key(dev);
 
         // Temporarily mount at / if not already mounted.
         if !was_mounted {
-            self.mount_ro(dev, "/")?;
+            if let Err(e) = self.mount_ro(dev, "/") {
+                if self.verbose || self.debug {
+                    eprintln!(
+                        "guestfs: validate_root: mount failed for {} (skipping): {}",
+                        dev, e
+                    );
+                }
+                return Ok(false);
+            }
         }
 
         // Validate root markers.
@@ -198,7 +208,6 @@ impl Guestfs {
         let is_windows = looks_like_windows_root(self);
 
         // Cleanup: unmount if we mounted it
-        // Use the device name for umount since that's the key in the mounted HashMap
         if !was_mounted {
             let _ = self.umount(dev);
         }
@@ -406,10 +415,8 @@ impl Guestfs {
                     "alma".to_string()
                 } else if lc.contains("oracle linux") {
                     "ol".to_string()
-                } else if lc.contains("red hat") {
-                    "rhel".to_string()
                 } else {
-                    "rhel".to_string() // default family guess
+                    "rhel".to_string() // default family guess (includes Red Hat)
                 }
             } else {
                 "unknown".to_string()
@@ -527,10 +534,9 @@ impl Guestfs {
             } else if self.exists("/lib/ld-musl-x86_64.so.1").unwrap_or(false)
                 || self.exists("/lib64/ld-linux-x86-64.so.2").unwrap_or(false)
                 || self.exists("/lib/ld-linux-x86-64.so.2").unwrap_or(false)
+                || self.exists("/lib64").unwrap_or(false)
             {
                 "x86_64".to_string()
-            } else if self.exists("/lib64").unwrap_or(false) {
-                "x86_64".to_string() // still a heuristic; but common
             } else {
                 "unknown".to_string()
             }
@@ -720,25 +726,107 @@ impl Guestfs {
 
     /// Get mountpoints for the root device.
     ///
-    /// v0: root always at `/`.
-    /// TODO: parse /etc/fstab, resolve UUID/LABEL, handle btrfs subvol=.
+    /// Parses /etc/fstab to discover additional mountpoints beyond root.
     pub fn inspect_get_mountpoints(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
         let mut mountpoints = HashMap::new();
+        // Always include root
         mountpoints.insert("/".to_string(), root.to_string());
+
+        // Try to parse /etc/fstab for additional mountpoints
+        if let Ok(fstab_content) = self.cat("/etc/fstab") {
+            // Pseudo-filesystems to skip
+            let pseudo_fs = ["proc", "sysfs", "tmpfs", "devpts", "devtmpfs",
+                             "cgroup", "cgroup2", "debugfs", "securityfs",
+                             "configfs", "fusectl", "mqueue", "hugetlbfs",
+                             "pstore", "binfmt_misc", "autofs", "efivarfs"];
+
+            for line in fstab_content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() || trimmed.starts_with('#') {
+                    continue;
+                }
+
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                if parts.len() < 3 {
+                    continue;
+                }
+
+                let spec = parts[0];
+                let mount = parts[1];
+                let fstype = parts[2];
+
+                // Skip pseudo-filesystems and swap
+                if pseudo_fs.contains(&fstype) || fstype == "swap" || mount == "none" {
+                    continue;
+                }
+
+                // Skip if we already have this mountpoint (root)
+                if mount == "/" {
+                    continue;
+                }
+
+                mountpoints.insert(mount.to_string(), spec.to_string());
+            }
+        }
+
         Ok(mountpoints)
     }
 
-    /// List installed applications (stub).
-    pub fn inspect_list_applications(&mut self, _root: &str) -> Result<Vec<Application>> {
+    /// List installed applications.
+    pub fn inspect_list_applications(&mut self, root: &str) -> Result<Vec<Application>> {
         self.ensure_ready()?;
-        Ok(Vec::new())
+
+        let apps2 = self.inspect_list_applications2(root)?;
+
+        let applications = apps2
+            .into_iter()
+            .map(|(name, version, release)| Application {
+                name: name.clone(),
+                display_name: name,
+                epoch: 0,
+                version,
+                release,
+                arch: String::new(),
+                install_path: String::new(),
+                publisher: String::new(),
+                url: String::new(),
+                description: String::new(),
+            })
+            .collect();
+
+        Ok(applications)
     }
 
-    /// Check if this is a live CD/USB (stub).
+    /// Check if this is a live CD/USB.
     pub fn inspect_is_live(&mut self, _root: &str) -> Result<bool> {
         self.ensure_ready()?;
+
+        // Check for common live CD/USB indicators
+        let live_indicators = [
+            "/run/live",
+            "/lib/live",
+            "/casper",
+            "/run/initramfs/live",
+        ];
+
+        for path in &live_indicators {
+            if self.exists(path).unwrap_or(false) {
+                return Ok(true);
+            }
+        }
+
+        // Check if root filesystem is squashfs (common for live images)
+        if let Ok(content) = self.cat("/proc/mounts") {
+            if content.lines().any(|line| {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                parts.len() >= 3 && parts[1] == "/" && parts[2] == "squashfs"
+            }) {
+                return Ok(true);
+            }
+        }
+
         Ok(false)
     }
 }
@@ -815,10 +903,13 @@ impl OsRelease {
             }
         }
 
-        // Parse version into major.minor
+        // Parse version into major.minor (default to 0 for non-numeric components)
         let (version_major, version_minor) = if !version_id.is_empty() {
             let parts: Vec<&str> = version_id.split('.').collect();
-            let major = parts.first().and_then(|s| s.parse().ok()).unwrap_or(0);
+            let major = parts.first().and_then(|s| s.parse().ok()).unwrap_or_else(|| {
+                log::debug!("Non-numeric major version in '{}', defaulting to 0", version_id);
+                0
+            });
             let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
             (major, minor)
         } else {

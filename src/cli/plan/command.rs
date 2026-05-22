@@ -210,7 +210,7 @@ impl PlanCommand {
         let applicator = PlanApplicator::new(vm_path.to_string(), true);
         let result = applicator.validate(&plan)?;
 
-        if result.valid {
+        if result.is_valid() {
             println!("{}", "✓ Plan is valid".green().bold());
 
             if !result.warnings.is_empty() {
@@ -285,7 +285,7 @@ impl PlanCommand {
         let applicator = PlanApplicator::new(vm_path.to_string(), true);
         let validation = applicator.validate(&plan)?;
 
-        if !validation.valid {
+        if !validation.is_valid() {
             println!("{}", "✗ Plan validation failed".red().bold());
             for error in &validation.errors {
                 println!("  ✗ {}", error.red());
@@ -382,16 +382,65 @@ impl PlanCommand {
         vm_disk: &str,
         profile: &str,
         output: &str,
-        _format: &PlanFileFormat,
+        format: &PlanFileFormat,
     ) -> Result<()> {
         println!("Generating {} plan for {}...", profile.cyan(), vm_disk.bright_blue());
 
-        // TODO: Actually run the profile and generate plan
-        // For now, create a placeholder
-        anyhow::bail!(
-            "Plan generation not yet implemented. Use 'guestctl profile {} {} --plan {}' instead.",
-            profile, vm_disk, output
-        );
+        // Open VM with Guestfs
+        let mut g = crate::guestfs::Guestfs::new()
+            .map_err(|e| anyhow::anyhow!("Failed to create Guestfs handle: {}", e))?;
+        g.add_drive_ro(vm_disk)
+            .map_err(|e| anyhow::anyhow!("Failed to add drive: {}", e))?;
+        g.launch()
+            .map_err(|e| anyhow::anyhow!("Failed to launch Guestfs: {}", e))?;
+
+        // Inspect OS
+        let roots = g.inspect_os()
+            .map_err(|e| anyhow::anyhow!("Failed to inspect OS: {}", e))?;
+        if roots.is_empty() {
+            anyhow::bail!("No operating system found in {}", vm_disk);
+        }
+
+        let root = &roots[0];
+
+        // Mount filesystems
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.into_iter().collect();
+            mounts.sort_by_key(|(mount, _)| mount.len());
+            for (mount, device) in &mounts {
+                let _ = g.mount(device, mount);
+            }
+        }
+
+        // Get the profile and run inspection
+        let inspection_profile = crate::cli::profiles::get_profile(profile)
+            .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
+
+        let report = inspection_profile.inspect(&mut g, root)
+            .map_err(|e| anyhow::anyhow!("Profile inspection failed: {}", e))?;
+
+        // Generate plan from report
+        let generator = PlanGenerator::new(vm_disk.to_string());
+        let plan = generator.from_security_profile(&report)?;
+
+        // Serialize to output format
+        let content = match format {
+            PlanFileFormat::Yaml => serde_yaml::to_string(&plan)
+                .with_context(|| "Failed to serialize plan to YAML")?,
+            PlanFileFormat::Json => serde_json::to_string_pretty(&plan)
+                .with_context(|| "Failed to serialize plan to JSON")?,
+        };
+
+        fs::write(output, &content)
+            .with_context(|| format!("Failed to write plan to: {}", output))?;
+
+        let _ = g.shutdown();
+
+        println!("{} Plan generated: {}", "✓".green(), output.bright_blue());
+        println!("  Operations: {}", plan.operations.len());
+        println!("  Overall risk: {}", plan.overall_risk);
+
+        Ok(())
     }
 
     fn show_stats(&self, plan_file: &str) -> Result<()> {

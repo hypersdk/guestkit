@@ -69,11 +69,12 @@ fn ubuntu_presets() -> HashMap<&'static str, UbuntuVersion> {
 
 fn make_lsb_release(version: &str) -> String {
     let presets = ubuntu_presets();
-    let metadata = presets.get(version).unwrap_or(&UbuntuVersion {
+    let default = UbuntuVersion {
         codename: "unknown",
-        description: &format!("Ubuntu {}", version),
+        description: "Ubuntu (unknown version)",
         root_fs: "ext4",
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default);
 
     format!(
         "DISTRIB_ID=Ubuntu\n\
@@ -86,11 +87,12 @@ fn make_lsb_release(version: &str) -> String {
 
 fn make_os_release(version: &str) -> String {
     let presets = ubuntu_presets();
-    let metadata = presets.get(version).unwrap_or(&UbuntuVersion {
+    let default = UbuntuVersion {
         codename: "unknown",
-        description: &format!("Ubuntu {}", version),
+        description: "Ubuntu (unknown version)",
         root_fs: "ext4",
-    });
+    };
+    let metadata = presets.get(version).unwrap_or(&default);
 
     format!(
         "NAME=\"Ubuntu\"\n\

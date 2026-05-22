@@ -108,7 +108,7 @@ The next phase focuses on **distribution, polish, and ecosystem integration**.
 ```
 
 **Success Metrics:**
-- ✅ `pip install guestctl` works
+- ✅ `pip install guestkit` works
 - ✅ 100+ downloads in first week
 - ✅ Listed on PyPI with proper metadata
 - ✅ Documentation updated everywhere
@@ -147,10 +147,10 @@ dpkg-buildpackage -us -uc
 # Effort: 1-2 days
 # Target: Fedora 39, 40, RHEL 9
 
-guestctl.spec
+guestkit.spec
 
 # Build command
-rpmbuild -ba guestctl.spec
+rpmbuild -ba guestkit.spec
 ```
 
 #### Arch Linux (AUR)
@@ -280,10 +280,10 @@ download /etc/fstab ./fstab
 EOF
 
 # Execute script
-guestctl script disk.qcow2 inspect.gk
+guestkit script disk.qcow2 inspect.gk
 
 # With error handling
-guestctl script --fail-fast disk.qcow2 inspect.gk
+guestkit script --fail-fast disk.qcow2 inspect.gk
 ```
 
 **Implementation:**
@@ -320,9 +320,9 @@ pub fn run_script(&mut self, script_path: &str) -> Result<()> {
 
 **Features:**
 ```bash
-guestctl> packages python > python_packages.txt
-guestctl> ls /etc >> file_list.txt
-guestctl> find '*.log' | tee logs.txt
+guestkit> packages python > python_packages.txt
+guestkit> ls /etc >> file_list.txt
+guestkit> find '*.log' | tee logs.txt
 ```
 
 ---
@@ -339,9 +339,9 @@ guestctl> find '*.log' | tee logs.txt
 - History search (Ctrl+R)
 
 ```rust
-// Save to ~/.guestctl/history/<disk_hash>.txt
+// Save to ~/.guestkit/history/<disk_hash>.txt
 let history_file = format!(
-    "{}/.guestctl/history/{}.txt",
+    "{}/.guestkit/history/{}.txt",
     env::var("HOME")?,
     disk_hash
 );
@@ -476,10 +476,10 @@ graph TD
 **Tools:**
 ```bash
 # CPU profiling
-cargo flamegraph --bin guestctl -- inspect disk.qcow2
+cargo flamegraph --bin guestkit -- inspect disk.qcow2
 
 # Memory profiling
-heaptrack guestctl inspect disk.qcow2
+heaptrack guestkit inspect disk.qcow2
 
 # Benchmarking
 cargo bench
@@ -566,16 +566,16 @@ packages
 **Support:**
 ```bash
 # AWS S3
-guestctl inspect s3://bucket/disk.qcow2
+guestkit inspect s3://bucket/disk.qcow2
 
 # Azure Blob Storage
-guestctl inspect az://storage/disk.vhd
+guestkit inspect az://storage/disk.vhd
 
 # Google Cloud Storage
-guestctl inspect gs://bucket/disk.vmdk
+guestkit inspect gs://bucket/disk.vmdk
 
 # HTTP/HTTPS
-guestctl inspect https://example.com/disk.img
+guestkit inspect https://example.com/disk.img
 ```
 
 **Implementation:**
@@ -602,7 +602,7 @@ guestctl inspect https://example.com/disk.img
 use axum::{Router, Json};
 
 // Start API server
-guestctl serve --port 8080
+guestkit serve --port 8080
 
 // Endpoints
 POST   /api/v1/inspect
@@ -629,7 +629,7 @@ DELETE /api/v1/cache/{disk_id}
 **Usage:**
 ```yaml
 - name: Inspect VM disk
-  guestctl_inspect:
+  guestkit_inspect:
     path: /var/lib/libvirt/images/vm.qcow2
     profile: security
     export: json
@@ -701,7 +701,7 @@ paths = ["/etc/ssh/sshd_config"]
 EOF
 
 # Check compliance
-guestctl check-compliance --baseline baseline.toml disk.qcow2
+guestkit check-compliance --baseline baseline.toml disk.qcow2
 ```
 
 ---
@@ -734,13 +734,13 @@ guestctl check-compliance --baseline baseline.toml disk.qcow2
 **Features:**
 ```bash
 # Verify backup can boot
-guestctl verify-backup --bootable backup.qcow2
+guestkit verify-backup --bootable backup.qcow2
 
 # Compare with source
-guestctl verify-backup --compare source.qcow2 backup.qcow2
+guestkit verify-backup --compare source.qcow2 backup.qcow2
 
 # Scheduled verification
-guestctl verify-backup --schedule weekly backup.qcow2
+guestkit verify-backup --schedule weekly backup.qcow2
 ```
 
 ---
@@ -923,7 +923,7 @@ guestctl verify-backup --schedule weekly backup.qcow2
 ### Day 3: Package Infrastructure
 1. Create debian/ directory structure
 2. Test .deb package build
-3. Create guestctl.spec for RPM
+3. Create guestkit.spec for RPM
 
 ### Day 4-5: Interactive Mode Polish
 1. Implement tab completion

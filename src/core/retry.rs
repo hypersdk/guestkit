@@ -55,15 +55,17 @@ where
     Fut: std::future::Future<Output = Result<T, E>>,
     E: std::fmt::Display,
 {
-    let mut last_error = None;
+    assert!(config.max_attempts > 0, "retry_with_backoff called with max_attempts == 0");
 
+    let mut last_err = None;
     for attempt in 1..=config.max_attempts {
         match operation().await {
             Ok(result) => return Ok(result),
             Err(e) => {
                 if attempt == config.max_attempts {
                     log::error!("Operation failed after {} attempts: {}", attempt, e);
-                    return Err(e);
+                    last_err = Some(e);
+                    break;
                 }
 
                 // Calculate delay with exponential backoff
@@ -87,13 +89,14 @@ where
                     delay.as_secs_f64()
                 );
 
-                last_error = Some(e);
                 sleep(delay).await;
             }
         }
     }
 
-    Err(last_error.unwrap())
+    // last_err is always Some here: the loop runs at least once (max_attempts >= 1),
+    // and exit via break always sets last_err.
+    Err(last_err.expect("retry loop ran but produced no error"))
 }
 
 #[cfg(test)]

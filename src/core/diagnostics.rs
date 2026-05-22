@@ -11,7 +11,7 @@ pub enum DiagnosticError {
     #[error("Failed to mount {device} at {mountpoint}")]
     #[diagnostic(
         code(guestkit::mount::failed),
-        help("Try these solutions:\n  1. Check filesystem type: guestctl filesystems {disk}\n  2. Verify device exists\n  3. Check if encrypted (LUKS)")
+        help("Try these solutions:\n  1. Check filesystem type: guestkit filesystems {disk}\n  2. Verify device exists\n  3. Check if encrypted (LUKS)")
     )]
     MountFailed {
         device: String,
@@ -25,7 +25,7 @@ pub enum DiagnosticError {
     #[error("No operating systems detected in {disk}")]
     #[diagnostic(
         code(guestkit::inspect::no_os),
-        help("Possible reasons:\n  • Disk is not bootable\n  • Disk is encrypted (check with: guestctl filesystems)\n  • Unsupported OS type\n  • Corrupted disk image\n\nTry:\n  guestctl filesystems {disk}")
+        help("Possible reasons:\n  • Disk is not bootable\n  • Disk is encrypted (check with: guestkit filesystems)\n  • Unsupported OS type\n  • Corrupted disk image\n\nTry:\n  guestkit filesystems {disk}")
     )]
     NoOsDetected { disk: String },
 
@@ -33,7 +33,7 @@ pub enum DiagnosticError {
     #[error("Failed to launch guestfs appliance")]
     #[diagnostic(
         code(guestkit::launch::failed),
-        help("Common causes:\n  1. KVM not available - check: ls -l /dev/kvm\n  2. Insufficient permissions - try: sudo guestctl ...\n  3. Corrupted disk image\n  4. QEMU not installed\n\nDebug:\n  Run with: guestctl -v inspect {disk}")
+        help("Common causes:\n  1. KVM not available - check: ls -l /dev/kvm\n  2. Insufficient permissions - try: sudo guestkit ...\n  3. Corrupted disk image\n  4. QEMU not installed\n\nDebug:\n  Run with: guestkit -v inspect {disk}")
     )]
     LaunchFailed {
         disk: String,
@@ -45,7 +45,7 @@ pub enum DiagnosticError {
     #[error("File not found: {path}")]
     #[diagnostic(
         code(guestkit::file::not_found),
-        help("Verify the file exists:\n  guestctl ls {disk} {parent}\n\nNote: Paths are case-sensitive")
+        help("Verify the file exists:\n  guestkit ls {disk} {parent}\n\nNote: Paths are case-sensitive")
     )]
     FileNotFound {
         disk: String,
@@ -57,7 +57,7 @@ pub enum DiagnosticError {
     #[error("Not a directory: {path}")]
     #[diagnostic(
         code(guestkit::dir::not_found),
-        help("Check the path exists:\n  guestctl ls {disk} {parent}\n\nList root:\n  guestctl ls {disk} /")
+        help("Check the path exists:\n  guestkit ls {disk} {parent}\n\nList root:\n  guestkit ls {disk} /")
     )]
     NotADirectory {
         disk: String,
@@ -69,7 +69,7 @@ pub enum DiagnosticError {
     #[error("Failed to list packages")]
     #[diagnostic(
         code(guestkit::packages::failed),
-        help("This OS may not have a supported package manager.\n\nSupported:\n  • dpkg (Debian/Ubuntu)\n  • RPM (Fedora/RHEL/SUSE)\n  • pacman (Arch Linux)\n\nCheck OS type:\n  guestctl inspect {disk}")
+        help("This OS may not have a supported package manager.\n\nSupported:\n  • dpkg (Debian/Ubuntu)\n  • RPM (Fedora/RHEL/SUSE)\n  • pacman (Arch Linux)\n\nCheck OS type:\n  guestkit inspect {disk}")
     )]
     PackageListFailed {
         disk: String,
@@ -101,7 +101,7 @@ pub enum DiagnosticError {
     #[error("Permission denied")]
     #[diagnostic(
         code(guestkit::permission::denied),
-        help("Most operations require root privileges.\n\nRun with sudo:\n  sudo guestctl {command} {disk}")
+        help("Most operations require root privileges.\n\nRun with sudo:\n  sudo guestkit {command} {disk}")
     )]
     PermissionDenied { command: String, disk: String },
 

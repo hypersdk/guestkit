@@ -61,10 +61,10 @@ impl Guestfs {
 **Impact:** Better IDE support and code completion
 **Effort:** Low (4-6 hours)
 
-Create `guestctl.pyi` stub file:
+Create `guestkit.pyi` stub file:
 
 ```python
-# guestctl.pyi
+# guestkit.pyi
 from typing import List, Dict, Optional
 
 class Guestfs:
@@ -116,9 +116,9 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 ```bash
 # Generate completion scripts
-guestctl completion bash > /etc/bash_completion.d/guestctl
-guestctl completion zsh > ~/.zsh/completion/_guestctl
-guestctl completion fish > ~/.config/fish/completions/guestctl.fish
+guestkit completion bash > /etc/bash_completion.d/guestkit
+guestkit completion zsh > ~/.zsh/completion/_guestkit
+guestkit completion fish > ~/.config/fish/completions/guestkit.fish
 ```
 
 ---
@@ -131,7 +131,7 @@ guestctl completion fish > ~/.config/fish/completions/guestctl.fish
 
 ```python
 import asyncio
-from guestctl import AsyncGuestfs
+from guestkit import AsyncGuestfs
 
 async def inspect_multiple_vms():
     async with AsyncGuestfs() as g:
@@ -194,7 +194,7 @@ kernel_packages = apps_df[apps_df['app_name'].str.contains('kernel')]
 
 ```python
 # Rich display in Jupyter
-from guestctl import Guestfs
+from guestkit import Guestfs
 
 g = Guestfs()
 g.add_drive_ro("disk.img")
@@ -237,23 +237,23 @@ for app in g.iter_applications(root):
 **Effort:** Medium (1-2 days)
 
 ```bash
-$ guestctl interactive disk.img
+$ guestkit interactive disk.img
 
-guestctl> inspect
+guestkit> inspect
 OS Type: linux
 Distribution: ubuntu
 Version: 22.04
 
-guestctl> mount /
+guestkit> mount /
 Mounted successfully
 
-guestctl> ls /etc
+guestkit> ls /etc
 [list of files]
 
-guestctl> cat /etc/hostname
+guestkit> cat /etc/hostname
 ubuntu-server
 
-guestctl> help
+guestkit> help
 Available commands: inspect, mount, ls, cat, download, ...
 ```
 
@@ -269,10 +269,10 @@ Available commands: inspect, mount, ls, cat, download, ...
 
 ```bash
 # Watch and re-inspect when disk changes
-guestctl inspect --watch disk.qcow2
+guestkit inspect --watch disk.qcow2
 
 # Auto-refresh every 5 seconds
-guestctl inspect --watch --interval 5 disk.qcow2
+guestkit inspect --watch --interval 5 disk.qcow2
 ```
 
 ### 3. Query Language
@@ -281,13 +281,13 @@ guestctl inspect --watch --interval 5 disk.qcow2
 
 ```bash
 # JQ-style queries
-guestctl query disk.img "select(.packages[] | select(.name | contains('kernel')))"
+guestkit query disk.img "select(.packages[] | select(.name | contains('kernel')))"
 
 # Find all files modified in last 24 hours
-guestctl query disk.img "files | where(.mtime > now - 1d)"
+guestkit query disk.img "files | where(.mtime > now - 1d)"
 
 # Get total disk usage by directory
-guestctl query disk.img "du / | group_by(.dir) | sum(.size)"
+guestkit query disk.img "du / | group_by(.dir) | sum(.size)"
 ```
 
 ### 4. Diff Enhancements
@@ -298,16 +298,16 @@ guestctl query disk.img "du / | group_by(.dir) | sum(.size)"
 # Currently basic diff, enhance with:
 
 # Side-by-side comparison
-guestctl diff --side-by-side vm1.img vm2.img
+guestkit diff --side-by-side vm1.img vm2.img
 
 # Ignore certain differences
-guestctl diff --ignore-packages --ignore-kernel vm1.img vm2.img
+guestkit diff --ignore-packages --ignore-kernel vm1.img vm2.img
 
 # Output as patch
-guestctl diff --format=patch vm1.img vm2.img > changes.patch
+guestkit diff --format=patch vm1.img vm2.img > changes.patch
 
 # Diff against baseline
-guestctl diff --baseline=golden.img vm1.img vm2.img vm3.img
+guestkit diff --baseline=golden.img vm1.img vm2.img vm3.img
 ```
 
 ### 5. Template Support
@@ -316,18 +316,18 @@ guestctl diff --baseline=golden.img vm1.img vm2.img vm3.img
 
 ```bash
 # Create template
-guestctl template create security-audit \
+guestkit template create security-audit \
   --profile security \
   --export html \
   --include-packages \
   --check-ssh-config
 
 # Apply template
-guestctl apply security-audit disk1.img disk2.img
+guestkit apply security-audit disk1.img disk2.img
 
 # Template library
-guestctl template list
-guestctl template show security-audit
+guestkit template list
+guestkit template show security-audit
 ```
 
 ---
@@ -340,10 +340,10 @@ guestctl template show security-audit
 
 ```bash
 # Current: sequential
-for disk in *.img; do guestctl inspect $disk; done
+for disk in *.img; do guestkit inspect $disk; done
 
 # Enhanced: parallel
-guestctl batch inspect --parallel 4 *.img
+guestkit batch inspect --parallel 4 *.img
 
 # Or use rayon internally
 ```
@@ -359,10 +359,10 @@ guestctl batch inspect --parallel 4 *.img
 
 ```bash
 # First run: full inspection (slow)
-guestctl inspect --cache disk.img
+guestkit inspect --cache disk.img
 
 # Subsequent runs: only check changes (fast)
-guestctl inspect --cache --incremental disk.img
+guestkit inspect --cache --incremental disk.img
 ```
 
 **Features:**
@@ -563,7 +563,7 @@ python scripts/generate_python_docs.py
 
 ```bash
 # Users can install via pip
-pip install guestctl
+pip install guestkit
 
 # No need to compile Rust
 ```
@@ -602,10 +602,10 @@ pip install guestctl
 FROM rust:latest
 COPY . /app
 RUN cargo build --release
-ENTRYPOINT ["guestctl"]
+ENTRYPOINT ["guestkit"]
 
 # Users can run
-docker run ghcr.io/ssahani/guestctl inspect disk.img
+docker run ghcr.io/ssahani/guestkit inspect disk.img
 ```
 
 **Variants:**
@@ -632,10 +632,10 @@ docker run ghcr.io/ssahani/guestctl inspect disk.img
 
 ```bash
 # Install as cargo subcommand
-cargo install cargo-guestctl
+cargo install cargo-guestkit
 
 # Use via cargo
-cargo guestctl inspect disk.img
+cargo guestkit inspect disk.img
 ```
 
 ---
@@ -648,13 +648,13 @@ cargo guestctl inspect disk.img
 
 ```rust
 // AWS support
-guestctl inspect s3://bucket/disk.vmdk
+guestkit inspect s3://bucket/disk.vmdk
 
 // Azure support
-guestctl inspect az://storage/disk.vhd
+guestkit inspect az://storage/disk.vhd
 
 // GCP support
-guestctl inspect gs://bucket/disk.qcow2
+guestkit inspect gs://bucket/disk.qcow2
 ```
 
 **Implementation:**
@@ -669,13 +669,13 @@ guestctl inspect gs://bucket/disk.qcow2
 
 ```bash
 # Inspect PXE configuration
-guestctl inspect-pxe disk.img
+guestkit inspect-pxe disk.img
 
 # Check initramfs
-guestctl inspect-initrd /boot/initrd.img
+guestkit inspect-initrd /boot/initrd.img
 
 # Analyze boot chain
-guestctl boot-chain disk.img
+guestkit boot-chain disk.img
 ```
 
 ### 3. Malware Scanning
@@ -684,13 +684,13 @@ guestctl boot-chain disk.img
 
 ```bash
 # Scan with YARA rules
-guestctl scan --rules malware.yar disk.img
+guestkit scan --rules malware.yar disk.img
 
 # ClamAV integration
-guestctl scan --clamav disk.img
+guestkit scan --clamav disk.img
 
 # Custom signatures
-guestctl scan --signatures custom.db disk.img
+guestkit scan --signatures custom.db disk.img
 ```
 
 ### 4. Configuration Drift Detection
@@ -710,7 +710,7 @@ forbidden = ["telnet", "rsh"]
 EOF
 
 # Check compliance
-guestctl check-config --expected expected.toml disk.img
+guestkit check-config --expected expected.toml disk.img
 ```
 
 ### 5. Backup Integration
@@ -719,13 +719,13 @@ guestctl check-config --expected expected.toml disk.img
 
 ```bash
 # Verify backup integrity
-guestctl verify-backup backup.img
+guestkit verify-backup backup.img
 
 # Compare with source
-guestctl verify-backup --compare source.img backup.img
+guestkit verify-backup --compare source.img backup.img
 
 # Schedule verification
-guestctl verify-backup --schedule daily backup.img
+guestkit verify-backup --schedule daily backup.img
 ```
 
 ---
@@ -739,7 +739,7 @@ guestctl verify-backup --schedule daily backup.img
 ```yaml
 # Ansible playbook
 - name: Inspect VM disk
-  guestctl_inspect:
+  guestkit_inspect:
     path: /var/lib/libvirt/images/vm.qcow2
     profile: security
   register: inspection
@@ -756,13 +756,13 @@ guestctl verify-backup --schedule daily backup.img
 
 ```hcl
 # Terraform
-data "guestctl_inspection" "vm" {
+data "guestkit_inspection" "vm" {
   disk_path = "/path/to/disk.img"
 }
 
 resource "aws_instance" "server" {
   # Use inspection data
-  instance_type = data.guestctl_inspection.vm.recommended_size
+  instance_type = data.guestkit_inspection.vm.recommended_size
 }
 ```
 
@@ -772,7 +772,7 @@ resource "aws_instance" "server" {
 
 ```rust
 // REST API server
-guestctl serve --port 8080
+guestkit serve --port 8080
 
 // Clients can call
 POST /api/v1/inspect
@@ -786,7 +786,7 @@ GET  /api/v1/packages/{disk_id}
 
 ```bash
 # Trigger webhook on inspection complete
-guestctl inspect --webhook https://api.example.com/hook disk.img
+guestkit inspect --webhook https://api.example.com/hook disk.img
 
 # Webhook payload includes full inspection data
 ```
@@ -797,9 +797,9 @@ guestctl inspect --webhook https://api.example.com/hook disk.img
 
 ```rust
 // Export metrics
-guestctl_disk_size_bytes{disk="vm1.img"} 10737418240
-guestctl_packages_total{disk="vm1.img"} 1847
-guestctl_inspection_duration_seconds{disk="vm1.img"} 5.2
+guestkit_disk_size_bytes{disk="vm1.img"} 10737418240
+guestkit_packages_total{disk="vm1.img"} 1847
+guestkit_inspection_duration_seconds{disk="vm1.img"} 5.2
 ```
 
 ---
@@ -856,7 +856,7 @@ git cliff --output CHANGELOG.md
 
 ```rust
 // Allow external plugins
-guestctl plugin install custom-analyzer
+guestkit plugin install custom-analyzer
 
 // Plugin API
 pub trait GuestkitPlugin {

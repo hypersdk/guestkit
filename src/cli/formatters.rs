@@ -2,7 +2,7 @@
 //! Output formatters for inspection results
 
 use anyhow::Result;
-use guestkit::guestfs::inspect_enhanced::*;
+use crate::guestfs::inspect_enhanced::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -291,13 +291,148 @@ impl OutputFormatter for CsvFormatter {
 }
 
 /// Get formatter for output format
-pub fn get_formatter(format: OutputFormat, pretty: bool) -> Box<dyn OutputFormatter> {
+pub fn get_formatter(format: OutputFormat, pretty: bool) -> Result<Box<dyn OutputFormatter>> {
     match format {
-        OutputFormat::Json => Box::new(JsonFormatter { pretty }),
-        OutputFormat::Yaml => Box::new(YamlFormatter),
-        OutputFormat::Text => panic!("Text format should use existing display logic"),
-        OutputFormat::Csv => Box::new(CsvFormatter {
+        OutputFormat::Json => Ok(Box::new(JsonFormatter { pretty })),
+        OutputFormat::Yaml => Ok(Box::new(YamlFormatter)),
+        OutputFormat::Text => Err(anyhow::anyhow!("Text format should use existing display logic")),
+        OutputFormat::Csv => Ok(Box::new(CsvFormatter {
             data_type: CsvDataType::Users,
-        }),
+        })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_output_format_from_str_text() {
+        let format = OutputFormat::from_str("text").unwrap();
+        assert_eq!(format, OutputFormat::Text);
+    }
+
+    #[test]
+    fn test_output_format_from_str_json() {
+        let format = OutputFormat::from_str("json").unwrap();
+        assert_eq!(format, OutputFormat::Json);
+    }
+
+    #[test]
+    fn test_output_format_from_str_yaml() {
+        assert_eq!(OutputFormat::from_str("yaml").unwrap(), OutputFormat::Yaml);
+        assert_eq!(OutputFormat::from_str("yml").unwrap(), OutputFormat::Yaml);
+    }
+
+    #[test]
+    fn test_output_format_from_str_csv() {
+        let format = OutputFormat::from_str("csv").unwrap();
+        assert_eq!(format, OutputFormat::Csv);
+    }
+
+    #[test]
+    fn test_output_format_from_str_case_insensitive() {
+        assert!(OutputFormat::from_str("JSON").is_ok());
+        assert!(OutputFormat::from_str("Text").is_ok());
+        assert!(OutputFormat::from_str("YAML").is_ok());
+        assert!(OutputFormat::from_str("CSV").is_ok());
+    }
+
+    #[test]
+    fn test_output_format_from_str_invalid() {
+        assert!(OutputFormat::from_str("xml").is_err());
+        assert!(OutputFormat::from_str("html").is_err());
+        assert!(OutputFormat::from_str("").is_err());
+    }
+
+    #[test]
+    fn test_version_info_creation() {
+        let version = VersionInfo {
+            major: 22,
+            minor: 4,
+        };
+
+        assert_eq!(version.major, 22);
+        assert_eq!(version.minor, 4);
+    }
+
+    #[test]
+    fn test_os_info_creation() {
+        let os = OsInfo {
+            root: "/dev/sda1".to_string(),
+            os_type: Some("linux".to_string()),
+            distribution: Some("ubuntu".to_string()),
+            product_name: Some("Ubuntu 22.04 LTS".to_string()),
+            architecture: Some("x86_64".to_string()),
+            version: Some(VersionInfo { major: 22, minor: 4 }),
+            hostname: Some("test-host".to_string()),
+            package_format: Some("deb".to_string()),
+            init_system: Some("systemd".to_string()),
+            package_manager: Some("apt".to_string()),
+            format: Some("qcow2".to_string()),
+        };
+
+        assert_eq!(os.root, "/dev/sda1");
+        assert_eq!(os.os_type, Some("linux".to_string()));
+        assert_eq!(os.distribution, Some("ubuntu".to_string()));
+        assert!(os.version.is_some());
+    }
+
+    #[test]
+    fn test_system_config_creation() {
+        let config = SystemConfig {
+            timezone: Some("UTC".to_string()),
+            locale: Some("en_US.UTF-8".to_string()),
+            selinux: Some("enforcing".to_string()),
+            cloud_init: Some(true),
+            vm_tools: Some(vec!["qemu-guest-agent".to_string()]),
+        };
+
+        assert_eq!(config.timezone, Some("UTC".to_string()));
+        assert_eq!(config.cloud_init, Some(true));
+        assert_eq!(config.vm_tools.as_ref().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_get_formatter_json_pretty() {
+        // Just ensure formatter can be created without panicking
+        let _formatter = get_formatter(OutputFormat::Json, true);
+        // Successfully created a JsonFormatter
+    }
+
+    #[test]
+    fn test_get_formatter_json_compact() {
+        // Just ensure formatter can be created without panicking
+        let _formatter = get_formatter(OutputFormat::Json, false);
+        // Successfully created a JsonFormatter
+    }
+
+    #[test]
+    fn test_get_formatter_yaml() {
+        // Just ensure formatter can be created without panicking
+        let _formatter = get_formatter(OutputFormat::Yaml, false);
+        // Successfully created a YamlFormatter
+    }
+
+    #[test]
+    fn test_get_formatter_csv() {
+        // Just ensure formatter can be created without panicking
+        let _formatter = get_formatter(OutputFormat::Csv, false);
+        // Successfully created a CsvFormatter
+    }
+
+    #[test]
+    fn test_windows_info_creation() {
+        let windows = WindowsInfo {
+            software: None,
+            services: None,
+            network_adapters: None,
+            updates: None,
+            event_logs: None,
+        };
+
+        assert!(windows.software.is_none());
+        assert!(windows.services.is_none());
     }
 }

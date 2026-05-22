@@ -25,8 +25,8 @@ Successfully developed a comprehensive, multi-access file exploration system for
 
 **Command:**
 ```bash
-guestctl explore disk.qcow2 [path]
-guestctl ex vm.qcow2 /var/log  # Short alias
+guestkit explore disk.qcow2 [path]
+guestkit ex vm.qcow2 /var/log  # Short alias
 ```
 
 **Features:**
@@ -46,9 +46,9 @@ guestctl ex vm.qcow2 /var/log  # Short alias
 
 **Command:**
 ```bash
-guestctl shell disk.qcow2
-guestctl> explore [path]
-guestctl> ex /etc  # Short alias
+guestkit shell disk.qcow2
+guestkit> explore [path]
+guestkit> ex /etc  # Short alias
 ```
 
 **Features:**
@@ -67,7 +67,7 @@ guestctl> ex /etc  # Short alias
 
 **Access:**
 ```bash
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 # Navigate to Files view (Tab or press '18')
 ```
 
@@ -345,7 +345,7 @@ pub struct FileEntry {
 
 ```bash
 # Quick config review
-guestctl explore disk.qcow2 /etc
+guestkit explore disk.qcow2 /etc
 
 # In explorer:
 # Navigate to ssh/
@@ -358,7 +358,7 @@ guestctl explore disk.qcow2 /etc
 
 ```bash
 # Find large logs
-guestctl explore disk.qcow2 /var/log
+guestkit explore disk.qcow2 /var/log
 
 # In explorer:
 # Press 's' twice (sort by size)
@@ -370,7 +370,7 @@ guestctl explore disk.qcow2 /var/log
 
 ```bash
 # TUI mode
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 
 # Navigate to Files view (Tab or '18')
 # Go to /var/www/html
@@ -383,7 +383,7 @@ guestctl tui disk.qcow2
 
 ```bash
 # TUI mode - full workflow
-guestctl tui disk.qcow2
+guestkit tui disk.qcow2
 
 # 1. Dashboard - system overview
 # 2. Security view - check findings

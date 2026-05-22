@@ -150,7 +150,7 @@ impl MockDisk {
 
         // Write some data blocks (sparse to save space)
         for i in (0..num_blocks).step_by(100) {
-            let block = vec![((i % 256) as u8); block_size as usize];
+            let block = vec![(i % 256) as u8; block_size as usize];
             file.write_all(&block)?;
 
             // Seek to next position for sparseness

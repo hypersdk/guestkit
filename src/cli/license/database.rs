@@ -23,6 +23,12 @@ pub struct LicenseDatabase {
     licenses: HashMap<String, LicenseInfo>,
 }
 
+impl Default for LicenseDatabase {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LicenseDatabase {
     pub fn new() -> Self {
         let mut db = Self {

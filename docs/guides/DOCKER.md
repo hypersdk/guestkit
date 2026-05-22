@@ -165,7 +165,7 @@ async def inspect_vm(file: UploadFile):
 
     # Run guestkit
     result = subprocess.run(
-        ["guestctl", "inspect", vm_path, "--output", "json"],
+        ["guestkit", "inspect", vm_path, "--output", "json"],
         capture_output=True,
         text=True
     )
@@ -225,7 +225,7 @@ spec:
       mountPath: /output
     - name: dev
       mountPath: /dev
-    command: ["guestctl", "inspect-batch", "/vms/*.qcow2", "--parallel", "4"]
+    command: ["guestkit", "inspect-batch", "/vms/*.qcow2", "--parallel", "4"]
   volumes:
   - name: vms
     hostPath:
@@ -317,14 +317,14 @@ docker system prune -a
 
 ```dockerfile
 # In Dockerfile, change the build command
-RUN cargo build --release --features ai --bin guestctl
+RUN cargo build --release --features ai --bin guestkit
 ```
 
 ### With Python Bindings
 
 ```dockerfile
 # In Dockerfile, change the build command
-RUN cargo build --release --features python-bindings --bin guestctl
+RUN cargo build --release --features python-bindings --bin guestkit
 ```
 
 ## Alternatives to Docker

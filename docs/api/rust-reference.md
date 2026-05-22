@@ -1,6 +1,6 @@
-# GuestCtl API Reference
+# GuestKit API Reference
 
-Complete API reference for guestctl v0.2.0 - a pure Rust implementation of -compatible APIs.
+Complete API reference for guestkit v0.3.2 - a pure Rust implementation of libguestfs-compatible APIs.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ Complete API reference for guestctl v0.2.0 - a pure Rust implementation of -comp
 ### Creating a GuestFS Handle
 
 ```rust
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -484,7 +484,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
   ```
 
-- **`mountpoints()`** - Get mountpoint mapping
+- **`mountpoints()`** - Get mountpoint mapping (returns `&HashMap<String, String>` reference, zero-copy)
 
 ### Mountpoint Management
 
@@ -726,14 +726,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Shell Execution
 
-- **`sh(command)`** - Execute shell command
+- **`sh(command)`** - Execute a simple shell command (no shell operators allowed)
   ```rust
-  let output = g.sh("df -h | grep /dev/sda")?;
+  let output = g.sh("cat /etc/hostname")?;
+  ```
+  Rejects commands containing `$(`, `` ` ``, `&&`, `||`, `|`, `;`, `>`, `>>`, `<<`, `\n`, `\r`. Use `command()` with explicit argument arrays for user-controlled input.
+
+- **`sh_raw(command)`** - Execute a shell command containing operators (trusted hardcoded strings only)
+  ```rust
+  // Only for developer-controlled hardcoded commands, never user input
+  let output = g.sh_raw("systemctl enable sshd || systemctl enable ssh")?;
   ```
 
 - **`sh_lines(command)`** - Execute shell command, return lines
   ```rust
-  let lines = g.sh_lines("ps aux | grep nginx")?;
+  let lines = g.sh_lines("ps aux")?;
   ```
 
 ---
@@ -901,7 +908,7 @@ fn process_vm(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 ## Complete Example
 
 ```rust
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize

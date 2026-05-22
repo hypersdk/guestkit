@@ -11,8 +11,8 @@ Welcome to the GuestKit documentation! This index helps you find the information
 - **[Worker Quickstart](guides/quickstart.md)** — Get the worker running in 5 minutes
 - **[CLI Guide](CLI-GUIDE.md)** — Complete CLI reference for guestkit-worker
 
-### For Guestctl Users
-- **[User Guides](user-guides/)** — Step-by-step tutorials for guestctl
+### For Guestkit Users
+- **[User Guides](user-guides/)** — Step-by-step tutorials for guestkit
 - **[Examples](../examples/)** — Code examples
 
 ### For Worker System
@@ -52,7 +52,7 @@ Core project files:
 Main navigation:
 - **[WORKER-INDEX.md](WORKER-INDEX.md)** — Worker system documentation index
 - **[INDEX.md](INDEX.md)** — This file (complete navigation)
-- **[README.md](README.md)** — Main docs index (guestctl)
+- **[README.md](README.md)** — Main docs index (guestkit)
 - **[FUTURE-ENHANCEMENTS.md](FUTURE-ENHANCEMENTS.md)** — Roadmap and planned features
 
 ---
@@ -148,7 +148,7 @@ Main navigation:
 
 ---
 
-## 📚 Guestctl CLI Documentation
+## 📚 Guestkit CLI Documentation
 
 ### User Guides
 End-user documentation and tutorials:
@@ -257,19 +257,19 @@ guestkit-worker submit -o guestkit.inspect -i vm.qcow2
 guestkit-worker list
 ```
 
-**Guestctl CLI:**
+**Guestkit CLI:**
 ```bash
 # Install
 cargo install guestkit
 
 # Inspect a VM
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Launch TUI
-guestctl tui vm.qcow2
+guestkit tui vm.qcow2
 
 # Interactive shell
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 ```
 
 ### Find Documentation
@@ -280,7 +280,7 @@ guestctl interactive vm.qcow2
 - REST API → [REST API Reference](phases/phase-4/PHASE-4.3-REST-API-TRANSPORT.md)
 - Metrics → [Prometheus Metrics](phases/phase-4/PHASE-4.2-PROMETHEUS-METRICS.md)
 
-**Guestctl:**
+**Guestkit:**
 - Installation → [User Guides: Getting Started](user-guides/getting-started.md)
 - CLI Usage → [User Guides: CLI Usage](user-guides/cli-usage.md)
 - TUI Help → [User Guides: TUI Guide](user-guides/tui-guide.md)

@@ -12,8 +12,8 @@ GuestKit is a production-ready toolkit for VM disk inspection and manipulation w
 [![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
 [![PyPI](https://img.shields.io/pypi/v/guestkit.svg)](https://pypi.org/project/guestkit/)
 [![Downloads](https://pepy.tech/badge/guestkit)](https://pepy.tech/project/guestkit)
-
 > **▶ [Watch the migration demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit)** (video + live dashboard) — then **[contact sales](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit)** for production. This repo is **Community Edition** only ([full platform →](https://zyvor.dev/?utm_source=github&utm_medium=guestkit))
+
 
 ---
 
@@ -98,27 +98,27 @@ cargo build --release
 
 **🎨 TUI dashboard:**
 ```bash
-guestctl tui vm.qcow2
+guestkit tui vm.qcow2
 ```
 
 **🔍 Inspect quickly:**
 ```bash
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 ```
 
 **🎮 Interactive shell:**
 ```bash
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 ```
 
 **📊 Run security profile:**
 ```bash
-guestctl profile security vm.qcow2
+guestkit profile security vm.qcow2
 ```
 
 **🔄 Batch process VMs:**
 ```bash
-guestctl inspect-batch *.qcow2 --parallel 4 --output json
+guestkit inspect-batch *.qcow2 --parallel 4 --output json
 ```
 
 ---
@@ -170,7 +170,7 @@ A professional dashboard for VM inspection with real-time visual analytics.
 ### Launch
 
 ```bash
-guestctl tui vm.qcow2
+guestkit tui vm.qcow2
 ```
 
 ### Keyboard Shortcuts
@@ -223,7 +223,7 @@ quick_jump_enabled = true
 
 **Inspect VM disk:**
 ```bash
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 ```
 
 **Sample output:**
@@ -260,55 +260,55 @@ guestctl inspect vm.qcow2
 
 ```bash
 # Get hostname
-guestctl inspect vm.qcow2 --output json | jq '.operating_systems[0].hostname'
+guestkit inspect vm.qcow2 --output json | jq '.operating_systems[0].hostname'
 
 # Get all network interfaces
-guestctl inspect vm.qcow2 --output json | jq '.network_interfaces[].name'
+guestkit inspect vm.qcow2 --output json | jq '.network_interfaces[].name'
 
 # Check if firewall is enabled
-guestctl inspect vm.qcow2 --output json | jq '.firewall.enabled'
+guestkit inspect vm.qcow2 --output json | jq '.firewall.enabled'
 
 # List all databases
-guestctl inspect vm.qcow2 --output json | jq '.databases[].name'
+guestkit inspect vm.qcow2 --output json | jq '.databases[].name'
 ```
 
 ### Export to Files
 
 ```bash
 # Export as JSON
-guestctl inspect vm.qcow2 --export report.json
+guestkit inspect vm.qcow2 --export report.json
 
 # Export as YAML
-guestctl inspect vm.qcow2 --export report.yaml
+guestkit inspect vm.qcow2 --export report.yaml
 
 # Export as HTML (requires --features html)
-guestctl inspect vm.qcow2 --export report.html
+guestkit inspect vm.qcow2 --export report.html
 
 # Export as PDF (requires --features pdf)
-guestctl inspect vm.qcow2 --export report.pdf
+guestkit inspect vm.qcow2 --export report.pdf
 ```
 
 ### Comparison
 
 ```bash
 # Compare two VM images
-guestctl diff vm-before.qcow2 vm-after.qcow2
+guestkit diff vm-before.qcow2 vm-after.qcow2
 
 # Output differences in JSON
-guestctl diff vm-before.qcow2 vm-after.qcow2 --output json
+guestkit diff vm-before.qcow2 vm-after.qcow2 --output json
 ```
 
 ### Batch Operations
 
 ```bash
 # Inspect multiple VMs in parallel
-guestctl inspect-batch *.qcow2 --parallel 4
+guestkit inspect-batch *.qcow2 --parallel 4
 
 # Batch with JSON output
-guestctl inspect-batch *.qcow2 --parallel 4 --output json > results.json
+guestkit inspect-batch *.qcow2 --parallel 4 --output json > results.json
 
 # Batch with caching (faster for repeated inspections)
-guestctl inspect-batch *.qcow2 --parallel 4 --cache
+guestkit inspect-batch *.qcow2 --parallel 4 --cache
 ```
 
 ---
@@ -320,7 +320,7 @@ The interactive shell provides a REPL environment for exploring and modifying VM
 ### Launch
 
 ```bash
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 ```
 
 ### Available Commands
@@ -359,27 +359,27 @@ guestctl interactive vm.qcow2
 ### Example Session
 
 ```
-guestctl> ls /etc
+guestkit> ls /etc
 total 1024 items
 drwxr-xr-x  2 root root  4096 fstab
 drwxr-xr-x  2 root root  4096 hostname
 ...
 
-guestctl> cat /etc/hostname
+guestkit> cat /etc/hostname
 webserver-prod
 
-guestctl> grep -r "database" /etc
+guestkit> grep -r "database" /etc
 /etc/my.cnf: database=prod
 /etc/postgresql/postgresql.conf: database_dir=/var/lib/postgresql
 
-guestctl> packages | grep postgresql
+guestkit> packages | grep postgresql
 postgresql-14.5-1.el8
 postgresql-client-14.5-1.el8
 
-guestctl> download /var/log/syslog ./syslog.txt
+guestkit> download /var/log/syslog ./syslog.txt
 Downloaded /var/log/syslog to ./syslog.txt (2.4 MB)
 
-guestctl> ai why is the database service failing?
+guestkit> ai why is the database service failing?
 Analyzing system configuration...
 
 Based on the inspection:
@@ -410,17 +410,17 @@ The `explore` command provides a visual, interactive file browser with rich feat
 **1. Direct CLI Access:**
 ```bash
 # Launch explorer directly
-guestctl explore vm.qcow2 [/optional/path]
+guestkit explore vm.qcow2 [/optional/path]
 
 # Start at specific directory
-guestctl explore vm.qcow2 /var/log
+guestkit explore vm.qcow2 /var/log
 ```
 
 **2. From Interactive Shell:**
 ```bash
-guestctl> explore /etc
+guestkit> explore /etc
 # or simply
-guestctl> ex
+guestkit> ex
 ```
 
 **3. TUI Files View:**
@@ -494,13 +494,13 @@ GuestKit includes built-in security analysis profiles that scan VM disks for sec
 
 ```bash
 # Run security profile
-guestctl profile security vm.qcow2
+guestkit profile security vm.qcow2
 
 # Run with JSON output
-guestctl profile security vm.qcow2 --output json
+guestkit profile security vm.qcow2 --output json
 
 # Run all profiles
-guestctl profile all vm.qcow2
+guestkit profile all vm.qcow2
 ```
 
 ### Example Output
@@ -561,55 +561,55 @@ Inspect → Diagnose → Generate Plan → Review → Approve → Execute
 
 ```bash
 # From a security profile (Phase 2 - coming soon)
-guestctl profile security vm.qcow2 --plan security-fixes.yaml
+guestkit profile security vm.qcow2 --plan security-fixes.yaml
 ```
 
 ### Preview the Plan
 
 ```bash
 # Human-readable preview
-guestctl plan preview security-fixes.yaml
+guestkit plan preview security-fixes.yaml
 
 # Show as unified diff
-guestctl plan preview security-fixes.yaml --diff
+guestkit plan preview security-fixes.yaml --diff
 
 # Summary only
-guestctl plan preview security-fixes.yaml --summary
+guestkit plan preview security-fixes.yaml --summary
 ```
 
 ### Export to Scripts
 
 ```bash
 # Export as bash script
-guestctl plan export security-fixes.yaml --format bash --output fixes.sh
+guestkit plan export security-fixes.yaml --format bash --output fixes.sh
 
 # Export as Ansible playbook
-guestctl plan export security-fixes.yaml --format ansible --output fixes.yml
+guestkit plan export security-fixes.yaml --format ansible --output fixes.yml
 
 # Export as JSON or YAML
-guestctl plan export security-fixes.yaml --format json --output fixes.json
+guestkit plan export security-fixes.yaml --format json --output fixes.json
 ```
 
 ### Validate and Apply
 
 ```bash
 # Validate plan (dry-run simulation)
-guestctl plan validate security-fixes.yaml
+guestkit plan validate security-fixes.yaml
 
 # Apply with interactive prompts
-guestctl plan apply security-fixes.yaml --interactive
+guestkit plan apply security-fixes.yaml --interactive
 
 # Apply with backup
-guestctl plan apply security-fixes.yaml --backup /backup/vm-state
+guestkit plan apply security-fixes.yaml --backup /backup/vm-state
 
 # Rollback if needed
-guestctl plan rollback /backup/vm-state --vm vm.qcow2
+guestkit plan rollback /backup/vm-state --vm vm.qcow2
 ```
 
 ### Show Statistics
 
 ```bash
-guestctl plan stats security-fixes.yaml
+guestkit plan stats security-fixes.yaml
 ```
 
 ### Key Features
@@ -643,7 +643,7 @@ export OPENAI_API_KEY='your-key-here'
 ### Use in Interactive Mode
 
 ```bash
-guestctl interactive vm.qcow2
+guestkit interactive vm.qcow2
 ```
 
 Example prompts:
@@ -658,7 +658,7 @@ ai is this VM ready for migration to KVM?
 ### Use in CLI
 
 ```bash
-guestctl inspect vm.qcow2 --ai-analyze
+guestkit inspect vm.qcow2 --ai-analyze
 ```
 
 ### Notes
@@ -790,16 +790,16 @@ GuestKit supports multiple export formats for reports and automation.
 
 ```bash
 # JSON (default)
-guestctl inspect vm.qcow2 --export report.json
+guestkit inspect vm.qcow2 --export report.json
 
 # YAML
-guestctl inspect vm.qcow2 --export report.yaml
+guestkit inspect vm.qcow2 --export report.yaml
 
 # HTML (requires --features html)
-guestctl inspect vm.qcow2 --export report.html
+guestkit inspect vm.qcow2 --export report.html
 
 # PDF (requires --features pdf)
-guestctl inspect vm.qcow2 --export report.pdf
+guestkit inspect vm.qcow2 --export report.pdf
 ```
 
 ### Export from TUI
@@ -812,10 +812,10 @@ guestctl inspect vm.qcow2 --export report.pdf
 ### Export from Interactive Shell
 
 ```
-guestctl> export json report.json
+guestkit> export json report.json
 Exported current inspection to report.json
 
-guestctl> export yaml report.yaml
+guestkit> export yaml report.yaml
 Exported current inspection to report.yaml
 ```
 
@@ -857,9 +857,9 @@ GuestKit auto-detects formats and uses the best available path.
 **Why:** Built into Linux, minimal moving parts.
 
 ```bash
-guestctl inspect disk.raw
-guestctl inspect ubuntu.img
-guestctl inspect debian.iso
+guestkit inspect disk.raw
+guestkit inspect ubuntu.img
+guestkit inspect debian.iso
 ```
 
 ### NBD (Fallback for Advanced Formats)
@@ -868,10 +868,10 @@ guestctl inspect debian.iso
 **Why:** Common virtual disk formats need QEMU helpers for block access.
 
 ```bash
-guestctl inspect vm.qcow2
-guestctl inspect windows.vmdk
-guestctl inspect virtualbox.vdi
-guestctl inspect hyperv.vhdx
+guestkit inspect vm.qcow2
+guestkit inspect windows.vmdk
+guestkit inspect virtualbox.vdi
+guestkit inspect hyperv.vhdx
 ```
 
 ### Performance Tips
@@ -879,17 +879,17 @@ guestctl inspect hyperv.vhdx
 **For repeated inspections, convert to RAW:**
 ```bash
 qemu-img convert -O raw vm.qcow2 vm.raw
-guestctl inspect vm.raw
+guestkit inspect vm.raw
 ```
 
 **Use caching for batch operations:**
 ```bash
-guestctl inspect-batch *.qcow2 --cache
+guestkit inspect-batch *.qcow2 --cache
 ```
 
 **Parallel processing:**
 ```bash
-guestctl inspect-batch *.qcow2 --parallel 8
+guestkit inspect-batch *.qcow2 --parallel 8
 ```
 
 ---

@@ -16,43 +16,43 @@ Generate infrastructure-as-code templates from disk images, enabling automated r
 ### Generate Terraform Template (AWS)
 
 ```bash
-guestctl blueprint fedora.qcow2 --format terraform --output main.tf
+guestkit blueprint fedora.qcow2 --format terraform --output main.tf
 ```
 
 ### Terraform for Azure
 
 ```bash
-guestctl blueprint ubuntu.img --format terraform --provider azure --output azure.tf
+guestkit blueprint ubuntu.img --format terraform --provider azure --output azure.tf
 ```
 
 ### Terraform for GCP
 
 ```bash
-guestctl blueprint debian.qcow2 --format terraform --provider gcp --output gcp.tf
+guestkit blueprint debian.qcow2 --format terraform --provider gcp --output gcp.tf
 ```
 
 ### Generate Ansible Playbook
 
 ```bash
-guestctl blueprint centos.img --format ansible --output playbook.yml
+guestkit blueprint centos.img --format ansible --output playbook.yml
 ```
 
 ### Generate Kubernetes Manifests
 
 ```bash
-guestctl blueprint app.qcow2 --format kubernetes --output deployment.yaml
+guestkit blueprint app.qcow2 --format kubernetes --output deployment.yaml
 ```
 
 ### Generate Docker Compose
 
 ```bash
-guestctl blueprint webapp.img --format compose --output docker-compose.yml
+guestkit blueprint webapp.img --format compose --output docker-compose.yml
 ```
 
 ### Verbose Output
 
 ```bash
-guestctl blueprint image.qcow2 --format terraform --verbose
+guestkit blueprint image.qcow2 --format terraform --verbose
 ```
 
 ## Output Formats
@@ -462,10 +462,10 @@ Instance type selection:
 
 ```bash
 # Step 1: Analyze the VM
-guestctl blueprint prod-vm.qcow2 --format terraform --provider aws --verbose
+guestkit blueprint prod-vm.qcow2 --format terraform --provider aws --verbose
 
 # Step 2: Generate Terraform
-guestctl blueprint prod-vm.qcow2 --format terraform --provider aws --output main.tf
+guestkit blueprint prod-vm.qcow2 --format terraform --provider aws --output main.tf
 
 # Step 3: Review and customize
 vi main.tf
@@ -480,7 +480,7 @@ terraform apply
 
 ```bash
 # Step 1: Generate Docker Compose
-guestctl blueprint app-vm.qcow2 --format compose --output docker-compose.yml
+guestkit blueprint app-vm.qcow2 --format compose --output docker-compose.yml
 
 # Step 2: Build container image (manual step)
 # Convert VM to container using containerization tools
@@ -496,7 +496,7 @@ docker-compose up -d
 
 ```bash
 # Step 1: Generate manifests
-guestctl blueprint app.qcow2 --format kubernetes --output k8s.yaml
+guestkit blueprint app.qcow2 --format kubernetes --output k8s.yaml
 
 # Step 2: Customize image and domain
 sed -i 's/your-registry\/image:latest/gcr.io\/myproject\/app:v1/' k8s.yaml
@@ -514,7 +514,7 @@ kubectl get svc -n webapp
 
 ```bash
 # Step 1: Generate Ansible playbook
-guestctl blueprint server.qcow2 --format ansible --output playbook.yml
+guestkit blueprint server.qcow2 --format ansible --output playbook.yml
 
 # Step 2: Create inventory
 cat > inventory <<EOF
@@ -547,7 +547,7 @@ jobs:
 
       - name: Generate Terraform
         run: |
-          guestctl blueprint images/prod.qcow2 \
+          guestkit blueprint images/prod.qcow2 \
             --format terraform \
             --provider aws \
             --output terraform/main.tf
@@ -571,7 +571,7 @@ jobs:
 generate-blueprint:
   stage: build
   script:
-    - guestctl blueprint $VM_IMAGE --format terraform --output main.tf
+    - guestkit blueprint $VM_IMAGE --format terraform --output main.tf
     - terraform fmt main.tf
   artifacts:
     paths:
@@ -587,7 +587,7 @@ Always review and customize generated templates:
 
 ```bash
 # Generate blueprint
-guestctl blueprint vm.qcow2 --format terraform --output main.tf
+guestkit blueprint vm.qcow2 --format terraform --output main.tf
 
 # Review carefully
 less main.tf
@@ -654,7 +654,7 @@ terraform {
 
 ```bash
 # Generate baseline
-guestctl blueprint vm.qcow2 --format terraform --output main.tf
+guestkit blueprint vm.qcow2 --format terraform --output main.tf
 
 # Update instance type
 sed -i 's/t3.micro/t3.large/' main.tf
@@ -699,11 +699,11 @@ resource "aws_autoscaling_group" "main" {
 
 ```bash
 # Verify image is valid
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Try different format
 qemu-img convert vm.vmdk vm.qcow2
-guestctl blueprint vm.qcow2 --format terraform
+guestkit blueprint vm.qcow2 --format terraform
 ```
 
 ### Issue: Missing services
@@ -712,7 +712,7 @@ The blueprint generator detects common services. For custom services:
 
 ```bash
 # Generate baseline
-guestctl blueprint vm.qcow2 --format ansible --output playbook.yml
+guestkit blueprint vm.qcow2 --format ansible --output playbook.yml
 
 # Manually add your service
 vi playbook.yml
@@ -756,10 +756,10 @@ ingress {
 
 ```bash
 # Generate SBOM
-guestctl inventory vm.qcow2 --format spdx --output sbom.json
+guestkit inventory vm.qcow2 --format spdx --output sbom.json
 
 # Generate blueprint
-guestctl blueprint vm.qcow2 --format terraform --output main.tf
+guestkit blueprint vm.qcow2 --format terraform --output main.tf
 
 # Use SBOM data to tag resources
 ```
@@ -769,7 +769,7 @@ guestctl blueprint vm.qcow2 --format terraform --output main.tf
 ```bash
 # Generate for each region
 for region in us-east-1 us-west-2 eu-west-1; do
-  guestctl blueprint vm.qcow2 \
+  guestkit blueprint vm.qcow2 \
     --format terraform \
     --provider aws \
     --output ${region}.tf
@@ -783,10 +783,10 @@ done
 
 ```bash
 # Generate blue environment
-guestctl blueprint vm.qcow2 --format terraform --output blue.tf
+guestkit blueprint vm.qcow2 --format terraform --output blue.tf
 
 # Generate green environment
-guestctl blueprint vm.qcow2 --format terraform --output green.tf
+guestkit blueprint vm.qcow2 --format terraform --output green.tf
 
 # Update tags
 sed -i 's/Environment = "production"/Environment = "blue"/' blue.tf

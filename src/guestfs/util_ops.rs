@@ -18,8 +18,8 @@ impl Guestfs {
             eprintln!("guestfs: version_info");
         }
 
-        // Return guestctl version
-        Ok((0, 1, 0, "guestctl".to_string()))
+        // Return guestkit version
+        Ok((0, 1, 0, "guestkit".to_string()))
     }
 
     /// Get default QEMU binary
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_util_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

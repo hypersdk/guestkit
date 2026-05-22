@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! CLI module for guestctl
+//! CLI module for guestkit
 
 pub mod ai;
 pub mod batch;
@@ -26,9 +26,3 @@ pub mod validate;
 
 pub use batch::*;
 pub use interactive::*;
-// Parallel inspection features - currently unused but available for future use
-#[allow(unused_imports)]
-pub use parallel::{
-    inspect_batch, inspect_batch_with_workers, InspectionConfig, InspectionResult,
-    ParallelInspector, ProgressiveInspector,
-};

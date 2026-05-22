@@ -46,7 +46,7 @@ pub enum PaperSize {
 }
 
 impl PaperSize {
-    fn to_mm(&self) -> (f32, f32) {
+    fn to_mm(self) -> (f32, f32) {
         match self {
             PaperSize::A4 => (210.0, 297.0),
             PaperSize::Letter => (215.9, 279.4),
@@ -130,11 +130,11 @@ impl PdfExporter {
         data: &InspectionData,
     ) -> std::io::Result<()> {
         let (width_mm, height_mm) = self.options.paper_size.to_mm();
-        let width_pt = Mm(width_mm).into();
-        let height_pt = Mm(height_mm).into();
+        let width_pt = Mm(width_mm);
+        let height_pt = Mm(height_mm);
 
         let (doc, page1, layer1) = PdfDocument::new(
-            &format!("VM Inspection Report - {}", data.hostname),
+            format!("VM Inspection Report - {}", data.hostname),
             width_pt,
             height_pt,
             "Layer 1",
@@ -142,15 +142,15 @@ impl PdfExporter {
 
         // Use built-in font (Helvetica)
         let font = doc.add_builtin_font(BuiltinFont::Helvetica)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let current_layer = doc.get_page(page1).get_layer(layer1);
 
         // Add title
-        let title = format!("VM Inspection Report");
+        let title = "VM Inspection Report".to_string();
         current_layer.use_text(&title, self.options.font_size + 8.0, Mm(20.0), Mm(height_mm - 30.0), &bold_font);
 
         let subtitle = format!("{} - {}", data.hostname, chrono::Local::now().format("%Y-%m-%d"));
@@ -276,7 +276,7 @@ impl PdfExporter {
 
         // Save the PDF
         doc.save(&mut BufWriter::new(File::create(output_path)?))
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         Ok(())
     }

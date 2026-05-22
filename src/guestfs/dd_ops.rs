@@ -137,7 +137,7 @@ impl Guestfs {
         let host_path = self.resolve_guest_path(directory)?;
 
         // Create a large file filled with zeros until disk is full
-        let temp_file = host_path.join("guestctl_zero_temp");
+        let temp_file = host_path.join("guestkit_zero_temp");
 
         let _output = Command::new("dd")
             .arg("if=/dev/zero")
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_dd_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

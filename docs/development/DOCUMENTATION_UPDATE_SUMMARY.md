@@ -1,6 +1,6 @@
 # Documentation Update Summary - v0.3.1
 
-This document summarizes all documentation updates made for guestctl v0.3.1 release.
+This document summarizes all documentation updates made for guestkit v0.3.1 release.
 
 ## Version Updates
 
@@ -274,4 +274,4 @@ This documentation update successfully documents the v0.3.1 release with:
 - **100% version consistency** across all files
 - **Enhanced user experience** with clearer, more organized documentation
 
-All documentation now accurately reflects the current state of guestctl v0.3.1, with special emphasis on the new killer summary view, Windows registry parsing, LVM management, and VM migration capabilities.
+All documentation now accurately reflects the current state of guestkit v0.3.1, with special emphasis on the new killer summary view, Windows registry parsing, LVM management, and VM migration capabilities.

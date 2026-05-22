@@ -65,7 +65,7 @@ impl BinaryCache {
     pub fn new() -> Result<Self> {
         let cache_dir = dirs::cache_dir()
             .ok_or_else(|| anyhow!("Could not find cache directory"))?
-            .join("guestctl")
+            .join("guestkit")
             .join("binary");
 
         fs::create_dir_all(&cache_dir)?;
@@ -206,11 +206,11 @@ cargo install flamegraph
 cargo install cargo-profdata
 
 # Generate flamegraph
-sudo cargo flamegraph --bin guestctl -- inspect test.qcow2
+sudo cargo flamegraph --bin guestkit -- inspect test.qcow2
 
 # Generate callgrind profile
 valgrind --tool=callgrind --callgrind-out-file=callgrind.out \
-  target/release/guestctl inspect test.qcow2
+  target/release/guestkit inspect test.qcow2
 
 # Analyze with kcachegrind
 kcachegrind callgrind.out
@@ -314,7 +314,7 @@ impl OptimizedLoopDevice {
 // benches/performance.rs
 
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 fn benchmark_inspection(c: &mut Criterion) {
     let mut group = c.benchmark_group("inspection");
@@ -773,7 +773,7 @@ impl HtmlReport<'_> {
 
 ```bash
 # Generate HTML report with charts
-sudo guestctl inspect vm.qcow2 --export html --output report.html
+sudo guestkit inspect vm.qcow2 --export html --output report.html
 
 # Open in browser
 xdg-open report.html
@@ -796,7 +796,7 @@ impl PdfExporter {
     pub fn export(html_path: &str, pdf_path: &str) -> Result<()> {
         // First generate HTML
         let html_report = HtmlReport::generate()?;
-        let temp_html = "/tmp/guestctl-report.html";
+        let temp_html = "/tmp/guestkit-report.html";
         std::fs::write(temp_html, html_report)?;
 
         // Convert HTML to PDF
@@ -822,7 +822,7 @@ impl PdfExporter {
 
 ```bash
 # Generate PDF report
-sudo guestctl inspect vm.qcow2 --export pdf --output report.pdf
+sudo guestkit inspect vm.qcow2 --export pdf --output report.pdf
 ```
 
 **Timeline:** Week 2 of March
@@ -993,7 +993,7 @@ Use this checklist for VM migration:
 
 ```bash
 # Generate Markdown report
-sudo guestctl inspect vm.qcow2 --export markdown --output report.md
+sudo guestkit inspect vm.qcow2 --export markdown --output report.md
 
 # View in GitHub/GitLab (Mermaid diagrams render automatically)
 # Or use markdown viewer
@@ -1055,7 +1055,7 @@ pub fn export_report(args: ExportArgs) -> Result<()> {
         ExportFormat::Pdf => {
             // Generate HTML first, then PDF
             let html = HtmlReport::new(&inspection, args.charts);
-            let temp_html = "/tmp/guestctl-temp.html";
+            let temp_html = "/tmp/guestkit-temp.html";
             html.generate(temp_html)?;
             PdfExporter::export(temp_html, &args.output)?;
         }
@@ -1206,7 +1206,7 @@ mod tests {
 ```rust
 // tests/integration_basic.rs
 
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 use tempfile::TempDir;
 
 #[test]
@@ -1268,7 +1268,7 @@ use predicates::prelude::*;
 
 #[test]
 fn test_inspect_command() {
-    let mut cmd = Command::cargo_bin("guestctl").unwrap();
+    let mut cmd = Command::cargo_bin("guestkit").unwrap();
 
     cmd.arg("inspect")
         .arg("test.qcow2")
@@ -1280,7 +1280,7 @@ fn test_inspect_command() {
 
 #[test]
 fn test_export_html() {
-    let mut cmd = Command::cargo_bin("guestctl").unwrap();
+    let mut cmd = Command::cargo_bin("guestkit").unwrap();
 
     cmd.arg("inspect")
         .arg("test.qcow2")
@@ -1297,7 +1297,7 @@ fn test_export_html() {
 
 #[test]
 fn test_json_output() {
-    let mut cmd = Command::cargo_bin("guestctl").unwrap();
+    let mut cmd = Command::cargo_bin("guestkit").unwrap();
 
     cmd.arg("inspect")
         .arg("test.qcow2")
@@ -1354,7 +1354,7 @@ proptest! {
 
 #![no_main]
 use libfuzzer_sys::fuzz_target;
-use guestctl::disk::PartitionTable;
+use guestkit::disk::PartitionTable;
 
 fuzz_target!(|data: &[u8]| {
     // Should never panic on any input

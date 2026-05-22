@@ -2,7 +2,7 @@
 
 Documentation for the **guestkit-worker** distributed job processing system.
 
-**Main Docs**: See [README.md](README.md) for guestctl CLI tool documentation.
+**Main Docs**: See [README.md](README.md) for guestkit CLI tool documentation.
 
 ---
 
@@ -205,7 +205,7 @@ curl http://localhost:9090/metrics | grep guestkit
 
 ## Navigation
 
-- **[← Main Docs](README.md)** - Guestctl CLI documentation
+- **[← Main Docs](README.md)** - Guestkit CLI documentation
 - **[↑ Index](INDEX.md)** - Complete documentation index
 
 ---

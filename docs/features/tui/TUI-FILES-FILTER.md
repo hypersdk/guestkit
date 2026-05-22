@@ -522,7 +522,7 @@ The TUI Files view now provides powerful search capabilities, making file discov
 6. ✅ **Real-time file filtering (/ key)** - NEW!
 
 **All Three Access Methods Fully Featured:**
-- Direct CLI: `guestctl explore disk.qcow2`
+- Direct CLI: `guestkit explore disk.qcow2`
 - Shell Mode: `explore` in interactive shell
 - TUI View: Navigate to Files tab in TUI
 

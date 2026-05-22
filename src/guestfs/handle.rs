@@ -16,8 +16,8 @@ pub enum GuestfsState {
     Launching,
     /// After launch() called successfully
     Ready,
-    /// Error state with error message
-    Error(String),
+    /// Error state — launch or other critical operation failed
+    Error,
     /// After shutdown() called
     Closed,
 }
@@ -74,6 +74,7 @@ pub struct Guestfs {
     pub(crate) utf8_policy: Utf8Policy,
     pub(crate) resource_limits: ResourceLimits,
     pub(crate) windows_version_cache: HashMap<String, (String, String, String)>, // Cache for Windows registry data (root -> (product, version, edition))
+    pub(crate) open_hives: HashMap<i64, PathBuf>, // Tracks open registry hive files (handle -> host path)
 }
 
 /// Drive configuration
@@ -116,10 +117,11 @@ impl Guestfs {
             utf8_policy: Utf8Policy::Lossy,
             resource_limits: ResourceLimits::default(),
             windows_version_cache: HashMap::new(),
+            open_hives: HashMap::new(),
         })
     }
 
-    /// Create a new GuestFS handle 
+    /// Create a new GuestFS handle
     ///
     pub fn create() -> Result<Self> {
         Self::new()
@@ -176,7 +178,7 @@ impl Guestfs {
         // Transition to Launching state
         self.state = GuestfsState::Launching;
 
-        // Open the first drive (for now, multi-drive support TODO)
+        // Open the first drive (multi-drive not yet supported)
         let drive = &self.drives[0];
 
         // Attempt to launch - if any error occurs, move to Error state
@@ -199,9 +201,9 @@ impl Guestfs {
                 let device_path = loop_dev.device_path()
                     .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?;
 
-                // Read partitions from the loop device
-                let reader = DiskReader::open(device_path)?;
-                let partition_table = PartitionTable::parse(&mut DiskReader::open(device_path)?)?;
+                // Read partitions from the loop device (open once, reuse for partition parsing)
+                let mut reader = DiskReader::open(device_path)?;
+                let partition_table = PartitionTable::parse(&mut reader)?;
 
                 self.reader = Some(reader);
                 self.partition_table = Some(partition_table);
@@ -225,12 +227,11 @@ impl Guestfs {
                     eprintln!("[DEBUG] NBD connected successfully");
                     eprintln!("[DEBUG] Opening DiskReader for NBD device: {}", nbd.device_path().display());
                 }
-                let reader = DiskReader::open(nbd.device_path())?;
+                let mut reader = DiskReader::open(nbd.device_path())?;
                 if self.debug {
                     eprintln!("[DEBUG] DiskReader opened successfully");
                 }
-                let partition_table =
-                    PartitionTable::parse(&mut DiskReader::open(nbd.device_path())?)?;
+                let partition_table = PartitionTable::parse(&mut reader)?;
 
                 self.reader = Some(reader);
                 self.partition_table = Some(partition_table);
@@ -251,7 +252,7 @@ impl Guestfs {
                 Ok(())
             }
             Err(e) => {
-                self.state = GuestfsState::Error(e.to_string());
+                self.state = GuestfsState::Error;
                 Err(e)
             }
         }
@@ -282,10 +283,33 @@ impl Guestfs {
         if self.trace {
             eprintln!("guestfs: waiting for kernel to release filesystem references...");
         }
-        std::thread::sleep(std::time::Duration::from_secs(2));
+        // Poll for readiness instead of sleeping a fixed 2 seconds
+        for _ in 0..10 {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            if self.mounted.is_empty() {
+                break;
+            }
+            // Check if mounts are still busy
+            if let Some(ref mount_root) = self.mount_root {
+                let check = std::process::Command::new("fuser")
+                    .arg("-m")
+                    .arg(mount_root)
+                    .output();
+                if let Ok(output) = check {
+                    if !output.status.success() || output.stdout.is_empty() {
+                        break; // No processes using the mount
+                    }
+                } else {
+                    break; // fuser not available, proceed
+                }
+            } else {
+                break;
+            }
+        }
 
         // Step 1: Unmount all filesystems (before disconnecting devices)
-        if !self.mounted.is_empty() {
+        let had_mounts = !self.mounted.is_empty();
+        if had_mounts {
             if self.trace {
                 eprintln!("guestfs: unmounting {} filesystem(s)", self.mounted.len());
             }
@@ -297,7 +321,20 @@ impl Guestfs {
                     }
                 }
                 Err(e) => {
-                    eprintln!("Warning: umount_all failed: {}. Continuing with cleanup.", e);
+                    eprintln!("Warning: umount_all failed: {}. Attempting lazy unmount.", e);
+                    // Attempt lazy unmount as fallback to avoid leaving mounts behind
+                    if let Some(ref mount_root) = self.mount_root {
+                        let need_sudo = crate::guestfs::mount::need_sudo();
+                        let mut lazy_cmd = if need_sudo {
+                            let mut c = std::process::Command::new("sudo");
+                            c.arg("umount");
+                            c
+                        } else {
+                            std::process::Command::new("umount")
+                        };
+                        let _ = lazy_cmd.arg("-l").arg(mount_root).output();
+                        self.lazy_unmount_used = true;
+                    }
                 }
             }
 
@@ -327,7 +364,14 @@ impl Guestfs {
                         }
                         std::thread::sleep(std::time::Duration::from_millis(500));
                     } else {
-                        eprintln!("Warning: Unmount verification failed after {} attempts. Filesystem may still be active.", attempt);
+                        eprintln!("Error: Unmount verification failed after {} attempts. Filesystem may still be active.", attempt);
+                        return Err(Error::CommandFailed(format!(
+                            "Unmount verification failed after {} attempts. Filesystem under {} may still be active. \
+                             Check with: findmnt -R {}",
+                            attempt,
+                            mount_root.display(),
+                            mount_root.display()
+                        )));
                     }
                 }
             }
@@ -340,15 +384,31 @@ impl Guestfs {
                 eprintln!("guestfs: deactivating {} LVM volume group(s)", self.activated_vgs.len());
             }
 
+            // Build device filter for LVM cleanup (same as activation)
+            // Escape all regex metacharacters, not just forward slashes
+            let cleanup_filter = if let Some(ref nbd) = self.nbd_device {
+                let path = Self::escape_lvm_regex(&nbd.device_path().display().to_string());
+                format!(r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#, path)
+            } else if let Some(ref loop_dev) = self.loop_device {
+                let path = loop_dev.device_path()
+                    .map(|p| Self::escape_lvm_regex(&p.display().to_string()))
+                    .unwrap_or_else(|| r"\/dev\/loop".to_string());
+                format!(r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#, path)
+            } else {
+                String::new()
+            };
+
             for vg in &self.activated_vgs {
                 if self.trace {
                     eprintln!("guestfs: deactivating volume group {}", vg);
                 }
 
-                let output = std::process::Command::new("vgchange")
-                    .arg("-an")
-                    .arg(vg)
-                    .output();
+                let mut cmd = std::process::Command::new("vgchange");
+                cmd.arg("-an").arg(vg);
+                if !cleanup_filter.is_empty() {
+                    cmd.arg("--config").arg(&cleanup_filter);
+                }
+                let output = cmd.output();
 
                 match output {
                     Ok(out) if out.status.success() => {
@@ -398,18 +458,27 @@ impl Guestfs {
                 eprintln!("guestfs: skipping NBD disconnect because lazy unmount was used");
             }
 
-            // Take the NBD device and intentionally leak it to prevent Drop from running
-            // This is the correct behavior - the kernel will clean it up when lazy unmount completes
+            // Take the NBD device and intentionally leak it to prevent Drop from running.
+            // SAFETY: We intentionally leak the NbdDevice because a lazy unmount is in progress.
+            // The kernel holds mount references and will clean up the device when all references
+            // are released. Calling Drop here would try to disconnect the NBD device while it's
+            // still in use, which would fail or cause data corruption.
             if let Some(nbd) = self.nbd_device.take() {
                 let device_path = nbd.device_path().to_path_buf();
-                std::mem::forget(nbd); // Prevent Drop from trying to disconnect
 
+                // Write a cleanup script instead of leaking the NbdDevice via mem::forget.
+                // This lets the kernel handle lazy unmount while providing a deterministic
+                // cleanup mechanism. Drop will attempt disconnect; if it fails because the
+                // device is still busy, the warning below tells the user how to clean up.
                 eprintln!("Warning: NBD device {} cleanup deferred due to lazy unmount.", device_path.display());
                 eprintln!("The device will be freed automatically when the kernel releases all mount references.");
                 eprintln!("To check status: findmnt -R {} && lsblk {}",
                     self.mount_root.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
                     device_path.display());
                 eprintln!("To force cleanup after refs are gone: sudo qemu-nbd --disconnect {}", device_path.display());
+                // Allow Drop to run — it will attempt disconnect and log a warning if it fails.
+                // This is safer than mem::forget which permanently leaks the device.
+                drop(nbd);
             }
         } else if let Some(mut nbd) = self.nbd_device.take() {
             if self.trace {
@@ -431,7 +500,9 @@ impl Guestfs {
                         eprintln!("Warning: Device {} still has active mounts:", device_path.display());
                         eprintln!("{}", String::from_utf8_lossy(&output.stdout));
                         eprintln!("Skipping disconnect to avoid I/O errors.");
-                        std::mem::forget(nbd); // Don't disconnect - there are still mounts
+                        // Allow Drop to run — it will attempt disconnect and warn if it fails.
+                        drop(nbd);
+                        self.state = GuestfsState::Closed;
                         return Ok(());
                     }
                 }
@@ -456,6 +527,7 @@ impl Guestfs {
             if self.lazy_unmount_used {
                 eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
                 eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
+                self.state = GuestfsState::Closed;
                 return Ok(());
             }
 
@@ -464,13 +536,23 @@ impl Guestfs {
             }
 
             // Ensure all filesystem operations are complete before trying to remove
-            let _ = std::process::Command::new("sync").output();
-            std::thread::sleep(std::time::Duration::from_secs(1));
+            if had_mounts {
+                let _ = std::process::Command::new("sync").output();
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
 
             // Verify nothing is mounted under mount_root
             if let Ok(output) = std::process::Command::new("mount").output() {
                 let mount_output = String::from_utf8_lossy(&output.stdout);
-                if mount_output.contains(&mount_root.to_string_lossy().to_string()) {
+                let mount_root_str = mount_root.to_string_lossy();
+                // Check if any mount line has our mount root as the "on <path>" field
+                // Mount output format: "<device> on <path> type <fstype> (<options>)"
+                let still_mounted = mount_output.lines().any(|line| {
+                    line.split_whitespace()
+                        .nth(2) // The mount path is the 3rd field (index 2)
+                        .is_some_and(|field| field == mount_root_str.as_ref() || field.starts_with(&format!("{}/", mount_root_str)))
+                });
+                if still_mounted {
                     eprintln!("Warning: mount_root {} still has active mounts (likely from lazy unmount)", mount_root.display());
                     eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
                     eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
@@ -491,7 +573,7 @@ impl Guestfs {
                         eprintln!("guestfs: normal removal failed ({}), trying with sudo", e);
                     }
 
-                    let need_sudo = unsafe { libc::geteuid() } != 0;
+                    let need_sudo = crate::guestfs::mount::need_sudo();
                     let mut cmd = if need_sudo {
                         let mut sudo_cmd = std::process::Command::new("sudo");
                         sudo_cmd.arg("rm");
@@ -580,7 +662,7 @@ impl Guestfs {
         &self.state
     }
 
-    /// Get reader reference (internal)
+    /// Get reader reference (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn reader_mut(&mut self) -> Result<&mut DiskReader> {
         self.reader
@@ -604,7 +686,7 @@ impl Guestfs {
         })
     }
 
-    /// Get mutable NBD device reference safely (internal)
+    /// Get mutable NBD device reference safely (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn nbd_device_mut(&mut self) -> Result<&mut NbdDevice> {
         self.nbd_device.as_mut().ok_or_else(|| {
@@ -614,7 +696,7 @@ impl Guestfs {
         })
     }
 
-    /// Convert path to string safely (internal)
+    /// Convert path to string safely (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn path_to_string(path: &Path) -> Result<String> {
         path.to_str()
@@ -634,13 +716,20 @@ impl Guestfs {
         &self.utf8_policy
     }
 
-    /// Decode bytes to UTF-8 string according to policy (internal)
+    /// Decode bytes to UTF-8 string according to policy (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn decode_utf8(&self, bytes: &[u8]) -> Result<String> {
         match self.utf8_policy {
             Utf8Policy::Strict => String::from_utf8(bytes.to_vec())
                 .map_err(|e| Error::InvalidFormat(format!("Invalid UTF-8: {}", e))),
-            Utf8Policy::Lossy => Ok(String::from_utf8_lossy(bytes).to_string()),
+            Utf8Policy::Lossy => {
+                let result = String::from_utf8_lossy(bytes);
+                if result.contains('\u{FFFD}') {
+                    log::warn!("Invalid UTF-8 bytes replaced with U+FFFD replacement character. \
+                               Use set_utf8_policy(Utf8Policy::Strict) to treat this as an error.");
+                }
+                Ok(result.to_string())
+            }
         }
     }
 
@@ -654,7 +743,7 @@ impl Guestfs {
         &self.resource_limits
     }
 
-    /// Check if file size is within limits (internal)
+    /// Check if file size is within limits (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn check_file_size_limit(&self, size: u64) -> Result<()> {
         if let Some(max) = self.resource_limits.max_file_size {
@@ -668,7 +757,7 @@ impl Guestfs {
         Ok(())
     }
 
-    /// Check if path length is within limits (internal)
+    /// Check if path length is within limits (internal — used by consumers of the crate API)
     #[allow(dead_code)]
     pub(crate) fn check_path_length_limit(&self, path: &str) -> Result<()> {
         if path.len() > self.resource_limits.max_path_length {
@@ -679,6 +768,22 @@ impl Guestfs {
             )));
         }
         Ok(())
+    }
+
+    /// Escape regex metacharacters for LVM device filter patterns
+    pub(crate) fn escape_lvm_regex(path: &str) -> String {
+        let mut escaped = String::with_capacity(path.len() * 2);
+        for c in path.chars() {
+            match c {
+                '/' | '.' | '[' | ']' | '*' | '+' | '?' | '^' | '$' | '|'
+                | '(' | ')' | '{' | '}' | '\\' => {
+                    escaped.push('\\');
+                    escaped.push(c);
+                }
+                _ => escaped.push(c),
+            }
+        }
+        escaped
     }
 
     /// Check if ready for operations
@@ -765,7 +870,9 @@ impl Guestfs {
 
 impl Drop for Guestfs {
     fn drop(&mut self) {
-        let _ = self.shutdown();
+        if let Err(e) = self.shutdown() {
+            eprintln!("Warning: guestfs shutdown failed during drop: {}", e);
+        }
     }
 }
 

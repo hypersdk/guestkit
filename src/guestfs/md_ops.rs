@@ -9,7 +9,7 @@ use std::process::Command;
 
 impl Guestfs {
     /// Create RAID array
-    ///
+    #[allow(clippy::too_many_arguments)]
     pub fn md_create(
         &mut self,
         name: &str,
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_md_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

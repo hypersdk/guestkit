@@ -450,7 +450,7 @@ Report issues at: https://github.com/ssahani/guestkit/issues
 
 ### Community
 
-- Maintainer: Susant Sahani <ssahani@gmail.com>
+- Maintainer: Susant Sahani <ssahani@redhat.com>
 
 ---
 

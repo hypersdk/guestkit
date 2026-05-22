@@ -49,7 +49,7 @@ impl Default for FileBrowserState {
 
 impl FileBrowserState {
     /// Load directory entries from guestfs
-    pub fn load_directory(&mut self, guestfs: &mut guestkit::Guestfs) -> Result<()> {
+    pub fn load_directory(&mut self, guestfs: &mut crate::Guestfs) -> Result<()> {
         let mut entries = Vec::new();
 
         // Add parent directory entry if not at root
@@ -64,7 +64,10 @@ impl FileBrowserState {
         // List directory contents
         let files = match guestfs.ls(&self.current_path) {
             Ok(files) => files,
-            Err(_) => return Ok(()), // Silent fail on permission errors
+            Err(e) => {
+                log::warn!("Failed to list {}: {}", self.current_path, e);
+                return Ok(());
+            }
         };
 
         for file in files {
@@ -440,19 +443,7 @@ fn get_file_icon_and_color(entry: &FileEntry) -> (&'static str, Color) {
 
 /// Format file size to human-readable format
 fn format_size(size: i64) -> String {
-    const KB: i64 = 1024;
-    const MB: i64 = KB * 1024;
-    const GB: i64 = MB * 1024;
-
-    if size >= GB {
-        format!("{:.2} GB", size as f64 / GB as f64)
-    } else if size >= MB {
-        format!("{:.2} MB", size as f64 / MB as f64)
-    } else if size >= KB {
-        format!("{:.2} KB", size as f64 / KB as f64)
-    } else {
-        format!("{} B", size)
-    }
+    crate::cli::output::format_size(size as u64)
 }
 
 /// Get the full path of the currently selected file

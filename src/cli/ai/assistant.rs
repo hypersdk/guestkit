@@ -4,7 +4,7 @@
 use super::tools::DiagnosticTools;
 use anyhow::{Context, Result};
 use colored::Colorize;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use std::path::Path;
 
 #[cfg(feature = "ai")]
@@ -71,7 +71,7 @@ pub fn run_ai_assistant(image_path: &Path, query: &str) -> Result<()> {
     // Initialize guestfs
     let mut guestfs = Guestfs::new().context("Failed to create Guestfs handle")?;
     guestfs
-        .add_drive_opts(image_path.to_str().unwrap(), false, None)
+        .add_drive_opts(image_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image_path.display()))?, false, None)
         .context("Failed to add drive")?;
     guestfs.launch().context("Failed to launch guestfs")?;
 

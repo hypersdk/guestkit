@@ -4,20 +4,9 @@ Welcome to the GuestKit documentation! This directory contains all project docum
 
 📑 **Quick Index**: See [INDEX.md](INDEX.md) for a complete documentation map and quick navigation.
 
-### Contact & support
+## Security & Quality
 
-<p align="center">
-  <a href="https://zyvor.dev/">
-    <img src="img/zyvor-logo.webp" alt="Zyvor AI Labs" width="180">
-  </a>
-</p>
-
-> **🏢 Enterprise & production** — This documentation covers the **Community Edition**. For SLAs, VMware exit, fleet migrations, and the full platform, **approach [zyvor.dev](https://zyvor.dev/)** (not GitHub Issues): [sales@zyvor.dev](mailto:sales@zyvor.dev) · [zyvor.dev/contact](https://zyvor.dev/contact)
-
-- **[Enterprise & platform suite](zyvor-enterprise.md)** — HyperSDK, hyper2kvm, v9s, PacketWolf, and full product matrix
-- **Platform:** [zyvor.dev](https://zyvor.dev/) · **Sales:** [sales@zyvor.dev](mailto:sales@zyvor.dev) · **Info:** [info@zyvor.dev](mailto:info@zyvor.dev)
-- **[Security policy](../SECURITY.md)** (repository root) — how to report vulnerabilities privately
-- **Contributing:** see [Contributing](development/CONTRIBUTING.md)
+A comprehensive code review was completed in April 2026, covering 20+ source files across all modules. A total of 54 security and correctness issues were identified and fixed (8 critical, 11 high, 22 medium, 13 low). The codebase now builds with zero clippy warnings and passes 699 tests. See [CHANGELOG.md](../CHANGELOG.md) and the [Improvements Log](development/improvements-log.md) for full details.
 
 ## 📚 Documentation Structure
 
@@ -98,7 +87,7 @@ For contributors and developers extending GuestKit.
 
 **Publishing & APIs:**
 - **[Publishing](development/publishing.md)** - PyPI publishing process
-- **[Missing APIs](development/missing-apis.md)** - APIs not yet implemented
+- **[Missing APIs](development/missing-apis.md)** - APIs pending implementation
 
 ### 🎨 [Marketing](marketing/) - Community & Promotion
 
@@ -185,16 +174,16 @@ Found an issue or want to improve documentation?
 
 - **Issues:** https://github.com/ssahani/guestkit/issues
 - **Discussions:** https://github.com/ssahani/guestkit/discussions
-- **Enterprise support:** [https://zyvor.dev/](https://zyvor.dev/) · [Contact](https://zyvor.dev/contact) · [sales@zyvor.dev](mailto:sales@zyvor.dev) · [info@zyvor.dev](mailto:info@zyvor.dev)
+- **Email:** ssahani@redhat.com
 
 ## External Resources
 
 - **Project Repository:** [GitHub](https://github.com/ssahani/guestkit)
-- **PyPI Package:** [guestctl on PyPI](https://pypi.org/project/guestctl/) (coming soon)
-- **Crates.io:** [guestctl on crates.io](https://crates.io/crates/guestctl)
+- **PyPI Package:** [guestkit on PyPI](https://pypi.org/project/guestkit/)
+- **Crates.io:** [guestkit on crates.io](https://crates.io/crates/guestkit)
 
 ---
 
-**Documentation Version:** 0.3.1
-**Last Updated:** 2026-01-27
+**Documentation Version:** 0.3.2
+**Last Updated:** 2026-04-05
 **License:** LGPL-3.0-or-later

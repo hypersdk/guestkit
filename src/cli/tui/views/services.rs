@@ -43,13 +43,13 @@ fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {
     let running_count = app.services.iter().filter(|s| s.state == "running" || s.state == "active").count();
     let stopped_count = app.services.len() - running_count;
 
-    let enabled_pct = if app.services.len() > 0 {
+    let enabled_pct = if !app.services.is_empty() {
         (enabled_count as f64 / app.services.len() as f64 * 100.0) as u16
     } else {
         0
     };
 
-    let running_pct = if app.services.len() > 0 {
+    let running_pct = if !app.services.is_empty() {
         (running_count as f64 / app.services.len() as f64 * 100.0) as u16
     } else {
         0

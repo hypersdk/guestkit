@@ -122,14 +122,18 @@ impl Guestfs {
         if let Some(ip) = ip_address {
             // This is simplified - real implementation would update specific network config
             let network_config = format!("IPADDR={}\n", ip);
-            let _ = self.write(
+            if let Err(e) = self.write(
                 "/etc/sysconfig/network-scripts/ifcfg-eth0",
                 network_config.as_bytes(),
-            );
+            ) {
+                eprintln!("Warning: Failed to update network configuration: {}", e);
+            }
         }
 
         // Generate new SSH host keys
-        let _ = self.command(&["ssh-keygen", "-A"]);
+        if let Err(e) = self.command(&["ssh-keygen", "-A"]) {
+            eprintln!("Warning: Failed to regenerate SSH host keys: {}", e);
+        }
 
         Ok(())
     }
@@ -227,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_template_ops_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

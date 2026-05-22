@@ -4,6 +4,34 @@
 use crate::cli::formatters::InspectionReport;
 use anyhow::Result;
 
+/// Escape special characters for Markdown table cells
+fn md_escape(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('|', "\\|")
+        .replace('[', "\\[")
+        .replace(']', "\\]")
+        .replace('(', "\\(")
+        .replace(')', "\\)")
+        .replace('*', "\\*")
+        .replace('_', "\\_")
+        .replace('`', "\\`")
+        .replace('#', "\\#")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+/// Escape special characters for Mermaid diagram labels
+fn mermaid_escape(s: &str) -> String {
+    s.replace('"', "'")
+        .replace('[', "(")
+        .replace(']', ")")
+        .replace('<', "‹")
+        .replace('>', "›")
+        .replace('`', "'")
+        .replace('{', "(")
+        .replace('}', ")")
+}
+
 /// Markdown export options
 #[derive(Debug, Clone)]
 pub struct MarkdownExportOptions {
@@ -127,7 +155,7 @@ pub fn generate_markdown_report_with_options(
             md.push_str("|---------|-------|\n");
 
             for service in services.enabled_services.iter().take(50) {
-                md.push_str(&format!("| {} | {} |\n", service.name, service.state));
+                md.push_str(&format!("| {} | {} |\n", md_escape(&service.name), md_escape(&service.state)));
             }
 
             if services.enabled_services.len() > 50 {
@@ -161,7 +189,7 @@ pub fn generate_markdown_report_with_options(
             for user in &users.regular_users {
                 md.push_str(&format!(
                     "| {} | {} | {} |\n",
-                    user.username, user.uid, user.home
+                    md_escape(&user.username), md_escape(&user.uid), md_escape(&user.home)
                 ));
             }
 
@@ -183,9 +211,9 @@ pub fn generate_markdown_report_with_options(
                 let dhcp = if iface.dhcp { "Yes" } else { "No" };
                 md.push_str(&format!(
                     "| {} | {} | {} | {} |\n",
-                    iface.name,
-                    iface.ip_address.join(", "),
-                    iface.mac_address,
+                    md_escape(&iface.name),
+                    md_escape(&iface.ip_address.join(", ")),
+                    md_escape(&iface.mac_address),
                     dhcp
                 ));
             }
@@ -216,7 +244,7 @@ pub fn generate_markdown_report_with_options(
             for fs in fstab_mounts {
                 md.push_str(&format!(
                     "| {} | {} | {} |\n",
-                    fs.device, fs.mountpoint, fs.fstype
+                    md_escape(&fs.device), md_escape(&fs.mountpoint), md_escape(&fs.fstype)
                 ));
             }
 
@@ -232,7 +260,7 @@ pub fn generate_markdown_report_with_options(
             if !lvm.physical_volumes.is_empty() {
                 md.push_str("### LVM Physical Volumes\n\n");
                 for pv in &lvm.physical_volumes {
-                    md.push_str(&format!("- {}\n", pv));
+                    md.push_str(&format!("- {}\n", md_escape(pv)));
                 }
                 md.push('\n');
             }
@@ -240,7 +268,7 @@ pub fn generate_markdown_report_with_options(
             if !lvm.volume_groups.is_empty() {
                 md.push_str("### LVM Volume Groups\n\n");
                 for vg in &lvm.volume_groups {
-                    md.push_str(&format!("- {} ({}, {} LVs)\n", vg.name, vg.size, vg.lv_count));
+                    md.push_str(&format!("- {} ({}, {} LVs)\n", md_escape(&vg.name), md_escape(&vg.size), vg.lv_count));
                 }
                 md.push('\n');
             }
@@ -248,7 +276,7 @@ pub fn generate_markdown_report_with_options(
             if !lvm.logical_volumes.is_empty() {
                 md.push_str("### LVM Logical Volumes\n\n");
                 for lv in &lvm.logical_volumes {
-                    md.push_str(&format!("- {} (VG: {}, Size: {})\n", lv.name, lv.vg_name, lv.size));
+                    md.push_str(&format!("- {} (VG: {}, Size: {})\n", md_escape(&lv.name), md_escape(&lv.vg_name), md_escape(&lv.size)));
                 }
                 md.push('\n');
             }
@@ -385,11 +413,11 @@ fn generate_architecture_diagram(report: &InspectionReport) -> String {
         .clone()
         .unwrap_or_else(|| "VM".to_string());
 
-    diagram.push_str(&format!("    VM[\"{} Virtual Machine\"]\n", vm_name));
+    diagram.push_str(&format!("    VM[\"{} Virtual Machine\"]\n", mermaid_escape(&vm_name)));
 
     // OS Layer
     if let Some(ref distro) = report.os.distribution {
-        diagram.push_str(&format!("    OS[\"Operating System<br/>{}", distro));
+        diagram.push_str(&format!("    OS[\"Operating System<br/>{}", mermaid_escape(distro)));
         if let Some(ref version) = report.os.version {
             diagram.push_str(&format!(" {}.{}", version.major, version.minor));
         }
@@ -399,7 +427,7 @@ fn generate_architecture_diagram(report: &InspectionReport) -> String {
 
     // Package Management
     if let Some(ref pkg_mgr) = report.os.package_manager {
-        diagram.push_str(&format!("    PKG[\"Package Manager<br/>{}\"]\n", pkg_mgr));
+        diagram.push_str(&format!("    PKG[\"Package Manager<br/>{}\"]\n", mermaid_escape(pkg_mgr)));
         diagram.push_str("    OS --> PKG\n");
     }
 
@@ -461,7 +489,7 @@ fn generate_network_diagram(report: &InspectionReport) -> String {
                 diagram.push_str(&format!(
                     "    {}[\"{}\"]\n",
                     iface_id,
-                    iface.name
+                    mermaid_escape(&iface.name)
                 ));
 
                 let ip_list = if !iface.ip_address.is_empty() {
@@ -472,7 +500,7 @@ fn generate_network_diagram(report: &InspectionReport) -> String {
 
                 diagram.push_str(&format!(
                     "    IP{}[\"{}\"]\n",
-                    idx, ip_list
+                    idx, mermaid_escape(&ip_list)
                 ));
 
                 diagram.push_str(&format!("    VM --> {}\n", iface_id));
@@ -510,14 +538,14 @@ fn generate_storage_diagram(report: &InspectionReport) -> String {
         if let Some(ref lvm) = storage.lvm {
             if !lvm.physical_volumes.is_empty() {
                 for (idx, pv) in lvm.physical_volumes.iter().take(5).enumerate() {
-                    diagram.push_str(&format!("    PV{}[\"PV: {}\"]\n", idx, pv));
+                    diagram.push_str(&format!("    PV{}[\"PV: {}\"]\n", idx, mermaid_escape(pv)));
                     diagram.push_str(&format!("    DISK --> PV{}\n", idx));
                 }
             }
 
             if !lvm.volume_groups.is_empty() {
                 for (idx, vg) in lvm.volume_groups.iter().take(5).enumerate() {
-                    diagram.push_str(&format!("    VG{}[\"VG: {}\"]\n", idx, vg.name));
+                    diagram.push_str(&format!("    VG{}[\"VG: {}\"]\n", idx, mermaid_escape(&vg.name)));
                     if idx < lvm.physical_volumes.len() {
                         diagram.push_str(&format!("    PV{} --> VG{}\n", idx, idx));
                     } else {
@@ -528,7 +556,7 @@ fn generate_storage_diagram(report: &InspectionReport) -> String {
 
             if !lvm.logical_volumes.is_empty() {
                 for (idx, lv) in lvm.logical_volumes.iter().take(5).enumerate() {
-                    diagram.push_str(&format!("    LV{}[\"LV: {}\"]\n", idx, lv.name));
+                    diagram.push_str(&format!("    LV{}[\"LV: {}\"]\n", idx, mermaid_escape(&lv.name)));
                     if idx < lvm.volume_groups.len() {
                         diagram.push_str(&format!("    VG{} --> LV{}\n", idx, idx));
                     } else {
@@ -543,7 +571,7 @@ fn generate_storage_diagram(report: &InspectionReport) -> String {
             for (idx, fs) in fstab.iter().take(5).enumerate() {
                 diagram.push_str(&format!(
                     "    FS{}[\"{}\"]\n",
-                    idx, fs.mountpoint
+                    idx, mermaid_escape(&fs.mountpoint)
                 ));
 
                 // Try to connect to LVM if present
@@ -579,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_generate_badges() {
-        let mut report = InspectionReport {
+        let report = InspectionReport {
             image_path: None,
             os: OsInfo {
                 root: "/".to_string(),
@@ -600,10 +628,13 @@ mod tests {
             ssh: None,
             services: None,
             packages: None,
-            filesystems: None,
             storage: None,
-            applications: None,
             security: None,
+            runtimes: None,
+            boot: None,
+            scheduled_tasks: None,
+            disk_usage: None,
+            windows: None,
         };
 
         let badges = generate_badges(&report);
@@ -635,10 +666,13 @@ mod tests {
             ssh: None,
             services: None,
             packages: None,
-            filesystems: None,
             storage: None,
-            applications: None,
             security: None,
+            runtimes: None,
+            boot: None,
+            scheduled_tasks: None,
+            disk_usage: None,
+            windows: None,
         };
 
         let diagram = generate_architecture_diagram(&report);
@@ -673,10 +707,13 @@ mod tests {
             ssh: None,
             services: None,
             packages: None,
-            filesystems: None,
             storage: None,
-            applications: None,
             security: None,
+            runtimes: None,
+            boot: None,
+            scheduled_tasks: None,
+            disk_usage: None,
+            windows: None,
         };
 
         let result = generate_markdown_report(&report);
@@ -712,10 +749,13 @@ mod tests {
             ssh: None,
             services: None,
             packages: None,
-            filesystems: None,
             storage: None,
-            applications: None,
             security: None,
+            runtimes: None,
+            boot: None,
+            scheduled_tasks: None,
+            disk_usage: None,
+            windows: None,
         };
 
         let options = MarkdownExportOptions {

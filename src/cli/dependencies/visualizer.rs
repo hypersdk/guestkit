@@ -49,7 +49,7 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
             output.push_str(&circ.cycle.join(" → "));
             output.push_str(" → ");
             output.push_str(&circ.cycle[0]);
-            output.push_str("\n");
+            output.push('\n');
         }
         output.push('\n');
     }

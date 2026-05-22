@@ -94,13 +94,13 @@ See `docs/development/tui-development-plan.md` for:
 
 Run the TUI with:
 ```bash
-guestctl tui vm.qcow2
+guestkit tui vm.qcow2
 ```
 
 Or install and run:
 ```bash
 cargo install guestkit
-guestctl tui vm.qcow2
+guestkit tui vm.qcow2
 ```
 
 ## Screenshots

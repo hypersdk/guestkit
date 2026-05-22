@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 /// TUI Configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TuiConfig {
     /// UI settings
     pub ui: UiConfig,
@@ -24,73 +25,55 @@ pub struct TuiConfig {
 
 /// UI appearance configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct UiConfig {
     /// Show splash screen on startup
-    #[serde(default = "default_true")]
     pub show_splash: bool,
 
     /// Splash duration in milliseconds
-    #[serde(default = "default_splash_duration")]
     pub splash_duration_ms: u64,
 
     /// Show stats bar at startup
-    #[serde(default = "default_true")]
     pub show_stats_bar: bool,
 
     /// Color theme (currently only "default" supported)
-    #[serde(default = "default_theme")]
     pub theme: String,
 }
 
 /// Behavior configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BehaviorConfig {
     /// Default view on startup
-    #[serde(default = "default_view")]
     pub default_view: String,
 
     /// Auto-refresh interval in seconds (0 = disabled)
-    #[serde(default)]
     pub auto_refresh_seconds: u64,
 
     /// Search case-sensitive by default
-    #[serde(default)]
     pub search_case_sensitive: bool,
 
     /// Search regex mode by default
-    #[serde(default)]
     pub search_regex_mode: bool,
 
     /// Maximum bookmarks
-    #[serde(default = "default_max_bookmarks")]
     pub max_bookmarks: usize,
 
     /// Scroll amount for page up/down
-    #[serde(default = "default_page_scroll")]
     pub page_scroll_lines: usize,
 }
 
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct KeybindingsConfig {
     /// Enable vim-style keybindings
-    #[serde(default = "default_true")]
     pub vim_mode: bool,
 
     /// Enable Ctrl+P quick jump menu
-    #[serde(default = "default_true")]
     pub quick_jump_enabled: bool,
 }
 
-impl Default for TuiConfig {
-    fn default() -> Self {
-        Self {
-            ui: UiConfig::default(),
-            behavior: BehaviorConfig::default(),
-            keybindings: KeybindingsConfig::default(),
-        }
-    }
-}
 
 impl Default for UiConfig {
     fn default() -> Self {
@@ -125,14 +108,6 @@ impl Default for KeybindingsConfig {
     }
 }
 
-// Default value functions for serde
-fn default_true() -> bool { true }
-fn default_splash_duration() -> u64 { 800 }
-fn default_theme() -> String { "default".to_string() }
-fn default_view() -> String { "dashboard".to_string() }
-fn default_max_bookmarks() -> usize { 20 }
-fn default_page_scroll() -> usize { 10 }
-
 impl TuiConfig {
     /// Get the default config file path
     pub fn default_path() -> Result<PathBuf> {
@@ -144,25 +119,22 @@ impl TuiConfig {
 
     /// Load configuration from default path, or return default config
     pub fn load() -> Self {
-        match Self::load_from_file() {
-            Ok(config) => config,
-            Err(_) => {
-                // Return default config if file doesn't exist or can't be read
-                Self::default()
-            }
-        }
+        Self::load_from_file().unwrap_or_default()
     }
 
     /// Load configuration from file
     fn load_from_file() -> Result<Self> {
         let path = Self::default_path()?;
 
-        if !path.exists() {
-            return Ok(Self::default());
-        }
-
-        let contents = fs::read_to_string(&path)
-            .context("Failed to read config file")?;
+        let contents = match fs::read_to_string(&path) {
+            Ok(contents) => contents,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Self::default());
+            }
+            Err(e) => {
+                return Err(anyhow::Error::new(e).context("Failed to read config file"));
+            }
+        };
 
         let config: TuiConfig = toml::from_str(&contents)
             .context("Failed to parse config file")?;
@@ -227,5 +199,107 @@ mod tests {
 
         assert_eq!(config.ui.show_splash, deserialized.ui.show_splash);
         assert_eq!(config.behavior.default_view, deserialized.behavior.default_view);
+    }
+
+    #[test]
+    fn test_ui_config_defaults() {
+        let ui = UiConfig::default();
+        assert_eq!(ui.show_splash, true);
+        assert_eq!(ui.splash_duration_ms, 800);
+        assert_eq!(ui.show_stats_bar, true);
+        assert_eq!(ui.theme, "default");
+    }
+
+    #[test]
+    fn test_behavior_config_defaults() {
+        let behavior = BehaviorConfig::default();
+        assert_eq!(behavior.default_view, "dashboard");
+        assert_eq!(behavior.auto_refresh_seconds, 0);
+        assert_eq!(behavior.search_case_sensitive, false);
+        assert_eq!(behavior.search_regex_mode, false);
+        assert_eq!(behavior.max_bookmarks, 20);
+        assert_eq!(behavior.page_scroll_lines, 10);
+    }
+
+    #[test]
+    fn test_keybindings_config_defaults() {
+        let kb = KeybindingsConfig::default();
+        assert_eq!(kb.vim_mode, true);
+        assert_eq!(kb.quick_jump_enabled, true);
+    }
+
+
+    #[test]
+    fn test_config_clone() {
+        let config = TuiConfig::default();
+        let cloned = config.clone();
+        assert_eq!(config.ui.show_splash, cloned.ui.show_splash);
+        assert_eq!(config.behavior.max_bookmarks, cloned.behavior.max_bookmarks);
+        assert_eq!(config.keybindings.vim_mode, cloned.keybindings.vim_mode);
+    }
+
+    #[test]
+    fn test_ui_config_custom() {
+        let mut ui = UiConfig::default();
+        ui.show_splash = false;
+        ui.splash_duration_ms = 1000;
+        ui.theme = "dark".to_string();
+
+        assert_eq!(ui.show_splash, false);
+        assert_eq!(ui.splash_duration_ms, 1000);
+        assert_eq!(ui.theme, "dark");
+    }
+
+    #[test]
+    fn test_behavior_config_custom() {
+        let mut behavior = BehaviorConfig::default();
+        behavior.default_view = "analytics".to_string();
+        behavior.auto_refresh_seconds = 30;
+        behavior.search_case_sensitive = true;
+        behavior.max_bookmarks = 50;
+
+        assert_eq!(behavior.default_view, "analytics");
+        assert_eq!(behavior.auto_refresh_seconds, 30);
+        assert_eq!(behavior.search_case_sensitive, true);
+        assert_eq!(behavior.max_bookmarks, 50);
+    }
+
+    #[test]
+    fn test_keybindings_config_custom() {
+        let mut kb = KeybindingsConfig::default();
+        kb.vim_mode = false;
+        kb.quick_jump_enabled = false;
+
+        assert_eq!(kb.vim_mode, false);
+        assert_eq!(kb.quick_jump_enabled, false);
+    }
+
+    #[test]
+    fn test_config_serialize_custom() {
+        let mut config = TuiConfig::default();
+        config.ui.theme = "custom".to_string();
+        config.behavior.max_bookmarks = 100;
+
+        let toml_str = toml::to_string(&config).unwrap();
+        assert!(toml_str.contains("custom"));
+        assert!(toml_str.contains("100"));
+    }
+
+    #[test]
+    fn test_config_deserialize_partial() {
+        // Test that partial config with defaults works
+        let toml_str = r#"
+        [ui]
+        show_splash = false
+
+        [behavior]
+        max_bookmarks = 50
+        "#;
+
+        let config: TuiConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.ui.show_splash, false);
+        assert_eq!(config.ui.splash_duration_ms, 800); // default
+        assert_eq!(config.behavior.max_bookmarks, 50);
+        assert_eq!(config.behavior.default_view, "dashboard"); // default
     }
 }

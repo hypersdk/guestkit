@@ -29,6 +29,7 @@ pub struct CachedInspection {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct OsInfoCache {
     pub os_type: String,
     pub distribution: String,
@@ -98,7 +99,7 @@ impl BinaryCache {
     pub fn new() -> Result<Self> {
         let cache_dir = dirs::cache_dir()
             .context("Could not find cache directory")?
-            .join("guestctl")
+            .join("guestkit")
             .join("binary");
 
         fs::create_dir_all(&cache_dir)
@@ -115,9 +116,30 @@ impl BinaryCache {
         Ok(Self { cache_dir })
     }
 
+    /// Validate that a cache key contains only safe characters
+    fn validate_key(key: &str) -> Result<()> {
+        if key.is_empty() {
+            anyhow::bail!("Cache key must not be empty");
+        }
+        if key.contains('/') || key.contains('\\') || key.contains("..") {
+            anyhow::bail!(
+                "Cache key contains unsafe characters (/, \\, or ..): {:?}",
+                key
+            );
+        }
+        if !key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.') {
+            anyhow::bail!(
+                "Cache key contains disallowed characters (only alphanumeric, -, _, . allowed): {:?}",
+                key
+            );
+        }
+        Ok(())
+    }
+
     /// Get cache file path for a given key
-    fn cache_path(&self, key: &str) -> PathBuf {
-        self.cache_dir.join(format!("{}.bin", key))
+    fn cache_path(&self, key: &str) -> Result<PathBuf> {
+        Self::validate_key(key)?;
+        Ok(self.cache_dir.join(format!("{}.bin", key)))
     }
 
     /// Save inspection result to binary cache
@@ -125,7 +147,7 @@ impl BinaryCache {
     /// Uses bincode for efficient binary serialization - 5-10x faster than JSON
     /// and produces 50-70% smaller files.
     pub fn save(&self, key: &str, data: &CachedInspection) -> Result<()> {
-        let path = self.cache_path(key);
+        let path = self.cache_path(key)?;
 
         // Serialize to binary format
         let encoded = bincode::serialize(data)
@@ -146,12 +168,18 @@ impl BinaryCache {
 
     /// Load inspection result from binary cache
     pub fn load(&self, key: &str) -> Result<CachedInspection> {
-        let path = self.cache_path(key);
+        let path = self.cache_path(key)?;
 
         let bytes = fs::read(&path)
             .context("Failed to read cache file")?;
 
-        let data: CachedInspection = bincode::deserialize(&bytes)
+        // Limit deserialization to 100MB to prevent memory exhaustion from corrupt/malicious data
+        use bincode::Options;
+        let data: CachedInspection = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes()
+            .with_limit(100 * 1024 * 1024)
+            .deserialize(&bytes)
             .context("Failed to deserialize cache data")?;
 
         log::debug!("Loaded cache from {:?} ({} bytes)", path, bytes.len());
@@ -161,7 +189,7 @@ impl BinaryCache {
 
     /// Check if cache exists for given key
     pub fn exists(&self, key: &str) -> bool {
-        self.cache_path(key).exists()
+        self.cache_path(key).map(|p| p.exists()).unwrap_or(false)
     }
 
     /// Check if cache is valid (not older than max_age_seconds)
@@ -181,7 +209,7 @@ impl BinaryCache {
 
     /// Delete cache entry
     pub fn delete(&self, key: &str) -> Result<()> {
-        let path = self.cache_path(key);
+        let path = self.cache_path(key)?;
         if path.exists() {
             fs::remove_file(&path)
                 .context("Failed to delete cache file")?;
@@ -228,7 +256,13 @@ impl BinaryCache {
 
                 // Get timestamp from cached data
                 if let Ok(bytes) = fs::read(&path) {
-                    if let Ok(data) = bincode::deserialize::<CachedInspection>(&bytes) {
+                    use bincode::Options;
+                    if let Ok(data) = bincode::DefaultOptions::new()
+                        .with_fixint_encoding()
+                        .allow_trailing_bytes()
+                        .with_limit(100 * 1024 * 1024)
+                        .deserialize::<CachedInspection>(&bytes)
+                    {
                         oldest_timestamp = oldest_timestamp.min(data.timestamp);
                         newest_timestamp = newest_timestamp.max(data.timestamp);
                     }
@@ -265,7 +299,13 @@ impl BinaryCache {
 
             if path.extension().and_then(|s| s.to_str()) == Some("bin") {
                 if let Ok(bytes) = fs::read(&path) {
-                    if let Ok(data) = bincode::deserialize::<CachedInspection>(&bytes) {
+                    use bincode::Options;
+                    if let Ok(data) = bincode::DefaultOptions::new()
+                        .with_fixint_encoding()
+                        .allow_trailing_bytes()
+                        .with_limit(100 * 1024 * 1024)
+                        .deserialize::<CachedInspection>(&bytes)
+                    {
                         let age = now.saturating_sub(data.timestamp);
                         if age > max_age_seconds {
                             fs::remove_file(&path)?;
@@ -283,7 +323,19 @@ impl BinaryCache {
 
 impl Default for BinaryCache {
     fn default() -> Self {
-        Self::new().expect("Failed to create binary cache")
+        Self::new().unwrap_or_else(|e| {
+            let fallback = std::env::temp_dir().join("guestkit").join("binary");
+            log::warn!(
+                "Primary cache directory unavailable ({}), falling back to {}. \
+                 Cache data in this location will be lost on reboot.",
+                e,
+                fallback.display()
+            );
+            if let Err(create_err) = std::fs::create_dir_all(&fallback) {
+                log::error!("Fallback cache directory creation also failed: {}. Caching will be non-functional.", create_err);
+            }
+            Self { cache_dir: fallback }
+        })
     }
 }
 
@@ -334,7 +386,7 @@ impl CachedInspection {
     pub fn new(disk_hash: String) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs();
 
         Self {
@@ -350,21 +402,6 @@ impl CachedInspection {
     }
 }
 
-impl Default for OsInfoCache {
-    fn default() -> Self {
-        Self {
-            os_type: String::new(),
-            distribution: String::new(),
-            product_name: String::new(),
-            version_major: 0,
-            version_minor: 0,
-            architecture: String::new(),
-            hostname: String::new(),
-            package_format: String::new(),
-            init_system: String::new(),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

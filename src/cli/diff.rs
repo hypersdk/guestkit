@@ -337,3 +337,177 @@ impl InspectionDiff {
             && self.config_changes.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_change_creation() {
+        let change = Change {
+            field: "hostname".to_string(),
+            old_value: "old-host".to_string(),
+            new_value: "new-host".to_string(),
+        };
+
+        assert_eq!(change.field, "hostname");
+        assert_eq!(change.old_value, "old-host");
+        assert_eq!(change.new_value, "new-host");
+    }
+
+    #[test]
+    fn test_package_update_creation() {
+        let update = PackageUpdate {
+            name: "nginx".to_string(),
+            old_version: "1.18.0".to_string(),
+            new_version: "1.20.0".to_string(),
+        };
+
+        assert_eq!(update.name, "nginx");
+        assert_eq!(update.old_version, "1.18.0");
+        assert_eq!(update.new_version, "1.20.0");
+    }
+
+    #[test]
+    fn test_package_changes_creation() {
+        let changes = PackageChanges {
+            added: vec!["docker".to_string(), "kubernetes".to_string()],
+            removed: vec!["apache2".to_string()],
+            updated: vec![
+                PackageUpdate {
+                    name: "nginx".to_string(),
+                    old_version: "1.18.0".to_string(),
+                    new_version: "1.20.0".to_string(),
+                }
+            ],
+        };
+
+        assert_eq!(changes.added.len(), 2);
+        assert_eq!(changes.removed.len(), 1);
+        assert_eq!(changes.updated.len(), 1);
+    }
+
+    #[test]
+    fn test_service_changes_creation() {
+        let changes = ServiceChanges {
+            enabled: vec!["docker".to_string(), "nginx".to_string()],
+            disabled: vec!["apache2".to_string()],
+        };
+
+        assert_eq!(changes.enabled.len(), 2);
+        assert_eq!(changes.disabled.len(), 1);
+    }
+
+    #[test]
+    fn test_user_changes_creation() {
+        let changes = UserChanges {
+            added: vec!["newuser".to_string()],
+            removed: vec!["olduser".to_string()],
+        };
+
+        assert_eq!(changes.added.len(), 1);
+        assert_eq!(changes.removed.len(), 1);
+    }
+
+    #[test]
+    fn test_inspection_diff_is_empty_true() {
+        let diff = InspectionDiff {
+            os_changes: vec![],
+            package_changes: PackageChanges {
+                added: vec![],
+                removed: vec![],
+                updated: vec![],
+            },
+            service_changes: ServiceChanges {
+                enabled: vec![],
+                disabled: vec![],
+            },
+            user_changes: UserChanges {
+                added: vec![],
+                removed: vec![],
+            },
+            network_changes: vec![],
+            config_changes: vec![],
+        };
+
+        assert!(diff.is_empty());
+    }
+
+    #[test]
+    fn test_inspection_diff_is_empty_false_with_os_changes() {
+        let diff = InspectionDiff {
+            os_changes: vec![Change {
+                field: "hostname".to_string(),
+                old_value: "old".to_string(),
+                new_value: "new".to_string(),
+            }],
+            package_changes: PackageChanges {
+                added: vec![],
+                removed: vec![],
+                updated: vec![],
+            },
+            service_changes: ServiceChanges {
+                enabled: vec![],
+                disabled: vec![],
+            },
+            user_changes: UserChanges {
+                added: vec![],
+                removed: vec![],
+            },
+            network_changes: vec![],
+            config_changes: vec![],
+        };
+
+        assert!(!diff.is_empty());
+    }
+
+    #[test]
+    fn test_inspection_diff_is_empty_false_with_packages() {
+        let diff = InspectionDiff {
+            os_changes: vec![],
+            package_changes: PackageChanges {
+                added: vec!["newpkg".to_string()],
+                removed: vec![],
+                updated: vec![],
+            },
+            service_changes: ServiceChanges {
+                enabled: vec![],
+                disabled: vec![],
+            },
+            user_changes: UserChanges {
+                added: vec![],
+                removed: vec![],
+            },
+            network_changes: vec![],
+            config_changes: vec![],
+        };
+
+        assert!(!diff.is_empty());
+    }
+
+    #[test]
+    fn test_inspection_diff_creation() {
+        let diff = InspectionDiff {
+            os_changes: vec![],
+            package_changes: PackageChanges {
+                added: vec![],
+                removed: vec![],
+                updated: vec![],
+            },
+            service_changes: ServiceChanges {
+                enabled: vec![],
+                disabled: vec![],
+            },
+            user_changes: UserChanges {
+                added: vec![],
+                removed: vec![],
+            },
+            network_changes: vec![],
+            config_changes: vec![],
+        };
+
+        assert!(diff.os_changes.is_empty());
+        assert!(diff.network_changes.is_empty());
+        assert!(diff.config_changes.is_empty());
+    }
+}

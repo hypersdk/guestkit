@@ -20,7 +20,7 @@ COPY examples ./examples
 COPY tests ./tests
 
 # Build release binary
-RUN cargo build --release --bin guestctl
+RUN cargo build --release --bin guestkit
 
 # Stage 2: Runtime
 FROM debian:bookworm-slim
@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder
-COPY --from=builder /build/target/release/guestctl /usr/local/bin/guestctl
+COPY --from=builder /build/target/release/guestkit /usr/local/bin/guestkit
 
 # Create directory for VM images
 RUN mkdir -p /vms /cache /config
@@ -52,3 +52,22 @@ WORKDIR /vms
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["--help"]
+
+# Stage 3: LVM Worker Container
+# Pre-built image with all LVM/filesystem tools for podman-based clone isolation
+FROM fedora:43 AS lvm-worker
+
+LABEL description="guestkit LVM worker - privileged container for LVM clone operations"
+
+RUN dnf install -y \
+    lvm2 \
+    e2fsprogs \
+    xfsprogs \
+    util-linux \
+    cryptsetup \
+    parted \
+    kpartx \
+    sudo \
+    && dnf clean all
+
+CMD ["sleep", "infinity"]

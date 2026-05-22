@@ -51,13 +51,14 @@ impl FstabEntry {
             return None;
         }
 
+        // dump and pass fields default to 0 per fstab(5) when absent
         Some(FstabEntry {
             spec: parts[0].to_string(),
             mountpoint: parts[1].to_string(),
             fstype: parts[2].to_string(),
             options: parts[3].to_string(),
-            dump: parts.get(4).unwrap_or(&"0").to_string(),
-            pass: parts.get(5).unwrap_or(&"0").to_string(),
+            dump: parts.get(4).copied().unwrap_or("0").to_string(),
+            pass: parts.get(5).copied().unwrap_or("0").to_string(),
         })
     }
 
@@ -337,13 +338,13 @@ mod tests {
     #[test]
     fn test_set_mount_option() {
         let opts = "defaults,noatime";
-        let new_opts = set_mount_option(opts, "subvol=@", "subvol");
+        let new_opts = set_mount_option(opts, "subvol", "subvol=@");
         assert!(new_opts.contains("subvol=@"));
         assert!(new_opts.contains("defaults"));
 
         // Replace existing
         let opts2 = "defaults,subvol=old";
-        let new_opts2 = set_mount_option(opts2, "subvol=@", "subvol");
+        let new_opts2 = set_mount_option(opts2, "subvol", "subvol=@");
         assert!(new_opts2.contains("subvol=@"));
         assert!(!new_opts2.contains("subvol=old"));
     }

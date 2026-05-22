@@ -7,7 +7,7 @@ pub mod kubernetes;
 pub mod compose;
 
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -21,6 +21,7 @@ pub enum BlueprintFormat {
 }
 
 impl BlueprintFormat {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "terraform" | "tf" => Some(Self::Terraform),
@@ -187,10 +188,14 @@ fn detect_services(g: &mut Guestfs, verbose: bool) -> Vec<Service> {
         for service_name in &["nginx", "apache2", "httpd", "mysql", "mariadb", "postgresql", "redis", "docker"] {
             let service_file = format!("/lib/systemd/system/{}.service", service_name);
             if g.is_file(&service_file).unwrap_or(false) {
+                // Check if service is enabled by looking for symlink in wants directories
+                let enabled_link = format!("/etc/systemd/system/multi-user.target.wants/{}.service", service_name);
+                let is_enabled = g.is_file(&enabled_link).unwrap_or(false);
+
                 services.push(Service {
                     name: service_name.to_string(),
-                    enabled: true,
-                    state: "active".to_string(),
+                    enabled: is_enabled,
+                    state: "installed".to_string(),
                 });
             }
         }
@@ -300,5 +305,162 @@ pub fn generate_blueprint(
         BlueprintFormat::Ansible => ansible::generate(analysis),
         BlueprintFormat::Kubernetes => kubernetes::generate(analysis),
         BlueprintFormat::Compose => compose::generate(analysis),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_blueprint_format_from_str() {
+        assert_eq!(BlueprintFormat::from_str("terraform"), Some(BlueprintFormat::Terraform));
+        assert_eq!(BlueprintFormat::from_str("tf"), Some(BlueprintFormat::Terraform));
+        assert_eq!(BlueprintFormat::from_str("ansible"), Some(BlueprintFormat::Ansible));
+        assert_eq!(BlueprintFormat::from_str("kubernetes"), Some(BlueprintFormat::Kubernetes));
+        assert_eq!(BlueprintFormat::from_str("k8s"), Some(BlueprintFormat::Kubernetes));
+        assert_eq!(BlueprintFormat::from_str("compose"), Some(BlueprintFormat::Compose));
+        assert_eq!(BlueprintFormat::from_str("docker-compose"), Some(BlueprintFormat::Compose));
+        assert_eq!(BlueprintFormat::from_str("invalid"), None);
+    }
+
+    #[test]
+    fn test_blueprint_format_case_insensitive() {
+        assert_eq!(BlueprintFormat::from_str("TERRAFORM"), Some(BlueprintFormat::Terraform));
+        assert_eq!(BlueprintFormat::from_str("Ansible"), Some(BlueprintFormat::Ansible));
+        assert_eq!(BlueprintFormat::from_str("K8S"), Some(BlueprintFormat::Kubernetes));
+    }
+
+    fn create_test_analysis() -> ImageAnalysis {
+        ImageAnalysis {
+            os_name: "Ubuntu".to_string(),
+            os_version: "22.04".to_string(),
+            arch: "x86_64".to_string(),
+            hostname: "test-host".to_string(),
+            packages: vec![Package {
+                name: "nginx".to_string(),
+                version: "1.18.0".to_string(),
+            }],
+            services: vec![Service {
+                name: "nginx".to_string(),
+                enabled: true,
+                state: "active".to_string(),
+            }],
+            filesystems: vec![Filesystem {
+                device: "/dev/sda1".to_string(),
+                mountpoint: "/".to_string(),
+                fstype: "ext4".to_string(),
+                size_gb: 20.0,
+            }],
+            network_config: NetworkConfig {
+                interfaces: vec![NetworkInterface {
+                    name: "eth0".to_string(),
+                    address: Some("192.168.1.10".to_string()),
+                }],
+            },
+            ports: vec![
+                Port { number: 80, protocol: "tcp".to_string() },
+                Port { number: 443, protocol: "tcp".to_string() },
+            ],
+            volumes: vec![Volume {
+                path: "/var/www".to_string(),
+                size_gb: 5.0,
+            }],
+        }
+    }
+
+    #[test]
+    fn test_terraform_generation_aws() {
+        let analysis = create_test_analysis();
+        let result = terraform::generate(&analysis, Some("aws"));
+        
+        assert!(result.is_ok());
+        let tf = result.unwrap();
+        
+        // Check for provider configuration
+        assert!(tf.contains("provider \"aws\""));
+        assert!(tf.contains("region = var.region"));
+        
+        // Check for security group
+        assert!(tf.contains("resource \"aws_security_group\""));
+        
+        // Check for HTTP/HTTPS ports
+        assert!(tf.contains("from_port   = 80"));
+        assert!(tf.contains("from_port   = 443"));
+    }
+
+    #[test]
+    fn test_terraform_generation_azure() {
+        let analysis = create_test_analysis();
+        let result = terraform::generate(&analysis, Some("azure"));
+        
+        assert!(result.is_ok());
+        let tf = result.unwrap();
+        
+        assert!(tf.contains("provider \"azurerm\""));
+        assert!(tf.contains("resource_group"));
+    }
+
+    #[test]
+    fn test_terraform_generation_gcp() {
+        let analysis = create_test_analysis();
+        let result = terraform::generate(&analysis, Some("gcp"));
+        
+        assert!(result.is_ok());
+        let tf = result.unwrap();
+        
+        assert!(tf.contains("provider \"google\""));
+        assert!(tf.contains("compute_instance"));
+    }
+
+    #[test]
+    fn test_ansible_generation() {
+        let analysis = create_test_analysis();
+        let result = ansible::generate(&analysis);
+        
+        assert!(result.is_ok());
+        let playbook = result.unwrap();
+        
+        // Check YAML structure
+        assert!(playbook.starts_with("---"));
+        assert!(playbook.contains("name: Configure server"));
+        assert!(playbook.contains("hosts: all"));
+        assert!(playbook.contains("become: yes"));
+    }
+
+    #[test]
+    fn test_kubernetes_generation() {
+        let analysis = create_test_analysis();
+        let result = kubernetes::generate(&analysis);
+        
+        assert!(result.is_ok());
+        let manifests = result.unwrap();
+        
+        // Check for namespace
+        assert!(manifests.contains("kind: Namespace"));
+        
+        // Check for deployment
+        assert!(manifests.contains("kind: Deployment"));
+        
+        // Check for service
+        assert!(manifests.contains("kind: Service"));
+    }
+
+    #[test]
+    fn test_compose_generation() {
+        let analysis = create_test_analysis();
+        let result = compose::generate(&analysis);
+        
+        assert!(result.is_ok());
+        let compose = result.unwrap();
+        
+        // Check version
+        assert!(compose.contains("version: '3.8'"));
+        
+        // Check service definition
+        assert!(compose.contains("services:"));
+        
+        // Check ports
+        assert!(compose.contains("ports:"));
     }
 }

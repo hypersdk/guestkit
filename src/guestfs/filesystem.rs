@@ -119,9 +119,7 @@ impl Guestfs {
         }
 
         if let Some(lbl) = label {
-            if fstype.starts_with("ext") {
-                cmd.arg("-L").arg(lbl);
-            } else if fstype == "xfs" {
+            if fstype.starts_with("ext") || fstype == "xfs" {
                 cmd.arg("-L").arg(lbl);
             } else if fstype == "vfat" || fstype == "fat" {
                 cmd.arg("-n").arg(lbl);
@@ -367,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_filesystem_api_exists() {
-        let mut g = Guestfs::new().unwrap();
+        let _g = Guestfs::new().unwrap();
         // API structure tests
     }
 }

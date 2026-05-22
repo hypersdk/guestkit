@@ -4,7 +4,7 @@
 use super::{PackageLicense, database::LICENSE_DB};
 use crate::cli::inventory::licenses;
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 
 /// Scan package licenses from disk image
 pub fn scan_package_licenses(

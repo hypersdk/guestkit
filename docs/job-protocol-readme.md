@@ -347,13 +347,13 @@ examples/jobs/
 
 ```bash
 # Generate job file
-guestctl job create inspect /vms/prod.qcow2 > job.json
+guestkit job create inspect /vms/prod.qcow2 > job.json
 
 # Submit job
-guestctl job submit job.json
+guestkit job submit job.json
 
 # Check status
-guestctl job status job-01KG7GWJF3...
+guestkit job status job-01KG7GWJF3...
 ```
 
 ### With REST API (future)

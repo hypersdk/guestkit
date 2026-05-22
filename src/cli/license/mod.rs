@@ -8,7 +8,7 @@ pub mod reporter;
 
 use analyzer::LicenseAnalyzer;
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -204,7 +204,7 @@ pub fn generate_attribution(report: &LicenseReport) -> String {
 
     output.push_str("THIRD-PARTY SOFTWARE NOTICES AND INFORMATION\n");
     output.push_str("===========================================\n\n");
-    output.push_str(&format!("This software incorporates components from the projects listed below.\n"));
+    output.push_str("This software incorporates components from the projects listed below.\n");
     output.push_str(&format!("Generated: {}\n\n", report.scanned_at));
 
     // Group by license
@@ -223,4 +223,149 @@ pub fn generate_attribution(report: &LicenseReport) -> String {
     }
 
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_license_database_initialization() {
+        let db = &*database::LICENSE_DB;
+        
+        // Should have common licenses
+        assert!(db.get("MIT").is_some());
+        assert!(db.get("Apache-2.0").is_some());
+        assert!(db.get("GPL-3.0-or-later").is_some());
+    }
+
+    #[test]
+    fn test_license_risk_levels() {
+        let db = &*database::LICENSE_DB;
+        
+        // MIT should be low risk
+        assert_eq!(db.get_risk_level("MIT"), RiskLevel::Low);
+        
+        // GPL should be high risk
+        assert_eq!(db.get_risk_level("GPL-3.0-or-later"), RiskLevel::High);
+        
+        // AGPL should be critical risk
+        assert_eq!(db.get_risk_level("AGPL-3.0"), RiskLevel::Critical);
+    }
+
+    #[test]
+    fn test_unknown_license() {
+        let db = &*database::LICENSE_DB;
+        
+        assert_eq!(db.get_risk_level("NonExistentLicense"), RiskLevel::Medium);
+        assert_eq!(db.get_type("NonExistentLicense"), LicenseType::Unknown);
+    }
+
+    #[test]
+    fn test_find_violations_prohibited() {
+        let analyzer = analyzer::LicenseAnalyzer::new();
+        
+        let packages = vec![PackageLicense {
+            package_name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "AGPL-3.0".to_string(),
+            license_type: LicenseType::StrongCopyleft,
+            risk_level: RiskLevel::Critical,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
+        
+        let prohibited = vec!["AGPL-3.0".to_string()];
+        let violations = analyzer.find_violations(&packages, &prohibited);
+        
+        assert_eq!(violations.len(), 2); // Prohibited + AGPL network copyleft
+        assert!(violations.iter().any(|v| matches!(v.violation_type, ViolationType::ProhibitedLicense)));
+    }
+
+    #[test]
+    fn test_find_violations_missing_license() {
+        let analyzer = analyzer::LicenseAnalyzer::new();
+        
+        let packages = vec![PackageLicense {
+            package_name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "Unknown".to_string(),
+            license_type: LicenseType::Unknown,
+            risk_level: RiskLevel::Medium,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
+        
+        let violations = analyzer.find_violations(&packages, &[]);
+        
+        assert_eq!(violations.len(), 1);
+        assert!(matches!(violations[0].violation_type, ViolationType::MissingLicense));
+    }
+
+    #[test]
+    fn test_no_violations() {
+        let analyzer = analyzer::LicenseAnalyzer::new();
+        
+        let packages = vec![PackageLicense {
+            package_name: "safe-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "MIT".to_string(),
+            license_type: LicenseType::Permissive,
+            risk_level: RiskLevel::Low,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
+        
+        let violations = analyzer.find_violations(&packages, &[]);
+        assert_eq!(violations.len(), 0);
+    }
+
+    #[test]
+    fn test_attribution_generation() {
+        let packages = vec![
+            PackageLicense {
+                package_name: "lib1".to_string(),
+                version: "1.0.0".to_string(),
+                license: "MIT".to_string(),
+                license_type: LicenseType::Permissive,
+                risk_level: RiskLevel::Low,
+                compatible_with: vec![],
+                incompatible_with: vec![],
+            },
+            PackageLicense {
+                package_name: "lib2".to_string(),
+                version: "2.0.0".to_string(),
+                license: "MIT".to_string(),
+                license_type: LicenseType::Permissive,
+                risk_level: RiskLevel::Low,
+                compatible_with: vec![],
+                incompatible_with: vec![],
+            },
+        ];
+        
+        let report = LicenseReport {
+            image_path: "test.img".to_string(),
+            scanned_at: "2024-01-01T00:00:00Z".to_string(),
+            total_packages: 2,
+            packages,
+            license_summary: HashMap::new(),
+            risk_summary: HashMap::new(),
+            violations: vec![],
+            statistics: LicenseStatistics {
+                permissive_licenses: 2,
+                copyleft_licenses: 0,
+                strong_copyleft_licenses: 0,
+                proprietary_licenses: 0,
+                unknown_licenses: 0,
+                compliance_score: 100.0,
+            },
+        };
+        
+        let attribution = generate_attribution(&report);
+        
+        assert!(attribution.contains("THIRD-PARTY SOFTWARE NOTICES"));
+        assert!(attribution.contains("MIT (2 packages)"));
+        assert!(attribution.contains("lib1 1.0.0"));
+        assert!(attribution.contains("lib2 2.0.0"));
+    }
 }

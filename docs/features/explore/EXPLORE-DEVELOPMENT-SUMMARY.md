@@ -121,14 +121,14 @@ struct FileEntry {
 
 ```bash
 # Start guestkit shell
-guestctl shell disk.qcow2
+guestkit shell disk.qcow2
 
 # Launch explorer
-guestctl> explore
+guestkit> explore
 
 # Or from specific path
-guestctl> explore /etc
-guestctl> ex /var/log  # Short alias
+guestkit> explore /etc
+guestkit> ex /var/log  # Short alias
 ```
 
 ### Keyboard Commands
@@ -343,7 +343,7 @@ explore /home
 
 ### Integration Ideas
 
-- [ ] Main CLI integration: `guestctl explore disk.qcow2`
+- [ ] Main CLI integration: `guestkit explore disk.qcow2`
 - [ ] TUI mode integration
 - [ ] Bulk operations on selections
 - [ ] Quick actions menu
@@ -521,8 +521,8 @@ The explore command enhances guestkit's CLI capabilities, making filesystem expl
 
 The explore command is now available directly from the main CLI:
 ```bash
-guestctl explore disk.qcow2 [path]
-guestctl ex vm.qcow2 /var/log  # Short alias
+guestkit explore disk.qcow2 [path]
+guestkit ex vm.qcow2 /var/log  # Short alias
 ```
 
 **Next Steps**:

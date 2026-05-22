@@ -3,11 +3,11 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Local};
-use guestkit::guestfs::inspect_enhanced::{
+use crate::guestfs::inspect_enhanced::{
     Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, Package, PackageInfo,
     RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
 };
-use guestkit::Guestfs;
+use crate::Guestfs;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -19,19 +19,7 @@ use crate::cli::profiles::{
 
 /// Format file size to human-readable format
 fn format_file_size(size: i64) -> String {
-    const KB: i64 = 1024;
-    const MB: i64 = KB * 1024;
-    const GB: i64 = MB * 1024;
-
-    if size >= GB {
-        format!("{:.2} GB", size as f64 / GB as f64)
-    } else if size >= MB {
-        format!("{:.2} MB", size as f64 / MB as f64)
-    } else if size >= KB {
-        format!("{:.2} KB", size as f64 / KB as f64)
-    } else {
-        format!("{} B", size)
-    }
+    crate::cli::output::format_size(if size < 0 { 0 } else { size as u64 })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -117,8 +105,8 @@ impl View {
         }
     }
 
-    pub fn all() -> Vec<View> {
-        vec![
+    pub fn all() -> &'static [View] {
+        &[
             View::Dashboard,
             View::Analytics,
             View::Timeline,
@@ -281,8 +269,7 @@ pub struct App {
 
     // Inspection data
     pub image_path: String,
-    #[allow(dead_code)]
-    pub image_path_buf: PathBuf,
+    pub _image_path_buf: PathBuf,
     pub os_name: String,
     pub os_version: String,
     pub hostname: String,
@@ -510,7 +497,7 @@ impl App {
             export_filename: String::new(),
 
             image_path: image_path.display().to_string(),
-            image_path_buf: image_path.to_path_buf(),
+            _image_path_buf: image_path.to_path_buf(),
             os_name,
             os_version,
             hostname,
@@ -634,11 +621,15 @@ impl App {
                     }
 
                     // Check file size - don't preview files > 1MB
-                    if let Ok(size) = guestfs.filesize(&path) {
-                        if size > 1024 * 1024 {
+                    match guestfs.filesize(&path) {
+                        Ok(size) if size > 1024 * 1024 => {
                             self.show_notification(format!("File too large to preview ({} bytes)", size));
                             return;
                         }
+                        Err(_) => {
+                            // Cannot determine size; proceed with caution
+                        }
+                        _ => {}
                     }
 
                     // Read file content
@@ -844,13 +835,40 @@ impl App {
 
         self.search_results.clear();
 
+        // Compile regex once if in regex mode, with length limit and error handling
+        let re = if self.search_regex_mode {
+            if query.len() > 1000 {
+                self.show_notification("Regex pattern too long (max 1000 chars)".to_string());
+                return;
+            }
+            match regex::Regex::new(&query) {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    self.show_notification(format!("Invalid regex: {}", e));
+                    return;
+                }
+            }
+        } else {
+            None
+        };
+
         // Filter based on current view
         match self.current_view {
             View::Packages => {
-                // Search in package names (we don't have full package list, so estimate)
-                for i in 0..self.packages.package_count {
-                    // Placeholder: in real implementation, search actual package names
-                    self.search_results.push(i);
+                for (idx, pkg) in self.packages.packages.iter().enumerate() {
+                    let name = if self.search_case_sensitive {
+                        pkg.name.clone()
+                    } else {
+                        pkg.name.to_lowercase()
+                    };
+
+                    if let Some(ref re) = re {
+                        if re.is_match(&name) {
+                            self.search_results.push(idx);
+                        }
+                    } else if name.contains(&query) {
+                        self.search_results.push(idx);
+                    }
                 }
             }
             View::Services => {
@@ -861,11 +879,9 @@ impl App {
                         service.name.to_lowercase()
                     };
 
-                    if self.search_regex_mode {
-                        if let Ok(re) = regex::Regex::new(&query) {
-                            if re.is_match(&name) {
-                                self.search_results.push(idx);
-                            }
+                    if let Some(ref re) = re {
+                        if re.is_match(&name) {
+                            self.search_results.push(idx);
                         }
                     } else if name.contains(&query) {
                         self.search_results.push(idx);
@@ -955,7 +971,7 @@ impl App {
             self.search_results.len()
         } else {
             match self.current_view {
-                View::Packages => self.packages.package_count,
+                View::Packages => self.packages.packages.len(),
                 View::Services => self.services.len(),
                 View::Network => self.network_interfaces.len(),
                 View::Users => self.users.len(),
@@ -972,13 +988,9 @@ impl App {
         // Special handling for Files view
         if self.current_view == View::Files {
             self.file_browser_up();
-        } else {
-            if self.scroll_offset > 0 {
-                self.scroll_offset -= 1;
-            }
-            if self.selected_index > 0 {
-                self.selected_index -= 1;
-            }
+        } else if self.selected_index > 0 {
+            self.selected_index -= 1;
+            self.scroll_offset = self.scroll_offset.min(self.selected_index);
         }
     }
 
@@ -987,19 +999,25 @@ impl App {
         if self.current_view == View::Files {
             self.file_browser_down();
         } else {
-            self.scroll_offset += 1;
-            self.selected_index += 1;
+            let count = self.get_filtered_count();
+            if count > 0 && self.selected_index < count - 1 {
+                self.selected_index += 1;
+                self.scroll_offset = self.scroll_offset.max(self.selected_index.saturating_sub(20));
+            }
         }
     }
 
     pub fn page_up(&mut self) {
-        self.scroll_offset = self.scroll_offset.saturating_sub(10);
         self.selected_index = self.selected_index.saturating_sub(10);
+        self.scroll_offset = self.scroll_offset.saturating_sub(10);
     }
 
     pub fn page_down(&mut self) {
-        self.scroll_offset += 10;
-        self.selected_index += 10;
+        let count = self.get_filtered_count();
+        if count == 0 { return; }
+        let max = count - 1;
+        self.selected_index = (self.selected_index + 10).min(max);
+        self.scroll_offset = (self.scroll_offset + 10).min(max);
     }
 
     pub fn scroll_top(&mut self) {
@@ -1008,8 +1026,11 @@ impl App {
     }
 
     pub fn scroll_bottom(&mut self) {
-        // This will be refined per view
-        self.scroll_offset = usize::MAX;
+        let count = self.get_filtered_count();
+        if count == 0 { return; }
+        let max = count - 1;
+        self.scroll_offset = max;
+        self.selected_index = max;
     }
 
     pub fn select_item(&mut self) {
@@ -1128,6 +1149,11 @@ impl App {
         use std::fs;
         use std::path::PathBuf;
 
+        // Validate filename to prevent path traversal
+        if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
+            return Err(anyhow::anyhow!("Invalid filename: path traversal not allowed"));
+        }
+
         let output_path = PathBuf::from(filename);
 
         // Export based on format
@@ -1142,9 +1168,22 @@ impl App {
                 let yaml = serde_yaml::to_string(&data)?;
                 fs::write(&output_path, yaml)?;
             }
-            ExportFormat::Html | ExportFormat::Pdf => {
-                // These require InspectionReport format - show message that these are TODO
-                return Err(anyhow::anyhow!("HTML/PDF export from TUI coming soon. Use CLI: guestctl inspect <image> --export {}", format.extension()));
+            ExportFormat::Html => {
+                let data = self.collect_export_data();
+                let json = serde_json::to_string_pretty(&data)?;
+                let html = format!(
+                    "<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\">\
+                    <title>GuestKit Export</title>\
+                    <style>body{{font-family:monospace;margin:2em;background:#1e1e2e;color:#cdd6f4}}\
+                    pre{{background:#313244;padding:1em;border-radius:8px;overflow:auto}}</style>\
+                    </head><body><h1>GuestKit TUI Export</h1>\
+                    <pre>{}</pre></body></html>",
+                    json.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+                );
+                fs::write(&output_path, html)?;
+            }
+            ExportFormat::Pdf => {
+                return Err(anyhow::anyhow!("PDF export is not supported from TUI. Use CLI: guestkit inspect <image> --export pdf"));
             }
         }
 
@@ -1285,12 +1324,14 @@ impl App {
                 },
                 "parameters": self.kernel_params,
             }),
-            View::Analytics => json!({
+            View::Analytics => {
+                let (critical, high, medium) = self.get_risk_summary();
+                json!({
                 "view": "analytics",
                 "security_score": {
-                    "critical": self.get_risk_summary().0,
-                    "high": self.get_risk_summary().1,
-                    "medium": self.get_risk_summary().2,
+                    "critical": critical,
+                    "high": high,
+                    "medium": medium,
                 },
                 "package_stats": {
                     "total": self.packages.package_count,
@@ -1299,7 +1340,7 @@ impl App {
                     "total": self.services.len(),
                     "enabled": self.services.iter().filter(|s| s.enabled).count(),
                 },
-            }),
+            })},
             View::Timeline => json!({
                 "view": "timeline",
                 "system": {
@@ -1503,11 +1544,10 @@ impl App {
 
             // Check for removed services
             for old_svc in snapshot {
-                if !self.services.iter().any(|s| s.name == old_svc.name) {
-                    if old_svc.state == "running" {
+                if !self.services.iter().any(|s| s.name == old_svc.name)
+                    && old_svc.state == "running" {
                         stopped += 1;
                     }
-                }
             }
 
             (started, stopped, changed)
@@ -1527,11 +1567,6 @@ impl App {
         } else {
             self.show_notification("⚠ Already bookmarked".to_string());
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn clear_bookmarks(&mut self) {
-        self.bookmarks.clear();
     }
 
     pub fn add_to_search_history(&mut self, query: String) {
@@ -1557,16 +1592,14 @@ impl App {
             &self.hardening_profile,
         ];
 
-        for profile in profiles {
-            if let Some(p) = profile {
-                if let Some(risk) = p.overall_risk {
-                    use crate::cli::profiles::RiskLevel;
-                    match risk {
-                        RiskLevel::Critical => critical += 1,
-                        RiskLevel::High => high += 1,
-                        RiskLevel::Medium => medium += 1,
-                        _ => {}
-                    }
+        for p in profiles.into_iter().flatten() {
+            if let Some(risk) = p.overall_risk {
+                use crate::cli::profiles::RiskLevel;
+                match risk {
+                    RiskLevel::Critical => critical += 1,
+                    RiskLevel::High => high += 1,
+                    RiskLevel::Medium => medium += 1,
+                    _ => {}
                 }
             }
         }
@@ -1580,9 +1613,9 @@ impl App {
 
         // Deduct points for critical/high/medium risks
         let (critical, high, medium) = self.get_risk_summary();
-        score = score.saturating_sub((critical * 20) as u8);
-        score = score.saturating_sub((high * 10) as u8);
-        score = score.saturating_sub((medium * 5) as u8);
+        score = score.saturating_sub((critical * 20).min(255) as u8);
+        score = score.saturating_sub((high * 10).min(255) as u8);
+        score = score.saturating_sub((medium * 5).min(255) as u8);
 
         // Deduct points for missing security features
         if &self.security.selinux == "disabled" {
@@ -1619,12 +1652,6 @@ impl App {
             40..=59 => ("Poor", "red"),
             _ => ("Critical", "red"),
         }
-    }
-
-    /// Get formatted timestamp of last update
-    #[allow(dead_code)]
-    pub fn get_last_updated_formatted(&self) -> String {
-        self.last_updated.format("%H:%M:%S").to_string()
     }
 
     /// Get time since last update in human-readable format
@@ -1875,7 +1902,9 @@ impl App {
             return;
         }
 
-        let filter = self.active_filter.as_ref().unwrap();
+        let Some(filter) = self.active_filter.as_ref() else {
+            return;
+        };
 
         match filter.as_str() {
             "critical" => {
@@ -2237,5 +2266,237 @@ impl App {
             .iter()
             .filter_map(|&idx| self.fstab.get(idx))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_file_size_bytes() {
+        assert_eq!(format_file_size(0), "0 B");
+        assert_eq!(format_file_size(500), "500 B");
+        assert_eq!(format_file_size(1023), "1023 B");
+    }
+
+    #[test]
+    fn test_format_file_size_kilobytes() {
+        assert_eq!(format_file_size(1024), "1.00 KB");
+        assert_eq!(format_file_size(1536), "1.50 KB");
+        assert_eq!(format_file_size(2048), "2.00 KB");
+        assert_eq!(format_file_size(10240), "10.00 KB");
+    }
+
+    #[test]
+    fn test_format_file_size_megabytes() {
+        const MB: i64 = 1024 * 1024;
+        assert_eq!(format_file_size(MB), "1.00 MB");
+        assert_eq!(format_file_size(MB + 512 * 1024), "1.50 MB");
+        assert_eq!(format_file_size(10 * MB), "10.00 MB");
+    }
+
+    #[test]
+    fn test_format_file_size_gigabytes() {
+        const GB: i64 = 1024 * 1024 * 1024;
+        assert_eq!(format_file_size(GB), "1.00 GB");
+        assert_eq!(format_file_size(2 * GB), "2.00 GB");
+        assert_eq!(format_file_size(GB + 512 * 1024 * 1024), "1.50 GB");
+    }
+
+    #[test]
+    fn test_export_format_extension() {
+        assert_eq!(ExportFormat::Json.extension(), "json");
+        assert_eq!(ExportFormat::Yaml.extension(), "yaml");
+        assert_eq!(ExportFormat::Html.extension(), "html");
+        assert_eq!(ExportFormat::Pdf.extension(), "pdf");
+    }
+
+    #[test]
+    fn test_export_format_name() {
+        assert_eq!(ExportFormat::Json.name(), "JSON");
+        assert_eq!(ExportFormat::Yaml.name(), "YAML");
+        assert_eq!(ExportFormat::Html.name(), "HTML");
+        assert_eq!(ExportFormat::Pdf.name(), "PDF");
+    }
+
+    #[test]
+    fn test_export_format_equality() {
+        assert_eq!(ExportFormat::Json, ExportFormat::Json);
+        assert_ne!(ExportFormat::Json, ExportFormat::Yaml);
+    }
+
+    #[test]
+    fn test_export_format_clone() {
+        let format = ExportFormat::Json;
+        let cloned = format.clone();
+        assert_eq!(format, cloned);
+    }
+
+    #[test]
+    fn test_export_mode_equality() {
+        assert_eq!(ExportMode::Selecting, ExportMode::Selecting);
+        assert_eq!(ExportMode::EnteringFilename, ExportMode::EnteringFilename);
+        assert_eq!(ExportMode::Exporting, ExportMode::Exporting);
+        assert_ne!(ExportMode::Selecting, ExportMode::Exporting);
+    }
+
+    #[test]
+    fn test_export_mode_success() {
+        let mode = ExportMode::Success("test.json".to_string());
+        match mode {
+            ExportMode::Success(filename) => assert_eq!(filename, "test.json"),
+            _ => panic!("Expected Success variant"),
+        }
+    }
+
+    #[test]
+    fn test_export_mode_error() {
+        let mode = ExportMode::Error("Failed to export".to_string());
+        match mode {
+            ExportMode::Error(msg) => assert_eq!(msg, "Failed to export"),
+            _ => panic!("Expected Error variant"),
+        }
+    }
+
+    #[test]
+    fn test_export_mode_clone() {
+        let mode = ExportMode::Success("file.json".to_string());
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_view_title() {
+        assert_eq!(View::Dashboard.title(), "Dashboard");
+        assert_eq!(View::Analytics.title(), "Analytics");
+        assert_eq!(View::Timeline.title(), "Timeline");
+        assert_eq!(View::Recommendations.title(), "Recommendations");
+        assert_eq!(View::Topology.title(), "Topology");
+        assert_eq!(View::Network.title(), "Network");
+        assert_eq!(View::Packages.title(), "Packages");
+        assert_eq!(View::Services.title(), "Services");
+        assert_eq!(View::Databases.title(), "Databases");
+        assert_eq!(View::WebServers.title(), "WebServers");
+        assert_eq!(View::Security.title(), "Security");
+        assert_eq!(View::Issues.title(), "Issues");
+        assert_eq!(View::Storage.title(), "Storage");
+        assert_eq!(View::Users.title(), "Users");
+        assert_eq!(View::Kernel.title(), "Kernel");
+        assert_eq!(View::Logs.title(), "Logs");
+        assert_eq!(View::Profiles.title(), "Profiles");
+        assert_eq!(View::Files.title(), "Files");
+    }
+
+    #[test]
+    fn test_view_all() {
+        let all_views = View::all();
+        assert_eq!(all_views.len(), 18);
+        assert!(all_views.contains(&View::Dashboard));
+        assert!(all_views.contains(&View::Analytics));
+        assert!(all_views.contains(&View::Files));
+    }
+
+    #[test]
+    fn test_view_all_completeness() {
+        let all_views = View::all();
+        // Verify all views are included
+        assert!(all_views.contains(&View::Dashboard));
+        assert!(all_views.contains(&View::Analytics));
+        assert!(all_views.contains(&View::Timeline));
+        assert!(all_views.contains(&View::Recommendations));
+        assert!(all_views.contains(&View::Topology));
+        assert!(all_views.contains(&View::Network));
+        assert!(all_views.contains(&View::Packages));
+        assert!(all_views.contains(&View::Services));
+        assert!(all_views.contains(&View::Databases));
+        assert!(all_views.contains(&View::WebServers));
+        assert!(all_views.contains(&View::Security));
+        assert!(all_views.contains(&View::Issues));
+        assert!(all_views.contains(&View::Storage));
+        assert!(all_views.contains(&View::Users));
+        assert!(all_views.contains(&View::Kernel));
+        assert!(all_views.contains(&View::Logs));
+        assert!(all_views.contains(&View::Profiles));
+        assert!(all_views.contains(&View::Files));
+    }
+
+    #[test]
+    fn test_view_equality() {
+        assert_eq!(View::Dashboard, View::Dashboard);
+        assert_ne!(View::Dashboard, View::Analytics);
+    }
+
+    #[test]
+    fn test_view_clone() {
+        let view = View::Dashboard;
+        let cloned = view.clone();
+        assert_eq!(view, cloned);
+    }
+
+    #[test]
+    fn test_sort_mode_next_packages() {
+        assert_eq!(SortMode::Default.next(&View::Packages), SortMode::NameAsc);
+        assert_eq!(SortMode::NameAsc.next(&View::Packages), SortMode::NameDesc);
+        assert_eq!(SortMode::NameDesc.next(&View::Packages), SortMode::VersionAsc);
+        assert_eq!(SortMode::VersionAsc.next(&View::Packages), SortMode::VersionDesc);
+        assert_eq!(SortMode::VersionDesc.next(&View::Packages), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_next_services() {
+        assert_eq!(SortMode::Default.next(&View::Services), SortMode::NameAsc);
+        assert_eq!(SortMode::NameAsc.next(&View::Services), SortMode::NameDesc);
+        assert_eq!(SortMode::NameDesc.next(&View::Services), SortMode::StateAsc);
+        assert_eq!(SortMode::StateAsc.next(&View::Services), SortMode::StateDesc);
+        assert_eq!(SortMode::StateDesc.next(&View::Services), SortMode::EnabledFirst);
+        assert_eq!(SortMode::EnabledFirst.next(&View::Services), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_next_users() {
+        assert_eq!(SortMode::Default.next(&View::Users), SortMode::NameAsc);
+        assert_eq!(SortMode::NameAsc.next(&View::Users), SortMode::NameDesc);
+        assert_eq!(SortMode::NameDesc.next(&View::Users), SortMode::UidAsc);
+        assert_eq!(SortMode::UidAsc.next(&View::Users), SortMode::UidDesc);
+        assert_eq!(SortMode::UidDesc.next(&View::Users), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_next_storage() {
+        assert_eq!(SortMode::Default.next(&View::Storage), SortMode::NameAsc);
+        assert_eq!(SortMode::NameAsc.next(&View::Storage), SortMode::NameDesc);
+        assert_eq!(SortMode::NameDesc.next(&View::Storage), SortMode::SizeAsc);
+        assert_eq!(SortMode::SizeAsc.next(&View::Storage), SortMode::SizeDesc);
+        assert_eq!(SortMode::SizeDesc.next(&View::Storage), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_next_default_view() {
+        // Dashboard should cycle through basic sort modes
+        assert_eq!(SortMode::Default.next(&View::Dashboard), SortMode::NameAsc);
+        assert_eq!(SortMode::NameAsc.next(&View::Dashboard), SortMode::NameDesc);
+        assert_eq!(SortMode::NameDesc.next(&View::Dashboard), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_next_invalid_returns_default() {
+        // Testing invalid sort mode for a view should return Default
+        assert_eq!(SortMode::SizeAsc.next(&View::Packages), SortMode::Default);
+        assert_eq!(SortMode::UidAsc.next(&View::Services), SortMode::Default);
+    }
+
+    #[test]
+    fn test_sort_mode_equality() {
+        assert_eq!(SortMode::Default, SortMode::Default);
+        assert_eq!(SortMode::NameAsc, SortMode::NameAsc);
+        assert_ne!(SortMode::NameAsc, SortMode::NameDesc);
+    }
+
+    #[test]
+    fn test_sort_mode_clone() {
+        let mode = SortMode::NameAsc;
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
     }
 }

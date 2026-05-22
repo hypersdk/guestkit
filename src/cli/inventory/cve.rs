@@ -6,9 +6,12 @@ use anyhow::Result;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
+/// A known CVE entry: (cve_id, severity, score)
+type CveEntry = (&'static str, &'static str, f64);
+
 /// Known CVEs for demonstration (in production, this would query a CVE database)
-static KNOWN_CVES: Lazy<HashMap<&'static str, Vec<(&'static str, &'static str, f64)>>> = Lazy::new(|| {
-    let mut m: HashMap<&'static str, Vec<(&'static str, &'static str, f64)>> = HashMap::new();
+static KNOWN_CVES: Lazy<HashMap<&'static str, Vec<CveEntry>>> = Lazy::new(|| {
+    let mut m: HashMap<&'static str, Vec<CveEntry>> = HashMap::new();
 
     // Example CVEs (package_name -> [(cve_id, severity, score)])
     m.insert("openssl", vec![
@@ -69,13 +72,241 @@ pub fn filter_by_severity(
         .collect()
 }
 
-#[allow(dead_code)]
-fn severity_rank(severity: &str) -> u8 {
+pub fn severity_rank(severity: &str) -> u8 {
     match severity.to_lowercase().as_str() {
         "critical" => 4,
         "high" => 3,
         "medium" => 2,
         "low" => 1,
         _ => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lookup_cves_known_package() {
+        let vulns = lookup_cves("openssl", "3.0.0").unwrap();
+        assert_eq!(vulns.len(), 2);
+        assert_eq!(vulns[0].cve, "CVE-2024-0727");
+        assert_eq!(vulns[0].severity, "high");
+        assert_eq!(vulns[0].score, Some(7.5));
+    }
+
+    #[test]
+    fn test_lookup_cves_nginx() {
+        let vulns = lookup_cves("nginx", "1.20.0").unwrap();
+        assert_eq!(vulns.len(), 1);
+        assert_eq!(vulns[0].cve, "CVE-2023-44487");
+        assert_eq!(vulns[0].severity, "high");
+    }
+
+    #[test]
+    fn test_lookup_cves_unknown_package() {
+        let vulns = lookup_cves("unknown-package", "1.0.0").unwrap();
+        assert_eq!(vulns.len(), 0);
+    }
+
+    #[test]
+    fn test_lookup_cves_curl() {
+        let vulns = lookup_cves("curl", "7.68.0").unwrap();
+        assert_eq!(vulns.len(), 1);
+        assert_eq!(vulns[0].cve, "CVE-2023-46218");
+        assert_eq!(vulns[0].severity, "medium");
+        assert_eq!(vulns[0].score, Some(6.5));
+    }
+
+    #[test]
+    fn test_lookup_cves_python3() {
+        let vulns = lookup_cves("python3", "3.8.0").unwrap();
+        assert_eq!(vulns.len(), 1);
+        assert_eq!(vulns[0].cve, "CVE-2023-40217");
+        assert_eq!(vulns[0].severity, "medium");
+    }
+
+    #[test]
+    fn test_vulnerability_info_fields() {
+        let vulns = lookup_cves("openssl", "3.0.0").unwrap();
+        let vuln = &vulns[0];
+
+        assert!(vuln.cve.starts_with("CVE-"));
+        assert!(!vuln.severity.is_empty());
+        assert!(vuln.score.is_some());
+        assert!(vuln.description.contains("openssl"));
+        assert_eq!(vuln.fixed_version, None);
+    }
+
+    #[test]
+    fn test_severity_rank_ordering() {
+        assert_eq!(severity_rank("critical"), 4);
+        assert_eq!(severity_rank("high"), 3);
+        assert_eq!(severity_rank("medium"), 2);
+        assert_eq!(severity_rank("low"), 1);
+        assert_eq!(severity_rank("unknown"), 0);
+    }
+
+    #[test]
+    fn test_severity_rank_case_insensitive() {
+        assert_eq!(severity_rank("CRITICAL"), 4);
+        assert_eq!(severity_rank("High"), 3);
+        assert_eq!(severity_rank("MeDiUm"), 2);
+        assert_eq!(severity_rank("LOW"), 1);
+    }
+
+    #[test]
+    fn test_filter_by_severity_critical() {
+        let vulns = vec![
+            VulnerabilityInfo {
+                cve: "CVE-001".to_string(),
+                severity: "critical".to_string(),
+                score: Some(9.8),
+                description: "Critical vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-002".to_string(),
+                severity: "high".to_string(),
+                score: Some(7.5),
+                description: "High vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-003".to_string(),
+                severity: "medium".to_string(),
+                score: Some(5.0),
+                description: "Medium vuln".to_string(),
+                fixed_version: None,
+            },
+        ];
+
+        let filtered = filter_by_severity(&vulns, "critical");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].cve, "CVE-001");
+    }
+
+    #[test]
+    fn test_filter_by_severity_high() {
+        let vulns = vec![
+            VulnerabilityInfo {
+                cve: "CVE-001".to_string(),
+                severity: "critical".to_string(),
+                score: Some(9.8),
+                description: "Critical vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-002".to_string(),
+                severity: "high".to_string(),
+                score: Some(7.5),
+                description: "High vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-003".to_string(),
+                severity: "low".to_string(),
+                score: Some(2.0),
+                description: "Low vuln".to_string(),
+                fixed_version: None,
+            },
+        ];
+
+        let filtered = filter_by_severity(&vulns, "high");
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].cve, "CVE-001");
+        assert_eq!(filtered[1].cve, "CVE-002");
+    }
+
+    #[test]
+    fn test_filter_by_severity_medium() {
+        let vulns = vec![
+            VulnerabilityInfo {
+                cve: "CVE-001".to_string(),
+                severity: "high".to_string(),
+                score: Some(7.5),
+                description: "High vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-002".to_string(),
+                severity: "medium".to_string(),
+                score: Some(5.0),
+                description: "Medium vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-003".to_string(),
+                severity: "low".to_string(),
+                score: Some(2.0),
+                description: "Low vuln".to_string(),
+                fixed_version: None,
+            },
+        ];
+
+        let filtered = filter_by_severity(&vulns, "medium");
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].cve, "CVE-001");
+        assert_eq!(filtered[1].cve, "CVE-002");
+    }
+
+    #[test]
+    fn test_filter_by_severity_low() {
+        let vulns = vec![
+            VulnerabilityInfo {
+                cve: "CVE-001".to_string(),
+                severity: "critical".to_string(),
+                score: Some(9.8),
+                description: "Critical vuln".to_string(),
+                fixed_version: None,
+            },
+            VulnerabilityInfo {
+                cve: "CVE-002".to_string(),
+                severity: "low".to_string(),
+                score: Some(2.0),
+                description: "Low vuln".to_string(),
+                fixed_version: None,
+            },
+        ];
+
+        let filtered = filter_by_severity(&vulns, "low");
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_by_severity_empty_list() {
+        let vulns: Vec<VulnerabilityInfo> = vec![];
+        let filtered = filter_by_severity(&vulns, "high");
+        assert_eq!(filtered.len(), 0);
+    }
+
+    #[test]
+    fn test_filter_by_severity_all_filtered() {
+        let vulns = vec![
+            VulnerabilityInfo {
+                cve: "CVE-001".to_string(),
+                severity: "low".to_string(),
+                score: Some(2.0),
+                description: "Low vuln".to_string(),
+                fixed_version: None,
+            },
+        ];
+
+        let filtered = filter_by_severity(&vulns, "critical");
+        assert_eq!(filtered.len(), 0);
+    }
+
+    #[test]
+    fn test_known_cves_map_contains_expected_packages() {
+        // Verify the static map is initialized correctly
+        let vulns_openssl = lookup_cves("openssl", "1.0.0").unwrap();
+        let vulns_nginx = lookup_cves("nginx", "1.0.0").unwrap();
+        let vulns_curl = lookup_cves("curl", "1.0.0").unwrap();
+        let vulns_python3 = lookup_cves("python3", "1.0.0").unwrap();
+
+        assert!(!vulns_openssl.is_empty());
+        assert!(!vulns_nginx.is_empty());
+        assert!(!vulns_curl.is_empty());
+        assert!(!vulns_python3.is_empty());
     }
 }

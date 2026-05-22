@@ -44,9 +44,11 @@ impl JournalEntry {
     /// Format timestamp as human-readable string
     pub fn timestamp_str(&self) -> String {
         let secs = self.timestamp / 1_000_000;
-        let datetime = chrono::DateTime::<chrono::Utc>::from_timestamp(secs as i64, 0)
-            .unwrap_or_else(|| chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0).unwrap());
-        datetime.format("%Y-%m-%d %H:%M:%S").to_string()
+        let secs_i64 = i64::try_from(secs).unwrap_or(i64::MAX);
+        chrono::DateTime::<chrono::Utc>::from_timestamp(secs_i64, 0)
+            .unwrap_or_default()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
     }
 }
 
@@ -150,6 +152,7 @@ impl BootTiming {
 }
 
 /// Systemd analyzer
+#[derive(Debug)]
 pub struct SystemdAnalyzer {
     /// Root path of the inspected system
     root_path: PathBuf,

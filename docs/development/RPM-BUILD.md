@@ -169,13 +169,13 @@ sudo dnf install ~/rpmbuild/RPMS/x86_64/guestkit-devel-0.3.1-1.fc39.x86_64.rpm
 
 ```bash
 # Check version
-guestctl --version
+guestkit --version
 
 # Run inspection
-guestctl inspect /path/to/vm.qcow2
+guestkit inspect /path/to/vm.qcow2
 
 # Launch TUI
-guestctl tui /path/to/vm.qcow2
+guestkit tui /path/to/vm.qcow2
 
 # Test Python bindings (if installed)
 python3 -c "from guestkit import Guestfs; print('OK')"
@@ -335,7 +335,7 @@ rpmlint ~/rpmbuild/RPMS/x86_64/guestkit-0.3.1-1.fc39.x86_64.rpm
 
 - **Issues**: https://github.com/ssahani/guestkit/issues
 - **Discussions**: https://github.com/ssahani/guestkit/discussions
-- **Email**: ssahani@gmail.com
+- **Email**: ssahani@redhat.com
 
 ---
 

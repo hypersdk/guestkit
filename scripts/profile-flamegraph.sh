@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generate flamegraph profiles for guestctl operations
+# Generate flamegraph profiles for guestkit operations
 # Requires: cargo-flamegraph (install with: cargo install flamegraph)
 
 set -e

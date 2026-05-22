@@ -88,7 +88,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
 
     // Add database services
     for db_service in &dependent_services {
-        compose.push_str("\n");
+        compose.push('\n');
         compose.push_str(&format!("  {}:\n", db_service));
 
         match *db_service {

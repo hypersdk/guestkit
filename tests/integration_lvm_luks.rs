@@ -27,7 +27,7 @@ fn test_luks_basic() -> Result<(), Box<dyn std::error::Error>> {
 
     // Format as LUKS
     let password = "test_password_123";
-    g.luks_format("/dev/sda1", password)?;
+    g.luks_format("/dev/sda1", password, 0)?;
 
     // Open LUKS device
     g.luks_open("/dev/sda1", password, "encrypted")?;
@@ -106,7 +106,7 @@ fn test_luks_with_lvm() -> Result<(), Box<dyn std::error::Error>> {
 
     // Encrypt the partition
     let password = "secure_password_456";
-    g.luks_format("/dev/sda1", password)?;
+    g.luks_format("/dev/sda1", password, 0)?;
     g.luks_open("/dev/sda1", password, "encrypted")?;
 
     // Create LVM on encrypted device
@@ -143,7 +143,7 @@ fn test_luks_with_lvm() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_lvm_inspection() -> Result<(), Box<dyn std::error::Error>> {
     // This test doesn't create LVM but tests the inspection APIs
-    let mut g = Guestfs::new()?;
+    let _g = Guestfs::new()?;
 
     // Test that the APIs exist and return appropriate empty results
     // when no LVM is present
@@ -180,11 +180,11 @@ fn test_luks_key_management() -> Result<(), Box<dyn std::error::Error>> {
 
     // Format as LUKS with initial key
     let key1 = "initial_password";
-    g.luks_format("/dev/sda1", key1)?;
+    g.luks_format("/dev/sda1", key1, 0)?;
 
     // Add a second key
     let key2 = "second_password";
-    g.luks_add_key("/dev/sda1", key1, key2)?;
+    g.luks_add_key("/dev/sda1", key1, key2, 1)?;
 
     // Test that we can open with the new key
     g.luks_open("/dev/sda1", key2, "encrypted")?;
@@ -269,7 +269,7 @@ fn test_luks_readonly_open() -> Result<(), Box<dyn std::error::Error>> {
     g.part_add("/dev/sda", "primary", 2048, -2048)?;
 
     let password = "test_password";
-    g.luks_format("/dev/sda1", password)?;
+    g.luks_format("/dev/sda1", password, 0)?;
 
     // Open in read-only mode
     g.luks_open_ro("/dev/sda1", password, "encrypted_ro")?;

@@ -6,7 +6,7 @@ pub mod graph;
 pub mod visualizer;
 
 use anyhow::Result;
-use guestkit::Guestfs;
+use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -215,7 +215,7 @@ fn extract_debian_dependencies(
     for (pkg, deps) in &dep_map {
         for dep in deps {
             reverse_dep_map.entry(dep.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(pkg.clone());
         }
     }
@@ -256,12 +256,12 @@ fn extract_debian_dependencies(
 }
 
 fn extract_rpm_dependencies(
-    g: &mut Guestfs,
+    _g: &mut Guestfs,
     applications: &[(String, String, String)],
     _verbose: bool,
 ) -> Result<(Vec<Package>, Vec<Dependency>)> {
     let mut packages = Vec::new();
-    let mut dependencies = Vec::new();
+    let dependencies = Vec::new();
     let dep_map: HashMap<String, Vec<String>> = HashMap::new();
 
     // For RPM systems, we'd need to query RPM database
@@ -320,8 +320,7 @@ fn parse_dpkg_status(content: &str, dep_map: &mut HashMap<String, Vec<String>>) 
         } else if line.starts_with("Depends:") {
             let deps_str = line.strip_prefix("Depends:").unwrap_or("").trim();
             for dep in deps_str.split(',') {
-                let dep_name = dep.trim()
-                    .split_whitespace()
+                let dep_name = dep.split_whitespace()
                     .next()
                     .unwrap_or("")
                     .to_string();
@@ -395,5 +394,97 @@ fn calculate_statistics(
         circular_dependencies: circular_deps.len(),
         conflicts: conflicts.len(),
         average_dependencies,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_package_creation() {
+        let package = Package {
+            name: "test-pkg".to_string(),
+            version: "1.0.0".to_string(),
+            depends_on: vec!["dep1".to_string()],
+            required_by: vec!["parent1".to_string()],
+            is_leaf: false,
+            is_root: false,
+            depth: 1,
+        };
+        
+        assert_eq!(package.name, "test-pkg");
+        assert_eq!(package.version, "1.0.0");
+        assert_eq!(package.depth, 1);
+        assert!(!package.is_leaf);
+        assert!(!package.is_root);
+    }
+
+    #[test]
+    fn test_dependency_creation() {
+        let dependency = Dependency {
+            from: "pkg-a".to_string(),
+            to: "pkg-b".to_string(),
+            dependency_type: DependencyType::Required,
+            is_optional: false,
+        };
+        
+        assert_eq!(dependency.from, "pkg-a");
+        assert_eq!(dependency.to, "pkg-b");
+        assert!(!dependency.is_optional);
+    }
+
+    #[test]
+    fn test_graph_statistics() {
+        let stats = GraphStatistics {
+            total_packages: 10,
+            total_dependencies: 15,
+            leaf_packages: 3,
+            root_packages: 2,
+            max_depth: 5,
+            circular_dependencies: 0,
+            conflicts: 0,
+            average_dependencies: 1.5,
+        };
+        
+        assert_eq!(stats.total_packages, 10);
+        assert_eq!(stats.total_dependencies, 15);
+        assert_eq!(stats.circular_dependencies, 0);
+        assert_eq!(stats.average_dependencies, 1.5);
+    }
+
+    #[test]
+    fn test_circular_dependency() {
+        let circular = CircularDependency {
+            cycle: vec!["pkg-a".to_string(), "pkg-b".to_string(), "pkg-a".to_string()],
+            length: 3,
+        };
+        
+        assert_eq!(circular.cycle.len(), 3);
+        assert_eq!(circular.length, 3);
+    }
+
+    #[test]
+    fn test_dependency_graph_creation() {
+        let graph = DependencyGraph {
+            packages: vec![],
+            dependencies: vec![],
+            conflicts: vec![],
+            circular_dependencies: vec![],
+            statistics: GraphStatistics {
+                total_packages: 0,
+                total_dependencies: 0,
+                leaf_packages: 0,
+                root_packages: 0,
+                max_depth: 0,
+                circular_dependencies: 0,
+                conflicts: 0,
+                average_dependencies: 0.0,
+            },
+        };
+        
+        assert_eq!(graph.packages.len(), 0);
+        assert_eq!(graph.dependencies.len(), 0);
+        assert_eq!(graph.statistics.total_packages, 0);
     }
 }

@@ -52,7 +52,7 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("resource \"aws_security_group\" \"main\" {\n");
     tf.push_str(&format!("  name        = \"{}-sg\"\n", sanitize_name(&analysis.hostname)));
     tf.push_str(&format!("  description = \"Security group for {}\"\n", analysis.hostname));
-    tf.push_str("\n");
+    tf.push('\n');
 
     // Ingress rules based on detected ports
     for port in &analysis.ports {
@@ -88,7 +88,7 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
         tf.push_str("  availability_zone = data.aws_availability_zones.available.names[0]\n");
         tf.push_str(&format!("  size              = {}\n", volume.size_gb.ceil() as u64));
         tf.push_str("  type              = \"gp3\"\n");
-        tf.push_str("\n");
+        tf.push('\n');
         tf.push_str("  tags = {\n");
         tf.push_str(&format!("    Name = \"{}-data-{}\"\n", sanitize_name(&analysis.hostname), idx));
         tf.push_str(&format!("    Path = \"{}\"\n", volume.path));
@@ -100,9 +100,9 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("resource \"aws_instance\" \"main\" {\n");
     tf.push_str("  ami           = var.ami_id  # Use your custom AMI\n");
     tf.push_str("  instance_type = var.instance_type\n");
-    tf.push_str("\n");
+    tf.push('\n');
     tf.push_str("  vpc_security_group_ids = [aws_security_group.main.id]\n");
-    tf.push_str("\n");
+    tf.push('\n');
     tf.push_str("  tags = {\n");
     tf.push_str(&format!("    Name = \"{}\"\n", sanitize_name(&analysis.hostname)));
     tf.push_str(&format!("    OS   = \"{} {}\"\n", analysis.os_name, analysis.os_version));
@@ -112,8 +112,12 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
     // Volume attachments
     for (idx, _volume) in analysis.volumes.iter().enumerate() {
         tf.push_str(&format!("resource \"aws_volume_attachment\" \"data_{}\" {{\n", idx));
-        tf.push_str(&format!("  device_name = \"/dev/sd{}\"\n",
-            char::from_u32('f' as u32 + idx as u32).unwrap_or('f')));
+        let dev_letter = if idx < 20 {
+            char::from_u32('f' as u32 + idx as u32).unwrap_or('z')
+        } else {
+            'z'
+        };
+        tf.push_str(&format!("  device_name = \"/dev/sd{}\"\n", dev_letter));
         tf.push_str(&format!("  volume_id   = aws_ebs_volume.data_{}.id\n", idx));
         tf.push_str("  instance_id = aws_instance.main.id\n");
         tf.push_str("}\n\n");
@@ -189,7 +193,7 @@ fn generate_gcp(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str(&format!("  name         = \"{}\"\n", sanitize_name(&analysis.hostname)));
     tf.push_str("  machine_type = var.machine_type\n");
     tf.push_str("  zone         = var.zone\n");
-    tf.push_str("\n");
+    tf.push('\n');
     tf.push_str("  boot_disk {\n");
     tf.push_str("    initialize_params {\n");
     tf.push_str("      image = var.image\n");

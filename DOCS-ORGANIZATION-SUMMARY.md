@@ -15,7 +15,7 @@ All documentation has been moved from the root directory into an organized `docs
 
 ```
 docs/
-├── README.md                    # Main docs index (guestctl CLI tool)
+├── README.md                    # Main docs index (guestkit CLI tool)
 ├── WORKER-INDEX.md             # Worker system docs index
 ├── INDEX.md                    # Complete navigation
 │
@@ -76,7 +76,7 @@ docs/
 │   ├── comparison-guide.md
 │   └── performance.md
 │
-├── user-guides/                # User guides (guestctl)
+├── user-guides/                # User guides (guestkit)
 │   ├── getting-started.md
 │   ├── cli-guide.md
 │   ├── best-practices.md
@@ -99,7 +99,7 @@ docs/
 - SHA256 checksum verification
 - Deployment guides
 
-### 2. Guestctl CLI Docs (EXISTING)
+### 2. Guestkit CLI Docs (EXISTING)
 **Index**: [docs/README.md](docs/README.md)
 
 - User guides
@@ -122,7 +122,7 @@ cat docs/WORKER-INDEX.md
 cat docs/phases/phase-4/PHASE-4-OVERVIEW.md
 ```
 
-**For Guestctl CLI**:
+**For Guestkit CLI**:
 ```bash
 # Read the main docs
 cat docs/README.md
@@ -159,7 +159,7 @@ cat docs/user-guides/getting-started.md
 - **Deploy worker** → `docs/guides/quickstart.md`
 - **Use REST API** → `docs/phases/phase-4/PHASE-4.3-REST-API-TRANSPORT.md`
 - **Monitor metrics** → `docs/phases/phase-4/PHASE-4.2-PROMETHEUS-METRICS.md`
-- **Learn guestctl** → `docs/user-guides/getting-started.md`
+- **Learn guestkit** → `docs/user-guides/getting-started.md`
 
 ---
 

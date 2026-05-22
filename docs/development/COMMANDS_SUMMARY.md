@@ -199,7 +199,7 @@ export OPENAI_API_KEY='your-key-here'
 
 **Usage:**
 ```bash
-sudo -E guestctl interactive vm.qcow2
+sudo -E guestkit interactive vm.qcow2
 ```
 
 ## Statistics

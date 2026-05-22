@@ -27,7 +27,7 @@ Implementation of Q1 2026 medium-term priorities.
 
 **API:**
 ```rust
-use guestctl::core::BinaryCache;
+use guestkit::core::BinaryCache;
 
 let cache = BinaryCache::new()?;
 
@@ -143,7 +143,7 @@ harness = false
 
 **API:**
 ```rust
-use guestctl::cli::parallel::{ParallelInspector, InspectionConfig};
+use guestkit::cli::parallel::{ParallelInspector, InspectionConfig};
 
 // Simple batch inspection (uses all CPU cores)
 let disks = vec!["vm1.qcow2", "vm2.qcow2", "vm3.qcow2"];
@@ -266,7 +266,7 @@ cat performance-analysis/analysis-*.md
 
 **API:**
 ```rust
-use guestctl::core::mem_optimize;
+use guestkit::core::mem_optimize;
 
 // Optimized allocations
 let partitions = mem_optimize::vec_for_partitions();  // capacity: 4
@@ -297,13 +297,13 @@ let services = mem_optimize::vec_for_services();     // capacity: 50
 **CLI Impact:**
 ```bash
 # Cache enabled by default
-guestctl inspect vm.qcow2
+guestkit inspect vm.qcow2
 
 # Disable cache if needed
-guestctl inspect vm.qcow2 --no-cache
+guestkit inspect vm.qcow2 --no-cache
 
 # Force refresh cached data
-guestctl inspect vm.qcow2 --cache-refresh
+guestkit inspect vm.qcow2 --cache-refresh
 ```
 
 **Performance Impact:**
@@ -684,7 +684,7 @@ src/cli/parallel.rs                     (cache integration)
 ### Test Binary Cache
 
 ```rust
-use guestctl::core::BinaryCache;
+use guestkit::core::BinaryCache;
 
 #[test]
 fn test_cache_performance() {
@@ -1134,16 +1134,16 @@ Week 12: Target 100%
 **Usage:**
 ```bash
 # Generate HTML report with Chart.js
-guestctl inspect disk.img --export html --export-output report.html
+guestkit inspect disk.img --export html --export-output report.html
 
 # Generate PDF report
-guestctl inspect disk.img --export pdf --export-output report.pdf
+guestkit inspect disk.img --export pdf --export-output report.pdf
 
 # Generate Markdown report with Mermaid diagrams
-guestctl inspect disk.img --export markdown --export-output report.md
+guestkit inspect disk.img --export markdown --export-output report.md
 
 # Use custom templates (programmatic API)
-use guestctl::export::{TemplateEngine, TemplateFormat, TemplateLevel};
+use guestkit::export::{TemplateEngine, TemplateFormat, TemplateLevel};
 
 let mut engine = TemplateEngine::new();
 let template_name = TemplateEngine::get_template_name(
@@ -1232,8 +1232,8 @@ let output = engine.render(&template_name, &vars)?;
 
 **API Usage:**
 ```rust
-use guestctl::core::{SystemdAnalyzer, JournalFilter};
-use guestctl::core::systemd::{journal::JournalReader, services::ServiceAnalyzer, boot::BootAnalyzer};
+use guestkit::core::{SystemdAnalyzer, JournalFilter};
+use guestkit::core::systemd::{journal::JournalReader, services::ServiceAnalyzer, boot::BootAnalyzer};
 
 // Create analyzer for VM root path
 let analyzer = SystemdAnalyzer::new("/mnt/vm");
@@ -1420,7 +1420,7 @@ let summary = boot_analyzer.generate_summary(&timing);
 - Restored full functionality to HTML and PDF exporters
 - Fixed pre-existing build errors from Week 6 implementation
 - Ensured type safety and correct data mapping
-- All guestctl features now compile and work correctly
+- All guestkit features now compile and work correctly
 
 ### 19. README Documentation Update 📝
 
@@ -1487,9 +1487,9 @@ cat /etc/hostname >> hosts.txt  # Append instead of overwrite
 ls /etc >> hosts.txt             # Append directory listing
 
 # Tab completion in interactive mode
-guestctl> mount /dev/[TAB]        # Shows devices
-guestctl> mount /dev/sda1 /[TAB]  # Shows mount points
-guestctl> ls /[TAB]               # Shows common paths
+guestkit> mount /dev/[TAB]        # Shows devices
+guestkit> mount /dev/sda1 /[TAB]  # Shows mount points
+guestkit> ls /[TAB]               # Shows common paths
 ```
 
 **Impact:**

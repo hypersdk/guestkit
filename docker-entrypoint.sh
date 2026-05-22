@@ -16,5 +16,5 @@ if [ -w /dev ]; then
     fi
 fi
 
-# Execute guestctl with provided arguments
-exec guestctl "$@"
+# Execute guestkit with provided arguments
+exec guestkit "$@"

@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with guestctl.
+This guide helps you diagnose and resolve common issues with guestkit.
 
 ## Table of Contents
 
@@ -102,7 +102,7 @@ Error: No free loop devices
 
 1. **Permission denied** - Run with sudo:
    ```bash
-   sudo guestctl inspect disk.raw
+   sudo guestkit inspect disk.raw
    ```
 
 2. **No free loop devices** - Check and clean up:
@@ -138,7 +138,7 @@ Error: No available NBD devices found
 
 **Solution:**
 
-guestctl automatically loads the NBD module, but if that fails:
+guestkit automatically loads the NBD module, but if that fails:
 
 ```bash
 # Manual module load
@@ -185,14 +185,14 @@ Error: Operation not permitted
 
 1. **For NBD operations** - Run with appropriate privileges:
    ```bash
-   sudo guestctl inspect disk.img
+   sudo guestkit inspect disk.img
    ```
 
 2. **For LUKS operations** - Requires root or appropriate capabilities:
    ```bash
-   sudo guestctl ...
+   sudo guestkit ...
    # OR use capabilities
-   sudo setcap cap_sys_admin+ep target/release/guestctl
+   sudo setcap cap_sys_admin+ep target/release/guestkit
    ```
 
 3. **For disk image access** - Check file permissions:
@@ -302,7 +302,7 @@ Error: exists: No such file or directory
 1. **Reduce disk image size** - Large images take longer to analyze:
    ```bash
    # Use qcow2 instead of raw for better performance
-   guestctl convert disk.raw --output disk.qcow2 --format qcow2
+   guestkit convert disk.raw --output disk.qcow2 --format qcow2
    ```
 
 2. **Use read-only mode** when possible:
@@ -417,7 +417,7 @@ ulimit -a
 podman run --privileged \
   --device /dev/nbd0 \
   -v /path/to/images:/images:ro \
-  guestctl inspect /images/vm.qcow2
+  guestkit inspect /images/vm.qcow2
 ```
 
 **Better:** Use container with pre-loaded NBD module:
@@ -426,7 +426,7 @@ podman run --privileged \
 FROM fedora:latest
 RUN dnf install -y qemu-img
 # Load NBD module on host before running container
-COPY guestctl /usr/local/bin/
+COPY guestkit /usr/local/bin/
 ```
 
 ### Integration with Kubernetes
@@ -440,7 +440,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: guestctl
+  - name: guestkit
     securityContext:
       privileged: true
     volumeMounts:
@@ -528,7 +528,7 @@ g.set_trace(true);
 ```bash
 # Environment variable
 export RUST_LOG=debug
-guestctl inspect disk.img
+guestkit inspect disk.img
 ```
 
 ### Check What's Happening
@@ -551,7 +551,7 @@ eprintln!("File stat: {:?}", stat);
 
 ```bash
 # Use strace to see system calls
-strace -e trace=open,stat,mount guestctl inspect disk.img 2>&1 | grep -v ENOENT
+strace -e trace=open,stat,mount guestkit inspect disk.img 2>&1 | grep -v ENOENT
 
 # Monitor qemu-nbd activity
 ps aux | grep qemu-nbd
@@ -576,7 +576,7 @@ qemu-img dd if=disk.qcow2 of=/dev/null bs=1M
 Create a minimal test case:
 
 ```rust
-use guestctl::Guestfs;
+use guestkit::Guestfs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut g = Guestfs::new()?;
@@ -604,7 +604,7 @@ Gather this information:
 1. **Environment:**
    - OS and version: `uname -a`
    - Rust version: `rustc --version`
-   - guestctl version: `guestctl version`
+   - guestkit version: `guestkit version`
 
 2. **Error details:**
    - Full error message
@@ -638,7 +638,7 @@ Use this template:
 **Environment:**
 - OS: Fedora 39
 - Rust: 1.75.0
-- guestctl: 0.2.0
+- guestkit: 0.2.0
 
 **Description:**
 Brief description of the issue
@@ -661,7 +661,7 @@ Any other relevant information
 
 ## Frequently Asked Questions
 
-### Q: Do I need root/sudo to use guestctl?
+### Q: Do I need root/sudo to use guestkit?
 
 **A:** It depends:
 - **Read-only inspection:** Usually no, unless NBD requires it
@@ -669,11 +669,11 @@ Any other relevant information
 - **LUKS operations:** Yes, requires root
 - **LVM operations:** Yes, requires root
 
-### Q: Can I use guestctl in Docker/containers?
+### Q: Can I use guestkit in Docker/containers?
 
 **A:** Yes, but requires privileged mode or device access for NBD operations.
 
-### Q: Does guestctl work on Windows/macOS?
+### Q: Does guestkit work on Windows/macOS?
 
 **A:** Currently Linux-only. Windows/macOS support is planned for future phases.
 
@@ -691,9 +691,9 @@ for disk in disks.chunks(10) {
 }
 ```
 
-### Q: What's the difference between guestctl and ?
+### Q: What's the difference between guestkit and ?
 
-**A:** guestctl is a pure Rust implementation inspired by :
+**A:** guestkit is a pure Rust implementation inspired by :
 - **Pros:** Memory safe, no C dependencies, better integration with Rust projects
 - **Cons:** Not 100% API compatible, some features still in development
 - **Coverage:** 76.8% of  APIs implemented

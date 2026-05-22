@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Performance validation framework for guestctl
+//! Performance validation framework for guestkit
 //!
 //! This module provides a framework for validating performance improvements
 //! and detecting regressions across different versions.
@@ -7,7 +7,7 @@
 mod helpers;
 
 use helpers::{MockDisk, MockDiskBuilder, MockDiskType};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::path::Path;
 use tempfile::TempDir;
 

@@ -246,14 +246,16 @@ impl Guestfs {
                 }
             } else if let Some(ref mut iface) = current_iface {
                 if line.starts_with("address ") {
-                    let addr = line.split_whitespace().nth(1).unwrap_or("").to_string();
-                    if !addr.is_empty() {
-                        iface.ip_address.push(addr);
+                    if let Some(addr) = line.split_whitespace().nth(1) {
+                        if !addr.is_empty() {
+                            iface.ip_address.push(addr.to_string());
+                        }
                     }
                 } else if line.starts_with("hwaddress ") || line.starts_with("hwaddr ") {
-                    let mac = line.split_whitespace().nth(1).unwrap_or("").to_string();
-                    if !mac.is_empty() {
-                        iface.mac_address = mac;
+                    if let Some(mac) = line.split_whitespace().nth(1) {
+                        if !mac.is_empty() {
+                            iface.mac_address = mac.to_string();
+                        }
                     }
                 } else if line.starts_with("dns-nameservers ") {
                     for server in line.split_whitespace().skip(1) {
@@ -292,22 +294,26 @@ impl Guestfs {
                     "BOOTPROTO" => iface.dhcp = matches!(value.to_lowercase().as_str(), "dhcp" | "bootp"),
                     "IPADDR" => iface.ip_address.push(value.to_string()),
                     k if k.starts_with("IPADDR") => {
-                        if let Ok(num) = usize::from_str(&k[6..]) {
-                            if num >= index {
-                                while iface.ip_address.len() <= num {
-                                    iface.ip_address.push(String::new());
+                        if let Some(suffix) = k.get(6..) {
+                            if let Ok(num) = usize::from_str(suffix) {
+                                if num >= index && num < 256 {
+                                    while iface.ip_address.len() <= num {
+                                        iface.ip_address.push(String::new());
+                                    }
+                                    iface.ip_address[num] = value.to_string();
+                                    index = num.saturating_add(1);
                                 }
-                                iface.ip_address[num] = value.to_string();
-                                index = num + 1;
+                            } else {
+                                iface.ip_address.push(value.to_string());
                             }
-                        } else {
-                            iface.ip_address.push(value.to_string());
                         }
                     }
                     "HWADDR" | "MACADDR" => iface.mac_address = value.to_string(),
                     k if k.starts_with("DNS") => {
-                        if k[3..].parse::<usize>().is_ok() {
-                            iface.dns_servers.push(value.to_string());
+                        if let Some(suffix) = k.get(3..) {
+                            if suffix.parse::<usize>().is_ok() {
+                                iface.dns_servers.push(value.to_string());
+                            }
                         }
                     }
                     _ => {}
@@ -594,8 +600,8 @@ impl Guestfs {
             } else if !has_resolv_conf || dns_servers.is_empty() {
                 // If no resolv.conf or empty, collect from network configs
                 // Note: We need to temporarily unmount to call inspect_network
-                let unmount_after = !guestfs.mounted.contains_key("/");
-                if unmount_after {
+                let was_mounted = guestfs.mounted.contains_key("/");
+                if was_mounted {
                     let _ = guestfs.umount("/");
                 }
 
@@ -606,7 +612,7 @@ impl Guestfs {
                 }
 
                 // Re-mount if we unmounted
-                if unmount_after {
+                if was_mounted {
                     guestfs.mount_ro(root, "/")?;
                 }
 
@@ -663,7 +669,7 @@ impl Guestfs {
                         "DNS" => {
                             for server in value.split_whitespace() {
                                 // Extract just the IP address, ignoring port, interface, SNI
-                                let ip = server.split(|c: char| c == ':' || c == '%' || c == '#').next().unwrap_or("");
+                                let ip = server.split([':', '%', '#']).next().unwrap_or("");
                                 if !ip.is_empty() {
                                     parsed.dns.push(ip.to_string());
                                 }
@@ -671,7 +677,7 @@ impl Guestfs {
                         }
                         "FallbackDNS" => {
                             for server in value.split_whitespace() {
-                                let ip = server.split(|c: char| c == ':' || c == '%' || c == '#').next().unwrap_or("");
+                                let ip = server.split([':', '%', '#']).next().unwrap_or("");
                                 if !ip.is_empty() {
                                     parsed.fallback_dns.push(ip.to_string());
                                 }
@@ -826,7 +832,7 @@ impl Guestfs {
         if let Ok(vgs) = self.vgs() {
             for vg in vgs {
                 let vg_info = VolumeGroup {
-                    name: vg.clone(),
+                    name: vg,
                     pv_count: 0, // Will be counted from PVs
                     lv_count: 0, // Will be counted from LVs
                     size: "Unknown".to_string(),
@@ -840,7 +846,7 @@ impl Guestfs {
             for lv_path in lvs {
                 // Parse LV path to get VG and LV names
                 // Format is usually /dev/mapper/vgname-lvname or /dev/vgname/lvname
-                let lv_name = lv_path.split('/').last().unwrap_or(&lv_path).to_string();
+                let lv_name = lv_path.split('/').next_back().unwrap_or(&lv_path).to_string();
 
                 // Try to get VG name from LV
                 let vg_name = if lv_path.contains("/mapper/") {
@@ -857,7 +863,7 @@ impl Guestfs {
                     name: lv_name,
                     vg_name: vg_name.clone(),
                     size: "Unknown".to_string(),
-                    path: lv_path.clone(),
+                    path: lv_path,
                 };
                 lvm_info.logical_volumes.push(lv_info);
 
@@ -912,13 +918,14 @@ impl Guestfs {
                                 })
                                 .collect();
 
+                            let dev_count = devices.len();
                             current_array = Some(RAIDArray {
-                                device: device.clone(),
+                                device,
                                 level,
                                 status,
-                                devices: devices.clone(),
-                                active_devices: devices.len(),
-                                total_devices: devices.len(),
+                                devices,
+                                active_devices: dev_count,
+                                total_devices: dev_count,
                             });
                         }
                     }
@@ -964,32 +971,26 @@ impl Guestfs {
     pub fn inspect_runtimes(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.with_mount(root, |guestfs| {
             let mut runtimes = HashMap::new();
+            let installed = "installed".to_string();
             // Python
             for py in &["python3", "python", "python2"] {
                 let path = format!("/usr/bin/{}", py);
                 if guestfs.exists(&path).unwrap_or(false) {
-                    runtimes.insert(py.to_string(), "installed".to_string());
+                    runtimes.insert(py.to_string(), installed.clone());
                 }
             }
-            // Node.js
-            if guestfs.exists("/usr/bin/node").unwrap_or(false) {
-                runtimes.insert("nodejs".to_string(), "installed".to_string());
-            }
-            // Ruby
-            if guestfs.exists("/usr/bin/ruby").unwrap_or(false) {
-                runtimes.insert("ruby".to_string(), "installed".to_string());
-            }
-            // Java
-            if guestfs.exists("/usr/bin/java").unwrap_or(false) {
-                runtimes.insert("java".to_string(), "installed".to_string());
-            }
-            // Go
-            if guestfs.exists("/usr/bin/go").unwrap_or(false) {
-                runtimes.insert("go".to_string(), "installed".to_string());
-            }
-            // Perl
-            if guestfs.exists("/usr/bin/perl").unwrap_or(false) {
-                runtimes.insert("perl".to_string(), "installed".to_string());
+            // Check other runtimes
+            let checks = [
+                ("nodejs", "/usr/bin/node"),
+                ("ruby", "/usr/bin/ruby"),
+                ("java", "/usr/bin/java"),
+                ("go", "/usr/bin/go"),
+                ("perl", "/usr/bin/perl"),
+            ];
+            for (name, path) in &checks {
+                if guestfs.exists(path).unwrap_or(false) {
+                    runtimes.insert(name.to_string(), installed.clone());
+                }
             }
             Ok(runtimes)
         })
@@ -1089,8 +1090,7 @@ impl Guestfs {
                 let mut issuer = "Unknown".to_string();
                 let mut expiry = "Unknown".to_string();
                 if has_openssl {
-                    let cmd = format!("openssl x509 -in {} -noout -subject -issuer -enddate", path);
-                    if let Ok(output) = guestfs.command(&["sh", "-c", &cmd]) {
+                    if let Ok(output) = guestfs.command(&["openssl", "x509", "-in", &path, "-noout", "-subject", "-issuer", "-enddate"]) {
                         for line in output.lines() {
                             let trimmed = line.trim();
                             if trimmed.starts_with("subject=") {
@@ -1173,9 +1173,9 @@ impl Guestfs {
             // Check GRUB2
             let grub_paths = vec!["/boot/grub2/grub.cfg", "/boot/grub/grub.cfg", "/etc/grub2.cfg"];
             for grub_cfg in grub_paths {
-                if guestfs.exists(&grub_cfg).unwrap_or(false) {
+                if guestfs.exists(grub_cfg).unwrap_or(false) {
                     config.bootloader = "GRUB2".to_string();
-                    if let Ok(content) = guestfs.cat(&grub_cfg) {
+                    if let Ok(content) = guestfs.cat(grub_cfg) {
                     // Parse basic GRUB config
                     let mut default_index: Option<usize> = None;
                     let mut current_entry = 0;
@@ -1206,12 +1206,11 @@ impl Guestfs {
                             if parts.len() > 1 && Some(current_entry) == default_index {
                                 config.kernel_cmdline = parts[1..].join(" ");
                             }
-                        } else if trimmed == "}" {
-                            if in_menuentry {
+                        } else if trimmed == "}"
+                            && in_menuentry {
                                 in_menuentry = false;
                                 current_entry += 1;
                             }
-                        }
                     }
                     }
                     break;
@@ -1739,11 +1738,10 @@ impl Guestfs {
     pub fn inspect_windows_software(&mut self, root: &str) -> Result<Vec<WindowsApplication>> {
         let mut applications = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
+        if !was_mounted
+            && self.mount_ro(root, "/").is_err() {
                 return Ok(applications);
             }
-        }
         // Get SOFTWARE registry hive path
         let systemroot = self
             .inspect_get_windows_systemroot(root)
@@ -1772,11 +1770,10 @@ impl Guestfs {
     pub fn inspect_windows_services(&mut self, root: &str) -> Result<Vec<WindowsService>> {
         let mut services = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
+        if !was_mounted
+            && self.mount_ro(root, "/").is_err() {
                 return Ok(services);
             }
-        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1803,11 +1800,10 @@ impl Guestfs {
     pub fn inspect_windows_network(&mut self, root: &str) -> Result<Vec<WindowsNetworkAdapter>> {
         let mut adapters = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
+        if !was_mounted
+            && self.mount_ro(root, "/").is_err() {
                 return Ok(adapters);
             }
-        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1838,11 +1834,10 @@ impl Guestfs {
     pub fn inspect_windows_updates(&mut self, root: &str) -> Result<Vec<WindowsUpdate>> {
         let mut updates = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
+        if !was_mounted
+            && self.mount_ro(root, "/").is_err() {
                 return Ok(updates);
             }
-        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1923,11 +1918,10 @@ impl Guestfs {
     ) -> Result<Vec<WindowsEventLogEntry>> {
         let mut events = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted {
-            if self.mount_ro(root, "/").is_err() {
+        if !was_mounted
+            && self.mount_ro(root, "/").is_err() {
                 return Ok(events);
             }
-        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
