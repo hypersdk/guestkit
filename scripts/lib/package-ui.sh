@@ -154,19 +154,101 @@ pkg_next_steps() {
     echo ""
 }
 
-# One-screen install guide shown at start of ./install.sh (hassle-free path).
+# Run a command as root when needed (install-full, libvirt deps).
+pkg_sudo() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        pkg_fail "This step needs root. Re-run with sudo or as root."
+        return 1
+    fi
+}
+
+pkg_sudo_available() {
+    [[ "$(id -u)" -eq 0 ]] && return 0
+    command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null && return 0
+    command -v sudo >/dev/null 2>&1 && return 0
+    return 1
+}
+
+# Copy product.env.example → product.env when missing.
+pkg_env_bootstrap() {
+    local example="$1"
+    local target="${2:-${example%.example}}"
+    if [[ -f "${example}" && ! -f "${target}" ]]; then
+        cp "${example}" "${target}"
+        pkg_ok "Created ${target} (edit before production)"
+        return 0
+    fi
+    if [[ -f "${target}" ]]; then
+        pkg_ok "${target} already present"
+    else
+        pkg_warn "No ${example} — create ${target} manually"
+    fi
+}
+
+# One-screen guide at start of ./install.sh
 pkg_install_welcome() {
     local product="$1"
     echo ""
-    pkg_box_begin "Hassle-free install"
-    pkg_box_line "No git clone · no compile on this machine (Python bundles use venv/)"
-    pkg_box_line "1. You are already in the extracted tarball folder"
-    pkg_box_line "2. This script installs deps + verifies binaries"
-    pkg_box_line "3. Run ./test-package.sh when finished"
+    pkg_box_begin "Automatic install — ${product}"
+    pkg_box_line "You are in the extracted tarball — nothing else to download"
+    pkg_box_line "We install OS deps, create config, verify binaries, run tests"
+    pkg_box_line "Faster path: ./install-everything.sh (same + host/production checks)"
     pkg_box_end
-    pkg_detail "Suite: https://zyvor.dev · © @zyvor 2026"
-    [[ -n "${product}" ]] && pkg_detail "Product: ${product}"
+    pkg_detail "This server: $(pkg_primary_host_label)"
+    pkg_detail "Zyvor · https://zyvor.dev · © @zyvor 2026"
     echo ""
+}
+
+# Machina-style production install (systemd, TLS, firewall) when install-full.sh exists.
+pkg_maybe_run_full_install() {
+    [[ -x ./install-full.sh ]] || return 0
+    if [[ "${ZYVOR_AUTO_INSTALL:-1}" == "0" ]]; then
+        pkg_skip "install-full.sh (ZYVOR_AUTO_INSTALL=0)"
+        return 0
+    fi
+    pkg_info "Production setup: systemd + TLS + firewall (install-full.sh)…"
+    if pkg_sudo ./install-full.sh --open-firewall; then
+        pkg_ok "Service installed and started"
+    else
+        pkg_warn "install-full.sh had issues — fix log then: sudo ./install-full.sh --open-firewall"
+    fi
+}
+
+# Friendly finish banner with live URL on this host.
+pkg_install_finish() {
+    local product="$1" scheme="$2" port="$3" ui_path="${4:-}"
+    shift 4
+    local -a extras=()
+    local line
+    for line in "$@"; do
+        [[ -n "${line}" ]] && extras+=("${line}")
+    done
+
+    local base host_label url
+    base=$(pkg_access_url "${scheme}" "${port}")
+    host_label=$(pkg_primary_host_label)
+    url="${base}${ui_path}"
+
+    pkg_summary "${product} — ready to use"
+    echo ""
+    pkg_box_begin "Open on this server"
+    pkg_box_line "${url}" "${PKG_C_GREEN}${PKG_C_BOLD}"
+    pkg_box_line "Network: ${host_label}" "${PKG_C_DIM}"
+    if [[ "${base}" != *"://localhost:"* ]]; then
+        pkg_box_line "On this machine: ${scheme}://127.0.0.1:${port}${ui_path}" "${PKG_C_DIM}"
+    fi
+    pkg_box_end
+
+    local -a steps=("https://zyvor.dev · © @zyvor 2026")
+    if [[ ${#extras[@]} -gt 0 ]]; then
+        steps+=("${extras[@]}")
+    fi
+    steps+=("Re-run checks: ./test-package.sh" "Remove: ./uninstall.sh --yes [--remove-dir]")
+    pkg_next_steps "${steps[@]}"
 }
 
 # Best-effort routable IPv4 for install URLs (default-route source, then first global UP iface).
