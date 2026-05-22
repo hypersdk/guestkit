@@ -189,6 +189,215 @@ pkg_env_bootstrap() {
     fi
 }
 
+# Optional flags for ./install.sh and ./install-everything.sh
+#   --kubeconfig PATH | ZYVOR_KUBECONFIG=PATH | prompt when TTY
+pkg_parse_install_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --kubeconfig)
+                ZYVOR_KUBECONFIG="${2:-}"
+                shift 2
+                ;;
+            --kubeconfig=*)
+                ZYVOR_KUBECONFIG="${1#*=}"
+                shift
+                ;;
+            -h | --help)
+                pkg_install_args_help
+                exit 0
+                ;;
+            *)
+                pkg_warn "Unknown option: $1 (try --help)"
+                shift
+                ;;
+        esac
+    done
+}
+
+pkg_install_args_help() {
+    cat <<'EOF'
+Install options:
+  --kubeconfig PATH     Use this kubeconfig file (skips auto-detect)
+  ZYVOR_KUBECONFIG=PATH Same as --kubeconfig
+  ZYVOR_NONINTERACTIVE=1 Do not prompt for kubeconfig if none found
+
+Kubernetes products auto-detect (in order):
+  $KUBECONFIG, ~/.kube/config, /etc/rancher/k3s/k3s.yaml,
+  /etc/kubernetes/admin.conf, MicroK8s client.config
+EOF
+}
+
+pkg_kube_user_home() {
+    if [[ -n "${HOME:-}" ]]; then
+        echo "${HOME}"
+    elif [[ -n "${USERPROFILE:-}" ]]; then
+        echo "${USERPROFILE}"
+    else
+        getent passwd "$(whoami 2>/dev/null || echo root)" 2>/dev/null | cut -d: -f6 || echo "/root"
+    fi
+}
+
+pkg_kubeconfig_is_valid() {
+    local path="$1"
+    [[ -n "${path}" && -f "${path}" && -r "${path}" ]] || return 1
+    grep -qE '^(apiVersion|clusters|contexts|users|kind):' "${path}" 2>/dev/null
+}
+
+pkg_kubeconfig_candidates() {
+    local home="${1:-$(pkg_kube_user_home)}"
+    local env_path
+    if [[ -n "${KUBECONFIG:-}" ]]; then
+        env_path="${KUBECONFIG%%:*}"
+        env_path="${env_path#"${env_path%%[![:space:]]*}"}"
+        env_path="${env_path%"${env_path##*[![:space:]]}"}"
+        [[ -n "${env_path}" ]] && echo "${env_path}"
+    fi
+    echo "${home}/.kube/config"
+    echo "/etc/rancher/k3s/k3s.yaml"
+    echo "/etc/kubernetes/admin.conf"
+    echo "/var/snap/microk8s/current/credentials/client.config"
+    echo "${home}/.kube/k3s.yaml"
+}
+
+pkg_detect_kubeconfig() {
+    local p
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        if pkg_kubeconfig_is_valid "${p}"; then
+            echo "${p}"
+            return 0
+        fi
+    done < <(pkg_kubeconfig_candidates | awk '!seen[$0]++')
+    return 1
+}
+
+pkg_kubeconfig_current_context() {
+    local kcfg="$1"
+    [[ -f "${kcfg}" ]] || return 1
+    grep -m1 '^current-context:' "${kcfg}" 2>/dev/null | sed 's/^current-context:[[:space:]]*//' | tr -d '\r'
+}
+
+pkg_kubeconfig_verify() {
+    local kcfg="$1"
+    export KUBECONFIG="${kcfg}"
+    if command -v kubectl >/dev/null 2>&1; then
+        kubectl cluster-info >/dev/null 2>&1 && return 0
+        kubectl get --raw=/version >/dev/null 2>&1 && return 0
+        return 1
+    fi
+    pkg_kubeconfig_is_valid "${kcfg}"
+}
+
+pkg_env_set_kubeconfig() {
+    local env_file="$1"
+    local kcfg="$2"
+    local tmp
+    tmp=$(mktemp)
+    if [[ -f "${env_file}" ]]; then
+        grep -v '^KUBECONFIG=' "${env_file}" > "${tmp}" || true
+    else
+        : > "${tmp}"
+    fi
+    echo "KUBECONFIG=${kcfg}" >> "${tmp}"
+    mv "${tmp}" "${env_file}"
+}
+
+pkg_kubeconfig_read_from_env_file() {
+    local env_file="$1"
+    [[ -f "${env_file}" ]] || return 1
+    local line val
+    line=$(grep -m1 '^KUBECONFIG=' "${env_file}" 2>/dev/null) || return 1
+    val="${line#KUBECONFIG=}"
+    val="${val%%#*}"
+    val="${val%"${val##*[![:space:]]}"}"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val#\"}" val="${val%\"}"
+    val="${val#\'}" val="${val%\'}"
+    [[ -n "${val}" && "${val}" != "/path/to/kubeconfig.yaml" && -f "${val}" ]] && echo "${val}"
+}
+
+pkg_load_env_file() {
+    local env_file="$1"
+    [[ -f "${env_file}" ]] || return 1
+    set -a
+    # shellcheck source=/dev/null
+    source "${env_file}"
+    set +a
+}
+
+# Auto-detect kubeconfig, or prompt / use --kubeconfig. Writes KUBECONFIG= into env_file.
+pkg_kubeconfig_configure() {
+    local env_file="$1"
+    local product="${2:-Kubernetes client}"
+    local detected existing chosen ctx
+
+    pkg_detail "Kubernetes: scanning KUBECONFIG, ~/.kube/config, k3s, kubeadm paths…"
+
+    detected=$(pkg_detect_kubeconfig 2>/dev/null || true)
+    existing=$(pkg_kubeconfig_read_from_env_file "${env_file}" 2>/dev/null || true)
+
+    if [[ -n "${ZYVOR_KUBECONFIG:-}" ]]; then
+        chosen="${ZYVOR_KUBECONFIG}"
+        if ! pkg_kubeconfig_is_valid "${chosen}"; then
+            pkg_fail "Invalid kubeconfig: ${chosen}"
+            return 1
+        fi
+        pkg_env_set_kubeconfig "${env_file}" "${chosen}"
+        pkg_ok "Using --kubeconfig / ZYVOR_KUBECONFIG: ${chosen}"
+    elif [[ -n "${existing}" ]]; then
+        chosen="${existing}"
+        pkg_ok "KUBECONFIG already set in ${env_file}: ${chosen}"
+    elif [[ -n "${detected}" ]]; then
+        chosen="${detected}"
+        pkg_env_set_kubeconfig "${env_file}" "${chosen}"
+        ctx=$(pkg_kubeconfig_current_context "${chosen}" || echo "default")
+        pkg_ok "Auto-detected kubeconfig: ${chosen} (context: ${ctx})"
+    elif [[ -t 0 ]] && [[ -z "${ZYVOR_NONINTERACTIVE:-}" ]]; then
+        pkg_warn "No kubeconfig found automatically"
+        printf "  %sPath to kubeconfig file:%s " "${PKG_C_CYAN}" "${PKG_C_RESET}" >/dev/tty
+        read -r chosen </dev/tty || chosen=""
+        chosen="${chosen#"${chosen%%[![:space:]]*}"}"
+        chosen="${chosen%"${chosen##*[![:space:]]}"}"
+        if [[ -z "${chosen}" ]]; then
+            pkg_warn "Skipped — set KUBECONFIG= in ${env_file} before starting ${product}"
+            return 0
+        fi
+        if ! pkg_kubeconfig_is_valid "${chosen}"; then
+            pkg_fail "File is not a readable kubeconfig: ${chosen}"
+            return 1
+        fi
+        pkg_env_set_kubeconfig "${env_file}" "${chosen}"
+        pkg_ok "KUBECONFIG=${chosen}"
+    else
+        if [[ -f "${env_file}" ]] && ! grep -q '^KUBECONFIG=' "${env_file}" 2>/dev/null; then
+            echo "KUBECONFIG=/path/to/kubeconfig.yaml" >> "${env_file}"
+        fi
+        pkg_warn "No kubeconfig auto-detected — edit ${env_file} or run: export KUBECONFIG=/path/to/config"
+        return 0
+    fi
+
+    if [[ -n "${chosen:-}" ]]; then
+        export KUBECONFIG="${chosen}"
+        if pkg_kubeconfig_verify "${chosen}"; then
+            ctx=$(pkg_kubeconfig_current_context "${chosen}" || echo "?")
+            pkg_ok "Cluster API reachable (kubectl context: ${ctx})"
+        elif command -v kubectl >/dev/null 2>&1; then
+            pkg_warn "Kubeconfig saved but cluster not reachable yet (network, credentials, or API down)"
+        else
+            pkg_detail "Install kubectl for install-time checks (optional)"
+        fi
+    fi
+    return 0
+}
+
+pkg_k8s_env_configure() {
+    local example="$1"
+    local env_file="$2"
+    local product="$3"
+    pkg_env_bootstrap "${example}" "${env_file}"
+    pkg_kubeconfig_configure "${env_file}" "${product}"
+}
+
 # One-screen guide at start of ./install.sh
 pkg_install_welcome() {
     local product="$1"
@@ -197,6 +406,7 @@ pkg_install_welcome() {
     pkg_box_line "You are in the extracted tarball — nothing else to download"
     pkg_box_line "We install OS deps, create config, verify binaries, run tests"
     pkg_box_line "Faster path: ./install-everything.sh (same + host/production checks)"
+    pkg_box_line "Kubernetes products: auto-detect kubeconfig (or --kubeconfig PATH)"
     pkg_box_end
     pkg_detail "This server: $(pkg_primary_host_label)"
     pkg_detail "Zyvor · https://zyvor.dev · © @zyvor 2026"
