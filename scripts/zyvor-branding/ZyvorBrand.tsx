@@ -1,11 +1,14 @@
 /**
- * Zyvor product suite branding — text only (no logo image).
- * Embed ZyvorInline in headers/footers; use ZyvorFooter for a minimal app footer line.
+ * Zyvor suite branding — text only.
+ * Footer: zyvor.dev · HyperSDK · © 2026
+ * Header: use ZyvorLogoMark (link only) — no copyright, no product name.
  */
 import React from 'react';
 
 export const ZYVOR_URL = 'https://zyvor.dev';
-export const ZYVOR_COPY = '© @zyvor 2026';
+export const ZYVOR_BRAND = 'HyperSDK';
+export const ZYVOR_COPY = '© 2026';
+export const ZYVOR_LINE = `zyvor.dev · ${ZYVOR_BRAND} · ${ZYVOR_COPY}`;
 
 const ORANGE = '#f97316';
 const MUTED = 'rgba(148, 163, 184, 0.75)';
@@ -24,16 +27,39 @@ const linkLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.style.color = ORANGE;
 };
 
-/** Single embedded line: zyvor.dev · © @zyvor 2026 · Product */
-export function ZyvorInline({
-  product,
-  className = '',
-  style,
-}: {
+const sep = <span aria-hidden> · </span>;
+
+function ZyvorDevLink({ className = '' }: { className?: string }) {
+  return (
+    <a
+      href={ZYVOR_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      style={{ ...linkStyle, fontWeight: 600 }}
+      onMouseEnter={linkHover}
+      onMouseLeave={linkLeave}
+    >
+      zyvor.dev
+    </a>
+  );
+}
+
+type BrandProps = {
+  /** @deprecated Ignored — product name is not shown (redundant in-app). */
   product?: string;
   className?: string;
   style?: React.CSSProperties;
-}) {
+  /** Include © line — default false (use ZyvorFooter for copyright). */
+  includeCopyright?: boolean;
+};
+
+/** Compact line: zyvor.dev · HyperSDK (optional © when includeCopyright). */
+export function ZyvorInline({
+  className = '',
+  style,
+  includeCopyright = false,
+}: BrandProps) {
   return (
     <span
       className={`zyvor-inline whitespace-normal ${className}`.trim()}
@@ -44,36 +70,21 @@ export function ZyvorInline({
         ...style,
       }}
     >
-      <a
-        href={ZYVOR_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ ...linkStyle, fontWeight: 600 }}
-        onMouseEnter={linkHover}
-        onMouseLeave={linkLeave}
-      >
-        zyvor.dev
-      </a>
-      <span aria-hidden> · </span>
-      <span>{ZYVOR_COPY}</span>
-      {product ? (
+      <ZyvorDevLink />
+      {sep}
+      <span>{ZYVOR_BRAND}</span>
+      {includeCopyright ? (
         <>
-          <span aria-hidden> · </span>
-          <span style={{ opacity: 0.85 }}>{product}</span>
+          {sep}
+          <span>{ZYVOR_COPY}</span>
         </>
       ) : null}
     </span>
   );
 }
 
-/** Minimal footer — one inline line, no logo, no extra background strip. */
-export function ZyvorFooter({
-  product,
-  className = '',
-}: {
-  product?: string;
-  className?: string;
-}) {
+/** Page footer — full line with copyright. */
+export function ZyvorFooter({ className = '' }: { className?: string }) {
   return (
     <footer
       className={`zyvor-footer shrink-0 py-2 text-center ${className}`.trim()}
@@ -83,24 +94,16 @@ export function ZyvorFooter({
         border: 'none',
       }}
       role="contentinfo"
-    >
-      <ZyvorInline product={product} />
-    </footer>
+    ></footer>
   );
 }
 
-/** @deprecated Use ZyvorInline — same inline text, no separate box. */
-export function ZyvorHelpStrip({
-  product,
-  className = '',
-}: {
-  product?: string;
-  className?: string;
-}) {
-  return <ZyvorInline product={product} className={className} />;
+/** @deprecated Use ZyvorFooter or ZyvorInline. */
+export function ZyvorHelpStrip(props: BrandProps) {
+  return;
 }
 
-/** Header mark: zyvor.dev link. */
+/** Header: zyvor.dev link only. */
 export function ZyvorLogoMark({ className = '' }: { className?: string }) {
   return (
     <a

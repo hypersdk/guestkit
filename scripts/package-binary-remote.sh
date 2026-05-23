@@ -173,7 +173,7 @@ HOST FIRST (Linux — offline disk inspection, not Kubernetes)
 Checklist: PREREQUISITES.txt  |  Details: HOST_SETUP.txt
 Remove: ./uninstall.sh --yes [--remove-dir]
 
-Packaged by Zyvor — https://zyvor.dev · © @zyvor 2026
+Packaged by Zyvor — zyvor.dev · HyperSDK · © 2026
 QEOF
 
 cp "\${BUILD_DIR}/scripts/zyvor-branding/ZYVOR_INSTALL.txt" "\${STAGE}/ZYVOR_INSTALL.txt" 2>/dev/null || true

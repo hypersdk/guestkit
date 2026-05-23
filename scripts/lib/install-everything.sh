@@ -23,7 +23,7 @@ _PKG_SESSION_START=${SECONDS}
 pkg_counters_reset
 pkg_customer_hero "${PRODUCT_NAME}"
 pkg_detail "Full automatic install — dependencies, config, tests, production setup when bundled"
-pkg_detail "zyvor.dev · © @zyvor 2026"
+pkg_detail "zyvor.dev · HyperSDK · © 2026"
 echo ""
 
 if [[ ! -x ./install.sh ]]; then
@@ -70,7 +70,7 @@ if [[ -n "${ACCESS_SCHEME:-}" && -n "${ACCESS_PORT:-}" ]]; then
 else
   pkg_summary "${PRODUCT_NAME} — install finished"
   pkg_next_steps \
-    "zyvor.dev · © @zyvor 2026" \
+    "zyvor.dev · HyperSDK · © 2026" \
     "Help: cat HELP.txt · START_HERE.txt" \
     "See README.txt and QUICKSTART.txt in this folder"
 fi

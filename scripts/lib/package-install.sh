@@ -32,7 +32,7 @@ pkg_step_done
 
 pkg_summary "GuestKit — ready"
 pkg_next_steps \
-  "https://zyvor.dev · © @zyvor 2026" \
+  "zyvor.dev · HyperSDK · © 2026" \
   "Help: cat HELP.txt · ./install.sh --help" \
   "Try: ./guestkit inspect /path/to/disk.qcow2" \
   "./test-selftest.sh --quick (if bundled)" \
