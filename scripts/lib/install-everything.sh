@@ -6,8 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${ROOT}"
 
+export PKG_INSTALL_ROOT="${ROOT}"
 # shellcheck source=/dev/null
 [[ -f "${ROOT}/.package-lib/package-ui.sh" ]] && source "${ROOT}/.package-lib/package-ui.sh"
+
+pkg_parse_install_args "$@"
 
 if [[ -f "${ROOT}/.package-lib/product.meta" ]]; then
   # shellcheck source=/dev/null
@@ -15,10 +18,7 @@ if [[ -f "${ROOT}/.package-lib/product.meta" ]]; then
 fi
 
 PRODUCT_NAME="${PRODUCT_NAME:-$(basename "${ROOT}" | sed 's/-linux-amd64$//')}"
-export PKG_INSTALL_ROOT="${ROOT}"
 _PKG_SESSION_START=${SECONDS}
-
-pkg_parse_install_args "$@"
 
 pkg_counters_reset
 pkg_customer_hero "${PRODUCT_NAME}"
