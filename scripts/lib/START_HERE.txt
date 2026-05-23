@@ -12,4 +12,4 @@ You extracted the archive. No git clone and no compile on this machine.
 
 More in this folder: QUICKSTART.txt · README.txt · ZYVOR_INSTALL.txt
 
-zyvor.dev · © @zyvor 2026
+zyvor.dev · HyperSDK · © 2026

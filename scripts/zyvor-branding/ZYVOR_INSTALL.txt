@@ -29,4 +29,4 @@ Or: sudo ./install-full.sh --open-firewall
 
 Open the URL printed at the end (uses this server's LAN IP, not localhost).
 
-Branding: https://zyvor.dev · © @zyvor 2026
+Branding: zyvor.dev · HyperSDK · © 2026
