@@ -20,14 +20,19 @@ _PKG_SESSION_START=${SECONDS}
 
 pkg_parse_install_args "$@"
 
-pkg_banner "${PRODUCT_NAME} — full automatic install" "Zyvor client bundle · https://zyvor.dev"
-pkg_detail "No git clone · no compile on this machine (Python bundles ship venv/)"
+pkg_counters_reset
+pkg_customer_hero "${PRODUCT_NAME}"
+pkg_detail "Full automatic install — dependencies, config, tests, production setup when bundled"
+pkg_detail "zyvor.dev · © @zyvor 2026"
 echo ""
 
 if [[ ! -x ./install.sh ]]; then
   pkg_fail "install.sh missing — extract the full tarball first"
+  pkg_install_failed_hint
   exit 1
 fi
+
+pkg_bundle_sanity_check || pkg_warn "Some bundle files missing — install may still work"
 
 pkg_phase "Core install (dependencies, config, binaries)"
 ./install.sh "$@"
@@ -40,7 +45,10 @@ fi
 # install-full is also run from install.sh when AUTO_FULL_INSTALL=1; safe to skip if already done
 if [[ -x ./install-full.sh ]] && [[ "${AUTO_FULL_INSTALL:-0}" != "1" ]]; then
   pkg_phase "Production host setup"
-  if pkg_sudo true 2>/dev/null; then
+  if [[ "${ZYVOR_NONINTERACTIVE:-0}" == "1" ]] && ! sudo -n true 2>/dev/null; then
+    pkg_skip "install-full.sh (non-interactive; no passwordless sudo)"
+    pkg_detail "After install: sudo ./install-full.sh --open-firewall"
+  elif pkg_sudo true 2>/dev/null; then
     pkg_sudo ./install-full.sh --open-firewall || pkg_warn "install-full.sh had issues"
   else
     pkg_warn "Skipped install-full.sh (need sudo). Run: sudo ./install-full.sh --open-firewall"
@@ -61,8 +69,8 @@ if [[ -n "${ACCESS_SCHEME:-}" && -n "${ACCESS_PORT:-}" ]]; then
   pkg_install_finish "${PRODUCT_NAME}" "${ACCESS_SCHEME}" "${ACCESS_PORT}" "${ACCESS_PATH:-}" ${_finish_extras[@]+"${_finish_extras[@]}"}
 else
   pkg_summary "${PRODUCT_NAME} — install finished"
-    pkg_next_steps \
-    "https://zyvor.dev · © @zyvor 2026" \
+  pkg_next_steps \
+    "zyvor.dev · © @zyvor 2026" \
     "Help: cat HELP.txt · START_HERE.txt" \
     "See README.txt and QUICKSTART.txt in this folder"
 fi

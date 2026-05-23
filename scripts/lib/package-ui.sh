@@ -159,7 +159,14 @@ pkg_sudo() {
     if [[ "$(id -u)" -eq 0 ]]; then
         "$@"
     elif command -v sudo >/dev/null 2>&1; then
-        sudo "$@"
+        if [[ "${ZYVOR_NONINTERACTIVE:-0}" == "1" ]]; then
+            sudo -n "$@" || {
+                pkg_warn "Need root (passwordless sudo). Run manually: sudo $*"
+                return 1
+            }
+        else
+            sudo "$@"
+        fi
     else
         pkg_fail "This step needs root. Re-run with sudo or as root."
         return 1
@@ -447,20 +454,41 @@ pkg_k8s_env_configure() {
     pkg_kubeconfig_configure "${env_file}" "${product}"
 }
 
+# Pleasant opener after tar xzf (also shown at start of install).
+pkg_customer_hero() {
+    local product="${1:-}"
+    echo ""
+    pkg_box_begin "Welcome"
+    pkg_box_line "Zyvor client bundle — ready to install" "${PKG_C_GREEN}${PKG_C_BOLD}"
+    [[ -n "${product}" ]] && pkg_box_line "Product: ${product}" "${PKG_C_CYAN}"
+    pkg_box_line "Server: $(pkg_primary_host_label)" "${PKG_C_DIM}"
+    pkg_box_line "Run: ./install-everything.sh (recommended)" "${PKG_C_GREEN}"
+    pkg_box_line "Help: cat START_HERE.txt or cat HELP.txt" "${PKG_C_DIM}"
+    pkg_box_end
+    echo ""
+}
+
 # One-screen guide at start of ./install.sh
 pkg_install_welcome() {
     local product="$1"
-    echo ""
-    pkg_box_begin "Automatic install — ${product}"
-    pkg_box_line "You are in the extracted tarball — nothing else to download"
-    pkg_box_line "We install OS deps, create config, verify binaries, run tests"
-    pkg_box_line "Faster path: ./install-everything.sh (same + host/production checks)"
-    pkg_box_line "Kubernetes products: auto-detect kubeconfig (or --kubeconfig PATH)"
-    pkg_box_line "Help: cat HELP.txt  ·  ./install.sh --help"
-    pkg_box_end
-    pkg_detail "This server: $(pkg_primary_host_label)"
+    pkg_customer_hero "${product}"
+    pkg_detail "This run: ./install.sh (use ./install-everything.sh for full host + production setup)"
     pkg_detail "zyvor.dev · © @zyvor 2026"
     echo ""
+}
+
+# Validate expected files exist in tarball (call from install scripts).
+pkg_bundle_sanity_check() {
+    local missing=0
+    local f
+    for f in START_HERE.txt HELP.txt install.sh install-everything.sh; do
+        if [[ ! -e "${f}" ]]; then
+            pkg_warn "Bundle missing ${f} (re-download the tarball)"
+            missing=$((missing + 1))
+        fi
+    done
+    [[ "${missing}" -eq 0 ]] && pkg_ok "Customer bundle layout OK (START_HERE, HELP, install scripts)"
+    return "${missing}"
 }
 
 # Machina-style production install (systemd, TLS, firewall) when install-full.sh exists.
@@ -503,7 +531,7 @@ pkg_install_finish() {
     fi
     pkg_box_end
 
-    local -a steps=("https://zyvor.dev · © @zyvor 2026")
+    local -a steps=("zyvor.dev · © @zyvor 2026")
     if [[ ${#extras[@]} -gt 0 ]]; then
         steps+=("${extras[@]}")
     fi
@@ -570,10 +598,21 @@ pkg_install_done_message() {
     local product="${1:-}"
     pkg_summary "Install complete"
     pkg_next_steps \
-        "Web UI footer: https://zyvor.dev · © @zyvor 2026" \
-        "Questions: https://zyvor.dev" \
+        "zyvor.dev · © @zyvor 2026" \
+        "Help: cat HELP.txt" \
         "Remove: ./uninstall.sh --yes [--remove-dir]"
     [[ -n "${product}" ]] && pkg_ok "Ready — ${product}"
+}
+
+# Friendly failure exit hint (call before exit 1 from install scripts).
+pkg_install_failed_hint() {
+    echo ""
+    pkg_warn "Install did not finish cleanly"
+    pkg_next_steps \
+        "Read: cat HELP.txt" \
+        "Retry: ./install-everything.sh" \
+        "Logs: scroll up for the first ✗ line" \
+        "Support: zyvor.dev"
 }
 
 pkg_source_ui() {
