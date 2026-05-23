@@ -31,3 +31,6 @@ wheels/
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Local presentation exports
+presentations/
