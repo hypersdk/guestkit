@@ -1,14 +1,13 @@
 /**
  * Zyvor suite branding — text only.
- * Footer: zyvor.dev · HyperSDK · © 2026
- * Header: use ZyvorLogoMark (link only) — no copyright, no product name.
+ * Footer: zyvor.dev · © 2026 (both orange) · optional host OS
  */
 import React from 'react';
 
 export const ZYVOR_URL = 'https://zyvor.dev';
-export const ZYVOR_BRAND = 'HyperSDK';
+export const ZYVOR_BRAND = 'Zyvor';
 export const ZYVOR_COPY = '© 2026';
-export const ZYVOR_LINE = `zyvor.dev · ${ZYVOR_BRAND} · ${ZYVOR_COPY}`;
+export const ZYVOR_LINE = `zyvor.dev · ${ZYVOR_COPY}`;
 
 const ORANGE = '#f97316';
 const MUTED = 'rgba(148, 163, 184, 0.75)';
@@ -16,7 +15,7 @@ const MUTED = 'rgba(148, 163, 184, 0.75)';
 const linkStyle: React.CSSProperties = {
   color: ORANGE,
   textDecoration: 'none',
-  fontWeight: 500,
+  fontWeight: 600,
 };
 
 const linkHover = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -27,7 +26,7 @@ const linkLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.style.color = ORANGE;
 };
 
-const sep = <span aria-hidden> · </span>;
+const sep = <span aria-hidden style={{ color: MUTED }}> · </span>;
 
 function ZyvorDevLink({ className = '' }: { className?: string }) {
   return (
@@ -36,7 +35,7 @@ function ZyvorDevLink({ className = '' }: { className?: string }) {
       target="_blank"
       rel="noopener noreferrer"
       className={className}
-      style={{ ...linkStyle, fontWeight: 600 }}
+      style={linkStyle}
       onMouseEnter={linkHover}
       onMouseLeave={linkLeave}
     >
@@ -46,19 +45,18 @@ function ZyvorDevLink({ className = '' }: { className?: string }) {
 }
 
 type BrandProps = {
-  /** @deprecated Ignored — product name is not shown (redundant in-app). */
+  /** @deprecated Ignored in footer — product name is not shown. */
   product?: string;
   className?: string;
   style?: React.CSSProperties;
-  /** Include © line — default false (use ZyvorFooter for copyright). */
   includeCopyright?: boolean;
 };
 
-/** Compact line: zyvor.dev · HyperSDK (optional © when includeCopyright). */
+/** Compact line: zyvor.dev · © 2026 */
 export function ZyvorInline({
   className = '',
   style,
-  includeCopyright = false,
+  includeCopyright = true,
 }: BrandProps) {
   return (
     <span
@@ -71,36 +69,61 @@ export function ZyvorInline({
       }}
     >
       <ZyvorDevLink />
-      {sep}
-      <span>{ZYVOR_BRAND}</span>
       {includeCopyright ? (
         <>
           {sep}
-          <span>{ZYVOR_COPY}</span>
+          <span style={{ color: ORANGE, fontWeight: 500 }}>{ZYVOR_COPY}</span>
         </>
       ) : null}
     </span>
   );
 }
 
-/** Page footer — full line with copyright. */
-export function ZyvorFooter({ className = '' }: { className?: string }) {
+type FooterProps = {
+  className?: string;
+  /** Host OS pretty name (e.g. Rocky Linux 9.4) — shown when provided. */
+  hostOs?: string;
+  /** @deprecated Ignored — footer is zyvor.dev · © 2026 only. */
+  product?: string;
+};
+
+/** Page footer — zyvor.dev and © 2026 in orange; optional host OS line. */
+export function ZyvorFooter({ className = '', hostOs }: FooterProps) {
   return (
     <footer
-      className={`zyvor-footer shrink-0 py-2 text-center ${className}`.trim()}
+      className={`zyvor-footer shrink-0 py-3 text-center ${className}`.trim()}
       style={{
         marginTop: 'auto',
         background: 'transparent',
         border: 'none',
       }}
       role="contentinfo"
-    ></footer>
+    >
+      <div
+        style={{
+          fontSize: '12px',
+          lineHeight: 1.5,
+        }}
+      >
+        <ZyvorDevLink />
+        {sep}
+        <span style={{ color: ORANGE, fontWeight: 500 }}>{ZYVOR_COPY}</span>
+      </div>
+      {hostOs ? (
+        <div
+          className="mt-1 text-[11px] text-slate-500"
+          title="Daemon host operating system"
+        >
+          {hostOs}
+        </div>
+      ) : null}
+    </footer>
   );
 }
 
 /** @deprecated Use ZyvorFooter or ZyvorInline. */
-export function ZyvorHelpStrip(props: BrandProps) {
-  return;
+export function ZyvorHelpStrip(_props: BrandProps) {
+  return null;
 }
 
 /** Header: zyvor.dev link only. */
