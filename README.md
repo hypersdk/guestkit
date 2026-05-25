@@ -12,11 +12,17 @@
 </p>
 
 <p align="center">
-  <a href="https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit"><strong>▶ Watch migration demo</strong></a>
+  <a href="https://www.youtube.com/watch?v=ZYCz6HN7bXE"><strong>▶ Watch demo video</strong></a>
   &nbsp;·&nbsp;
   <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit">Contact sales</a>
   &nbsp;·&nbsp;
   <a href="https://zyvor.dev/?utm_source=github&utm_medium=guestkit">Full platform</a>
+</p>
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ZYCz6HN7bXE">
+    <img src="https://img.youtube.com/vi/ZYCz6HN7bXE/hqdefault.jpg" alt="GuestKit demo video" width="560">
+  </a>
 </p>
 
 ---
@@ -272,7 +278,7 @@ Production migrations, VMware exit programs, SLAs, and the integrated platform (
 
 | | |
 |---|---|
-| **Demo** | [zyvor.dev/demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit) |
+| **Demo video** | [YouTube](https://www.youtube.com/watch?v=ZYCz6HN7bXE) |
 | **Sales** | [sales@zyvor.dev](mailto:sales@zyvor.dev) |
 | **Contact** | [zyvor.dev/contact](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit) |
 
