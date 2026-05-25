@@ -95,7 +95,6 @@ jobs:
     name: Publish to crates.io
     needs: build-and-upload
     runs-on: ubuntu-latest
-    if: ${{ secrets.CARGO_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -110,13 +109,17 @@ jobs:
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
-        run: cargo publish --locked --token "$CARGO_REGISTRY_TOKEN"
+        run: |
+          if [ -z "${CARGO_REGISTRY_TOKEN}" ]; then
+            echo "Skipping crates.io publish (CARGO_TOKEN not configured)"
+            exit 0
+          fi
+          cargo publish --locked --token "${CARGO_REGISTRY_TOKEN}"
 
   publish-pypi:
     name: Publish Python wheel to PyPI
     needs: build-and-upload
     runs-on: ubuntu-latest
-    if: ${{ secrets.PYPI_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -134,4 +137,9 @@ jobs:
       - name: Publish to PyPI
         env:
           PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: maturin publish -u __token__ -p "$PYPI_API_TOKEN"
+        run: |
+          if [ -z "${PYPI_API_TOKEN}" ]; then
+            echo "Skipping PyPI publish (PYPI_API_TOKEN not configured)"
+            exit 0
+          fi
+          maturin publish -u __token__ -p "${PYPI_API_TOKEN}"
