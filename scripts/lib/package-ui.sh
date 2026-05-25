@@ -5,6 +5,13 @@
 [[ -n "${_PKG_UI_LOADED:-}" ]] && return 0
 _PKG_UI_LOADED=1
 
+_PKG_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# shellcheck source=package-auth-bootstrap.sh
+if [[ -f "${_PKG_LIB_DIR}/package-auth-bootstrap.sh" ]]; then
+    source "${_PKG_LIB_DIR}/package-auth-bootstrap.sh"
+fi
+
+
 PKG_UI_WIDTH="${PKG_UI_WIDTH:-62}"
 PKG_STEP=0
 PKG_STEP_TOTAL="${PKG_STEP_TOTAL:-0}"
@@ -451,6 +458,9 @@ pkg_k8s_env_configure() {
     local env_file="$2"
     local product="$3"
     pkg_env_bootstrap "${example}" "${env_file}"
+    if declare -F pkg_env_bootstrap_auth_for_file >/dev/null 2>&1; then
+        pkg_env_bootstrap_auth_for_file "${env_file}"
+    fi
     pkg_kubeconfig_configure "${env_file}" "${product}"
 }
 

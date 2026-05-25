@@ -18,7 +18,12 @@ pkg_sudo ./install-client-deps.sh 2>/dev/null || ./install-client-deps.sh || pkg
 pkg_step_done
 
 pkg_step "Configuration"
-pkg_env_bootstrap guestkit.env.example guestkit.env
+if [[ -f guestkit.env.example ]]; then
+  pkg_env_bootstrap guestkit.env.example guestkit.env
+  if declare -F pkg_env_bootstrap_auth_for_file >/dev/null 2>&1; then
+    pkg_env_bootstrap_auth_for_file guestkit.env 2>/dev/null || true
+  fi
+fi
 pkg_step_done
 
 pkg_step "Verify binary"
