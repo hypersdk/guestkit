@@ -35,11 +35,21 @@ Built in **Rust** for safety and speed. Pairs with **[hyper2kvm](https://github.
 | Migration surprises at first power-on | fstab/crypttab analysis and fix plans before cutover |
 
 ```bash
-cargo install guestkit    # or: pip install hypersdk-guestkit
+cargo install guestkit    # installs guestkit + guestctl; or: pip install hypersdk-guestkit
 guestkit inspect vm.qcow2
-guestkit tui vm.qcow2       # interactive dashboard
+guestctl tui vm.qcow2       # guestctl is an alias for guestkit
 guestkit inspect vm.qcow2 --profile security
+guestctl vm.qcow2           # shorthand → inspect
 ```
+
+### Aliases
+
+| Name | Role |
+|------|------|
+| `guestkit` | Primary CLI binary |
+| `guestctl` | Same CLI (kubectl-style alias); help, completions, and tips use the name you invoked |
+
+Run `guestctl` with no subcommand for a quick-start banner, or `guestctl commands` for a grouped command list.
 
 ## See it in action
 
@@ -79,7 +89,7 @@ guestkit inspect vm.qcow2 --profile security
 ### Install
 
 ```bash
-# Rust
+# Rust (installs guestkit and guestctl)
 cargo install guestkit
 
 # Python
@@ -95,9 +105,11 @@ docker run --privileged -v ./vms:/vms:ro guestkit:latest inspect /vms/vm.qcow2
 
 See [Docker guide](docs/guides/DOCKER.md) · [Remote deploy](docs/guides/DEPLOY-REMOTE.md) (`make deploy-remote H=<host> U=root`)
 
-**Client tarball (no deploy scripts):** build on a Linux host and hand off `guestkit` + install/test scripts:
+**Client tarball (no deploy scripts):** same bundle from GitHub Releases or a remote Linux build:
 
 ```bash
+# GitHub: download guestkit-*-linux-amd64.tar.gz from Releases
+# Remote build:
 ./scripts/package-binary-remote.sh HOST USER --fetch
 # Customer: tar xzf guestkit-*-linux-amd64.tar.gz && ./install.sh && ./test-host.sh
 ```
@@ -108,9 +120,10 @@ See [docs/PACKAGE_BINARY_REMOTE.md](docs/PACKAGE_BINARY_REMOTE.md).
 
 | Goal | Command |
 |------|---------|
-| Inspect | `guestkit inspect disk.qcow2` |
+| Inspect | `guestkit inspect disk.qcow2` (or `guestctl disk.qcow2`) |
 | JSON for CI | `guestkit inspect disk.qcow2 -o json` |
-| TUI | `guestkit tui disk.qcow2` |
+| TUI | `guestctl tui disk.qcow2` |
+| Command list | `guestctl commands` |
 | REPL | `guestkit interactive disk.qcow2` |
 | Security scan | `guestkit inspect disk.qcow2 --profile security` |
 | Fleet | `guestkit inspect-batch ./vms/*.qcow2 --parallel 4 -o json` |

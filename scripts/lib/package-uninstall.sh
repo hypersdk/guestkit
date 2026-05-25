@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 source "${ROOT}/.package-lib/package-uninstall-lib.sh"
 
 PRODUCT="GuestKit"
-BINARIES=(guestkit)
+BINARIES=(guestkit guestctl)
 LOCAL_CONFIGS=(guestkit.env)
 SYSTEM_PATHS=("${HOME}/.cache/guestkit")
 

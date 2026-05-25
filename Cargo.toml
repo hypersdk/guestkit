@@ -1,6 +1,6 @@
 [package]
 name = "guestkit"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["Susant Sahani <ssahani@gmail.com>"]
 license = "LGPL-3.0-or-later"
@@ -137,3 +137,11 @@ harness = false
 [[bench]]
 name = "performance"
 harness = false
+
+[[bin]]
+name = "guestkit"
+path = "src/main.rs"
+
+[[bin]]
+name = "guestctl"
+path = "src/bin/guestctl.rs"

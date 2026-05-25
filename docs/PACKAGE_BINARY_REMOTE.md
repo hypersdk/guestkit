@@ -20,9 +20,23 @@ guestkit-0.3.3-linux-amd64/
 
 ## Build
 
+**GitHub Release** (tag `v*`): CI builds the same customer tarball and attaches it to the release:
+
+- `guestkit-<version>-linux-amd64.tar.gz` (+ `.sha256`)
+- `guestkit-<version>-linux-amd64-musl.tar.gz` (+ `.sha256`)
+
+**Remote Linux host:**
+
 ```bash
 ./scripts/package-binary-remote.sh 212.8.252.194 sus --fetch
 ./scripts/package-binary-remote.sh 212.8.252.194 sus --reuse-build --skip-deps
+```
+
+**Local / CI** (after `cargo build --release` on Linux):
+
+```bash
+./scripts/package-binary-release.sh --build
+./scripts/package-binary-release.sh --build --target x86_64-unknown-linux-musl
 ```
 
 Environment:

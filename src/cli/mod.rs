@@ -3,6 +3,10 @@
 
 pub mod ai;
 pub mod batch;
+pub mod commands_list;
+pub mod entry;
+pub mod invocation;
+pub mod welcome;
 pub mod blueprint;
 pub mod cache;
 pub mod commands;
@@ -26,3 +30,8 @@ pub mod validate;
 
 pub use batch::*;
 pub use interactive::*;
+
+/// Run the CLI (`guestkit` / `guestctl`).
+pub fn run() -> anyhow::Result<()> {
+    entry::run()
+}

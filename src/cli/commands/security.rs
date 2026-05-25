@@ -1183,8 +1183,14 @@ pub fn compliance_command(
 
     if fix {
         println!();
-        println!("Note: Use 'guestkit plan' to generate a remediation plan for failed checks");
-        println!("      Apply with 'guestkit plan apply' after review");
+        println!(
+            "Note: Use '{}' to generate a remediation plan for failed checks",
+            crate::cli::invocation::example("plan")
+        );
+        println!(
+            "      Apply with '{}' after review",
+            crate::cli::invocation::example("plan apply")
+        );
     }
 
     // Export report if requested
@@ -2750,7 +2756,10 @@ pub fn anomaly_command(
             }
         } else {
             println!("  ⚠ Baseline file not found: {}", baseline_path.display());
-            println!("    Generate a baseline with: guestkit anomaly <image> --export baseline.txt");
+            println!(
+                "    Generate a baseline with: {}",
+                crate::cli::invocation::example("anomaly <image> --export baseline.txt")
+            );
         }
     }
 
@@ -3024,11 +3033,20 @@ pub fn recommend_command(
     println!();
 
     if apply {
-        println!("⚠️  Use 'guestkit plan' to generate an apply-plan for these recommendations");
-        println!("    Then review and apply with 'guestkit plan apply'");
+        println!(
+            "⚠️  Use '{}' to generate an apply-plan for these recommendations",
+            crate::cli::invocation::example("plan")
+        );
+        println!(
+            "    Then review and apply with '{}'",
+            crate::cli::invocation::example("plan apply")
+        );
     } else {
         println!("💡 Tip: Review these recommendations and implement based on your requirements");
-        println!("    Use 'guestkit plan' to generate an apply-plan for safe recommendations");
+        println!(
+            "    Use '{}' to generate an apply-plan for safe recommendations",
+            crate::cli::invocation::example("plan")
+        );
     }
 
     if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }

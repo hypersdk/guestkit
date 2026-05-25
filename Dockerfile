@@ -20,7 +20,7 @@ COPY examples ./examples
 COPY tests ./tests
 
 # Build release binary
-RUN cargo build --release --bin guestkit
+RUN cargo build --release --bin guestkit --bin guestctl
 
 # Stage 2: Runtime
 FROM debian:bookworm-slim
@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy binary from builder
 COPY --from=builder /build/target/release/guestkit /usr/local/bin/guestkit
+COPY --from=builder /build/target/release/guestctl /usr/local/bin/guestctl
 
 # Create directory for VM images
 RUN mkdir -p /vms /cache /config

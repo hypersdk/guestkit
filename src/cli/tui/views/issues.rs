@@ -278,7 +278,11 @@ fn draw_issue_detail(f: &mut Frame, area: Rect, app: &App) {
             Line::from(vec![
                 Span::styled("Copy fix: ", label_style()),
                 Span::styled(
-                    format!("# guestkit inspect --profile security {}", app.image_path),
+                    format!(
+                        "# {} --profile security {}",
+                        crate::cli::invocation::example("inspect"),
+                        app.image_path
+                    ),
                     Style::default().fg(theme::INFO),
                 ),
             ]),

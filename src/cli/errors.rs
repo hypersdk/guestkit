@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Enhanced error messages with suggestions
 
+use crate::cli::invocation;
 use owo_colors::OwoColorize;
 use std::fmt;
 
@@ -143,7 +144,7 @@ pub mod builders {
     pub fn permission_denied(operation: &str) -> EnhancedError {
         EnhancedError::new(format!("Permission denied: {}", operation))
             .with_suggestion("Try running with elevated privileges or check file permissions")
-            .with_example("sudo guestkit ...")
+            .with_example(format!("sudo {} ...", invocation::name()))
     }
 
     /// Disk image not found
@@ -175,8 +176,8 @@ pub mod builders {
         EnhancedError::new(format!("Cache error: {}", message))
             .with_suggestion("Try clearing the cache or running without --cache")
             .with_examples(vec![
-                "guestkit cache-clear".to_string(),
-                "guestkit inspect vm.qcow2  # without --cache".to_string(),
+                invocation::example("cache-clear"),
+                format!("{}  # without --cache", invocation::example("inspect vm.qcow2")),
             ])
     }
 
@@ -188,7 +189,9 @@ pub mod builders {
                 "# Verify output directory:".to_string(),
                 "ls -ld $(dirname output.html)".to_string(),
                 "# Try different output location:".to_string(),
-                "guestkit inspect vm.qcow2 --export html --export-output ~/report.html".to_string(),
+                invocation::example(
+                    "inspect vm.qcow2 --export html --export-output ~/report.html",
+                ),
             ])
     }
 

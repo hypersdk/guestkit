@@ -17,8 +17,8 @@ ORDER OF OPERATIONS
   Step A  ./install.sh
   Step B  ./test-host.sh
   Step C  ./test-selftest.sh          # full pipeline check (optional)
-  Step D  ./guestkit inspect disk.qcow2
-  Step E  ./guestkit tui disk.qcow2   # interactive dashboard
+  Step D  ./guestkit inspect disk.qcow2   # or: ./guestctl inspect ...
+  Step E  ./guestkit tui disk.qcow2       # guestctl is an alias for guestkit
 
 STEP A — install.sh
 -------------------
@@ -35,6 +35,11 @@ STEP B — Automated tests
   ./test-host.sh       Quick: binary + qemu + libguestfs + nbd
   ./test-package.sh    Runs test-host + guestkit --version
   ./test-selftest.sh   Full selftest from GuestKit (same as scripts/selftest.sh)
+
+ALIASES
+-------
+  guestctl is the same CLI as guestkit (symlink in the bundle).
+  Shorthand: ./guestctl vm.qcow2  runs inspect on the image.
 
 EXAMPLE COMMANDS
 ----------------

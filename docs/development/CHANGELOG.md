@@ -7,14 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-05-25
+
 ### Added
+- **`guestctl` binary** — separate crate binary (alias entry point); install via `cargo install guestkit` or client tarball symlink
+- **GitHub Release customer bundles** — full install tarball (`guestkit-<version>-linux-amd64.tar.gz`) matching remote deploy packaging
+- **`scripts/package-binary-release.sh`** — local/CI packaging shared with GitHub Actions
 - **TUI visual polish** — shared `widgets.rs` (stat chips, severity rail, progress bar, risk donut)
 - **Theme variants** — `high-contrast` and `minimal` via `[ui] theme` in `tui.toml`
 - **Config** — `show_emoji`, `density` under `[ui]`
 
 ### Changed
+- CLI entry split into `guestkit::cli` module tree (`entry`, `invocation`, `commands_list`, `welcome`)
 - TUI header, stats bar, tabs, footer, loading bar, fleet sidebar, and modal dim layer
 - Dashboard and Issues views use carbon gauges, sparklines, and risk summary donut
+- GitHub release workflow uploads customer bundles (gnu + musl) instead of bare binaries
 - Documentation: [tui-enhancements.md](../features/tui-enhancements.md) updated for carbon theme and visual polish
 
 ## [0.3.3] - 2026-05-22

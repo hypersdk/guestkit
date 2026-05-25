@@ -123,98 +123,12 @@ BUILD_DIR='${BUILD_DIR}'
 ARTIFACT='${ARTIFACT}'
 VERSION='${VERSION}'
 
+# shellcheck source=scripts/lib/package-guestkit-client-bundle.sh
+source "\${BUILD_DIR}/scripts/lib/package-guestkit-client-bundle.sh"
 STAGE="\${OUT_DIR}/\${ARTIFACT}"
-rm -rf "\${STAGE}"
-mkdir -p "\${STAGE}"
-cp "\${BUILD_DIR}/target/release/guestkit" "\${STAGE}/"
-chmod +x "\${STAGE}/guestkit"
-sed 's#")/\.\.#")#' "\${BUILD_DIR}/scripts/selftest.sh" > "\${STAGE}/test-selftest.sh"
-chmod +x "\${STAGE}/test-selftest.sh"
-cp "\${BUILD_DIR}/LICENSE" "\${STAGE}/" 2>/dev/null || true
-
-cat > "\${STAGE}/guestkit.env.example" <<'ENV_EOF'
-# Optional — copy to guestkit.env
-# GUESTKIT_LOG=info
-# GUESTKIT_CACHE_DIR=$HOME/.cache/guestkit
-ENV_EOF
-
-LIB="\${BUILD_DIR}/scripts/lib"
-for f in package-install.sh package-client-install.sh package-client-test.sh \
-  package-host-test.sh package-uninstall.sh package-uninstall-lib.sh; do
-  test -f "\${LIB}/\${f}" || { echo "missing \${LIB}/\${f}" >&2; exit 1; }
-done
-cp "\${LIB}/package-install.sh" "\${STAGE}/install.sh"
-cp "\${LIB}/package-client-install.sh" "\${STAGE}/install-client-deps.sh"
-cp "\${LIB}/package-client-test.sh" "\${STAGE}/test-package.sh"
-cp "\${LIB}/package-host-test.sh" "\${STAGE}/test-host.sh"
-mkdir -p "\${STAGE}/.package-lib"
-cp "\${LIB}/package-ui.sh" "\${STAGE}/.package-lib/"
-cp "\${LIB}/install-everything.sh" "\${STAGE}/"
-cp "\${LIB}/package-uninstall-lib.sh" "\${STAGE}/.package-lib/"
-cp "\${LIB}/package-uninstall.sh" "\${STAGE}/uninstall.sh"
-cp "\${LIB}/HOST_SETUP.txt" "\${LIB}/PREREQUISITES.txt" "\${STAGE}/"
-chmod +x "\${STAGE}/install.sh" "\${STAGE}/install-client-deps.sh" \
-  "\${STAGE}/test-package.sh" "\${STAGE}/test-host.sh" "\${STAGE}/install-everything.sh" "\${STAGE}/uninstall.sh"
-chmod +x "\${LIB}/write-customer-help.sh"
-"\${LIB}/write-customer-help.sh" "\${STAGE}" "GuestKit" host
-cp "\${LIB}/START_HERE.txt" "\${STAGE}/"
-
-cat > "\${STAGE}/QUICKSTART.txt" <<'QEOF'
-GuestKit — install guide
-========================
-
-HOST FIRST (Linux — offline disk inspection, not Kubernetes)
-  1. tar xzf guestkit-*-linux-amd64.tar.gz && cd guestkit-*-linux-amd64
-  2. ./install.sh
-  3. ./test-host.sh
-  4. ./test-selftest.sh --quick
-  5. ./guestkit inspect /path/to/vm.qcow2
-
-Checklist: PREREQUISITES.txt  |  Details: HOST_SETUP.txt
-Remove: ./uninstall.sh --yes [--remove-dir]
-
-Packaged by Zyvor — zyvor.dev · HyperSDK · © 2026
-QEOF
-
-cp "\${BUILD_DIR}/scripts/zyvor-branding/ZYVOR_INSTALL.txt" "\${STAGE}/ZYVOR_INSTALL.txt" 2>/dev/null || true
-
-cat > "\${STAGE}/README.txt" <<README_EOF
-GuestKit ${VERSION} — Linux amd64 client bundle
-===============================================
-
-START: cat START_HERE.txt  |  full help: cat HELP.txt
-
-NOT KUBERNETES — inspects offline VM disk images on this Linux host.
-
-FILES
-  guestkit              Main CLI binary
-  install.sh            Client install (deps + verify)
-  install-client-deps.sh  libguestfs, qemu-img, nbd
-  test-host.sh          Host prerequisite checks
-  test-selftest.sh      Full GuestKit selftest
-  test-package.sh       Quick smoke test
-  uninstall.sh          Remove client install
-  HOST_SETUP.txt        Step-by-step + troubleshooting
-  PREREQUISITES.txt     Checklist
-
-REQUIREMENTS — see PREREQUISITES.txt
-  libguestfs-tools, qemu-img, nbd module, disk image file access
-
-ORDER: ./install.sh → ./test-host.sh → ./guestkit inspect <image>
-
-UNINSTALL: ./uninstall.sh --yes [--remove-dir]
-README_EOF
-
-for req in HELP.txt START_HERE.txt install.sh uninstall.sh README.txt QUICKSTART.txt HOST_SETUP.txt PREREQUISITES.txt \
-  install-client-deps.sh test-host.sh test-package.sh test-selftest.sh guestkit guestkit.env.example; do
-  test -e "\${STAGE}/\${req}" || { echo "bundle missing \${req}" >&2; exit 1; }
-done
-echo "Customer bundle OK"
-
-cd "\${OUT_DIR}"
-tar czf "\${ARTIFACT}.tar.gz" "\${ARTIFACT}"
-sha256sum "\${ARTIFACT}.tar.gz" | tee "\${ARTIFACT}.tar.gz.sha256"
-ls -lh "\${ARTIFACT}.tar.gz"
+package_guestkit_client_bundle "\${STAGE}" "\${BUILD_DIR}" "\${VERSION}"
+package_guestkit_client_tarball "\${OUT_DIR}" "\${ARTIFACT}" "\${STAGE}"
+ls -lh "\${OUT_DIR}/\${ARTIFACT}.tar.gz"
 "\${STAGE}/guestkit" --version
 REMOTE_PACK
 

@@ -2,6 +2,7 @@
 //! Interactive REPL mode for guestkit CLI
 
 use super::errors::builders as errors;
+use super::invocation;
 use anyhow::{Context, Result};
 use crate::Guestfs;
 use owo_colors::OwoColorize;
@@ -459,7 +460,10 @@ impl InteractiveSession {
     /// Run the interactive session
     pub fn run(&mut self) -> Result<()> {
         loop {
-            let prompt = format!("{}> ", "guestkit".truecolor(222, 115, 86).bold());
+            let prompt = format!(
+                "{}> ",
+                invocation::name().truecolor(222, 115, 86).bold()
+            );
 
             match self.editor.readline(&prompt) {
                 Ok(line) => {
