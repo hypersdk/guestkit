@@ -167,8 +167,14 @@ pub fn template_command(
 
     if fix {
         println!();
-        println!("Note: Use 'guestkit plan' to generate a fix plan for these violations");
-        println!("      Review violations above and apply with 'guestkit plan apply'");
+        println!(
+            "Note: Use '{}' to generate a fix plan for these violations",
+            crate::cli::invocation::example("plan")
+        );
+        println!(
+            "      Review violations above and apply with '{}'",
+            crate::cli::invocation::example("plan apply")
+        );
     }
 
     // Export template

@@ -863,7 +863,10 @@ pub fn simulate_command(
         println!("  Review impacts above before applying changes");
     } else {
         println!("⚠️  Live execution requires write access to the disk image");
-        println!("   Use 'guestkit plan' to generate an apply-plan for these changes");
+        println!(
+            "   Use '{}' to generate an apply-plan for these changes",
+            crate::cli::invocation::example("plan")
+        );
     }
 
     if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }

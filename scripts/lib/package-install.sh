@@ -23,6 +23,7 @@ pkg_step_done
 
 pkg_step "Verify binary"
 [[ -x ./guestkit ]] && ./guestkit --version && pkg_ok "guestkit" || { pkg_fail "guestkit"; exit 1; }
+[[ -x ./guestctl ]] && ./guestctl --version >/dev/null && pkg_ok "guestctl" || pkg_warn "guestctl symlink missing"
 pkg_step_done
 
 pkg_step "Smoke test"
@@ -35,6 +36,7 @@ pkg_next_steps \
   "zyvor.dev · HyperSDK · © 2026" \
   "Help: cat HELP.txt · ./install.sh --help" \
   "Try: ./guestkit inspect /path/to/disk.qcow2" \
+  "Alias: ./guestctl (same CLI) · shorthand: ./guestctl disk.qcow2" \
   "./test-selftest.sh --quick (if bundled)" \
   "Docs: HOST_SETUP.txt · PREREQUISITES.txt" \
   "Remove: ./uninstall.sh --yes [--remove-dir]"

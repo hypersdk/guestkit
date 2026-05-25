@@ -605,7 +605,11 @@ fn cmd_health(_ctx: &mut ShellContext) {
     println!("\n{}", "System Health Score".yellow().bold());
     println!("{}", "─".repeat(60).cyan());
     println!("\n{} This command requires full TUI mode.", "Note:".yellow());
-    println!("{} Run 'guestkit tui <image>' for complete health analysis", "Tip:".cyan());
+    println!(
+        "{} Run '{}' for complete health analysis",
+        "Tip:".cyan(),
+        crate::cli::invocation::example("tui <image>")
+    );
     println!();
 }
 
@@ -613,6 +617,10 @@ fn cmd_risks(_ctx: &mut ShellContext) {
     println!("\n{}", "Security Risks".yellow().bold());
     println!("{}", "─".repeat(60).cyan());
     println!("\n{} This command requires full TUI mode.", "Note:".yellow());
-    println!("{} Run 'guestkit tui <image>' to view security issues", "Tip:".cyan());
+    println!(
+        "{} Run '{}' to view security issues",
+        "Tip:".cyan(),
+        crate::cli::invocation::example("tui <image>")
+    );
     println!();
 }

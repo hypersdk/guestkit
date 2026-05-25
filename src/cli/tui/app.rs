@@ -1293,7 +1293,10 @@ impl App {
                 fs::write(&output_path, html)?;
             }
             ExportFormat::Pdf => {
-                return Err(anyhow::anyhow!("PDF export is not supported from TUI. Use CLI: guestkit inspect <image> --export pdf"));
+                return Err(anyhow::anyhow!(
+                    "PDF export is not supported from TUI. Use CLI: {} --export pdf",
+                    crate::cli::invocation::example("inspect <image>")
+                ));
             }
         }
 
