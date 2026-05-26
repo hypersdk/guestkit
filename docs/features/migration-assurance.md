@@ -58,9 +58,15 @@ Builds on the same evidence + boot report, then applies target-specific rules (V
 ```bash
 guestkit migrate-plan vm.vmdk --target proxmox
 guestkit migrate-plan vm.qcow2 --target aws --explain -o json
+guestkit migrate-plan vm.vmdk --target proxmox --export migration-plan.yaml
 ```
 
-JSON fields: `migration_score`, `bootability`, `driver_injections`, `required_changes`, `licensing_warnings`, `estimated_downtime_minutes`.
+| Flag | Description |
+|------|-------------|
+| `--target` | Target hypervisor (required) |
+| `--explain` | Root-cause chain from inference engine |
+| `--export FILE` | Write executable fix plan (`.yaml` or `.json`) |
+| `-o json` | Machine-readable score + checklist |
 
 **Target mapping (examples)**
 
@@ -120,8 +126,9 @@ guestkit inspect win.vmdk --profile windows-migration -o json
 # 1. Boot gate
 guestkit doctor source.vmdk --target proxmox --explain
 
-# 2. Migration checklist + downtime estimate
+# 2. Migration checklist + export fix plan
 guestkit migrate-plan source.vmdk --target proxmox -o json > plan.json
+guestkit migrate-plan source.vmdk --target proxmox --export migration-fix-plan.yaml
 
 # 3. Windows-specific inventory (if applicable)
 guestkit inspect source.vmdk --profile windows-migration -o json
@@ -148,7 +155,7 @@ guestkit doctor source.vmdk --target proxmox
 | Doctor boot report | `boot-repair` | Boot blockers from `repair --fix boot` |
 | Migration profile | `migration` | Manual/runbook plans (see [fix-plans.md](fix-plans.md)) |
 
-`migrate-plan` is **scoring and guidance**; it does not auto-apply disk changes. Use **fix plans** or **repair** for offline mutations.
+`migrate-plan` is **scoring and guidance** by default; use **`--export`** to produce an executable fix plan, or **`repair --fix boot`** for boot blockers only.
 
 ## Library API (Rust)
 
@@ -162,6 +169,7 @@ use guestkit::cli::migrate::plan::compute_migration_score;
 
 ## See also
 
+- [Zyvor GuestKit](https://zyvor.dev/guestkit) — platform overview
 - [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, hyper2kvm handoff
 - [Fix plans](fix-plans.md) — preview, export, apply
 - [Security profiles](../user-guides/profiles.md) — migration and windows-migration profiles

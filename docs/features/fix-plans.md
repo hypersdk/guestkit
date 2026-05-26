@@ -8,6 +8,8 @@
 
 The Offline Patch & Fix Preview Mode enables safe, reviewable VM fixes with complete separation of concerns. Instead of directly applying changes, GuestKit generates detailed fix plans that can be previewed, reviewed, exported as scripts, and applied with safety checks.
 
+Part of [GuestKit on zyvor.dev](https://zyvor.dev/guestkit). Pairs with [migration assurance](migration-assurance.md) (`doctor`, `migrate-plan --export`).
+
 ## Workflow
 
 ```
@@ -419,26 +421,26 @@ Rollback: Available for all operations
 - Topological sort for execution order
 - Circular dependency prevention
 
-## Current Limitations (Phase 1)
+## Current Status (Phase 2)
 
-- ✅ Plan generation from profiles
+- ✅ Plan generation from profiles and boot reports
 - ✅ Preview and diff display
 - ✅ Export to bash/ansible/json/yaml
 - ✅ Validation framework
-- ⏳ **Actual plan application** (Phase 2)
-- ⏳ **TUI integration** (Phase 2)
-- ⏳ **Rollback execution** (Phase 2)
-- ⏳ **Progress tracking** (Phase 2)
-- ⏳ **CLI commands** (Phase 2)
+- ✅ **`guestkit plan apply`** — apply fix plans with dry-run and backup
+- ✅ **`guestkit plan rollback`** — restore from backup
+- ✅ **`guestkit repair --fix boot`** — doctor-driven boot repair loop
+- ✅ **`guestkit migrate-plan --export`** — migration scoring → fix plan
+- ⏳ **Progress tracking during apply** (Phase 2 polish)
+- ⏳ **TUI integration** (Phase 3)
 
 ## Roadmap
 
-### Phase 2: Application & Safety
-- Implement actual plan application
-- Backup creation and management
-- Rollback execution
-- Progress tracking
-- Error handling and recovery
+### Phase 2: Application & Safety (mostly complete)
+- ✅ Plan application with dry-run and backup
+- ✅ Rollback execution
+- ⏳ Progress tracking and recovery UX polish
+- ⏳ Error handling hardening
 
 ### Phase 3: TUI Integration
 - Interactive plan viewer

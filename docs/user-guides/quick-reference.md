@@ -42,6 +42,7 @@ guestkit inspect disk.qcow2 -v
 |---------|---------|
 | `guestkit doctor IMAGE --target kvm` | Boot probability + blockers |
 | `guestkit migrate-plan IMAGE --target proxmox` | Migration score, drivers, downtime |
+| `guestkit migrate-plan IMAGE --target proxmox --export plan.yaml` | Export executable fix plan |
 | `guestkit policy check IMAGE --policy FILE` | Policy-as-code (expression DSL) |
 | `guestkit fleet analyze ./vms/` | Cluster VMs, snowflakes, blockers |
 | `guestkit forensic-diff OLD NEW` | Security drift between snapshots |
@@ -54,6 +55,15 @@ guestkit repair vm.qcow2 --fix boot --dry-run
 ```
 
 Details: [migration-assurance.md](../features/migration-assurance.md)
+
+## TUI (`guestkit tui IMAGE`)
+
+| Keys | Action |
+|------|--------|
+| `Tab` | Next view in group · `{`/`}` groups · `Ctrl+P` jump |
+| `h` | Help (scroll with `j`/`k`) |
+
+[zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [tui-enhancements.md](../features/tui-enhancements.md)
 
 ## 🎯 Common Commands
 

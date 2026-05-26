@@ -254,6 +254,117 @@ impl PlanGenerator {
         Ok(plan)
     }
 
+    /// Generate a fix plan from a migration score report (includes boot repair ops).
+    pub fn from_migration_report(
+        &self,
+        migration: &crate::cli::migrate::plan::MigrationScoreReport,
+        boot: &crate::boot::BootabilityReport,
+        target: &str,
+        image: &std::path::Path,
+    ) -> Result<FixPlan> {
+        let mut plan = self.from_boot_report(boot, image)?;
+        plan.profile = "migration".to_string();
+        plan.metadata.author = "guestkit-migrate-plan".to_string();
+        plan.metadata.description = Some(format!(
+            "Hypervisor-aware migration plan for {} → {}",
+            image.display(),
+            target
+        ));
+        plan.metadata.tags = vec!["migration".to_string(), target.to_lowercase()];
+
+        let mut op_counter = plan.operations.len() + 1;
+
+        for change in &migration.required_changes {
+            let op_type = self.migration_change_to_operation(change)?;
+            plan.add_operation(Operation {
+                id: format!("mig-{:03}", op_counter),
+                op_type,
+                priority: Priority::High,
+                description: change.clone(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            op_counter += 1;
+        }
+
+        if !migration.driver_injections.is_empty() {
+            let modules = migration.driver_injections.join("\n");
+            plan.add_operation(Operation {
+                id: format!("mig-{:03}", op_counter),
+                op_type: OperationType::FileEdit(FileEdit {
+                    file: "/etc/modules-load.d/guestkit-migration.conf".to_string(),
+                    backup: true,
+                    changes: vec![FileChange {
+                        line: 1,
+                        before: String::new(),
+                        after: modules,
+                        context: Some(
+                            "# GuestKit: virtio modules for migration target".to_string(),
+                        ),
+                    }],
+                }),
+                priority: Priority::High,
+                description: "Load virtio drivers for target hypervisor".to_string(),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            op_counter += 1;
+        }
+
+        for warning in &migration.licensing_warnings {
+            plan.post_apply.push(PostApplyAction::Message {
+                message: warning.clone(),
+            });
+        }
+
+        if migration.estimated_downtime_minutes > 0 {
+            plan.post_apply.push(PostApplyAction::Message {
+                message: format!(
+                    "Estimated migration downtime: {} minutes",
+                    migration.estimated_downtime_minutes
+                ),
+            });
+        }
+
+        plan.estimated_duration = Self::estimate_duration(plan.operations.len());
+        self.add_post_apply_actions(&mut plan);
+        Ok(plan)
+    }
+
+    fn migration_change_to_operation(&self, change: &str) -> Result<OperationType> {
+        let lower = change.to_lowercase();
+
+        if lower.contains("vmware tools") && lower.contains("qemu-guest-agent") {
+            return Ok(OperationType::PackageInstall(PackageInstall {
+                packages: vec!["qemu-guest-agent".to_string()],
+                estimated_size: Some("~2MB".to_string()),
+            }));
+        }
+
+        if lower.contains("cloud-init") {
+            return Ok(OperationType::PackageInstall(PackageInstall {
+                packages: vec!["cloud-init".to_string()],
+                estimated_size: Some("~5MB".to_string()),
+            }));
+        }
+
+        if let Ok(op_type) = self.parse_remediation(change) {
+            return Ok(op_type);
+        }
+
+        Ok(OperationType::CommandExec(CommandExec {
+            command: change.to_string(),
+            expected_exit: 0,
+            timeout: Some(600),
+        }))
+    }
+
     /// Estimate duration based on number of operations
     fn estimate_duration(op_count: usize) -> String {
         match op_count {
@@ -650,5 +761,53 @@ mod tests {
         for (i, op) in plan.operations.iter().enumerate() {
             assert_eq!(op.id, format!("sec-{:03}", i + 1));
         }
+    }
+
+    #[test]
+    fn test_from_migration_report_includes_changes_and_drivers() {
+        use crate::boot::report::BootabilityReport;
+        use crate::cli::migrate::plan::MigrationScoreReport;
+        use std::path::Path;
+
+        let generator = PlanGenerator::new("vm.qcow2".to_string());
+        let boot = BootabilityReport {
+            score: 80.0,
+            confidence: 0.9,
+            target: "proxmox".to_string(),
+            blockers: vec![],
+            warnings: vec![],
+            checks: vec![],
+            summary: "ok".to_string(),
+        };
+        let migration = MigrationScoreReport {
+            score: 75.0,
+            driver_injections: vec!["virtio_blk".to_string(), "virtio_net".to_string()],
+            required_changes: vec![
+                "Remove VMware Tools; install qemu-guest-agent".to_string(),
+                "Set disk bus to virtio-scsi or virtio-blk".to_string(),
+            ],
+            licensing_warnings: vec!["Verify OS license portability".to_string()],
+            estimated_downtime_minutes: 45,
+        };
+
+        let plan = generator
+            .from_migration_report(&migration, &boot, "proxmox", Path::new("vm.qcow2"))
+            .unwrap();
+
+        assert_eq!(plan.profile, "migration");
+        assert!(plan.metadata.tags.contains(&"proxmox".to_string()));
+        assert!(plan.operations.iter().any(|op| op.id.starts_with("mig-")));
+        assert!(plan
+            .operations
+            .iter()
+            .any(|op| matches!(&op.op_type, OperationType::PackageInstall(_))));
+        assert!(plan
+            .operations
+            .iter()
+            .any(|op| matches!(&op.op_type, OperationType::FileEdit(_))));
+        assert!(plan.post_apply.iter().any(|a| matches!(
+            a,
+            PostApplyAction::Message { message } if message.contains("license")
+        )));
     }
 }

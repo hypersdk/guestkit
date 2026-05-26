@@ -1768,6 +1768,10 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+
+        /// Export executable fix plan (YAML or JSON from file extension)
+        #[arg(long, value_name = "FILE")]
+        export: Option<PathBuf>,
     },
 
     /// Forensic diff with security drift scoring
@@ -3013,8 +3017,16 @@ pub fn run() -> anyhow::Result<()> {
             target,
             explain,
             output,
+            export,
         } => {
-            migrate_plan_command(&image, &target, explain, &output, cli.verbose)?;
+            migrate_plan_command(
+                &image,
+                &target,
+                explain,
+                &output,
+                export.as_deref(),
+                cli.verbose,
+            )?;
         }
 
         Commands::ForensicDiff { old, new, output } => {

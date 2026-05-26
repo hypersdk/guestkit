@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! UI rendering orchestration
 
-use super::app::{App, View};
+use super::app::{App, JumpMenuRow, View};
 use std::path::Path;
 use super::cache;
 use super::theme::{self, fill_background, key_muted, key_primary, pane_block, pane_block_with_border, risk_border_color};
@@ -22,7 +22,9 @@ use ratatui::{
     Frame,
 };
 
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, app: &mut App) {
+    app.terminal_width = f.area().width;
+    app.terminal_height = f.area().height;
     f.render_widget(fill_background(), f.area());
     let root = f.area();
     let content_root = if app.fleet_active() {
@@ -40,14 +42,14 @@ pub fn draw(f: &mut Frame, app: &App) {
         vec![
             Constraint::Length(3), // Header
             Constraint::Length(2), // Stats bar
-            Constraint::Length(3), // Tabs
+            Constraint::Length(5), // Tabs (group + view rows)
             Constraint::Min(0),    // Content
             Constraint::Length(1), // Footer
         ]
     } else {
         vec![
             Constraint::Length(3), // Header
-            Constraint::Length(3), // Tabs
+            Constraint::Length(5), // Tabs (group + view rows)
             Constraint::Min(0),    // Content
             Constraint::Length(1), // Footer
         ]
@@ -220,11 +222,44 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
-    let ordered = app.tab_titles_ordered();
-    let mut tab_spans: Vec<Span> = Vec::new();
-    for (i, (view, title)) in ordered.iter().enumerate() {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(2), Constraint::Length(2)])
+        .split(area);
+
+    draw_group_tabs(f, rows[0], app);
+    draw_view_tabs(f, rows[1], app);
+}
+
+fn draw_group_tabs(f: &mut Frame, area: Rect, app: &App) {
+    let current = app.current_group();
+    let mut spans: Vec<Span> = Vec::new();
+    for (i, group) in View::all_groups().iter().enumerate() {
         if i > 0 {
-            tab_spans.push(Span::raw("  "));
+            spans.push(Span::styled(" │ ", theme::label_style()));
+        }
+        let selected = *group == current;
+        if selected {
+            spans.push(Span::styled(
+                format!("▸ {group} "),
+                theme::focus_style().add_modifier(Modifier::UNDERLINED),
+            ));
+        } else {
+            spans.push(Span::styled(
+                format!("  {group}  "),
+                Style::default().fg(TEXT_MUTED),
+            ));
+        }
+    }
+    let block = Paragraph::new(Line::from(spans)).block(pane_block("Groups", false));
+    f.render_widget(block, area);
+}
+
+fn draw_view_tabs(f: &mut Frame, area: Rect, app: &App) {
+    let mut tab_spans: Vec<Span> = Vec::new();
+    for (i, (view, title)) in app.view_tab_entries().iter().enumerate() {
+        if i > 0 {
+            tab_spans.push(Span::raw(" "));
         }
         let selected = *view == app.current_view;
         if selected {
@@ -239,8 +274,7 @@ fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
             ));
         }
     }
-    let tabs = Paragraph::new(Line::from(tab_spans))
-        .block(pane_block("Views", false));
+    let tabs = Paragraph::new(Line::from(tab_spans)).block(pane_block("Views", false));
     f.render_widget(tabs, area);
 }
 
@@ -355,7 +389,12 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     } else {
         let mut spans = vec![
             Span::styled("Tab", key_primary()),
-            Span::styled(" views ", key_muted()),
+            Span::styled(" view ", key_muted()),
+            Span::styled("{", key_primary()),
+            Span::styled("}", key_muted()),
+            Span::styled(" group ", key_muted()),
+            Span::styled("Ctrl+P", key_primary()),
+            Span::styled(" jump ", key_muted()),
             Span::styled("/", key_primary()),
             Span::styled(" find ", key_muted()),
             Span::styled(":", key_primary()),
@@ -431,26 +470,20 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("1-9          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Quick jump: 1=Dashboard 2=Network 3=Packages 4=Services     "),
-            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("             ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("            5=DBs 6=WebServers 7=Security 8=Issues 9=Storage"),
-            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
-        ]),
-        Line::from(vec![
-            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("Tab          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Next view                                                         "),
+            Span::raw("Next view in current group                                       "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("Shift+Tab    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw("Previous view                                                     "),
+            Span::raw("Previous view in current group                                   "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("{ / }        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Previous / next view group (Overview, System, Security)          "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
@@ -667,7 +700,7 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
         Line::from(vec![
             Span::styled("💡 ", Style::default().fg(WARNING_COLOR)),
             Span::styled("Pro Tips:", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw("  Use number keys for fastest navigation • Search is live and instant")
+            Span::raw("  Ctrl+P jumps to any view • j/k scrolls this help • Search is live")
         ]),
         Line::from(vec![
             Span::raw("             Color coding: "),
@@ -679,18 +712,37 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Press ESC, h, or F1 to close this help",
+            Span::styled("Press ESC, h, or F1 to close • j/k or PgUp/PgDn to scroll",
                 Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
         ]),
     ];
 
-    let help = Paragraph::new(help_text)
+    let inner_height = area.height.saturating_sub(2) as usize;
+    let total_lines = help_text.len();
+    let max_scroll = total_lines.saturating_sub(inner_height);
+    let scroll = app.help_scroll.min(max_scroll);
+    let visible: Vec<Line> = help_text
+        .into_iter()
+        .skip(scroll)
+        .take(inner_height)
+        .collect();
+    let title_end = (scroll + visible.len()).min(total_lines);
+    let scroll_label = if total_lines > inner_height {
+        format!(" ({0}–{1} of {2})", scroll + 1, title_end, total_lines)
+    } else {
+        String::new()
+    };
+
+    let help = Paragraph::new(visible)
         .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
             .title(vec![
                 Span::raw(" "),
-                Span::styled("📖 Help & Keyboard Shortcuts", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("📖 Help & Keyboard Shortcuts{scroll_label}"),
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" "),
             ])
             .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
@@ -1558,48 +1610,65 @@ fn draw_global_search(f: &mut Frame, app: &App) {
     f.render_widget(block, area);
 }
 
-fn draw_jump_menu(f: &mut Frame, app: &App) {
-    let area = centered_rect(50, 60, f.area());
+fn draw_jump_menu(f: &mut Frame, app: &mut App) {
+    let rows = app.build_jump_menu_rows();
+    let pct_y = ((rows.len() as u16 + 6) * 100 / f.area().height.max(1)).clamp(35, 60);
+    let area = centered_rect(50, pct_y, f.area());
 
-    let entries = app.get_grouped_jump_entries();
-    let mut items: Vec<ListItem> = Vec::new();
-    let mut last_group = String::new();
-    for (idx, (group, _view, title)) in entries.iter().enumerate() {
-        if group != &last_group {
-            items.push(ListItem::new(Line::from(Span::styled(
-                format!("── {} ──", group),
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(3), Constraint::Length(2)])
+        .split(area);
+
+    let visible_height = chunks[0].height.saturating_sub(2) as usize;
+    app.ensure_jump_scroll_visible(visible_height.max(1));
+
+    let mut item_idx = 0;
+    let all_items: Vec<ListItem> = rows
+        .iter()
+        .map(|row| match row {
+            JumpMenuRow::Header(group) => ListItem::new(Line::from(Span::styled(
+                format!("── {group} ──"),
                 Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD),
-            ))));
-            last_group = group.clone();
-        }
-        let is_selected = idx == app.jump_selected_index;
-        let line = if is_selected {
-            Line::from(vec![
-                Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(title.as_str(), theme::focus_style()),
-            ])
-        } else {
-            Line::from(vec![
-                Span::raw("   "),
-                Span::styled(title.as_str(), Style::default().fg(TEXT_COLOR)),
-                Span::styled(format!("  [{}]", group), theme::label_style()),
-            ])
-        };
-        items.push(ListItem::new(line));
-    }
+            ))),
+            JumpMenuRow::Item { group, title, .. } => {
+                let is_selected = item_idx == app.jump_selected_index;
+                item_idx += 1;
+                let line = if is_selected {
+                    Line::from(vec![
+                        Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                        Span::styled(title.as_str(), theme::focus_style()),
+                    ])
+                } else {
+                    Line::from(vec![
+                        Span::raw("   "),
+                        Span::styled(title.as_str(), Style::default().fg(TEXT_COLOR)),
+                        Span::styled(format!("  [{group}]"), theme::label_style()),
+                    ])
+                };
+                ListItem::new(line)
+            }
+        })
+        .collect();
 
-    let list = List::new(items)
-        .block(Block::default()
+    let items: Vec<ListItem> = all_items
+        .into_iter()
+        .skip(app.jump_scroll_offset)
+        .take(visible_height.max(1))
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
             .title(vec![
                 Span::styled(" 🚀 Quick Jump ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
                 Span::styled(&app.jump_query, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
                 Span::raw(" "),
             ])
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE)))
-        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+            .border_style(Style::default().fg(ORANGE)),
+    )
+    .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
 
-    // Help footer
     let help_text = vec![
         Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
         Span::raw(": Navigate  "),
@@ -1612,20 +1681,13 @@ fn draw_jump_menu(f: &mut Frame, app: &App) {
     ];
 
     let help = Paragraph::new(Line::from(help_text))
-        .block(Block::default()
-            .borders(Borders::TOP)
-            .border_style(Style::default().fg(DARK_ORANGE)))
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(DARK_ORANGE)),
+        )
         .alignment(Alignment::Center)
         .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
-
-    // Split area for list and help
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),
-            Constraint::Length(2),
-        ])
-        .split(area);
 
     f.render_widget(ratatui::widgets::Clear, area);
     f.render_widget(list, chunks[0]);

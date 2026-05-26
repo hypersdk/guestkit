@@ -14,7 +14,7 @@
 
 | Guide | Description |
 |-------|-------------|
-| [TUI dashboard](features/tui-enhancements.md) | Interactive terminal UI |
+| [TUI dashboard](features/tui-enhancements.md) | Two-tier tabs, jump menu — [zyvor.dev/guestkit](https://zyvor.dev/guestkit) |
 | [File explorer](features/explore/EXPLORE-QUICKSTART.md) | `guestkit explore` |
 | [Interactive shell](user-guides/interactive-mode.md) | REPL mode |
 | [Security profiles](user-guides/profiles.md) | Security, compliance, migration profiles |

@@ -233,6 +233,7 @@ pub fn migrate_plan_command(
     target: &str,
     explain: bool,
     output_format: &str,
+    export: Option<&Path>,
     verbose: bool,
 ) -> Result<()> {
     let boot_target = match target.to_lowercase().as_str() {
@@ -248,6 +249,33 @@ pub fn migrate_plan_command(
         &boot_report,
         target,
     );
+
+    if let Some(export_path) = export {
+        use crate::cli::plan::{PlanExporter, PlanGenerator};
+        use std::fs;
+
+        let generator = PlanGenerator::new(image.display().to_string());
+        let plan = generator.from_migration_report(&migration_score, &boot_report, target, image)?;
+        let content = if export_path
+            .extension()
+            .is_some_and(|e| e == "json")
+        {
+            PlanExporter::to_json(&plan)?
+        } else {
+            PlanExporter::to_yaml(&plan)?
+        };
+        fs::write(export_path, content)
+            .with_context(|| format!("Failed to write fix plan to {}", export_path.display()))?;
+        println!(
+            "{}",
+            format!(
+                "Fix plan written to {} ({} operations)",
+                export_path.display(),
+                plan.operations.len()
+            )
+            .green()
+        );
+    }
 
     if output_format == "json" {
         let mut out = serde_json::json!({

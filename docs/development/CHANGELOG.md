@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-05-26
+
 ### Added
 - **Migration assurance platform** — evidence snapshot model (`EvidenceSnapshot`) as the digital twin primitive for scoring engines
 - **`guestkit doctor`** — bootability prediction with weighted score, blockers, and `--explain` root-cause analysis
 - **`guestkit migrate-plan`** — hypervisor-aware migration scoring (KVM/Proxmox/cloud) with driver injections and downtime estimate
+- **`guestkit migrate-plan --export`** — write migration guidance as an executable fix plan (YAML/JSON)
 - **`guestkit policy check`** — policy-as-code alias with expression DSL over evidence fields (`bootability.score >= 80`)
 - **`guestkit fleet analyze`** — cluster identical VMs, detect snowflakes, flag migration blockers
 - **`guestkit forensic-diff`** — security drift scoring between two disk snapshots
@@ -20,7 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OSV CVE lookup** — offline cache at `~/.cache/guestkit/cve/` with static fallback database
 - **Cloud disk sources** — optional S3/Azure/GCS backends (`--features cloud-s3`, etc.)
 - **AI evidence tools** — deterministic bootability and evidence snapshot for the optional AI assistant
-- **Documentation** — [migration-assurance.md](../features/migration-assurance.md); VM migration and fix-plans guides updated for assurance workflow
+- **Assurance integration tests** — CLI and plan-generation coverage for doctor/migrate-plan/repair workflow
+- **Documentation** — [migration-assurance.md](../features/migration-assurance.md); VM migration and fix-plans guides updated
+
+### Changed
+- **TUI navigation** — two-tier tabs (group + view rows); scrollable jump menu and help; `{`/`}` switch groups ([tui-enhancements.md](../features/tui-enhancements.md))
 
 ## [0.3.4] - 2026-05-25
 

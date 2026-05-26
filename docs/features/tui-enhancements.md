@@ -1,8 +1,10 @@
 # TUI Enhancements - January 2026
 
+Carbon control-plane UI for offline disk inspect — part of [GuestKit on zyvor.dev](https://zyvor.dev/guestkit).
+
 ## Overview
 
-The GuestKit TUI has been enhanced with several new features to improve usability and user experience.
+Interactive terminal UI (`guestkit tui IMAGE`). Splash, vim keys, and grouped navigation.
 
 ## New Features
 
@@ -124,6 +126,17 @@ Themes: `carbon` (default), `high-contrast`, `minimal` — set in `[ui] theme`.
 
 Shared design system and chrome refresh:
 
+### Navigation (two-tier tabs, May 2026)
+
+| Keys | Action |
+|------|--------|
+| `Tab` / `Shift+Tab` | Next/prev view in group |
+| `{` / `}` | Previous/next group (Overview · System · Security) |
+| `Ctrl+P` | Jump menu (filter + scroll) |
+| `h` + `j`/`k` | Scroll full help |
+
+Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `density = "compact"` or width &lt; `auto_compact_width` (default 100).
+
 ### Design system (`theme.rs`, `widgets.rs`)
 - **Pane blocks** — muted borders; orange border/title only when focused or risk-gated
 - **Stat chips** — compact Pkgs / Svcs / Users / Risk / Bookmarks row
@@ -134,7 +147,9 @@ Shared design system and chrome refresh:
 
 ### Chrome
 - **Header v2** — health %, breadcrumb (`Issues › critical`), truncated image path, fleet/compare hints
-- **Tabs** — custom row with `▸` on active tab (no full-width orange highlight)
+- **Tabs** — two-row group + view selector; `▸` on active tab
+- **Help** — full reference (`h`) scrolls with `j`/`k` or PgUp/PgDn; title shows line range
+- **Jump menu** — viewport scroll keeps selection visible; group headers are non-selectable
 - **Footer** — muted hints; `cache` when inspect cache exists; loading/fleet indicators
 - **Modals** — dim layer behind palette, help, jump, global search
 - **Toast** — bottom-right notice panel
@@ -149,7 +164,8 @@ Shared design system and chrome refresh:
 theme = "carbon"           # carbon | high-contrast | minimal
 show_emoji = true          # false = ASCII-only labels in chrome
 icon_mode = "emoji"        # emoji | ascii
-density = "comfortable"    # comfortable | compact (reserved)
+density = "comfortable"    # comfortable | compact (tab labels)
+auto_compact_width = 100   # icon-only tabs below this width (unless density = compact)
 ```
 
 ## Future Enhancements
@@ -229,7 +245,8 @@ quick_jump_enabled = true
 - **theme**: `carbon`, `high-contrast`, or `minimal` (default: `carbon`)
 - **show_emoji**: Emoji in chrome labels (default: `true`; set `false` for ASCII-only)
 - **icon_mode**: Tab/header icons: `emoji` or `ascii` (default: `emoji`)
-- **density**: `comfortable` or `compact` (default: `comfortable`)
+- **density**: `comfortable` or `compact` tab labels (default: `comfortable`)
+- **auto_compact_width**: use compact tab labels when terminal is narrower than this (default: `100`)
 - **mouse_enabled**: Enable/disable mouse support (default: `true`)
 
 #### View Settings (`[views]`)

@@ -179,6 +179,12 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('?') => app.toggle_context_help(),
                     KeyCode::Char('[') if !app.is_searching() => app.cycle_layout_mode_backward(),
                     KeyCode::Char(']') if !app.is_searching() => app.cycle_layout_mode(),
+                    KeyCode::Char('{') if !app.is_searching() && !app.show_help && !app.show_jump_menu && !app.show_palette => {
+                        app.previous_group();
+                    }
+                    KeyCode::Char('}') if !app.is_searching() && !app.show_help && !app.show_jump_menu && !app.show_palette => {
+                        app.next_group();
+                    }
                     KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
                         app.toggle_case_sensitive();
                     }
@@ -270,6 +276,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.global_search_prev();
                         } else if app.show_jump_menu {
                             app.jump_menu_previous();
+                        } else if app.show_help && !app.help_context {
+                            app.help_scroll_up();
                         } else {
                             app.scroll_up();
                         }
@@ -284,17 +292,50 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.global_search_next();
                         } else if app.show_jump_menu {
                             app.jump_menu_next();
+                        } else if app.show_help && !app.help_context {
+                            let visible = app.help_visible_lines();
+                            app.help_scroll_down(app::App::FULL_HELP_LINES, visible);
                         } else {
                             app.scroll_down();
                         }
                     }
-                    KeyCode::PageUp => app.page_up(),
-                    KeyCode::PageDown => app.page_down(),
+                    KeyCode::PageUp => {
+                        if app.show_help && !app.help_context {
+                            app.help_page_up(app.config.behavior.page_scroll_lines);
+                        } else {
+                            app.page_up();
+                        }
+                    }
+                    KeyCode::PageDown => {
+                        if app.show_help && !app.help_context {
+                            let visible = app.help_visible_lines();
+                            app.help_page_down(
+                                app::App::FULL_HELP_LINES,
+                                visible,
+                                app.config.behavior.page_scroll_lines,
+                            );
+                        } else {
+                            app.page_down();
+                        }
+                    }
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
                     // Vim-style navigation
-                    KeyCode::Char('k') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_up(),
-                    KeyCode::Char('j') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_down(),
+                    KeyCode::Char('k') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        if app.show_help && !app.help_context {
+                            app.help_scroll_up();
+                        } else {
+                            app.scroll_up();
+                        }
+                    }
+                    KeyCode::Char('j') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                        if app.show_help && !app.help_context {
+                            let visible = app.help_visible_lines();
+                            app.help_scroll_down(app::App::FULL_HELP_LINES, visible);
+                        } else {
+                            app.scroll_down();
+                        }
+                    }
                     KeyCode::Char('g') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_top(),
                     KeyCode::Char('G') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_bottom(),
                     KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_up(),

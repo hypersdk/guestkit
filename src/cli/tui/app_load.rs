@@ -77,6 +77,36 @@ impl View {
         }
     }
 
+    pub fn all_groups() -> &'static [&'static str] {
+        &["Overview", "System", "Security"]
+    }
+
+    pub fn views_in_group(group: &str) -> &'static [View] {
+        match group {
+            "Overview" => &[
+                View::Dashboard,
+                View::Analytics,
+                View::Timeline,
+                View::Recommendations,
+                View::Topology,
+            ],
+            "System" => &[
+                View::Network,
+                View::Packages,
+                View::Services,
+                View::Databases,
+                View::WebServers,
+                View::Users,
+                View::Kernel,
+                View::Logs,
+                View::Storage,
+                View::Files,
+            ],
+            "Security" => &[View::Security, View::Issues, View::Profiles],
+            _ => &[],
+        }
+    }
+
     /// Heavy views loaded on first visit when lazy loading is active.
     pub fn is_lazy(self) -> bool {
         matches!(
@@ -628,6 +658,87 @@ impl App {
         self.show_notification(format!("Filter: {}", label));
     }
 
+    pub fn current_group(&self) -> &'static str {
+        self.current_view.group()
+    }
+
+    pub fn views_in_current_group(&self) -> Vec<View> {
+        View::views_in_group(self.current_group()).to_vec()
+    }
+
+    pub fn pinned_view_list(&self) -> Vec<View> {
+        self.pinned_views
+            .iter()
+            .filter_map(|name| View::from_name(name))
+            .collect()
+    }
+
+    pub fn is_compact_tabs(&self) -> bool {
+        self.config.ui.density == "compact"
+            || self.terminal_width < self.config.ui.auto_compact_width
+    }
+
+    pub fn set_group(&mut self, group: &str) {
+        let views = View::views_in_group(group);
+        if views.is_empty() {
+            return;
+        }
+        if self.current_view.group() != group {
+            self.set_view(views[0]);
+            self.show_notification(format!("→ {} group", group));
+        }
+    }
+
+    pub fn next_group(&mut self) {
+        let groups = View::all_groups();
+        let idx = groups
+            .iter()
+            .position(|g| *g == self.current_group())
+            .unwrap_or(0);
+        let next = groups[(idx + 1) % groups.len()];
+        if let Some(&view) = View::views_in_group(next).first() {
+            self.set_view(view);
+            self.show_notification(format!("→ {} group", next));
+        }
+    }
+
+    pub fn previous_group(&mut self) {
+        let groups = View::all_groups();
+        let idx = groups
+            .iter()
+            .position(|g| *g == self.current_group())
+            .unwrap_or(0);
+        let prev = groups[(idx + groups.len() - 1) % groups.len()];
+        if let Some(&view) = View::views_in_group(prev).first() {
+            self.set_view(view);
+            self.show_notification(format!("← {} group", prev));
+        }
+    }
+
+    /// Views shown in the view tab row: pinned quick-access, then current group (deduped).
+    pub fn view_tab_entries(&self) -> Vec<(View, String)> {
+        let compact = self.is_compact_tabs();
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for v in self.pinned_view_list() {
+            if seen.insert(v) {
+                out.push((v, self.tab_title_for(v, compact, true)));
+            }
+        }
+        for &v in View::views_in_group(self.current_group()) {
+            if seen.insert(v) {
+                out.push((v, self.tab_title_for(v, compact, false)));
+            }
+        }
+        out
+    }
+
+    /// Y positions of group/view tab rows (content area, 0-based).
+    pub fn tab_row_y(&self) -> (u16, u16) {
+        let group_y = if self.show_stats_bar { 5 } else { 3 };
+        (group_y, group_y + 2)
+    }
+
     pub fn tab_titles_ordered(&self) -> Vec<(View, String)> {
         let all = View::all();
         let mut pinned: Vec<View> = Vec::new();
@@ -643,15 +754,19 @@ impl App {
         ordered
             .into_iter()
             .map(|v| {
-                let title = self.tab_title_for(v);
+                let title = self.tab_title_for(v, self.is_compact_tabs(), false);
                 (v, title)
             })
             .collect()
     }
 
-    fn tab_title_for(&self, v: View) -> String {
+    pub fn tab_title_for(&self, v: View, compact: bool, pinned: bool) -> String {
         let ascii = self.config.ui.icon_mode == "ascii";
         let icon = icons::view_icon(v, ascii);
+        if compact {
+            let prefix = if pinned { "★" } else { "" };
+            return format!("{}{}", prefix, icon);
+        }
         let count = match v {
             View::Network => Some(self.network_interfaces.len()),
             View::Packages => Some(self.packages.package_count),
@@ -663,10 +778,11 @@ impl App {
             }
             _ => None,
         };
+        let prefix = if pinned { "★" } else { "" };
         if let Some(n) = count {
-            format!("{}{} ({})", icon, v.title(), n)
+            format!("{}{}{} ({})", prefix, icon, v.title(), n)
         } else {
-            format!("{}{}", icon, v.title())
+            format!("{}{}{}", prefix, icon, v.title())
         }
     }
 
