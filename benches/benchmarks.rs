@@ -3,14 +3,16 @@
 //!
 //! Run with: cargo bench
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
 use guestkit::Guestfs;
 use std::fs;
 
 fn setup_test_disk(path: &str, size_mb: u64) {
     let _ = fs::remove_file(path);
     let mut g = Guestfs::new().unwrap();
-    g.disk_create(path, "raw", size_mb * 1024 * 1024).unwrap();
+    g.disk_create(path, "raw", (size_mb * 1024 * 1024) as i64)
+        .unwrap();
 }
 
 fn cleanup_disk(path: &str) {
@@ -25,7 +27,7 @@ fn bench_disk_creation(c: &mut Criterion) {
             b.iter(|| {
                 let path = format!("/tmp/bench_disk_{}mb.img", size);
                 let mut g = Guestfs::new().unwrap();
-                g.disk_create(&path, "raw", black_box(size * 1024 * 1024))
+                g.disk_create(&path, "raw", black_box((size * 1024 * 1024) as i64))
                     .unwrap();
                 cleanup_disk(&path);
             });

@@ -322,9 +322,9 @@ mod tests {
     fn test_is_whole_device() {
         let g = Guestfs::new().unwrap();
 
-        assert_eq!(g.is_whole_device("/dev/sda").unwrap(), true);
-        assert_eq!(g.is_whole_device("/dev/sda1").unwrap(), false);
-        assert_eq!(g.is_whole_device("/dev/sda10").unwrap(), false);
+        assert!(g.is_whole_device("/dev/sda").unwrap());
+        assert!(!g.is_whole_device("/dev/sda1").unwrap());
+        assert!(!g.is_whole_device("/dev/sda10").unwrap());
     }
 
     #[test]

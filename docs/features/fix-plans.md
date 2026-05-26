@@ -14,6 +14,8 @@ The Offline Patch & Fix Preview Mode enables safe, reviewable VM fixes with comp
 Inspect → Diagnose → Generate Plan → Review → Approve → Execute
 ```
 
+**Boot repair path:** `guestkit doctor` → `guestkit repair --fix boot` generates a `boot-repair` plan from blockers/warnings, applies it, then re-runs doctor for a before/after score. See [migration-assurance.md](migration-assurance.md).
+
 This workflow matches enterprise change management requirements and provides:
 - **Safety**: See exactly what will change before applying
 - **Auditability**: Plans are version-controllable artifacts

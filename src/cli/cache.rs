@@ -136,6 +136,59 @@ impl InspectionCache {
             total_bytes: total_size,
         })
     }
+
+    /// Store evidence snapshot in cache
+    pub fn store_evidence(
+        &self,
+        image_path: &Path,
+        evidence: &crate::evidence::EvidenceSnapshot,
+    ) -> Result<()> {
+        let key = self.cache_key(image_path)?;
+        let cache_file = self.cache_dir.join(format!("{}-evidence-v1.json", key));
+        let json = serde_json::to_string_pretty(evidence)
+            .context("Failed to serialize evidence snapshot")?;
+        fs::write(&cache_file, json)?;
+        Ok(())
+    }
+
+    /// Get cached evidence snapshot
+    pub fn get_evidence(
+        &self,
+        image_path: &Path,
+    ) -> Result<Option<crate::evidence::EvidenceSnapshot>> {
+        let key = self.cache_key(image_path)?;
+        let cache_file = self.cache_dir.join(format!("{}-evidence-v1.json", key));
+        if !cache_file.exists() {
+            return Ok(None);
+        }
+        let content = fs::read_to_string(&cache_file)?;
+        let evidence: crate::evidence::EvidenceSnapshot = serde_json::from_str(&content)?;
+        Ok(Some(evidence))
+    }
+}
+
+/// Evidence snapshot cache wrapper
+pub struct EvidenceCache(InspectionCache);
+
+impl EvidenceCache {
+    pub fn new() -> Result<Self> {
+        Ok(Self(InspectionCache::new()?))
+    }
+
+    pub fn store(
+        &self,
+        image_path: &Path,
+        evidence: &crate::evidence::EvidenceSnapshot,
+    ) -> Result<()> {
+        self.0.store_evidence(image_path, evidence)
+    }
+
+    pub fn get(
+        &self,
+        image_path: &Path,
+    ) -> Result<Option<crate::evidence::EvidenceSnapshot>> {
+        self.0.get_evidence(image_path)
+    }
 }
 
 /// Cache statistics

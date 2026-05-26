@@ -5,9 +5,13 @@
 
 use assert_cmd::Command;
 
+fn guestkit() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_guestkit"))
+}
+
 #[test]
 fn test_cli_help_shows_output_option() {
-    let mut cmd = Command::cargo_bin("guestkit").unwrap();
+    let mut cmd = guestkit();
     cmd.arg("inspect").arg("--help");
 
     let output = cmd.output().expect("Failed to execute command");
@@ -22,7 +26,7 @@ fn test_cli_help_shows_output_option() {
 
 #[test]
 fn test_cli_accepts_json_flag() {
-    let mut cmd = Command::cargo_bin("guestkit").unwrap();
+    let mut cmd = guestkit();
     cmd.arg("inspect")
         .arg("nonexistent.qcow2")
         .arg("--output")
@@ -38,7 +42,7 @@ fn test_cli_accepts_json_flag() {
 
 #[test]
 fn test_cli_accepts_yaml_flag() {
-    let mut cmd = Command::cargo_bin("guestkit").unwrap();
+    let mut cmd = guestkit();
     cmd.arg("inspect")
         .arg("nonexistent.qcow2")
         .arg("-o") // Test short form
@@ -50,7 +54,7 @@ fn test_cli_accepts_yaml_flag() {
 
 #[test]
 fn test_cli_accepts_csv_flag() {
-    let mut cmd = Command::cargo_bin("guestkit").unwrap();
+    let mut cmd = guestkit();
     cmd.arg("inspect")
         .arg("nonexistent.qcow2")
         .arg("-o")
@@ -62,7 +66,7 @@ fn test_cli_accepts_csv_flag() {
 
 #[test]
 fn test_cli_rejects_invalid_format() {
-    let mut cmd = Command::cargo_bin("guestkit").unwrap();
+    let mut cmd = guestkit();
     cmd.arg("inspect")
         .arg("nonexistent.qcow2")
         .arg("--output")

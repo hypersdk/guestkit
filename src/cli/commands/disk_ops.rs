@@ -958,7 +958,7 @@ pub fn find_large_command(
     }
 
     // Sort by size descending
-    file_sizes.sort_by(|a, b| b.1.cmp(&a.1));
+    file_sizes.sort_by_key(|b| std::cmp::Reverse(b.1));
     file_sizes.truncate(max_results);
 
     progress.finish_and_clear();

@@ -152,4 +152,27 @@ impl DiagnosticTools {
             Err(e) => Ok(format!("Error listing {}: {}", path, e)),
         }
     }
+
+    /// Get deterministic bootability + root cause report from evidence engine
+    pub fn get_bootability_report(&mut self, image_path: &std::path::Path) -> Result<String> {
+        use crate::boot::{analyze_bootability, BootTarget};
+        use crate::evidence::build_evidence;
+        use crate::inference::infer_root_cause;
+
+        let evidence = build_evidence(&mut self.guestfs, &self.root, image_path)?;
+        let boot = analyze_bootability(&evidence, BootTarget::Kvm);
+        let root_cause = infer_root_cause(&evidence, &boot);
+        let report = json!({
+            "bootability": boot,
+            "root_cause": root_cause,
+        });
+        Ok(serde_json::to_string_pretty(&report)?)
+    }
+
+    /// Get normalized evidence snapshot (digital twin)
+    pub fn get_evidence_snapshot(&mut self, image_path: &std::path::Path) -> Result<String> {
+        use crate::evidence::build_evidence;
+        let evidence = build_evidence(&mut self.guestfs, &self.root, image_path)?;
+        Ok(serde_json::to_string_pretty(&evidence)?)
+    }
 }

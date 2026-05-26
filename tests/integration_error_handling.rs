@@ -57,7 +57,7 @@ fn test_error_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
     assert!(result.is_err());
 
     // Try to check if nonexistent file exists
-    assert_eq!(g.exists("/nonexistent.txt")?, false);
+    assert!(!g.exists("/nonexistent.txt")?);
 
     // Try to stat nonexistent file
     let result = g.stat("/nonexistent.txt");
@@ -304,7 +304,7 @@ fn test_error_large_file_handling() -> Result<(), Box<dyn std::error::Error>> {
     let result = g.cat("/large.dat");
     // If it succeeds, verify content
     if let Ok(content) = result {
-        assert!(content.len() > 0);
+        assert!(!content.is_empty());
     }
 
     g.umount("/")?;

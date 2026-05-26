@@ -15,6 +15,7 @@ pub mod dependencies;
 pub mod diff;
 pub mod errors;
 pub mod exporters;
+pub mod forensic_diff;
 pub mod formatters;
 pub mod interactive;
 pub mod inventory;

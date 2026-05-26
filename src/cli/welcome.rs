@@ -31,6 +31,14 @@ pub fn print_welcome() {
     println!();
     println!("{}", "Common workflows:".bold());
     println!(
+        "  {}  Boot probability before migration",
+        orange(&invocation::example("doctor disk.qcow2 --target kvm")).dimmed()
+    );
+    println!(
+        "  {}  Hypervisor-aware migration plan",
+        orange(&invocation::example("migrate-plan disk.vmdk --target proxmox")).dimmed()
+    );
+    println!(
         "  {}  Inspect a disk image",
         orange(&invocation::example("inspect disk.qcow2")).dimmed()
     );

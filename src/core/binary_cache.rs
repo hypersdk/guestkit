@@ -108,8 +108,7 @@ impl BinaryCache {
         Ok(Self { cache_dir })
     }
 
-    /// Create cache with custom directory (for testing)
-    #[cfg(test)]
+    /// Create cache with custom directory (for testing and benchmarks)
     pub fn with_dir(cache_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&cache_dir)
             .context("Failed to create cache directory")?;

@@ -10,12 +10,14 @@ pub mod hardening;
 pub mod migration;
 pub mod performance;
 pub mod security;
+pub mod windows_migration;
 
 pub use compliance::ComplianceProfile;
 pub use hardening::HardeningProfile;
 pub use migration::MigrationProfile;
 pub use performance::PerformanceProfile;
 pub use security::SecurityProfile;
+pub use windows_migration::WindowsMigrationProfile;
 
 /// Risk level for security findings
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -108,6 +110,7 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "performance" => Some(Box::new(PerformanceProfile)),
         "compliance" => Some(Box::new(ComplianceProfile)),
         "hardening" => Some(Box::new(HardeningProfile)),
+        "windows-migration" | "windows_migration" => Some(Box::new(WindowsMigrationProfile)),
         _ => None,
     }
 }
@@ -132,6 +135,10 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         (
             "hardening",
             "System hardening recommendations with actionable remediation steps",
+        ),
+        (
+            "windows-migration",
+            "Windows migration readiness for VMware/KVM exits",
         ),
     ]
 }
@@ -242,7 +249,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 5);
+        assert_eq!(profiles.len(), 6);
     }
 
     #[test]

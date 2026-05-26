@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Migration assurance platform** — evidence snapshot model (`EvidenceSnapshot`) as the digital twin primitive for scoring engines
+- **`guestkit doctor`** — bootability prediction with weighted score, blockers, and `--explain` root-cause analysis
+- **`guestkit migrate-plan`** — hypervisor-aware migration scoring (KVM/Proxmox/cloud) with driver injections and downtime estimate
+- **`guestkit policy check`** — policy-as-code alias with expression DSL over evidence fields (`bootability.score >= 80`)
+- **`guestkit fleet analyze`** — cluster identical VMs, detect snowflakes, flag migration blockers
+- **`guestkit forensic-diff`** — security drift scoring between two disk snapshots
+- **`guestkit repair --fix boot`** — transactional boot repair via fix plans with post-apply doctor validation
+- **`--profile windows-migration`** — BitLocker, domain join, RDP, hypervisor remnants, driver gaps
+- **Windows registry depth** — SAM/SECURITY hive parsing, BitLocker detection, pending reboot, domain/RDP audit
+- **OSV CVE lookup** — offline cache at `~/.cache/guestkit/cve/` with static fallback database
+- **Cloud disk sources** — optional S3/Azure/GCS backends (`--features cloud-s3`, etc.)
+- **AI evidence tools** — deterministic bootability and evidence snapshot for the optional AI assistant
+- **Documentation** — [migration-assurance.md](../features/migration-assurance.md); VM migration and fix-plans guides updated for assurance workflow
+
 ## [0.3.4] - 2026-05-25
 
 ### Added

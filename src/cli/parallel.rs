@@ -862,11 +862,9 @@ mod tests {
     #[test]
     fn test_inspect_all_failures() {
         let inspector = ParallelInspector::default();
-        let disks = vec![
-            PathBuf::from("/nonexistent1.img"),
+        let disks = [PathBuf::from("/nonexistent1.img"),
             PathBuf::from("/nonexistent2.img"),
-            PathBuf::from("/nonexistent3.img"),
-        ];
+            PathBuf::from("/nonexistent3.img")];
 
         let disk_refs: Vec<&PathBuf> = disks.iter().collect();
         let results = inspector.inspect_batch(&disk_refs).unwrap();

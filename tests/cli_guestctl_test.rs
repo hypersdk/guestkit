@@ -4,10 +4,17 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 
+fn guestctl() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_guestctl"))
+}
+
+fn guestkit() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_guestkit"))
+}
+
 #[test]
 fn guestctl_version() {
-    Command::cargo_bin("guestctl")
-        .unwrap()
+    guestctl()
         .arg("--version")
         .assert()
         .success()
@@ -16,8 +23,7 @@ fn guestctl_version() {
 
 #[test]
 fn guestctl_welcome_without_subcommand() {
-    Command::cargo_bin("guestctl")
-        .unwrap()
+    guestctl()
         .assert()
         .success()
         .stdout(predicate::str::contains("Common workflows"))
@@ -26,8 +32,7 @@ fn guestctl_welcome_without_subcommand() {
 
 #[test]
 fn guestkit_welcome_uses_guestkit_name() {
-    Command::cargo_bin("guestkit")
-        .unwrap()
+    guestkit()
         .assert()
         .success()
         .stdout(predicate::str::contains("guestkit — Guest VM"))
@@ -36,8 +41,7 @@ fn guestkit_welcome_uses_guestkit_name() {
 
 #[test]
 fn guestctl_commands_subcommand() {
-    Command::cargo_bin("guestctl")
-        .unwrap()
+    guestctl()
         .arg("commands")
         .assert()
         .success()
@@ -66,8 +70,7 @@ fn guestctl_disk_shorthand_preprocess() {
 
 #[test]
 fn guestctl_completion_supports_all_flag() {
-    Command::cargo_bin("guestctl")
-        .unwrap()
+    guestctl()
         .arg("completion")
         .arg("--help")
         .assert()
@@ -78,8 +81,7 @@ fn guestctl_completion_supports_all_flag() {
 #[test]
 #[cfg(not(debug_assertions))]
 fn guestctl_completion_all_generates_both_names() {
-    Command::cargo_bin("guestctl")
-        .unwrap()
+    guestctl()
         .arg("completion")
         .arg("bash")
         .arg("--all")

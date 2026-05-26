@@ -265,8 +265,6 @@ mod tests {
     fn test_service_analyzer_creation() {
         let analyzer = SystemdAnalyzer::new("/tmp");
         let _service_analyzer = ServiceAnalyzer::new(analyzer);
-        // Just verify creation
-        assert!(true);
     }
 
     #[test]

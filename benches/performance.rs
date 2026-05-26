@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Performance benchmarks for guestkit operations
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
 use std::time::Duration;
 
 /// Benchmark appliance launch and shutdown
@@ -313,16 +314,7 @@ fn benchmark_batch_inspection(c: &mut Criterion) {
 /// Benchmark cache hit vs cache miss performance
 fn benchmark_cache_performance(c: &mut Criterion) {
     use guestkit::core::BinaryCache;
-    use serde::{Deserialize, Serialize};
     use tempfile::TempDir;
-
-    #[derive(Serialize, Deserialize, Clone)]
-    struct LargeInspectionData {
-        os_info: String,
-        packages: Vec<String>,
-        users: Vec<String>,
-        filesystems: Vec<String>,
-    }
 
     let mut group = c.benchmark_group("cache_performance");
 

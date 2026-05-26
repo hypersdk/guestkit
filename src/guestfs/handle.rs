@@ -889,16 +889,16 @@ mod tests {
     #[test]
     fn test_guestfs_verbose() {
         let mut g = Guestfs::new().unwrap();
-        assert_eq!(g.get_verbose(), false);
+        assert!(!g.get_verbose());
         g.set_verbose(true);
-        assert_eq!(g.get_verbose(), true);
+        assert!(g.get_verbose());
     }
 
     #[test]
     fn test_guestfs_trace() {
         let mut g = Guestfs::new().unwrap();
-        assert_eq!(g.get_trace(), false);
+        assert!(!g.get_trace());
         g.set_trace(true);
-        assert_eq!(g.get_trace(), true);
+        assert!(g.get_trace());
     }
 }

@@ -2,11 +2,12 @@
 
 ## Project Overview
 
-**guestkit** (v0.3.1) is a pure Rust library and CLI tool for VM disk inspection and manipulation with beautiful terminal output. Features include:
+**guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. Features include:
 
+- 🩺 **Doctor / migrate-plan** - Boot probability and hypervisor-aware migration scoring before cutover
 - 🎯 **Killer Summary View** - See OS, version, architecture at a glance
-- 🪟 **Windows Registry Parsing** - Full Windows version detection
-- 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter
+- 🪟 **Windows Registry Parsing** - Full Windows version detection (incl. `windows-migration` profile)
+- 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter + fix plans
 - 💾 **Smart LVM Cleanup** - Automatic volume group management
 - 🔄 **Loop Device Primary** - Built-in support for RAW/IMG/ISO
 

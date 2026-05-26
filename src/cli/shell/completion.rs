@@ -83,13 +83,13 @@ mod tests {
     #[test]
     fn test_completer_creation() {
         let completer = ShellCompleter::new();
-        assert!(completer.commands.len() > 0);
+        assert!(!completer.commands.is_empty());
     }
 
     #[test]
     fn test_completer_default() {
         let completer = ShellCompleter::default();
-        assert!(completer.commands.len() > 0);
+        assert!(!completer.commands.is_empty());
     }
 
     #[test]

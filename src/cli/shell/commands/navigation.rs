@@ -166,7 +166,7 @@ pub fn cmd_recent(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         // Sort by modification time (descending)
-        files_with_time.sort_by(|a, b| b.1.cmp(&a.1));
+        files_with_time.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         println!("{}", "Recently Modified Files:".yellow().bold());
         println!("{}", "─".repeat(80).cyan());

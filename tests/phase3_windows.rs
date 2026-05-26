@@ -286,7 +286,7 @@ fn create_fake_windows_image() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean up temporary CPIO test directory
     let _ = std::process::Command::new("rm")
-        .args(&["-rf", "/tmp/cpio-test-windows"])
+        .args(["-rf", "/tmp/cpio-test-windows"])
         .output();
 
     println!("\n=== All Phase 3 APIs Tested Successfully on Windows Image! ===");

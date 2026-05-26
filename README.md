@@ -1,6 +1,6 @@
 <p align="center">
   <strong>GuestKit</strong><br>
-  <sub>Pure-Rust VM disk inspection — no boot required</sub>
+  <sub>Offline VM intelligence + migration assurance — no boot required</sub>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 
 ---
 
-**GuestKit** inspects and repairs VM disks **while they are powered off**. Point it at a QCOW2, VMDK, or RAW image and get OS facts, security findings, network layout, packages, services, and exportable reports — in seconds, from a single static binary.
+**GuestKit** is an **offline VM intelligence and migration assurance platform**. Know whether a VM will survive migration before first boot — then inspect, score, repair, and export evidence-backed reports from QCOW2, VMDK, or RAW images without powering anything on.
 
 Built in **Rust** for safety and speed. Pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM migration pipelines. Optional **TUI**, **REPL shell**, **AI diagnostics**, and **Python** bindings when you need more than one-shot CLI output.
 
@@ -38,14 +38,15 @@ Built in **Rust** for safety and speed. Pairs with **[hyper2kvm](https://github.
 | Boot every VM to “just check” config | Inspect offline images in place |
 | Fragile shell scripts over `guestfish` | Structured JSON/YAML/HTML/PDF output |
 | No fleet-wide security posture view | Batch inspect + profiles across many disks |
-| Migration surprises at first power-on | fstab/crypttab analysis and fix plans before cutover |
+| Migration surprises at first power-on | **`guestkit doctor`** — boot probability score before cutover |
 
 ```bash
 cargo install guestkit    # installs guestkit + guestctl; or: pip install hypersdk-guestkit
-guestkit inspect vm.qcow2
-guestctl tui vm.qcow2       # guestctl is an alias for guestkit
-guestkit inspect vm.qcow2 --profile security
-guestctl vm.qcow2           # shorthand → inspect
+guestkit doctor vm.qcow2 --target kvm          # 82% boot probability + blockers
+guestkit migrate-plan vm.vmdk --target proxmox # hypervisor-aware migration plan
+guestkit inspect win.vmdk --profile windows-migration
+guestkit policy check vm.qcow2 --policy cis.yaml
+guestctl tui vm.qcow2
 ```
 
 ### Aliases
@@ -79,16 +80,25 @@ Run `guestctl` with no subcommand for a quick-start banner, or `guestctl command
 
 | | |
 |---|---|
+| **Doctor** | Bootability prediction — `%` chance of first boot on KVM/Proxmox with blockers |
+| **Migrate-plan** | Hypervisor-aware migration score, driver injections, downtime estimate |
 | **Inspect** | OS, hostname, disks, network, packages, DBs, web servers, users, kernel |
+| **Windows migration** | `--profile windows-migration` — BitLocker, VirtIO, hypervisor remnants |
+| **Policy check** | Policy-as-code compliance (`guestkit policy check`) with expression DSL |
+| **Fleet analyze** | Cluster identical VMs, detect snowflakes, migration blockers |
+| **Forensic diff** | Security drift scoring between two disk snapshots |
+| **Repair** | Transactional boot repair (`guestkit repair --fix boot`) |
 | **TUI** | Multi-view dashboard — files, security, services, storage, fuzzy jump (`Ctrl+P`) |
 | **Shell** | REPL with `ls`, `cat`, `grep`, `explore`, upload/download, optional `ai` |
 | **Profiles** | Security, compliance, hardening, performance, migration readiness |
 | **Fix plans** | Preview offline changes → export bash/Ansible → apply with backup/rollback |
 | **Batch** | Parallel fleet inspection with caching (`inspect-batch --parallel 8`) |
+| **SBOM/CVE** | SPDX/CycloneDX export + OSV CVE lookup with offline cache |
+| **Cloud** | S3/Azure/GCS disk sources (`--features cloud-s3`, etc.) |
 | **Export** | JSON, YAML, HTML, PDF for tickets and automation |
 | **Formats** | QCOW2, VMDK, VDI, VHD/VHDX, RAW, IMG, ISO |
 | **Python** | PyO3 bindings — same inspection API in pipelines |
-| **AI** *(optional)* | Natural-language triage on top of deterministic facts (`--features ai`) |
+| **AI** *(optional)* | Root-cause narration on deterministic evidence (`--features ai`) |
 
 ## Quick start
 
@@ -126,13 +136,20 @@ See [docs/PACKAGE_BINARY_REMOTE.md](docs/PACKAGE_BINARY_REMOTE.md).
 
 | Goal | Command |
 |------|---------|
+| Boot probability | `guestkit doctor disk.qcow2 --target kvm -o json` |
+| Migration plan | `guestkit migrate-plan disk.vmdk --target proxmox --explain` |
+| Windows migration | `guestkit inspect win.vmdk --profile windows-migration` |
+| Policy compliance | `guestkit policy check disk.qcow2 --policy policy.yaml` |
+| Fleet clustering | `guestkit fleet analyze ./vms/ -o json` |
+| Boot repair | `guestkit repair disk.qcow2 --fix boot --dry-run` |
+| Forensic diff | `guestkit forensic-diff before.qcow2 after.qcow2` |
 | Inspect | `guestkit inspect disk.qcow2` (or `guestctl disk.qcow2`) |
 | JSON for CI | `guestkit inspect disk.qcow2 -o json` |
 | TUI | `guestctl tui disk.qcow2` |
 | Command list | `guestctl commands` |
 | REPL | `guestkit interactive disk.qcow2` |
 | Security scan | `guestkit inspect disk.qcow2 --profile security` |
-| Fleet | `guestkit inspect-batch ./vms/*.qcow2 --parallel 4 -o json` |
+| Fleet batch | `guestkit inspect-batch ./vms/*.qcow2 --parallel 4 -o json` |
 | Diff two images | `guestkit diff before.qcow2 after.qcow2` |
 | File browser | `guestkit explore disk.qcow2 /etc` |
 
@@ -164,7 +181,7 @@ flowchart LR
 
 **Typical flows**
 
-- **Migration** — inspect → profile migration → fix plan → hand off to [hyper2kvm](https://github.com/hypersdk/hyper2kvm)
+- **Migration** — `doctor` → `migrate-plan` → fix plan / `repair --fix boot` → [hyper2kvm](https://github.com/hypersdk/hyper2kvm)
 - **Incident response** — `tui` or `interactive` on a clone without powering on production
 - **Compliance** — `inspect --profile compliance` → HTML/PDF reports for auditors
 - **Automation** — `inspect -o json` → jq → your ticketing or inventory system
@@ -208,6 +225,7 @@ AI interprets inspection data you already collected — it does not replace dete
 | Topic | Link |
 |-------|------|
 | **Full docs index** | [docs/INDEX.md](docs/INDEX.md) |
+| Migration assurance | [docs/features/migration-assurance.md](docs/features/migration-assurance.md) |
 | CLI reference | [docs/user-guides/cli-guide.md](docs/user-guides/cli-guide.md) |
 | TUI | [docs/features/tui-enhancements.md](docs/features/tui-enhancements.md) |
 | Interactive shell & explore | [docs/features/explore/EXPLORE-QUICKSTART.md](docs/features/explore/EXPLORE-QUICKSTART.md) |
@@ -222,7 +240,12 @@ AI interprets inspection data you already collected — it does not replace dete
 ```text
 guestkit/
 ├── src/
-│   ├── cli/          # commands, TUI, shell, profiles, exporters
+│   ├── cli/          # commands, TUI, shell, profiles, plan/migrate
+│   ├── evidence/     # EvidenceSnapshot (digital twin schema)
+│   ├── boot/         # bootability scoring engine
+│   ├── fleet/        # fleet clustering & snowflake detection
+│   ├── inference/    # root-cause analysis for --explain
+│   ├── storage/      # local + optional cloud disk resolution
 │   ├── guestfs/      # disk inspection & file operations
 │   ├── disk/         # partition & filesystem primitives
 │   └── python.rs     # PyO3 bindings

@@ -178,11 +178,10 @@ impl GuestDetector {
                         os_version = "Unknown".to_string();
                     }
 
-                    crate::disk::FileSystemType::Fat32 => {
-                        if partition.start_lba < 2048 && partition.size_sectors < 1024 * 1024 {
+                    crate::disk::FileSystemType::Fat32
+                        if partition.start_lba < 2048 && partition.size_sectors < 1024 * 1024 => {
                             firmware = Firmware::Uefi;
                         }
-                    }
 
                     _ => {}
                 }

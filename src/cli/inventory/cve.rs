@@ -34,8 +34,140 @@ static KNOWN_CVES: Lazy<HashMap<&'static str, Vec<CveEntry>>> = Lazy::new(|| {
     m
 });
 
-/// Lookup CVEs for a package
+/// Lookup CVEs for a package (static + OSV API with offline cache)
 pub fn lookup_cves(package_name: &str, package_version: &str) -> Result<Vec<VulnerabilityInfo>> {
+    let mut vulnerabilities = Vec::new();
+
+    // Static fallback database
+    if let Some(cves) = KNOWN_CVES.get(package_name) {
+        for (cve_id, severity, score) in cves {
+            vulnerabilities.push(VulnerabilityInfo {
+                cve: cve_id.to_string(),
+                severity: severity.to_string(),
+                score: Some(*score),
+                description: format!(
+                    "Vulnerability in {} {}",
+                    package_name, package_version
+                ),
+                fixed_version: None,
+            });
+        }
+    }
+
+    // OSV API lookup (cached)
+    if let Ok(osv_vulns) = lookup_cves_osv(package_name, package_version) {
+        for v in osv_vulns {
+            if !vulnerabilities.iter().any(|existing| existing.cve == v.cve) {
+                vulnerabilities.push(v);
+            }
+        }
+    }
+
+    Ok(vulnerabilities)
+}
+
+/// Query OSV API with local file cache (~/.cache/guestkit/cve/)
+pub fn lookup_cves_osv(package_name: &str, package_version: &str) -> Result<Vec<VulnerabilityInfo>> {
+    let cache_key = format!("{}@{}", package_name, package_version);
+    let cache_dir = osv_cache_dir()?;
+    let cache_file = cache_dir.join(format!("{}.json", sanitize_cache_key(&cache_key)));
+
+    if cache_file.exists() {
+        if let Ok(content) = std::fs::read_to_string(&cache_file) {
+            if let Ok(vulns) = serde_json::from_str::<Vec<VulnerabilityInfo>>(&content) {
+                return Ok(vulns);
+            }
+        }
+    }
+
+    let query = serde_json::json!({
+        "package": {
+            "name": package_name,
+            "ecosystem": "Linux"
+        },
+        "version": package_version
+    });
+
+    let output = std::process::Command::new("curl")
+        .args([
+            "-sS",
+            "-X",
+            "POST",
+            "https://api.osv.dev/v1/query",
+            "-H",
+            "Content-Type: application/json",
+            "-d",
+            &query.to_string(),
+        ])
+        .output();
+
+    let mut vulnerabilities = Vec::new();
+
+    if let Ok(resp) = output {
+        if resp.status.success() {
+            if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&resp.stdout) {
+                if let Some(vulns) = json.get("vulns").and_then(|v| v.as_array()) {
+                    for vuln in vulns {
+                        let cve_id = vuln
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("UNKNOWN")
+                            .to_string();
+                        let summary = vuln
+                            .get("summary")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        vulnerabilities.push(VulnerabilityInfo {
+                            cve: cve_id,
+                            severity: "unknown".to_string(),
+                            score: None,
+                            description: summary,
+                            fixed_version: None,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if let Ok(json) = serde_json::to_string_pretty(&vulnerabilities) {
+        let _ = std::fs::write(&cache_file, json);
+    }
+
+    Ok(vulnerabilities)
+}
+
+fn osv_cache_dir() -> Result<std::path::PathBuf> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+    let dir = home.join(".cache").join("guestkit").join("cve");
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+fn sanitize_cache_key(key: &str) -> String {
+    key.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
+}
+
+/// Aggregate CVE counts across fleet inventory results
+pub fn fleet_cve_heatmap(
+    inventories: &[(String, Vec<VulnerabilityInfo>)],
+) -> HashMap<String, usize> {
+    let mut heatmap: HashMap<String, usize> = HashMap::new();
+    for (image, vulns) in inventories {
+        heatmap.insert(image.clone(), vulns.len());
+    }
+    heatmap
+}
+
+// Legacy static-only lookup kept for tests
+#[allow(dead_code)]
+fn lookup_cves_static_only(package_name: &str, package_version: &str) -> Result<Vec<VulnerabilityInfo>> {
     let mut vulnerabilities = Vec::new();
 
     // Check if we have known CVEs for this package

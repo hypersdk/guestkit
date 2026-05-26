@@ -24,6 +24,28 @@ guestkit v0.3.1+ provides powerful VM migration capabilities through:
 
 ## Quick Start
 
+### Assurance-first workflow (recommended)
+
+Score boot probability and migration readiness **before** editing the disk:
+
+```bash
+# Boot gate + blockers
+guestkit doctor vm.vmdk --target proxmox --explain
+
+# Hypervisor-aware checklist (VirtIO, cloud-init, downtime estimate)
+guestkit migrate-plan vm.vmdk --target proxmox -o json > migration-plan.json
+
+# Windows-specific signals
+guestkit inspect vm.vmdk --profile windows-migration -o json
+
+# Fix boot blockers offline, then re-score
+guestkit repair vm.vmdk --fix boot --dry-run
+guestkit repair vm.vmdk --fix boot
+guestkit doctor vm.vmdk --target proxmox
+```
+
+See [Migration assurance](../features/migration-assurance.md) for `fleet analyze`, `policy check`, and `forensic-diff`.
+
 ### Basic Migration Workflow
 
 ```bash

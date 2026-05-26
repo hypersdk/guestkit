@@ -273,7 +273,7 @@ fn create_fake_fedora_image() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean up temporary CPIO test directory
     let _ = std::process::Command::new("rm")
-        .args(&["-rf", "/tmp/cpio-test"])
+        .args(["-rf", "/tmp/cpio-test"])
         .output();
 
     println!("\n=== All Phase 3 APIs Tested Successfully! ===");

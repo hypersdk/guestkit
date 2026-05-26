@@ -208,6 +208,52 @@ impl PlanGenerator {
         }
     }
 
+    /// Generate a fix plan from bootability report blockers/warnings
+    pub fn from_boot_report(
+        &self,
+        boot: &crate::boot::BootabilityReport,
+        image: &std::path::Path,
+    ) -> Result<FixPlan> {
+        let mut plan = FixPlan::new(
+            image.display().to_string(),
+            "boot-repair".to_string(),
+        );
+        plan.metadata.description = Some(
+            "Automated boot repair plan from doctor analysis".to_string(),
+        );
+        plan.metadata.tags = vec!["boot".to_string(), "doctor".to_string()];
+
+        let mut op_counter = 1;
+        for finding in boot
+            .blockers
+            .iter()
+            .chain(boot.warnings.iter())
+        {
+            let remediation = finding
+                .remediation
+                .clone()
+                .unwrap_or_else(|| finding.message.clone());
+            if let Ok(op_type) = self.parse_remediation(&remediation) {
+                plan.add_operation(Operation {
+                    id: format!("boot-{:03}", op_counter),
+                    op_type,
+                    priority: Priority::High,
+                    description: finding.title.clone(),
+                    risk: Priority::Medium,
+                    reversible: true,
+                    depends_on: vec![],
+                    validation: None,
+                    undo: None,
+                });
+                op_counter += 1;
+            }
+        }
+
+        plan.estimated_duration = Self::estimate_duration(plan.operations.len());
+        self.add_post_apply_actions(&mut plan);
+        Ok(plan)
+    }
+
     /// Estimate duration based on number of operations
     fn estimate_duration(op_count: usize) -> String {
         match op_count {
@@ -286,7 +332,7 @@ mod tests {
         assert_eq!(plan.vm, "test.qcow2");
         assert_eq!(plan.profile, "security");
         assert_eq!(plan.overall_risk, "high");
-        assert!(plan.operations.len() > 0);
+        assert!(!plan.operations.is_empty());
     }
 
     #[test]
@@ -334,7 +380,7 @@ mod tests {
         match op_type {
             OperationType::FileEdit(fe) => {
                 assert!(fe.file.contains("sshd_config"));
-                assert_eq!(fe.backup, true);
+                assert!(fe.backup);
             }
             _ => panic!("Expected FileEdit operation"),
         }
@@ -362,7 +408,7 @@ mod tests {
             OperationType::ServiceOperation(so) => {
                 assert_eq!(so.service, "firewalld");
                 assert_eq!(so.state, Some("enabled".to_string()));
-                assert_eq!(so.start, true);
+                assert!(so.start);
             }
             _ => panic!("Expected ServiceOperation"),
         }
@@ -458,7 +504,7 @@ mod tests {
         assert_eq!(op.id, "op-test");
         assert_eq!(op.description, "Test finding");
         assert_eq!(op.risk, Priority::High);
-        assert_eq!(op.reversible, true);
+        assert!(op.reversible);
         assert!(op.depends_on.is_empty());
     }
 
@@ -485,7 +531,7 @@ mod tests {
 
         generator.add_post_apply_actions(&mut plan);
 
-        assert!(plan.post_apply.len() > 0);
+        assert!(!plan.post_apply.is_empty());
         let has_ssh_restart = plan.post_apply.iter().any(|action| {
             matches!(action, PostApplyAction::ServiceRestart { services } if services.contains(&"sshd".to_string()))
         });

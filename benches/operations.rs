@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Performance benchmarks for GuestKit operations
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
 use guestkit::guestfs::Guestfs;
 use std::path::PathBuf;
 
@@ -197,7 +198,7 @@ fn bench_file_operations(c: &mut Criterion) {
 
         group.bench_function("stat_file", |b| {
             b.iter(|| {
-                let stat = g.statns("/etc/passwd").unwrap();
+                let stat = g.stat("/etc/passwd").unwrap();
                 black_box(&stat);
             });
         });
@@ -239,7 +240,8 @@ fn bench_package_operations(c: &mut Criterion) {
 
                 // Mount filesystems
                 if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
-                    for (mount, device) in mountpoints.iter().rev() {
+                    let mounts: Vec<_> = mountpoints.iter().collect();
+                    for (mount, device) in mounts.into_iter().rev() {
                         g.mount_ro(device, mount).ok();
                     }
                 }

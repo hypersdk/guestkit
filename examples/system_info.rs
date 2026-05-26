@@ -138,37 +138,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n--- Installed Packages ---");
 
     // Try Debian packages
-    match g.dpkg_list() {
-        Ok(packages) => {
-            if !packages.is_empty() {
-                println!("Debian packages: {} installed", packages.len());
-                println!("Sample packages:");
-                for pkg in packages.iter().take(10) {
-                    println!("  - {}", pkg);
-                }
-                if packages.len() > 10 {
-                    println!("  ... and {} more", packages.len() - 10);
-                }
+    if let Ok(packages) = g.dpkg_list() {
+        if !packages.is_empty() {
+            println!("Debian packages: {} installed", packages.len());
+            println!("Sample packages:");
+            for pkg in packages.iter().take(10) {
+                println!("  - {}", pkg);
+            }
+            if packages.len() > 10 {
+                println!("  ... and {} more", packages.len() - 10);
             }
         }
-        Err(_) => {}
     }
 
     // Try RPM packages
-    match g.rpm_list() {
-        Ok(packages) => {
-            if !packages.is_empty() {
-                println!("RPM packages: {} installed", packages.len());
-                println!("Sample packages:");
-                for pkg in packages.iter().take(10) {
-                    println!("  - {}", pkg);
-                }
-                if packages.len() > 10 {
-                    println!("  ... and {} more", packages.len() - 10);
-                }
+    if let Ok(packages) = g.rpm_list() {
+        if !packages.is_empty() {
+            println!("RPM packages: {} installed", packages.len());
+            println!("Sample packages:");
+            for pkg in packages.iter().take(10) {
+                println!("  - {}", pkg);
+            }
+            if packages.len() > 10 {
+                println!("  ... and {} more", packages.len() - 10);
             }
         }
-        Err(_) => {}
     }
 
     // Users and Groups

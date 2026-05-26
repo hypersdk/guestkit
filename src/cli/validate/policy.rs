@@ -22,7 +22,11 @@ pub struct PolicyRule {
     pub name: String,
     pub description: String,
     pub severity: String,
+    #[serde(flatten)]
     pub rule_type: RuleType,
+    /// Expression over evidence snapshot (e.g. `security.ssh.root_login == false`)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expr: Option<String>,
     pub remediation: Option<String>,
 }
 
@@ -42,6 +46,8 @@ pub enum RuleType {
     UserNotExists { username: String },
     PortClosed { port: u16 },
     Custom { check: String },
+    /// Expression-based rule over evidence fields
+    Expression { expr: String },
 }
 
 impl Policy {
@@ -67,6 +73,7 @@ impl Policy {
                     rule_type: RuleType::PackageInstalled {
                         package: "openssh-server".to_string(),
                     },
+                    expr: None,
                     remediation: Some("Install openssh-server package".to_string()),
                 },
                 PolicyRule {
@@ -77,6 +84,7 @@ impl Policy {
                     rule_type: RuleType::PackageForbidden {
                         package: "telnet".to_string(),
                     },
+                    expr: None,
                     remediation: Some("Remove telnet package".to_string()),
                 },
                 PolicyRule {
@@ -87,6 +95,7 @@ impl Policy {
                     rule_type: RuleType::FileExists {
                         path: "/etc/passwd".to_string(),
                     },
+                    expr: None,
                     remediation: None,
                 },
                 PolicyRule {
@@ -98,6 +107,7 @@ impl Policy {
                         path: "/etc/ssh/sshd_config".to_string(),
                         mode: "600".to_string(),
                     },
+                    expr: None,
                     remediation: Some("chmod 600 /etc/ssh/sshd_config".to_string()),
                 },
                 PolicyRule {
@@ -108,6 +118,7 @@ impl Policy {
                     rule_type: RuleType::ServiceEnabled {
                         service: "sshd".to_string(),
                     },
+                    expr: None,
                     remediation: Some("systemctl enable sshd".to_string()),
                 },
                 PolicyRule {
@@ -118,7 +129,19 @@ impl Policy {
                     rule_type: RuleType::UserExists {
                         username: "root".to_string(),
                     },
+                    expr: None,
                     remediation: None,
+                },
+                PolicyRule {
+                    id: "EXPR-001".to_string(),
+                    name: "SSH root login disabled".to_string(),
+                    description: "Root SSH login must be disabled".to_string(),
+                    severity: "high".to_string(),
+                    rule_type: RuleType::Custom {
+                        check: "ssh_root_login".to_string(),
+                    },
+                    expr: Some("security.ssh.root_login == false".to_string()),
+                    remediation: Some("Set PermitRootLogin no in sshd_config".to_string()),
                 },
             ],
         }
