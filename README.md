@@ -45,7 +45,7 @@ guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml
 # → migration score · driver injections · executable fix plan
 
 guestctl tui vm.qcow2
-# → carbon TUI · grouped views · offline file browser
+# → carbon TUI · Assurance (doctor) · fix-plan preview · offline files
 ```
 
 | Without GuestKit | With GuestKit |
@@ -62,8 +62,9 @@ guestctl tui vm.qcow2
 | | |
 |---|---|
 | **Navigation** | Two-tier tabs: **Overview · System · Security** + views in group · `Ctrl+P` jump menu |
-| **Keys** | `Tab` cycle views · `{` `}` switch groups · `h` scrollable help · vim `j`/`k` |
-| **Views** | Dashboard, issues, packages, services, files, storage, profiles, **Assurance** (doctor/migrate-plan), topology, … |
+| **Keys** | `Tab` · `{` `}` groups · `:` palette · `Ctrl+Shift+P` search · `a` → Assurance from dashboard |
+| **Assurance** | `d` doctor · `t` target · `p` plan preview · `e` export YAML (Security group) |
+| **Views** | Dashboard, issues, packages, services, files, storage, profiles, Assurance, topology, … |
 | **Fleet** | `guestctl tui img.qcow2 --fleet ./images/` — sidebar, **N** / **P** switch disks |
 | **Theme** | Carbon graphite + orange accent — config in `~/.config/guestkit/tui.toml` |
 
@@ -200,8 +201,9 @@ src/
 ## Roadmap
 
 - ✅ Migration assurance (`doctor`, `migrate-plan`, `repair --fix boot`)
+- ✅ TUI Assurance view, fix-plan preview, palette & global search
 - ✅ TUI two-tier navigation, scrollable jump menu & help
-- ✅ Fix plan export & apply
+- ✅ Fix plan export & apply (CLI); TUI export + read-only preview
 - 🔄 Windows EFI / boot diagnostics
 - 🔮 Deeper cloud pull & plugin profiles
 

@@ -5,6 +5,7 @@
 **guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. Features include:
 
 - 🩺 **Doctor / migrate-plan** - Boot probability and hypervisor-aware migration scoring before cutover
+- 🖥️ **TUI Assurance** - Same scoring in `guestctl tui` (Security group · `d`/`t`/`p`/`e` keys)
 - 🎯 **Killer Summary View** - See OS, version, architecture at a glance
 - 🪟 **Windows Registry Parsing** - Full Windows version detection (incl. `windows-migration` profile)
 - 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter + fix plans
@@ -107,6 +108,23 @@ cargo run --example detect_format
 # Retry example
 cargo run --example retry_example
 ```
+
+## TUI (interactive dashboard)
+
+```bash
+# Carbon-themed multi-view inspector
+guestctl tui vm.qcow2
+
+# Fleet of images
+guestctl tui vm.qcow2 --fleet ./images/
+
+# Compare second disk on dashboard
+guestctl tui vm.qcow2 --compare other.qcow2
+```
+
+**Assurance** (Security group): offline `doctor` + `migrate-plan` parity with CLI — `d` run doctor, `t` cycle target (kvm/proxmox/aws), `p` preview fix plan, `e` export YAML. Dashboard **`a`** jumps to Assurance.
+
+See [TUI enhancements](../features/tui-enhancements.md) and [migration assurance](../features/migration-assurance.md).
 
 ## Integration with hyper2kvm
 
