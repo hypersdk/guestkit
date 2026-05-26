@@ -26,13 +26,18 @@ mkdir -p "${STAGE}"
 ================================================================================
 
 START HERE
-  cat START_HERE.txt          one-screen pointer (this bundle)
+  OPEN_FIRST.txt      ✦ open this first (points to welcome page)
+  docs/welcome.html   interactive offline guide (best experience)
+  docs/pdf/WELCOME.pdf
+  cat START_HERE.txt
   ./install-everything.sh     recommended full automatic install
   ./install-everything.sh --help
   ./install.sh --help
 
 DOCUMENTATION (read in this order)
   HELP.txt            all scripts explained (this file)
+  docs/pdf/           same guides as printable PDFs (Zyvor logo on each page)
+  docs/PDF_INDEX.txt  list of PDF filenames
   ZYVOR_INSTALL.txt   fastest install, no compile on this machine
   QUICKSTART.txt      step-by-step commands for ${PRODUCT}
   README.txt          archive contents and requirements
@@ -228,6 +233,14 @@ GETTING HELP
   Remove install:          ./uninstall.sh --help
   Product binary:          run the main binary with --help (see README.txt)
   Zyvor:                   https://zyvor.dev
+
+--------------------------------------------------------------------------------
+ENTERPRISE (fleet, SLA, VMware exit)
+--------------------------------------------------------------------------------
+  Production / fleet / SLA:  https://zyvor.dev/contact?utm_source=package&utm_medium=${PRODUCT}
+  Demo:                      https://zyvor.dev/demo?utm_source=package&utm_medium=${PRODUCT}
+  ROI:                       https://zyvor.dev/roi?utm_source=package&utm_medium=${PRODUCT}
+  Sales:                     sales@zyvor.dev
 
 EOF
 } > "${STAGE}/HELP.txt"

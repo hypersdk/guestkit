@@ -1,15 +1,43 @@
-Welcome — Zyvor client bundle
-=============================
 
-You extracted the archive. No git clone and no compile on this machine.
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                                                              ║
+  ║     ✦  Zyvor client bundle — welcome                         ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
 
-  Recommended (one command):
-    ./install-everything.sh
+  Best first open (offline — works in any browser):
+    docs/welcome.html
 
-  All commands explained:
-    cat HELP.txt
-    ./install-everything.sh --help
+  Or open the welcome PDF:
+    docs/pdf/WELCOME.pdf
 
-More in this folder: QUICKSTART.txt · README.txt · ZYVOR_INSTALL.txt
+  ──────────────────────────────────────────────────────────────
+  QUICK INSTALL (3 steps)
+  ──────────────────────────────────────────────────────────────
 
-zyvor.dev · HyperSDK · © 2026
+  1. You are already in the extracted folder (or: cd PRODUCT-*-linux-amd64)
+  2. ./install-everything.sh
+  3. Follow the URL printed at the end
+
+  ──────────────────────────────────────────────────────────────
+  IMPORTANT
+  ──────────────────────────────────────────────────────────────
+
+  Always run ./install-*.sh from THIS folder — not from $HOME.
+  If you see "missing .../cluster/install-cluster-prereqs.sh", you are
+  in the wrong directory. cd into the extract dir and retry.
+
+  ──────────────────────────────────────────────────────────────
+  MORE HELP
+  ──────────────────────────────────────────────────────────────
+
+  docs/PDF_INDEX.txt    all PDFs + guides
+  ls docs/pdf/          printable docs (Zyvor logo)
+  cat HELP.txt          every script explained
+  ./install-everything.sh --help
+
+  Enterprise (fleet / SLA / VMware exit):
+    https://zyvor.dev/contact?utm_source=package&utm_medium=guestkit
+    sales@zyvor.dev
+
+  zyvor.dev · HyperSDK · © 2026
