@@ -566,7 +566,7 @@ To extend the plan system:
 - [Security Profiles](security-profiles.md)
 - [Profile System](../architecture/security-profiles.md)
 - [Export Formats](export-formats.md)
-- [TUI Dashboard](tui-dashboard.md)
+- [TUI enhancements](tui-enhancements.md)
 
 ---
 

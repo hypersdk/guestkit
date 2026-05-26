@@ -711,4 +711,4 @@ See [PERFORMANCE.md](PERFORMANCE.md) for detailed performance tuning guide.
 - [Architecture Documentation](ARCHITECTURE.md)
 - [Security Policy](../SECURITY.md)
 - [Roadmap](../ROADMAP.md)
-- [Changelog](../CHANGELOG.md)
+- [Changelog](../development/CHANGELOG.md)

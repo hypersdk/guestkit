@@ -5,7 +5,7 @@
 | Guide | Description |
 |-------|-------------|
 | [Getting started](user-guides/getting-started.md) | Build, install, first commands |
-| [CLI reference](user-guides/cli-guide.md) | Full command reference |
+| [CLI reference](user-guides/cli-guide.md) | Command index → topic guides & `guestkit --help` |
 | [Quick reference](user-guides/quick-reference.md) | Cheat sheet |
 | [FAQ](user-guides/faq.md) | Common questions |
 | [Troubleshooting](user-guides/troubleshooting.md) | Fixes for common issues |

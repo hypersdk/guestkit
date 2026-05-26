@@ -181,7 +181,7 @@ with Guestfs() as g:
 | **Index** | [docs/INDEX.md](docs/INDEX.md) |
 | Migration assurance | [migration-assurance.md](docs/features/migration-assurance.md) |
 | TUI | [tui-enhancements.md](docs/features/tui-enhancements.md) |
-| CLI reference | [cli-guide.md](docs/user-guides/cli-guide.md) |
+| CLI reference | [quick-reference.md](docs/user-guides/quick-reference.md) · [cli-guide.md](docs/user-guides/cli-guide.md) |
 | Quick reference | [quick-reference.md](docs/user-guides/quick-reference.md) |
 | Fix plans | [fix-plans.md](docs/features/fix-plans.md) |
 | VM migration | [vm-migration.md](docs/user-guides/vm-migration.md) |
