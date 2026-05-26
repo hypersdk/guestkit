@@ -81,6 +81,17 @@ pub enum View {
     Files,
 }
 
+/// Row in the grouped jump menu (Ctrl+P).
+#[derive(Debug, Clone)]
+pub enum JumpMenuRow {
+    Header(String),
+    Item {
+        group: String,
+        view: View,
+        title: String,
+    },
+}
+
 /// Layout preset per view (`[` / `]` to cycle).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayoutMode {
@@ -298,6 +309,14 @@ pub struct App {
     pub show_jump_menu: bool,
     pub jump_query: String,
     pub jump_selected_index: usize,
+    pub jump_scroll_offset: usize,
+
+    /// Scroll offset for full help overlay (`h`)
+    pub help_scroll: usize,
+
+    /// Last known terminal size (updated each frame)
+    pub terminal_width: u16,
+    pub terminal_height: u16,
 
     // Export state
     pub export_mode: Option<ExportMode>,
@@ -457,6 +476,10 @@ impl App {
             show_jump_menu: false,
             jump_query: String::new(),
             jump_selected_index: 0,
+            jump_scroll_offset: 0,
+            help_scroll: 0,
+            terminal_width: 80,
+            terminal_height: 24,
 
             export_mode: None,
             export_format: None,
@@ -751,23 +774,29 @@ impl App {
     }
 
     pub fn next_view(&mut self) {
-        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
-        let current_idx = ordered
+        let views: Vec<View> = self.views_in_current_group();
+        if views.is_empty() {
+            return;
+        }
+        let current_idx = views
             .iter()
             .position(|v| v == &self.current_view)
             .unwrap_or(0);
-        let next = ordered[(current_idx + 1) % ordered.len()];
+        let next = views[(current_idx + 1) % views.len()];
         self.set_view(next);
         self.show_notification(format!("→ {}", self.current_view.title()));
     }
 
     pub fn previous_view(&mut self) {
-        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
-        let current_idx = ordered
+        let views: Vec<View> = self.views_in_current_group();
+        if views.is_empty() {
+            return;
+        }
+        let current_idx = views
             .iter()
             .position(|v| v == &self.current_view)
             .unwrap_or(0);
-        let prev = ordered[(current_idx + ordered.len() - 1) % ordered.len()];
+        let prev = views[(current_idx + views.len() - 1) % views.len()];
         self.set_view(prev);
         self.show_notification(format!("← {}", self.current_view.title()));
     }
@@ -776,6 +805,7 @@ impl App {
         self.show_help = !self.show_help;
         if self.show_help {
             self.help_context = false;
+            self.help_scroll = 0;
         }
     }
 
@@ -1565,14 +1595,40 @@ impl App {
         }
     }
 
-    /// Mouse click: tab row (y≈4–6) changes view.
+    /// Mouse click: tab rows change group or view.
     pub fn handle_mouse_click(&mut self, column: u16, row: u16) {
-        if (3..=5).contains(&row) {
-            let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
-            let idx = (column as usize / 12).min(ordered.len().saturating_sub(1));
-            if idx < ordered.len() {
-                self.set_view(ordered[idx]);
+        let (group_y, view_y) = self.tab_row_y();
+        if row == group_y || row == group_y + 1 {
+            self.handle_group_tab_click(column);
+        } else if row == view_y || row == view_y + 1 {
+            self.handle_view_tab_click(column);
+        }
+    }
+
+    fn handle_group_tab_click(&mut self, column: u16) {
+        let mut x: u16 = 2;
+        for group in View::all_groups() {
+            let label = format!("  {}  ", group);
+            let width = label.chars().count() as u16;
+            if column >= x && column < x + width {
+                self.set_group(group);
+                return;
             }
+            x += width + 1;
+        }
+    }
+
+    fn handle_view_tab_click(&mut self, column: u16) {
+        let mut x: u16 = 2;
+        for (view, title) in self.view_tab_entries() {
+            let marker = if view == self.current_view { "▸ " } else { "  " };
+            let label = format!("{}{} ", marker, title);
+            let width = label.chars().count() as u16;
+            if column >= x && column < x + width {
+                self.set_view(view);
+                return;
+            }
+            x += width;
         }
     }
 
@@ -1829,6 +1885,9 @@ impl App {
     pub fn toggle_context_help(&mut self) {
         self.help_context = !self.help_context;
         self.show_help = self.help_context;
+        if self.show_help {
+            self.help_scroll = 0;
+        }
     }
 
     pub fn start_global_search(&mut self) {
@@ -1916,19 +1975,22 @@ impl App {
         if self.show_jump_menu {
             self.jump_query.clear();
             self.jump_selected_index = 0;
+            self.jump_scroll_offset = 0;
         }
     }
 
     /// Handle jump menu input
     pub fn jump_menu_input(&mut self, c: char) {
         self.jump_query.push(c);
-        self.jump_selected_index = 0; // Reset selection when query changes
+        self.jump_selected_index = 0;
+        self.jump_scroll_offset = 0;
     }
 
     /// Handle jump menu backspace
     pub fn jump_menu_backspace(&mut self) {
         self.jump_query.pop();
-        self.jump_selected_index = 0; // Reset selection when query changes
+        self.jump_selected_index = 0;
+        self.jump_scroll_offset = 0;
     }
 
     /// Grouped quick-jump entries: (group name, view, display title).
@@ -1953,11 +2015,58 @@ impl App {
         entries
     }
 
+    /// Flat jump menu rows: group headers + selectable view items.
+    pub fn build_jump_menu_rows(&self) -> Vec<JumpMenuRow> {
+        let entries = self.get_grouped_jump_entries();
+        let mut rows = Vec::new();
+        let mut last_group = String::new();
+        for (group, view, title) in entries {
+            if group != last_group {
+                rows.push(JumpMenuRow::Header(group.clone()));
+                last_group = group.clone();
+            }
+            rows.push(JumpMenuRow::Item {
+                group,
+                view,
+                title,
+            });
+        }
+        rows
+    }
+
+    fn jump_selected_display_index(&self) -> usize {
+        let rows = self.build_jump_menu_rows();
+        let mut item_idx = 0;
+        for (i, row) in rows.iter().enumerate() {
+            if let JumpMenuRow::Item { .. } = row {
+                if item_idx == self.jump_selected_index {
+                    return i;
+                }
+                item_idx += 1;
+            }
+        }
+        0
+    }
+
+    pub fn ensure_jump_scroll_visible(&mut self, visible_height: usize) {
+        if visible_height == 0 {
+            return;
+        }
+        let sel = self.jump_selected_display_index();
+        if sel < self.jump_scroll_offset {
+            self.jump_scroll_offset = sel;
+        } else if sel >= self.jump_scroll_offset + visible_height {
+            self.jump_scroll_offset = sel + 1 - visible_height;
+        }
+    }
+
     /// Navigate jump menu selection
     pub fn jump_menu_next(&mut self) {
         let n = self.get_grouped_jump_entries().len();
         if n > 0 {
             self.jump_selected_index = (self.jump_selected_index + 1) % n;
+            let visible = ((self.terminal_height as usize) * 60 / 100).saturating_sub(6).max(5);
+            self.ensure_jump_scroll_visible(visible);
         }
     }
 
@@ -1969,6 +2078,8 @@ impl App {
             } else {
                 self.jump_selected_index - 1
             };
+            let visible = ((self.terminal_height as usize) * 60 / 100).saturating_sub(6).max(5);
+            self.ensure_jump_scroll_visible(visible);
         }
     }
 
@@ -1980,6 +2091,32 @@ impl App {
             self.show_notification(format!("→ {}", view.title()));
         }
     }
+
+    pub fn help_scroll_up(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_sub(1);
+    }
+
+    pub fn help_scroll_down(&mut self, max_lines: usize, visible: usize) {
+        let max_scroll = max_lines.saturating_sub(visible);
+        self.help_scroll = (self.help_scroll + 1).min(max_scroll);
+    }
+
+    pub fn help_page_up(&mut self, page: usize) {
+        self.help_scroll = self.help_scroll.saturating_sub(page);
+    }
+
+    pub fn help_page_down(&mut self, max_lines: usize, visible: usize, page: usize) {
+        let max_scroll = max_lines.saturating_sub(visible);
+        self.help_scroll = (self.help_scroll + page).min(max_scroll);
+    }
+
+    /// Approximate visible lines in the full help overlay.
+    pub fn help_visible_lines(&self) -> usize {
+        ((self.terminal_height as u32 * 85 / 100).saturating_sub(2)) as usize
+    }
+
+    /// Total lines in the full keyboard reference help overlay.
+    pub const FULL_HELP_LINES: usize = 80;
 
     /// Toggle multi-select mode
     pub fn toggle_multi_select(&mut self) {

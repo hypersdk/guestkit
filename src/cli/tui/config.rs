@@ -58,6 +58,14 @@ pub struct UiConfig {
     /// Row density: `comfortable` or `compact`
     #[serde(default = "default_density")]
     pub density: String,
+
+    /// Terminal width below which tab labels switch to compact (icon-only) mode
+    #[serde(default = "default_auto_compact_width")]
+    pub auto_compact_width: u16,
+}
+
+fn default_auto_compact_width() -> u16 {
+    100
 }
 
 fn default_density() -> String {
@@ -142,6 +150,7 @@ impl Default for UiConfig {
             icon_mode: "emoji".to_string(),
             show_emoji: true,
             density: "comfortable".to_string(),
+            auto_compact_width: default_auto_compact_width(),
         }
     }
 }
