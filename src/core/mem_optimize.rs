@@ -213,6 +213,7 @@ pub fn shrink_if_wasteful<T>(vec: &mut Vec<T>) {
 }
 
 #[cfg(test)]
+#[allow(clippy::assertions_on_constants)]
 mod tests {
     use super::*;
 

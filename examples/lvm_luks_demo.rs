@@ -56,9 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Try to open LUKS device if passphrase provided
-    if !luks_devices.is_empty() && passphrase.is_some() {
-        let device = &luks_devices[0];
-        let pass = passphrase.unwrap();
+    if let (Some(device), Some(pass)) = (luks_devices.first(), passphrase) {
 
         println!("\nAttempting to open LUKS device...");
         match g.luks_open(device, pass, "cryptroot") {

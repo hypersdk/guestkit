@@ -73,11 +73,10 @@ fn draw_health_gauges(f: &mut Frame, area: Rect, app: &App) {
     // Service Health Gauge
     let total_services = app.services.len();
     let enabled_services = app.services.iter().filter(|s| s.enabled).count();
-    let service_health = if total_services > 0 {
-        (enabled_services * 100 / total_services) as u16
-    } else {
-        0
-    };
+    let service_health = enabled_services
+        .saturating_mul(100)
+        .checked_div(total_services)
+        .unwrap_or(0) as u16;
 
     let service_gauge = Gauge::default()
         .block(Block::default()

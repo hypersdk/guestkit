@@ -136,7 +136,7 @@ impl ExplorerState {
                 });
             }
             SortMode::Size => {
-                self.entries.sort_by(|a, b| b.size.cmp(&a.size));
+                self.entries.sort_by_key(|b| std::cmp::Reverse(b.size));
             }
             SortMode::Type => {
                 self.entries.sort_by(|a, b| {
@@ -550,14 +550,13 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                 }
 
                 // Go to parent
-                (KeyCode::Backspace, _) => {
-                    if state.current_path != "/" {
+                (KeyCode::Backspace, _)
+                    if state.current_path != "/" => {
                         state.current_path = state.parent_path();
                         state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
                         state.sort_entries();
                         state.reset_navigation();
                     }
-                }
 
                 // View file content
                 (KeyCode::Char('v'), KeyModifiers::NONE) => {
@@ -659,7 +658,7 @@ mod tests {
         assert_eq!(state.selected, 0);
         assert_eq!(state.scroll_offset, 0);
         assert_eq!(state.filter, "");
-        assert_eq!(state.show_hidden, false);
+        assert!(!state.show_hidden);
         assert!(matches!(state.sort_by, SortMode::Name));
     }
 

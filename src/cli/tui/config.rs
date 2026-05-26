@@ -264,9 +264,9 @@ mod tests {
     #[test]
     fn test_ui_config_defaults() {
         let ui = UiConfig::default();
-        assert_eq!(ui.show_splash, true);
+        assert!(ui.show_splash);
         assert_eq!(ui.splash_duration_ms, 800);
-        assert_eq!(ui.show_stats_bar, true);
+        assert!(ui.show_stats_bar);
         assert_eq!(ui.theme, "carbon");
     }
 
@@ -275,8 +275,8 @@ mod tests {
         let behavior = BehaviorConfig::default();
         assert_eq!(behavior.default_view, "dashboard");
         assert_eq!(behavior.auto_refresh_seconds, 0);
-        assert_eq!(behavior.search_case_sensitive, false);
-        assert_eq!(behavior.search_regex_mode, false);
+        assert!(!behavior.search_case_sensitive);
+        assert!(!behavior.search_regex_mode);
         assert_eq!(behavior.max_bookmarks, 20);
         assert_eq!(behavior.page_scroll_lines, 10);
     }
@@ -284,8 +284,8 @@ mod tests {
     #[test]
     fn test_keybindings_config_defaults() {
         let kb = KeybindingsConfig::default();
-        assert_eq!(kb.vim_mode, true);
-        assert_eq!(kb.quick_jump_enabled, true);
+        assert!(kb.vim_mode);
+        assert!(kb.quick_jump_enabled);
     }
 
 
@@ -300,38 +300,43 @@ mod tests {
 
     #[test]
     fn test_ui_config_custom() {
-        let mut ui = UiConfig::default();
-        ui.show_splash = false;
-        ui.splash_duration_ms = 1000;
-        ui.theme = "dark".to_string();
+        let ui = UiConfig {
+            show_splash: false,
+            splash_duration_ms: 1000,
+            theme: "dark".to_string(),
+            ..Default::default()
+        };
 
-        assert_eq!(ui.show_splash, false);
+        assert!(!ui.show_splash);
         assert_eq!(ui.splash_duration_ms, 1000);
         assert_eq!(ui.theme, "dark");
     }
 
     #[test]
     fn test_behavior_config_custom() {
-        let mut behavior = BehaviorConfig::default();
-        behavior.default_view = "analytics".to_string();
-        behavior.auto_refresh_seconds = 30;
-        behavior.search_case_sensitive = true;
-        behavior.max_bookmarks = 50;
+        let behavior = BehaviorConfig {
+            default_view: "analytics".to_string(),
+            auto_refresh_seconds: 30,
+            search_case_sensitive: true,
+            max_bookmarks: 50,
+            ..Default::default()
+        };
 
         assert_eq!(behavior.default_view, "analytics");
         assert_eq!(behavior.auto_refresh_seconds, 30);
-        assert_eq!(behavior.search_case_sensitive, true);
+        assert!(behavior.search_case_sensitive);
         assert_eq!(behavior.max_bookmarks, 50);
     }
 
     #[test]
     fn test_keybindings_config_custom() {
-        let mut kb = KeybindingsConfig::default();
-        kb.vim_mode = false;
-        kb.quick_jump_enabled = false;
+        let kb = KeybindingsConfig {
+            vim_mode: false,
+            quick_jump_enabled: false,
+        };
 
-        assert_eq!(kb.vim_mode, false);
-        assert_eq!(kb.quick_jump_enabled, false);
+        assert!(!kb.vim_mode);
+        assert!(!kb.quick_jump_enabled);
     }
 
     #[test]
@@ -357,7 +362,7 @@ mod tests {
         "#;
 
         let config: TuiConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.ui.show_splash, false);
+        assert!(!config.ui.show_splash);
         assert_eq!(config.ui.splash_duration_ms, 800); // default
         assert_eq!(config.behavior.max_bookmarks, 50);
         assert_eq!(config.behavior.default_view, "dashboard"); // default

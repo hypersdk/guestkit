@@ -131,11 +131,10 @@ impl Guestfs {
                     crate::disk::FileSystemType::Ext
                     | crate::disk::FileSystemType::Xfs
                     | crate::disk::FileSystemType::Btrfs
-                    | crate::disk::FileSystemType::Ntfs => {
-                        if self.validate_root_partition(&dev)? {
+                    | crate::disk::FileSystemType::Ntfs
+                        if self.validate_root_partition(&dev)? => {
                             roots.push(dev);
                         }
-                    }
                     _ => {}
                 }
             }
@@ -170,7 +169,7 @@ impl Guestfs {
                 }
             }
 
-            for lv in preferred.into_iter().chain(others.into_iter()) {
+            for lv in preferred.into_iter().chain(others) {
                 if self.validate_root_partition(&lv)? {
                     roots.push(lv);
                 }

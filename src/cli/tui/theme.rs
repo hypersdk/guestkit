@@ -112,12 +112,8 @@ pub fn use_emoji(cfg: &UiConfig) -> bool {
     cfg.show_emoji && cfg.icon_mode != "ascii"
 }
 
-pub fn list_row_height(cfg: &UiConfig) -> u16 {
-    if cfg.density == "compact" {
-        1
-    } else {
-        1
-    }
+pub fn list_row_height(_cfg: &UiConfig) -> u16 {
+    1
 }
 
 pub fn fill_background() -> Block<'static> {

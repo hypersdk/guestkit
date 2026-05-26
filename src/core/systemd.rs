@@ -138,15 +138,14 @@ impl BootTiming {
     /// Get slowest services
     pub fn slowest_services(&self, limit: usize) -> Vec<&ServiceTiming> {
         let mut services = self.services.iter().collect::<Vec<_>>();
-        services.sort_by(|a, b| b.activation_time.cmp(&a.activation_time));
+        services.sort_by_key(|b| std::cmp::Reverse(b.activation_time));
         services.into_iter().take(limit).collect()
     }
 
     /// Get critical chain (services that delayed boot)
     pub fn critical_chain(&self) -> Vec<&ServiceTiming> {
         let mut services = self.services.iter().collect::<Vec<_>>();
-        services.sort_by(|a, b| (a.start_offset + a.activation_time)
-            .cmp(&(b.start_offset + b.activation_time)));
+        services.sort_by_key(|a| a.start_offset + a.activation_time);
         services.into_iter().rev().take(10).collect()
     }
 }

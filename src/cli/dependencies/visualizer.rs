@@ -29,7 +29,7 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
     let mut top_packages: Vec<_> = graph.packages.iter()
         .filter(|p| !p.required_by.is_empty())
         .collect();
-    top_packages.sort_by(|a, b| b.required_by.len().cmp(&a.required_by.len()));
+    top_packages.sort_by_key(|b| std::cmp::Reverse(b.required_by.len()));
 
     for (idx, pkg) in top_packages.iter().take(10).enumerate() {
         output.push_str(&format!(

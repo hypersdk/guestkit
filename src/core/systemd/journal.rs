@@ -323,7 +323,5 @@ mod tests {
     fn test_journal_reader_creation() {
         let analyzer = SystemdAnalyzer::new("/tmp");
         let _reader = JournalReader::new(analyzer);
-        // Just verify it was created successfully
-        assert!(true);
     }
 }

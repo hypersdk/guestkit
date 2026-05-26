@@ -239,13 +239,11 @@ WantedBy=sysinit.target
 }
 
 fn make_systemd_boot_entry(_kernel_version: &str) -> String {
-    format!(
-        r#"title   Arch Linux
+    r#"title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
 options root=UUID=ROOT-UUID rw rootflags=subvol=/@ quiet loglevel=3
-"#
-    )
+"#.to_string()
 }
 
 fn make_passwd() -> String {

@@ -44,11 +44,16 @@
 //! - `cli` - Command-line interface
 
 pub mod cli;
+pub mod boot;
 pub mod converters;
 pub mod core;
 pub mod disk;
+pub mod evidence;
 pub mod export;
+pub mod fleet;
 pub mod guestfs;
+pub mod inference;
+pub mod storage;
 
 // Optional modules
 #[cfg(feature = "guest-inspect")]
@@ -67,6 +72,8 @@ pub use export::{
     PdfExportOptions, TemplateEngine, TemplateFormat, TemplateLevel,
 };
 pub use guestfs::Guestfs;
+pub use evidence::EvidenceSnapshot;
+pub use boot::BootabilityReport;
 
 #[cfg(feature = "guest-inspect")]
 pub use detectors::GuestDetector;

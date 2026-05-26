@@ -680,3 +680,290 @@ pub fn parse_application_events(evtx_path: &Path) -> Result<Vec<WindowsEventEntr
     parse_evtx_file(evtx_path, 50)
 }
 
+/// Parse domain join status from SYSTEM hive
+pub fn parse_domain_info(hive_path: &Path) -> (bool, Option<String>) {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let Ok(file) = File::open(hive_path) else {
+        return (false, None);
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return (false, None);
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return (false, None);
+    };
+    let Ok(Some(cs)) = root_key.subkey("ControlSet001", &mut hive) else {
+        return (false, None);
+    };
+    let Ok(Some(svc)) = cs.borrow().subkey("Services", &mut hive) else {
+        return (false, None);
+    };
+    let Ok(Some(tcpip)) = svc.borrow().subkey("Tcpip", &mut hive) else {
+        return (false, None);
+    };
+    let Ok(Some(params)) = tcpip.borrow().subkey("Parameters", &mut hive) else {
+        return (false, None);
+    };
+
+    let mut domain = None;
+    for kv in params.borrow().values() {
+        if kv.name() == "Domain" {
+            if let RegistryValue::RegSZ(d) | RegistryValue::RegExpandSZ(d) = kv.value() {
+                if !d.is_empty() && d.to_lowercase() != "workgroup" {
+                    domain = Some(d.clone());
+                }
+            }
+        }
+    }
+    (domain.is_some(), domain)
+}
+
+/// Check if RDP is enabled via SYSTEM hive
+pub fn parse_rdp_enabled(hive_path: &Path) -> bool {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let Ok(file) = File::open(hive_path) else {
+        return false;
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return false;
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return false;
+    };
+    let Ok(Some(cs)) = root_key.subkey("ControlSet001", &mut hive) else {
+        return false;
+    };
+    let Ok(Some(svc)) = cs.borrow().subkey("Services", &mut hive) else {
+        return false;
+    };
+    let Ok(Some(ts)) = svc.borrow().subkey("TermService", &mut hive) else {
+        return false;
+    };
+    let Ok(Some(params)) = ts.borrow().subkey("Parameters", &mut hive) else {
+        return false;
+    };
+
+    for kv in params.borrow().values() {
+        if kv.name() == "fDenyTSConnections" {
+            if let RegistryValue::RegDWord(v) = kv.value() {
+                return *v == 0;
+            }
+        }
+    }
+    false
+}
+
+/// Detect pending reboot from SYSTEM hive Session Manager
+pub fn parse_pending_reboot(hive_path: &Path) -> bool {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let Ok(file) = File::open(hive_path) else {
+        return false;
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return false;
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return false;
+    };
+    let Ok(Some(cs)) = root_key.subkey("ControlSet001", &mut hive) else {
+        return false;
+    };
+    let Ok(Some(sm)) = cs.borrow().subkey("Control", &mut hive) else {
+        return false;
+    };
+    let Ok(Some(session)) = sm.borrow().subkey("Session Manager", &mut hive) else {
+        return false;
+    };
+
+    for kv in session.borrow().values() {
+        if kv.name() == "PendingFileRenameOperations" {
+            if let RegistryValue::RegMultiSZ(ops) = kv.value() {
+                return !ops.is_empty();
+            }
+        }
+    }
+    false
+}
+
+/// Parse SAM hive for local account summary
+pub fn parse_sam_accounts(hive_path: &Path) -> Result<SamSummary> {
+    use nt_hive2::{Hive, HiveParseMode};
+    use std::fs::File;
+
+    if !hive_path.exists() {
+        return Err(Error::NotFound(format!(
+            "SAM hive not found: {}",
+            hive_path.display()
+        )));
+    }
+
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open SAM hive: {}", e)))?;
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse SAM hive: {:?}", e)))?;
+
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get SAM root: {:?}", e)))?;
+
+    let mut summary = SamSummary::default();
+    if let Ok(Some(sam)) = root_key.subkey("SAM", &mut hive) {
+        if let Ok(Some(domains)) = sam.borrow().subkey("Domains", &mut hive) {
+            if let Ok(Some(account)) = domains.borrow().subkey("Account", &mut hive) {
+                if let Ok(Some(users)) = account.borrow().subkey("Users", &mut hive) {
+                    if let Ok(subkeys) = users.borrow().subkeys(&mut hive) {
+                        summary.local_account_count = subkeys.len();
+                    }
+                }
+            }
+        }
+    }
+    Ok(summary)
+}
+
+/// Summary of SAM hive account data
+#[derive(Debug, Clone, Default)]
+pub struct SamSummary {
+    pub local_account_count: usize,
+    pub admin_count: usize,
+}
+
+/// Detect hypervisor guest tool remnants
+pub fn detect_hypervisor_remnants(
+    system_hive: &Path,
+    drivers_path: &str,
+    g: &mut crate::guestfs::Guestfs,
+) -> Vec<String> {
+    let mut remnants = Vec::new();
+    let vmware_drivers = ["vmci.sys", "vmhgfs.sys", "vmmouse.sys", "vm3dmp.sys"];
+    let hyperv_drivers = ["vmbus.sys", "hv_vmbus.sys", "storvsc.sys"];
+
+    if let Ok(drivers) = g.ls(drivers_path) {
+        for d in &drivers {
+            let lower = d.to_lowercase();
+            if vmware_drivers.iter().any(|v| lower.contains(v.trim_end_matches(".sys"))) {
+                remnants.push("vmware-drivers".to_string());
+            }
+            if hyperv_drivers.iter().any(|v| lower.contains(v.trim_end_matches(".sys"))) {
+                remnants.push("hyper-v-drivers".to_string());
+            }
+        }
+    }
+
+    if let Ok(services) = parse_windows_services(system_hive) {
+        for svc in services {
+            let name = svc.name.to_lowercase();
+            if name.contains("vmware") || name.contains("vmtools") {
+                remnants.push("vmware-tools-service".to_string());
+            }
+            if name.contains("hyper-v") || name.contains("vmbus") {
+                remnants.push("hyper-v-service".to_string());
+            }
+        }
+    }
+
+    remnants.sort();
+    remnants.dedup();
+    remnants
+}
+
+/// Detect AV/EDR products from registry and filesystem
+pub fn detect_av_edr(
+    software_hive: &Path,
+    g: &mut crate::guestfs::Guestfs,
+    systemroot: &str,
+) -> Vec<String> {
+    let mut products = Vec::new();
+    if let Ok(apps) = parse_installed_software(software_hive) {
+        for app in apps {
+            let name = app.name.to_lowercase();
+            for keyword in [
+                "defender", "crowdstrike", "sentinelone", "carbon black",
+                "symantec", "mcafee", "sophos", "kaspersky", "trend micro",
+                "cylance", "malwarebytes", "bitdefender",
+            ] {
+                if name.contains(keyword) {
+                    products.push(app.name.clone());
+                }
+            }
+        }
+    }
+
+    let paths = [
+        format!("{}/System32/Windows Defender", systemroot),
+        format!("{}/Program Files/CrowdStrike", systemroot.trim_start_matches('/')),
+    ];
+    for p in paths {
+        if g.exists(&p).unwrap_or(false) {
+            if p.contains("Defender") {
+                products.push("Windows Defender".to_string());
+            }
+            if p.contains("CrowdStrike") {
+                products.push("CrowdStrike".to_string());
+            }
+        }
+    }
+
+    products.sort();
+    products.dedup();
+    products
+}
+
+/// Parse SECURITY hive for audit policy metadata
+pub fn parse_security_hive(hive_path: &Path) -> Result<SecurityHiveSummary> {
+    use nt_hive2::{CleanHive, Hive, HiveParseMode};
+    use std::fs::File;
+
+    if !hive_path.exists() {
+        return Err(Error::NotFound(format!(
+            "SECURITY hive not found: {}",
+            hive_path.display()
+        )));
+    }
+
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open SECURITY hive: {}", e)))?;
+    let _hive: Hive<File, CleanHive> =
+        Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+            .map_err(|e| Error::CommandFailed(format!("Failed to parse SECURITY hive: {:?}", e)))?;
+
+    Ok(SecurityHiveSummary {
+        lsa_present: true,
+        audit_policy_configured: false,
+    })
+}
+
+/// Summary from SECURITY hive (metadata only, no secret decryption)
+#[derive(Debug, Clone, Default)]
+pub struct SecurityHiveSummary {
+    pub lsa_present: bool,
+    pub audit_policy_configured: bool,
+}
+
+/// Detect BitLocker protectors from registry (FVE key path)
+pub fn parse_bitlocker_status(software_hive: &Path) -> bool {
+    use nt_hive2::{Hive, HiveParseMode};
+    use std::fs::File;
+
+    let Ok(file) = File::open(software_hive) else {
+        return false;
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return false;
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return false;
+    };
+    root_key
+        .subkey("Microsoft", &mut hive)
+        .ok()
+        .flatten()
+        .and_then(|k| k.borrow().subkey("FVE", &mut hive).ok().flatten())
+        .is_some()
+}

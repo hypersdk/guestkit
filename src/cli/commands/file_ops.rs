@@ -236,21 +236,18 @@ pub fn search_command(
             let is_link = g.is_symlink(&file).unwrap_or(false);
 
             match ftype.as_str() {
-                "dir" | "directory" => {
-                    if !is_dir {
+                "dir" | "directory"
+                    if !is_dir => {
                         continue;
                     }
-                }
-                "file" => {
-                    if !is_file {
+                "file"
+                    if !is_file => {
                         continue;
                     }
-                }
-                "link" | "symlink" => {
-                    if !is_link {
+                "link" | "symlink"
+                    if !is_link => {
                         continue;
                     }
-                }
                 _ => {}
             }
         }
@@ -894,9 +891,9 @@ pub fn find_duplicates_command(
         println!("No duplicate files found");
     } else {
         let mut total_wasted = 0u64;
-        let mut group_num = 1;
 
-        for (hash, files) in duplicates {
+        for (group_num, (hash, files)) in duplicates.into_iter().enumerate() {
+            let group_num = group_num + 1;
             let file_size = files[0].1;
             let wasted = file_size.saturating_mul(files.len().saturating_sub(1) as u64);
             total_wasted += wasted;
@@ -908,7 +905,6 @@ pub fn find_duplicates_command(
                 println!("  {}", file);
             }
             println!();
-            group_num += 1;
         }
 
         println!("Total wasted space: {}", format_size(total_wasted));

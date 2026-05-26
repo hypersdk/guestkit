@@ -1076,9 +1076,9 @@ pub fn compliance_command(
 
         // Simplified check logic (real implementation would be more comprehensive)
         let result = match check_id {
-            id if id.contains("5.2.1") => {
+            id if id.contains("5.2.1")
                 // Check SSH config permissions
-                if g.is_file("/etc/ssh/sshd_config").unwrap_or(false) {
+                && g.is_file("/etc/ssh/sshd_config").unwrap_or(false) => {
                     if let Ok(stat) = g.stat("/etc/ssh/sshd_config") {
                         let mode = stat.mode & 0o777;
                         if mode <= 0o600 {
@@ -1089,14 +1089,11 @@ pub fn compliance_command(
                     } else {
                         "WARN"
                     }
-                } else {
-                    "WARN"
                 }
-            }
 
-            id if id.contains("6.2.1") => {
+            id if id.contains("6.2.1")
                 // Check for empty password fields
-                if g.is_file("/etc/shadow").unwrap_or(false) {
+                && g.is_file("/etc/shadow").unwrap_or(false) => {
                     if let Ok(content) = g.read_file("/etc/shadow") {
                         if let Ok(text) = String::from_utf8(content) {
                             let has_empty = text.lines().any(|line| {
@@ -1114,10 +1111,7 @@ pub fn compliance_command(
                     } else {
                         "WARN"
                     }
-                } else {
-                    "WARN"
                 }
-            }
 
             id if id.contains("1.3.1") => {
                 // Check for SELinux/AppArmor
@@ -2721,7 +2715,7 @@ pub fn anomaly_command(
 
     if !anomalies.is_empty() {
         println!("Detected Anomalies:");
-        anomalies.sort_by(|a, b| b.2.cmp(&a.2)); // Sort by score descending
+        anomalies.sort_by_key(|b| std::cmp::Reverse(b.2)); // Sort by score descending
 
         for (category, description, score, details) in anomalies.iter().take(10) {
             println!("  • [{}] {} - {} (score: {})",
@@ -3001,7 +2995,7 @@ pub fn recommend_command(
     }
 
     // Sort and filter by priority
-    recommendations.sort_by(|a, b| b.2.cmp(&a.2));
+    recommendations.sort_by_key(|b| std::cmp::Reverse(b.2));
 
     let priority_threshold = match priority {
         "critical" => 85,

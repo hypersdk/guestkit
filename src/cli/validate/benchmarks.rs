@@ -51,6 +51,7 @@ fn cis_ubuntu_2004_policy() -> Policy {
                 rule_type: RuleType::FileNotExists {
                     path: "/etc/modprobe.d/cramfs.conf".to_string(),
                 },
+                expr: None,
                 remediation: Some("echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string()),
             },
             PolicyRule {
@@ -62,6 +63,7 @@ fn cis_ubuntu_2004_policy() -> Policy {
                     path: "/boot/grub/grub.cfg".to_string(),
                     mode: "400".to_string(),
                 },
+                expr: None,
                 remediation: Some("chmod 400 /boot/grub/grub.cfg".to_string()),
             },
             PolicyRule {
@@ -73,6 +75,7 @@ fn cis_ubuntu_2004_policy() -> Policy {
                     path: "/etc/ssh/sshd_config".to_string(),
                     mode: "600".to_string(),
                 },
+                expr: None,
                 remediation: Some("chmod 600 /etc/ssh/sshd_config && chown root:root /etc/ssh/sshd_config".to_string()),
             },
             PolicyRule {
@@ -84,6 +87,7 @@ fn cis_ubuntu_2004_policy() -> Policy {
                     path: "/etc/ssh/sshd_config".to_string(),
                     pattern: "PermitRootLogin no".to_string(),
                 },
+                expr: None,
                 remediation: Some("Set 'PermitRootLogin no' in /etc/ssh/sshd_config".to_string()),
             },
         ],
@@ -104,6 +108,7 @@ fn cis_rhel8_policy() -> Policy {
                 rule_type: RuleType::FileNotExists {
                     path: "/etc/modprobe.d/cramfs.conf".to_string(),
                 },
+                expr: None,
                 remediation: Some("echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string()),
             },
             PolicyRule {
@@ -115,6 +120,7 @@ fn cis_rhel8_policy() -> Policy {
                     path: "/boot/grub2/grub.cfg".to_string(),
                     mode: "600".to_string(),
                 },
+                expr: None,
                 remediation: Some("chmod 600 /boot/grub2/grub.cfg".to_string()),
             },
         ],
@@ -135,6 +141,7 @@ fn nist_csf_policy() -> Policy {
                 rule_type: RuleType::FileExists {
                     path: "/etc/passwd".to_string(),
                 },
+                expr: None,
                 remediation: None,
             },
             PolicyRule {
@@ -145,6 +152,7 @@ fn nist_csf_policy() -> Policy {
                 rule_type: RuleType::PackageInstalled {
                     package: "cryptsetup".to_string(),
                 },
+                expr: None,
                 remediation: Some("Install cryptsetup for disk encryption".to_string()),
             },
         ],
@@ -165,6 +173,7 @@ fn pci_dss_policy() -> Policy {
                 rule_type: RuleType::PackageForbidden {
                     package: "telnet".to_string(),
                 },
+                expr: None,
                 remediation: Some("Remove telnet and other insecure services".to_string()),
             },
             PolicyRule {
@@ -176,6 +185,7 @@ fn pci_dss_policy() -> Policy {
                     path: "/etc/ssh/sshd_config".to_string(),
                     pattern: "PermitRootLogin no".to_string(),
                 },
+                expr: None,
                 remediation: Some("Disable root login via SSH".to_string()),
             },
         ],
@@ -196,6 +206,7 @@ fn hipaa_policy() -> Policy {
                 rule_type: RuleType::FileExists {
                     path: "/etc/passwd".to_string(),
                 },
+                expr: None,
                 remediation: None,
             },
             PolicyRule {
@@ -206,6 +217,7 @@ fn hipaa_policy() -> Policy {
                 rule_type: RuleType::PackageInstalled {
                     package: "cryptsetup".to_string(),
                 },
+                expr: None,
                 remediation: Some("Install encryption tools".to_string()),
             },
         ],

@@ -212,7 +212,7 @@ pub fn find_most_depended(packages: &[Package], limit: usize) -> Vec<(String, us
         .map(|p| (p.name.clone(), p.required_by.len()))
         .collect();
 
-    pkg_deps.sort_by(|a, b| b.1.cmp(&a.1));
+    pkg_deps.sort_by_key(|b| std::cmp::Reverse(b.1));
     pkg_deps.truncate(limit);
     pkg_deps
 }

@@ -18,7 +18,7 @@ pub fn export_dot(graph: &DependencyGraph, show_all: bool) -> String {
     } else {
         // Show packages with most dependencies
         let mut pkgs = graph.packages.clone();
-        pkgs.sort_by(|a, b| b.required_by.len().cmp(&a.required_by.len()));
+        pkgs.sort_by_key(|b| std::cmp::Reverse(b.required_by.len()));
         pkgs.truncate(50);
         pkgs
     };
@@ -146,7 +146,7 @@ pub fn export_html(graph: &DependencyGraph) -> String {
     let mut top_packages: Vec<_> = graph.packages.iter()
         .filter(|p| !p.required_by.is_empty())
         .collect();
-    top_packages.sort_by(|a, b| b.required_by.len().cmp(&a.required_by.len()));
+    top_packages.sort_by_key(|b| std::cmp::Reverse(b.required_by.len()));
 
     html.push_str("<h2>Most Depended Upon Packages</h2>\n");
     html.push_str("<table>\n");

@@ -1151,12 +1151,11 @@ impl App {
         }
 
         let interval = self.config.behavior.auto_refresh_seconds;
-        if interval > 0 && !self.refreshing && !self.is_searching() && !self.show_palette {
-            if self.last_auto_refresh.elapsed().as_secs() >= interval {
+        if interval > 0 && !self.refreshing && !self.is_searching() && !self.show_palette
+            && self.last_auto_refresh.elapsed().as_secs() >= interval {
                 let _ = self.reload_current_view(false);
                 self.last_auto_refresh = Instant::now();
             }
-        }
     }
 
     pub fn show_notification(&mut self, message: String) {
@@ -1568,7 +1567,7 @@ impl App {
 
     /// Mouse click: tab row (y≈4–6) changes view.
     pub fn handle_mouse_click(&mut self, column: u16, row: u16) {
-        if row >= 3 && row <= 5 {
+        if (3..=5).contains(&row) {
             let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
             let idx = (column as usize / 12).min(ordered.len().saturating_sub(1));
             if idx < ordered.len() {
@@ -1829,11 +1828,7 @@ impl App {
 
     pub fn toggle_context_help(&mut self) {
         self.help_context = !self.help_context;
-        if self.help_context {
-            self.show_help = true;
-        } else {
-            self.show_help = false;
-        }
+        self.show_help = self.help_context;
     }
 
     pub fn start_global_search(&mut self) {
@@ -2077,37 +2072,33 @@ impl App {
                 self.current_view = View::Issues;
                 self.scroll_offset = 0;
             }
-            "enabled" => {
+            "enabled"
                 // Filter enabled services
-                if self.current_view == View::Services {
+                if self.current_view == View::Services => {
                     // In real implementation, would filter the list
                     self.show_notification(format!("{} enabled services",
                         self.services.iter().filter(|s| s.enabled).count()));
                 }
-            }
-            "running" => {
+            "running"
                 // Filter running services
-                if self.current_view == View::Services {
+                if self.current_view == View::Services => {
                     self.show_notification(format!("{} running services",
                         self.services.iter().filter(|s| s.state == "running").count()));
                 }
-            }
-            "failed" => {
+            "failed"
                 // Filter failed services
-                if self.current_view == View::Services {
+                if self.current_view == View::Services => {
                     self.show_notification(format!("{} failed services",
                         self.services.iter().filter(|s| s.state == "failed").count()));
                 }
-            }
-            "dev" => {
+            "dev"
                 // Filter development packages
-                if self.current_view == View::Packages {
+                if self.current_view == View::Packages => {
                     let dev_count = self.packages.packages.iter()
                         .filter(|p| p.name.contains("devel") || p.name.contains("-dev"))
                         .count();
                     self.show_notification(format!("{} dev packages", dev_count));
                 }
-            }
             _ => {}
         }
     }
@@ -2494,7 +2485,7 @@ mod tests {
     #[test]
     fn test_export_format_clone() {
         let format = ExportFormat::Json;
-        let cloned = format.clone();
+        let cloned = format;
         assert_eq!(format, cloned);
     }
 
@@ -2595,7 +2586,7 @@ mod tests {
     #[test]
     fn test_view_clone() {
         let view = View::Dashboard;
-        let cloned = view.clone();
+        let cloned = view;
         assert_eq!(view, cloned);
     }
 
@@ -2661,7 +2652,7 @@ mod tests {
     #[test]
     fn test_sort_mode_clone() {
         let mode = SortMode::NameAsc;
-        let cloned = mode.clone();
+        let cloned = mode;
         assert_eq!(mode, cloned);
     }
 }

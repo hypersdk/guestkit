@@ -404,16 +404,14 @@ impl Guestfs {
                 let key = key.trim();
                 let value = value.trim();
                 match current_section {
-                    "connection" => {
-                        if key == "interface-name" {
+                    "connection"
+                        if key == "interface-name" => {
                             iface.name = value.to_string();
                         }
-                    }
-                    "ethernet" | "wifi" => {
-                        if key == "mac-address" {
+                    "ethernet" | "wifi"
+                        if key == "mac-address" => {
                             iface.mac_address = value.to_string();
                         }
-                    }
                     "ipv4" => {
                         if key == "method" {
                             iface.dhcp = value == "auto";
@@ -499,14 +497,13 @@ impl Guestfs {
                             }
                         }
                     }
-                    "Address" => {
-                        if key == "Address" {
+                    "Address"
+                        if key == "Address" => {
                             let ip = value.split('/').next().unwrap_or("").to_string();
                             if !ip.is_empty() {
                                 ip_address.push(ip);
                             }
                         }
-                    }
                     _ => {}
                 }
             }

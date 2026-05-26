@@ -5,6 +5,7 @@
 #![allow(clippy::too_many_arguments)]
 
 pub mod analysis;
+pub mod assurance;
 pub mod batch;
 pub mod disk_ops;
 pub mod file_ops;
@@ -14,6 +15,7 @@ pub mod systemd;
 pub mod tools;
 
 pub use analysis::*;
+pub use assurance::*;
 pub use batch::*;
 pub use disk_ops::*;
 pub use file_ops::*;

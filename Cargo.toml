@@ -111,6 +111,10 @@ default = ["guest-inspect"]
 guest-inspect = []
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
+cloud-s3 = []
+cloud-azure = []
+cloud-gcs = []
+cloud = ["cloud-s3", "cloud-azure", "cloud-gcs"]
 
 # Python module (optional)
 [lib]

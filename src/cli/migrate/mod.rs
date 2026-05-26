@@ -2,6 +2,7 @@
 //! Migration planning and compatibility analysis
 
 pub mod analyzer;
+pub mod plan;
 pub mod planner;
 pub mod reporter;
 

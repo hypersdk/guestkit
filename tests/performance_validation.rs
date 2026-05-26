@@ -55,6 +55,7 @@ impl PerfResult {
 }
 
 /// Performance test suite
+#[derive(Default)]
 pub struct PerfTestSuite {
     results: Vec<PerfResult>,
 }
@@ -62,9 +63,7 @@ pub struct PerfTestSuite {
 impl PerfTestSuite {
     /// Create a new performance test suite
     pub fn new() -> Self {
-        Self {
-            results: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Run a performance test with multiple iterations
@@ -176,7 +175,7 @@ impl ComparisonReport {
             for (test, pct) in &self.improvements {
                 report.push_str(&format!("- {}: +{:.2}% faster\n", test, pct));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         if !self.regressions.is_empty() {
@@ -184,7 +183,7 @@ impl ComparisonReport {
             for (test, pct) in &self.regressions {
                 report.push_str(&format!("- {}: -{:.2}% slower\n", test, pct));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         if !self.unchanged.is_empty() {
@@ -192,7 +191,7 @@ impl ComparisonReport {
             for test in &self.unchanged {
                 report.push_str(&format!("- {}\n", test));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         report.push_str(&format!("\n**Overall improvement:** {:.2}%\n", self.overall_improvement()));

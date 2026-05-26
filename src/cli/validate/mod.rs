@@ -4,6 +4,7 @@
 pub mod policy;
 pub mod rules;
 pub mod benchmarks;
+pub mod expr;
 
 use anyhow::Result;
 use crate::Guestfs;
@@ -138,6 +139,13 @@ pub fn validate_image<P: AsRef<Path>>(
         let _ = g.mount(&dev, &mp);
     }
 
+    // Build evidence snapshot for expression rules
+    let evidence = crate::evidence::build_evidence(&mut g, root, image_path.as_ref())?;
+    let boot_report = crate::boot::analyze_bootability(
+        &evidence,
+        crate::boot::BootTarget::Generic,
+    );
+
     // Run validation rules
     let mut results = Vec::new();
 
@@ -146,7 +154,7 @@ pub fn validate_image<P: AsRef<Path>>(
             println!("  Checking: {}", rule.name);
         }
 
-        let result = validate_rule(&mut g, root, rule)?;
+        let result = validate_rule(&mut g, root, rule, &evidence, boot_report.score)?;
         results.push(result);
     }
 
@@ -170,7 +178,26 @@ fn validate_rule(
     g: &mut Guestfs,
     root: &str,
     rule: &PolicyRule,
+    evidence: &crate::evidence::EvidenceSnapshot,
+    boot_score: f64,
 ) -> Result<ValidationResult> {
+    // Expression rules take precedence
+    if let Some(expr) = &rule.expr {
+        let passed = expr::evaluate_expr(expr, evidence, Some(boot_score))?;
+        return Ok(ValidationResult {
+            rule_id: rule.id.clone(),
+            rule_name: rule.name.clone(),
+            status: if passed {
+                ValidationStatus::Pass
+            } else {
+                ValidationStatus::Fail
+            },
+            message: format!("Expression `{}` => {}", expr, passed),
+            severity: rule.severity.clone(),
+            remediation: rule.remediation.clone(),
+        });
+    }
+
     let status = match &rule.rule_type {
         RuleType::PackageInstalled { package } => {
             check_package_installed(g, root, package)?
@@ -205,6 +232,13 @@ fn validate_rule(
         RuleType::PortClosed { port: _ } => {
             // Port checking requires more complex parsing
             ValidationStatus::Skip
+        }
+        RuleType::Expression { expr } => {
+            if expr::evaluate_expr(expr, evidence, Some(boot_score))? {
+                ValidationStatus::Pass
+            } else {
+                ValidationStatus::Fail
+            }
         }
         RuleType::Custom { check: _ } => {
             // Custom checks would be implemented here

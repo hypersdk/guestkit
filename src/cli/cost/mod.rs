@@ -414,7 +414,7 @@ mod tests {
         };
         
         assert_eq!(profile.cpu_usage_percent, 60.0);
-        assert_eq!(profile.has_database, true);
+        assert!(profile.has_database);
         assert_eq!(profile.storage_type, "ssd");
     }
 

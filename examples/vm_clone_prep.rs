@@ -223,57 +223,54 @@ fn cleanup_temp_files(g: &mut Guestfs) -> Result<(), Box<dyn std::error::Error>>
 }
 
 fn generalize_config(g: &mut Guestfs, ostype: &str) -> Result<(), Box<dyn std::error::Error>> {
-    match ostype {
-        "linux" => {
-            // Comment out specific hostname configuration
-            if g.exists("/etc/hostname")? {
-                println!("  Clearing hostname");
-                g.write("/etc/hostname", b"localhost.localdomain\n")?;
-            }
+    if ostype == "linux" {
+        // Comment out specific hostname configuration
+        if g.exists("/etc/hostname")? {
+            println!("  Clearing hostname");
+            g.write("/etc/hostname", b"localhost.localdomain\n")?;
+        }
 
-            // Remove specific network configurations
-            let network_configs = vec![
-                "/etc/sysconfig/network-scripts/ifcfg-*",
-                "/etc/netplan/*.yaml",
-            ];
+        // Remove specific network configurations
+        let network_configs = vec![
+            "/etc/sysconfig/network-scripts/ifcfg-*",
+            "/etc/netplan/*.yaml",
+        ];
 
-            for pattern in network_configs {
-                if let Ok(files) = g.glob_expand(pattern) {
-                    for file in files {
-                        // Don't remove ifcfg-lo
-                        if !file.contains("ifcfg-lo") {
-                            if let Ok(content) = g.cat(&file) {
-                                // Remove hardware-specific lines
-                                let mut new_content = String::new();
-                                for line in content.lines() {
-                                    if !line.contains("HWADDR")
-                                        && !line.contains("UUID")
-                                        && !line.contains("IPADDR")
-                                    {
-                                        new_content.push_str(line);
-                                        new_content.push('\n');
-                                    }
+        for pattern in network_configs {
+            if let Ok(files) = g.glob_expand(pattern) {
+                for file in files {
+                    // Don't remove ifcfg-lo
+                    if !file.contains("ifcfg-lo") {
+                        if let Ok(content) = g.cat(&file) {
+                            // Remove hardware-specific lines
+                            let mut new_content = String::new();
+                            for line in content.lines() {
+                                if !line.contains("HWADDR")
+                                    && !line.contains("UUID")
+                                    && !line.contains("IPADDR")
+                                {
+                                    new_content.push_str(line);
+                                    new_content.push('\n');
                                 }
-                                println!("  Generalizing {}", file);
-                                g.write(&file, new_content.as_bytes())?;
                             }
+                            println!("  Generalizing {}", file);
+                            g.write(&file, new_content.as_bytes())?;
                         }
                     }
                 }
             }
+        }
 
-            // Disable cloud-init if present (to prevent it from applying old config)
-            if g.is_dir("/etc/cloud").unwrap_or(false) {
-                println!("  Disabling cloud-init");
-                if g.exists("/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg")? {
-                    g.write(
-                        "/etc/cloud/cloud.cfg.d/99-manual-cache.cfg",
-                        b"manual_cache_clean: True\n",
-                    )?;
-                }
+        // Disable cloud-init if present (to prevent it from applying old config)
+        if g.is_dir("/etc/cloud").unwrap_or(false) {
+            println!("  Disabling cloud-init");
+            if g.exists("/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg")? {
+                g.write(
+                    "/etc/cloud/cloud.cfg.d/99-manual-cache.cfg",
+                    b"manual_cache_clean: True\n",
+                )?;
             }
         }
-        _ => {}
     }
 
     Ok(())

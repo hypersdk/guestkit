@@ -235,8 +235,6 @@ mod tests {
     fn test_boot_analyzer_creation() {
         let analyzer = SystemdAnalyzer::new("/tmp");
         let _boot_analyzer = BootAnalyzer::new(analyzer);
-        // Verify creation
-        assert!(true);
     }
 
     #[test]

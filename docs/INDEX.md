@@ -18,6 +18,7 @@
 | [File explorer](features/explore/EXPLORE-QUICKSTART.md) | `guestkit explore` |
 | [Interactive shell](user-guides/interactive-mode.md) | REPL mode |
 | [Security profiles](user-guides/profiles.md) | Security, compliance, migration profiles |
+| [Migration assurance](features/migration-assurance.md) | Doctor, migrate-plan, fleet, policy, forensic diff |
 | [Fix plans](features/fix-plans.md) | Offline patch workflow |
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
 | [Python bindings](user-guides/python-bindings.md) | PyO3 API |

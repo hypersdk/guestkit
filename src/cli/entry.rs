@@ -1238,9 +1238,17 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Repair type (permissions, packages, network, bootloader, filesystem)
+        /// Repair type (permissions, packages, network, bootloader, filesystem, boot)
         #[arg(short = 't', long)]
-        repair_type: String,
+        repair_type: Option<String>,
+
+        /// Fix category (boot, network, etc.)
+        #[arg(long)]
+        fix: Option<String>,
+
+        /// Dry-run repair without applying changes
+        #[arg(long)]
+        dry_run: bool,
 
         /// Force repair even if risky
         #[arg(short = 'f', long)]
@@ -1708,10 +1716,119 @@ enum Commands {
 
     /// List subcommands grouped by category
     #[command(name = "commands")]
-    CommandsList,
+    CommandCatalog,
 
     /// Manage fix plans (preview, validate, export, apply)
     Plan(PlanCommand),
+
+    /// Bootability prediction — will this VM survive first boot?
+    Doctor {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target hypervisor (kvm, proxmox, hyperv, cloud)
+        #[arg(long, default_value = "kvm")]
+        target: String,
+
+        /// Deterministic root-cause analysis
+        #[arg(long)]
+        explain: bool,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+    },
+
+    /// Policy-as-code compliance check
+    Policy {
+        #[command(subcommand)]
+        action: PolicyAction,
+    },
+
+    /// Fleet-wide VM analysis
+    Fleet {
+        #[command(subcommand)]
+        action: FleetAction,
+    },
+
+    /// Hypervisor-aware migration plan
+    #[command(name = "migrate-plan")]
+    MigratePlan {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target platform (proxmox, kvm, aws, azure, gcp)
+        #[arg(long, value_name = "TARGET")]
+        target: String,
+
+        /// Include root-cause explanation
+        #[arg(long)]
+        explain: bool,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+    },
+
+    /// Forensic diff with security drift scoring
+    #[command(name = "forensic-diff")]
+    ForensicDiff {
+        /// Before disk image
+        old: PathBuf,
+
+        /// After disk image
+        new: PathBuf,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum PolicyAction {
+    /// Check disk image against policy
+    Check {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Policy file path (YAML)
+        #[arg(short, long, value_name = "FILE")]
+        policy: Option<PathBuf>,
+
+        /// Use industry benchmark
+        #[arg(short, long, value_name = "BENCHMARK")]
+        benchmark: Option<String>,
+
+        /// Generate example policy file
+        #[arg(long)]
+        example_policy: bool,
+
+        /// Output format (text, json)
+        #[arg(short = 'f', long, value_name = "FORMAT", default_value = "text")]
+        format: String,
+
+        /// Output file
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Fail on any validation failure
+        #[arg(long)]
+        strict: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum FleetAction {
+    /// Analyze a directory of VM images
+    Analyze {
+        /// Directory containing disk images
+        dir: PathBuf,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -2590,10 +2707,18 @@ pub fn run() -> anyhow::Result<()> {
         Commands::Repair {
             image,
             repair_type,
+            fix,
+            dry_run,
             force,
             backup,
         } => {
-            repair_command(&image, &repair_type, force, backup, cli.verbose)?;
+            if fix.as_deref() == Some("boot") {
+                repair_boot_command(&image, dry_run, cli.verbose)?;
+            } else if let Some(rt) = repair_type {
+                repair_command(&image, &rt, force, backup, cli.verbose)?;
+            } else {
+                anyhow::bail!("Specify --fix boot or --repair-type <type>");
+            }
         }
 
         Commands::Harden {
@@ -2725,7 +2850,7 @@ pub fn run() -> anyhow::Result<()> {
             println!("License: LGPL-3.0-or-later");
         }
 
-        Commands::CommandsList => {
+        Commands::CommandCatalog => {
             commands_list::print_grouped_commands(invocation::name());
         }
 
@@ -2843,6 +2968,57 @@ pub fn run() -> anyhow::Result<()> {
 
         Commands::Plan(plan_cmd) => {
             plan_cmd.execute()?;
+        }
+
+        Commands::Doctor {
+            image,
+            target,
+            explain,
+            output,
+        } => {
+            doctor_command(&image, &target, explain, &output, cli.verbose)?;
+        }
+
+        Commands::Policy { action } => match action {
+            PolicyAction::Check {
+                image,
+                policy,
+                benchmark,
+                example_policy,
+                format,
+                output,
+                strict,
+            } => {
+                policy_check_command(
+                    &image,
+                    policy.as_deref(),
+                    benchmark,
+                    example_policy,
+                    &format,
+                    output.as_deref(),
+                    strict,
+                    cli.verbose,
+                )?;
+            }
+        },
+
+        Commands::Fleet { action } => match action {
+            FleetAction::Analyze { dir, output } => {
+                fleet_analyze_command(&dir, &output, cli.verbose)?;
+            }
+        },
+
+        Commands::MigratePlan {
+            image,
+            target,
+            explain,
+            output,
+        } => {
+            migrate_plan_command(&image, &target, explain, &output, cli.verbose)?;
+        }
+
+        Commands::ForensicDiff { old, new, output } => {
+            forensic_diff_command(&old, &new, &output, cli.verbose)?;
         }
     }
 

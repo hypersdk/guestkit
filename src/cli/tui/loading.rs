@@ -58,6 +58,12 @@ pub struct LoadingState {
     pub message: String,
 }
 
+impl Default for LoadingState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LoadingState {
     pub fn new() -> Self {
         Self {

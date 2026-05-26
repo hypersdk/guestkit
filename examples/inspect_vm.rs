@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Get partition details
         if let Ok(part_list) = g.part_list("/dev/sda") {
             let part_num = g.part_to_partnum(partition)?;
-            if let Some(p) = part_list.iter().find(|p| p.part_num == part_num as i32) {
+            if let Some(p) = part_list.iter().find(|p| p.part_num == part_num) {
                 println!("  Start: {} bytes", p.part_start);
                 println!(
                     "  Size: {} bytes ({:.2} GB)",

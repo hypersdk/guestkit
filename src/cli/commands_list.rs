@@ -10,7 +10,10 @@ const GROUPS: &[(&str, &[&str])] = &[
         &[
             "inspect",
             "inspect-batch",
+            "doctor",
+            "migrate-plan",
             "diff",
+            "forensic-diff",
             "compare",
             "inventory",
             "sbom",
@@ -54,6 +57,7 @@ const GROUPS: &[(&str, &[&str])] = &[
             "health",
             "audit",
             "repair",
+            "policy",
             "harden",
             "anomaly",
             "recommend",
@@ -67,7 +71,7 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Migrate & plan",
-        &["migrate", "blueprint", "plan", "cost", "dependencies", "risk"],
+        &["migrate", "migrate-plan", "blueprint", "plan", "cost", "dependencies", "risk", "fleet"],
     ),
     (
         "Systemd",

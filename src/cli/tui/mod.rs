@@ -253,16 +253,14 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.start_search();
                         }
                     }
-                    KeyCode::Left => {
-                        if app.current_view == app::View::Profiles {
+                    KeyCode::Left
+                        if app.current_view == app::View::Profiles => {
                             app.previous_profile_tab();
                         }
-                    }
-                    KeyCode::Right => {
-                        if app.current_view == app::View::Profiles {
+                    KeyCode::Right
+                        if app.current_view == app::View::Profiles => {
                             app.next_profile_tab();
                         }
-                    }
                     KeyCode::Up => {
                         if app.show_palette {
                             if app.palette_selected > 0 {

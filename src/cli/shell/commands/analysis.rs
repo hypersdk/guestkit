@@ -3402,8 +3402,14 @@ pub fn cmd_troubleshoot(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                 println!("{} Service Statistics:", "→".cyan());
                 println!("  Total services:    {}", total.to_string().cyan());
-                let enabled_pct = if total > 0 { enabled * 100 / total } else { 0 };
-                let disabled_pct = if total > 0 { disabled * 100 / total } else { 0 };
+                let enabled_pct = enabled
+                    .saturating_mul(100)
+                    .checked_div(total)
+                    .unwrap_or(0);
+                let disabled_pct = disabled
+                    .saturating_mul(100)
+                    .checked_div(total)
+                    .unwrap_or(0);
                 println!("  Enabled:           {} ({}%)", enabled.to_string().green(), enabled_pct);
                 println!("  Disabled:          {} ({}%)", disabled.to_string().yellow(), disabled_pct);
                 println!();
@@ -5300,7 +5306,10 @@ pub fn cmd_baseline(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             // CIS summary
             let total = checks.len();
-            let compliance_rate = if total > 0 { (passed * 100) / total } else { 0 };
+            let compliance_rate = (passed as usize)
+                .saturating_mul(100)
+                .checked_div(total)
+                .unwrap_or(0);
 
             println!("{}", "CIS Benchmark Summary:".yellow().bold());
             println!("  Total checks: {}", total);

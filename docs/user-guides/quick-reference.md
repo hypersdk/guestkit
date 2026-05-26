@@ -36,6 +36,25 @@ guestkit inspect disk.qcow2 -v
 | **VM Tools** | VMware Tools, QEMU GA, VirtualBox, Hyper-V |
 | **Config** | Timezone, locale |
 
+## Migration assurance
+
+| Command | Purpose |
+|---------|---------|
+| `guestkit doctor IMAGE --target kvm` | Boot probability + blockers |
+| `guestkit migrate-plan IMAGE --target proxmox` | Migration score, drivers, downtime |
+| `guestkit policy check IMAGE --policy FILE` | Policy-as-code (expression DSL) |
+| `guestkit fleet analyze ./vms/` | Cluster VMs, snowflakes, blockers |
+| `guestkit forensic-diff OLD NEW` | Security drift between snapshots |
+| `guestkit repair IMAGE --fix boot` | Boot repair via fix plans |
+
+```bash
+guestkit doctor vm.qcow2 --target kvm --explain
+guestkit migrate-plan vm.vmdk --target proxmox -o json
+guestkit repair vm.qcow2 --fix boot --dry-run
+```
+
+Details: [migration-assurance.md](../features/migration-assurance.md)
+
 ## 🎯 Common Commands
 
 ```bash
