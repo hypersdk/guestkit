@@ -582,7 +582,7 @@ sudo guestkit inspect vm.qcow2
 
 ### Will guestkit support feature X?
 
-Check the [Enhancement Roadmap](../development/enhancement-roadmap.md) for planned features.
+Check the [roadmap](../development/roadmap.md) for planned features.
 
 **Request a feature:**
 ```bash
