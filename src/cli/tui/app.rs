@@ -396,6 +396,9 @@ pub struct App {
     /// Fleet mode: multiple images (`N` / `P` to switch)
     pub fleet_images: Vec<String>,
     pub fleet_index: usize,
+
+    /// Resolved colors (glass / transparency from `tui.toml`)
+    pub resolved_theme: super::theme::ResolvedTheme,
 }
 
 impl App {
@@ -424,6 +427,7 @@ impl App {
         loaded_views: HashSet<View>,
     ) -> Self {
         let pinned_views = config.views.pinned.clone();
+        let resolved_theme = super::theme::resolve(&config.ui);
 
         Self {
             current_view,
@@ -554,7 +558,12 @@ impl App {
             last_auto_refresh: Instant::now(),
             fleet_images: Vec::new(),
             fleet_index: 0,
+            resolved_theme,
         }
+    }
+
+    pub fn theme(&self) -> &super::theme::ResolvedTheme {
+        &self.resolved_theme
     }
 
     pub fn fleet_active(&self) -> bool {

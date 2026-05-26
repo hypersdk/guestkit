@@ -99,7 +99,7 @@ fn draw_service_detail(f: &mut Frame, area: Rect, app: &App) {
     };
     f.render_widget(
         Paragraph::new(lines)
-            .block(content_block("Service detail"))
+            .block(content_block("Service detail", app.theme()))
             .wrap(ratatui::widgets::Wrap { trim: true }),
         area,
     );

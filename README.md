@@ -1,6 +1,6 @@
 <p align="center">
   <strong>GuestKit</strong><br>
-  <sub>Offline VM intelligence + migration assurance — no boot required</sub>
+  <sub>Offline VM intelligence & migration assurance — powered on <a href="https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit">zyvor.dev</a></sub>
 </p>
 
 <p align="center">
@@ -12,11 +12,11 @@
 </p>
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=ZYCz6HN7bXE"><strong>▶ Watch demo video</strong></a>
+  <a href="https://www.youtube.com/watch?v=ZYCz6HN7bXE"><strong>▶ Watch demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit"><strong>zyvor.dev/demo</strong></a>
   &nbsp;·&nbsp;
   <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit">Contact sales</a>
-  &nbsp;·&nbsp;
-  <a href="https://zyvor.dev/?utm_source=github&utm_medium=guestkit">Full platform</a>
 </p>
 
 <p align="center">
@@ -27,173 +27,137 @@
 
 ---
 
-**GuestKit** is an **offline VM intelligence and migration assurance platform**. Know whether a VM will survive migration before first boot — then inspect, score, repair, and export evidence-backed reports from QCOW2, VMDK, or RAW images without powering anything on.
+**GuestKit** answers the question every migration team asks too late: *will this VM actually boot on the target?*
 
-Built in **Rust** for safety and speed. Pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM migration pipelines. Optional **TUI**, **REPL shell**, **AI diagnostics**, and **Python** bindings when you need more than one-shot CLI output.
+Inspect **QCOW2, VMDK, or RAW** images **without powering them on**. Score boot probability, generate hypervisor-aware migration plans, export executable fix plans, and explore disks from a carbon-themed TUI — all in **Rust**, with structured JSON/YAML/HTML/PDF for CI.
 
-## Why GuestKit?
+Part of the open-source stack on **[zyvor.dev](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)** · pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM pipelines.
+
+## Three commands before cutover
+
+```bash
+cargo install guestkit   # guestkit + guestctl
+
+guestkit doctor vm.qcow2 --target proxmox --explain
+# → 82% boot probability · blockers · root-cause chain
+
+guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml
+# → migration score · driver injections · executable fix plan
+
+guestctl tui vm.qcow2
+# → carbon TUI · grouped views · offline file browser
+```
 
 | Without GuestKit | With GuestKit |
 |------------------|---------------|
-| Boot every VM to “just check” config | Inspect offline images in place |
-| Fragile shell scripts over `guestfish` | Structured JSON/YAML/HTML/PDF output |
-| No fleet-wide security posture view | Batch inspect + profiles across many disks |
-| Migration surprises at first power-on | **`guestkit doctor`** — boot probability score before cutover |
+| Boot every VM to “just check” | Inspect offline in place |
+| Shell scripts over `guestfish` | Evidence snapshots + structured export |
+| Migration surprises at power-on | **`doctor`** score before cutover |
+| Manual runbooks for fleet drift | **`fleet analyze`** · **`forensic-diff`** |
 
-```bash
-cargo install guestkit    # installs guestkit + guestctl; or: pip install hypersdk-guestkit
-guestkit doctor vm.qcow2 --target kvm          # 82% boot probability + blockers
-guestkit migrate-plan vm.vmdk --target proxmox # hypervisor-aware migration plan
-guestkit inspect win.vmdk --profile windows-migration
-guestkit policy check vm.qcow2 --policy cis.yaml
-guestctl tui vm.qcow2
-```
+## TUI — control plane in your terminal
 
-### Aliases
+`guestctl tui` is a multi-view dashboard for incident response and deep dives — no VM boot required.
 
-| Name | Role |
-|------|------|
-| `guestkit` | Primary CLI binary |
-| `guestctl` | Same CLI (kubectl-style alias); help, completions, and tips use the name you invoked |
+| | |
+|---|---|
+| **Navigation** | Two-tier tabs: **Overview · System · Security** + views in group · `Ctrl+P` jump menu |
+| **Keys** | `Tab` cycle views · `{` `}` switch groups · `h` scrollable help · vim `j`/`k` |
+| **Views** | Dashboard, issues, packages, services, files, storage, profiles, topology, … |
+| **Fleet** | `guestctl tui img.qcow2 --fleet ./images/` — sidebar, **N** / **P** switch disks |
+| **Theme** | Carbon graphite + orange accent — config in `~/.config/guestkit/tui.toml` |
 
-Run `guestctl` with no subcommand for a quick-start banner, or `guestctl commands` for a grouped command list.
-
-## See it in action
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ Ubuntu 22.04 LTS                                        │
-│ linux · x86_64 · hostname: webserver-prod               │
-└────────────────────────────────────────────────────────┘
-
-💾 Block devices    /dev/sda  8.0 GiB
-🌐 Network          eth0 192.168.1.100/24 (up)
-📦 Packages         1,234 (deb)
-🔧 Services         45 systemd units
-🔐 Security         firewalld active · SSH keys present
-
-→ guestkit inspect vm.qcow2 --profile security   # full risk report
-→ guestkit inspect vm.qcow2 --export report.html
-```
+→ [TUI guide](docs/features/tui-enhancements.md)
 
 ## Features
 
 | | |
 |---|---|
-| **Doctor** | Bootability prediction — `%` chance of first boot on KVM/Proxmox with blockers |
-| **Migrate-plan** | Hypervisor-aware migration score, driver injections, downtime estimate |
-| **Inspect** | OS, hostname, disks, network, packages, DBs, web servers, users, kernel |
-| **Windows migration** | `--profile windows-migration` — BitLocker, VirtIO, hypervisor remnants |
-| **Policy check** | Policy-as-code compliance (`guestkit policy check`) with expression DSL |
-| **Fleet analyze** | Cluster identical VMs, detect snowflakes, migration blockers |
-| **Forensic diff** | Security drift scoring between two disk snapshots |
-| **Repair** | Transactional boot repair (`guestkit repair --fix boot`) |
-| **TUI** | Multi-view dashboard — files, security, services, storage, fuzzy jump (`Ctrl+P`) |
-| **Shell** | REPL with `ls`, `cat`, `grep`, `explore`, upload/download, optional `ai` |
-| **Profiles** | Security, compliance, hardening, performance, migration readiness |
-| **Fix plans** | Preview offline changes → export bash/Ansible → apply with backup/rollback |
-| **Batch** | Parallel fleet inspection with caching (`inspect-batch --parallel 8`) |
-| **SBOM/CVE** | SPDX/CycloneDX export + OSV CVE lookup with offline cache |
-| **Cloud** | S3/Azure/GCS disk sources (`--features cloud-s3`, etc.) |
-| **Export** | JSON, YAML, HTML, PDF for tickets and automation |
-| **Formats** | QCOW2, VMDK, VDI, VHD/VHDX, RAW, IMG, ISO |
-| **Python** | PyO3 bindings — same inspection API in pipelines |
-| **AI** *(optional)* | Root-cause narration on deterministic evidence (`--features ai`) |
+| **Doctor** | Bootability `%` on KVM/Proxmox/cloud — blockers, warnings, `--explain` |
+| **Migrate-plan** | Target-aware score, drivers, downtime · **`--export`** fix plan YAML/JSON |
+| **Inspect** | OS, disks, network, packages, DBs, web servers, users, kernel, security |
+| **Windows** | `--profile windows-migration` — BitLocker, VirtIO, hypervisor remnants |
+| **Policy** | Expression DSL (`bootability.score >= 80`) · `guestkit policy check` |
+| **Fleet** | Cluster identical VMs, snowflakes, migration blockers |
+| **Forensic diff** | Security drift between two snapshots |
+| **Repair** | `guestkit repair --fix boot` — plan apply + post-check |
+| **Fix plans** | Preview → export bash/Ansible → apply with backup/rollback |
+| **Shell** | REPL: `ls`, `cat`, `grep`, `explore`, upload/download, optional `ai` |
+| **Batch** | `inspect-batch --parallel 8` with cache |
+| **SBOM/CVE** | SPDX/CycloneDX + OSV lookup (offline cache) |
+| **Cloud** | S3/Azure/GCS sources (`--features cloud-s3`, …) |
+| **Python** | PyO3 — same API in pipelines |
+| **AI** *(opt)* | Narration on deterministic evidence (`--features ai`) |
+
+**Aliases:** `guestkit` (primary) · `guestctl` (kubectl-style) — same binary, your choice of name.
 
 ## Quick start
 
-### Install
-
 ```bash
-# Rust (installs guestkit and guestctl)
+# Install
 cargo install guestkit
+# pip install hypersdk-guestkit
 
-# Python
-pip install hypersdk-guestkit
+# Assurance workflow
+guestkit doctor disk.qcow2 --target kvm -o json
+guestkit migrate-plan disk.vmdk --target proxmox --export migration.yaml
+guestkit repair disk.qcow2 --fix boot --dry-run
 
-# From source
-git clone https://github.com/hypersdk/guestkit && cd guestkit && cargo build --release
+# Inspect & report
+guestkit inspect disk.qcow2 --profile security --export report.html
+guestkit fleet analyze ./vms/ -o json
 
-# Docker
-docker build -t guestkit:latest .
-docker run --privileged -v ./vms:/vms:ro guestkit:latest inspect /vms/vm.qcow2
+# Explore
+guestctl tui disk.qcow2
+guestkit interactive disk.qcow2
+guestkit explore disk.qcow2 /etc
 ```
 
-See [Docker guide](docs/guides/DOCKER.md) · [Remote deploy](docs/guides/DEPLOY-REMOTE.md) (`make deploy-remote H=<host> U=root`)
+**Docker:** `docker build -t guestkit .` · [Docker guide](docs/guides/DOCKER.md)  
+**Tarball:** GitHub Releases or [remote package script](docs/PACKAGE_BINARY_REMOTE.md)
 
-**Client tarball (no deploy scripts):** same bundle from GitHub Releases or a remote Linux build:
-
-```bash
-# GitHub: download guestkit-*-linux-amd64.tar.gz from Releases
-# Remote build:
-./scripts/package-binary-remote.sh HOST USER --fetch
-# Customer: tar xzf guestkit-*-linux-amd64.tar.gz && ./install.sh && ./test-host.sh
-```
-
-See [docs/PACKAGE_BINARY_REMOTE.md](docs/PACKAGE_BINARY_REMOTE.md).
-
-### Essential commands
+### Command cheat sheet
 
 | Goal | Command |
 |------|---------|
-| Boot probability | `guestkit doctor disk.qcow2 --target kvm -o json` |
-| Migration plan | `guestkit migrate-plan disk.vmdk --target proxmox --explain` |
-| Windows migration | `guestkit inspect win.vmdk --profile windows-migration` |
-| Policy compliance | `guestkit policy check disk.qcow2 --policy policy.yaml` |
-| Fleet clustering | `guestkit fleet analyze ./vms/ -o json` |
-| Boot repair | `guestkit repair disk.qcow2 --fix boot --dry-run` |
-| Forensic diff | `guestkit forensic-diff before.qcow2 after.qcow2` |
-| Inspect | `guestkit inspect disk.qcow2` (or `guestctl disk.qcow2`) |
-| JSON for CI | `guestkit inspect disk.qcow2 -o json` |
-| TUI | `guestctl tui disk.qcow2` |
-| Command list | `guestctl commands` |
-| REPL | `guestkit interactive disk.qcow2` |
-| Security scan | `guestkit inspect disk.qcow2 --profile security` |
-| Fleet batch | `guestkit inspect-batch ./vms/*.qcow2 --parallel 4 -o json` |
-| Diff two images | `guestkit diff before.qcow2 after.qcow2` |
-| File browser | `guestkit explore disk.qcow2 /etc` |
+| Boot gate | `guestkit doctor IMAGE --target kvm --explain` |
+| Migration + plan file | `guestkit migrate-plan IMAGE --target proxmox --export plan.yaml` |
+| Policy | `guestkit policy check IMAGE --policy policy.yaml` |
+| TUI | `guestctl tui IMAGE` |
+| Security report | `guestkit inspect IMAGE --profile security -o html` |
+| Fleet | `guestkit inspect-batch ./vms/*.qcow2 --parallel 4` |
 
 ## How it fits your stack
 
 ```mermaid
 flowchart LR
-  subgraph sources [Disk sources]
-    QCOW[QCOW2 / VMDK / RAW]
+  subgraph disks [Offline disks]
+    IMG[QCOW2 / VMDK / RAW]
   end
-  subgraph guestkit [GuestKit]
-    INS[inspect]
-    PRF[profiles]
+  subgraph gk [GuestKit]
+    DOC[doctor]
+    MIG[migrate-plan]
+    INS[inspect / repair]
+    TUI[tui]
+  end
+  subgraph out [Outputs]
     PLN[fix plans]
-    EXP[export]
-  end
-  subgraph downstream [Downstream]
+    RPT[JSON HTML PDF]
     H2K[hyper2kvm]
-    CI[CI / CMDB]
-    OPS[runbooks]
   end
-  QCOW --> INS
-  INS --> PRF --> PLN
-  INS --> EXP
+  IMG --> DOC --> MIG --> PLN
+  IMG --> INS --> RPT
+  IMG --> TUI
   PLN --> H2K
-  EXP --> CI
-  PRF --> OPS
+  RPT --> CI[CI / CMDB]
 ```
 
 **Typical flows**
 
-- **Migration** — `doctor` → `migrate-plan` → fix plan / `repair --fix boot` → [hyper2kvm](https://github.com/hypersdk/hyper2kvm)
-- **Incident response** — `tui` or `interactive` on a clone without powering on production
-- **Compliance** — `inspect --profile compliance` → HTML/PDF reports for auditors
-- **Automation** — `inspect -o json` → jq → your ticketing or inventory system
-
-## Disk formats
-
-| Path | Formats | Mechanism |
-|------|---------|-----------|
-| Fast | RAW, IMG, ISO | loop device |
-| Universal | QCOW2, VMDK, VDI, VHD/VHDX | QEMU NBD |
-
-Repeated runs on the same image? Use `--cache` or convert once: `qemu-img convert -O raw vm.qcow2 vm.raw`.
+- **Migration** — `doctor` → `migrate-plan --export` → `repair --fix boot` → [hyper2kvm](https://github.com/hypersdk/hyper2kvm)
+- **Incident** — `guestctl tui` on a clone; production stays off
+- **Compliance** — profiles → HTML/PDF for auditors
+- **Automation** — `inspect -o json` → jq → ticketing
 
 ## Python (30 seconds)
 
@@ -207,62 +171,41 @@ with Guestfs() as g:
         print(g.inspect_get_distro(root), g.inspect_get_hostname(root))
 ```
 
-More examples: [`examples/python/`](examples/python/) · [Python guide](docs/user-guides/python-bindings.md)
-
-## AI diagnostics *(optional)*
-
-```bash
-cargo build --release --features ai
-export OPENAI_API_KEY=sk-...
-guestkit interactive vm.qcow2
-# ai why won't this boot?
-```
-
-AI interprets inspection data you already collected — it does not replace deterministic checks. Sensitive images: keep AI off or use air-gapped workflows.
+→ [`examples/python/`](examples/python/) · [Python guide](docs/user-guides/python-bindings.md)
 
 ## Documentation
 
 | Topic | Link |
 |-------|------|
-| **Full docs index** | [docs/INDEX.md](docs/INDEX.md) |
-| Migration assurance | [docs/features/migration-assurance.md](docs/features/migration-assurance.md) |
-| CLI reference | [docs/user-guides/cli-guide.md](docs/user-guides/cli-guide.md) |
-| TUI | [docs/features/tui-enhancements.md](docs/features/tui-enhancements.md) |
-| Interactive shell & explore | [docs/features/explore/EXPLORE-QUICKSTART.md](docs/features/explore/EXPLORE-QUICKSTART.md) |
-| Security profiles | [docs/user-guides/profiles.md](docs/user-guides/profiles.md) |
-| Fix plans | [docs/features/fix-plans.md](docs/features/fix-plans.md) |
-| Export formats | [docs/features/export-formats.md](docs/features/export-formats.md) |
-| VM migration | [docs/user-guides/vm-migration.md](docs/user-guides/vm-migration.md) |
-| Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
+| **Index** | [docs/INDEX.md](docs/INDEX.md) |
+| Migration assurance | [migration-assurance.md](docs/features/migration-assurance.md) |
+| TUI | [tui-enhancements.md](docs/features/tui-enhancements.md) |
+| CLI reference | [cli-guide.md](docs/user-guides/cli-guide.md) |
+| Quick reference | [quick-reference.md](docs/user-guides/quick-reference.md) |
+| Fix plans | [fix-plans.md](docs/features/fix-plans.md) |
+| VM migration | [vm-migration.md](docs/user-guides/vm-migration.md) |
 
 ## Project layout
 
 ```text
-guestkit/
-├── src/
-│   ├── cli/          # commands, TUI, shell, profiles, plan/migrate
-│   ├── evidence/     # EvidenceSnapshot (digital twin schema)
-│   ├── boot/         # bootability scoring engine
-│   ├── fleet/        # fleet clustering & snowflake detection
-│   ├── inference/    # root-cause analysis for --explain
-│   ├── storage/      # local + optional cloud disk resolution
-│   ├── guestfs/      # disk inspection & file operations
-│   ├── disk/         # partition & filesystem primitives
-│   └── python.rs     # PyO3 bindings
-├── docs/             # guides & reference
-├── examples/         # Rust & Python samples
-└── scripts/          # deploy-remote.sh, selftest.sh
+src/
+├── cli/          # commands, TUI, shell, migrate/plan
+├── evidence/     # EvidenceSnapshot (digital twin)
+├── boot/         # bootability engine
+├── fleet/        # clustering & snowflakes
+├── guestfs/      # disk inspect & file ops
+└── python.rs     # PyO3
 ```
 
-## Roadmap snapshot
+## Roadmap
 
-- ✅ TUI dashboard, security profiles, JSON/YAML/HTML/PDF export
-- ✅ Interactive shell, Python bindings, batch + cache
-- 🔄 Richer Windows boot/EFI diagnostics
-- 🔄 Deeper offline edit safety gates
-- 🔮 Cloud image pull (S3/Azure/GCP) · plugin profiles
+- ✅ Migration assurance (`doctor`, `migrate-plan`, `repair --fix boot`)
+- ✅ TUI two-tier navigation, scrollable jump menu & help
+- ✅ Fix plan export & apply
+- 🔄 Windows EFI / boot diagnostics
+- 🔮 Deeper cloud pull & plugin profiles
 
-Details: [docs/development/roadmap.md](docs/development/roadmap.md)
+[Full roadmap](docs/development/roadmap.md) · [Changelog](docs/development/CHANGELOG.md)
 
 ## Contributing
 
@@ -271,70 +214,37 @@ git clone https://github.com/hypersdk/guestkit && cd guestkit
 cargo test && cargo clippy && cargo fmt
 ```
 
-Bug reports and PRs welcome on GitHub. See [Contributing](docs/development/CONTRIBUTING.md).
-
-## Enterprise
-
-| | |
-|---|---|
-| **Demo** | [zyvor.dev/demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit) |
-| **ROI** | [zyvor.dev/roi](https://zyvor.dev/roi?utm_source=github&utm_medium=guestkit) |
-| **Pricing** | [zyvor.dev/pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit) |
-| **Contact** | [zyvor.dev/contact](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit) · [sales@zyvor.dev](mailto:sales@zyvor.dev) |
-
-Community Edition covers offline inspect and repair on individual disks. Fleet programs, dashboard, RBAC, and SLAs → contact Zyvor. [CE vs Enterprise](docs/ce-vs-enterprise.md).
+[Contributing guide](docs/development/CONTRIBUTING.md) · [Issues](https://github.com/hypersdk/guestkit/issues) · [Discussions](https://github.com/hypersdk/guestkit/discussions)
 
 ## License
 
-**LGPL-3.0-or-later** — commercial use allowed; modifications to GuestKit itself must stay open under LGPL. See [LICENSE](LICENSE).
+**LGPL-3.0-or-later** — commercial use allowed; modifications to GuestKit must stay open. See [LICENSE](LICENSE).
 
 ---
 
-## Support
-
 <p align="center">
-  <a href="https://zyvor.dev/">
-    <img src="docs/img/zyvor-logo.webp" alt="Zyvor AI Labs" width="200">
+  <a href="https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit">
+    <img src="docs/img/zyvor-logo.webp" alt="Zyvor AI Labs" width="180">
   </a>
 </p>
 
-**GuestKit** is the open-source guest-disk component of the [HyperSDK Platform](https://zyvor.dev/) (Zeus suite), from [Zyvor AI Labs](https://zyvor.dev/).
-
-### GitHub (this repository)
-
-- [Issues](https://github.com/hypersdk/guestkit/issues) — bugs and features
-- [Discussions](https://github.com/hypersdk/guestkit/discussions) — questions and ideas
-- [docs/](docs/) — full documentation tree
-
-### Enterprise — [zyvor.dev](https://zyvor.dev/)
-
-Production migrations, VMware exit programs, SLAs, and the integrated platform (dashboard, RBAC, fleet orchestration) are provided by **Zyvor**, not via GitHub Issues.
-
-| | |
-|---|---|
-| **Demo video** | [YouTube](https://www.youtube.com/watch?v=ZYCz6HN7bXE) |
-| **Sales** | [sales@zyvor.dev](mailto:sales@zyvor.dev) |
-| **Contact** | [zyvor.dev/contact](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit) |
-
-| Product | Focus |
-|---------|--------|
-| [HyperSDK](https://zyvor.dev/hypersdk) | Multi-cloud export & APIs |
-| [hyper2kvm](https://zyvor.dev/hyper2kvm) | Conversion & validation at scale |
-| [GuestKit](https://zyvor.dev/guestkit) | Offline inspect, repair, profiles |
-| [v9s](https://zyvor.dev/v9s) · [PacketWolf](https://zyvor.dev/packetwolf) | KubeVirt ops · eBPF observability |
-
-📄 [Open source vs Enterprise](docs/ce-vs-enterprise.md) · [Enterprise guide](docs/zyvor-enterprise.md) · [Security](SECURITY.md)
-
-### Related open-source repos
-
-| GitHub | Role |
-|--------|------|
-| [hypersdk](https://github.com/hypersdk/hypersdk) | Hypervisor SDK |
-| [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | VM migration toolkit |
-| **guestkit** *(this repo)* | Guest disk inspection |
-
----
+<p align="center">
+  <strong>GuestKit</strong> is the open-source guest-disk layer of the
+  <a href="https://zyvor.dev/hypersdk?utm_source=github&utm_medium=guestkit">HyperSDK Platform</a>
+  from <a href="https://zyvor.dev?utm_source=github&utm_medium=guestkit">Zyvor AI Labs</a>.
+</p>
 
 <p align="center">
-  <sub>Questions? <a href="https://github.com/hypersdk/guestkit/issues">Open an issue</a> or <a href="https://github.com/hypersdk/guestkit/discussions">start a discussion</a>.</sub>
+  <a href="https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit">Demo</a> ·
+  <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit">Contact</a> ·
+  <a href="mailto:sales@zyvor.dev">sales@zyvor.dev</a> ·
+  <a href="docs/ce-vs-enterprise.md">CE vs Enterprise</a> ·
+  <a href="docs/zyvor-enterprise.md">Enterprise guide</a>
+</p>
+
+<p align="center">
+  <sub>
+    HyperSDK · hyper2kvm · GuestKit · v9s · PacketWolf —
+    <a href="https://zyvor.dev/docs/products?utm_source=github&utm_medium=guestkit">full suite</a>
+  </sub>
 </p>

@@ -138,6 +138,9 @@ Shared design system and chrome refresh:
 Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `density = "compact"` or width &lt; `auto_compact_width` (default 100).
 
 ### Design system (`theme.rs`, `widgets.rs`)
+- **Chip navigation** — warm `┃ Group ┃` pills + pinned view highlights (`zyvor.dev` link color)
+- **Glass mode** — Zellij-style transparency: terminal wallpaper shows through; panes use blended surfaces (`transparent = true`, `glass_opacity = 82` in `tui.toml`)
+- **Chrome** — raised header/footer, accent modals, left-bar toasts, lighter dim overlay
 - **Pane blocks** — muted borders; orange border/title only when focused or risk-gated
 - **Stat chips** — compact Pkgs / Svcs / Users / Risk / Bookmarks row
 - **List severity rail** — `▌` prefix on Issues (and reusable for other views)
@@ -166,6 +169,8 @@ show_emoji = true          # false = ASCII-only labels in chrome
 icon_mode = "emoji"        # emoji | ascii
 density = "comfortable"    # comfortable | compact (tab labels)
 auto_compact_width = 100   # icon-only tabs below this width (unless density = compact)
+transparent = true         # glass panes (needs terminal transparency enabled)
+glass_opacity = 82         # 40–100, surface strength when transparent
 ```
 
 ## Future Enhancements
@@ -247,6 +252,8 @@ quick_jump_enabled = true
 - **icon_mode**: Tab/header icons: `emoji` or `ascii` (default: `emoji`)
 - **density**: `comfortable` or `compact` tab labels (default: `comfortable`)
 - **auto_compact_width**: use compact tab labels when terminal is narrower than this (default: `100`)
+- **transparent**: let the terminal background show through (default: `true`; disable for opaque panels)
+- **glass_opacity**: pane fill strength when transparent, 40–100 (default: `82`)
 - **mouse_enabled**: Enable/disable mouse support (default: `true`)
 
 #### View Settings (`[views]`)

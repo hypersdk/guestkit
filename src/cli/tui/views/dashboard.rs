@@ -91,7 +91,7 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
     }
 
     f.render_widget(
-        Paragraph::new(info_lines).block(content_block("System")),
+        Paragraph::new(info_lines).block(content_block("System", app.theme())),
         area,
     );
 }
@@ -117,7 +117,7 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
     ];
 
     let barchart = BarChart::default()
-        .block(content_block("Profile risk"))
+        .block(content_block("Profile risk", app.theme()))
         .data(&data)
         .bar_width(6)
         .bar_gap(2)
@@ -166,12 +166,17 @@ fn draw_stats(f: &mut Frame, area: Rect, app: &App) {
             .split(chunks[i]);
         let data = spark(*count, 7 + i, 5, 50);
         f.render_widget(
-            theme::sparkline_widget(&format!("{title} trend"), &data, theme::SPARKLINE_MUTED),
+            theme::sparkline_widget(
+                &format!("{title} trend"),
+                &data,
+                theme::SPARKLINE_MUTED,
+                app.theme(),
+            ),
             col[0],
         );
         let pct = ((*count).min(*max) as f64 / *max as f64 * 100.0) as u16;
         f.render_widget(
-            theme::gauge_widget(title, pct, &format!("{count}"), *color),
+            theme::gauge_widget(title, pct, &format!("{count}"), *color, app.theme()),
             col[1],
         );
     }
@@ -207,7 +212,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
     .collect();
 
     f.render_widget(
-        List::new(security_items).block(content_block("Security")),
+        List::new(security_items).block(content_block("Security", app.theme())),
         chunks[0],
     );
 
@@ -225,7 +230,7 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
     ])));
 
     f.render_widget(
-        List::new(app_items).block(content_block("Details")),
+        List::new(app_items).block(content_block("Details", app.theme())),
         chunks[1],
     );
 }
@@ -252,7 +257,7 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
         .split(area);
 
     let gauge = Gauge::default()
-        .block(content_block("Health"))
+        .block(content_block("Health", app.theme()))
         .gauge_style(Style::default().fg(health_color))
         .percent(u16::from(health_score.min(100)))
         .label(format!("{health_score}% {status_text}"));
@@ -278,7 +283,7 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("8", Style::default().fg(ACCENT)),
         ])),
     ];
-    f.render_widget(List::new(details).block(content_block("Risk")), chunks[2]);
+    f.render_widget(List::new(details).block(content_block("Risk", app.theme())), chunks[2]);
 }
 
 fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
@@ -303,7 +308,7 @@ fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
         ])),
     ];
     f.render_widget(
-        List::new(package_items).block(content_block("Package diff")),
+        List::new(package_items).block(content_block("Package diff", app.theme())),
         chunks[0],
     );
 
@@ -323,7 +328,7 @@ fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {
         ])),
     ];
     f.render_widget(
-        List::new(service_items).block(content_block("Service diff")),
+        List::new(service_items).block(content_block("Service diff", app.theme())),
         chunks[1],
     );
 }

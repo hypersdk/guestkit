@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Splash screen — carbon surfaces, orange accent, Zyvor branding.
 
-use crate::cli::tui::theme::{fill_background, ACCENT, ACCENT_SOFT, BORDER_MUTED, SURFACE, TEXT, TEXT_MUTED};
+use crate::cli::tui::config::UiConfig;
+use crate::cli::tui::theme::{fill_background, resolve, ACCENT, ACCENT_SOFT, BORDER_MUTED, LINK, TEXT, TEXT_MUTED};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Modifier, Style},
@@ -20,8 +21,9 @@ const ZYVOR_LOGO: &[&str] = &[
     "    ╚══════╝╚═╝     ╚═══╝   ╚═════╝ ╚═╝  ╚═╝",
 ];
 
-pub fn draw_splash(f: &mut Frame) {
-    f.render_widget(fill_background(), f.area());
+pub fn draw_splash(f: &mut Frame, cfg: &UiConfig) {
+    let th = resolve(cfg);
+    f.render_widget(fill_background(&th), f.area());
 
     let area = f.area();
     let chunks = Layout::default()
@@ -44,17 +46,18 @@ pub fn draw_splash(f: &mut Frame) {
 
     let mut logo: Vec<Line> = Vec::new();
     logo.push(Line::from(""));
-    for row in ZYVOR_LOGO {
+    for (i, row) in ZYVOR_LOGO.iter().enumerate() {
+        let color = if i < 3 { ACCENT } else { ACCENT_SOFT };
         logo.push(Line::from(Span::styled(
             *row,
-            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
         )));
     }
     logo.push(Line::from(""));
     logo.push(Line::from(vec![
         Span::styled("  HyperSDK Platform  ", Style::default().fg(TEXT_MUTED)),
         Span::styled("·", Style::default().fg(BORDER_MUTED)),
-        Span::styled("  zyvor.dev  ", Style::default().fg(ACCENT_SOFT)),
+        Span::styled("  zyvor.dev  ", Style::default().fg(LINK).add_modifier(Modifier::UNDERLINED)),
     ]));
     logo.push(Line::from(""));
     logo.push(Line::from(vec![
@@ -72,8 +75,8 @@ pub fn draw_splash(f: &mut Frame) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_MUTED))
-                .style(Style::default().bg(SURFACE)),
+                .border_style(Style::default().fg(ACCENT))
+                .style(Style::default().bg(th.surface_raised)),
         );
 
     f.render_widget(splash, logo_chunks[1]);
