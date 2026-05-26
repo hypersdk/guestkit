@@ -408,6 +408,11 @@ pub struct App {
     /// First visible tab index in the view tab row
     pub view_tab_scroll: usize,
 
+    /// Read-only fix plan preview (from migration assurance)
+    pub show_plan_preview: bool,
+    pub plan_preview: Option<crate::cli::plan::types::FixPlan>,
+    pub plan_preview_scroll: usize,
+
     /// Resolved colors (glass / transparency from `tui.toml`)
     pub resolved_theme: super::theme::ResolvedTheme,
 }
@@ -575,6 +580,9 @@ impl App {
             assurance_evidence: None,
             assurance_target,
             view_tab_scroll: 0,
+            show_plan_preview: false,
+            plan_preview: None,
+            plan_preview_scroll: 0,
             resolved_theme,
         }
     }
@@ -937,6 +945,47 @@ impl App {
                             label: format!("issue: {} — {}", finding.item, finding.message),
                         });
                     }
+                }
+            }
+        }
+
+        if let Some(ref boot) = self.boot_report {
+            for (idx, b) in boot.blockers.iter().enumerate() {
+                if b.title.to_lowercase().contains(&q) || b.message.to_lowercase().contains(&q) {
+                    self.global_search_hits.push(GlobalSearchHit {
+                        view: View::Assurance,
+                        index: idx,
+                        label: format!("boot blocker: {} — {}", b.title, b.message),
+                    });
+                }
+            }
+            for (idx, w) in boot.warnings.iter().enumerate() {
+                if w.title.to_lowercase().contains(&q) || w.message.to_lowercase().contains(&q) {
+                    self.global_search_hits.push(GlobalSearchHit {
+                        view: View::Assurance,
+                        index: idx,
+                        label: format!("boot warning: {} — {}", w.title, w.message),
+                    });
+                }
+            }
+        }
+        if let Some(ref mig) = self.migration_report {
+            for (idx, c) in mig.required_changes.iter().enumerate() {
+                if c.to_lowercase().contains(&q) {
+                    self.global_search_hits.push(GlobalSearchHit {
+                        view: View::Assurance,
+                        index: idx,
+                        label: format!("migration: {c}"),
+                    });
+                }
+            }
+            for d in &mig.driver_injections {
+                if d.to_lowercase().contains(&q) {
+                    self.global_search_hits.push(GlobalSearchHit {
+                        view: View::Assurance,
+                        index: 0,
+                        label: format!("driver: {d}"),
+                    });
                 }
             }
         }

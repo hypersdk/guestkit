@@ -33,6 +33,7 @@ pub const COMMANDS: &[PaletteCommand] = &[
     PaletteCommand { name: "assurance", description: "Open Assurance view + run doctor" },
     PaletteCommand { name: "migrate-plan", description: "Score migration for current target" },
     PaletteCommand { name: "export plan", description: "Export fix plan YAML to cwd" },
+    PaletteCommand { name: "plan preview", description: "Preview fix plan operations (read-only)" },
     PaletteCommand { name: "export json", description: "Export current view as JSON" },
     PaletteCommand { name: "export html", description: "Export security report HTML" },
     PaletteCommand { name: "refresh", description: "Reload current view data" },
@@ -48,6 +49,7 @@ pub enum PaletteAction {
     AssuranceRun,
     MigratePlan,
     ExportFixPlan,
+    PlanPreview,
     ExportJson,
     ExportHtml,
     Refresh,
@@ -103,6 +105,7 @@ pub fn parse_command(input: &str) -> PaletteAction {
         "goto logs" | "logs" => PaletteAction::Goto(View::Logs),
         "migrate-plan" | "migrate plan" => PaletteAction::MigratePlan,
         "export plan" | "export fix plan" => PaletteAction::ExportFixPlan,
+        "plan preview" | "preview plan" => PaletteAction::PlanPreview,
         "export json" => PaletteAction::ExportJson,
         "export html" => PaletteAction::ExportHtml,
         "refresh" => PaletteAction::Refresh,
@@ -154,6 +157,7 @@ mod tests {
     fn parse_migrate_and_export_plan() {
         assert_eq!(parse_command("migrate-plan"), PaletteAction::MigratePlan);
         assert_eq!(parse_command("export plan"), PaletteAction::ExportFixPlan);
+        assert_eq!(parse_command("plan preview"), PaletteAction::PlanPreview);
     }
 }
 

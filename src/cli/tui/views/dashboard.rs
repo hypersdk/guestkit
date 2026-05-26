@@ -107,7 +107,9 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
     } else {
         info_lines.push(Line::from(vec![
             Span::styled("Boot:       ", label_style()),
-            Span::styled("—  → Assurance (d)", Style::default().fg(INFO)),
+            Span::styled("—  press ", theme::label_style()),
+            Span::styled("a", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(" for Assurance", theme::label_style()),
         ]));
     }
 

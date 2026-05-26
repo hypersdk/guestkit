@@ -600,6 +600,9 @@ impl App {
                     Err(e) => self.show_notification(format!("Export failed: {e}")),
                 }
             }
+            PaletteAction::PlanPreview => {
+                self.toggle_plan_preview();
+            }
             PaletteAction::ExportJson => {
                 self.current_view = View::Dashboard;
                 self.toggle_export_menu();
@@ -675,6 +678,8 @@ impl App {
                 self.assurance_evidence = Some(evidence);
                 self.boot_report = Some(boot_report);
                 self.migration_report = Some(migration_report);
+                self.plan_preview = None;
+                self.show_plan_preview = false;
                 self.show_notification(format!("Assurance updated (target: {target_str})"));
                 Ok(())
             }
@@ -695,12 +700,14 @@ impl App {
         self.boot_report = None;
         self.migration_report = None;
         self.assurance_evidence = None;
+        self.plan_preview = None;
+        self.show_plan_preview = false;
         self.show_notification(format!("Target → {}", self.assurance_target));
         let _ = self.load_assurance();
     }
 
-    pub fn export_assurance_plan(&mut self) -> Result<String> {
-        use crate::cli::plan::{PlanExporter, PlanGenerator};
+    pub fn build_assurance_fix_plan(&mut self) -> Result<crate::cli::plan::types::FixPlan> {
+        use crate::cli::plan::PlanGenerator;
 
         let migration = self
             .migration_report
@@ -717,6 +724,14 @@ impl App {
             &self.assurance_target,
             &self._image_path_buf,
         )?;
+        self.plan_preview = Some(plan.clone());
+        Ok(plan)
+    }
+
+    pub fn export_assurance_plan(&mut self) -> Result<String> {
+        use crate::cli::plan::PlanExporter;
+
+        let plan = self.build_assurance_fix_plan()?;
         let path = format!(
             "guestkit-fix-plan-{}-{}.yaml",
             self.hostname.replace('.', "-"),
@@ -725,6 +740,46 @@ impl App {
         let content = PlanExporter::to_yaml(&plan)?;
         std::fs::write(&path, content)?;
         Ok(format!("{path} ({} operations)", plan.operations.len()))
+    }
+
+    pub fn go_to_assurance(&mut self) {
+        self.set_view(View::Assurance);
+        if self.boot_report.is_none() {
+            let _ = self.load_assurance();
+        }
+    }
+
+    pub fn toggle_plan_preview(&mut self) {
+        if self.show_plan_preview {
+            self.close_plan_preview();
+            return;
+        }
+        match self.build_assurance_fix_plan() {
+            Ok(plan) => {
+                let n = plan.operations.len();
+                self.plan_preview_scroll = 0;
+                self.show_plan_preview = true;
+                self.show_notification(format!("Fix plan preview ({n} operations, read-only)"));
+            }
+            Err(e) => self.show_notification(format!("Plan preview: {e:#}")),
+        }
+    }
+
+    pub fn close_plan_preview(&mut self) {
+        self.show_plan_preview = false;
+    }
+
+    pub fn plan_preview_scroll_up(&mut self) {
+        self.plan_preview_scroll = self.plan_preview_scroll.saturating_sub(1);
+    }
+
+    pub fn plan_preview_scroll_down(&mut self) {
+        if let Some(ref plan) = self.plan_preview {
+            let max = plan.operations.len().saturating_sub(1);
+            if self.plan_preview_scroll < max {
+                self.plan_preview_scroll += 1;
+            }
+        }
     }
 
     pub fn view_tab_scroll_left(&mut self) {

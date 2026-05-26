@@ -137,6 +137,8 @@ Shared design system and chrome refresh:
 | `h` + `j`/`k` | Scroll full help |
 | `,` / `.` | Scroll view tab row when pinned+group tabs overflow |
 | `d` / `t` / `e` | In **Assurance**: run doctor, cycle kvm→proxmox→aws, export fix plan |
+| `p` | In **Assurance** (after load): read-only fix-plan preview |
+| `a` | On **Dashboard**: open Assurance |
 
 Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `density = "compact"` or width &lt; `auto_compact_width` (default 100). Dashboard shows **Boot: N%** when assurance is loaded.
 
