@@ -38,6 +38,7 @@ impl View {
             View::Kernel => "kernel",
             View::Logs => "logs",
             View::Profiles => "profiles",
+            View::Assurance => "assurance",
             View::Files => "files",
         }
     }
@@ -61,6 +62,7 @@ impl View {
             "kernel" => Some(View::Kernel),
             "logs" => Some(View::Logs),
             "profiles" => Some(View::Profiles),
+            "assurance" | "doctor" => Some(View::Assurance),
             "files" => Some(View::Files),
             _ => None,
         }
@@ -73,7 +75,7 @@ impl View {
             View::Network | View::Packages | View::Services | View::Databases
             | View::WebServers | View::Users | View::Kernel | View::Logs | View::Storage
             | View::Files => "System",
-            View::Security | View::Issues | View::Profiles => "Security",
+            View::Security | View::Issues | View::Profiles | View::Assurance => "Security",
         }
     }
 
@@ -102,7 +104,7 @@ impl View {
                 View::Storage,
                 View::Files,
             ],
-            "Security" => &[View::Security, View::Issues, View::Profiles],
+            "Security" => &[View::Security, View::Issues, View::Profiles, View::Assurance],
             _ => &[],
         }
     }
@@ -414,6 +416,16 @@ impl App {
                 if let Ok(snap) = self.build_cache_snapshot(&self._image_path_buf) {
                     let _ = cache::save_snapshot(&self._image_path_buf, &snap);
                 }
+                if self.config.behavior.assurance_on_startup {
+                    let _ = self.load_assurance();
+                }
+                if self.config.behavior.show_assurance_hint {
+                    self.show_notification(
+                        "Press : for palette · Ctrl+P jump · d in Assurance for doctor".to_string(),
+                    );
+                    self.config.behavior.show_assurance_hint = false;
+                    let _ = self.config.save();
+                }
             }
             LoadingStage::Done => {}
         }
@@ -570,6 +582,24 @@ impl App {
             PaletteAction::Goto(v) => {
                 self.set_view(v);
             }
+            PaletteAction::AssuranceRun => {
+                self.set_view(View::Assurance);
+                let _ = self.load_assurance();
+            }
+            PaletteAction::MigratePlan => {
+                let _ = self.load_assurance();
+                self.show_notification(format!(
+                    "Migration score: {:.0}% → {}",
+                    self.migration_report.as_ref().map(|m| m.score).unwrap_or(0.0),
+                    self.assurance_target
+                ));
+            }
+            PaletteAction::ExportFixPlan => {
+                match self.export_assurance_plan() {
+                    Ok(path) => self.show_notification(format!("Exported {}", path)),
+                    Err(e) => self.show_notification(format!("Export failed: {e}")),
+                }
+            }
             PaletteAction::ExportJson => {
                 self.current_view = View::Dashboard;
                 self.toggle_export_menu();
@@ -605,6 +635,145 @@ impl App {
         if view == View::Files {
             self.init_file_browser();
         }
+        if view == View::Assurance && self.boot_report.is_none() {
+            let _ = self.load_assurance();
+        }
+        self.ensure_view_tab_scroll_visible();
+    }
+
+    /// Run doctor + migration scoring using the mounted guest (or CLI fallback).
+    pub fn load_assurance(&mut self) -> Result<()> {
+        use crate::boot::{analyze_bootability, BootTarget};
+        use crate::cli::commands::assurance::collect_assurance_data;
+        use crate::cli::migrate::plan::compute_migration_score;
+        use crate::evidence::build_evidence;
+
+        self.refreshing = true;
+        let target_str = self.assurance_target.clone();
+        let boot_target = BootTarget::parse(&target_str);
+        let image_path = &self._image_path_buf;
+
+        let result = if let Some(ref mut gfs) = self.guestfs {
+            let root = self.inspect_root.clone();
+            build_evidence(gfs, &root, image_path).map(|evidence| {
+                let boot_report = analyze_bootability(&evidence, boot_target);
+                let migration_report =
+                    compute_migration_score(&evidence, &boot_report, &target_str);
+                (evidence, boot_report, migration_report)
+            })
+        } else {
+            collect_assurance_data(image_path, boot_target, false).map(|(evidence, boot_report)| {
+                let migration_report =
+                    compute_migration_score(&evidence, &boot_report, &target_str);
+                (evidence, boot_report, migration_report)
+            })
+        };
+
+        self.refreshing = false;
+        match result {
+            Ok((evidence, boot_report, migration_report)) => {
+                self.assurance_evidence = Some(evidence);
+                self.boot_report = Some(boot_report);
+                self.migration_report = Some(migration_report);
+                self.show_notification(format!("Assurance updated (target: {target_str})"));
+                Ok(())
+            }
+            Err(e) => {
+                self.show_notification(format!("Assurance failed: {e:#}"));
+                Err(e)
+            }
+        }
+    }
+
+    pub fn cycle_assurance_target(&mut self) {
+        const TARGETS: &[&str] = &["kvm", "proxmox", "aws"];
+        let idx = TARGETS
+            .iter()
+            .position(|t| *t == self.assurance_target)
+            .unwrap_or(0);
+        self.assurance_target = TARGETS[(idx + 1) % TARGETS.len()].to_string();
+        self.boot_report = None;
+        self.migration_report = None;
+        self.assurance_evidence = None;
+        self.show_notification(format!("Target → {}", self.assurance_target));
+        let _ = self.load_assurance();
+    }
+
+    pub fn export_assurance_plan(&mut self) -> Result<String> {
+        use crate::cli::plan::{PlanExporter, PlanGenerator};
+
+        let migration = self
+            .migration_report
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Run assurance first (d)"))?;
+        let boot = self
+            .boot_report
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Run assurance first (d)"))?;
+        let generator = PlanGenerator::new(self.image_path.clone());
+        let plan = generator.from_migration_report(
+            migration,
+            boot,
+            &self.assurance_target,
+            &self._image_path_buf,
+        )?;
+        let path = format!(
+            "guestkit-fix-plan-{}-{}.yaml",
+            self.hostname.replace('.', "-"),
+            self.assurance_target
+        );
+        let content = PlanExporter::to_yaml(&plan)?;
+        std::fs::write(&path, content)?;
+        Ok(format!("{path} ({} operations)", plan.operations.len()))
+    }
+
+    pub fn view_tab_scroll_left(&mut self) {
+        self.view_tab_scroll = self.view_tab_scroll.saturating_sub(1);
+    }
+
+    pub fn view_tab_scroll_right(&mut self) {
+        let max = self.view_tab_entries().len().saturating_sub(1);
+        if self.view_tab_scroll < max {
+            self.view_tab_scroll += 1;
+        }
+    }
+
+    /// Keep the active view tab visible in the tab row.
+    pub fn ensure_view_tab_scroll_visible(&mut self) {
+        let entries = self.view_tab_entries();
+        if entries.is_empty() {
+            self.view_tab_scroll = 0;
+            return;
+        }
+        let active_idx = entries
+            .iter()
+            .position(|(v, _)| *v == self.current_view)
+            .unwrap_or(0);
+        let visible = self.visible_view_tab_count();
+        if active_idx < self.view_tab_scroll {
+            self.view_tab_scroll = active_idx;
+        } else if visible > 0 && active_idx >= self.view_tab_scroll + visible {
+            self.view_tab_scroll = active_idx + 1 - visible;
+        }
+    }
+
+    fn visible_view_tab_count(&self) -> usize {
+        let entries = self.view_tab_entries();
+        if entries.is_empty() {
+            return 0;
+        }
+        let width = self.terminal_width.saturating_sub(4) as usize;
+        let mut used = 0usize;
+        let mut count = 0usize;
+        for (_, title) in entries.iter().skip(self.view_tab_scroll) {
+            let w = title.chars().count() + 3;
+            if used + w > width && count > 0 {
+                break;
+            }
+            used += w;
+            count += 1;
+        }
+        count.max(1)
     }
 
     pub fn pin_current_view(&mut self) {
@@ -776,6 +945,10 @@ impl App {
                 let t = c + h + m;
                 if t > 0 { Some(t) } else { None }
             }
+            View::Assurance => self
+                .boot_report
+                .as_ref()
+                .map(|b| b.score.round() as usize),
             _ => None,
         };
         let prefix = if pinned { "★" } else { "" };

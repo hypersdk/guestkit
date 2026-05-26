@@ -23,6 +23,7 @@ pub fn view_icon(view: View, ascii: bool) -> &'static str {
             View::Kernel => "[K] ",
             View::Logs => "[L] ",
             View::Profiles => "[F] ",
+            View::Assurance => "[M] ",
             View::Files => "[>] ",
         }
     } else {
@@ -44,6 +45,7 @@ pub fn view_icon(view: View, ascii: bool) -> &'static str {
             View::Kernel => "🧩 ",
             View::Logs => "📋 ",
             View::Profiles => "🛡️ ",
+            View::Assurance => "🩺 ",
             View::Files => "📂 ",
         }
     }
@@ -68,6 +70,7 @@ pub fn view_description(view: View) -> &'static str {
         View::Kernel => "Kernel Configuration",
         View::Logs => "System Logs",
         View::Profiles => "Profile Reports",
+        View::Assurance => "Boot & migration assurance",
         View::Files => "File Browser",
     }
 }

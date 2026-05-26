@@ -90,6 +90,27 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
         ]));
     }
 
+    if let Some(ref boot) = app.boot_report {
+        let score = boot.score.round() as u8;
+        let color = widgets::health_score_color(score);
+        info_lines.push(Line::from(vec![
+            Span::styled("Boot:       ", label_style()),
+            Span::styled(
+                format!("{score}%"),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" ({})", app.assurance_target),
+                theme::label_style(),
+            ),
+        ]));
+    } else {
+        info_lines.push(Line::from(vec![
+            Span::styled("Boot:       ", label_style()),
+            Span::styled("—  → Assurance (d)", Style::default().fg(INFO)),
+        ]));
+    }
+
     f.render_widget(
         Paragraph::new(info_lines).block(content_block("System", app.theme())),
         area,

@@ -198,7 +198,45 @@ fn run_app<B: ratatui::backend::Backend>(
                         app.current_view = app::View::Profiles;
                         app.scroll_offset = 0;
                     }
+                    KeyCode::Char('d')
+                        if app.current_view == app::View::Assurance
+                            && !app.is_searching()
+                            && !key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
+                        let _ = app.load_assurance();
+                    }
+                    KeyCode::Char('t')
+                        if app.current_view == app::View::Assurance && !app.is_searching() =>
+                    {
+                        app.cycle_assurance_target();
+                    }
+                    KeyCode::Char('e')
+                        if app.current_view == app::View::Assurance
+                            && app.migration_report.is_some()
+                            && !app.is_searching() =>
+                    {
+                        match app.export_assurance_plan() {
+                            Ok(msg) => app.show_notification(msg),
+                            Err(e) => app.show_notification(format!("Export failed: {e:#}")),
+                        }
+                    }
                     KeyCode::Char('e') => app.toggle_export_menu(),
+                    KeyCode::Char(',')
+                        if !app.is_searching()
+                            && !app.show_help
+                            && !app.show_jump_menu
+                            && !app.show_palette =>
+                    {
+                        app.view_tab_scroll_left();
+                    }
+                    KeyCode::Char('.')
+                        if !app.is_searching()
+                            && !app.show_help
+                            && !app.show_jump_menu
+                            && !app.show_palette =>
+                    {
+                        app.view_tab_scroll_right();
+                    }
                     KeyCode::Char('s') => app.cycle_sort_mode(),
                     KeyCode::Char('x') if app.current_view == app::View::Files && !app.is_searching() => {
                         app.file_browser_extract();

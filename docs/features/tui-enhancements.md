@@ -94,7 +94,8 @@ Themes: `carbon` (default), `high-contrast`, `minimal` — set in `[ui] theme`.
 
 - **Progressive loading** — staged inspect with on-screen progress banner
 - **Real refresh** — `r` reloads current view; `Shift+R` full re-inspect; `auto_refresh_seconds` in config
-- **Command palette** — `:` for goto/export/refresh/pin
+- **Command palette** — `:` for goto/export/refresh/pin; `doctor`, `migrate-plan`, `export plan`, `goto assurance`
+- **Assurance view** (Security group) — boot gate + migration score; `d` doctor, `t` cycle target, `e` export fix plan YAML
 - **Pinned tabs** — configure `[views] pinned` in `tui.toml`; pin with palette `pin view`
 - **Layout modes** — `[` / `]` cycle list / split / detail (Issues view)
 - **Issue filters** — `f` cycles All / Critical / High / Medium; split detail pane with remediation
@@ -134,8 +135,10 @@ Shared design system and chrome refresh:
 | `{` / `}` | Previous/next group (Overview · System · Security) |
 | `Ctrl+P` | Jump menu (filter + scroll) |
 | `h` + `j`/`k` | Scroll full help |
+| `,` / `.` | Scroll view tab row when pinned+group tabs overflow |
+| `d` / `t` / `e` | In **Assurance**: run doctor, cycle kvm→proxmox→aws, export fix plan |
 
-Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `density = "compact"` or width &lt; `auto_compact_width` (default 100).
+Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `density = "compact"` or width &lt; `auto_compact_width` (default 100). Dashboard shows **Boot: N%** when assurance is loaded.
 
 ### Design system (`theme.rs`, `widgets.rs`)
 - **Chip navigation** — warm `┃ Group ┃` pills + pinned view highlights (`zyvor.dev` link color)
@@ -160,6 +163,7 @@ Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `den
 ### Views
 - **Dashboard** — 2-column grid, theme gauges/sparklines, health gauge + risk breakdown
 - **Issues** — donut summary, gauge breakdown, severity rails on findings list
+- **Assurance** — doctor boot gate, migration checklist, palette/`:` parity with CLI
 
 ### Configuration
 ```toml
@@ -171,6 +175,11 @@ density = "comfortable"    # comfortable | compact (tab labels)
 auto_compact_width = 100   # icon-only tabs below this width (unless density = compact)
 transparent = true         # glass panes (needs terminal transparency enabled)
 glass_opacity = 82         # 40–100, surface strength when transparent
+
+[behavior]
+default_migration_target = "kvm"
+assurance_on_startup = false   # run doctor when inspect finishes
+show_assurance_hint = true     # one-time palette/jump toast after load
 ```
 
 ## Future Enhancements

@@ -137,6 +137,15 @@ pub struct BehaviorConfig {
 
     /// Scroll amount for page up/down
     pub page_scroll_lines: usize,
+
+    /// Default migration target for assurance (`kvm`, `proxmox`, `aws`, …)
+    pub default_migration_target: String,
+
+    /// Run doctor/migrate scoring when the TUI finishes loading
+    pub assurance_on_startup: bool,
+
+    /// Show one-time onboarding toast after splash
+    pub show_assurance_hint: bool,
 }
 
 /// Keybindings configuration
@@ -178,6 +187,9 @@ impl Default for BehaviorConfig {
             search_regex_mode: false,
             max_bookmarks: 20,
             page_scroll_lines: 10,
+            default_migration_target: "kvm".to_string(),
+            assurance_on_startup: false,
+            show_assurance_hint: true,
         }
     }
 }

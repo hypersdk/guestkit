@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **TUI Assurance view** — Security-group panel for `doctor` boot gate and `migrate-plan` scoring; `d`/`t`/`e` keys; palette commands `doctor`, `migrate-plan`, `export plan`
+- **TUI config** — `[behavior]` `default_migration_target`, `assurance_on_startup`, `show_assurance_hint`
+- **TUI UX** — scrollable view tab row (`,` / `.`); compact density on Issues list rows; palette `goto` aliases for all views
+
+### Changed
+- **Dashboard** — boot score line when assurance data is loaded
+- **Docs** — TUI assurance keys in [tui-enhancements.md](../features/tui-enhancements.md); TUI parity in [migration-assurance.md](../features/migration-assurance.md)
+
 ## [0.3.5] - 2026-05-26
 
 ### Added
