@@ -10,6 +10,7 @@ pub mod fleet;
 pub mod icons;
 pub mod loading;
 pub mod palette;
+pub mod plan_preview;
 pub mod splash;
 pub mod theme;
 pub mod widgets;
@@ -142,6 +143,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         } else if app.file_filtering {
                             // Cancel file filter and clear it
                             app.cancel_file_filter();
+                        } else if app.show_plan_preview {
+                            app.close_plan_preview();
                         } else if app.show_palette {
                             app.toggle_palette();
                         } else if app.show_jump_menu {
@@ -194,7 +197,19 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Tab => app.next_view(),
                     KeyCode::BackTab => app.previous_view(),
                     KeyCode::Char('h') | KeyCode::F(1) => app.toggle_help(),
-                    KeyCode::Char('p') => {
+                    KeyCode::Char('a')
+                        if app.current_view == app::View::Dashboard && !app.is_searching() =>
+                    {
+                        app.go_to_assurance();
+                    }
+                    KeyCode::Char('p')
+                        if app.current_view == app::View::Assurance
+                            && app.migration_report.is_some()
+                            && !app.is_searching() =>
+                    {
+                        app.toggle_plan_preview();
+                    }
+                    KeyCode::Char('p') if !app.show_plan_preview => {
                         app.current_view = app::View::Profiles;
                         app.scroll_offset = 0;
                     }
@@ -306,7 +321,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.next_profile_tab();
                         }
                     KeyCode::Up => {
-                        if app.show_palette {
+                        if app.show_plan_preview {
+                            app.plan_preview_scroll_up();
+                        } else if app.show_palette {
                             if app.palette_selected > 0 {
                                 app.palette_selected -= 1;
                             }
@@ -321,7 +338,9 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                     }
                     KeyCode::Down => {
-                        if app.show_palette {
+                        if app.show_plan_preview {
+                            app.plan_preview_scroll_down();
+                        } else if app.show_palette {
                             let n = crate::cli::tui::palette::filtered_commands(&app.palette_query).len();
                             if n > 0 {
                                 app.palette_selected = (app.palette_selected + 1) % n;
@@ -360,14 +379,18 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::End => app.scroll_bottom(),
                     // Vim-style navigation
                     KeyCode::Char('k') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
-                        if app.show_help && !app.help_context {
+                        if app.show_plan_preview {
+                            app.plan_preview_scroll_up();
+                        } else if app.show_help && !app.help_context {
                             app.help_scroll_up();
                         } else {
                             app.scroll_up();
                         }
                     }
                     KeyCode::Char('j') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
-                        if app.show_help && !app.help_context {
+                        if app.show_plan_preview {
+                            app.plan_preview_scroll_down();
+                        } else if app.show_help && !app.help_context {
                             let visible = app.help_visible_lines();
                             app.help_scroll_down(app::App::FULL_HELP_LINES, visible);
                         } else {

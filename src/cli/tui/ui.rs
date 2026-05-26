@@ -82,6 +82,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         || app.show_file_info
         || app.show_jump_menu
         || app.show_palette
+        || app.show_plan_preview
         || (app.global_search && app.is_searching());
 
     if modal_open {
@@ -114,6 +115,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     if app.show_palette {
         draw_palette(f, app);
+    }
+
+    if app.show_plan_preview {
+        super::plan_preview::draw(f, app);
     }
 
     if app.global_search && app.is_searching() {
@@ -617,6 +622,18 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Export fix plan YAML (Assurance view, after load)                "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("p            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Preview fix plan operations (read-only modal)                      "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("a            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Open Assurance from Dashboard                                    "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
@@ -1894,8 +1911,8 @@ fn context_help_for_view(view: View) -> Vec<&'static str> {
         ],
         View::Assurance => vec![
             "Assurance — doctor boot gate + migrate-plan scoring.",
-            "d run doctor • t cycle target (kvm/proxmox/aws) • e export fix plan",
-            ": doctor or : migrate-plan from palette",
+            "d doctor • t target • p plan preview • e export YAML",
+            ": doctor · : plan preview · : export plan",
         ],
         _ => vec![
             "j/k or arrows scroll • Tab switch view • q quit",

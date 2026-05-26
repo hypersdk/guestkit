@@ -173,9 +173,9 @@ fn draw_migration(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     let hint = if app.migration_report.is_some() {
-        "d doctor  t target (kvm/proxmox/aws)  e export plan  ↑↓ scroll changes"
+        "d doctor  t target  p plan preview  e export  ↑↓ scroll changes"
     } else {
-        "d doctor  t target  e export plan (after load)"
+        "d doctor  t target  p preview / e export (after load)"
     };
     f.render_widget(
         Paragraph::new(Line::from(Span::styled(hint, theme::label_style()))),
