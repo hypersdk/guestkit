@@ -111,7 +111,7 @@ fn draw_package_detail(f: &mut Frame, area: Rect, app: &App) {
     };
     f.render_widget(
         Paragraph::new(lines)
-            .block(content_block("Package detail"))
+            .block(content_block("Package detail", app.theme()))
             .wrap(ratatui::widgets::Wrap { trim: true }),
         area,
     );

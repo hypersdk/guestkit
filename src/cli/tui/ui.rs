@@ -4,13 +4,14 @@
 use super::app::{App, JumpMenuRow, View};
 use std::path::Path;
 use super::cache;
-use super::theme::{self, fill_background, key_muted, key_primary, pane_block, pane_block_with_border, risk_border_color};
+use super::theme::{self, fill_background, key_muted, key_primary, pane_block, risk_border_color};
 use super::widgets::{self, progress_bar, stat_chip, truncate_path};
 use super::views;
 pub use super::theme::{
-    content_block, ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR,
-    focus_style, INFO_COLOR, label_style, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, SURFACE,
-    TEXT_COLOR, TEXT_MUTED, value_style, WARNING_COLOR,
+    chrome_footer_style, chrome_header_block, content_block, group_tab_span, modal_block,
+    tab_strip_block, toast_block, view_tab_span, ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR,
+    DARK_ORANGE, ERROR_COLOR, focus_style, INFO_COLOR, label_style, LIGHT_ORANGE, LINK, ORANGE,
+    SUCCESS_COLOR, SURFACE, SURFACE_RAISED, TEXT_COLOR, TEXT_MUTED, value_style, WARNING_COLOR,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -25,7 +26,8 @@ use ratatui::{
 pub fn draw(f: &mut Frame, app: &mut App) {
     app.terminal_width = f.area().width;
     app.terminal_height = f.area().height;
-    f.render_widget(fill_background(), f.area());
+    let th = app.theme();
+    f.render_widget(fill_background(th), f.area());
     let root = f.area();
     let content_root = if app.fleet_active() {
         let cols = Layout::default()
@@ -83,7 +85,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         || (app.global_search && app.is_searching());
 
     if modal_open {
-        widgets::render_dim_layer(f, f.area());
+        widgets::render_dim_layer(f, f.area(), th);
     }
 
     if app.show_help {
@@ -135,7 +137,7 @@ fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
     for (i, path) in app.fleet_images.iter().enumerate() {
         let name = super::fleet::fleet_label(Path::new(path));
         let style = if i == app.fleet_index {
-            theme::focus_style()
+            theme::focus_style(app.theme())
         } else {
             Style::default().fg(TEXT_MUTED)
         };
@@ -146,7 +148,7 @@ fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
         ]));
     }
     lines.push(Line::from(Span::styled("N / P", theme::label_style())));
-    let block = Paragraph::new(lines).block(pane_block("Images", false));
+    let block = Paragraph::new(lines).block(pane_block("Images", false, app.theme()));
     f.render_widget(block, area);
 }
 
@@ -162,7 +164,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let mut line1 = vec![
         Span::styled("GuestKit", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
         Span::styled(" · ", theme::label_style()),
-        Span::styled("Zyvor", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled("zyvor.dev", Style::default().fg(LINK).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
         Span::styled("  │  ", theme::label_style()),
         Span::raw(format!("{} ", view_icon)),
         Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
@@ -193,7 +195,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let (critical, high, medium) = app.get_risk_summary();
     let header_border = risk_border_color(critical, high, medium);
     let header = Paragraph::new(vec![Line::from(line1), Line::from(line2)])
-        .block(pane_block_with_border(" HyperSDK · zyvor.dev ", header_border));
+        .block(chrome_header_block(" HyperSDK · offline inspect ", header_border, app.theme()));
 
     f.render_widget(header, area);
 }
@@ -203,20 +205,20 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
     let emoji = theme::use_emoji(&app.config.ui);
 
     let mut spans = vec![
-        stat_chip("Pkgs", &app.packages.package_count.to_string(), SUCCESS_COLOR),
+        stat_chip("Pkgs", &app.packages.package_count.to_string(), SUCCESS_COLOR, app.theme()),
         Span::raw(" "),
-        stat_chip("Svcs", &app.services.len().to_string(), SUCCESS_COLOR),
+        stat_chip("Svcs", &app.services.len().to_string(), SUCCESS_COLOR, app.theme()),
         Span::raw(" "),
-        stat_chip("Users", &app.users.len().to_string(), INFO_COLOR),
+        stat_chip("Users", &app.users.len().to_string(), INFO_COLOR, app.theme()),
         Span::raw(" "),
         Span::styled(" Risk ", theme::label_style()),
     ];
     spans.extend(widgets::risk_dots(critical, high, medium, emoji));
     spans.push(Span::raw(" "));
-    spans.push(stat_chip("Bm", &app.bookmarks.len().to_string(), INFO_COLOR));
+    spans.push(stat_chip("Bm", &app.bookmarks.len().to_string(), INFO_COLOR, app.theme()));
 
     let stats = Paragraph::new(Line::from(spans))
-        .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
+        .style(chrome_footer_style(app.theme()));
 
     f.render_widget(stats, area);
 }
@@ -236,45 +238,31 @@ fn draw_group_tabs(f: &mut Frame, area: Rect, app: &App) {
     let mut spans: Vec<Span> = Vec::new();
     for (i, group) in View::all_groups().iter().enumerate() {
         if i > 0 {
-            spans.push(Span::styled(" │ ", theme::label_style()));
+            spans.push(Span::styled(" ", Style::default().bg(app.theme().tab_strip_bg)));
         }
-        let selected = *group == current;
-        if selected {
-            spans.push(Span::styled(
-                format!("▸ {group} "),
-                theme::focus_style().add_modifier(Modifier::UNDERLINED),
-            ));
-        } else {
-            spans.push(Span::styled(
-                format!("  {group}  "),
-                Style::default().fg(TEXT_MUTED),
-            ));
-        }
+        spans.push(group_tab_span(group, *group == current, app.theme()));
     }
-    let block = Paragraph::new(Line::from(spans)).block(pane_block("Groups", false));
+    let block = Paragraph::new(Line::from(spans)).block(tab_strip_block("Groups", app.theme()));
     f.render_widget(block, area);
 }
 
 fn draw_view_tabs(f: &mut Frame, area: Rect, app: &App) {
+    let entries = app.view_tab_entries();
+    let pinned: std::collections::HashSet<View> = app.pinned_view_list().into_iter().collect();
     let mut tab_spans: Vec<Span> = Vec::new();
-    for (i, (view, title)) in app.view_tab_entries().iter().enumerate() {
+    for (i, (view, title)) in entries.iter().enumerate() {
         if i > 0 {
             tab_spans.push(Span::raw(" "));
         }
-        let selected = *view == app.current_view;
-        if selected {
-            tab_spans.push(Span::styled(
-                format!("▸ {title} "),
-                theme::focus_style().add_modifier(Modifier::UNDERLINED),
-            ));
-        } else {
-            tab_spans.push(Span::styled(
-                format!("  {title}  "),
-                Style::default().fg(TEXT_MUTED),
-            ));
-        }
+        let is_pinned = pinned.contains(view);
+        tab_spans.push(view_tab_span(
+            title,
+            *view == app.current_view,
+            is_pinned,
+            app.theme(),
+        ));
     }
-    let tabs = Paragraph::new(Line::from(tab_spans)).block(pane_block("Views", false));
+    let tabs = Paragraph::new(Line::from(tab_spans)).block(tab_strip_block("Views", app.theme()));
     f.render_widget(tabs, area);
 }
 
@@ -297,7 +285,7 @@ fn draw_loading_banner(f: &mut Frame, app: &App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(ACCENT))
-                    .style(Style::default().bg(SURFACE)),
+                    .style(Style::default().bg(app.theme().surface)),
             ),
             area,
         );
@@ -307,14 +295,7 @@ fn draw_loading_banner(f: &mut Frame, app: &App) {
 fn draw_palette(f: &mut Frame, app: &App) {
     let area = centered_rect(70, 60, f.area());
     f.render_widget(ratatui::widgets::Clear, area);
-    f.render_widget(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ACCENT))
-            .title(" Command palette ")
-            .style(Style::default().bg(SURFACE)),
-        area,
-    );
+    f.render_widget(modal_block(" Command palette ", app.theme()), area);
     let inner = Rect {
         x: area.x + 2,
         y: area.y + 1,
@@ -328,9 +309,9 @@ fn draw_palette(f: &mut Frame, app: &App) {
     ])];
     for (i, (name, desc)) in cmds.iter().take(inner.height as usize - 2).enumerate() {
         let style = if i == app.palette_selected {
-            theme::focus_style()
+            focus_style(app.theme())
         } else {
-            Style::default().fg(TEXT_COLOR)
+            Style::default().fg(TEXT_COLOR).bg(app.theme().surface_raised)
         };
         lines.push(Line::from(vec![
             Span::styled(format!("  {}  ", name), style),
@@ -421,7 +402,12 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
     };
 
     let footer = Paragraph::new(Line::from(footer_spans))
-        .style(Style::default().bg(SURFACE).fg(TEXT_COLOR));
+        .style(chrome_footer_style(app.theme()))
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(BORDER_COLOR)),
+        );
 
     f.render_widget(footer, area);
 }
@@ -441,7 +427,7 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(ACCENT))
                     .title(format!(" Help: {} ", app.current_view.title()))
-                    .style(Style::default().bg(SURFACE)),
+                    .style(Style::default().bg(app.theme().surface)),
             )
             .wrap(ratatui::widgets::Wrap { trim: true });
         f.render_widget(block, area);
@@ -1562,13 +1548,7 @@ fn draw_notification(f: &mut Frame, app: &App) {
             message.clone(),
             theme::value_style(),
         )))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(ACCENT))
-                .title(" notice ")
-                .style(Style::default().bg(SURFACE)),
-        )
+        .block(toast_block(app.theme()))
         .alignment(Alignment::Center);
 
         f.render_widget(ratatui::widgets::Clear, area);
@@ -1591,7 +1571,7 @@ fn draw_global_search(f: &mut Frame, app: &App) {
     }
     for (i, hit) in app.global_search_hits.iter().take(12).enumerate() {
         let style = if i == app.global_search_selected {
-            theme::focus_style()
+            theme::focus_style(app.theme())
         } else {
             Style::default().fg(TEXT_COLOR)
         };
@@ -1600,13 +1580,7 @@ fn draw_global_search(f: &mut Frame, app: &App) {
             Span::styled(&hit.label, style),
         ]));
     }
-    let block = Paragraph::new(lines).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ACCENT))
-            .title(" Ctrl+Shift+P ")
-            .style(Style::default().bg(SURFACE)),
-    );
+    let block = Paragraph::new(lines).block(modal_block(" Global search ", app.theme()));
     f.render_widget(block, area);
 }
 
@@ -1637,7 +1611,7 @@ fn draw_jump_menu(f: &mut Frame, app: &mut App) {
                 let line = if is_selected {
                     Line::from(vec![
                         Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                        Span::styled(title.as_str(), theme::focus_style()),
+                        Span::styled(title.as_str(), theme::focus_style(app.theme())),
                     ])
                 } else {
                     Line::from(vec![
@@ -1657,17 +1631,21 @@ fn draw_jump_menu(f: &mut Frame, app: &mut App) {
         .take(visible_height.max(1))
         .collect();
 
-    let list = List::new(items).block(
-        Block::default()
-            .title(vec![
-                Span::styled(" 🚀 Quick Jump ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.jump_query, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-                Span::raw(" "),
-            ])
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE)),
-    )
-    .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+    let query = if app.jump_query.is_empty() {
+        "type to filter…".to_string()
+    } else {
+        app.jump_query.clone()
+    };
+    let list = List::new(items)
+        .block(
+            modal_block(" Quick Jump ", app.theme())
+                .title(vec![
+                    Span::styled(" filter: ", Style::default().fg(TEXT_MUTED)),
+                    Span::styled(query, Style::default().fg(LINK).add_modifier(Modifier::BOLD)),
+                    Span::raw(" "),
+                ]),
+        )
+        .style(Style::default().bg(app.theme().surface_raised).fg(TEXT_COLOR));
 
     let help_text = vec![
         Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
@@ -1687,9 +1665,16 @@ fn draw_jump_menu(f: &mut Frame, app: &mut App) {
                 .border_style(Style::default().fg(DARK_ORANGE)),
         )
         .alignment(Alignment::Center)
-        .style(Style::default().bg(Color::Black).fg(TEXT_COLOR));
+        .style(Style::default().bg(app.theme().surface).fg(TEXT_MUTED));
 
     f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ACCENT))
+            .style(Style::default().bg(app.theme().surface_raised)),
+        area,
+    );
     f.render_widget(list, chunks[0]);
     f.render_widget(help, chunks[1]);
 }

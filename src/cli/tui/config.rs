@@ -62,6 +62,18 @@ pub struct UiConfig {
     /// Terminal width below which tab labels switch to compact (icon-only) mode
     #[serde(default = "default_auto_compact_width")]
     pub auto_compact_width: u16,
+
+    /// Let the terminal background show through (enable transparency in your terminal)
+    #[serde(default = "default_true")]
+    pub transparent: bool,
+
+    /// Surface opacity 40–100 when `transparent` is on (Zellij-style glass; default 82)
+    #[serde(default = "default_glass_opacity")]
+    pub glass_opacity: u8,
+}
+
+fn default_glass_opacity() -> u8 {
+    82
 }
 
 fn default_auto_compact_width() -> u16 {
@@ -151,6 +163,8 @@ impl Default for UiConfig {
             show_emoji: true,
             density: "comfortable".to_string(),
             auto_compact_width: default_auto_compact_width(),
+            transparent: true,
+            glass_opacity: default_glass_opacity(),
         }
     }
 }

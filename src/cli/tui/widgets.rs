@@ -2,7 +2,7 @@
 //! Shared TUI widgets — chips, list rows, empty states, progress, severity.
 
 use super::app::App;
-use super::theme::{self, ACCENT, BORDER_MUTED, ERROR, SUCCESS, SURFACE, SURFACE_RAISED, TEXT_MUTED, WARNING};
+use super::theme::{self, ACCENT, BORDER_MUTED, ERROR, SUCCESS, TEXT_MUTED, WARNING};
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -11,13 +11,18 @@ use ratatui::{
     Frame,
 };
 
-/// Muted stat chip: `Pkgs 1247`
-pub fn stat_chip<'a>(label: &'a str, value: &str, value_color: Color) -> Span<'a> {
+/// Muted stat chip: `│ Pkgs 1247 │`
+pub fn stat_chip<'a>(
+    label: &'a str,
+    value: &str,
+    value_color: Color,
+    t: &theme::ResolvedTheme,
+) -> Span<'a> {
     Span::styled(
-        format!(" {} {} ", label, value),
+        format!("│ {label} {value} │"),
         Style::default()
             .fg(value_color)
-            .bg(SURFACE_RAISED)
+            .bg(t.chip_bg)
             .add_modifier(Modifier::BOLD),
     )
 }
@@ -57,24 +62,32 @@ pub fn severity_prefix(level: Option<char>, selected: bool) -> (String, Color) {
     }
 }
 
-pub fn list_line_spans(selected: bool, severity: Option<char>, parts: Vec<Span<'_>>) -> Line<'_> {
+pub fn list_line_spans(
+    selected: bool,
+    severity: Option<char>,
+    parts: Vec<Span<'_>>,
+    t: &theme::ResolvedTheme,
+) -> Line<'static> {
     let (bar, bar_color) = severity_prefix(severity, selected);
     let mut spans = vec![Span::styled(bar, Style::default().fg(bar_color))];
     let row_style = if selected {
         Style::default()
-            .bg(SURFACE_RAISED)
+            .bg(t.selection)
             .fg(ACCENT)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default()
     };
     for part in parts {
-        spans.push(Span::styled(part.content, part.style.patch(row_style)));
+        spans.push(Span::styled(
+            part.content.to_string(),
+            part.style.patch(row_style),
+        ));
     }
     Line::from(spans)
 }
 
-pub fn empty_state<'a>(title: &'a str, hint: &'a str) -> Paragraph<'a> {
+pub fn empty_state<'a>(title: &'a str, hint: &'a str, t: &theme::ResolvedTheme) -> Paragraph<'a> {
     let art = [
         "    ┌──────────────┐",
         "    │   no data    │",
@@ -88,7 +101,7 @@ pub fn empty_state<'a>(title: &'a str, hint: &'a str) -> Paragraph<'a> {
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_MUTED))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(t.surface)),
     )
 }
 
@@ -135,8 +148,8 @@ pub fn truncate_path(path: &str, max: usize) -> String {
     }
 }
 
-pub fn render_dim_layer(f: &mut Frame, area: Rect) {
-    let block = Block::default().style(Style::default().bg(Color::Rgb(6, 8, 11)));
+pub fn render_dim_layer(f: &mut Frame, area: Rect, t: &theme::ResolvedTheme) {
+    let block = Block::default().style(Style::default().bg(t.dim_overlay));
     f.render_widget(block, area);
 }
 

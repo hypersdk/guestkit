@@ -167,7 +167,7 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     ];
 
     f.render_widget(
-        Paragraph::new(summary_lines).block(content_block("Issues summary")),
+        Paragraph::new(summary_lines).block(content_block("Issues summary", app.theme())),
         chunks[0],
     );
 
@@ -192,7 +192,7 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     .iter()
     .enumerate()
     {
-        let g = theme::gauge_widget(label, pct(*n), &format!("{n}"), *color);
+        let g = theme::gauge_widget(label, pct(*n), &format!("{n}"), *color, app.theme());
         f.render_widget(g, row[i]);
     }
 }
@@ -235,6 +235,7 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
                         Span::raw(" · "),
                         Span::styled(&row.item, Style::default().fg(TEXT)),
                     ],
+                    app.theme(),
                 ),
                 Line::from(vec![
                     Span::raw(" "),
@@ -246,7 +247,7 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
         .take(area.height.saturating_sub(2) as usize)
         .collect();
 
-    let list = List::new(items).block(content_block("Findings"));
+    let list = List::new(items).block(content_block("Findings", app.theme()));
     f.render_widget(list, area);
 }
 
@@ -296,7 +297,7 @@ fn draw_issue_detail(f: &mut Frame, area: Rect, app: &App) {
 
     f.render_widget(
         Paragraph::new(detail)
-            .block(content_block("Detail"))
+            .block(content_block("Detail", app.theme()))
             .wrap(ratatui::widgets::Wrap { trim: true }),
         area,
     );

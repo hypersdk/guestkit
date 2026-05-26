@@ -68,7 +68,7 @@ pub fn run_tui<P: AsRef<Path>>(
 
     // Show splash screen if enabled
     if config.ui.show_splash {
-        terminal.draw(splash::draw_splash)?;
+        terminal.draw(|f| splash::draw_splash(f, &config.ui))?;
         std::thread::sleep(Duration::from_millis(config.ui.splash_duration_ms));
     }
 
