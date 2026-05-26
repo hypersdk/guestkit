@@ -1,7 +1,7 @@
 # 🔧 Offline Patch & Fix Preview Mode
 
 **Status:** Phase 1 Complete (Foundation)
-**Version:** 0.3.1+
+**Version:** 0.3.6+
 **Last Updated:** 2026-01-27
 
 ## Overview
@@ -432,7 +432,8 @@ Rollback: Available for all operations
 - ✅ **`guestkit repair --fix boot`** — doctor-driven boot repair loop
 - ✅ **`guestkit migrate-plan --export`** — migration scoring → fix plan
 - ⏳ **Progress tracking during apply** (Phase 2 polish)
-- ⏳ **TUI integration** (Phase 3)
+- ✅ **TUI preview** (Phase 3 partial) — read-only operation list from Assurance (`p`, `: plan preview`)
+- ⏳ **TUI apply** (Phase 3) — apply/rollback with write mount and progress UI
 
 ## Roadmap
 
@@ -443,10 +444,10 @@ Rollback: Available for all operations
 - ⏳ Error handling hardening
 
 ### Phase 3: TUI Integration
-- Interactive plan viewer
-- Checkbox operation selection
-- Real-time preview
-- Apply from TUI
+- ✅ Read-only plan preview in Assurance view (v0.3.6)
+- ✅ Export fix plan from TUI (`e`, `: export plan`)
+- ⏳ Checkbox operation selection
+- ⏳ Apply from TUI (requires write mount + backups)
 
 ### Phase 4: Advanced Features
 - Plan merging and composition

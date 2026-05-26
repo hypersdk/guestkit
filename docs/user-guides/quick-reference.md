@@ -56,14 +56,31 @@ guestkit repair vm.qcow2 --fix boot --dry-run
 
 Details: [migration-assurance.md](../features/migration-assurance.md)
 
-## TUI (`guestkit tui IMAGE`)
+## TUI (`guestctl tui IMAGE`)
 
 | Keys | Action |
 |------|--------|
-| `Tab` | Next view in group · `{`/`}` groups · `Ctrl+P` jump |
-| `h` | Help (scroll with `j`/`k`) |
+| `Tab` / `Shift+Tab` | Next/prev view in current group |
+| `{` / `}` | Previous/next group (Overview · System · Security) |
+| `Ctrl+P` | Jump menu (all views, filter + scroll) |
+| `Ctrl+Shift+P` | Global search (packages, boot blockers, migration items, …) |
+| `:` | Command palette (`doctor`, `migrate-plan`, `export plan`, `goto assurance`) |
+| `,` / `.` | Scroll view tab row when tabs overflow |
+| `h` / `?` | Full help / context help for current view |
 
-[zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [tui-enhancements.md](../features/tui-enhancements.md)
+### Assurance view (Security group)
+
+| Keys | Action |
+|------|--------|
+| `d` | Run doctor (boot gate + migration score) |
+| `t` | Cycle target: kvm → proxmox → aws |
+| `p` | Read-only fix-plan preview (after load) |
+| `e` | Export fix plan YAML to cwd |
+| `a` | From **Dashboard**: open Assurance |
+
+Config: `~/.config/guestkit/tui.toml` — `default_migration_target`, `assurance_on_startup`, `density`, glass theme.
+
+[zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [tui-enhancements.md](../features/tui-enhancements.md) · [migration-assurance.md](../features/migration-assurance.md)
 
 ## 🎯 Common Commands
 

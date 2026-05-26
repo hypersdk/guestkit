@@ -1,14 +1,15 @@
-# GuestCtl CLI Guide (v0.3.1)
+# GuestCtl CLI Guide (v0.3.6)
 
-`guestkit` is a command-line tool for inspecting and manipulating virtual machine disk images without mounting them.
+`guestkit` / `guestctl` inspect and manipulate VM disk images offline — including **migration assurance** and an interactive **TUI**.
 
-## What's New in v0.3.1
+## What's New in v0.3.6
 
-- **🎯 Killer Summary View**: Quick boxed summary showing OS, architecture, hostname at a glance
-- **🪟 Windows Registry Parsing**: Full Windows version detection via direct registry access
-- **🔄 VM Migration Support**: Universal fstab/crypttab rewriter for cross-platform migration
-- **💾 Smart LVM Cleanup**: Automatic LVM volume group cleanup during shutdown
-- **🔄 Loop Device Primary**: Built-in support for RAW/IMG/ISO formats without kernel modules
+- **TUI Assurance view** — `doctor` + `migrate-plan` in the Security group (`d`/`t`/`e`, dashboard `a`)
+- **Fix-plan preview** — read-only operation modal (`p`, `: plan preview`) before export
+- **Palette & search** — `: doctor`, `: migrate-plan`, global search for boot blockers and migration items
+- **Tab UX** — scroll overflowing view tabs with `,` / `.`; compact list density in `tui.toml`
+
+Earlier highlights (v0.3.5): `guestkit doctor`, `migrate-plan --export`, `fleet analyze`, `forensic-diff`, `repair --fix boot`. See [CHANGELOG](../development/CHANGELOG.md).
 
 ## Installation
 
@@ -100,6 +101,33 @@ guestkit --trace inspect disk.raw
 guestkit --trace inspect disk.qcow2
 # Output: "guestfs: using NBD for qcow2/vmdk/vdi/vhd disk format"
 ```
+
+## Migration assurance (CLI)
+
+| Command | Purpose |
+|---------|---------|
+| `guestkit doctor IMAGE --target kvm` | Boot probability, blockers, `--explain` root cause |
+| `guestkit migrate-plan IMAGE --target proxmox` | Migration score, drivers, required changes |
+| `guestkit migrate-plan IMAGE --target aws --export plan.yaml` | Export executable fix plan |
+| `guestkit policy check IMAGE --policy FILE` | Policy DSL over evidence |
+| `guestkit fleet analyze ./vms/` | Cluster posture |
+| `guestkit forensic-diff OLD NEW` | Snapshot drift |
+| `guestkit repair IMAGE --fix boot` | Apply boot fix plan + re-validate |
+
+Details: [migration-assurance.md](../features/migration-assurance.md) · [vm-migration.md](vm-migration.md)
+
+## TUI (`guestctl tui IMAGE`)
+
+Interactive carbon-themed dashboard (19 views, three groups). **Assurance** mirrors CLI doctor/migrate-plan without a second guest mount when guestfs is already open.
+
+| Keys | Action |
+|------|--------|
+| `:` | Palette — `doctor`, `goto assurance`, `migrate-plan`, `export plan`, `plan preview` |
+| `d` / `t` / `p` / `e` | In Assurance: doctor, cycle target, preview plan, export YAML |
+| `a` | From Dashboard: open Assurance |
+| `Ctrl+Shift+P` | Global search (includes boot blockers, migration checklist) |
+
+Config: `~/.config/guestkit/tui.toml`. Full key map: [tui-enhancements.md](../features/tui-enhancements.md).
 
 ## Commands
 

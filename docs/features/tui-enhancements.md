@@ -94,7 +94,7 @@ Themes: `carbon` (default), `high-contrast`, `minimal` — set in `[ui] theme`.
 
 - **Progressive loading** — staged inspect with on-screen progress banner
 - **Real refresh** — `r` reloads current view; `Shift+R` full re-inspect; `auto_refresh_seconds` in config
-- **Command palette** — `:` for goto/export/refresh/pin; `doctor`, `migrate-plan`, `export plan`, `goto assurance`
+- **Command palette** — `:` for goto/export/refresh/pin; `doctor`, `migrate-plan`, `export plan`, `plan preview`, `goto assurance`
 - **Assurance view** (Security group) — boot gate + migration score; `d` doctor, `t` cycle target, `e` export fix plan YAML
 - **Pinned tabs** — configure `[views] pinned` in `tui.toml`; pin with palette `pin view`
 - **Layout modes** — `[` / `]` cycle list / split / detail (Issues view)
@@ -165,7 +165,7 @@ Row 1: groups. Row 2: `★` pinned + views in active group. Compact labels: `den
 ### Views
 - **Dashboard** — 2-column grid, theme gauges/sparklines, health gauge + risk breakdown
 - **Issues** — donut summary, gauge breakdown, severity rails on findings list
-- **Assurance** — doctor boot gate, migration checklist, palette/`:` parity with CLI
+- **Assurance** — doctor boot gate, migration checklist, fix-plan preview modal, palette/`:` parity with CLI
 
 ### Configuration
 ```toml

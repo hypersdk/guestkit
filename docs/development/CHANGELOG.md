@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-05-27
+
 ### Added
 - **TUI fix-plan preview** — read-only modal of migration plan operations (`p` in Assurance, `: plan preview`)
 - **TUI Assurance shortcuts** — dashboard `a` opens Assurance; global search indexes boot blockers and migration items
@@ -16,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Dashboard** — boot score line when assurance data is loaded
-- **Docs** — TUI assurance keys in [tui-enhancements.md](../features/tui-enhancements.md); TUI parity in [migration-assurance.md](../features/migration-assurance.md)
+- **Documentation** — TUI assurance, quick reference, CLI guide, fix-plans Phase 3 status, migration-assurance TUI parity
 
 ## [0.3.5] - 2026-05-26
 

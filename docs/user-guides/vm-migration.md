@@ -46,6 +46,8 @@ guestkit doctor vm.vmdk --target proxmox
 
 See [Migration assurance](../features/migration-assurance.md) for `fleet analyze`, `policy check`, and `forensic-diff`.
 
+**TUI:** `guestctl tui vm.qcow2` → Security → **Assurance** (or Dashboard **`a`**, palette `: doctor`). Preview operations with **`p`** before exporting `migrate-plan --export`.
+
 ### Basic Migration Workflow
 
 ```bash

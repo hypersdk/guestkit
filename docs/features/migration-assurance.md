@@ -177,4 +177,4 @@ use guestkit::cli::migrate::plan::compute_migration_score;
 - [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, hyper2kvm handoff
 - [Fix plans](fix-plans.md) — preview, export, apply
 - [Security profiles](../user-guides/profiles.md) — migration and windows-migration profiles
-- [Changelog](../development/CHANGELOG.md) — unreleased assurance features
+- [Changelog](../development/CHANGELOG.md) — v0.3.5+ assurance CLI; v0.3.6 TUI parity
