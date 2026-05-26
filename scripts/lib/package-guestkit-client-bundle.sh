@@ -119,6 +119,9 @@ README_EOF
         fi
     done
 
+    chmod +x "${lib}/finalize-customer-bundle.sh"
+    "${lib}/finalize-customer-bundle.sh" "${stage}" "${build_dir}" "GuestKit" "${version}" || return 1
+
     echo "Customer bundle OK"
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install cluster prerequisites: Cilium (when applicable), metrics-server, KubeVirt, CDI.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 export PKG_INSTALL_ROOT="${ROOT}"
 # shellcheck source=/dev/null

@@ -40,4 +40,19 @@ package_bundle_customer_docs() {
     [[ -f "${lib}/START_HERE.txt" ]] && cp "${lib}/START_HERE.txt" "${stage}/"
     [[ -f "${build_dir}/scripts/zyvor-branding/ZYVOR_INSTALL.txt" ]] && \
         cp "${build_dir}/scripts/zyvor-branding/ZYVOR_INSTALL.txt" "${stage}/" 2>/dev/null || true
+
+    package_bundle_customer_pdfs "${stage}" "${build_dir}" "${product}"
+}
+
+# Branded PDF copies of customer .txt docs → docs/pdf/ + docs/zyvor-logo.png
+package_bundle_customer_pdfs() {
+    local stage="$1" build_dir="$2" product="$3"
+    local version="${4:-${V9S_PACKAGE_VERSION:-latest}}"
+    local lib="${build_dir}/scripts/lib"
+    if [[ ! -x "${lib}/generate-customer-pdfs.sh" ]]; then
+        echo "WARN: missing ${lib}/generate-customer-pdfs.sh — skipping PDF docs" >&2
+        return 0
+    fi
+    chmod +x "${lib}/generate-customer-pdfs.sh"
+    "${lib}/generate-customer-pdfs.sh" "${stage}" "${build_dir}" "${product}" "${version}"
 }

@@ -250,6 +250,17 @@ cargo test && cargo clippy && cargo fmt
 
 Bug reports and PRs welcome on GitHub. See [Contributing](docs/development/CONTRIBUTING.md).
 
+## Enterprise
+
+| | |
+|---|---|
+| **Demo** | [zyvor.dev/demo](https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit) |
+| **ROI** | [zyvor.dev/roi](https://zyvor.dev/roi?utm_source=github&utm_medium=guestkit) |
+| **Pricing** | [zyvor.dev/pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit) |
+| **Contact** | [zyvor.dev/contact](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit) · [sales@zyvor.dev](mailto:sales@zyvor.dev) |
+
+Community Edition covers offline inspect and repair on individual disks. Fleet programs, dashboard, RBAC, and SLAs → contact Zyvor. [CE vs Enterprise](docs/ce-vs-enterprise.md).
+
 ## License
 
 **LGPL-3.0-or-later** — commercial use allowed; modifications to GuestKit itself must stay open under LGPL. See [LICENSE](LICENSE).
