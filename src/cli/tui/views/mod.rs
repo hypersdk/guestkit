@@ -2,6 +2,7 @@
 //! TUI view modules
 
 pub mod analytics;
+pub mod assurance;
 pub mod dashboard;
 pub mod databases;
 pub mod files;

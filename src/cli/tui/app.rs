@@ -78,6 +78,7 @@ pub enum View {
     Kernel,
     Logs,
     Profiles,
+    Assurance,
     Files,
 }
 
@@ -149,6 +150,7 @@ impl View {
             View::Kernel => "Kernel",
             View::Logs => "Logs",
             View::Profiles => "Profiles",
+            View::Assurance => "Assurance",
             View::Files => "Files",
         }
     }
@@ -172,6 +174,7 @@ impl View {
             View::Kernel,
             View::Logs,
             View::Profiles,
+            View::Assurance,
             View::Files,
         ]
     }
@@ -397,6 +400,14 @@ pub struct App {
     pub fleet_images: Vec<String>,
     pub fleet_index: usize,
 
+    /// Migration assurance (doctor / migrate-plan)
+    pub boot_report: Option<crate::boot::BootabilityReport>,
+    pub migration_report: Option<crate::cli::migrate::plan::MigrationScoreReport>,
+    pub assurance_evidence: Option<crate::evidence::EvidenceSnapshot>,
+    pub assurance_target: String,
+    /// First visible tab index in the view tab row
+    pub view_tab_scroll: usize,
+
     /// Resolved colors (glass / transparency from `tui.toml`)
     pub resolved_theme: super::theme::ResolvedTheme,
 }
@@ -428,6 +439,7 @@ impl App {
     ) -> Self {
         let pinned_views = config.views.pinned.clone();
         let resolved_theme = super::theme::resolve(&config.ui);
+        let assurance_target = config.behavior.default_migration_target.clone();
 
         Self {
             current_view,
@@ -558,6 +570,11 @@ impl App {
             last_auto_refresh: Instant::now(),
             fleet_images: Vec::new(),
             fleet_index: 0,
+            boot_report: None,
+            migration_report: None,
+            assurance_evidence: None,
+            assurance_target,
+            view_tab_scroll: 0,
             resolved_theme,
         }
     }
@@ -1117,6 +1134,11 @@ impl App {
                 View::WebServers => self.web_servers.len(),
                 View::Kernel => self.kernel_modules.len(),
                 View::Storage => self.fstab.len(),
+                View::Assurance => self
+                    .migration_report
+                    .as_ref()
+                    .map(|m| m.required_changes.len())
+                    .unwrap_or(0),
                 _ => 0,
             }
         }
@@ -1237,6 +1259,7 @@ impl App {
             View::Kernel => "kernel",
             View::Logs => "logs",
             View::Profiles => "profiles",
+            View::Assurance => "assurance",
             View::Files => "files",
         };
         self.export_filename = format!(
@@ -1557,6 +1580,12 @@ impl App {
                     "files": files,
                 })
             }
+            View::Assurance => json!({
+                "view": "assurance",
+                "target": self.assurance_target,
+                "bootability": self.boot_report,
+                "migration_score": self.migration_report,
+            }),
         }
     }
 
@@ -1629,7 +1658,7 @@ impl App {
 
     fn handle_view_tab_click(&mut self, column: u16) {
         let mut x: u16 = 2;
-        for (view, title) in self.view_tab_entries() {
+        for (view, title) in self.view_tab_entries().into_iter().skip(self.view_tab_scroll) {
             let marker = if view == self.current_view { "▸ " } else { "  " };
             let label = format!("{}{} ", marker, title);
             let width = label.chars().count() as u16;
@@ -2693,7 +2722,7 @@ mod tests {
     #[test]
     fn test_view_all() {
         let all_views = View::all();
-        assert_eq!(all_views.len(), 18);
+        assert_eq!(all_views.len(), 19);
         assert!(all_views.contains(&View::Dashboard));
         assert!(all_views.contains(&View::Analytics));
         assert!(all_views.contains(&View::Files));
@@ -2720,6 +2749,7 @@ mod tests {
         assert!(all_views.contains(&View::Kernel));
         assert!(all_views.contains(&View::Logs));
         assert!(all_views.contains(&View::Profiles));
+        assert!(all_views.contains(&View::Assurance));
         assert!(all_views.contains(&View::Files));
     }
 

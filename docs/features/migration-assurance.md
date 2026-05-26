@@ -31,6 +31,10 @@ Disk image (QCOW2/VMDK/…)
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
 
+### TUI parity
+
+The **Assurance** view in `guestctl tui` reuses the same evidence → boot → migration pipeline as `doctor` and `migrate-plan` (no second guest mount when the TUI already has guestfs open). Open it from the Security group, the command palette (`doctor`, `goto assurance`), or the dashboard boot line. Keys: `d` refresh doctor, `t` cycle target (`kvm` / `proxmox` / `aws`), `e` export fix plan YAML to the current directory. Configure `default_migration_target` and `assurance_on_startup` under `[behavior]` in `tui.toml`.
+
 ## Commands
 
 ### `guestkit doctor` — boot probability

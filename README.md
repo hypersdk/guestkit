@@ -63,7 +63,7 @@ guestctl tui vm.qcow2
 |---|---|
 | **Navigation** | Two-tier tabs: **Overview · System · Security** + views in group · `Ctrl+P` jump menu |
 | **Keys** | `Tab` cycle views · `{` `}` switch groups · `h` scrollable help · vim `j`/`k` |
-| **Views** | Dashboard, issues, packages, services, files, storage, profiles, topology, … |
+| **Views** | Dashboard, issues, packages, services, files, storage, profiles, **Assurance** (doctor/migrate-plan), topology, … |
 | **Fleet** | `guestctl tui img.qcow2 --fleet ./images/` — sidebar, **N** / **P** switch disks |
 | **Theme** | Carbon graphite + orange accent — config in `~/.config/guestkit/tui.toml` |
 

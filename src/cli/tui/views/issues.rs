@@ -214,6 +214,7 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
+    let row_h = theme::list_row_height(&app.config.ui) as usize;
     let items: Vec<ListItem> = filtered
         .iter()
         .enumerate()
@@ -226,22 +227,23 @@ fn draw_issues_list(f: &mut Frame, area: Rect, app: &App) {
                 _ => None,
             };
             let selected = idx == app.selected_index;
-            ListItem::new(vec![
-                list_line_spans(
-                    selected,
-                    sev,
-                    vec![
-                        Span::styled(&row.section, Style::default().fg(TEXT)),
-                        Span::raw(" · "),
-                        Span::styled(&row.item, Style::default().fg(TEXT)),
-                    ],
-                    app.theme(),
-                ),
-                Line::from(vec![
+            let mut lines = vec![list_line_spans(
+                selected,
+                sev,
+                vec![
+                    Span::styled(&row.section, Style::default().fg(TEXT)),
+                    Span::raw(" · "),
+                    Span::styled(&row.item, Style::default().fg(TEXT)),
+                ],
+                app.theme(),
+            )];
+            if row_h > 1 {
+                lines.push(Line::from(vec![
                     Span::raw(" "),
                     Span::styled(&row.message, theme::label_style()),
-                ]),
-            ])
+                ]));
+            }
+            ListItem::new(lines)
         })
         .skip(app.scroll_offset)
         .take(area.height.saturating_sub(2) as usize)

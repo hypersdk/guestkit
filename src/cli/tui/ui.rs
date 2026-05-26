@@ -250,9 +250,16 @@ fn draw_view_tabs(f: &mut Frame, area: Rect, app: &App) {
     let entries = app.view_tab_entries();
     let pinned: std::collections::HashSet<View> = app.pinned_view_list().into_iter().collect();
     let mut tab_spans: Vec<Span> = Vec::new();
-    for (i, (view, title)) in entries.iter().enumerate() {
-        if i > 0 {
+    let mut used = 0usize;
+    let max_w = area.width.saturating_sub(2) as usize;
+    for (view, title) in entries.iter().skip(app.view_tab_scroll) {
+        let w = title.chars().count() + 3;
+        if used + w > max_w && !tab_spans.is_empty() {
+            break;
+        }
+        if !tab_spans.is_empty() {
             tab_spans.push(Span::raw(" "));
+            used += 1;
         }
         let is_pinned = pinned.contains(view);
         tab_spans.push(view_tab_span(
@@ -261,6 +268,7 @@ fn draw_view_tabs(f: &mut Frame, area: Rect, app: &App) {
             is_pinned,
             app.theme(),
         ));
+        used += w;
     }
     let tabs = Paragraph::new(Line::from(tab_spans)).block(tab_strip_block("Views", app.theme()));
     f.render_widget(tabs, area);
@@ -344,6 +352,7 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Kernel => views::kernel::draw(f, area, app),
         View::Logs => views::logs::draw(f, area, app),
         View::Profiles => views::profiles::draw(f, area, app),
+        View::Assurance => views::assurance::draw(f, area, app),
         View::Files => views::files::draw(f, area, app),
     }
 }
@@ -474,6 +483,12 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled(", / .        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Scroll view tab row when tabs overflow                           "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("p            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Jump to Profiles view                                            "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
@@ -574,6 +589,40 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
             Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
             Span::raw("Open export menu (JSON, YAML, HTML, PDF)                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("└", Style::default().fg(DARK_ORANGE)),
+            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("ASSURANCE (Security group)", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled(" ─────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("d            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Run doctor (boot gate + migration score)                         "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("t            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Cycle target kvm → proxmox → aws                                 "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Export fix plan YAML (Assurance view, after load)                "),
+            Span::styled("   │", Style::default().fg(DARK_ORANGE)),
+        ]),
+        Line::from(vec![
+            Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
+            Span::styled(": doctor     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::raw("Palette: open Assurance + run doctor                               "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
@@ -905,6 +954,22 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
         View::Kernel => generate_kernel_details(app),
         View::Logs => generate_logs_details(app),
         View::Profiles => generate_profiles_details(app),
+        View::Assurance => {
+            let mut lines = vec![Line::from(format!(
+                "Target: {} — d doctor, t cycle target, e export plan",
+                app.assurance_target
+            ))];
+            if let Some(ref boot) = app.boot_report {
+                lines.push(Line::from(boot.boot_probability_message()));
+            }
+            if let Some(ref mig) = app.migration_report {
+                lines.push(Line::from(format!(
+                    "Migration score: {:.0}%",
+                    mig.score
+                )));
+            }
+            lines
+        }
         View::Files => {
             // Files view doesn't use detail overlay - file preview/info overlays are used instead
             vec![Line::from("Use 'v' to preview files and 'i' to view file information.")]
@@ -1826,6 +1891,11 @@ fn context_help_for_view(view: View) -> Vec<&'static str> {
         View::Packages => vec![
             "Packages — installed packages.",
             "s sort • c compare mode • m multi-select",
+        ],
+        View::Assurance => vec![
+            "Assurance — doctor boot gate + migrate-plan scoring.",
+            "d run doctor • t cycle target (kvm/proxmox/aws) • e export fix plan",
+            ": doctor or : migrate-plan from palette",
         ],
         _ => vec![
             "j/k or arrows scroll • Tab switch view • q quit",
