@@ -11,7 +11,6 @@ if [[ -f "${_PKG_LIB_DIR}/package-auth-bootstrap.sh" ]]; then
     source "${_PKG_LIB_DIR}/package-auth-bootstrap.sh"
 fi
 
-
 PKG_UI_WIDTH="${PKG_UI_WIDTH:-62}"
 PKG_STEP=0
 PKG_STEP_TOTAL="${PKG_STEP_TOTAL:-0}"
@@ -203,8 +202,52 @@ pkg_env_bootstrap() {
     fi
 }
 
+# Alias used by packetwolf install paths.
+pkg_env_bootstrap_auth() {
+    pkg_env_bootstrap_auth_for_file "$1"
+}
+
 # Root of extracted tarball (set by install.sh / install-everything.sh before parsing args).
 PKG_INSTALL_ROOT="${PKG_INSTALL_ROOT:-}"
+
+# License / legal files in the bundle (shown in --help and install banners).
+pkg_license_help_text() {
+    local root="${1:-${PKG_INSTALL_ROOT:-.}}"
+    local any=0
+    if [[ -f "${root}/LICENSE" ]]; then
+        echo "  LICENSE                 cat LICENSE — software license"
+        any=1
+    fi
+    if [[ -f "${root}/LICENSE.txt" ]]; then
+        echo "  LICENSE.txt             cat LICENSE.txt — software license"
+        any=1
+    fi
+    if [[ -f "${root}/ZYVOR-COMPANY-TERMS.md" ]]; then
+        echo "  ZYVOR-COMPANY-TERMS.md  Zyvor distribution (install prompts ACCEPT)"
+        any=1
+    fi
+    if [[ -f "${root}/LEGAL-INDEX.txt" ]]; then
+        echo "  LEGAL-INDEX.txt         index of all legal files"
+        any=1
+    fi
+    if [[ -d "${root}/docs/legal" ]]; then
+        echo "  docs/legal/             company reference"
+        any=1
+    fi
+    [[ "${any}" -eq 1 ]]
+}
+
+pkg_license_help_block() {
+    local root="${1:-${PKG_INSTALL_ROOT:-.}}"
+    local lines
+    lines="$(pkg_license_help_text "${root}" 2>/dev/null || true)"
+    if [[ -n "${lines}" ]]; then
+        echo ""
+        echo "License & legal:"
+        echo "${lines}"
+        echo "  Read LICENSE before install; ./install.sh will prompt to accept terms."
+    fi
+}
 
 # Print bundled HELP.txt or built-in summary.
 pkg_customer_help() {
@@ -227,6 +270,9 @@ Documentation in this folder:
   ZYVOR_INSTALL.txt   fastest install path
   QUICKSTART.txt      step-by-step commands
   README.txt          archive contents
+EOF
+    pkg_license_help_block "${PKG_INSTALL_ROOT:-.}" || true
+    cat <<'EOF'
 
 Recommended:
   ./install-everything.sh
@@ -474,6 +520,9 @@ pkg_customer_hero() {
     pkg_box_line "Server: $(pkg_primary_host_label)" "${PKG_C_DIM}"
     pkg_box_line "Run: ./install-everything.sh (recommended)" "${PKG_C_GREEN}"
     pkg_box_line "Help: cat START_HERE.txt or cat HELP.txt" "${PKG_C_DIM}"
+    if [[ -f "${PKG_INSTALL_ROOT:-.}/LICENSE" || -f "${PKG_INSTALL_ROOT:-.}/LICENSE.txt" ]]; then
+        pkg_box_line "License: cat LICENSE · LEGAL-INDEX.txt" "${PKG_C_DIM}"
+    fi
     pkg_box_end
     echo ""
 }
@@ -546,6 +595,9 @@ pkg_install_finish() {
         steps+=("${extras[@]}")
     fi
     steps+=("Help: cat HELP.txt" "Re-run checks: ./test-package.sh" "Remove: ./uninstall.sh --yes [--remove-dir]")
+    if [[ -f "${PKG_INSTALL_ROOT:-.}/LICENSE" || -f "${PKG_INSTALL_ROOT:-.}/LICENSE.txt" ]]; then
+        steps=("License: cat LICENSE · LEGAL-INDEX.txt" "${steps[@]}")
+    fi
     pkg_next_steps "${steps[@]}"
 }
 
@@ -607,10 +659,12 @@ pkg_access_url() {
 pkg_install_done_message() {
     local product="${1:-}"
     pkg_summary "Install complete"
-    pkg_next_steps \
-        "zyvor.dev · HyperSDK · © 2026" \
-        "Help: cat HELP.txt" \
-        "Remove: ./uninstall.sh --yes [--remove-dir]"
+    local -a _done_steps=("zyvor.dev · HyperSDK · © 2026" "Help: cat HELP.txt")
+    if [[ -f "${PKG_INSTALL_ROOT:-.}/LICENSE" || -f "${PKG_INSTALL_ROOT:-.}/LICENSE.txt" ]]; then
+        _done_steps=("License: cat LICENSE · LEGAL-INDEX.txt" "${_done_steps[@]}")
+    fi
+    _done_steps+=("Remove: ./uninstall.sh --yes [--remove-dir]")
+    pkg_next_steps "${_done_steps[@]}"
     [[ -n "${product}" ]] && pkg_ok "Ready — ${product}"
 }
 
