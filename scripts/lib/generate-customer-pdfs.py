@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 ZyvorAI Labs Private Limited. All rights reserved.
+# Proprietary software — see LICENSE in the repository root.
+# https://zyvor.dev · info@zyvor.dev
+
 """Branded customer documentation: premium PDFs + offline welcome page."""
 from __future__ import annotations
 
@@ -261,12 +265,48 @@ def welcome_pdf(pdf_path: Path, logo_path: Path, product: str, version: str) -> 
     pdf.output(str(pdf_path))
 
 
+def legal_doc_links_html(stage: Path) -> str:
+  """HTML links for LICENSE / Zyvor legal files present in the bundle root."""
+  links: list[str] = []
+  items = [
+    ("LICENSE", "LICENSE — software license"),
+    ("LICENSE.txt", "LICENSE.txt — software license"),
+    ("ZYVOR-COMPANY-TERMS.md", "Zyvor distribution terms"),
+    ("LEGAL-INDEX.txt", "Legal file index"),
+  ]
+  icons = {
+    "LICENSE": "⚖️",
+    "LICENSE.txt": "⚖️",
+    "ZYVOR-COMPANY-TERMS.md": "📜",
+    "LEGAL-INDEX.txt": "📋",
+  }
+  for name, label in items:
+    if (stage / name).is_file():
+      links.append(
+        f'        <a class="doc-link" href="../{html.escape(name)}">'
+        f'<span class="icon">{icons.get(name, "⚖️")}</span>{html.escape(label)}</a>'
+      )
+  legal_readme = stage / "docs" / "legal" / "README.md"
+  if legal_readme.is_file():
+    links.append(
+      '        <a class="doc-link" href="../docs/legal/README.md">'
+      '<span class="icon">🏢</span>Company legal reference</a>'
+    )
+  if not links:
+    return (
+      '        <p style="font-size:.85rem;color:var(--slate-500)">'
+      "Read LICENSE in the bundle root before install.</p>"
+    )
+  return "\n".join(links)
+
+
 def welcome_html(
     html_path: Path,
     logo_path: Path,
     product: str,
     version: str,
     pdf_names: list[str],
+    stage: Path,
 ) -> None:
     logo_b64 = ""
     if logo_path.is_file():
@@ -277,6 +317,7 @@ def welcome_html(
         f'        <a class="doc-link" href="pdf/{esc(n)}"><span class="icon">📄</span>{esc(n.replace(".pdf", "").replace("_", " "))}</a>'
         for n in pdf_names
     )
+    legal_links = legal_doc_links_html(stage)
 
     content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -399,6 +440,13 @@ def welcome_html(
           After install: run <code style="display:inline;padding:.2rem .45rem">./test-package.sh</code>
         </p>
       </motion-div>
+      <div class="panel">
+        <h3>License &amp; legal</h3>
+{legal_links}
+        <p style="margin-top:1rem;font-size:.85rem;color:var(--slate-500)">
+          Read LICENSE before install; <code style="display:inline;padding:.2rem .45rem">./install.sh</code> prompts acceptance.
+        </p>
+      </div>
     </div>
 
     <footer>
@@ -431,6 +479,10 @@ def write_open_first(stage: Path, product: str) -> None:
         "    cd into this folder, then:",
         "    ./install-everything.sh",
         "",
+        "  LICENSE (read before install)",
+        "    cat LICENSE",
+        "    cat LEGAL-INDEX.txt",
+        "",
         "  MORE HELP",
         "    cat START_HERE.txt",
         "    ls docs/pdf/",
@@ -461,6 +513,9 @@ def write_index(out_dir: Path, names: list[str], product: str) -> None:
             "",
             "  📁  Text originals (bundle root)",
             "     START_HERE.txt · HELP.txt · QUICKSTART.txt · README.txt",
+            "",
+            "  ⚖️  License & legal (bundle root)",
+            "     LICENSE · LEGAL-INDEX.txt · ZYVOR-COMPANY-TERMS.md (if present)",
             "",
             "  🎨  Branding: docs/zyvor-logo.png",
             "",
@@ -506,7 +561,7 @@ def main() -> int:
         print("ERROR: no .txt docs found to convert", file=sys.stderr)
         return 1
 
-    welcome_html(docs_root / "welcome.html", args.logo, product, version, made)
+    welcome_html(docs_root / "welcome.html", args.logo, product, version, made, stage)
     print("  html: docs/welcome.html")
 
     write_open_first(stage, product)

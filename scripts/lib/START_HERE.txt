@@ -20,6 +20,15 @@
   3. Follow the URL printed at the end
 
   ──────────────────────────────────────────────────────────────
+  LICENSE (read before install)
+  ──────────────────────────────────────────────────────────────
+
+  cat LICENSE              software license (required reading)
+  cat LEGAL-INDEX.txt      full list of legal files in this bundle
+  cat ZYVOR-COMPANY-TERMS.md   (if present) Zyvor distribution terms
+  ./install.sh will prompt you to accept before continuing.
+
+  ──────────────────────────────────────────────────────────────
   IMPORTANT
   ──────────────────────────────────────────────────────────────
 
@@ -35,9 +44,5 @@
   ls docs/pdf/          printable docs (Zyvor logo)
   cat HELP.txt          every script explained
   ./install-everything.sh --help
-
-  Enterprise (fleet / SLA / VMware exit):
-    https://zyvor.dev/contact?utm_source=package&utm_medium=guestkit
-    sales@zyvor.dev
 
   zyvor.dev · HyperSDK · © 2026

@@ -43,9 +43,29 @@ DOCUMENTATION (read in this order)
   README.txt          archive contents and requirements
 EOF
 
+  echo ""
+  echo "LICENSE & LEGAL (read before install)"
+  if [[ -f "${STAGE}/LICENSE" ]]; then
+    echo "  LICENSE                 cat LICENSE — software license"
+  fi
+  if [[ -f "${STAGE}/LICENSE.txt" ]]; then
+    echo "  LICENSE.txt             cat LICENSE.txt — software license"
+  fi
+  if [[ -f "${STAGE}/ZYVOR-COMPANY-TERMS.md" ]]; then
+    echo "  ZYVOR-COMPANY-TERMS.md  Zyvor distribution terms (install prompts ACCEPT)"
+  fi
+  if [[ -f "${STAGE}/LEGAL-INDEX.txt" ]]; then
+    echo "  LEGAL-INDEX.txt         index of all legal files"
+  fi
+  if [[ -d "${STAGE}/docs/legal" ]]; then
+    echo "  docs/legal/             company reference"
+  fi
+  echo "  ./install.sh --help     license summary + install options"
+
   case "${KIND}" in
     k8s)
       cat <<'EOF'
+  CORE_KUBERNETES.txt Kubernetes dashboard URL, ports (:30050 vs :5050 vs :5092)
   PREREQUISITES.txt   checklist before install
   CLUSTER_SETUP.txt   cluster bootstrap flags and order
 EOF
@@ -232,15 +252,18 @@ GETTING HELP
   All install scripts:     ./install.sh --help  |  ./install-everything.sh --help
   Remove install:          ./uninstall.sh --help
   Product binary:          run the main binary with --help (see README.txt)
-  Zyvor:                   https://zyvor.dev
+  License:                 cat LICENSE · cat LEGAL-INDEX.txt
+  Zyvor:                   https://zyvor.dev · sales@zyvor.dev · legal@zyvor.dev
 
 --------------------------------------------------------------------------------
 ENTERPRISE (fleet, SLA, VMware exit)
 --------------------------------------------------------------------------------
+EOF
+  cat <<EOF
   Production / fleet / SLA:  https://zyvor.dev/contact?utm_source=package&utm_medium=${PRODUCT}
   Demo:                      https://zyvor.dev/demo?utm_source=package&utm_medium=${PRODUCT}
   ROI:                       https://zyvor.dev/roi?utm_source=package&utm_medium=${PRODUCT}
-  Sales:                     sales@zyvor.dev
+  Sales:                     sales@zyvor.dev · info@zyvor.dev
 
 EOF
 } > "${STAGE}/HELP.txt"
