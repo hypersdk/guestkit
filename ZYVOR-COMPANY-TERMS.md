@@ -25,7 +25,7 @@ If you do not agree, do not use Zyvor-distributed builds. You may still use Gues
 
 ## 3. Company identity
 
-**ZyvorAI Labs Private Limited** is a company incorporated under the Companies Act, 2013 (India), with registered office at A 802 Wisteria, Keshav Nagar Manjri Rd., Mundhwa, Pune — 411036, Maharashtra, India.
+**ZyvorAI Labs Private Limited** is a company incorporated under the Companies Act, 2013 (India) Maharashtra, India.
 
 GuestKit is published under the **zyvor.dev** brand as part of the HyperSDK product family.
 
