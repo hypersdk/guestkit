@@ -6,7 +6,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["Susant Sahani <ssahani@redhat.com>"]
+authors = ["ZyvorAI Labs Private Limited <ssahani@redhat.com>"]
 license = "LGPL-3.0-or-later"
 edition = "2024"
 repository = "https://github.com/ssahani/guestkit"
