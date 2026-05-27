@@ -93,7 +93,7 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
-* Mon Jan 27 2026 Susant Sahani <ssahani@redhat.com> - 0.3.1-1
+* Mon Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
 - Initial RPM package
 - Add interactive TUI dashboard with fuzzy jump navigation
 - Add security, compliance, hardening, performance profiles
@@ -104,19 +104,19 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Reorganize documentation structure
 - Fix compiler warnings
 
-* Sun Jan 26 2026 Susant Sahani <ssahani@redhat.com> - 0.3.0-1
+* Sun Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.0-1
 - Add comprehensive TUI dashboard
 - Add security analysis profiles
 - Add enhanced inspection APIs
 - Improve documentation
 
-* Fri Jan 24 2026 Susant Sahani <ssahani@redhat.com> - 0.2.0-1
+* Fri Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.2.0-1
 - Add Python bindings
 - Add batch processing support
 - Add caching system
 - Improve error handling
 
-* Thu Jan 23 2026 Susant Sahani <ssahani@redhat.com> - 0.1.0-1
+* Thu Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.1.0-1
 - Initial release
 - Basic VM disk inspection
 - Support for multiple disk formats

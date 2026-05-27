@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 license = { text = "LGPL-3.0-or-later" }
 keywords = ["vm", "disk", "qcow2", "vmdk", "inspection", "guestfs"]
 authors = [
-    { name = "Susant Sahani", email = "ssahani@vmware.com" }
+    { name = "ZyvorAI Labs Private Limited", email = "ssahani@vmware.com" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
