@@ -227,7 +227,7 @@ cargo test && cargo clippy && cargo fmt
 
 **LGPL** allows commercial use; derivative works of GuestKit must remain open under LGPL.
 
-**Zyvor company terms** apply when you use Zyvor-built customer bundles or `./scripts/deploy-remote.sh` / `./scripts/package-binary-remote.sh` (type `ACCEPT` or set `GUESTKIT_ZYVOR_ACCEPT=1`). Contact: [info@zyvor.dev](mailto:info@zyvor.dev).
+**Zyvor company terms** apply when you use Zyvor-built customer bundles or `./scripts/deploy-remote.sh` / `./scripts/package-binary-remote.sh` (type `ACCEPT` or set `GUESTKIT_ZYVOR_ACCEPT=1`). Enterprise: [sales@zyvor.dev](mailto:sales@zyvor.dev) · General: [info@zyvor.dev](mailto:info@zyvor.dev).
 
 Company reference: [docs/legal/CORPORATE.md](docs/legal/CORPORATE.md).
 
@@ -248,6 +248,7 @@ Company reference: [docs/legal/CORPORATE.md](docs/legal/CORPORATE.md).
 <p align="center">
   <a href="https://zyvor.dev/demo?utm_source=github&utm_medium=guestkit">Demo</a> ·
   <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit">Contact</a> ·
+  <a href="mailto:sales@zyvor.dev">sales@zyvor.dev</a> ·
   <a href="mailto:info@zyvor.dev">info@zyvor.dev</a> ·
   <a href="docs/ce-vs-enterprise.md">CE vs Enterprise</a> ·
   <a href="docs/zyvor-enterprise.md">Enterprise guide</a>

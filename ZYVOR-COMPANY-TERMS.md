@@ -4,7 +4,7 @@
 
 **Company:** ZyvorAI Labs Private Limited · [zyvor.dev](https://zyvor.dev)  
 **Product:** GuestKit (community edition)  
-**Contact:** info@zyvor.dev · legal@zyvor.dev
+**Contact:** sales@zyvor.dev (enterprise) · info@zyvor.dev (general) · legal@zyvor.dev
 
 ---
 

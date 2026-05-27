@@ -41,7 +41,7 @@ GuestKit legal pack
   ZYVOR-COMPANY-TERMS.md  — Zyvor brand / binary distribution (accept before install)
   docs/legal/             — Company reference
 
-ZyvorAI Labs Private Limited · info@zyvor.dev · https://zyvor.dev
+ZyvorAI Labs Private Limited · sales@zyvor.dev · info@zyvor.dev · https://zyvor.dev
 LEGAL_EOF
 
     cat > "${stage}/guestkit.env.example" <<'ENV_EOF'
