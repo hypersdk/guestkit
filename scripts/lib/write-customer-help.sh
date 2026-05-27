@@ -222,10 +222,18 @@ EOF
 
   case "${KIND}" in
     k8s)
-      cat <<EOF
+      if [[ "${PRODUCT}" == "v9s" ]]; then
+        cat <<EOF
+  Cluster (once):  install-cluster.sh → deploy v9s in cluster → apply-cluster-network.sh
+                   Dashboard: https://<node-ip>:30050/vms  (see CORE_KUBERNETES.txt)
+  This machine:    install-everything.sh → edit v9s.env → test-cluster.sh → test-package.sh
+EOF
+      else
+        cat <<EOF
   Cluster (once):  install-cluster.sh → deploy ${PRODUCT} in cluster → apply-cluster-network.sh
   This machine:    install-everything.sh → edit *.env → start product → test-package.sh
 EOF
+      fi
       ;;
     host)
       cat <<EOF
