@@ -26,23 +26,8 @@ package_guestkit_client_bundle() {
 
     sed 's#")/\.\.#")#' "${build_dir}/scripts/selftest.sh" > "${stage}/test-selftest.sh"
     chmod +x "${stage}/test-selftest.sh"
-    cp "${build_dir}/LICENSE" "${stage}/" 2>/dev/null || true
-    cp "${build_dir}/ZYVOR-COMPANY-TERMS.md" "${stage}/" 2>/dev/null || true
-    mkdir -p "${stage}/docs/legal"
-    cp "${build_dir}/docs/legal/CORPORATE.md" "${stage}/docs/legal/" 2>/dev/null || true
-    cp "${build_dir}/docs/legal/README.md" "${stage}/docs/legal/" 2>/dev/null || true
-    cp "${build_dir}/docs/legal/TRADEMARK-NOTICE.md" "${stage}/docs/legal/" 2>/dev/null || true
-    cp "${build_dir}/scripts/lib/zyvor-company-accept.sh" "${stage}/.package-lib/" 2>/dev/null || true
-    chmod +x "${stage}/.package-lib/zyvor-company-accept.sh" 2>/dev/null || true
-    cat > "${stage}/LEGAL-INDEX.txt" <<'LEGAL_EOF'
-GuestKit legal pack
-====================
-  LICENSE                 — LGPL-3.0-or-later (GuestKit source code)
-  ZYVOR-COMPANY-TERMS.md  — Zyvor brand / binary distribution (accept before install)
-  docs/legal/             — Company reference
-
-ZyvorAI Labs Private Limited · sales@zyvor.dev · info@zyvor.dev · https://zyvor.dev
-LEGAL_EOF
+    chmod +x "${lib}/copy-zyvor-legal-to-bundle.sh"
+    "${lib}/copy-zyvor-legal-to-bundle.sh" "${stage}" "${build_dir}" --with-accept
 
     cat > "${stage}/guestkit.env.example" <<'ENV_EOF'
 # Optional — copy to guestkit.env
@@ -132,7 +117,8 @@ README_EOF
     local req
     for req in HELP.txt START_HERE.txt install.sh uninstall.sh README.txt QUICKSTART.txt \
         HOST_SETUP.txt PREREQUISITES.txt install-client-deps.sh test-host.sh test-package.sh \
-        test-selftest.sh guestkit guestctl guestkit.env.example; do
+        test-selftest.sh guestkit guestctl guestkit.env.example \
+        LEGAL-INDEX.txt ZYVOR-COMPANY-TERMS.md LICENSE; do
         if [[ ! -e "${stage}/${req}" ]]; then
             echo "package_guestkit_client_bundle: bundle missing ${req}" >&2
             return 1
