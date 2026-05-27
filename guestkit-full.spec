@@ -165,7 +165,7 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
-* Mon Jan 27 2026 Susant Sahani <ssahani@redhat.com> - 0.3.1-1
+* Mon Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
 - Initial RPM package for Fedora/RHEL
 - Interactive TUI dashboard with fuzzy jump navigation (Ctrl+P)
 - Security, compliance, hardening, performance profiles
@@ -181,21 +181,21 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Reorganized documentation structure
 - Removed libguestfs references (pure Rust implementation)
 
-* Sun Jan 26 2026 Susant Sahani <ssahani@redhat.com> - 0.3.0-1
+* Sun Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.0-1
 - Add comprehensive TUI dashboard with multiple views
 - Add security analysis profiles (5 types)
 - Add enhanced inspection APIs
 - Improve documentation with examples
 - Add export formats (JSON, YAML, HTML, PDF)
 
-* Fri Jan 24 2026 Susant Sahani <ssahani@redhat.com> - 0.2.0-1
+* Fri Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.2.0-1
 - Add Python bindings via PyO3
 - Add batch processing support with parallelization
 - Add inspection caching system
 - Improve error handling and reporting
 - Add retry mechanisms for operations
 
-* Thu Jan 23 2026 Susant Sahani <ssahani@redhat.com> - 0.1.0-1
+* Thu Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.1.0-1
 - Initial release
 - Basic VM disk inspection functionality
 - Support for multiple disk formats (QCOW2, VMDK, etc.)
