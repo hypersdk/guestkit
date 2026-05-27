@@ -27,6 +27,22 @@ package_guestkit_client_bundle() {
     sed 's#")/\.\.#")#' "${build_dir}/scripts/selftest.sh" > "${stage}/test-selftest.sh"
     chmod +x "${stage}/test-selftest.sh"
     cp "${build_dir}/LICENSE" "${stage}/" 2>/dev/null || true
+    cp "${build_dir}/ZYVOR-COMPANY-TERMS.md" "${stage}/" 2>/dev/null || true
+    mkdir -p "${stage}/docs/legal"
+    cp "${build_dir}/docs/legal/CORPORATE.md" "${stage}/docs/legal/" 2>/dev/null || true
+    cp "${build_dir}/docs/legal/README.md" "${stage}/docs/legal/" 2>/dev/null || true
+    cp "${build_dir}/docs/legal/TRADEMARK-NOTICE.md" "${stage}/docs/legal/" 2>/dev/null || true
+    cp "${build_dir}/scripts/lib/zyvor-company-accept.sh" "${stage}/.package-lib/" 2>/dev/null || true
+    chmod +x "${stage}/.package-lib/zyvor-company-accept.sh" 2>/dev/null || true
+    cat > "${stage}/LEGAL-INDEX.txt" <<'LEGAL_EOF'
+GuestKit legal pack
+====================
+  LICENSE                 — LGPL-3.0-or-later (GuestKit source code)
+  ZYVOR-COMPANY-TERMS.md  — Zyvor brand / binary distribution (accept before install)
+  docs/legal/             — Company reference
+
+ZyvorAI Labs Private Limited · info@zyvor.dev · https://zyvor.dev
+LEGAL_EOF
 
     cat > "${stage}/guestkit.env.example" <<'ENV_EOF'
 # Optional — copy to guestkit.env
@@ -65,10 +81,11 @@ GuestKit — install guide
 
 HOST FIRST (Linux — offline disk inspection, not Kubernetes)
   1. tar xzf guestkit-*-linux-amd64.tar.gz && cd guestkit-*-linux-amd64
-  2. ./install.sh
-  3. ./test-host.sh
-  4. ./test-selftest.sh --quick
-  5. ./guestkit inspect /path/to/vm.qcow2
+  2. Read LICENSE (LGPL) and ZYVOR-COMPANY-TERMS.md — ./install.sh prompts ACCEPT
+  3. ./install.sh
+  4. ./test-host.sh
+  5. ./test-selftest.sh --quick
+  6. ./guestkit inspect /path/to/vm.qcow2
      (or ./guestctl vm.qcow2 for shorthand inspect)
 
 Checklist: PREREQUISITES.txt  |  Details: HOST_SETUP.txt
@@ -90,6 +107,9 @@ START: cat START_HERE.txt  |  full help: cat HELP.txt
 NOT KUBERNETES — inspects offline VM disk images on this Linux host.
 
 FILES
+  LICENSE               LGPL-3.0-or-later (source code)
+  ZYVOR-COMPANY-TERMS.md  Zyvor distribution terms (read before install)
+  LEGAL-INDEX.txt
   guestkit              Main CLI binary
   guestctl              Symlink to guestkit (same CLI)
   install.sh            Client install (deps + verify)

@@ -15,6 +15,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck source=lib/zyvor-company-accept.sh
+source "${SCRIPT_DIR}/lib/zyvor-company-accept.sh"
+require_zyvor_company_accept "${PROJECT_DIR}"
 VERSION="1.0.0"
 REMOTE_DIR=""
 DEPLOY_PROFILE="full"
