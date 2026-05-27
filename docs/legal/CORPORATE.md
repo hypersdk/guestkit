@@ -11,7 +11,6 @@ GuestKit **source code** is licensed under **LGPL-3.0-or-later** — see [LICENS
 | Legal name | **ZyvorAI Labs Private Limited** |
 | Brand / website | [zyvor.dev](https://zyvor.dev) / [GuestKit](https://zyvor.dev/guestkit) |
 | Incorporated | 6 May 2026 (India) |
-| Registered office | A 802 Wisteria, Keshav Nagar Manjri Rd., Mundhwa, Pune — 411036, Maharashtra, India |
 
 ## Contacts
 
