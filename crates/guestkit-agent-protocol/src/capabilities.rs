@@ -6,11 +6,14 @@ use serde::{Deserialize, Serialize};
 /// Protocol version string.
 pub const PROTOCOL_VERSION: &str = "1.0";
 
-/// Virtio-serial channel name (libvirt / KubeVirt target).
-pub const VIRTIO_CHANNEL_NAME: &str = "com.zyvor.guestkit.0";
+/// Virtio-serial channel name — same as QEMU guest agent (libvirt `qemu-agent-command`).
+pub const VIRTIO_CHANNEL_NAME: &str = "org.qemu.guest_agent.0";
+
+/// Legacy GuestKit-only channel (deprecated; use [`VIRTIO_CHANNEL_NAME`]).
+pub const VIRTIO_CHANNEL_LEGACY: &str = "com.zyvor.guestkit.0";
 
 /// Default guest device path for the virtio channel.
-pub const VIRTIO_DEVICE_PATH: &str = "/dev/virtio-ports/com.zyvor.guestkit.0";
+pub const VIRTIO_DEVICE_PATH: &str = "/dev/virtio-ports/org.qemu.guest_agent.0";
 
 /// Known RPC methods exposed by the agent.
 pub const METHOD_PING: &str = "guestkit.ping";
