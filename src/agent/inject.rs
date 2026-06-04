@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Offline agent injection into disk images via guestfs.
 
-use crate::cli::plan::types::{CommandExec, FileCopy, FixPlan, Operation, OperationType, PostApplyAction, Priority};
+use crate::cli::plan::types::{
+    CommandExec, FileCopy, FixPlan, Operation, OperationType, PostApplyAction, Priority,
+};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,10 +44,8 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
         undo: None,
     });
 
-    let unit_staging = std::env::temp_dir().join(format!(
-        "guestkit-agent-{}.service",
-        std::process::id()
-    ));
+    let unit_staging =
+        std::env::temp_dir().join(format!("guestkit-agent-{}.service", std::process::id()));
     fs::write(&unit_staging, unit_content)?;
 
     plan.operations.push(Operation {
@@ -126,7 +126,11 @@ pub fn inject_agent_into_image(
     }
 
     let mut g = crate::Guestfs::new().context("create guestfs")?;
-    g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("invalid image path"))?)?;
+    g.add_drive(
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("invalid image path"))?,
+    )?;
     g.launch()?;
 
     let roots = g.inspect_os()?;
@@ -143,7 +147,9 @@ pub fn inject_agent_into_image(
     }
 
     g.upload(
-        binary.to_str().ok_or_else(|| anyhow::anyhow!("binary path"))?,
+        binary
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("binary path"))?,
         GUEST_BINARY_DEST,
     )?;
     g.command(&["chmod", "0755", GUEST_BINARY_DEST])?;
@@ -151,7 +157,10 @@ pub fn inject_agent_into_image(
     let unit_tmp = tempfile::NamedTempFile::new()?;
     fs::write(unit_tmp.path(), unit_content)?;
     g.upload(
-        unit_tmp.path().to_str().ok_or_else(|| anyhow::anyhow!("temp path"))?,
+        unit_tmp
+            .path()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("temp path"))?,
         GUEST_UNIT_DEST,
     )?;
 
@@ -176,8 +185,7 @@ pub fn resolve_agent_binary(explicit: Option<&Path>) -> Result<PathBuf> {
 /// Load systemd unit content from path or built-in template.
 pub fn resolve_agent_unit(explicit: Option<&Path>) -> Result<String> {
     if let Some(p) = explicit {
-        return fs::read_to_string(p)
-            .with_context(|| format!("read unit file {}", p.display()));
+        return fs::read_to_string(p).with_context(|| format!("read unit file {}", p.display()));
     }
     Ok(DEFAULT_UNIT.to_string())
 }

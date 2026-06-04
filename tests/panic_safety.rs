@@ -3,8 +3,8 @@
 //! Tests to ensure no unwrap() panics occur in error scenarios.
 //! All operations should return proper Result types instead of panicking.
 
-use guestkit::guestfs::Guestfs;
 use guestkit::guestfs::handle::Utf8Policy;
+use guestkit::guestfs::Guestfs;
 
 #[test]
 fn test_nbd_not_initialized() {
@@ -120,7 +120,6 @@ fn test_operations_after_error_state() {
 
 #[test]
 fn test_resource_limits_boundary() {
-    
     let g = Guestfs::new().unwrap();
 
     // Test resource limits exist and have reasonable defaults - should not panic

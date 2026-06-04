@@ -8,7 +8,9 @@ pub mod error;
 pub mod frame;
 pub mod rpc;
 
-pub use capabilities::{AgentCapabilities, PROTOCOL_VERSION, VIRTIO_CHANNEL_NAME, VIRTIO_DEVICE_PATH};
+pub use capabilities::{
+    AgentCapabilities, PROTOCOL_VERSION, VIRTIO_CHANNEL_NAME, VIRTIO_DEVICE_PATH,
+};
 pub use error::{AgentError, RpcErrorCode};
 pub use frame::{read_frame, write_frame};
 pub use rpc::{JsonRpcRequest, JsonRpcResponse, RpcMethod};

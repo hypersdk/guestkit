@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Output formatters for inspection results
 
-use anyhow::Result;
 use crate::guestfs::inspect_enhanced::*;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -295,7 +295,9 @@ pub fn get_formatter(format: OutputFormat, pretty: bool) -> Result<Box<dyn Outpu
     match format {
         OutputFormat::Json => Ok(Box::new(JsonFormatter { pretty })),
         OutputFormat::Yaml => Ok(Box::new(YamlFormatter)),
-        OutputFormat::Text => Err(anyhow::anyhow!("Text format should use existing display logic")),
+        OutputFormat::Text => Err(anyhow::anyhow!(
+            "Text format should use existing display logic"
+        )),
         OutputFormat::Csv => Ok(Box::new(CsvFormatter {
             data_type: CsvDataType::Users,
         })),
@@ -365,7 +367,10 @@ mod tests {
             distribution: Some("ubuntu".to_string()),
             product_name: Some("Ubuntu 22.04 LTS".to_string()),
             architecture: Some("x86_64".to_string()),
-            version: Some(VersionInfo { major: 22, minor: 4 }),
+            version: Some(VersionInfo {
+                major: 22,
+                minor: 4,
+            }),
             hostname: Some("test-host".to_string()),
             package_format: Some("deb".to_string()),
             init_system: Some("systemd".to_string()),

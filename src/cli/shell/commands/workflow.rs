@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Workflow and automation commands for interactive shell
 
+use super::*;
 use anyhow::Result;
 use colored::Colorize;
-use super::*;
 
 pub fn cmd_export(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
@@ -32,7 +32,12 @@ pub fn cmd_export(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     let format = if args.len() > 1 { args[1] } else { "json" };
     let output = if args.len() > 2 { Some(args[2]) } else { None };
 
-    println!("{} Exporting {} as {}...", "→".cyan(), export_type.yellow(), format.green());
+    println!(
+        "{} Exporting {} as {}...",
+        "→".cyan(),
+        export_type.yellow(),
+        format.green()
+    );
 
     match export_type {
         "packages" => export_packages(ctx, format, output)?,
@@ -54,12 +59,28 @@ pub fn cmd_tips(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     use rand::Rng;
 
     let tips = vec![
-        ("⚡", "Use aliases to speed up common commands", "Try: alias ll 'ls -l'"),
-        ("🔖", "Bookmark frequently visited directories", "Try: bookmark config /etc"),
+        (
+            "⚡",
+            "Use aliases to speed up common commands",
+            "Try: alias ll 'ls -l'",
+        ),
+        (
+            "🔖",
+            "Bookmark frequently visited directories",
+            "Try: bookmark config /etc",
+        ),
         ("⏱", "Commands >100ms show execution time automatically", ""),
-        ("🔍", "Use grep with patterns", "Try: grep 'error' /var/log/syslog"),
+        (
+            "🔍",
+            "Use grep with patterns",
+            "Try: grep 'error' /var/log/syslog",
+        ),
         ("📊", "View system overview", "Try: dashboard"),
-        ("💾", "Export data for analysis", "Try: export packages json"),
+        (
+            "💾",
+            "Export data for analysis",
+            "Try: export packages json",
+        ),
         ("🌳", "Visualize directory structure", "Try: tree /etc 2"),
         ("↑↓", "Navigate command history with arrow keys", ""),
         ("Tab", "Use Tab for command completion", ""),
@@ -81,9 +102,24 @@ pub fn cmd_tips(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
 /// Generate comprehensive system snapshot report
 pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║            Quick Actions Menu                   ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║            Quick Actions Menu                   ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Snapshots & Reports:".yellow().bold());
@@ -116,19 +152,46 @@ pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{} Security overview:", "→".cyan());
             println!();
             if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
-                let selinux_icon = if &sec.selinux != "disabled" { "✓".green() } else { "✗".red() };
-                let apparmor_icon = if sec.apparmor { "✓".green() } else { "✗".red() };
-                let auditd_icon = if sec.auditd { "✓".green() } else { "✗".red() };
+                let selinux_icon = if &sec.selinux != "disabled" {
+                    "✓".green()
+                } else {
+                    "✗".red()
+                };
+                let apparmor_icon = if sec.apparmor {
+                    "✓".green()
+                } else {
+                    "✗".red()
+                };
+                let auditd_icon = if sec.auditd {
+                    "✓".green()
+                } else {
+                    "✗".red()
+                };
 
                 println!("  {} SELinux:  {}", selinux_icon, sec.selinux.yellow());
-                println!("  {} AppArmor: {}", apparmor_icon, if sec.apparmor { "enabled" } else { "disabled" });
-                println!("  {} Auditd:   {}", auditd_icon, if sec.auditd { "enabled" } else { "disabled" });
+                println!(
+                    "  {} AppArmor: {}",
+                    apparmor_icon,
+                    if sec.apparmor { "enabled" } else { "disabled" }
+                );
+                println!(
+                    "  {} Auditd:   {}",
+                    auditd_icon,
+                    if sec.auditd { "enabled" } else { "disabled" }
+                );
 
                 if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
-                    let fw_icon = if fw.enabled { "✓".green() } else { "✗".red() };
-                    println!("  {} Firewall: {} ({})", fw_icon,
+                    let fw_icon = if fw.enabled {
+                        "✓".green()
+                    } else {
+                        "✗".red()
+                    };
+                    println!(
+                        "  {} Firewall: {} ({})",
+                        fw_icon,
                         if fw.enabled { "enabled" } else { "disabled" },
-                        fw.firewall_type);
+                        fw.firewall_type
+                    );
                 }
             }
             println!();
@@ -136,7 +199,10 @@ pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         "packages" => {
             println!("{} Package summary:", "→".cyan());
             if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
-                println!("  Total packages: {}", pkg_info.packages.len().to_string().green().bold());
+                println!(
+                    "  Total packages: {}",
+                    pkg_info.packages.len().to_string().green().bold()
+                );
                 println!("  Use {} for details", "'export packages json'".cyan());
             }
             println!();
@@ -146,7 +212,12 @@ pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!("{} User accounts:", "→".cyan());
                 for user in users {
                     let marker = if user.uid == "0" { " ⚠️ " } else { "   " };
-                    println!("{}  {} ({})", marker, user.username.green(), user.uid.bright_black());
+                    println!(
+                        "{}  {} ({})",
+                        marker,
+                        user.username.green(),
+                        user.uid.bright_black()
+                    );
                 }
                 println!();
             }
@@ -205,44 +276,83 @@ pub fn cmd_quick(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Show command cheat sheet
 pub fn cmd_cheat(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║                  Command Cheat Sheet                     ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║                  Command Cheat Sheet                     ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     let cheat = vec![
-        ("📂", "File Operations", vec![
-            ("ls /etc", "List directory contents"),
-            ("cat /etc/fstab", "View file contents"),
-            ("tree /etc 2", "Directory tree (2 levels)"),
-            ("find . passwd", "Find files by name"),
-        ]),
-        ("📊", "System Overview", vec![
-            ("dashboard", "Beautiful system overview"),
-            ("summary", "Quick one-liner status"),
-            ("info", "Detailed system info"),
-        ]),
-        ("💾", "Data Export", vec![
-            ("export packages json", "Export to JSON"),
-            ("snapshot report.md", "Full system snapshot"),
-            ("diff package kernel", "Compare packages"),
-        ]),
-        ("👥", "User & Security", vec![
-            ("users", "List all users"),
-            ("security", "Security status"),
-            ("services", "System services"),
-        ]),
-        ("⚡", "Quick Actions", vec![
-            ("quick", "Show quick actions menu"),
-            ("quick security", "Security overview"),
-            ("recent /var/log", "Recent files"),
-        ]),
-        ("🎯", "Productivity", vec![
-            ("alias ll 'ls -l'", "Create alias"),
-            ("bookmark cfg /etc", "Bookmark path"),
-            ("goto cfg", "Jump to bookmark"),
-            ("tips", "Random tip"),
-        ]),
+        (
+            "📂",
+            "File Operations",
+            vec![
+                ("ls /etc", "List directory contents"),
+                ("cat /etc/fstab", "View file contents"),
+                ("tree /etc 2", "Directory tree (2 levels)"),
+                ("find . passwd", "Find files by name"),
+            ],
+        ),
+        (
+            "📊",
+            "System Overview",
+            vec![
+                ("dashboard", "Beautiful system overview"),
+                ("summary", "Quick one-liner status"),
+                ("info", "Detailed system info"),
+            ],
+        ),
+        (
+            "💾",
+            "Data Export",
+            vec![
+                ("export packages json", "Export to JSON"),
+                ("snapshot report.md", "Full system snapshot"),
+                ("diff package kernel", "Compare packages"),
+            ],
+        ),
+        (
+            "👥",
+            "User & Security",
+            vec![
+                ("users", "List all users"),
+                ("security", "Security status"),
+                ("services", "System services"),
+            ],
+        ),
+        (
+            "⚡",
+            "Quick Actions",
+            vec![
+                ("quick", "Show quick actions menu"),
+                ("quick security", "Security overview"),
+                ("recent /var/log", "Recent files"),
+            ],
+        ),
+        (
+            "🎯",
+            "Productivity",
+            vec![
+                ("alias ll 'ls -l'", "Create alias"),
+                ("bookmark cfg /etc", "Bookmark path"),
+                ("goto cfg", "Jump to bookmark"),
+                ("tips", "Random tip"),
+            ],
+        ),
     ];
 
     for (icon, category, commands) in cheat {
@@ -254,7 +364,10 @@ pub fn cmd_cheat(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     }
 
     println!("📍 Current path: {}", ctx.current_path.cyan());
-    println!("{} Type 'help' for complete command list", "💡".to_string().yellow());
+    println!(
+        "{} Type 'help' for complete command list",
+        "💡".to_string().yellow()
+    );
     println!();
 
     Ok(())
@@ -267,8 +380,14 @@ pub fn cmd_search(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         println!();
         println!("{}", "Options:".green().bold());
         println!("  {} - Search in specific path", "--path <path>".cyan());
-        println!("  {} - Filter by file type (file/dir)", "--type <type>".cyan());
-        println!("  {} - Size filter (e.g., +1M, -100K)", "--size <size>".cyan());
+        println!(
+            "  {} - Filter by file type (file/dir)",
+            "--type <type>".cyan()
+        );
+        println!(
+            "  {} - Size filter (e.g., +1M, -100K)",
+            "--size <size>".cyan()
+        );
         println!("  {} - Name pattern only (default)", "--name".cyan());
         println!("  {} - Search file contents", "--content".cyan());
         println!();
@@ -304,7 +423,12 @@ pub fn cmd_search(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
     }
 
-    println!("{} Searching for: {} in {}", "→".cyan(), pattern.yellow(), search_path.cyan());
+    println!(
+        "{} Searching for: {} in {}",
+        "→".cyan(),
+        pattern.yellow(),
+        search_path.cyan()
+    );
     println!();
 
     let mut results = Vec::new();
@@ -330,12 +454,17 @@ pub fn cmd_search(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 if let Ok(content) = ctx.guestfs.read_file(&full_path) {
                     if let Ok(text) = std::str::from_utf8(&content) {
                         if text.contains(pattern) {
-                            let lines: Vec<&str> = text.lines()
+                            let lines: Vec<&str> = text
+                                .lines()
                                 .filter(|l| l.contains(pattern))
                                 .take(3)
                                 .collect();
                             for line in lines {
-                                results.push((full_path.clone(), line.to_string(), "content".to_string()));
+                                results.push((
+                                    full_path.clone(),
+                                    line.to_string(),
+                                    "content".to_string(),
+                                ));
                             }
                         }
                     }
@@ -347,19 +476,32 @@ pub fn cmd_search(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if results.is_empty() {
         println!("{} No results found", "⚠".yellow());
     } else {
-        println!("{} ({} results)", "Search Results:".yellow().bold(), results.len());
+        println!(
+            "{} ({} results)",
+            "Search Results:".yellow().bold(),
+            results.len()
+        );
         println!("{}", "─".repeat(80).cyan());
 
         for (path, content, match_type) in results.iter().take(50) {
             if match_type == "name" {
                 println!("  📄 {}", path.green());
             } else {
-                println!("  {} {} {}", "→".cyan(), path.bright_black(), content.yellow());
+                println!(
+                    "  {} {} {}",
+                    "→".cyan(),
+                    path.bright_black(),
+                    content.yellow()
+                );
             }
         }
 
         if results.len() > 50 {
-            println!("\n{} Showing 50 of {} results", "Note:".yellow(), results.len());
+            println!(
+                "\n{} Showing 50 of {} results",
+                "Note:".yellow(),
+                results.len()
+            );
         }
     }
     println!();
@@ -376,7 +518,10 @@ pub fn cmd_watch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         println!("  watch /var/log 5     - Watch /var/log every 5 seconds");
         println!("  watch /etc/fstab     - Watch single file");
         println!();
-        println!("{} This is a snapshot-based watch (not live)", "Note:".yellow());
+        println!(
+            "{} This is a snapshot-based watch (not live)",
+            "Note:".yellow()
+        );
         return Ok(());
     }
 
@@ -403,8 +548,14 @@ pub fn cmd_watch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     }
 
     println!();
-    println!("{} Use Ctrl+C to stop watching (in a real implementation)", "Tip:".yellow());
-    println!("{} VM filesystems are static snapshots, so changes won't be detected in real-time", "Note:".bright_black());
+    println!(
+        "{} Use Ctrl+C to stop watching (in a real implementation)",
+        "Tip:".yellow()
+    );
+    println!(
+        "{} VM filesystems are static snapshots, so changes won't be detected in real-time",
+        "Note:".bright_black()
+    );
 
     Ok(())
 }
@@ -412,16 +563,37 @@ pub fn cmd_watch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// Batch operations on files
 pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║              Batch Operations                   ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║              Batch Operations                   ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Available Operations:".yellow().bold());
         println!("  {} - List multiple files", "batch cat <pattern>".cyan());
-        println!("  {} - Find in multiple locations", "batch find <pattern> <paths...>".cyan());
+        println!(
+            "  {} - Find in multiple locations",
+            "batch find <pattern> <paths...>".cyan()
+        );
         println!("  {} - Export multiple types", "batch export <dir>".cyan());
-        println!("  {} - Analyze multiple logs", "batch analyze <paths...>".cyan());
+        println!(
+            "  {} - Analyze multiple logs",
+            "batch analyze <paths...>".cyan()
+        );
         println!();
 
         println!("{}", "Examples:".green().bold());
@@ -470,7 +642,11 @@ pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         "export" => {
             let output_dir = if args.len() > 1 { args[1] } else { "." };
 
-            println!("{} Exporting all data types to: {}", "→".cyan(), output_dir.yellow());
+            println!(
+                "{} Exporting all data types to: {}",
+                "→".cyan(),
+                output_dir.yellow()
+            );
 
             let exports = vec![
                 ("packages", "json"),
@@ -481,13 +657,26 @@ pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             for (export_type, format) in exports {
                 let filename = format!("{}/{}.{}", output_dir, export_type, format);
-                println!("  {} Exporting {} to {}", "→".cyan(), export_type.green(), filename.bright_black());
+                println!(
+                    "  {} Exporting {} to {}",
+                    "→".cyan(),
+                    export_type.green(),
+                    filename.bright_black()
+                );
 
                 match export_type {
-                    "packages" => { let _ = export_packages(ctx, format, Some(&filename)); }
-                    "users" => { let _ = export_users(ctx, format, Some(&filename)); }
-                    "services" => { let _ = export_services(ctx, format, Some(&filename)); }
-                    "system" => { let _ = export_system(ctx, format, Some(&filename)); }
+                    "packages" => {
+                        let _ = export_packages(ctx, format, Some(&filename));
+                    }
+                    "users" => {
+                        let _ = export_users(ctx, format, Some(&filename));
+                    }
+                    "services" => {
+                        let _ = export_services(ctx, format, Some(&filename));
+                    }
+                    "system" => {
+                        let _ = export_system(ctx, format, Some(&filename));
+                    }
                     _ => {}
                 }
             }
@@ -497,20 +686,29 @@ pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
         "find" => {
             if args.len() < 3 {
-                println!("{} Usage: batch find <pattern> <path1> [path2...]", "Error:".red());
+                println!(
+                    "{} Usage: batch find <pattern> <path1> [path2...]",
+                    "Error:".red()
+                );
                 return Ok(());
             }
 
             let pattern = args[1];
             let paths = &args[2..];
 
-            println!("{} Searching for '{}' in {} locations", "→".cyan(), pattern.yellow(), paths.len());
+            println!(
+                "{} Searching for '{}' in {} locations",
+                "→".cyan(),
+                pattern.yellow(),
+                paths.len()
+            );
             println!();
 
             for path in paths {
                 println!("{} Searching in: {}", "→".cyan(), path.yellow());
                 if let Ok(entries) = ctx.guestfs.ls(path) {
-                    let matches: Vec<_> = entries.iter()
+                    let matches: Vec<_> = entries
+                        .iter()
                         .filter(|e| e.to_lowercase().contains(&pattern.to_lowercase()))
                         .collect();
 
@@ -526,7 +724,10 @@ pub fn cmd_batch(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
         _ => {
             println!("{} Unknown batch operation: {}", "Error:".red(), operation);
-            println!("{} Use 'batch' to see available operations", "Tip:".yellow());
+            println!(
+                "{} Use 'batch' to see available operations",
+                "Tip:".yellow()
+            );
         }
     }
 
@@ -539,9 +740,24 @@ pub fn cmd_pin(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     // In a real implementation, this would be persistent
 
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║              Pinned Commands                    ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║              Pinned Commands                    ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Usage:".yellow().bold());
@@ -575,8 +791,15 @@ pub fn cmd_pin(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 return Ok(());
             }
             let pin_name = args[1];
-            println!("{} Would execute pinned command: {}", "→".cyan(), pin_name.yellow());
-            println!("{} Pin functionality requires persistent storage", "Note:".bright_black());
+            println!(
+                "{} Would execute pinned command: {}",
+                "→".cyan(),
+                pin_name.yellow()
+            );
+            println!(
+                "{} Pin functionality requires persistent storage",
+                "Note:".bright_black()
+            );
         }
         "remove" => {
             if args.len() < 2 {
@@ -594,8 +817,16 @@ pub fn cmd_pin(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
             let pin_name = args[0];
             let command = args[1..].join(" ");
-            println!("{} Would pin command: {} = {}", "→".cyan(), pin_name.yellow(), command.green());
-            println!("{} Pin functionality requires persistent storage", "Note:".bright_black());
+            println!(
+                "{} Would pin command: {} = {}",
+                "→".cyan(),
+                pin_name.yellow(),
+                command.green()
+            );
+            println!(
+                "{} Pin functionality requires persistent storage",
+                "Note:".bright_black()
+            );
         }
     }
 
@@ -605,9 +836,24 @@ pub fn cmd_pin(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// Show command history with analysis
 pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║                  Interactive Wizards                     ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║                  Interactive Wizards                     ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Available Wizards:".yellow().bold());
@@ -641,7 +887,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 let mut issues = Vec::new();
 
                 if &sec.selinux != "disabled" {
-                    println!("  {} SELinux: {} (enforcing)", "✓".green(), sec.selinux.green());
+                    println!(
+                        "  {} SELinux: {} (enforcing)",
+                        "✓".green(),
+                        sec.selinux.green()
+                    );
                     score += 20;
                 } else {
                     println!("  {} SELinux: disabled", "✗".red());
@@ -682,7 +932,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                         println!("  {} Single root account", "✓".green());
                         score += 10;
                     } else {
-                        println!("  {} Multiple root accounts: {}", "✗".red(), root_users.len());
+                        println!(
+                            "  {} Multiple root accounts: {}",
+                            "✗".red(),
+                            root_users.len()
+                        );
                         issues.push("Multiple root accounts detected - security risk");
                     }
                 }
@@ -699,7 +953,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                     "D (Poor)".red().bold()
                 };
 
-                println!("  Security Score: {}/100 - Grade: {}", score.to_string().bold(), grade);
+                println!(
+                    "  Security Score: {}/100 - Grade: {}",
+                    score.to_string().bold(),
+                    grade
+                );
 
                 println!();
                 println!("{} Step 4/5: Recommendations...", "→".cyan());
@@ -714,7 +972,10 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!();
                 println!("{} Step 5/5: Next steps...", "→".cyan());
                 println!("  • Run {} for detailed security info", "'security'".cyan());
-                println!("  • Generate report: {}", "'snapshot security-audit.md'".cyan());
+                println!(
+                    "  • Generate report: {}",
+                    "'snapshot security-audit.md'".cyan()
+                );
                 println!("  • Export data: {}", "'export system json'".cyan());
             }
             println!();
@@ -735,8 +996,13 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 let enabled = services.iter().filter(|s| s.enabled).count();
                 let ratio = (enabled as f64 / services.len().max(1) as f64) * 100.0;
 
-                println!("  {} Services: {}/{} enabled ({:.1}%)",
-                    "✓".green(), enabled, services.len(), ratio);
+                println!(
+                    "  {} Services: {}/{} enabled ({:.1}%)",
+                    "✓".green(),
+                    enabled,
+                    services.len(),
+                    ratio
+                );
 
                 if ratio < 30.0 {
                     warnings.push("Low service count - system may be minimal");
@@ -769,7 +1035,12 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 "Fair".yellow().bold()
             };
 
-            println!("{} Health Score: {}/100 ({})", "→".cyan(), health_score, health_grade);
+            println!(
+                "{} Health Score: {}/100 ({})",
+                "→".cyan(),
+                health_score,
+                health_grade
+            );
 
             if !warnings.is_empty() {
                 println!();
@@ -780,7 +1051,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
 
             println!();
-            println!("{} Use {} for detailed overview", "Tip:".yellow(), "'dashboard'".cyan());
+            println!(
+                "{} Use {} for detailed overview",
+                "Tip:".yellow(),
+                "'dashboard'".cyan()
+            );
             println!();
         }
         "packages" => {
@@ -795,16 +1070,29 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!();
 
                 // Find interesting packages
-                let security_pkgs: Vec<_> = packages.iter()
-                    .filter(|p| p.name.contains("security") || p.name.contains("firewall") || p.name.contains("selinux"))
+                let security_pkgs: Vec<_> = packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("security")
+                            || p.name.contains("firewall")
+                            || p.name.contains("selinux")
+                    })
                     .collect();
 
-                let dev_pkgs: Vec<_> = packages.iter()
-                    .filter(|p| p.name.contains("dev") || p.name.contains("gcc") || p.name.contains("make"))
+                let dev_pkgs: Vec<_> = packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("dev") || p.name.contains("gcc") || p.name.contains("make")
+                    })
                     .collect();
 
-                let server_pkgs: Vec<_> = packages.iter()
-                    .filter(|p| p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache"))
+                let server_pkgs: Vec<_> = packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("httpd")
+                            || p.name.contains("nginx")
+                            || p.name.contains("apache")
+                    })
                     .collect();
 
                 println!("{}", "Package Categories:".yellow().bold());
@@ -817,7 +1105,10 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 if server_pkgs.is_empty() {
                     println!("  • No web servers detected - workstation/desktop system");
                 } else {
-                    println!("  • Web server detected - review {} output", "'services'".cyan());
+                    println!(
+                        "  • Web server detected - review {} output",
+                        "'services'".cyan()
+                    );
                 }
 
                 if dev_pkgs.len() > 50 {
@@ -825,7 +1116,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 }
 
                 println!();
-                println!("{} Export package list: {}", "Tip:".yellow(), "'export packages json'".cyan());
+                println!(
+                    "{} Export package list: {}",
+                    "Tip:".yellow(),
+                    "'export packages json'".cyan()
+                );
             }
             println!();
         }
@@ -847,7 +1142,12 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             for config_file in config_files {
                 if ctx.guestfs.exists(config_file).unwrap_or(false) {
                     if let Ok(stat) = ctx.guestfs.stat(config_file) {
-                        println!("  {} {} ({} bytes)", "✓".green(), config_file.cyan(), stat.size);
+                        println!(
+                            "  {} {} ({} bytes)",
+                            "✓".green(),
+                            config_file.cyan(),
+                            stat.size
+                        );
                     }
                 } else {
                     println!("  {} {} (not found)", "✗".red(), config_file);
@@ -855,7 +1155,11 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
 
             println!();
-            println!("{} Use {} to examine files", "Tip:".yellow(), "'cat /etc/fstab'".cyan());
+            println!(
+                "{} Use {} to examine files",
+                "Tip:".yellow(),
+                "'cat /etc/fstab'".cyan()
+            );
             println!();
         }
         "export" => {
@@ -866,15 +1170,24 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{} What would you like to export?", "→".cyan());
             println!();
             println!("  1) {} - Complete system snapshot", "Full Report".green());
-            println!("  2) {} - All data in JSON format", "All Data (JSON)".green());
-            println!("  3) {} - Security configuration only", "Security Report".green());
+            println!(
+                "  2) {} - All data in JSON format",
+                "All Data (JSON)".green()
+            );
+            println!(
+                "  3) {} - Security configuration only",
+                "Security Report".green()
+            );
             println!("  4) {} - Package inventory", "Package List".green());
             println!();
             println!("{}", "Quick commands:".yellow().bold());
             println!("  Full: {}", "snapshot system-report.md".cyan());
             println!("  JSON: {}", "batch export /tmp/data".cyan());
             println!("  Security: {}", "quick security > security.txt".cyan());
-            println!("  Packages: {}", "export packages json packages.json".cyan());
+            println!(
+                "  Packages: {}",
+                "export packages json packages.json".cyan()
+            );
             println!();
         }
         _ => {
@@ -889,9 +1202,24 @@ pub fn cmd_wizard(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// Comprehensive scanning (security, health, issues)
 pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║                  Automation System                       ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║                  Automation System                       ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Automation Commands:".yellow().bold());
@@ -926,9 +1254,24 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             let preset = args[1];
 
-            println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-            println!("{}", format!("║  Automation: {}                           ║", preset).cyan().bold());
-            println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+            println!(
+                "\n{}",
+                "╔═══════════════════════════════════════════════════════════╗"
+                    .cyan()
+                    .bold()
+            );
+            println!(
+                "{}",
+                format!("║  Automation: {}                           ║", preset)
+                    .cyan()
+                    .bold()
+            );
+            println!(
+                "{}",
+                "╚═══════════════════════════════════════════════════════════╝"
+                    .cyan()
+                    .bold()
+            );
             println!();
 
             match preset {
@@ -950,7 +1293,11 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                     println!("{}", "═".repeat(60).cyan());
                     println!("{} Security audit complete!", "✓".green());
-                    println!("{} Report saved to: {}", "→".cyan(), "security-audit.md".yellow());
+                    println!(
+                        "{} Report saved to: {}",
+                        "→".cyan(),
+                        "security-audit.md".yellow()
+                    );
                     println!();
                 }
                 "full-analysis" => {
@@ -993,7 +1340,10 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                     cmd_batch(ctx, &["export", "/tmp/guestkit-export"])?;
 
-                    println!("{} Export complete! Check /tmp/guestkit-export/", "✓".green());
+                    println!(
+                        "{} Export complete! Check /tmp/guestkit-export/",
+                        "✓".green()
+                    );
                     println!();
                 }
                 "documentation" => {
@@ -1015,7 +1365,10 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 }
                 _ => {
                     println!("{} Unknown preset: {}", "Error:".red(), preset);
-                    println!("{} Use 'auto list' to see available presets", "Tip:".yellow());
+                    println!(
+                        "{} Use 'auto list' to see available presets",
+                        "Tip:".yellow()
+                    );
                 }
             }
         }
@@ -1024,15 +1377,28 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             let presets = vec![
-                ("security-audit", "Complete security audit with report", "4 steps"),
+                (
+                    "security-audit",
+                    "Complete security audit with report",
+                    "4 steps",
+                ),
                 ("full-analysis", "Comprehensive system analysis", "5 steps"),
                 ("health-check", "Quick system health check", "3 steps"),
                 ("export-all", "Export all data types", "1 step"),
-                ("documentation", "Create full documentation package", "4 files"),
+                (
+                    "documentation",
+                    "Create full documentation package",
+                    "4 files",
+                ),
             ];
 
             for (name, description, info) in presets {
-                println!("  {} {} - {}", name.cyan().bold(), info.bright_black(), description);
+                println!(
+                    "  {} {} - {}",
+                    name.cyan().bold(),
+                    info.bright_black(),
+                    description
+                );
             }
             println!();
         }
@@ -1043,7 +1409,11 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
 
             let preset = args[1];
-            println!("\n{} Preset Details: {}", "→".cyan(), preset.yellow().bold());
+            println!(
+                "\n{} Preset Details: {}",
+                "→".cyan(),
+                preset.yellow().bold()
+            );
             println!();
 
             match preset {
@@ -1063,7 +1433,11 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
         }
         _ => {
-            println!("{} Unknown automation command: {}", "Error:".red(), auto_command);
+            println!(
+                "{} Unknown automation command: {}",
+                "Error:".red(),
+                auto_command
+            );
         }
     }
 
@@ -1072,9 +1446,24 @@ pub fn cmd_auto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Interactive menu system
 pub fn cmd_menu(_ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║                  Interactive Menu                        ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║                  Interactive Menu                        ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     println!("{}", "Main Categories:".yellow().bold());
@@ -1109,46 +1498,81 @@ pub fn cmd_menu(_ctx: &mut ShellContext, _args: &[&str]) -> Result<()> {
 
 /// Visual timeline and progress tracking
 pub fn cmd_presets(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║                  Command Presets                         ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║                  Command Presets                         ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     println!("{}", "Quick Start Presets:".yellow().bold());
     println!();
 
     let presets = vec![
-        ("First Time User", vec![
-            ("Start here", "dashboard"),
-            ("Learn commands", "cheat"),
-            ("Get a tip", "tips"),
-        ]),
-        ("Security Analyst", vec![
-            ("Security audit", "wizard security"),
-            ("Security scan", "scan security"),
-            ("Get recommendations", "recommend"),
-        ]),
-        ("System Administrator", vec![
-            ("Full analysis", "auto run full-analysis"),
-            ("Health check", "wizard health"),
-            ("Create snapshot", "snapshot"),
-        ]),
-        ("Auditor/Compliance", vec![
-            ("Executive report", "report executive --output summary.md"),
-            ("Security report", "report security --output security.md"),
-            ("Export all data", "batch export /tmp/audit"),
-        ]),
-        ("Developer/Researcher", vec![
-            ("Discover apps", "discover apps"),
-            ("Find files", "search <pattern> --path /etc"),
-            ("Profile system", "profile detect"),
-        ]),
+        (
+            "First Time User",
+            vec![
+                ("Start here", "dashboard"),
+                ("Learn commands", "cheat"),
+                ("Get a tip", "tips"),
+            ],
+        ),
+        (
+            "Security Analyst",
+            vec![
+                ("Security audit", "wizard security"),
+                ("Security scan", "scan security"),
+                ("Get recommendations", "recommend"),
+            ],
+        ),
+        (
+            "System Administrator",
+            vec![
+                ("Full analysis", "auto run full-analysis"),
+                ("Health check", "wizard health"),
+                ("Create snapshot", "snapshot"),
+            ],
+        ),
+        (
+            "Auditor/Compliance",
+            vec![
+                ("Executive report", "report executive --output summary.md"),
+                ("Security report", "report security --output security.md"),
+                ("Export all data", "batch export /tmp/audit"),
+            ],
+        ),
+        (
+            "Developer/Researcher",
+            vec![
+                ("Discover apps", "discover apps"),
+                ("Find files", "search <pattern> --path /etc"),
+                ("Profile system", "profile detect"),
+            ],
+        ),
     ];
 
     for (role, commands) in presets {
         println!("{}", role.green().bold());
         for (description, command) in commands {
-            println!("  {} {} {}", "•".cyan(), description.bright_black(), "-".bright_black());
+            println!(
+                "  {} {} {}",
+                "•".cyan(),
+                description.bright_black(),
+                "-".bright_black()
+            );
             println!("    {}", command.yellow());
         }
         println!();
@@ -1170,7 +1594,6 @@ pub fn cmd_presets(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
 }
 
 // Helper functions for new commands
-
 
 fn export_packages(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
     let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
@@ -1241,7 +1664,10 @@ fn export_users(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> R
         "csv" => {
             let mut lines = vec!["username,uid,gid,home".to_string()];
             for user in users {
-                lines.push(format!("{},{},{},{}", user.username, user.uid, user.gid, user.home));
+                lines.push(format!(
+                    "{},{},{},{}",
+                    user.username, user.uid, user.gid, user.home
+                ));
             }
             lines.join("\n")
         }
@@ -1251,14 +1677,20 @@ fn export_users(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> R
                 "|----------|-----|-----|------|".to_string(),
             ];
             for user in users {
-                lines.push(format!("| {} | {} | {} | {} |", user.username, user.uid, user.gid, user.home));
+                lines.push(format!(
+                    "| {} | {} | {} | {} |",
+                    user.username, user.uid, user.gid, user.home
+                ));
             }
             lines.join("\n")
         }
         _ => {
             let mut lines = Vec::new();
             for user in users {
-                lines.push(format!("{} ({}:{}) - {}", user.username, user.uid, user.gid, user.home));
+                lines.push(format!(
+                    "{} ({}:{}) - {}",
+                    user.username, user.uid, user.gid, user.home
+                ));
             }
             lines.join("\n")
         }
@@ -1328,11 +1760,26 @@ fn export_services(ctx: &mut ShellContext, format: &str, output: Option<&str>) -
 }
 
 fn export_system(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> Result<()> {
-    let os_type = ctx.guestfs.inspect_get_type(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-    let distro = ctx.guestfs.inspect_get_distro(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-    let version = ctx.guestfs.inspect_get_product_name(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-    let arch = ctx.guestfs.inspect_get_arch(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-    let hostname = ctx.guestfs.inspect_get_hostname(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+    let os_type = ctx
+        .guestfs
+        .inspect_get_type(&ctx.root)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let distro = ctx
+        .guestfs
+        .inspect_get_distro(&ctx.root)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let version = ctx
+        .guestfs
+        .inspect_get_product_name(&ctx.root)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let arch = ctx
+        .guestfs
+        .inspect_get_arch(&ctx.root)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let hostname = ctx
+        .guestfs
+        .inspect_get_hostname(&ctx.root)
+        .unwrap_or_else(|_| "unknown".to_string());
 
     let content = match format {
         "json" => {
@@ -1384,12 +1831,26 @@ fn export_system(ctx: &mut ShellContext, format: &str, output: Option<&str>) -> 
     Ok(())
 }
 
-
 pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║                  Learning Center                         ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║                  Learning Center                         ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Available Tutorials:".yellow().bold());
@@ -1401,12 +1862,18 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             ("navigation", "Filesystem navigation", "3 min", "🗺"),
             ("security", "Security analysis workflow", "10 min", "🔒"),
             ("export", "Exporting data and reports", "5 min", "💾"),
-            ("advanced", "Advanced search and batch operations", "8 min", "⚡"),
+            (
+                "advanced",
+                "Advanced search and batch operations",
+                "8 min",
+                "⚡",
+            ),
             ("automation", "Automation and presets", "7 min", "🤖"),
         ];
 
         for (name, desc, duration, icon) in tutorials {
-            println!("  {} {} - {} {}",
+            println!(
+                "  {} {} - {} {}",
                 icon,
                 name.green().bold(),
                 desc,
@@ -1425,7 +1892,11 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
 
     match tutorial {
         "basics" => {
-            println!("\n{} {}", "📚".cyan(), "Tutorial: Getting Started with GuestKit".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📚".cyan(),
+                "Tutorial: Getting Started with GuestKit".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -1452,19 +1923,29 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "navigation" => {
-            println!("\n{} {}", "🗺".cyan(), "Tutorial: Filesystem Navigation".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🗺".cyan(),
+                "Tutorial: Filesystem Navigation".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{} Understanding Paths", "Lesson 1:".green().bold());
-            println!("  • Absolute paths start with /   Example: {}", "/etc/fstab".cyan());
+            println!(
+                "  • Absolute paths start with /   Example: {}",
+                "/etc/fstab".cyan()
+            );
             println!("  • Relative paths are from current location");
             println!("  • {} goes up one directory", "..".cyan());
             println!("  • {} stays in current directory", ".".cyan());
             println!();
 
             println!("{} Quick Navigation", "Lesson 2:".green().bold());
-            println!("  • {} - Create bookmarks for favorite locations", "bookmark".cyan());
+            println!(
+                "  • {} - Create bookmarks for favorite locations",
+                "bookmark".cyan()
+            );
             println!("  • {} - Jump to a bookmark", "goto <name>".cyan());
             println!("  • {} - Quick command aliases", "alias".cyan());
             println!();
@@ -1483,7 +1964,11 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "security" => {
-            println!("\n{} {}", "🔒".cyan(), "Tutorial: Security Analysis".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔒".cyan(),
+                "Tutorial: Security Analysis".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -1513,7 +1998,11 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "export" => {
-            println!("\n{} {}", "💾".cyan(), "Tutorial: Exporting Data".yellow().bold());
+            println!(
+                "\n{} {}",
+                "💾".cyan(),
+                "Tutorial: Exporting Data".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -1521,18 +2010,33 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  GuestKit supports: JSON, CSV, Markdown, Plain text\n");
 
             println!("{} Export Examples", "Step 2:".green().bold());
-            println!("  • {} - Package list as JSON", "export packages json packages.json".cyan());
+            println!(
+                "  • {} - Package list as JSON",
+                "export packages json packages.json".cyan()
+            );
             println!("  • {} - Users as CSV", "export users csv users.csv".cyan());
-            println!("  • {} - Services as Markdown", "export services md services.md".cyan());
+            println!(
+                "  • {} - Services as Markdown",
+                "export services md services.md".cyan()
+            );
             println!();
 
             println!("{} Snapshots", "Step 3:".green().bold());
-            println!("  • {} - Complete system snapshot", "snapshot report.md".cyan());
+            println!(
+                "  • {} - Complete system snapshot",
+                "snapshot report.md".cyan()
+            );
             println!("  Creates comprehensive Markdown report with all data\n");
 
             println!("{} Batch Export", "Step 4:".green().bold());
-            println!("  • {} - Export everything", "batch export /tmp/reports".cyan());
-            println!("  • {} - All data in one command", "auto run export-all".cyan());
+            println!(
+                "  • {} - Export everything",
+                "batch export /tmp/reports".cyan()
+            );
+            println!(
+                "  • {} - All data in one command",
+                "auto run export-all".cyan()
+            );
             println!();
 
             println!("{} Try it!", "💡".yellow());
@@ -1541,23 +2045,45 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "advanced" => {
-            println!("\n{} {}", "⚡".cyan(), "Tutorial: Advanced Features".yellow().bold());
+            println!(
+                "\n{} {}",
+                "⚡".cyan(),
+                "Tutorial: Advanced Features".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{} Smart Search", "Technique 1:".green().bold());
-            println!("  • {} - Search by path", "search <pattern> --path /etc".cyan());
-            println!("  • {} - Search by type", "search <pattern> --type file".cyan());
-            println!("  • {} - Search in content", "search <pattern> --content".cyan());
+            println!(
+                "  • {} - Search by path",
+                "search <pattern> --path /etc".cyan()
+            );
+            println!(
+                "  • {} - Search by type",
+                "search <pattern> --type file".cyan()
+            );
+            println!(
+                "  • {} - Search in content",
+                "search <pattern> --content".cyan()
+            );
             println!();
 
             println!("{} Batch Operations", "Technique 2:".green().bold());
-            println!("  • {} - Read multiple files", "batch cat file1 file2 file3".cyan());
-            println!("  • {} - Search multiple dirs", "batch find pattern /etc /var".cyan());
+            println!(
+                "  • {} - Read multiple files",
+                "batch cat file1 file2 file3".cyan()
+            );
+            println!(
+                "  • {} - Search multiple dirs",
+                "batch find pattern /etc /var".cyan()
+            );
             println!();
 
             println!("{} Pin Favorites", "Technique 3:".green().bold());
-            println!("  • {} - Save command", "pin errors 'grep ERROR /var/log'".cyan());
+            println!(
+                "  • {} - Save command",
+                "pin errors 'grep ERROR /var/log'".cyan()
+            );
             println!("  • {} - Run pinned command", "pin run errors".cyan());
             println!();
 
@@ -1566,18 +2092,31 @@ pub fn cmd_learn(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{} Try it!", "💡".yellow());
-            println!("  Type: {}", "search error --content --path /var/log".green());
+            println!(
+                "  Type: {}",
+                "search error --content --path /var/log".green()
+            );
             println!();
         }
 
         "automation" => {
-            println!("\n{} {}", "🤖".cyan(), "Tutorial: Automation & Presets".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🤖".cyan(),
+                "Tutorial: Automation & Presets".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{} Automation Presets", "Step 1:".green().bold());
-            println!("  • {} - Complete security workflow", "auto run security-audit".cyan());
-            println!("  • {} - Full system analysis", "auto run full-analysis".cyan());
+            println!(
+                "  • {} - Complete security workflow",
+                "auto run security-audit".cyan()
+            );
+            println!(
+                "  • {} - Full system analysis",
+                "auto run full-analysis".cyan()
+            );
             println!("  • {} - Health assessment", "auto run health-check".cyan());
             println!("  • {} - Export everything", "auto run export-all".cyan());
             println!();
@@ -1615,9 +2154,18 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         println!("\n{}", "Usage: focus <aspect>".red());
         println!();
         println!("{}", "Available Focus Areas:".yellow().bold());
-        println!("  {} - Security posture and vulnerabilities", "security".green());
-        println!("  {} - Performance and resource usage", "performance".green());
-        println!("  {} - Network configuration and connectivity", "network".green());
+        println!(
+            "  {} - Security posture and vulnerabilities",
+            "security".green()
+        );
+        println!(
+            "  {} - Performance and resource usage",
+            "performance".green()
+        );
+        println!(
+            "  {} - Network configuration and connectivity",
+            "network".green()
+        );
         println!("  {} - Storage and filesystems", "storage".green());
         println!("  {} - User accounts and permissions", "users".green());
         println!();
@@ -1628,29 +2176,65 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     match aspect {
         "security" => {
-            println!("\n{} {}", "🔒".cyan(), "Security Focus Mode".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔒".cyan(),
+                "Security Focus Mode".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
                 println!("{}", "Security Status:".green().bold());
-                println!("  SELinux:  {}", if &sec.selinux != "disabled" { sec.selinux.green() } else { sec.selinux.red() });
-                println!("  AppArmor: {}", if sec.apparmor { "enabled".green() } else { "disabled".red() });
-                println!("  auditd:   {}", if sec.auditd { "enabled".green() } else { "disabled".red() });
+                println!(
+                    "  SELinux:  {}",
+                    if &sec.selinux != "disabled" {
+                        sec.selinux.green()
+                    } else {
+                        sec.selinux.red()
+                    }
+                );
+                println!(
+                    "  AppArmor: {}",
+                    if sec.apparmor {
+                        "enabled".green()
+                    } else {
+                        "disabled".red()
+                    }
+                );
+                println!(
+                    "  auditd:   {}",
+                    if sec.auditd {
+                        "enabled".green()
+                    } else {
+                        "disabled".red()
+                    }
+                );
                 println!();
             }
 
             if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
                 println!("{}", "Firewall Configuration:".green().bold());
                 println!("  Type:   {}", fw.firewall_type.cyan());
-                println!("  Status: {}", if fw.enabled { "enabled".green() } else { "disabled".red() });
+                println!(
+                    "  Status: {}",
+                    if fw.enabled {
+                        "enabled".green()
+                    } else {
+                        "disabled".red()
+                    }
+                );
                 println!();
             }
 
             println!("{}", "Critical Files to Review:".yellow().bold());
             let security_files = vec![
-                "/etc/shadow", "/etc/sudoers", "/etc/ssh/sshd_config",
-                "/etc/pam.d/", "/etc/security/", "/etc/selinux/config"
+                "/etc/shadow",
+                "/etc/sudoers",
+                "/etc/ssh/sshd_config",
+                "/etc/pam.d/",
+                "/etc/security/",
+                "/etc/selinux/config",
             ];
             for file in security_files {
                 let exists = ctx.guestfs.exists(file).unwrap_or(false);
@@ -1667,13 +2251,20 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "performance" => {
-            println!("\n{} {}", "⚡".cyan(), "Performance Focus Mode".yellow().bold());
+            println!(
+                "\n{} {}",
+                "⚡".cyan(),
+                "Performance Focus Mode".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
                 println!("{}", "Package Statistics:".green().bold());
-                println!("  Total packages: {}", pkg_info.packages.len().to_string().yellow());
+                println!(
+                    "  Total packages: {}",
+                    pkg_info.packages.len().to_string().yellow()
+                );
                 println!();
             }
 
@@ -1682,7 +2273,10 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!("{}", "Service Statistics:".green().bold());
                 println!("  Total services: {}", services.len().to_string().yellow());
                 println!("  Enabled: {}", enabled.to_string().green());
-                println!("  Disabled: {}", (services.len() - enabled).to_string().bright_black());
+                println!(
+                    "  Disabled: {}",
+                    (services.len() - enabled).to_string().bright_black()
+                );
                 println!();
             }
 
@@ -1699,7 +2293,11 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
-                println!("{} ({} total)", "Network Interfaces:".green().bold(), interfaces.len());
+                println!(
+                    "{} ({} total)",
+                    "Network Interfaces:".green().bold(),
+                    interfaces.len()
+                );
                 for iface in interfaces {
                     println!("  • {}", iface.name.cyan());
                 }
@@ -1718,8 +2316,11 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{}", "Network Configuration Files:".yellow().bold());
             let net_files = vec![
-                "/etc/hosts", "/etc/resolv.conf", "/etc/hostname",
-                "/etc/sysconfig/network", "/etc/network/interfaces"
+                "/etc/hosts",
+                "/etc/resolv.conf",
+                "/etc/hostname",
+                "/etc/sysconfig/network",
+                "/etc/network/interfaces",
             ];
             for file in net_files {
                 if ctx.guestfs.exists(file).unwrap_or(false) {
@@ -1740,7 +2341,11 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             if let Ok(devices) = ctx.guestfs.list_devices() {
-                println!("{} ({} total)", "Block Devices:".green().bold(), devices.len());
+                println!(
+                    "{} ({} total)",
+                    "Block Devices:".green().bold(),
+                    devices.len()
+                );
                 for device in devices {
                     println!("  • {}", device.cyan());
                 }
@@ -1763,36 +2368,61 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "users" => {
-            println!("\n{} {}", "👥".cyan(), "User Accounts Focus Mode".yellow().bold());
+            println!(
+                "\n{} {}",
+                "👥".cyan(),
+                "User Accounts Focus Mode".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
                 let root_users: Vec<_> = users.iter().filter(|u| u.uid == "0").collect();
-                let system_users: Vec<_> = users.iter().filter(|u| {
-                    if let Ok(uid) = u.uid.parse::<u32>() {
-                        uid > 0 && uid < 1000
-                    } else {
-                        false
-                    }
-                }).collect();
-                let regular_users: Vec<_> = users.iter().filter(|u| {
-                    if let Ok(uid) = u.uid.parse::<u32>() {
-                        uid >= 1000
-                    } else {
-                        false
-                    }
-                }).collect();
+                let system_users: Vec<_> = users
+                    .iter()
+                    .filter(|u| {
+                        if let Ok(uid) = u.uid.parse::<u32>() {
+                            uid > 0 && uid < 1000
+                        } else {
+                            false
+                        }
+                    })
+                    .collect();
+                let regular_users: Vec<_> = users
+                    .iter()
+                    .filter(|u| {
+                        if let Ok(uid) = u.uid.parse::<u32>() {
+                            uid >= 1000
+                        } else {
+                            false
+                        }
+                    })
+                    .collect();
 
                 println!("{}", "User Statistics:".green().bold());
-                println!("  Root accounts:    {} {}", root_users.len().to_string().red().bold(), if root_users.len() > 1 { "(⚠ Multiple root accounts!)".yellow() } else { "".normal() });
-                println!("  System accounts:  {}", system_users.len().to_string().cyan());
-                println!("  Regular accounts: {}", regular_users.len().to_string().green());
+                println!(
+                    "  Root accounts:    {} {}",
+                    root_users.len().to_string().red().bold(),
+                    if root_users.len() > 1 {
+                        "(⚠ Multiple root accounts!)".yellow()
+                    } else {
+                        "".normal()
+                    }
+                );
+                println!(
+                    "  System accounts:  {}",
+                    system_users.len().to_string().cyan()
+                );
+                println!(
+                    "  Regular accounts: {}",
+                    regular_users.len().to_string().green()
+                );
                 println!();
 
                 println!("{}", "Regular Users:".yellow().bold());
                 for user in regular_users.iter().take(10) {
-                    println!("  {} (UID: {}, Home: {})",
+                    println!(
+                        "  {} (UID: {}, Home: {})",
                         user.username.green(),
                         user.uid.bright_black(),
                         user.home.cyan()
@@ -1834,9 +2464,24 @@ pub fn cmd_focus(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// Security and operations playbooks
 pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║                    Playbook Library                      ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║                    Playbook Library                      ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Available Playbooks:".yellow().bold());
@@ -1845,11 +2490,31 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
         let playbooks = vec![
             ("incident", "🚨", "Security incident response", "Advanced"),
-            ("hardening", "🔒", "System security hardening", "Intermediate"),
+            (
+                "hardening",
+                "🔒",
+                "System security hardening",
+                "Intermediate",
+            ),
             ("audit", "📋", "Compliance audit checklist", "Intermediate"),
-            ("forensics", "🔍", "Digital forensics investigation", "Advanced"),
-            ("migration", "📦", "VM migration preparation", "Intermediate"),
-            ("recovery", "🔧", "System recovery procedures", "Intermediate"),
+            (
+                "forensics",
+                "🔍",
+                "Digital forensics investigation",
+                "Advanced",
+            ),
+            (
+                "migration",
+                "📦",
+                "VM migration preparation",
+                "Intermediate",
+            ),
+            (
+                "recovery",
+                "🔧",
+                "System recovery procedures",
+                "Intermediate",
+            ),
         ];
 
         for (name, icon, desc, level) in playbooks {
@@ -1858,7 +2523,8 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 "Intermediate" => level.yellow(),
                 _ => level.green(),
             };
-            println!("  {} {} - {} {}",
+            println!(
+                "  {} {} - {} {}",
                 icon,
                 name.green().bold(),
                 desc,
@@ -1877,13 +2543,23 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     match playbook {
         "incident" => {
-            println!("\n{} {}", "🚨".cyan(), "Security Incident Response Playbook".red().bold());
+            println!(
+                "\n{} {}",
+                "🚨".cyan(),
+                "Security Incident Response Playbook".red().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{} Immediate Actions", "Phase 1:".red().bold());
-            println!("  {} Document current time and create snapshot", "1.".yellow());
-            println!("     Command: {}", "snapshot incident-$(date +%Y%m%d-%H%M%S).md".cyan());
+            println!(
+                "  {} Document current time and create snapshot",
+                "1.".yellow()
+            );
+            println!(
+                "     Command: {}",
+                "snapshot incident-$(date +%Y%m%d-%H%M%S).md".cyan()
+            );
             println!("  {} Capture system state", "2.".yellow());
             println!("     Command: {}", "dashboard".cyan());
             println!("  {} Check currently logged in users", "3.".yellow());
@@ -1899,8 +2575,14 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("     Command: {}", "recent /etc 50".cyan());
             println!("     Command: {}", "recent /var/log 50".cyan());
             println!("  {} Search for suspicious activity", "7.".yellow());
-            println!("     Command: {}", "search failed --content --path /var/log".cyan());
-            println!("     Command: {}", "search unauthorized --content --path /var/log".cyan());
+            println!(
+                "     Command: {}",
+                "search failed --content --path /var/log".cyan()
+            );
+            println!(
+                "     Command: {}",
+                "search unauthorized --content --path /var/log".cyan()
+            );
             println!();
 
             println!("{} Analysis", "Phase 3:".green().bold());
@@ -1914,17 +2596,30 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{} Reporting", "Phase 4:".cyan().bold());
             println!("  {} Generate comprehensive report", "11.".yellow());
-            println!("     Command: {}", "report security --output incident-report.md".cyan());
+            println!(
+                "     Command: {}",
+                "report security --output incident-report.md".cyan()
+            );
             println!("  {} Export all evidence", "12.".yellow());
-            println!("     Command: {}", "batch export /tmp/incident-evidence".cyan());
+            println!(
+                "     Command: {}",
+                "batch export /tmp/incident-evidence".cyan()
+            );
             println!();
 
-            println!("{} This playbook helps investigate security incidents systematically", "Note:".yellow().bold());
+            println!(
+                "{} This playbook helps investigate security incidents systematically",
+                "Note:".yellow().bold()
+            );
             println!();
         }
 
         "hardening" => {
-            println!("\n{} {}", "🔒".cyan(), "System Security Hardening Playbook".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔒".cyan(),
+                "System Security Hardening Playbook".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -1968,53 +2663,120 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "audit" => {
-            println!("\n{} {}", "📋".cyan(), "Compliance Audit Checklist".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📋".cyan(),
+                "Compliance Audit Checklist".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{}", "System Information:".green().bold());
-            println!("  {} {}", "☐".yellow(), "System overview - dashboard".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "System overview - dashboard".cyan()
+            );
             println!("  {} {}", "☐".yellow(), "OS and version - info".cyan());
-            println!("  {} {}", "☐".yellow(), "Installed packages - packages".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Installed packages - packages".cyan()
+            );
             println!();
 
             println!("{}", "Security Controls:".green().bold());
-            println!("  {} {}", "☐".yellow(), "Security features - security".cyan());
-            println!("  {} {}", "☐".yellow(), "Firewall configuration - security".cyan());
-            println!("  {} {}", "☐".yellow(), "SELinux/AppArmor status - security".cyan());
-            println!("  {} {}", "☐".yellow(), "Security audit - wizard security".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Security features - security".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Firewall configuration - security".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "SELinux/AppArmor status - security".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Security audit - wizard security".cyan()
+            );
             println!();
 
             println!("{}", "Access Controls:".green().bold());
             println!("  {} {}", "☐".yellow(), "User accounts - users".cyan());
-            println!("  {} {}", "☐".yellow(), "Sudo privileges - cat /etc/sudoers".cyan());
-            println!("  {} {}", "☐".yellow(), "SSH configuration - cat /etc/ssh/sshd_config".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Sudo privileges - cat /etc/sudoers".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "SSH configuration - cat /etc/ssh/sshd_config".cyan()
+            );
             println!();
 
             println!("{}", "Network Security:".green().bold());
-            println!("  {} {}", "☐".yellow(), "Network configuration - network".cyan());
-            println!("  {} {}", "☐".yellow(), "Open ports and services - services".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Network configuration - network".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Open ports and services - services".cyan()
+            );
             println!();
 
             println!("{}", "Logging & Monitoring:".green().bold());
-            println!("  {} {}", "☐".yellow(), "Audit daemon status - security".cyan());
-            println!("  {} {}", "☐".yellow(), "Log files review - recent /var/log 50".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Audit daemon status - security".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Log files review - recent /var/log 50".cyan()
+            );
             println!();
 
             println!("{}", "Documentation:".green().bold());
-            println!("  {} {}", "☐".yellow(), "Generate snapshot - snapshot audit-report.md".cyan());
-            println!("  {} {}", "☐".yellow(), "Compliance report - report compliance".cyan());
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Generate snapshot - snapshot audit-report.md".cyan()
+            );
+            println!(
+                "  {} {}",
+                "☐".yellow(),
+                "Compliance report - report compliance".cyan()
+            );
             println!();
         }
 
         "forensics" => {
-            println!("\n{} {}", "🔍".cyan(), "Digital Forensics Investigation Playbook".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔍".cyan(),
+                "Digital Forensics Investigation Playbook".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
             println!("{} Preservation", "Phase 1:".red().bold());
             println!("  {} Create complete snapshot immediately", "1.".yellow());
-            println!("     {}", "snapshot forensics-$(date +%Y%m%d-%H%M%S).md".cyan());
+            println!(
+                "     {}",
+                "snapshot forensics-$(date +%Y%m%d-%H%M%S).md".cyan()
+            );
             println!("  {} Export all data for analysis", "2.".yellow());
             println!("     {}", "auto run export-all".cyan());
             println!();
@@ -2056,12 +2818,19 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{} Reporting", "Phase 6:".magenta().bold());
             println!("  {} Generate technical report", "13.".yellow());
-            println!("     {}", "report technical --output forensics-report.md".cyan());
+            println!(
+                "     {}",
+                "report technical --output forensics-report.md".cyan()
+            );
             println!();
         }
 
         "migration" => {
-            println!("\n{} {}", "📦".cyan(), "VM Migration Preparation Playbook".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📦".cyan(),
+                "VM Migration Preparation Playbook".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2099,12 +2868,19 @@ pub fn cmd_playbook(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{} Final Report", "Step 5:".green().bold());
             println!("  {} Generate executive summary", "•".yellow());
-            println!("     {}", "report executive --output migration-plan.md".cyan());
+            println!(
+                "     {}",
+                "report executive --output migration-plan.md".cyan()
+            );
             println!();
         }
 
         "recovery" => {
-            println!("\n{} {}", "🔧".cyan(), "System Recovery Procedures".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔧".cyan(),
+                "System Recovery Procedures".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2177,15 +2953,31 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             // Gather information
-            let os_type = ctx.guestfs.inspect_get_type(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-            let distro = ctx.guestfs.inspect_get_distro(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
-            let arch = ctx.guestfs.inspect_get_arch(&ctx.root).unwrap_or_else(|_| "unknown".to_string());
+            let os_type = ctx
+                .guestfs
+                .inspect_get_type(&ctx.root)
+                .unwrap_or_else(|_| "unknown".to_string());
+            let distro = ctx
+                .guestfs
+                .inspect_get_distro(&ctx.root)
+                .unwrap_or_else(|_| "unknown".to_string());
+            let arch = ctx
+                .guestfs
+                .inspect_get_arch(&ctx.root)
+                .unwrap_or_else(|_| "unknown".to_string());
 
-            println!("{}", "Once upon a time, in a datacenter far away...".italic());
+            println!(
+                "{}",
+                "Once upon a time, in a datacenter far away...".italic()
+            );
             println!();
 
-            println!("This is a {} system, specifically a {} distribution running on {} architecture.",
-                os_type.yellow(), distro.green(), arch.cyan());
+            println!(
+                "This is a {} system, specifically a {} distribution running on {} architecture.",
+                os_type.yellow(),
+                distro.green(),
+                arch.cyan()
+            );
             println!();
 
             if let Ok(pkg_info) = ctx.guestfs.inspect_packages(&ctx.root) {
@@ -2196,17 +2988,35 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!();
 
                 // Identify character
-                let web_packages = pkg_info.packages.iter().filter(|p|
-                    p.name.contains("httpd") || p.name.contains("nginx") || p.name.contains("apache")
-                ).count();
+                let web_packages = pkg_info
+                    .packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("httpd")
+                            || p.name.contains("nginx")
+                            || p.name.contains("apache")
+                    })
+                    .count();
 
-                let db_packages = pkg_info.packages.iter().filter(|p|
-                    p.name.contains("mysql") || p.name.contains("postgres") || p.name.contains("mariadb")
-                ).count();
+                let db_packages = pkg_info
+                    .packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("mysql")
+                            || p.name.contains("postgres")
+                            || p.name.contains("mariadb")
+                    })
+                    .count();
 
-                let dev_packages = pkg_info.packages.iter().filter(|p|
-                    p.name.contains("gcc") || p.name.contains("make") || p.name.contains("python-devel")
-                ).count();
+                let dev_packages = pkg_info
+                    .packages
+                    .iter()
+                    .filter(|p| {
+                        p.name.contains("gcc")
+                            || p.name.contains("make")
+                            || p.name.contains("python-devel")
+                    })
+                    .count();
 
                 if web_packages > 0 {
                     println!("This system bears the marks of a {}, with {} web server packages installed.",
@@ -2215,8 +3025,11 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 }
 
                 if db_packages > 0 {
-                    println!("Database packages ({}) suggest this system has been entrusted with {}.",
-                        db_packages.to_string().yellow(), "storing precious data".green().bold());
+                    println!(
+                        "Database packages ({}) suggest this system has been entrusted with {}.",
+                        db_packages.to_string().yellow(),
+                        "storing precious data".green().bold()
+                    );
                     println!("Countless queries have been executed within its digital walls.");
                 }
 
@@ -2226,34 +3039,48 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 }
 
                 if web_packages == 0 && db_packages == 0 && dev_packages == 0 {
-                    println!("This appears to be a {}, lean and purpose-built for specific tasks.",
-                        "minimalist system".green().bold());
+                    println!(
+                        "This appears to be a {}, lean and purpose-built for specific tasks.",
+                        "minimalist system".green().bold()
+                    );
                 }
                 println!();
             }
 
             if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
-                let regular_users: Vec<_> = users.iter().filter(|u| {
-                    if let Ok(uid) = u.uid.parse::<u32>() {
-                        uid >= 1000
-                    } else {
-                        false
-                    }
-                }).collect();
+                let regular_users: Vec<_> = users
+                    .iter()
+                    .filter(|u| {
+                        if let Ok(uid) = u.uid.parse::<u32>() {
+                            uid >= 1000
+                        } else {
+                            false
+                        }
+                    })
+                    .collect();
 
                 if !regular_users.is_empty() {
                     println!("{} user accounts have called this system home, each leaving their unique imprint.",
                         regular_users.len().to_string().yellow());
                     println!("Their files and configurations tell tales of work accomplished and challenges overcome.");
                 } else {
-                    println!("This is a {}, without regular user accounts - a pure service machine.",
-                        "sentinel system".green().bold());
+                    println!(
+                        "This is a {}, without regular user accounts - a pure service machine.",
+                        "sentinel system".green().bold()
+                    );
                 }
                 println!();
             }
 
-            println!("{}", "And so our system continues its journey, faithfully executing its duties,".italic());
-            println!("{}", "waiting for its next chapter to be written...".italic());
+            println!(
+                "{}",
+                "And so our system continues its journey, faithfully executing its duties,"
+                    .italic()
+            );
+            println!(
+                "{}",
+                "waiting for its next chapter to be written...".italic()
+            );
             println!();
         }
 
@@ -2268,13 +3095,18 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                 // SELinux story
                 if &sec.selinux != "disabled" {
-                    println!("This system is guarded by the watchful eyes of {}, operating in {} mode.",
-                        "SELinux".green().bold(), sec.selinux.yellow());
+                    println!(
+                        "This system is guarded by the watchful eyes of {}, operating in {} mode.",
+                        "SELinux".green().bold(),
+                        sec.selinux.yellow()
+                    );
                     println!("Like a vigilant sentinel, it enforces mandatory access controls,");
                     println!("ensuring that every process stays within its designated boundaries.");
                 } else {
-                    println!("SELinux, the guardian of mandatory access controls, {} on this system.",
-                        "stands silent".red());
+                    println!(
+                        "SELinux, the guardian of mandatory access controls, {} on this system.",
+                        "stands silent".red()
+                    );
                     println!("Its protective embrace has been forgone, for better or worse.");
                 }
                 println!();
@@ -2282,12 +3114,18 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 // Firewall story
                 if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
                     if fw.enabled {
-                        println!("The {} stands as a mighty barrier, filtering network traffic",
-                            fw.firewall_type.green().bold());
-                        println!("with rules carefully crafted to protect against the outside world.");
+                        println!(
+                            "The {} stands as a mighty barrier, filtering network traffic",
+                            fw.firewall_type.green().bold()
+                        );
+                        println!(
+                            "with rules carefully crafted to protect against the outside world."
+                        );
                     } else {
-                        println!("The firewall gates {}. This system trusts the network around it,",
-                            "stand open".red());
+                        println!(
+                            "The firewall gates {}. This system trusts the network around it,",
+                            "stand open".red()
+                        );
                         println!("or perhaps operates within a protected enclave.");
                     }
                     println!();
@@ -2295,24 +3133,39 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                 // Audit story
                 if sec.auditd {
-                    println!("The {} chronicles every significant event,", "audit daemon".green().bold());
+                    println!(
+                        "The {} chronicles every significant event,",
+                        "audit daemon".green().bold()
+                    );
                     println!("maintaining detailed logs for forensic analysis and compliance.");
                     println!("Nothing escapes its watchful recording.");
                 } else {
-                    println!("No audit daemon watches and records. Events pass by {},",
-                        "unchronicled".red());
+                    println!(
+                        "No audit daemon watches and records. Events pass by {},",
+                        "unchronicled".red()
+                    );
                     println!("leaving no detailed trail for future investigators.");
                 }
                 println!();
 
-                println!("{}", "Thus the security posture is revealed - a balance between".italic());
-                println!("{}", "protection and accessibility, security and convenience.".italic());
+                println!(
+                    "{}",
+                    "Thus the security posture is revealed - a balance between".italic()
+                );
+                println!(
+                    "{}",
+                    "protection and accessibility, security and convenience.".italic()
+                );
                 println!();
             }
         }
 
         "config" => {
-            println!("\n{} {}", "⚙".cyan(), "Configuration Journey".yellow().bold());
+            println!(
+                "\n{} {}",
+                "⚙".cyan(),
+                "Configuration Journey".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2333,11 +3186,16 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             // Storage configuration
             println!("{}", "Chapter 2: Storage".yellow());
             if let Ok(devices) = ctx.guestfs.list_devices() {
-                println!("Storage was provisioned across {} devices, the foundation of persistent data.",
-                    devices.len().to_string().green());
+                println!(
+                    "Storage was provisioned across {} devices, the foundation of persistent data.",
+                    devices.len().to_string().green()
+                );
             }
             if ctx.guestfs.exists("/etc/fstab").unwrap_or(false) {
-                println!("The sacred {} defines how these storage realms are mounted,", "/etc/fstab".cyan());
+                println!(
+                    "The sacred {} defines how these storage realms are mounted,",
+                    "/etc/fstab".cyan()
+                );
                 println!("a map for the system to understand its storage landscape.");
             }
             println!();
@@ -2346,15 +3204,23 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{}", "Chapter 3: Services and Daemons".yellow());
             if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
                 let enabled = services.iter().filter(|s| s.enabled).count();
-                println!("Of {} services defined, {} were chosen to run at startup,",
+                println!(
+                    "Of {} services defined, {} were chosen to run at startup,",
                     services.len().to_string().green(),
-                    enabled.to_string().yellow());
+                    enabled.to_string().yellow()
+                );
                 println!("each playing its role in the system's daily operations.");
             }
             println!();
 
-            println!("{}", "And thus the system was configured, piece by piece,".italic());
-            println!("{}", "each setting a deliberate choice in its creation.".italic());
+            println!(
+                "{}",
+                "And thus the system was configured, piece by piece,".italic()
+            );
+            println!(
+                "{}",
+                "each setting a deliberate choice in its creation.".italic()
+            );
             println!();
         }
 
@@ -2384,14 +3250,19 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             // Check logs
             if ctx.guestfs.is_dir("/var/log").unwrap_or(false) {
-                println!("The {} directory continues to grow, chronicling system events,",
-                    "/var/log".cyan());
+                println!(
+                    "The {} directory continues to grow, chronicling system events,",
+                    "/var/log".cyan()
+                );
                 println!("errors encountered, and successes achieved.");
                 println!("Each log file a diary entry in the system's ongoing story.");
             }
             println!();
 
-            println!("{}", "The system's journey continues, writing new chapters daily...".italic());
+            println!(
+                "{}",
+                "The system's journey continues, writing new chapters daily...".italic()
+            );
             println!();
         }
 
@@ -2408,9 +3279,24 @@ pub fn cmd_story(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// Interactive advisor system
 pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║                  System Advisor                          ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║                  System Advisor                          ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Ask the Advisor:".yellow().bold());
@@ -2443,7 +3329,11 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
 
     match question {
         "secure" => {
-            println!("\n{} {}", "🛡".cyan(), "Security Improvement Advice".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🛡".cyan(),
+                "Security Improvement Advice".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2478,13 +3368,20 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  Then: {}", "recommend".cyan());
             println!();
 
-            println!("{} Use {} for a complete security workflow",
-                "💡".yellow(), "auto run security-audit".cyan());
+            println!(
+                "{} Use {} for a complete security workflow",
+                "💡".yellow(),
+                "auto run security-audit".cyan()
+            );
             println!();
         }
 
         "performance" => {
-            println!("\n{} {}", "⚡".cyan(), "Performance Optimization Advice".yellow().bold());
+            println!(
+                "\n{} {}",
+                "⚡".cyan(),
+                "Performance Optimization Advice".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2519,12 +3416,20 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Tune /etc/sysctl.conf");
             println!("  • Load only necessary modules\n");
 
-            println!("{} Start with: {}", "💡".yellow(), "focus performance".cyan());
+            println!(
+                "{} Start with: {}",
+                "💡".yellow(),
+                "focus performance".cyan()
+            );
             println!();
         }
 
         "troubleshoot" => {
-            println!("\n{} {}", "🔧".cyan(), "Troubleshooting Guide".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔧".cyan(),
+                "Troubleshooting Guide".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2539,7 +3444,10 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{}", "Phase 2: Identify Issues".yellow());
             println!("  • Scan for problems: {}", "scan issues".cyan());
-            println!("  • Search error logs: {}", "search error --content --path /var/log".cyan());
+            println!(
+                "  • Search error logs: {}",
+                "search error --content --path /var/log".cyan()
+            );
             println!("  • Review recent changes: {}", "recent /etc 50".cyan());
             println!();
 
@@ -2555,16 +3463,30 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{}", "Phase 5: Document Findings".yellow());
-            println!("  • Create snapshot: {}", "snapshot troubleshooting.md".cyan());
-            println!("  • Export evidence: {}", "batch export /tmp/evidence".cyan());
+            println!(
+                "  • Create snapshot: {}",
+                "snapshot troubleshooting.md".cyan()
+            );
+            println!(
+                "  • Export evidence: {}",
+                "batch export /tmp/evidence".cyan()
+            );
             println!();
 
-            println!("{} For systematic investigation: {}", "💡".yellow(), "playbook forensics".cyan());
+            println!(
+                "{} For systematic investigation: {}",
+                "💡".yellow(),
+                "playbook forensics".cyan()
+            );
             println!();
         }
 
         "backup" => {
-            println!("\n{} {}", "💾".cyan(), "Backup Strategy Advice".yellow().bold());
+            println!(
+                "\n{} {}",
+                "💾".cyan(),
+                "Backup Strategy Advice".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2573,8 +3495,14 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{}", "1. Document Current State".yellow());
             println!("  • Create snapshot: {}", "snapshot pre-backup.md".cyan());
-            println!("  • Export configurations: {}", "export system json config.json".cyan());
-            println!("  • List packages: {}", "export packages csv packages.csv".cyan());
+            println!(
+                "  • Export configurations: {}",
+                "export system json config.json".cyan()
+            );
+            println!(
+                "  • List packages: {}",
+                "export packages csv packages.csv".cyan()
+            );
             println!("  • Export users: {}", "export users csv users.csv".cyan());
             println!();
 
@@ -2600,12 +3528,20 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Practice restoration");
             println!("  • Document recovery procedures\n");
 
-            println!("{} Quick backup: {}", "💡".yellow(), "auto run export-all".cyan());
+            println!(
+                "{} Quick backup: {}",
+                "💡".yellow(),
+                "auto run export-all".cyan()
+            );
             println!();
         }
 
         "monitoring" => {
-            println!("\n{} {}", "📊".cyan(), "Monitoring Strategy".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📊".cyan(),
+                "Monitoring Strategy".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2640,12 +3576,20 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Monthly: {}", "scan security".cyan());
             println!("  • Quarterly: Full audit\n");
 
-            println!("{} Get current status: {}", "💡".yellow(), "dashboard".cyan());
+            println!(
+                "{} Get current status: {}",
+                "💡".yellow(),
+                "dashboard".cyan()
+            );
             println!();
         }
 
         "upgrade" => {
-            println!("\n{} {}", "⬆".cyan(), "Upgrade Planning Advice".yellow().bold());
+            println!(
+                "\n{} {}",
+                "⬆".cyan(),
+                "Upgrade Planning Advice".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2653,7 +3597,10 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{}", "Phase 1: Pre-Upgrade Assessment".yellow());
-            println!("  • Document current state: {}", "snapshot pre-upgrade.md".cyan());
+            println!(
+                "  • Document current state: {}",
+                "snapshot pre-upgrade.md".cyan()
+            );
             println!("  • Check compatibility");
             println!("  • Review release notes");
             println!("  • Export packages: {}", "export packages json".cyan());
@@ -2666,7 +3613,10 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{}", "Phase 3: Backup Everything".yellow());
             println!("  • Full system backup");
-            println!("  • Configuration exports: {}", "auto run export-all".cyan());
+            println!(
+                "  • Configuration exports: {}",
+                "auto run export-all".cyan()
+            );
             println!("  • Test backup restoration\n");
 
             println!("{}", "Phase 4: Test Upgrade".yellow());
@@ -2689,7 +3639,11 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "compliance" => {
-            println!("\n{} {}", "📋".cyan(), "Compliance Achievement Guide".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📋".cyan(),
+                "Compliance Achievement Guide".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2713,7 +3667,10 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Network security: Configure firewall\n");
 
             println!("{}", "4. Documentation".yellow());
-            println!("  • System documentation: {}", "snapshot compliance-docs.md".cyan());
+            println!(
+                "  • System documentation: {}",
+                "snapshot compliance-docs.md".cyan()
+            );
             println!("  • Configuration records");
             println!("  • Change management logs\n");
 
@@ -2732,7 +3689,11 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "migration" => {
-            println!("\n{} {}", "🚀".cyan(), "Migration Preparation Guide".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🚀".cyan(),
+                "Migration Preparation Guide".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2740,9 +3701,15 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{}", "Step 1: Discovery & Documentation".yellow());
-            println!("  • Full system analysis: {}", "auto run full-analysis".cyan());
+            println!(
+                "  • Full system analysis: {}",
+                "auto run full-analysis".cyan()
+            );
             println!("  • Detect purpose: {}", "profile detect".cyan());
-            println!("  • Create baseline: {}", "snapshot pre-migration.md".cyan());
+            println!(
+                "  • Create baseline: {}",
+                "snapshot pre-migration.md".cyan()
+            );
             println!();
 
             println!("{}", "Step 2: Dependency Mapping".yellow());
@@ -2758,7 +3725,10 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Backup critical files\n");
 
             println!("{}", "Step 4: Planning".yellow());
-            println!("  • Use migration playbook: {}", "playbook migration".cyan());
+            println!(
+                "  • Use migration playbook: {}",
+                "playbook migration".cyan()
+            );
             println!("  • Define cutover plan");
             println!("  • Identify risks\n");
 
@@ -2773,7 +3743,11 @@ pub fn cmd_advisor(_ctx: &ShellContext, args: &[&str]) -> Result<()> {
             println!("  • Performance check: {}", "bench all".cyan());
             println!();
 
-            println!("{} Complete workflow: {}", "💡".yellow(), "playbook migration".cyan());
+            println!(
+                "{} Complete workflow: {}",
+                "💡".yellow(),
+                "playbook migration".cyan()
+            );
             println!();
         }
 
@@ -2806,7 +3780,11 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     match check {
         "integrity" => {
-            println!("\n{} {}", "✓".cyan(), "System Integrity Verification".yellow().bold());
+            println!(
+                "\n{} {}",
+                "✓".cyan(),
+                "System Integrity Verification".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2828,13 +3806,30 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             for (file, desc, critical) in critical_files {
                 if ctx.guestfs.exists(file).unwrap_or(false) {
-                    println!("  {} {} - {}", "✓".green(), file.cyan(), desc.bright_black());
+                    println!(
+                        "  {} {} - {}",
+                        "✓".green(),
+                        file.cyan(),
+                        desc.bright_black()
+                    );
                     passed += 1;
                 } else if critical {
-                    println!("  {} {} - {} {}", "✗".red(), file.cyan(), desc.bright_black(), "[CRITICAL]".red().bold());
+                    println!(
+                        "  {} {} - {} {}",
+                        "✗".red(),
+                        file.cyan(),
+                        desc.bright_black(),
+                        "[CRITICAL]".red().bold()
+                    );
                     failed += 1;
                 } else {
-                    println!("  {} {} - {} {}", "⚠".yellow(), file.bright_black(), desc.bright_black(), "[OPTIONAL]".yellow());
+                    println!(
+                        "  {} {} - {} {}",
+                        "⚠".yellow(),
+                        file.bright_black(),
+                        desc.bright_black(),
+                        "[OPTIONAL]".yellow()
+                    );
                     warnings += 1;
                 }
             }
@@ -2851,19 +3846,35 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             if failed == 0 && warnings == 0 {
-                println!("{} System integrity: {}", "✓".green().bold(), "EXCELLENT".green().bold());
+                println!(
+                    "{} System integrity: {}",
+                    "✓".green().bold(),
+                    "EXCELLENT".green().bold()
+                );
             } else if failed == 0 {
-                println!("{} System integrity: {} ({} warnings)",
-                    "✓".green(), "GOOD".green(), warnings.to_string().yellow());
+                println!(
+                    "{} System integrity: {} ({} warnings)",
+                    "✓".green(),
+                    "GOOD".green(),
+                    warnings.to_string().yellow()
+                );
             } else {
-                println!("{} System integrity: {} ({} critical failures)",
-                    "✗".red().bold(), "POOR".red().bold(), failed.to_string().red());
+                println!(
+                    "{} System integrity: {} ({} critical failures)",
+                    "✗".red().bold(),
+                    "POOR".red().bold(),
+                    failed.to_string().red()
+                );
             }
             println!();
         }
 
         "security" => {
-            println!("\n{} {}", "🔒".cyan(), "Security Configuration Verification".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔒".cyan(),
+                "Security Configuration Verification".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2876,44 +3887,86 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 // SELinux
                 max_score += 25;
                 if &sec.selinux != "disabled" {
-                    println!("  {} SELinux: {} {}", "✓".green(), sec.selinux.green(), "[25 points]".bright_black());
+                    println!(
+                        "  {} SELinux: {} {}",
+                        "✓".green(),
+                        sec.selinux.green(),
+                        "[25 points]".bright_black()
+                    );
                     score += 25;
                 } else {
-                    println!("  {} SELinux: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                    println!(
+                        "  {} SELinux: {} {}",
+                        "✗".red(),
+                        "disabled".red(),
+                        "[0/25 points]".bright_black()
+                    );
                 }
 
                 // AppArmor
                 max_score += 25;
                 if sec.apparmor {
-                    println!("  {} AppArmor: {} {}", "✓".green(), "enabled".green(), "[25 points]".bright_black());
+                    println!(
+                        "  {} AppArmor: {} {}",
+                        "✓".green(),
+                        "enabled".green(),
+                        "[25 points]".bright_black()
+                    );
                     score += 25;
                 } else {
-                    println!("  {} AppArmor: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                    println!(
+                        "  {} AppArmor: {} {}",
+                        "✗".red(),
+                        "disabled".red(),
+                        "[0/25 points]".bright_black()
+                    );
                 }
 
                 // Firewall
                 max_score += 25;
                 if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
                     if fw.enabled {
-                        println!("  {} Firewall: {} ({}) {}", "✓".green(), "enabled".green(), fw.firewall_type, "[25 points]".bright_black());
+                        println!(
+                            "  {} Firewall: {} ({}) {}",
+                            "✓".green(),
+                            "enabled".green(),
+                            fw.firewall_type,
+                            "[25 points]".bright_black()
+                        );
                         score += 25;
                     } else {
-                        println!("  {} Firewall: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                        println!(
+                            "  {} Firewall: {} {}",
+                            "✗".red(),
+                            "disabled".red(),
+                            "[0/25 points]".bright_black()
+                        );
                     }
                 }
 
                 // Auditd
                 max_score += 25;
                 if sec.auditd {
-                    println!("  {} Auditd: {} {}", "✓".green(), "enabled".green(), "[25 points]".bright_black());
+                    println!(
+                        "  {} Auditd: {} {}",
+                        "✓".green(),
+                        "enabled".green(),
+                        "[25 points]".bright_black()
+                    );
                     score += 25;
                 } else {
-                    println!("  {} Auditd: {} {}", "✗".red(), "disabled".red(), "[0/25 points]".bright_black());
+                    println!(
+                        "  {} Auditd: {} {}",
+                        "✗".red(),
+                        "disabled".red(),
+                        "[0/25 points]".bright_black()
+                    );
                 }
 
                 println!();
                 println!("{}", "Security Score:".green().bold());
-                println!("  {}/{} points ({}%)",
+                println!(
+                    "  {}/{} points ({}%)",
                     score.to_string().yellow(),
                     max_score,
                     ((score as f64 / max_score as f64) * 100.0) as i32
@@ -2932,13 +3985,21 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!("  Grade: {}", grade);
                 println!();
 
-                println!("{} For detailed security analysis: {}", "💡".yellow(), "wizard security".cyan());
+                println!(
+                    "{} For detailed security analysis: {}",
+                    "💡".yellow(),
+                    "wizard security".cyan()
+                );
                 println!();
             }
         }
 
         "boot" => {
-            println!("\n{} {}", "🚀".cyan(), "Boot Configuration Verification".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🚀".cyan(),
+                "Boot Configuration Verification".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -2976,10 +4037,18 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             if issues.is_empty() {
-                println!("{} Boot configuration: {}", "✓".green().bold(), "VALID".green().bold());
+                println!(
+                    "{} Boot configuration: {}",
+                    "✓".green().bold(),
+                    "VALID".green().bold()
+                );
             } else {
-                println!("{} Boot configuration: {} ({} issues)",
-                    "⚠".yellow(), "WARNING".yellow(), issues.len());
+                println!(
+                    "{} Boot configuration: {} ({} issues)",
+                    "⚠".yellow(),
+                    "WARNING".yellow(),
+                    issues.len()
+                );
                 println!();
                 println!("{}", "Issues:".yellow());
                 for issue in issues {
@@ -2988,12 +4057,20 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
             println!();
 
-            println!("{} For detailed inspection: {}", "💡".yellow(), "inspect boot".cyan());
+            println!(
+                "{} For detailed inspection: {}",
+                "💡".yellow(),
+                "inspect boot".cyan()
+            );
             println!();
         }
 
         "network" => {
-            println!("\n{} {}", "🌐".cyan(), "Network Configuration Verification".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🌐".cyan(),
+                "Network Configuration Verification".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3006,8 +4083,11 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             checks += 1;
             if let Ok(interfaces) = ctx.guestfs.inspect_network(&ctx.root) {
                 if !interfaces.is_empty() {
-                    println!("  {} {} network interfaces configured",
-                        "✓".green(), interfaces.len().to_string().yellow());
+                    println!(
+                        "  {} {} network interfaces configured",
+                        "✓".green(),
+                        interfaces.len().to_string().yellow()
+                    );
                     passed += 1;
                 } else {
                     println!("  {} No network interfaces configured", "⚠".yellow());
@@ -3035,22 +4115,39 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             // Check hostname
             checks += 1;
             if let Ok(hostname) = ctx.guestfs.inspect_get_hostname(&ctx.root) {
-                println!("  {} Hostname configured: {}", "✓".green(), hostname.yellow());
+                println!(
+                    "  {} Hostname configured: {}",
+                    "✓".green(),
+                    hostname.yellow()
+                );
                 passed += 1;
             } else {
                 println!("  {} Hostname not configured", "⚠".yellow());
             }
 
             println!();
-            println!("{} {}/{} checks passed", "Results:".green().bold(), passed, checks);
+            println!(
+                "{} {}/{} checks passed",
+                "Results:".green().bold(),
+                passed,
+                checks
+            );
             println!();
 
-            println!("{} For detailed analysis: {}", "💡".yellow(), "focus network".cyan());
+            println!(
+                "{} For detailed analysis: {}",
+                "💡".yellow(),
+                "focus network".cyan()
+            );
             println!();
         }
 
         "all" => {
-            println!("\n{} {}", "🔍".cyan(), "Complete System Verification".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🔍".cyan(),
+                "Complete System Verification".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3069,7 +4166,10 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             cmd_verify(ctx, &["network"])?;
 
             println!("{}", "═".repeat(70).cyan());
-            println!("{} Complete system verification finished", "✓".green().bold());
+            println!(
+                "{} Complete system verification finished",
+                "✓".green().bold()
+            );
             println!();
         }
 
@@ -3085,9 +4185,24 @@ pub fn cmd_verify(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Optimization recommendations
 pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║              Optimization Recommendations                ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║              Optimization Recommendations                ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     println!("{}", "System Optimization Guide".yellow().bold());
@@ -3095,28 +4210,56 @@ pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!();
 
     let categories = vec![
-        ("Performance", vec![
-            ("Disable unnecessary services", "services -> disable unused", "Medium"),
-            ("Remove unused packages", "packages -> uninstall unused", "Low"),
-            ("Optimize mount options", "cat /etc/fstab -> add noatime", "Medium"),
-            ("Tune kernel parameters", "/etc/sysctl.conf tuning", "High"),
-        ]),
-        ("Security", vec![
-            ("Enable SELinux/AppArmor", "Mandatory access control", "High"),
-            ("Configure firewall", "Network filtering", "High"),
-            ("Enable audit logging", "auditd configuration", "Medium"),
-            ("Harden SSH", "/etc/ssh/sshd_config", "Medium"),
-        ]),
-        ("Storage", vec![
-            ("Clean log files", "Log rotation and cleanup", "Low"),
-            ("Remove old kernels", "Keep only recent kernels", "Low"),
-            ("Optimize filesystem", "Choice of fs type", "Medium"),
-        ]),
-        ("Network", vec![
-            ("Optimize TCP/IP stack", "sysctl network tuning", "Medium"),
-            ("Configure DNS properly", "/etc/resolv.conf", "Low"),
-            ("Use connection pooling", "For applications", "Medium"),
-        ]),
+        (
+            "Performance",
+            vec![
+                (
+                    "Disable unnecessary services",
+                    "services -> disable unused",
+                    "Medium",
+                ),
+                (
+                    "Remove unused packages",
+                    "packages -> uninstall unused",
+                    "Low",
+                ),
+                (
+                    "Optimize mount options",
+                    "cat /etc/fstab -> add noatime",
+                    "Medium",
+                ),
+                ("Tune kernel parameters", "/etc/sysctl.conf tuning", "High"),
+            ],
+        ),
+        (
+            "Security",
+            vec![
+                (
+                    "Enable SELinux/AppArmor",
+                    "Mandatory access control",
+                    "High",
+                ),
+                ("Configure firewall", "Network filtering", "High"),
+                ("Enable audit logging", "auditd configuration", "Medium"),
+                ("Harden SSH", "/etc/ssh/sshd_config", "Medium"),
+            ],
+        ),
+        (
+            "Storage",
+            vec![
+                ("Clean log files", "Log rotation and cleanup", "Low"),
+                ("Remove old kernels", "Keep only recent kernels", "Low"),
+                ("Optimize filesystem", "Choice of fs type", "Medium"),
+            ],
+        ),
+        (
+            "Network",
+            vec![
+                ("Optimize TCP/IP stack", "sysctl network tuning", "Medium"),
+                ("Configure DNS properly", "/etc/resolv.conf", "Low"),
+                ("Use connection pooling", "For applications", "Medium"),
+            ],
+        ),
     ];
 
     for (category, optimizations) in categories {
@@ -3127,7 +4270,8 @@ pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
                 "Medium" => impact.yellow(),
                 _ => impact.green(),
             };
-            println!("  {} {} - {} [{}]",
+            println!(
+                "  {} {} - {} [{}]",
                 "•".cyan(),
                 name,
                 action.bright_black(),
@@ -3140,7 +4284,10 @@ pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("{}", "Getting Started:".yellow().bold());
     println!("  • {} - Performance analysis", "focus performance".cyan());
     println!("  • {} - Security improvements", "advisor secure".cyan());
-    println!("  • {} - Full system analysis", "auto run full-analysis".cyan());
+    println!(
+        "  • {} - Full system analysis",
+        "auto run full-analysis".cyan()
+    );
     println!();
 
     Ok(())
@@ -3150,7 +4297,13 @@ pub fn cmd_optimize(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
 pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     let timeframe = if args.is_empty() { "30-day" } else { args[0] };
 
-    println!("\n{} {}", "🗺".cyan(), format!("{} Improvement Roadmap", timeframe.to_uppercase()).yellow().bold());
+    println!(
+        "\n{} {}",
+        "🗺".cyan(),
+        format!("{} Improvement Roadmap", timeframe.to_uppercase())
+            .yellow()
+            .bold()
+    );
     println!("{}", "═".repeat(70).cyan());
     println!();
 
@@ -3181,7 +4334,10 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{} Week 4: Documentation & Validation", "📅".yellow());
-            println!("  • Create documentation: {}", "auto run documentation".cyan());
+            println!(
+                "  • Create documentation: {}",
+                "auto run documentation".cyan()
+            );
             println!("  • Run all verifications: {}", "verify all".cyan());
             println!("  • Generate reports: {}", "report executive".cyan());
             println!("  • Archive baseline for future comparison");
@@ -3189,7 +4345,10 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "90-day" | "medium" => {
-            println!("{} (Priority: Substantial Improvements)", "90-Day Roadmap".green().bold());
+            println!(
+                "{} (Priority: Substantial Improvements)",
+                "90-Day Roadmap".green().bold()
+            );
             println!();
 
             println!("{} Month 1: Foundation", "📅".yellow());
@@ -3199,14 +4358,20 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
 
             println!("{} Month 2: Security Hardening", "📅".yellow());
-            println!("  • Follow hardening playbook: {}", "playbook hardening".cyan());
+            println!(
+                "  • Follow hardening playbook: {}",
+                "playbook hardening".cyan()
+            );
             println!("  • Implement intrusion detection");
             println!("  • Configure log centralization");
             println!("  • Security scan: {}", "scan security".cyan());
             println!();
 
             println!("{} Month 3: Optimization & Compliance", "📅".yellow());
-            println!("  • Performance optimization: {}", "advisor performance".cyan());
+            println!(
+                "  • Performance optimization: {}",
+                "advisor performance".cyan()
+            );
             println!("  • Compliance assessment: {}", "playbook audit".cyan());
             println!("  • Automated monitoring setup");
             println!("  • Final validation: {}", "verify all".cyan());
@@ -3214,7 +4379,10 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "annual" | "long" => {
-            println!("{} (Priority: Strategic Transformation)", "Annual Roadmap".green().bold());
+            println!(
+                "{} (Priority: Strategic Transformation)",
+                "Annual Roadmap".green().bold()
+            );
             println!();
 
             println!("{} Q1: Assessment & Planning", "📅".yellow());
@@ -3248,14 +4416,23 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
         _ => {
             println!("{} Unknown timeframe: {}", "Error:".red(), timeframe);
-            println!("{}", "Available timeframes: 30-day, 90-day, annual".yellow());
+            println!(
+                "{}",
+                "Available timeframes: 30-day, 90-day, annual".yellow()
+            );
             return Ok(());
         }
     }
 
     println!("{}", "Key Success Metrics:".green().bold());
-    println!("  • Security score improvement: Track with {}", "wizard security".cyan());
-    println!("  • Health score improvement: Track with {}", "wizard health".cyan());
+    println!(
+        "  • Security score improvement: Track with {}",
+        "wizard security".cyan()
+    );
+    println!(
+        "  • Health score improvement: Track with {}",
+        "wizard health".cyan()
+    );
     println!("  • Performance gains: Measure with {}", "bench all".cyan());
     println!("  • Compliance status: Verify with {}", "verify all".cyan());
     println!();
@@ -3269,9 +4446,24 @@ pub fn cmd_roadmap(_ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 /// AI-like intelligent insights
 pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-        println!("{}", "║              System Improvement Goals                    ║".cyan().bold());
-        println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════╗"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "║              System Improvement Goals                    ║"
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════╝"
+                .cyan()
+                .bold()
+        );
         println!();
 
         println!("{}", "Track your system improvement journey!".yellow());
@@ -3320,7 +4512,11 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
                 if !sec.auditd {
                     security_goals += 1;
-                    println!("{} {} Enable Audit Daemon", format!("{}.", security_goals + 1).yellow(), "📝".cyan());
+                    println!(
+                        "{} {} Enable Audit Daemon",
+                        format!("{}.", security_goals + 1).yellow(),
+                        "📝".cyan()
+                    );
                     println!("   Target: Start security event logging");
                     println!("   Verify: Run 'security' command");
                     println!();
@@ -3329,7 +4525,11 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 if let Ok(fw) = ctx.guestfs.inspect_firewall(&ctx.root) {
                     if !fw.enabled {
                         security_goals += 1;
-                        println!("{} {} Enable Firewall", format!("{}.", security_goals + 1).yellow(), "🛡️".cyan());
+                        println!(
+                            "{} {} Enable Firewall",
+                            format!("{}.", security_goals + 1).yellow(),
+                            "🛡️".cyan()
+                        );
                         println!("   Target: Configure network filtering");
                         println!("   Verify: Run 'verify security'");
                         println!();
@@ -3355,7 +4555,11 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("   Command: 'auto run documentation'");
             println!();
 
-            println!("{} Use {} to track progress", "💡".yellow(), "verify all".cyan());
+            println!(
+                "{} Use {} to track progress",
+                "💡".yellow(),
+                "verify all".cyan()
+            );
             println!();
         }
 
@@ -3366,11 +4570,29 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
             println!("{}", "Common Goals:".green().bold());
 
-            let goals = [("Security Excellence", "Achieve security score 90+", "verify security"),
-                ("Performance Optimization", "Reduce service count by 25%", "services"),
-                ("Compliance Ready", "Pass all audit checks", "playbook audit"),
-                ("Documentation Complete", "Full system documentation", "auto run documentation"),
-                ("Zero Critical Issues", "No critical findings", "doctor")];
+            let goals = [
+                (
+                    "Security Excellence",
+                    "Achieve security score 90+",
+                    "verify security",
+                ),
+                (
+                    "Performance Optimization",
+                    "Reduce service count by 25%",
+                    "services",
+                ),
+                (
+                    "Compliance Ready",
+                    "Pass all audit checks",
+                    "playbook audit",
+                ),
+                (
+                    "Documentation Complete",
+                    "Full system documentation",
+                    "auto run documentation",
+                ),
+                ("Zero Critical Issues", "No critical findings", "doctor"),
+            ];
 
             for (i, (name, target, cmd)) in goals.iter().enumerate() {
                 println!("{}. {} {}", i + 1, name.bold(), "🎯".cyan());
@@ -3379,7 +4601,10 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!();
             }
 
-            println!("{} Run commands to check progress towards your goals", "💡".yellow());
+            println!(
+                "{} Run commands to check progress towards your goals",
+                "💡".yellow()
+            );
             println!();
         }
 
@@ -3390,7 +4615,11 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
 
             let goal = args[1];
-            println!("\n{} {}", "🎯".cyan(), format!("Checking Goal: {}", goal).yellow().bold());
+            println!(
+                "\n{} {}",
+                "🎯".cyan(),
+                format!("Checking Goal: {}", goal).yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3415,7 +4644,11 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                         if enabled < 40 {
                             println!("  Status:  {} Goal achieved!", "✓".green().bold());
                         } else {
-                            println!("  Status:  {} In progress ({} to remove)", "→".yellow(), enabled - 40);
+                            println!(
+                                "  Status:  {} In progress ({} to remove)",
+                                "→".yellow(),
+                                enabled - 40
+                            );
                         }
                         println!();
                     }
@@ -3438,24 +4671,51 @@ pub fn cmd_goals(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Shell usage analysis and habits
 pub fn cmd_habits(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║              Shell Usage Analysis                        ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║              Shell Usage Analysis                        ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     println!("{}", "Session Statistics:".green().bold());
     println!("{}", "─".repeat(70).cyan());
     println!();
 
-    println!("  Commands executed: {}", ctx.command_count.to_string().yellow());
+    println!(
+        "  Commands executed: {}",
+        ctx.command_count.to_string().yellow()
+    );
 
     if let Some(duration) = ctx.last_command_time {
-        println!("  Last command time: {} ms", format!("{:.2}", duration.as_secs_f64() * 1000.0).yellow());
+        println!(
+            "  Last command time: {} ms",
+            format!("{:.2}", duration.as_secs_f64() * 1000.0).yellow()
+        );
     }
 
     println!("  Current directory: {}", ctx.current_path.cyan());
-    println!("  Active aliases:    {}", ctx.aliases.len().to_string().yellow());
-    println!("  Bookmarks saved:   {}", ctx.bookmarks.len().to_string().yellow());
+    println!(
+        "  Active aliases:    {}",
+        ctx.aliases.len().to_string().yellow()
+    );
+    println!(
+        "  Bookmarks saved:   {}",
+        ctx.bookmarks.len().to_string().yellow()
+    );
     println!();
 
     println!("{}", "Usage Patterns:".green().bold());
@@ -3497,7 +4757,12 @@ pub fn cmd_habits(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     ];
 
     for (tip, benefit) in tips {
-        println!("  {} {} - {}", "💡".yellow(), tip.bold(), benefit.bright_black());
+        println!(
+            "  {} {} - {}",
+            "💡".yellow(),
+            tip.bold(),
+            benefit.bright_black()
+        );
     }
     println!();
 
@@ -3506,12 +4771,18 @@ pub fn cmd_habits(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!();
 
     if ctx.bookmarks.is_empty() {
-        println!("  {} Create bookmarks for frequently visited paths", "1.".yellow());
+        println!(
+            "  {} Create bookmarks for frequently visited paths",
+            "1.".yellow()
+        );
         println!("     Command: {}", "bookmark myspot".cyan());
     }
 
     if ctx.aliases.len() <= 5 {
-        println!("  {} Set up custom aliases for your workflow", "2.".yellow());
+        println!(
+            "  {} Set up custom aliases for your workflow",
+            "2.".yellow()
+        );
         println!("     Command: {}", "alias shortname 'full command'".cyan());
     }
 
@@ -3528,8 +4799,14 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         println!("\n{}", "Usage: collaborate <report-type>".red());
         println!();
         println!("{}", "Available Report Types:".yellow().bold());
-        println!("  {} - Handoff report for team transition", "handoff".green());
-        println!("  {} - Incident report for security team", "incident".green());
+        println!(
+            "  {} - Handoff report for team transition",
+            "handoff".green()
+        );
+        println!(
+            "  {} - Incident report for security team",
+            "incident".green()
+        );
         println!("  {} - Change request documentation", "change".green());
         println!("  {} - Weekly status report", "status".green());
         println!();
@@ -3540,7 +4817,11 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     match report_type {
         "handoff" => {
-            println!("\n{} {}", "👥".cyan(), "Team Handoff Report".yellow().bold());
+            println!(
+                "\n{} {}",
+                "👥".cyan(),
+                "Team Handoff Report".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3577,15 +4858,25 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
             if let Ok(services) = ctx.guestfs.inspect_systemd_services(&ctx.root) {
                 let enabled = services.iter().filter(|s| s.enabled).count();
-                println!("- **Services:** {} total, {} enabled", services.len(), enabled);
+                println!(
+                    "- **Services:** {} total, {} enabled",
+                    services.len(),
+                    enabled
+                );
             }
             println!();
 
             println!("{}", "### Security Status".yellow());
             if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
                 println!("- **SELinux:** {}", sec.selinux);
-                println!("- **AppArmor:** {}", if sec.apparmor { "enabled" } else { "disabled" });
-                println!("- **Auditd:** {}", if sec.auditd { "enabled" } else { "disabled" });
+                println!(
+                    "- **AppArmor:** {}",
+                    if sec.apparmor { "enabled" } else { "disabled" }
+                );
+                println!(
+                    "- **Auditd:** {}",
+                    if sec.auditd { "enabled" } else { "disabled" }
+                );
             }
             println!();
 
@@ -3603,12 +4894,20 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("- /etc/ssh/sshd_config - SSH settings");
             println!();
 
-            println!("{} Save this report: {}", "💡".yellow(), "snapshot handoff-report.md".cyan());
+            println!(
+                "{} Save this report: {}",
+                "💡".yellow(),
+                "snapshot handoff-report.md".cyan()
+            );
             println!();
         }
 
         "incident" => {
-            println!("\n{} {}", "🚨".cyan(), "Security Incident Report".yellow().bold());
+            println!(
+                "\n{} {}",
+                "🚨".cyan(),
+                "Security Incident Report".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3630,15 +4929,22 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("\n**Security Configuration:**");
             if let Ok(sec) = ctx.guestfs.inspect_security(&ctx.root) {
                 println!("- SELinux: {}", sec.selinux);
-                println!("- AppArmor: {}", if sec.apparmor { "Active" } else { "Inactive" });
-                println!("- Audit Daemon: {}", if sec.auditd { "Running" } else { "Not running" });
+                println!(
+                    "- AppArmor: {}",
+                    if sec.apparmor { "Active" } else { "Inactive" }
+                );
+                println!(
+                    "- Audit Daemon: {}",
+                    if sec.auditd { "Running" } else { "Not running" }
+                );
             }
 
             println!("\n**Active Users:**");
             if let Ok(users) = ctx.guestfs.inspect_users(&ctx.root) {
-                let regular = users.iter().filter(|u| {
-                    u.uid.parse::<u32>().map(|uid| uid >= 1000).unwrap_or(false)
-                }).count();
+                let regular = users
+                    .iter()
+                    .filter(|u| u.uid.parse::<u32>().map(|uid| uid >= 1000).unwrap_or(false))
+                    .count();
                 println!("- {} regular user accounts", regular);
                 println!("- Run 'users' for complete list");
             }
@@ -3646,7 +4952,10 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!();
             println!("{}", "### Evidence Collection".yellow());
             println!("The following data should be preserved:");
-            println!("1. Complete snapshot: `snapshot incident-{}.md`", now.format("%Y%m%d-%H%M%S"));
+            println!(
+                "1. Complete snapshot: `snapshot incident-{}.md`",
+                now.format("%Y%m%d-%H%M%S")
+            );
             println!("2. Security logs: `recent /var/log 100`");
             println!("3. User activity: `users`");
             println!("4. Service status: `services`");
@@ -3661,11 +4970,18 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "change" => {
-            println!("\n{} {}", "📝".cyan(), "Change Request Documentation".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📝".cyan(),
+                "Change Request Documentation".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
-            println!("{}", "## Change Request - System Modification".green().bold());
+            println!(
+                "{}",
+                "## Change Request - System Modification".green().bold()
+            );
             println!();
 
             println!("**Date:** {}", chrono::Local::now().format("%Y-%m-%d"));
@@ -3707,7 +5023,11 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "status" => {
-            println!("\n{} {}", "📊".cyan(), "Weekly Status Report".yellow().bold());
+            println!(
+                "\n{} {}",
+                "📊".cyan(),
+                "Weekly Status Report".yellow().bold()
+            );
             println!("{}", "═".repeat(70).cyan());
             println!();
 
@@ -3767,23 +5087,57 @@ pub fn cmd_collaborate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-
 /// Predictive analysis for potential issues
 pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║              Command Template System                     ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║              Command Template System                     ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     if args.is_empty() {
         println!("{}", "Available Templates:".yellow().bold());
         println!();
-        println!("{} {} - Full security audit", "1.".cyan(), "security-audit".green());
-        println!("{} {} - System health check", "2.".cyan(), "health-check".green());
-        println!("{} {} - Compliance review", "3.".cyan(), "compliance-review".green());
-        println!("{} {} - Performance analysis", "4.".cyan(), "performance-analysis".green());
+        println!(
+            "{} {} - Full security audit",
+            "1.".cyan(),
+            "security-audit".green()
+        );
+        println!(
+            "{} {} - System health check",
+            "2.".cyan(),
+            "health-check".green()
+        );
+        println!(
+            "{} {} - Compliance review",
+            "3.".cyan(),
+            "compliance-review".green()
+        );
+        println!(
+            "{} {} - Performance analysis",
+            "4.".cyan(),
+            "performance-analysis".green()
+        );
         println!("{} {} - Export all data", "5.".cyan(), "export-all".green());
-        println!("{} {} - Pre-migration check", "6.".cyan(), "pre-migration".green());
+        println!(
+            "{} {} - Pre-migration check",
+            "6.".cyan(),
+            "pre-migration".green()
+        );
         println!();
         println!("{} template <name>", "Usage:".yellow());
         return Ok(());
@@ -3858,7 +5212,10 @@ pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "performance-analysis" => {
-            println!("{}", "⚡ Running Performance Analysis Template".cyan().bold());
+            println!(
+                "{}",
+                "⚡ Running Performance Analysis Template".cyan().bold()
+            );
             println!("{}", "━".repeat(60).bright_black());
             println!();
 
@@ -3890,7 +5247,10 @@ pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         "pre-migration" => {
-            println!("{}", "🚀 Running Pre-Migration Check Template".cyan().bold());
+            println!(
+                "{}",
+                "🚀 Running Pre-Migration Check Template".cyan().bold()
+            );
             println!("{}", "━".repeat(60).bright_black());
             println!();
 
@@ -3916,7 +5276,10 @@ pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
         _ => {
             println!("{} Unknown template: {}", "Error:".red(), template_name);
-            println!("{} template (without arguments) to see available templates", "Tip:".yellow());
+            println!(
+                "{} template (without arguments) to see available templates",
+                "Tip:".yellow()
+            );
         }
     }
 
@@ -3926,9 +5289,24 @@ pub fn cmd_template(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Comprehensive system scoring across multiple dimensions
 pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║           Migration Readiness Assessment                ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║           Migration Readiness Assessment                ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     let target = if args.is_empty() { "cloud" } else { args[0] };
@@ -3973,7 +5351,10 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             // Check 3: Cloud-init support
             println!("{} Checking cloud-init support...", "→".cyan());
             let pkg_info = ctx.guestfs.inspect_packages(&ctx.root)?;
-            let has_cloud_init = pkg_info.packages.iter().any(|p| p.name.contains("cloud-init"));
+            let has_cloud_init = pkg_info
+                .packages
+                .iter()
+                .any(|p| p.name.contains("cloud-init"));
             if has_cloud_init {
                 println!("  {} cloud-init is installed", "✓".green());
                 ready += 1;
@@ -4007,7 +5388,11 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("{}", "═".repeat(60).bright_black());
             println!();
 
-            println!("{} Migration Readiness: {}/5 checks passed", "📊".cyan(), ready.to_string().cyan().bold());
+            println!(
+                "{} Migration Readiness: {}/5 checks passed",
+                "📊".cyan(),
+                ready.to_string().cyan().bold()
+            );
             println!();
 
             if !blockers.is_empty() {
@@ -4027,7 +5412,10 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             }
 
             if blockers.is_empty() && ready >= 4 {
-                println!("{}", "✓ System is ready for cloud migration!".green().bold());
+                println!(
+                    "{}",
+                    "✓ System is ready for cloud migration!".green().bold()
+                );
                 println!();
                 println!("{} Next Steps:", "💡".cyan());
                 println!("  1. Create final snapshot: snapshot pre-migration.md");
@@ -4035,10 +5423,16 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
                 println!("  3. Export system data: export system json system-config.json");
                 println!("  4. Review and test boot configuration");
             } else if blockers.is_empty() {
-                println!("{}", "⚠ System is mostly ready but has some warnings.".yellow());
+                println!(
+                    "{}",
+                    "⚠ System is mostly ready but has some warnings.".yellow()
+                );
                 println!("  Address recommendations above for best results.");
             } else {
-                println!("{}", "✗ System has critical blockers preventing migration.".red());
+                println!(
+                    "{}",
+                    "✗ System has critical blockers preventing migration.".red()
+                );
                 println!("  Resolve blockers before attempting migration.");
             }
         }
@@ -4055,11 +5449,20 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             println!("  Total packages: {}", pkg_count.to_string().cyan());
 
             if pkg_count < 300 {
-                println!("  {} Suitable for containerization (minimal footprint)", "✓".green());
+                println!(
+                    "  {} Suitable for containerization (minimal footprint)",
+                    "✓".green()
+                );
             } else if pkg_count < 600 {
-                println!("  {} Can be containerized (consider reducing packages)", "⚠".yellow());
+                println!(
+                    "  {} Can be containerized (consider reducing packages)",
+                    "⚠".yellow()
+                );
             } else {
-                println!("  {} Large package count (strongly consider reduction)", "⚠".yellow());
+                println!(
+                    "  {} Large package count (strongly consider reduction)",
+                    "⚠".yellow()
+                );
             }
 
             println!();
@@ -4073,8 +5476,16 @@ pub fn cmd_migrate(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         _ => {
             println!("{}", "Migration Targets:".yellow().bold());
             println!();
-            println!("{} {} - Cloud platform migration (AWS, Azure, GCP)", "1.".cyan(), "migrate cloud".green());
-            println!("{} {} - Container migration assessment", "2.".cyan(), "migrate container".green());
+            println!(
+                "{} {} - Cloud platform migration (AWS, Azure, GCP)",
+                "1.".cyan(),
+                "migrate cloud".green()
+            );
+            println!(
+                "{} {} - Container migration assessment",
+                "2.".cyan(),
+                "migrate container".green()
+            );
             println!();
             println!("{} migrate <target>", "Usage:".yellow());
         }

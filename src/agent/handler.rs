@@ -127,7 +127,9 @@ impl RequestHandler {
                 let boot_target = crate::boot::BootTarget::parse(target);
                 let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
                 let report = crate::cli::migrate::plan::compute_migration_score(
-                    &evidence, &boot_report, target,
+                    &evidence,
+                    &boot_report,
+                    target,
                 );
                 JsonRpcResponse::success(id, serde_json::to_value(report).unwrap_or(json!({})))
             }

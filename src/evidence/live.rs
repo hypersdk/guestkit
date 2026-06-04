@@ -107,7 +107,10 @@ fn collect_storage_live() -> StorageEvidence {
             }
         }
     }
-    if let Ok(out) = Command::new("lsblk").args(["-J", "-o", "NAME,UUID,FSTYPE"]).output() {
+    if let Ok(out) = Command::new("lsblk")
+        .args(["-J", "-o", "NAME,UUID,FSTYPE"])
+        .output()
+    {
         if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&out.stdout) {
             if let Some(devices) = json["blockdevices"].as_array() {
                 walk_lsblk(devices, &mut storage.partition_uuids);
@@ -232,7 +235,10 @@ fn collect_packages_live() -> PackageEvidence {
             packages.sample_packages = list.into_iter().take(50).collect();
         }
     } else if Path::new("/usr/bin/rpm").exists() {
-        if let Ok(out) = Command::new("rpm").args(["-qa", "--qf", "%{NAME}\n"]).output() {
+        if let Ok(out) = Command::new("rpm")
+            .args(["-qa", "--qf", "%{NAME}\n"])
+            .output()
+        {
             let list: Vec<String> = String::from_utf8_lossy(&out.stdout)
                 .lines()
                 .map(|s| s.to_string())
@@ -259,14 +265,16 @@ fn collect_security_live() -> SecurityEvidence {
         .args(["is-active", "firewalld"])
         .output()
     {
-        security.firewall_enabled =
-            String::from_utf8_lossy(&out.stdout).trim() == "active";
+        security.firewall_enabled = String::from_utf8_lossy(&out.stdout).trim() == "active";
     }
     if let Ok(content) = fs::read_to_string("/etc/ssh/sshd_config") {
         for line in content.lines() {
             let line = line.trim();
             if line.starts_with("PermitRootLogin") {
-                let val = line.split_whitespace().nth(1).unwrap_or("prohibit-password");
+                let val = line
+                    .split_whitespace()
+                    .nth(1)
+                    .unwrap_or("prohibit-password");
                 security.ssh_root_login = Some(!matches!(val, "no" | "prohibit-password"));
             }
         }

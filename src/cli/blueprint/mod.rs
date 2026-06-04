@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Infrastructure as Code blueprint generation
 
-pub mod terraform;
 pub mod ansible;
-pub mod kubernetes;
 pub mod compose;
+pub mod kubernetes;
+pub mod terraform;
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -120,12 +120,18 @@ pub fn analyze_image<P: AsRef<Path>>(image_path: P, verbose: bool) -> Result<Ima
     }
 
     // Get OS information
-    let os_name = g.inspect_get_product_name(root).unwrap_or_else(|_| "Unknown".to_string());
+    let os_name = g
+        .inspect_get_product_name(root)
+        .unwrap_or_else(|_| "Unknown".to_string());
     let os_version = g.inspect_get_major_version(root).unwrap_or(0);
     let os_minor = g.inspect_get_minor_version(root).unwrap_or(0);
-    let arch = g.inspect_get_arch(root).unwrap_or_else(|_| "x86_64".to_string());
+    let arch = g
+        .inspect_get_arch(root)
+        .unwrap_or_else(|_| "x86_64".to_string());
 
-    let hostname = g.inspect_get_hostname(root).unwrap_or_else(|_| "unknown".to_string());
+    let hostname = g
+        .inspect_get_hostname(root)
+        .unwrap_or_else(|_| "unknown".to_string());
 
     // Get packages
     let mut packages = Vec::new();
@@ -177,19 +183,31 @@ fn detect_services(g: &mut Guestfs, verbose: bool) -> Vec<Service> {
     let mut services = Vec::new();
 
     // Check for systemd services
-    if g.is_file("/etc/systemd/system").unwrap_or(false) ||
-       g.is_dir("/lib/systemd/system").unwrap_or(false) {
-
+    if g.is_file("/etc/systemd/system").unwrap_or(false)
+        || g.is_dir("/lib/systemd/system").unwrap_or(false)
+    {
         if verbose {
             println!("  Detecting systemd services...");
         }
 
         // Common services to check
-        for service_name in &["nginx", "apache2", "httpd", "mysql", "mariadb", "postgresql", "redis", "docker"] {
+        for service_name in &[
+            "nginx",
+            "apache2",
+            "httpd",
+            "mysql",
+            "mariadb",
+            "postgresql",
+            "redis",
+            "docker",
+        ] {
             let service_file = format!("/lib/systemd/system/{}.service", service_name);
             if g.is_file(&service_file).unwrap_or(false) {
                 // Check if service is enabled by looking for symlink in wants directories
-                let enabled_link = format!("/etc/systemd/system/multi-user.target.wants/{}.service", service_name);
+                let enabled_link = format!(
+                    "/etc/systemd/system/multi-user.target.wants/{}.service",
+                    service_name
+                );
                 let is_enabled = g.is_file(&enabled_link).unwrap_or(false);
 
                 services.push(Service {
@@ -234,27 +252,46 @@ fn detect_ports(g: &mut Guestfs, verbose: bool) -> Vec<Port> {
     }
 
     // Check for common web servers
-    if g.is_file("/etc/nginx/nginx.conf").unwrap_or(false) ||
-       g.is_file("/etc/apache2/apache2.conf").unwrap_or(false) ||
-       g.is_file("/etc/httpd/conf/httpd.conf").unwrap_or(false) {
-        ports.push(Port { number: 80, protocol: "tcp".to_string() });
-        ports.push(Port { number: 443, protocol: "tcp".to_string() });
+    if g.is_file("/etc/nginx/nginx.conf").unwrap_or(false)
+        || g.is_file("/etc/apache2/apache2.conf").unwrap_or(false)
+        || g.is_file("/etc/httpd/conf/httpd.conf").unwrap_or(false)
+    {
+        ports.push(Port {
+            number: 80,
+            protocol: "tcp".to_string(),
+        });
+        ports.push(Port {
+            number: 443,
+            protocol: "tcp".to_string(),
+        });
     }
 
     // Check for databases
     if g.is_dir("/var/lib/mysql").unwrap_or(false) {
-        ports.push(Port { number: 3306, protocol: "tcp".to_string() });
+        ports.push(Port {
+            number: 3306,
+            protocol: "tcp".to_string(),
+        });
     }
     if g.is_dir("/var/lib/postgresql").unwrap_or(false) {
-        ports.push(Port { number: 5432, protocol: "tcp".to_string() });
+        ports.push(Port {
+            number: 5432,
+            protocol: "tcp".to_string(),
+        });
     }
     if g.is_file("/etc/redis/redis.conf").unwrap_or(false) {
-        ports.push(Port { number: 6379, protocol: "tcp".to_string() });
+        ports.push(Port {
+            number: 6379,
+            protocol: "tcp".to_string(),
+        });
     }
 
     // SSH is almost always present
     if g.is_file("/etc/ssh/sshd_config").unwrap_or(false) {
-        ports.push(Port { number: 22, protocol: "tcp".to_string() });
+        ports.push(Port {
+            number: 22,
+            protocol: "tcp".to_string(),
+        });
     }
 
     ports
@@ -282,7 +319,8 @@ fn detect_volumes(g: &mut Guestfs, verbose: bool) -> Vec<Volume> {
             let size_bytes = g.du(dir).unwrap_or(0);
             let size_gb = size_bytes as f64 / 1_073_741_824.0;
 
-            if size_gb > 0.1 {  // Only include if > 100MB
+            if size_gb > 0.1 {
+                // Only include if > 100MB
                 volumes.push(Volume {
                     path: dir.to_string(),
                     size_gb,
@@ -314,21 +352,51 @@ mod tests {
 
     #[test]
     fn test_blueprint_format_from_str() {
-        assert_eq!(BlueprintFormat::from_str("terraform"), Some(BlueprintFormat::Terraform));
-        assert_eq!(BlueprintFormat::from_str("tf"), Some(BlueprintFormat::Terraform));
-        assert_eq!(BlueprintFormat::from_str("ansible"), Some(BlueprintFormat::Ansible));
-        assert_eq!(BlueprintFormat::from_str("kubernetes"), Some(BlueprintFormat::Kubernetes));
-        assert_eq!(BlueprintFormat::from_str("k8s"), Some(BlueprintFormat::Kubernetes));
-        assert_eq!(BlueprintFormat::from_str("compose"), Some(BlueprintFormat::Compose));
-        assert_eq!(BlueprintFormat::from_str("docker-compose"), Some(BlueprintFormat::Compose));
+        assert_eq!(
+            BlueprintFormat::from_str("terraform"),
+            Some(BlueprintFormat::Terraform)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("tf"),
+            Some(BlueprintFormat::Terraform)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("ansible"),
+            Some(BlueprintFormat::Ansible)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("kubernetes"),
+            Some(BlueprintFormat::Kubernetes)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("k8s"),
+            Some(BlueprintFormat::Kubernetes)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("compose"),
+            Some(BlueprintFormat::Compose)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("docker-compose"),
+            Some(BlueprintFormat::Compose)
+        );
         assert_eq!(BlueprintFormat::from_str("invalid"), None);
     }
 
     #[test]
     fn test_blueprint_format_case_insensitive() {
-        assert_eq!(BlueprintFormat::from_str("TERRAFORM"), Some(BlueprintFormat::Terraform));
-        assert_eq!(BlueprintFormat::from_str("Ansible"), Some(BlueprintFormat::Ansible));
-        assert_eq!(BlueprintFormat::from_str("K8S"), Some(BlueprintFormat::Kubernetes));
+        assert_eq!(
+            BlueprintFormat::from_str("TERRAFORM"),
+            Some(BlueprintFormat::Terraform)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("Ansible"),
+            Some(BlueprintFormat::Ansible)
+        );
+        assert_eq!(
+            BlueprintFormat::from_str("K8S"),
+            Some(BlueprintFormat::Kubernetes)
+        );
     }
 
     fn create_test_analysis() -> ImageAnalysis {
@@ -359,8 +427,14 @@ mod tests {
                 }],
             },
             ports: vec![
-                Port { number: 80, protocol: "tcp".to_string() },
-                Port { number: 443, protocol: "tcp".to_string() },
+                Port {
+                    number: 80,
+                    protocol: "tcp".to_string(),
+                },
+                Port {
+                    number: 443,
+                    protocol: "tcp".to_string(),
+                },
             ],
             volumes: vec![Volume {
                 path: "/var/www".to_string(),
@@ -373,17 +447,17 @@ mod tests {
     fn test_terraform_generation_aws() {
         let analysis = create_test_analysis();
         let result = terraform::generate(&analysis, Some("aws"));
-        
+
         assert!(result.is_ok());
         let tf = result.unwrap();
-        
+
         // Check for provider configuration
         assert!(tf.contains("provider \"aws\""));
         assert!(tf.contains("region = var.region"));
-        
+
         // Check for security group
         assert!(tf.contains("resource \"aws_security_group\""));
-        
+
         // Check for HTTP/HTTPS ports
         assert!(tf.contains("from_port   = 80"));
         assert!(tf.contains("from_port   = 443"));
@@ -393,10 +467,10 @@ mod tests {
     fn test_terraform_generation_azure() {
         let analysis = create_test_analysis();
         let result = terraform::generate(&analysis, Some("azure"));
-        
+
         assert!(result.is_ok());
         let tf = result.unwrap();
-        
+
         assert!(tf.contains("provider \"azurerm\""));
         assert!(tf.contains("resource_group"));
     }
@@ -405,10 +479,10 @@ mod tests {
     fn test_terraform_generation_gcp() {
         let analysis = create_test_analysis();
         let result = terraform::generate(&analysis, Some("gcp"));
-        
+
         assert!(result.is_ok());
         let tf = result.unwrap();
-        
+
         assert!(tf.contains("provider \"google\""));
         assert!(tf.contains("compute_instance"));
     }
@@ -417,10 +491,10 @@ mod tests {
     fn test_ansible_generation() {
         let analysis = create_test_analysis();
         let result = ansible::generate(&analysis);
-        
+
         assert!(result.is_ok());
         let playbook = result.unwrap();
-        
+
         // Check YAML structure
         assert!(playbook.starts_with("---"));
         assert!(playbook.contains("name: Configure server"));
@@ -432,16 +506,16 @@ mod tests {
     fn test_kubernetes_generation() {
         let analysis = create_test_analysis();
         let result = kubernetes::generate(&analysis);
-        
+
         assert!(result.is_ok());
         let manifests = result.unwrap();
-        
+
         // Check for namespace
         assert!(manifests.contains("kind: Namespace"));
-        
+
         // Check for deployment
         assert!(manifests.contains("kind: Deployment"));
-        
+
         // Check for service
         assert!(manifests.contains("kind: Service"));
     }
@@ -450,16 +524,16 @@ mod tests {
     fn test_compose_generation() {
         let analysis = create_test_analysis();
         let result = compose::generate(&analysis);
-        
+
         assert!(result.is_ok());
         let compose = result.unwrap();
-        
+
         // Check version
         assert!(compose.contains("version: '3.8'"));
-        
+
         // Check service definition
         assert!(compose.contains("services:"));
-        
+
         // Check ports
         assert!(compose.contains("ports:"));
     }

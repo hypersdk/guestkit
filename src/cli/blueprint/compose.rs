@@ -25,7 +25,8 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     if !analysis.ports.is_empty() {
         compose.push_str("    ports:\n");
         for port in &analysis.ports {
-            if port.number != 22 {  // Skip SSH
+            if port.number != 22 {
+                // Skip SSH
                 compose.push_str(&format!("      - \"{}:{}\"\n", port.number, port.number));
             }
         }
@@ -63,7 +64,10 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     compose.push_str("      - app_network\n");
 
     // Health check (if web service detected)
-    let has_http = analysis.ports.iter().any(|p| p.number == 80 || p.number == 443);
+    let has_http = analysis
+        .ports
+        .iter()
+        .any(|p| p.number == 80 || p.number == 443);
     if has_http {
         compose.push_str("    healthcheck:\n");
         compose.push_str("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:80\"]\n");
@@ -147,6 +151,12 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
 fn sanitize_name(name: &str) -> String {
     name.to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }

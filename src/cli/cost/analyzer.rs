@@ -80,7 +80,8 @@ pub fn find_savings_opportunities(
     // Auto-scaling opportunity
     opportunities.push(SavingsOpportunity {
         category: "Auto-scaling".to_string(),
-        description: "Implement auto-scaling to match demand (scale down during off-peak)".to_string(),
+        description: "Implement auto-scaling to match demand (scale down during off-peak)"
+            .to_string(),
         current_cost: current.compute_monthly,
         optimized_cost: current.compute_monthly * 0.7,
         monthly_savings: current.compute_monthly * 0.3,
@@ -144,7 +145,8 @@ fn add_aws_opportunities(opportunities: &mut Vec<SavingsOpportunity>, current: &
     if !current.instance_type.contains("graviton") && !current.instance_type.starts_with('r') {
         opportunities.push(SavingsOpportunity {
             category: "Graviton Instances".to_string(),
-            description: "Migrate to ARM-based Graviton instances (20% better price-performance)".to_string(),
+            description: "Migrate to ARM-based Graviton instances (20% better price-performance)"
+                .to_string(),
             current_cost: current.compute_monthly,
             optimized_cost: current.compute_monthly * 0.8,
             monthly_savings: current.compute_monthly * 0.2,
@@ -154,7 +156,10 @@ fn add_aws_opportunities(opportunities: &mut Vec<SavingsOpportunity>, current: &
     }
 }
 
-fn add_azure_opportunities(opportunities: &mut Vec<SavingsOpportunity>, current: &ResourceEstimate) {
+fn add_azure_opportunities(
+    opportunities: &mut Vec<SavingsOpportunity>,
+    current: &ResourceEstimate,
+) {
     // Azure Hybrid Benefit
     opportunities.push(SavingsOpportunity {
         category: "Azure Hybrid Benefit".to_string(),
@@ -200,9 +205,14 @@ pub fn generate_recommendations(
     let mut recommendations = Vec::new();
 
     // Top opportunity
-    if let Some(top_opp) = opportunities.iter()
+    if let Some(top_opp) = opportunities
+        .iter()
         .filter(|o| o.priority == OptimizationPriority::High)
-        .max_by(|a, b| a.monthly_savings.partial_cmp(&b.monthly_savings).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|a, b| {
+            a.monthly_savings
+                .partial_cmp(&b.monthly_savings)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     {
         recommendations.push(CostRecommendation {
             title: format!("Priority: {}", top_opp.category),
@@ -217,7 +227,8 @@ pub fn generate_recommendations(
         recommendations.push(CostRecommendation {
             title: "Right-size Compute Resources".to_string(),
             description: "Current allocation appears oversized for detected workload".to_string(),
-            estimated_savings: opportunities.iter()
+            estimated_savings: opportunities
+                .iter()
                 .find(|o| o.category == "Compute Right-sizing")
                 .map(|o| o.monthly_savings)
                 .unwrap_or(0.0),
@@ -236,7 +247,8 @@ pub fn generate_recommendations(
         recommendations.push(CostRecommendation {
             title: "Implement Storage Tiering".to_string(),
             description: "Move infrequently accessed data to cheaper storage tiers".to_string(),
-            estimated_savings: opportunities.iter()
+            estimated_savings: opportunities
+                .iter()
                 .find(|o| o.category == "Storage Optimization")
                 .map(|o| o.monthly_savings)
                 .unwrap_or(0.0),
@@ -269,7 +281,10 @@ pub fn generate_recommendations(
 fn get_implementation_steps(category: &str, provider: CloudProvider) -> Vec<String> {
     match category {
         "Reserved Instances" => vec![
-            format!("Analyze usage patterns in {} Cost Explorer", provider.as_str()),
+            format!(
+                "Analyze usage patterns in {} Cost Explorer",
+                provider.as_str()
+            ),
             "Identify stable workloads running 24/7".to_string(),
             "Purchase 1-year reserved instances with partial upfront".to_string(),
             "Monitor RI utilization and adjust as needed".to_string(),

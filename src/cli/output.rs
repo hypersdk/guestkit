@@ -83,7 +83,6 @@ pub struct Table {
 }
 
 impl Table {
-    
     pub fn new(headers: Vec<String>) -> Self {
         Self {
             headers,
@@ -91,12 +90,10 @@ impl Table {
         }
     }
 
-    
     pub fn add_row(&mut self, row: Vec<String>) {
         self.rows.push(row);
     }
 
-    
     pub fn print(&self) {
         if self.headers.is_empty() {
             return;
@@ -145,7 +142,6 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    
     pub fn new(total: u64) -> Self {
         Self {
             total,
@@ -154,20 +150,17 @@ impl ProgressBar {
         }
     }
 
-    
     pub fn update(&mut self, current: u64) {
         self.current = current;
         self.draw();
     }
 
-    
     pub fn finish(&mut self) {
         self.current = self.total;
         self.draw();
         println!();
     }
 
-    
     fn draw(&self) {
         let percentage = if self.total > 0 {
             (self.current as f64 / self.total as f64 * 100.0) as u8
@@ -176,7 +169,8 @@ impl ProgressBar {
         };
 
         let filled = if self.total > 0 {
-            (((self.current.min(self.total)) as f64 / self.total as f64) * self.width as f64) as usize
+            (((self.current.min(self.total)) as f64 / self.total as f64) * self.width as f64)
+                as usize
         } else {
             0
         };
@@ -284,9 +278,18 @@ mod tests {
 
     #[test]
     fn test_output_format_from_str_case_insensitive() {
-        assert!(matches!("JSON".parse::<OutputFormat>().unwrap(), OutputFormat::Json));
-        assert!(matches!("YAML".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml));
-        assert!(matches!("YaML".parse::<OutputFormat>().unwrap(), OutputFormat::Yaml));
+        assert!(matches!(
+            "JSON".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Json
+        ));
+        assert!(matches!(
+            "YAML".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Yaml
+        ));
+        assert!(matches!(
+            "YaML".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Yaml
+        ));
     }
 
     #[test]
@@ -341,10 +344,10 @@ pub mod colors {
     use super::*;
 
     // Coral-Terracotta Orange theme - Pantone 7416 C inspired
-    const ORANGE_RGB: (u8, u8, u8) = (222, 115, 86);        // Primary coral orange
+    const ORANGE_RGB: (u8, u8, u8) = (222, 115, 86); // Primary coral orange
     const LIGHT_ORANGE_RGB: (u8, u8, u8) = (255, 145, 115); // Lighter coral
     #[allow(dead_code)]
-    const DARK_ORANGE_RGB: (u8, u8, u8) = (180, 85, 60);    // Darker terracotta
+    const DARK_ORANGE_RGB: (u8, u8, u8) = (180, 85, 60); // Darker terracotta
 
     /// Print success message with green checkmark
     pub fn success(msg: &str) {
@@ -363,22 +366,39 @@ pub mod colors {
 
     /// Print info message with coral orange info icon
     pub fn info(msg: &str) {
-        println!("{} {}", "ℹ".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
+        println!(
+            "{} {}",
+            "ℹ".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2),
+            msg
+        );
     }
 
     /// Print header with bold and underline in coral orange
     pub fn header(msg: &str) {
-        println!("{}", msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold().underline());
+        println!(
+            "{}",
+            msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2)
+                .bold()
+                .underline()
+        );
     }
 
     /// Print section header with coral orange color
     pub fn section(msg: &str) {
-        println!("\n{}", msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold());
+        println!(
+            "\n{}",
+            msg.truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2)
+                .bold()
+        );
     }
 
     /// Print key-value pair with coral orange key
     pub fn kv(key: &str, value: &str) {
-        println!("{}: {}", key.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2), value);
+        println!(
+            "{}: {}",
+            key.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2),
+            value
+        );
     }
 
     /// Print key-value with optional value coloring
@@ -419,7 +439,8 @@ pub mod colors {
 
     /// Status indicator with colored icon
     pub fn status(label: &str, status: Status) {
-        let label_colored = label.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2);
+        let label_colored =
+            label.truecolor(LIGHT_ORANGE_RGB.0, LIGHT_ORANGE_RGB.1, LIGHT_ORANGE_RGB.2);
         match status {
             Status::Enabled => println!("{} {}: {}", "✓".bold(), label_colored, "enabled".green()),
             Status::Disabled => println!("{} {}: {}", "✗".bold(), label_colored, "disabled".red()),
@@ -453,17 +474,31 @@ pub mod colors {
 
     /// Print bullet point item
     pub fn bullet(msg: &str) {
-        println!("  {} {}", "•".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
+        println!(
+            "  {} {}",
+            "•".truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2),
+            msg
+        );
     }
 
     /// Print numbered item
     pub fn numbered(num: usize, msg: &str) {
-        println!("  {}. {}", num.to_string().truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2).bold(), msg);
+        println!(
+            "  {}. {}",
+            num.to_string()
+                .truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2)
+                .bold(),
+            msg
+        );
     }
 
     /// Print progress indicator
     pub fn progress(current: usize, total: usize, msg: &str) {
-        println!("{} {}", format!("[{}/{}]", current, total).truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2), msg);
+        println!(
+            "{} {}",
+            format!("[{}/{}]", current, total).truecolor(ORANGE_RGB.0, ORANGE_RGB.1, ORANGE_RGB.2),
+            msg
+        );
     }
 }
 

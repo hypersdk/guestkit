@@ -28,8 +28,7 @@ pub struct CachedInspection {
     pub system_config: Option<SystemConfigCache>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OsInfoCache {
     pub os_type: String,
     pub distribution: String,
@@ -102,16 +101,14 @@ impl BinaryCache {
             .join("guestkit")
             .join("binary");
 
-        fs::create_dir_all(&cache_dir)
-            .context("Failed to create cache directory")?;
+        fs::create_dir_all(&cache_dir).context("Failed to create cache directory")?;
 
         Ok(Self { cache_dir })
     }
 
     /// Create cache with custom directory (for testing and benchmarks)
     pub fn with_dir(cache_dir: PathBuf) -> Result<Self> {
-        fs::create_dir_all(&cache_dir)
-            .context("Failed to create cache directory")?;
+        fs::create_dir_all(&cache_dir).context("Failed to create cache directory")?;
         Ok(Self { cache_dir })
     }
 
@@ -126,7 +123,10 @@ impl BinaryCache {
                 key
             );
         }
-        if !key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.') {
+        if !key
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+        {
             anyhow::bail!(
                 "Cache key contains disallowed characters (only alphanumeric, -, _, . allowed): {:?}",
                 key
@@ -149,16 +149,13 @@ impl BinaryCache {
         let path = self.cache_path(key)?;
 
         // Serialize to binary format
-        let encoded = bincode::serialize(data)
-            .context("Failed to serialize cache data")?;
+        let encoded = bincode::serialize(data).context("Failed to serialize cache data")?;
 
         // Write atomically using temp file + rename
         let temp_path = path.with_extension("tmp");
-        fs::write(&temp_path, encoded)
-            .context("Failed to write cache file")?;
+        fs::write(&temp_path, encoded).context("Failed to write cache file")?;
 
-        fs::rename(&temp_path, &path)
-            .context("Failed to rename cache file")?;
+        fs::rename(&temp_path, &path).context("Failed to rename cache file")?;
 
         log::debug!("Saved cache to {:?} ({} bytes)", path, data.size());
 
@@ -169,8 +166,7 @@ impl BinaryCache {
     pub fn load(&self, key: &str) -> Result<CachedInspection> {
         let path = self.cache_path(key)?;
 
-        let bytes = fs::read(&path)
-            .context("Failed to read cache file")?;
+        let bytes = fs::read(&path).context("Failed to read cache file")?;
 
         // Limit deserialization to 100MB to prevent memory exhaustion from corrupt/malicious data
         use bincode::Options;
@@ -198,9 +194,7 @@ impl BinaryCache {
         }
 
         let data = self.load(key)?;
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
         let age = now.saturating_sub(data.timestamp);
         Ok(age < max_age_seconds)
@@ -210,8 +204,7 @@ impl BinaryCache {
     pub fn delete(&self, key: &str) -> Result<()> {
         let path = self.cache_path(key)?;
         if path.exists() {
-            fs::remove_file(&path)
-                .context("Failed to delete cache file")?;
+            fs::remove_file(&path).context("Failed to delete cache file")?;
         }
         Ok(())
     }
@@ -288,9 +281,7 @@ impl BinaryCache {
     /// Clear cache entries older than specified seconds
     pub fn clear_older_than(&self, max_age_seconds: u64) -> Result<usize> {
         let mut count = 0;
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
         for entry in fs::read_dir(&self.cache_dir)? {
             let entry = entry?;
@@ -315,7 +306,11 @@ impl BinaryCache {
             }
         }
 
-        log::info!("Cleared {} cache entries older than {} seconds", count, max_age_seconds);
+        log::info!(
+            "Cleared {} cache entries older than {} seconds",
+            count,
+            max_age_seconds
+        );
         Ok(count)
     }
 }
@@ -400,7 +395,6 @@ impl CachedInspection {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

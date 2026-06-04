@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! TUI application state management
 
-use anyhow::Result;
-use chrono::{DateTime, Local};
 use crate::guestfs::inspect_enhanced::{
-    Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, Package, PackageInfo,
-    RAIDArray, SecurityInfo, SystemService, UserAccount, WebServer,
+    Database, FirewallInfo, HostEntry, LVMInfo, NetworkInterface, Package, PackageInfo, RAIDArray,
+    SecurityInfo, SystemService, UserAccount, WebServer,
 };
 use crate::Guestfs;
+use anyhow::Result;
+use chrono::{DateTime, Local};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -186,13 +186,13 @@ pub enum SortMode {
     Default,
     NameAsc,
     NameDesc,
-    VersionAsc,   // For packages
+    VersionAsc, // For packages
     VersionDesc,
-    SizeAsc,      // For storage
+    SizeAsc, // For storage
     SizeDesc,
-    StateAsc,     // For services
+    StateAsc, // For services
     StateDesc,
-    UidAsc,       // For users
+    UidAsc, // For users
     UidDesc,
     EnabledFirst, // For services
 }
@@ -298,7 +298,7 @@ pub struct App {
     pub show_detail: bool,
     pub sort_mode: SortMode,
     pub show_stats_bar: bool,
-    pub table_mode: bool, // Toggle between list and table view
+    pub table_mode: bool,      // Toggle between list and table view
     pub comparison_mode: bool, // Toggle comparison/diff view
     pub snapshot_packages: Option<Vec<Package>>, // Snapshot for comparison
     pub snapshot_services: Option<Vec<SystemService>>,
@@ -685,7 +685,10 @@ impl App {
                     // Check file size - don't preview files > 1MB
                     match guestfs.filesize(&path) {
                         Ok(size) if size > 1024 * 1024 => {
-                            self.show_notification(format!("File too large to preview ({} bytes)", size));
+                            self.show_notification(format!(
+                                "File too large to preview ({} bytes)",
+                                size
+                            ));
                             return;
                         }
                         Err(_) => {
@@ -723,7 +726,10 @@ impl App {
 
                     // File type
                     if let Ok(is_dir) = guestfs.is_dir(&path) {
-                        info.push(format!("Type: {}", if is_dir { "Directory" } else { "File" }));
+                        info.push(format!(
+                            "Type: {}",
+                            if is_dir { "Directory" } else { "File" }
+                        ));
                     }
 
                     // File size
@@ -751,7 +757,6 @@ impl App {
             }
         }
     }
-
 
     /// Close file preview
     pub fn close_file_preview(&mut self) {
@@ -888,7 +893,11 @@ impl App {
     /// Toggle live filtering
     pub fn toggle_live_filter(&mut self) {
         self.live_filter_enabled = !self.live_filter_enabled;
-        let status = if self.live_filter_enabled { "enabled" } else { "disabled" };
+        let status = if self.live_filter_enabled {
+            "enabled"
+        } else {
+            "disabled"
+        };
         self.show_notification(format!("Live filter {}", status));
     }
 
@@ -1015,7 +1024,11 @@ impl App {
     }
 
     pub fn global_search_activate(&mut self) {
-        if let Some(hit) = self.global_search_hits.get(self.global_search_selected).cloned() {
+        if let Some(hit) = self
+            .global_search_hits
+            .get(self.global_search_selected)
+            .cloned()
+        {
             self.set_view(hit.view);
             self.selected_index = hit.index;
             self.scroll_offset = hit.index.saturating_sub(5);
@@ -1214,7 +1227,9 @@ impl App {
             let count = self.get_filtered_count();
             if count > 0 && self.selected_index < count - 1 {
                 self.selected_index += 1;
-                self.scroll_offset = self.scroll_offset.max(self.selected_index.saturating_sub(20));
+                self.scroll_offset = self
+                    .scroll_offset
+                    .max(self.selected_index.saturating_sub(20));
             }
         }
     }
@@ -1226,7 +1241,9 @@ impl App {
 
     pub fn page_down(&mut self) {
         let count = self.get_filtered_count();
-        if count == 0 { return; }
+        if count == 0 {
+            return;
+        }
         let max = count - 1;
         self.selected_index = (self.selected_index + 10).min(max);
         self.scroll_offset = (self.scroll_offset + 10).min(max);
@@ -1239,7 +1256,9 @@ impl App {
 
     pub fn scroll_bottom(&mut self) {
         let count = self.get_filtered_count();
-        if count == 0 { return; }
+        if count == 0 {
+            return;
+        }
         let max = count - 1;
         self.scroll_offset = max;
         self.selected_index = max;
@@ -1264,11 +1283,15 @@ impl App {
         }
 
         let interval = self.config.behavior.auto_refresh_seconds;
-        if interval > 0 && !self.refreshing && !self.is_searching() && !self.show_palette
-            && self.last_auto_refresh.elapsed().as_secs() >= interval {
-                let _ = self.reload_current_view(false);
-                self.last_auto_refresh = Instant::now();
-            }
+        if interval > 0
+            && !self.refreshing
+            && !self.is_searching()
+            && !self.show_palette
+            && self.last_auto_refresh.elapsed().as_secs() >= interval
+        {
+            let _ = self.reload_current_view(false);
+            self.last_auto_refresh = Instant::now();
+        }
     }
 
     pub fn show_notification(&mut self, message: String) {
@@ -1314,11 +1337,7 @@ impl App {
             View::Assurance => "assurance",
             View::Files => "files",
         };
-        self.export_filename = format!(
-            "guestkit-{}.{}",
-            view_name,
-            format.extension()
-        );
+        self.export_filename = format!("guestkit-{}.{}", view_name, format.extension());
     }
 
     pub fn export_input(&mut self, c: char) {
@@ -1374,7 +1393,9 @@ impl App {
 
         // Validate filename to prevent path traversal
         if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
-            return Err(anyhow::anyhow!("Invalid filename: path traversal not allowed"));
+            return Err(anyhow::anyhow!(
+                "Invalid filename: path traversal not allowed"
+            ));
         }
 
         let output_path = PathBuf::from(filename);
@@ -1464,7 +1485,7 @@ impl App {
                     "filtered": packages_to_export.len() != self.packages.packages.len(),
                     "packages": packages_to_export,
                 })
-            },
+            }
             View::Services => {
                 let services_to_export = self.get_filtered_export_services();
                 json!({
@@ -1474,7 +1495,7 @@ impl App {
                     "filtered": services_to_export.len() != self.services.len(),
                     "services": services_to_export,
                 })
-            },
+            }
             View::Databases => json!({
                 "view": "databases",
                 "count": self.databases.len(),
@@ -1531,7 +1552,7 @@ impl App {
                     "lvm": self.lvm_info,
                     "raid": self.raid_arrays,
                 })
-            },
+            }
             View::Users => {
                 let users_to_export = self.get_filtered_export_users();
                 json!({
@@ -1541,7 +1562,7 @@ impl App {
                     "filtered": users_to_export.len() != self.users.len(),
                     "users": users_to_export,
                 })
-            },
+            }
             View::Kernel => json!({
                 "view": "kernel",
                 "modules": {
@@ -1553,20 +1574,21 @@ impl App {
             View::Analytics => {
                 let (critical, high, medium) = self.get_risk_summary();
                 json!({
-                "view": "analytics",
-                "security_score": {
-                    "critical": critical,
-                    "high": high,
-                    "medium": medium,
-                },
-                "package_stats": {
-                    "total": self.packages.package_count,
-                },
-                "service_stats": {
-                    "total": self.services.len(),
-                    "enabled": self.services.iter().filter(|s| s.enabled).count(),
-                },
-            })},
+                    "view": "analytics",
+                    "security_score": {
+                        "critical": critical,
+                        "high": high,
+                        "medium": medium,
+                    },
+                    "package_stats": {
+                        "total": self.packages.package_count,
+                    },
+                    "service_stats": {
+                        "total": self.services.len(),
+                        "enabled": self.services.iter().filter(|s| s.enabled).count(),
+                    },
+                })
+            }
             View::Timeline => json!({
                 "view": "timeline",
                 "system": {
@@ -1590,7 +1612,10 @@ impl App {
                 let current_profile = match self.selected_profile_tab {
                     0 => self.security_profile.as_ref().map(|p| ("security", p)),
                     1 => self.migration_profile.as_ref().map(|p| ("migration", p)),
-                    2 => self.performance_profile.as_ref().map(|p| ("performance", p)),
+                    2 => self
+                        .performance_profile
+                        .as_ref()
+                        .map(|p| ("performance", p)),
                     3 => self.compliance_profile.as_ref().map(|p| ("compliance", p)),
                     4 => self.hardening_profile.as_ref().map(|p| ("hardening", p)),
                     _ => None,
@@ -1608,17 +1633,21 @@ impl App {
                         "error": "No profile data available"
                     })
                 }
-            },
+            }
             View::Files => {
                 // Export file browser state
                 let files = if let Some(ref browser) = self.file_browser {
-                    browser.entries.iter().map(|entry| {
-                        json!({
-                            "name": entry.name,
-                            "is_dir": entry.is_dir,
-                            "size": entry.size,
+                    browser
+                        .entries
+                        .iter()
+                        .map(|entry| {
+                            json!({
+                                "name": entry.name,
+                                "is_dir": entry.is_dir,
+                                "size": entry.size,
+                            })
                         })
-                    }).collect::<Vec<_>>()
+                        .collect::<Vec<_>>()
                 } else {
                     Vec::new()
                 };
@@ -1643,14 +1672,32 @@ impl App {
 
     pub fn next_profile_tab(&mut self) {
         self.selected_profile_tab = (self.selected_profile_tab + 1) % 5;
-        let profile_names = ["Security", "Migration", "Performance", "Compliance", "Hardening"];
-        self.show_notification(format!("→ {} Profile", profile_names[self.selected_profile_tab]));
+        let profile_names = [
+            "Security",
+            "Migration",
+            "Performance",
+            "Compliance",
+            "Hardening",
+        ];
+        self.show_notification(format!(
+            "→ {} Profile",
+            profile_names[self.selected_profile_tab]
+        ));
     }
 
     pub fn previous_profile_tab(&mut self) {
         self.selected_profile_tab = (self.selected_profile_tab + 4) % 5;
-        let profile_names = ["Security", "Migration", "Performance", "Compliance", "Hardening"];
-        self.show_notification(format!("← {} Profile", profile_names[self.selected_profile_tab]));
+        let profile_names = [
+            "Security",
+            "Migration",
+            "Performance",
+            "Compliance",
+            "Hardening",
+        ];
+        self.show_notification(format!(
+            "← {} Profile",
+            profile_names[self.selected_profile_tab]
+        ));
     }
 
     pub fn get_current_profile_report(&self) -> Option<&ProfileReport> {
@@ -1677,7 +1724,11 @@ impl App {
     }
 
     pub fn jump_to_view(&mut self, index: usize) {
-        let ordered: Vec<View> = self.tab_titles_ordered().into_iter().map(|(v, _)| v).collect();
+        let ordered: Vec<View> = self
+            .tab_titles_ordered()
+            .into_iter()
+            .map(|(v, _)| v)
+            .collect();
         if index < ordered.len() {
             let v = ordered[index];
             self.set_view(v);
@@ -1710,8 +1761,16 @@ impl App {
 
     fn handle_view_tab_click(&mut self, column: u16) {
         let mut x: u16 = 2;
-        for (view, title) in self.view_tab_entries().into_iter().skip(self.view_tab_scroll) {
-            let marker = if view == self.current_view { "▸ " } else { "  " };
+        for (view, title) in self
+            .view_tab_entries()
+            .into_iter()
+            .skip(self.view_tab_scroll)
+        {
+            let marker = if view == self.current_view {
+                "▸ "
+            } else {
+                "  "
+            };
             let label = format!("{}{} ", marker, title);
             let width = label.chars().count() as u16;
             if column >= x && column < x + width {
@@ -1724,7 +1783,11 @@ impl App {
 
     pub fn toggle_stats_bar(&mut self) {
         self.show_stats_bar = !self.show_stats_bar;
-        let state = if self.show_stats_bar { "shown" } else { "hidden" };
+        let state = if self.show_stats_bar {
+            "shown"
+        } else {
+            "hidden"
+        };
         self.show_notification(format!("Stats bar {}", state));
     }
 
@@ -1755,8 +1818,12 @@ impl App {
     pub fn get_package_diff_stats(&self) -> (usize, usize, usize) {
         // Returns (added, removed, modified)
         if let Some(ref snapshot) = self.snapshot_packages {
-            let current_names: std::collections::HashSet<&str> =
-                self.packages.packages.iter().map(|p| p.name.as_str()).collect();
+            let current_names: std::collections::HashSet<&str> = self
+                .packages
+                .packages
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect();
             let snapshot_names: std::collections::HashSet<&str> =
                 snapshot.iter().map(|p| p.name.as_str()).collect();
 
@@ -1808,9 +1875,10 @@ impl App {
             // Check for removed services
             for old_svc in snapshot {
                 if !self.services.iter().any(|s| s.name == old_svc.name)
-                    && old_svc.state == "running" {
-                        stopped += 1;
-                    }
+                    && old_svc.state == "running"
+                {
+                    stopped += 1;
+                }
             }
 
             (started, stopped, changed)
@@ -2032,7 +2100,11 @@ impl App {
     /// Toggle case-sensitive search
     pub fn toggle_case_sensitive(&mut self) {
         self.search_case_sensitive = !self.search_case_sensitive;
-        let status = if self.search_case_sensitive { "ON" } else { "OFF" };
+        let status = if self.search_case_sensitive {
+            "ON"
+        } else {
+            "OFF"
+        };
         self.show_notification(format!("Case-sensitive: {}", status));
     }
 
@@ -2115,11 +2187,7 @@ impl App {
                 rows.push(JumpMenuRow::Header(group.clone()));
                 last_group = group.clone();
             }
-            rows.push(JumpMenuRow::Item {
-                group,
-                view,
-                title,
-            });
+            rows.push(JumpMenuRow::Item { group, view, title });
         }
         rows
     }
@@ -2155,7 +2223,9 @@ impl App {
         let n = self.get_grouped_jump_entries().len();
         if n > 0 {
             self.jump_selected_index = (self.jump_selected_index + 1) % n;
-            let visible = ((self.terminal_height as usize) * 60 / 100).saturating_sub(6).max(5);
+            let visible = ((self.terminal_height as usize) * 60 / 100)
+                .saturating_sub(6)
+                .max(5);
             self.ensure_jump_scroll_visible(visible);
         }
     }
@@ -2168,13 +2238,18 @@ impl App {
             } else {
                 self.jump_selected_index - 1
             };
-            let visible = ((self.terminal_height as usize) * 60 / 100).saturating_sub(6).max(5);
+            let visible = ((self.terminal_height as usize) * 60 / 100)
+                .saturating_sub(6)
+                .max(5);
             self.ensure_jump_scroll_visible(visible);
         }
     }
 
     pub fn jump_menu_select(&mut self) {
-        if let Some((_, view, _)) = self.get_grouped_jump_entries().get(self.jump_selected_index) {
+        if let Some((_, view, _)) = self
+            .get_grouped_jump_entries()
+            .get(self.jump_selected_index)
+        {
             let view = *view;
             self.show_jump_menu = false;
             self.set_view(view);
@@ -2362,7 +2437,8 @@ impl App {
                 "installed" => "📦 Installed",
                 "dev" => "🔧 Dev Packages",
                 _ => f.as_str(),
-            }.to_string()
+            }
+            .to_string()
         })
     }
 
@@ -2373,25 +2449,33 @@ impl App {
         match self.sort_mode {
             SortMode::NameAsc => {
                 indices.sort_by(|&a, &b| {
-                    self.packages.packages[a].name.to_lowercase()
+                    self.packages.packages[a]
+                        .name
+                        .to_lowercase()
                         .cmp(&self.packages.packages[b].name.to_lowercase())
                 });
             }
             SortMode::NameDesc => {
                 indices.sort_by(|&a, &b| {
-                    self.packages.packages[b].name.to_lowercase()
+                    self.packages.packages[b]
+                        .name
+                        .to_lowercase()
                         .cmp(&self.packages.packages[a].name.to_lowercase())
                 });
             }
             SortMode::VersionAsc => {
                 indices.sort_by(|&a, &b| {
-                    self.packages.packages[a].version.to_lowercase()
+                    self.packages.packages[a]
+                        .version
+                        .to_lowercase()
                         .cmp(&self.packages.packages[b].version.to_lowercase())
                 });
             }
             SortMode::VersionDesc => {
                 indices.sort_by(|&a, &b| {
-                    self.packages.packages[b].version.to_lowercase()
+                    self.packages.packages[b]
+                        .version
+                        .to_lowercase()
                         .cmp(&self.packages.packages[a].version.to_lowercase())
                 });
             }
@@ -2408,32 +2492,38 @@ impl App {
         match self.sort_mode {
             SortMode::NameAsc => {
                 indices.sort_by(|&a, &b| {
-                    self.services[a].name.to_lowercase()
+                    self.services[a]
+                        .name
+                        .to_lowercase()
                         .cmp(&self.services[b].name.to_lowercase())
                 });
             }
             SortMode::NameDesc => {
                 indices.sort_by(|&a, &b| {
-                    self.services[b].name.to_lowercase()
+                    self.services[b]
+                        .name
+                        .to_lowercase()
                         .cmp(&self.services[a].name.to_lowercase())
                 });
             }
             SortMode::StateAsc => {
-                indices.sort_by(|&a, &b| {
-                    self.services[a].state.cmp(&self.services[b].state)
-                });
+                indices.sort_by(|&a, &b| self.services[a].state.cmp(&self.services[b].state));
             }
             SortMode::StateDesc => {
-                indices.sort_by(|&a, &b| {
-                    self.services[b].state.cmp(&self.services[a].state)
-                });
+                indices.sort_by(|&a, &b| self.services[b].state.cmp(&self.services[a].state));
             }
             SortMode::EnabledFirst => {
                 indices.sort_by(|&a, &b| {
                     // Enabled first (true > false in reverse)
-                    self.services[b].enabled.cmp(&self.services[a].enabled)
-                        .then(self.services[a].name.to_lowercase()
-                            .cmp(&self.services[b].name.to_lowercase()))
+                    self.services[b]
+                        .enabled
+                        .cmp(&self.services[a].enabled)
+                        .then(
+                            self.services[a]
+                                .name
+                                .to_lowercase()
+                                .cmp(&self.services[b].name.to_lowercase()),
+                        )
                 });
             }
             _ => {} // Default order
@@ -2449,25 +2539,25 @@ impl App {
         match self.sort_mode {
             SortMode::NameAsc => {
                 indices.sort_by(|&a, &b| {
-                    self.users[a].username.to_lowercase()
+                    self.users[a]
+                        .username
+                        .to_lowercase()
                         .cmp(&self.users[b].username.to_lowercase())
                 });
             }
             SortMode::NameDesc => {
                 indices.sort_by(|&a, &b| {
-                    self.users[b].username.to_lowercase()
+                    self.users[b]
+                        .username
+                        .to_lowercase()
                         .cmp(&self.users[a].username.to_lowercase())
                 });
             }
             SortMode::UidAsc => {
-                indices.sort_by(|&a, &b| {
-                    self.users[a].uid.cmp(&self.users[b].uid)
-                });
+                indices.sort_by(|&a, &b| self.users[a].uid.cmp(&self.users[b].uid));
             }
             SortMode::UidDesc => {
-                indices.sort_by(|&a, &b| {
-                    self.users[b].uid.cmp(&self.users[a].uid)
-                });
+                indices.sort_by(|&a, &b| self.users[b].uid.cmp(&self.users[a].uid));
             }
             _ => {} // Default order
         }
@@ -2482,27 +2572,35 @@ impl App {
         match self.sort_mode {
             SortMode::NameAsc => {
                 indices.sort_by(|&a, &b| {
-                    self.fstab[a].0.to_lowercase()
+                    self.fstab[a]
+                        .0
+                        .to_lowercase()
                         .cmp(&self.fstab[b].0.to_lowercase())
                 });
             }
             SortMode::NameDesc => {
                 indices.sort_by(|&a, &b| {
-                    self.fstab[b].0.to_lowercase()
+                    self.fstab[b]
+                        .0
+                        .to_lowercase()
                         .cmp(&self.fstab[a].0.to_lowercase())
                 });
             }
             SortMode::SizeAsc => {
                 // For fstab, sort by mountpoint instead of size
                 indices.sort_by(|&a, &b| {
-                    self.fstab[a].1.to_lowercase()
+                    self.fstab[a]
+                        .1
+                        .to_lowercase()
                         .cmp(&self.fstab[b].1.to_lowercase())
                 });
             }
             SortMode::SizeDesc => {
                 // For fstab, sort by mountpoint reverse
                 indices.sort_by(|&a, &b| {
-                    self.fstab[b].1.to_lowercase()
+                    self.fstab[b]
+                        .1
+                        .to_lowercase()
                         .cmp(&self.fstab[a].1.to_lowercase())
                 });
             }
@@ -2516,7 +2614,8 @@ impl App {
     fn get_filtered_export_packages(&self) -> Vec<&Package> {
         // If multi-select mode with items selected, export only selected
         if self.multi_select_mode && !self.selected_items.is_empty() {
-            return self.selected_items
+            return self
+                .selected_items
                 .iter()
                 .filter_map(|&idx| self.packages.packages.get(idx))
                 .collect();
@@ -2531,7 +2630,9 @@ impl App {
                 .into_iter()
                 .filter(|&idx| {
                     let pkg = &self.packages.packages[idx];
-                    pkg.name.to_lowercase().contains(&self.search_query.to_lowercase())
+                    pkg.name
+                        .to_lowercase()
+                        .contains(&self.search_query.to_lowercase())
                         || pkg.version.contains(&self.search_query)
                 })
                 .collect()
@@ -2550,7 +2651,8 @@ impl App {
     fn get_filtered_export_services(&self) -> Vec<&SystemService> {
         // If multi-select mode with items selected, export only selected
         if self.multi_select_mode && !self.selected_items.is_empty() {
-            return self.selected_items
+            return self
+                .selected_items
                 .iter()
                 .filter_map(|&idx| self.services.get(idx))
                 .collect();
@@ -2565,8 +2667,13 @@ impl App {
                 .into_iter()
                 .filter(|&idx| {
                     let svc = &self.services[idx];
-                    svc.name.to_lowercase().contains(&self.search_query.to_lowercase())
-                        || svc.state.to_lowercase().contains(&self.search_query.to_lowercase())
+                    svc.name
+                        .to_lowercase()
+                        .contains(&self.search_query.to_lowercase())
+                        || svc
+                            .state
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
                 })
                 .collect()
         } else {
@@ -2584,7 +2691,8 @@ impl App {
     fn get_filtered_export_users(&self) -> Vec<&UserAccount> {
         // If multi-select mode with items selected, export only selected
         if self.multi_select_mode && !self.selected_items.is_empty() {
-            return self.selected_items
+            return self
+                .selected_items
                 .iter()
                 .filter_map(|&idx| self.users.get(idx))
                 .collect();
@@ -2599,10 +2707,18 @@ impl App {
                 .into_iter()
                 .filter(|&idx| {
                     let user = &self.users[idx];
-                    user.username.to_lowercase().contains(&self.search_query.to_lowercase())
+                    user.username
+                        .to_lowercase()
+                        .contains(&self.search_query.to_lowercase())
                         || user.uid.contains(&self.search_query)
-                        || user.shell.to_lowercase().contains(&self.search_query.to_lowercase())
-                        || user.home.to_lowercase().contains(&self.search_query.to_lowercase())
+                        || user
+                            .shell
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
+                        || user
+                            .home
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
                 })
                 .collect()
         } else {
@@ -2620,7 +2736,8 @@ impl App {
     fn get_filtered_export_storage(&self) -> Vec<&(String, String, String)> {
         // If multi-select mode with items selected, export only selected
         if self.multi_select_mode && !self.selected_items.is_empty() {
-            return self.selected_items
+            return self
+                .selected_items
                 .iter()
                 .filter_map(|&idx| self.fstab.get(idx))
                 .collect();
@@ -2635,9 +2752,15 @@ impl App {
                 .into_iter()
                 .filter(|&idx| {
                     let (device, mountpoint, fstype) = &self.fstab[idx];
-                    device.to_lowercase().contains(&self.search_query.to_lowercase())
-                        || mountpoint.to_lowercase().contains(&self.search_query.to_lowercase())
-                        || fstype.to_lowercase().contains(&self.search_query.to_lowercase())
+                    device
+                        .to_lowercase()
+                        .contains(&self.search_query.to_lowercase())
+                        || mountpoint
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
+                        || fstype
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
                 })
                 .collect()
         } else {
@@ -2822,9 +2945,18 @@ mod tests {
     fn test_sort_mode_next_packages() {
         assert_eq!(SortMode::Default.next(&View::Packages), SortMode::NameAsc);
         assert_eq!(SortMode::NameAsc.next(&View::Packages), SortMode::NameDesc);
-        assert_eq!(SortMode::NameDesc.next(&View::Packages), SortMode::VersionAsc);
-        assert_eq!(SortMode::VersionAsc.next(&View::Packages), SortMode::VersionDesc);
-        assert_eq!(SortMode::VersionDesc.next(&View::Packages), SortMode::Default);
+        assert_eq!(
+            SortMode::NameDesc.next(&View::Packages),
+            SortMode::VersionAsc
+        );
+        assert_eq!(
+            SortMode::VersionAsc.next(&View::Packages),
+            SortMode::VersionDesc
+        );
+        assert_eq!(
+            SortMode::VersionDesc.next(&View::Packages),
+            SortMode::Default
+        );
     }
 
     #[test]
@@ -2832,9 +2964,18 @@ mod tests {
         assert_eq!(SortMode::Default.next(&View::Services), SortMode::NameAsc);
         assert_eq!(SortMode::NameAsc.next(&View::Services), SortMode::NameDesc);
         assert_eq!(SortMode::NameDesc.next(&View::Services), SortMode::StateAsc);
-        assert_eq!(SortMode::StateAsc.next(&View::Services), SortMode::StateDesc);
-        assert_eq!(SortMode::StateDesc.next(&View::Services), SortMode::EnabledFirst);
-        assert_eq!(SortMode::EnabledFirst.next(&View::Services), SortMode::Default);
+        assert_eq!(
+            SortMode::StateAsc.next(&View::Services),
+            SortMode::StateDesc
+        );
+        assert_eq!(
+            SortMode::StateDesc.next(&View::Services),
+            SortMode::EnabledFirst
+        );
+        assert_eq!(
+            SortMode::EnabledFirst.next(&View::Services),
+            SortMode::Default
+        );
     }
 
     #[test]

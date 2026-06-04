@@ -27,8 +27,8 @@ pub use tools::*;
 // Shared imports used by multiple submodules
 use crate::cli::formatters::*;
 use crate::cli::profiles::{FindingStatus, ProfileReport};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 /// Collect inspection data into a structured report
 pub(crate) fn collect_inspection_data(
@@ -84,7 +84,8 @@ pub(crate) fn collect_inspection_data(
                 let regular_users: Vec<_> = all_users
                     .iter()
                     .filter(|u| {
-                        u.uid.parse::<u32>()
+                        u.uid
+                            .parse::<u32>()
                             .map(|uid| (1000..65534).contains(&uid))
                             .unwrap_or(false)
                     })
@@ -94,7 +95,8 @@ pub(crate) fn collect_inspection_data(
                 let system_users_count = all_users
                     .iter()
                     .filter(|u| {
-                        u.uid.parse::<u32>()
+                        u.uid
+                            .parse::<u32>()
                             .map(|uid| uid > 0 && uid < 1000)
                             .unwrap_or(false)
                     })
@@ -345,10 +347,12 @@ pub(crate) fn print_inspection_report(
 pub(crate) fn init_guestfs_ro(image: &std::path::Path, verbose: bool) -> Result<Guestfs> {
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
-    g.add_drive_ro(
-        image.to_str()
-            .ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8: {}", image.display()))?,
-    )?;
+    g.add_drive_ro(image.to_str().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Disk image path contains invalid UTF-8: {}",
+            image.display()
+        )
+    })?)?;
     g.launch()?;
     Ok(g)
 }

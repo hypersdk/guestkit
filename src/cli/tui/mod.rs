@@ -13,9 +13,9 @@ pub mod palette;
 pub mod plan_preview;
 pub mod splash;
 pub mod theme;
-pub mod widgets;
 pub mod ui;
 pub mod views;
+pub mod widgets;
 
 use anyhow::{Context, Result};
 use crossterm::{
@@ -24,10 +24,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -40,8 +37,7 @@ struct TerminalGuard;
 impl TerminalGuard {
     fn new() -> Result<Self> {
         enable_raw_mode().context("Failed to enable raw mode")?;
-        execute!(io::stdout(), EnterAlternateScreen)
-            .context("Failed to enter alternate screen")?;
+        execute!(io::stdout(), EnterAlternateScreen).context("Failed to enter alternate screen")?;
         Ok(Self)
     }
 }
@@ -79,7 +75,7 @@ pub fn run_tui<P: AsRef<Path>>(
         ProgressStyle::default_spinner()
             .template("{spinner:.rgb(255,122,0)} {msg:.rgb(125,133,144)}")
             .expect("valid spinner template")
-            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
     spinner.set_message("Inspecting disk image…");
     spinner.enable_steady_tick(Duration::from_millis(120));
@@ -111,10 +107,7 @@ pub fn run_tui<P: AsRef<Path>>(
     result
 }
 
-fn run_app<B: ratatui::backend::Backend>(
-    terminal: &mut Terminal<B>,
-    app: &mut App,
-) -> Result<()> {
+fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
 
@@ -170,10 +163,16 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('P') if app.fleet_active() && !app.is_searching() => {
                         let _ = app.fleet_previous();
                     }
-                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) && app.config.keybindings.quick_jump_enabled => {
+                    KeyCode::Char('p')
+                        if key.modifiers.contains(KeyModifiers::CONTROL)
+                            && app.config.keybindings.quick_jump_enabled =>
+                    {
                         app.toggle_jump_menu();
                     }
-                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) && key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    KeyCode::Char('p')
+                        if key.modifiers.contains(KeyModifiers::CONTROL)
+                            && key.modifiers.contains(KeyModifiers::SHIFT) =>
+                    {
                         app.start_global_search();
                     }
                     KeyCode::Char(':') if !app.is_searching() => {
@@ -182,16 +181,30 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Char('?') => app.toggle_context_help(),
                     KeyCode::Char('[') if !app.is_searching() => app.cycle_layout_mode_backward(),
                     KeyCode::Char(']') if !app.is_searching() => app.cycle_layout_mode(),
-                    KeyCode::Char('{') if !app.is_searching() && !app.show_help && !app.show_jump_menu && !app.show_palette => {
+                    KeyCode::Char('{')
+                        if !app.is_searching()
+                            && !app.show_help
+                            && !app.show_jump_menu
+                            && !app.show_palette =>
+                    {
                         app.previous_group();
                     }
-                    KeyCode::Char('}') if !app.is_searching() && !app.show_help && !app.show_jump_menu && !app.show_palette => {
+                    KeyCode::Char('}')
+                        if !app.is_searching()
+                            && !app.show_help
+                            && !app.show_jump_menu
+                            && !app.show_palette =>
+                    {
                         app.next_group();
                     }
-                    KeyCode::Char('i') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
+                    KeyCode::Char('i')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() =>
+                    {
                         app.toggle_case_sensitive();
                     }
-                    KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() => {
+                    KeyCode::Char('r')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && app.is_searching() =>
+                    {
                         app.toggle_regex_mode();
                     }
                     KeyCode::Tab => app.next_view(),
@@ -253,49 +266,99 @@ fn run_app<B: ratatui::backend::Backend>(
                         app.view_tab_scroll_right();
                     }
                     KeyCode::Char('s') => app.cycle_sort_mode(),
-                    KeyCode::Char('x') if app.current_view == app::View::Files && !app.is_searching() => {
+                    KeyCode::Char('x')
+                        if app.current_view == app::View::Files && !app.is_searching() =>
+                    {
                         app.file_browser_extract();
                     }
-                    KeyCode::Char('v') if app.current_view == app::View::Files && !app.is_searching() => {
+                    KeyCode::Char('v')
+                        if app.current_view == app::View::Files && !app.is_searching() =>
+                    {
                         // View file preview in Files view
                         app.show_file_preview();
                     }
-                    KeyCode::Char('i') if app.current_view == app::View::Files && !app.is_searching() => {
+                    KeyCode::Char('i')
+                        if app.current_view == app::View::Files && !app.is_searching() =>
+                    {
                         // Show file info in Files view
                         app.show_file_information();
                     }
                     KeyCode::Char('i') => app.toggle_stats_bar(),
-                    KeyCode::Char('t') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('t')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.toggle_table_mode();
                     }
-                    KeyCode::Char('c') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('c')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.toggle_comparison_mode();
                     }
-                    KeyCode::Char('m') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('m')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.toggle_multi_select();
                     }
-                    KeyCode::Char('f') if app.current_view == app::View::Issues && !app.is_searching() => {
+                    KeyCode::Char('f')
+                        if app.current_view == app::View::Issues && !app.is_searching() =>
+                    {
                         app.cycle_issue_filter();
                     }
-                    KeyCode::Char('f') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('f')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.cycle_filter();
                     }
-                    KeyCode::Char('l') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('l')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.toggle_live_filter();
                     }
-                    KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => {
+                    KeyCode::Char('a')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() =>
+                    {
                         app.select_all_items();
                     }
                     KeyCode::Char(' ') if app.multi_select_mode && !app.is_searching() => {
                         app.toggle_item_selection();
                     }
-                    KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::SHIFT) && !app.is_searching() => {
+                    KeyCode::Char('r')
+                        if key.modifiers.contains(KeyModifiers::SHIFT) && !app.is_searching() =>
+                    {
                         app.start_refresh(true);
                     }
-                    KeyCode::Char('r') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('r')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         app.start_refresh(false);
                     }
-                    KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => {
+                    KeyCode::Char('m')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() =>
+                    {
                         let _ = app.export_migration_bundle();
                     }
                     KeyCode::Char('b') => {
@@ -312,14 +375,12 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.start_search();
                         }
                     }
-                    KeyCode::Left
-                        if app.current_view == app::View::Profiles => {
-                            app.previous_profile_tab();
-                        }
-                    KeyCode::Right
-                        if app.current_view == app::View::Profiles => {
-                            app.next_profile_tab();
-                        }
+                    KeyCode::Left if app.current_view == app::View::Profiles => {
+                        app.previous_profile_tab();
+                    }
+                    KeyCode::Right if app.current_view == app::View::Profiles => {
+                        app.next_profile_tab();
+                    }
                     KeyCode::Up => {
                         if app.show_plan_preview {
                             app.plan_preview_scroll_up();
@@ -341,7 +402,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         if app.show_plan_preview {
                             app.plan_preview_scroll_down();
                         } else if app.show_palette {
-                            let n = crate::cli::tui::palette::filtered_commands(&app.palette_query).len();
+                            let n = crate::cli::tui::palette::filtered_commands(&app.palette_query)
+                                .len();
                             if n > 0 {
                                 app.palette_selected = (app.palette_selected + 1) % n;
                             }
@@ -378,7 +440,14 @@ fn run_app<B: ratatui::backend::Backend>(
                     KeyCode::Home => app.scroll_top(),
                     KeyCode::End => app.scroll_bottom(),
                     // Vim-style navigation
-                    KeyCode::Char('k') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('k')
+                        if app.config.keybindings.vim_mode
+                            && !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         if app.show_plan_preview {
                             app.plan_preview_scroll_up();
                         } else if app.show_help && !app.help_context {
@@ -387,7 +456,14 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.scroll_up();
                         }
                     }
-                    KeyCode::Char('j') if app.config.keybindings.vim_mode && !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => {
+                    KeyCode::Char('j')
+                        if app.config.keybindings.vim_mode
+                            && !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
                         if app.show_plan_preview {
                             app.plan_preview_scroll_down();
                         } else if app.show_help && !app.help_context {
@@ -397,10 +473,34 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.scroll_down();
                         }
                     }
-                    KeyCode::Char('g') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_top(),
-                    KeyCode::Char('G') if !app.is_searching() && !matches!(app.export_mode, Some(app::ExportMode::EnteringFilename)) => app.scroll_bottom(),
-                    KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_up(),
-                    KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() => app.page_down(),
+                    KeyCode::Char('g')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
+                        app.scroll_top()
+                    }
+                    KeyCode::Char('G')
+                        if !app.is_searching()
+                            && !matches!(
+                                app.export_mode,
+                                Some(app::ExportMode::EnteringFilename)
+                            ) =>
+                    {
+                        app.scroll_bottom()
+                    }
+                    KeyCode::Char('u')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() =>
+                    {
+                        app.page_up()
+                    }
+                    KeyCode::Char('d')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) && !app.is_searching() =>
+                    {
+                        app.page_down()
+                    }
                     KeyCode::Enter => {
                         use app::ExportMode;
 

@@ -14,19 +14,39 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
     // Statistics
     output.push_str("📈 Statistics\n");
     output.push_str("-------------\n");
-    output.push_str(&format!("Total Packages: {}\n", graph.statistics.total_packages));
-    output.push_str(&format!("Total Dependencies: {}\n", graph.statistics.total_dependencies));
-    output.push_str(&format!("Leaf Packages: {}\n", graph.statistics.leaf_packages));
-    output.push_str(&format!("Root Packages: {}\n", graph.statistics.root_packages));
+    output.push_str(&format!(
+        "Total Packages: {}\n",
+        graph.statistics.total_packages
+    ));
+    output.push_str(&format!(
+        "Total Dependencies: {}\n",
+        graph.statistics.total_dependencies
+    ));
+    output.push_str(&format!(
+        "Leaf Packages: {}\n",
+        graph.statistics.leaf_packages
+    ));
+    output.push_str(&format!(
+        "Root Packages: {}\n",
+        graph.statistics.root_packages
+    ));
     output.push_str(&format!("Maximum Depth: {}\n", graph.statistics.max_depth));
-    output.push_str(&format!("Average Dependencies: {:.1}\n", graph.statistics.average_dependencies));
-    output.push_str(&format!("Circular Dependencies: {}\n", graph.statistics.circular_dependencies));
+    output.push_str(&format!(
+        "Average Dependencies: {:.1}\n",
+        graph.statistics.average_dependencies
+    ));
+    output.push_str(&format!(
+        "Circular Dependencies: {}\n",
+        graph.statistics.circular_dependencies
+    ));
     output.push_str(&format!("Conflicts: {}\n\n", graph.statistics.conflicts));
 
     // Most depended upon packages
     output.push_str("🔝 Most Depended Upon\n");
     output.push_str("---------------------\n");
-    let mut top_packages: Vec<_> = graph.packages.iter()
+    let mut top_packages: Vec<_> = graph
+        .packages
+        .iter()
         .filter(|p| !p.required_by.is_empty())
         .collect();
     top_packages.sort_by_key(|b| std::cmp::Reverse(b.required_by.len()));
@@ -34,7 +54,10 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
     for (idx, pkg) in top_packages.iter().take(10).enumerate() {
         output.push_str(&format!(
             "{}. {} (v{}) - {} packages depend on it\n",
-            idx + 1, pkg.name, pkg.version, pkg.required_by.len()
+            idx + 1,
+            pkg.name,
+            pkg.version,
+            pkg.required_by.len()
         ));
     }
     output.push('\n');
@@ -44,7 +67,11 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
         output.push_str("🔄 Circular Dependencies\n");
         output.push_str("------------------------\n");
         for (idx, circ) in graph.circular_dependencies.iter().enumerate() {
-            output.push_str(&format!("{}. Cycle of {} packages:\n", idx + 1, circ.length));
+            output.push_str(&format!(
+                "{}. Cycle of {} packages:\n",
+                idx + 1,
+                circ.length
+            ));
             output.push_str("   ");
             output.push_str(&circ.cycle.join(" → "));
             output.push_str(" → ");
@@ -86,7 +113,10 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
             }
 
             if !pkg.required_by.is_empty() {
-                output.push_str(&format!("  Required by: {} packages\n", pkg.required_by.len()));
+                output.push_str(&format!(
+                    "  Required by: {} packages\n",
+                    pkg.required_by.len()
+                ));
                 if pkg.required_by.len() <= 5 {
                     output.push_str(&format!("    {}\n", pkg.required_by.join(", ")));
                 }
@@ -102,7 +132,10 @@ pub fn format_report(graph: &DependencyGraph, detailed: bool) -> String {
         }
 
         if packages.len() > 50 {
-            output.push_str(&format!("\n... and {} more packages\n", packages.len() - 50));
+            output.push_str(&format!(
+                "\n... and {} more packages\n",
+                packages.len() - 50
+            ));
         }
     }
 
@@ -146,7 +179,10 @@ pub fn format_tree(graph: &DependencyGraph, package_name: &str, max_depth: usize
         None => return format!("Package '{}' not found\n", package_name),
     };
 
-    output.push_str(&format!("Dependency tree for: {} v{}\n\n", pkg.name, pkg.version));
+    output.push_str(&format!(
+        "Dependency tree for: {} v{}\n\n",
+        pkg.name, pkg.version
+    ));
 
     // Build tree recursively
     let mut visited = std::collections::HashSet::new();
@@ -171,7 +207,10 @@ fn format_tree_recursive(
 
     // Check for circular reference
     if visited.contains(package_name) {
-        output.push_str(&format!("{}└─ {} (circular reference)\n", indent, package_name));
+        output.push_str(&format!(
+            "{}└─ {} (circular reference)\n",
+            indent, package_name
+        ));
         return;
     }
 
@@ -206,7 +245,11 @@ fn format_tree_recursive(
 }
 
 /// Format reverse dependency tree (what depends on this package)
-pub fn format_reverse_tree(graph: &DependencyGraph, package_name: &str, max_depth: usize) -> String {
+pub fn format_reverse_tree(
+    graph: &DependencyGraph,
+    package_name: &str,
+    max_depth: usize,
+) -> String {
     let mut output = String::new();
 
     // Find the package
@@ -215,8 +258,14 @@ pub fn format_reverse_tree(graph: &DependencyGraph, package_name: &str, max_dept
         None => return format!("Package '{}' not found\n", package_name),
     };
 
-    output.push_str(&format!("Reverse dependency tree for: {} v{}\n", pkg.name, pkg.version));
-    output.push_str(&format!("{} packages depend on this\n\n", pkg.required_by.len()));
+    output.push_str(&format!(
+        "Reverse dependency tree for: {} v{}\n",
+        pkg.name, pkg.version
+    ));
+    output.push_str(&format!(
+        "{} packages depend on this\n\n",
+        pkg.required_by.len()
+    ));
 
     // Build reverse tree recursively
     let mut visited = std::collections::HashSet::new();
@@ -240,7 +289,10 @@ fn format_reverse_tree_recursive(
     let indent = "  ".repeat(depth);
 
     if visited.contains(package_name) {
-        output.push_str(&format!("{}└─ {} (circular reference)\n", indent, package_name));
+        output.push_str(&format!(
+            "{}└─ {} (circular reference)\n",
+            indent, package_name
+        ));
         return;
     }
 

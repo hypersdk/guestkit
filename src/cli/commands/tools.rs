@@ -60,7 +60,11 @@ pub fn template_command(
         ],
         "database" => vec![
             ("Required Package", "mysql or postgresql", true),
-            ("Data Directory", "/var/lib/mysql or /var/lib/postgresql", true),
+            (
+                "Data Directory",
+                "/var/lib/mysql or /var/lib/postgresql",
+                true,
+            ),
             ("Backup Config", "backup script in /etc/cron.daily", false),
             ("Performance Tuning", "Custom config in /etc", false),
         ],
@@ -78,7 +82,9 @@ pub fn template_command(
             ("MAC System", "SELinux or AppArmor", true),
         ],
         _ => {
-            anyhow::bail!("Unknown template. Available: web-server, database, docker-host, cis-level1");
+            anyhow::bail!(
+                "Unknown template. Available: web-server, database, docker-host, cis-level1"
+            );
         }
     };
 
@@ -87,9 +93,11 @@ pub fn template_command(
     println!();
 
     for (check_name, requirement, critical) in &template_rules {
-        print!("  [{}] {} ... ",
+        print!(
+            "  [{}] {} ... ",
             if *critical { "CRITICAL" } else { "OPTIONAL" },
-            check_name);
+            check_name
+        );
 
         // Simplified validation logic
         let validation_passed = match check_name {
@@ -120,9 +128,7 @@ pub fn template_command(
                     || g.is_dir("/etc/apparmor.d").unwrap_or(false)
             }
 
-            &"Audit System" => {
-                g.is_file("/etc/audit/auditd.conf").unwrap_or(false)
-            }
+            &"Audit System" => g.is_file("/etc/audit/auditd.conf").unwrap_or(false),
 
             _ => {
                 // Simplified - in production would do actual checks
@@ -187,17 +193,25 @@ pub fn template_command(
         writeln!(output)?;
         writeln!(output, "## Requirements")?;
         for (name, req, critical) in &template_rules {
-            writeln!(output, "- [{}] {}: {}",
+            writeln!(
+                output,
+                "- [{}] {}: {}",
                 if *critical { "CRITICAL" } else { "OPTIONAL" },
-                name, req)?;
+                name,
+                req
+            )?;
         }
 
         println!();
         println!("Template exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -219,12 +233,8 @@ pub fn inventory_command(
     }
 
     // Generate inventory
-    let inventory = inventory::generate_inventory(
-        image,
-        include_licenses,
-        include_cves,
-        include_files,
-    )?;
+    let inventory =
+        inventory::generate_inventory(image, include_licenses, include_cves, include_files)?;
 
     // Show summary if requested
     if summary {
@@ -244,7 +254,10 @@ pub fn inventory_command(
 
     if !summary && output.is_none() {
         // If no summary shown and output to stdout, add a brief message
-        eprintln!("\n✅ SBOM generated successfully ({} packages)", inventory.statistics.total_packages);
+        eprintln!(
+            "\n✅ SBOM generated successfully ({} packages)",
+            inventory.statistics.total_packages
+        );
     }
 
     Ok(())
@@ -369,7 +382,10 @@ pub fn license_command(
 
     // Return error if strict mode and violations found
     if strict && !report.violations.is_empty() {
-        anyhow::bail!("License compliance check failed: {} violations found", report.violations.len());
+        anyhow::bail!(
+            "License compliance check failed: {} violations found",
+            report.violations.len()
+        );
     }
 
     Ok(())
@@ -386,8 +402,12 @@ pub fn blueprint_command(
     use crate::cli::blueprint;
 
     // Parse format
-    let blueprint_format = blueprint::BlueprintFormat::from_str(format)
-        .ok_or_else(|| anyhow::anyhow!("Invalid format: {}. Must be terraform, ansible, kubernetes, or compose", format))?;
+    let blueprint_format = blueprint::BlueprintFormat::from_str(format).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Invalid format: {}. Must be terraform, ansible, kubernetes, or compose",
+            format
+        )
+    })?;
 
     if verbose {
         println!("🔍 Analyzing image: {}", image.display());
@@ -439,10 +459,12 @@ pub fn migrate_command(
     use crate::cli::migrate;
 
     // Parse migration type
-    let migration_type = migrate::MigrationTarget::from_str(target_type)
-        .ok_or_else(|| anyhow::anyhow!(
-            "Invalid migration type: {}. Must be os, cloud, or container", target_type
-        ))?;
+    let migration_type = migrate::MigrationTarget::from_str(target_type).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Invalid migration type: {}. Must be os, cloud, or container",
+            target_type
+        )
+    })?;
 
     if verbose {
         println!("🔍 Analyzing source system: {}", image.display());
@@ -503,10 +525,12 @@ pub fn cost_command(
     use crate::cli::cost;
 
     // Parse cloud provider
-    let provider = cost::CloudProvider::from_str(provider_str)
-        .ok_or_else(|| anyhow::anyhow!(
-            "Invalid cloud provider: {}. Must be aws, azure, or gcp", provider_str
-        ))?;
+    let provider = cost::CloudProvider::from_str(provider_str).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Invalid cloud provider: {}. Must be aws, azure, or gcp",
+            provider_str
+        )
+    })?;
 
     if verbose {
         println!("💰 Analyzing costs for: {}", image.display());
@@ -519,11 +543,18 @@ pub fn cost_command(
 
     if verbose {
         println!("✅ Cost analysis complete");
-        println!("   Current: ${:.2}/month", analysis.current_estimate.total_monthly);
-        println!("   Optimized: ${:.2}/month", analysis.optimized_estimate.total_monthly);
-        println!("   Savings: ${:.2}/month ({:.1}%)",
-            analysis.total_monthly_savings,
-            analysis.savings_percentage);
+        println!(
+            "   Current: ${:.2}/month",
+            analysis.current_estimate.total_monthly
+        );
+        println!(
+            "   Optimized: ${:.2}/month",
+            analysis.optimized_estimate.total_monthly
+        );
+        println!(
+            "   Savings: ${:.2}/month ({:.1}%)",
+            analysis.total_monthly_savings, analysis.savings_percentage
+        );
         println!();
     }
 
@@ -599,7 +630,10 @@ pub fn dependencies_command(
 
         // Print helpful message based on format
         match format {
-            "dot" => println!("💡 Generate visualization: dot -Tpng {} -o graph.png", out_path.display()),
+            "dot" => println!(
+                "💡 Generate visualization: dot -Tpng {} -o graph.png",
+                out_path.display()
+            ),
             "html" => println!("💡 Open in browser: open {}", out_path.display()),
             _ => {}
         }

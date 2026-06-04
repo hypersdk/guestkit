@@ -3,8 +3,10 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::App;
-use crate::cli::tui::theme::{self, content_block, label_style, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING};
 use crate::cli::tui::theme::value_style;
+use crate::cli::tui::theme::{
+    self, content_block, label_style, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING,
+};
 use crate::cli::tui::widgets;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -62,7 +64,10 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
         Line::from(vec![
             Span::raw(format!("{os_icon} ")),
             Span::styled("OS:         ", label_style()),
-            Span::styled(&app.os_name, Style::default().fg(SUCCESS).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.os_name,
+                Style::default().fg(SUCCESS).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Version:    ", label_style()),
@@ -74,11 +79,17 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
         ]),
         Line::from(vec![
             Span::styled("Arch:       ", label_style()),
-            Span::styled(&app.architecture, Style::default().fg(WARNING).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.architecture,
+                Style::default().fg(WARNING).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Hostname:   ", label_style()),
-            Span::styled(&app.hostname, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.hostname,
+                Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+            ),
         ]),
     ];
 
@@ -99,16 +110,16 @@ fn draw_system_info(f: &mut Frame, area: Rect, app: &App) {
                 format!("{score}%"),
                 Style::default().fg(color).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                format!(" ({})", app.assurance_target),
-                theme::label_style(),
-            ),
+            Span::styled(format!(" ({})", app.assurance_target), theme::label_style()),
         ]));
     } else {
         info_lines.push(Line::from(vec![
             Span::styled("Boot:       ", label_style()),
             Span::styled("—  press ", theme::label_style()),
-            Span::styled("a", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "a",
+                Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" for Assurance", theme::label_style()),
         ]));
     }
@@ -132,11 +143,30 @@ fn draw_risk_chart(f: &mut Frame, area: Rect, app: &App) {
     }
 
     let data = vec![
-        ("Sec", risk_to_value(app.security_profile.as_ref().and_then(|p| p.overall_risk))),
-        ("Mig", risk_to_value(app.migration_profile.as_ref().and_then(|p| p.overall_risk))),
-        ("Perf", risk_to_value(app.performance_profile.as_ref().and_then(|p| p.overall_risk))),
-        ("Comp", risk_to_value(app.compliance_profile.as_ref().and_then(|p| p.overall_risk))),
-        ("Hard", risk_to_value(app.hardening_profile.as_ref().and_then(|p| p.overall_risk))),
+        (
+            "Sec",
+            risk_to_value(app.security_profile.as_ref().and_then(|p| p.overall_risk)),
+        ),
+        (
+            "Mig",
+            risk_to_value(app.migration_profile.as_ref().and_then(|p| p.overall_risk)),
+        ),
+        (
+            "Perf",
+            risk_to_value(
+                app.performance_profile
+                    .as_ref()
+                    .and_then(|p| p.overall_risk),
+            ),
+        ),
+        (
+            "Comp",
+            risk_to_value(app.compliance_profile.as_ref().and_then(|p| p.overall_risk)),
+        ),
+        (
+            "Hard",
+            risk_to_value(app.hardening_profile.as_ref().and_then(|p| p.overall_risk)),
+        ),
     ];
 
     let barchart = BarChart::default()
@@ -222,7 +252,11 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
         "disabled".to_string()
     };
     let security_items: Vec<ListItem> = [
-        ("SELinux", app.security.selinux.as_str(), app.security.selinux != "disabled"),
+        (
+            "SELinux",
+            app.security.selinux.as_str(),
+            app.security.selinux != "disabled",
+        ),
         ("AppArmor", apparmor.as_str(), app.security.apparmor),
         (
             "Firewall",
@@ -259,7 +293,11 @@ fn draw_quick_info(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn status_item(name: &str, status: &str, enabled: bool) -> ListItem<'static> {
-    let (sym, color) = if enabled { ("+", SUCCESS) } else { ("-", ERROR) };
+    let (sym, color) = if enabled {
+        ("+", SUCCESS)
+    } else {
+        ("-", ERROR)
+    };
     ListItem::new(Line::from(vec![
         Span::styled(sym, Style::default().fg(color).add_modifier(Modifier::BOLD)),
         Span::styled(format!(" {name:10} "), label_style()),
@@ -276,7 +314,11 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Length(4), Constraint::Min(0)])
+        .constraints([
+            Constraint::Length(6),
+            Constraint::Length(4),
+            Constraint::Min(0),
+        ])
         .split(area);
 
     let gauge = Gauge::default()
@@ -300,13 +342,14 @@ fn draw_health_meter(f: &mut Frame, area: Rect, app: &App) {
         chunks[1],
     );
 
-    let details = vec![
-        ListItem::new(Line::from(vec![
-            Span::styled("Issues view ", label_style()),
-            Span::styled("8", Style::default().fg(ACCENT)),
-        ])),
-    ];
-    f.render_widget(List::new(details).block(content_block("Risk", app.theme())), chunks[2]);
+    let details = vec![ListItem::new(Line::from(vec![
+        Span::styled("Issues view ", label_style()),
+        Span::styled("8", Style::default().fg(ACCENT)),
+    ]))];
+    f.render_widget(
+        List::new(details).block(content_block("Risk", app.theme())),
+        chunks[2],
+    );
 }
 
 fn draw_comparison_stats(f: &mut Frame, area: Rect, app: &App) {

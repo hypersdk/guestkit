@@ -2,7 +2,9 @@
 //! Assurance view — boot gate and migration scoring (doctor / migrate-plan parity).
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::theme::{self, content_block, label_style, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING};
+use crate::cli::tui::theme::{
+    self, content_block, label_style, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING,
+};
 use crate::cli::tui::widgets;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -31,23 +33,19 @@ fn draw_boot_gate(f: &mut Frame, area: Rect, app: &App) {
     let lines = if let Some(ref boot) = app.boot_report {
         let score = boot.score.round() as u8;
         let color = widgets::health_score_color(score);
-        let mut lines = vec![
-            Line::from(vec![
-                Span::styled("Score ", label_style()),
-                Span::styled(
-                    format!("{score}%"),
-                    Style::default().fg(color).add_modifier(Modifier::BOLD),
-                ),
-                Span::styled("  target ", label_style()),
-                Span::styled(&app.assurance_target, Style::default().fg(ACCENT)),
-            ]),
-        ];
+        let mut lines = vec![Line::from(vec![
+            Span::styled("Score ", label_style()),
+            Span::styled(
+                format!("{score}%"),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  target ", label_style()),
+            Span::styled(&app.assurance_target, Style::default().fg(ACCENT)),
+        ])];
         if app.agent_live {
             lines[0].spans.push(Span::styled(
                 "  LIVE",
-                Style::default()
-                    .fg(SUCCESS)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(SUCCESS).add_modifier(Modifier::BOLD),
             ));
         }
         lines.push(Line::from(Span::styled(
@@ -62,7 +60,10 @@ fn draw_boot_gate(f: &mut Frame, area: Rect, app: &App) {
             for b in boot.blockers.iter().take(3) {
                 lines.push(Line::from(vec![
                     Span::styled("  ✗ ", Style::default().fg(ERROR)),
-                    Span::styled(&b.title, Style::default().fg(TEXT).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &b.title,
+                        Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw(" — "),
                     Span::styled(&b.message, theme::label_style()),
                 ]));
@@ -89,10 +90,7 @@ fn draw_boot_gate(f: &mut Frame, area: Rect, app: &App) {
         ))]
     } else {
         vec![
-            Line::from(Span::styled(
-                "No boot report yet.",
-                theme::label_style(),
-            )),
+            Line::from(Span::styled("No boot report yet.", theme::label_style())),
             Line::from(Span::styled(
                 "Press d to run doctor",
                 Style::default().fg(ACCENT),
@@ -146,7 +144,12 @@ fn draw_migration(f: &mut Frame, area: Rect, app: &App) {
                 Style::default().fg(INFO).add_modifier(Modifier::BOLD),
             )));
             let scroll = app.scroll_offset;
-            for c in mig.required_changes.iter().skip(scroll).take(inner_h.saturating_sub(lines.len())) {
+            for c in mig
+                .required_changes
+                .iter()
+                .skip(scroll)
+                .take(inner_h.saturating_sub(lines.len()))
+            {
                 lines.push(Line::from(vec![
                     Span::raw("  • "),
                     Span::styled(c, theme::value_style()),

@@ -10,9 +10,7 @@ use crate::cli::profiles::{
     ComplianceProfile, HardeningProfile, InspectionProfile, MigrationProfile, PerformanceProfile,
     SecurityProfile,
 };
-use crate::guestfs::inspect_enhanced::{
-    FirewallInfo, PackageInfo, SecurityInfo,
-};
+use crate::guestfs::inspect_enhanced::{FirewallInfo, PackageInfo, SecurityInfo};
 use crate::Guestfs;
 use anyhow::Result;
 use std::collections::HashSet;
@@ -70,10 +68,20 @@ impl View {
 
     pub fn group(self) -> &'static str {
         match self {
-            View::Dashboard | View::Analytics | View::Timeline | View::Recommendations
+            View::Dashboard
+            | View::Analytics
+            | View::Timeline
+            | View::Recommendations
             | View::Topology => "Overview",
-            View::Network | View::Packages | View::Services | View::Databases
-            | View::WebServers | View::Users | View::Kernel | View::Logs | View::Storage
+            View::Network
+            | View::Packages
+            | View::Services
+            | View::Databases
+            | View::WebServers
+            | View::Users
+            | View::Kernel
+            | View::Logs
+            | View::Storage
             | View::Files => "System",
             View::Security | View::Issues | View::Profiles | View::Assurance => "Security",
         }
@@ -104,7 +112,12 @@ impl View {
                 View::Storage,
                 View::Files,
             ],
-            "Security" => &[View::Security, View::Issues, View::Profiles, View::Assurance],
+            "Security" => &[
+                View::Security,
+                View::Issues,
+                View::Profiles,
+                View::Assurance,
+            ],
             _ => &[],
         }
     }
@@ -182,7 +195,8 @@ impl App {
             _ => LayoutMode::SplitDetail,
         };
 
-        let current_view = View::from_name(&config.behavior.default_view).unwrap_or(View::Dashboard);
+        let current_view =
+            View::from_name(&config.behavior.default_view).unwrap_or(View::Dashboard);
 
         let mut loaded_views = HashSet::new();
         loaded_views.insert(View::Dashboard);
@@ -328,7 +342,11 @@ impl App {
             return Ok(true);
         }
 
-        let stage = self.loading.as_ref().map(|l| l.stage).unwrap_or(LoadingStage::Done);
+        let stage = self
+            .loading
+            .as_ref()
+            .map(|l| l.stage)
+            .unwrap_or(LoadingStage::Done);
         if stage == LoadingStage::Done {
             self.loading = None;
             return Ok(true);
@@ -344,20 +362,24 @@ impl App {
                 if let Some(ref mut gfs) = self.guestfs {
                     self.network_interfaces = gfs.inspect_network(&root).unwrap_or_default();
                     self.dns_servers = gfs.inspect_dns(&root).unwrap_or_default();
-                    self.firewall = gfs.inspect_firewall(&root).unwrap_or_else(|_| FirewallInfo {
-                        firewall_type: "none".to_string(),
-                        enabled: false,
-                        rules_count: 0,
-                        zones: Vec::new(),
-                    });
-                    self.security = gfs.inspect_security(&root).unwrap_or_else(|_| SecurityInfo {
-                        selinux: "unknown".to_string(),
-                        apparmor: false,
-                        fail2ban: false,
-                        aide: false,
-                        auditd: false,
-                        ssh_keys: Vec::new(),
-                    });
+                    self.firewall = gfs
+                        .inspect_firewall(&root)
+                        .unwrap_or_else(|_| FirewallInfo {
+                            firewall_type: "none".to_string(),
+                            enabled: false,
+                            rules_count: 0,
+                            zones: Vec::new(),
+                        });
+                    self.security = gfs
+                        .inspect_security(&root)
+                        .unwrap_or_else(|_| SecurityInfo {
+                            selinux: "unknown".to_string(),
+                            apparmor: false,
+                            fail2ban: false,
+                            aide: false,
+                            auditd: false,
+                            ssh_keys: Vec::new(),
+                        });
                     self.users = gfs.inspect_users(&root).unwrap_or_default();
                 }
                 self.loaded_views.insert(View::Network);
@@ -445,7 +467,9 @@ impl App {
         gfs.add_drive_ro(path)?;
         gfs.launch()?;
         let roots = gfs.inspect_os()?;
-        let root = roots.first().ok_or_else(|| anyhow::anyhow!("No OS in compare image"))?;
+        let root = roots
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No OS in compare image"))?;
         gfs.mount_ro(root, "/")?;
 
         let os_name = gfs
@@ -513,7 +537,11 @@ impl App {
                 View::WebServers => {
                     self.web_servers = gfs.inspect_web_servers(&root).unwrap_or_default();
                 }
-                View::Analytics | View::Timeline | View::Recommendations | View::Topology | View::Logs => {}
+                View::Analytics
+                | View::Timeline
+                | View::Recommendations
+                | View::Topology
+                | View::Logs => {}
                 _ => {}
             }
         }
@@ -547,11 +575,12 @@ impl App {
             if let Some(ref mut gfs) = self.guestfs {
                 match view {
                     View::Packages => {
-                        self.packages = gfs.inspect_packages(&root).unwrap_or_else(|_| PackageInfo {
-                            manager: "unknown".to_string(),
-                            package_count: 0,
-                            packages: Vec::new(),
-                        });
+                        self.packages =
+                            gfs.inspect_packages(&root).unwrap_or_else(|_| PackageInfo {
+                                manager: "unknown".to_string(),
+                                package_count: 0,
+                                packages: Vec::new(),
+                            });
                     }
                     View::Services => {
                         self.services = gfs.inspect_systemd_services(&root).unwrap_or_default();
@@ -590,16 +619,17 @@ impl App {
                 let _ = self.load_assurance();
                 self.show_notification(format!(
                     "Migration score: {:.0}% → {}",
-                    self.migration_report.as_ref().map(|m| m.score).unwrap_or(0.0),
+                    self.migration_report
+                        .as_ref()
+                        .map(|m| m.score)
+                        .unwrap_or(0.0),
                     self.assurance_target
                 ));
             }
-            PaletteAction::ExportFixPlan => {
-                match self.export_assurance_plan() {
-                    Ok(path) => self.show_notification(format!("Exported {}", path)),
-                    Err(e) => self.show_notification(format!("Export failed: {e}")),
-                }
-            }
+            PaletteAction::ExportFixPlan => match self.export_assurance_plan() {
+                Ok(path) => self.show_notification(format!("Exported {}", path)),
+                Err(e) => self.show_notification(format!("Export failed: {e}")),
+            },
             PaletteAction::PlanPreview => {
                 self.toggle_plan_preview();
             }
@@ -844,7 +874,10 @@ impl App {
             if !self.config.views.pinned.contains(&name) {
                 self.config.views.pinned.push(name);
                 if let Err(e) = self.config.save() {
-                    self.show_notification(format!("Pin saved locally; config write failed: {}", e));
+                    self.show_notification(format!(
+                        "Pin saved locally; config write failed: {}",
+                        e
+                    ));
                 } else {
                     self.show_notification(format!(
                         "Pinned {} (saved to tui.toml)",
@@ -1004,12 +1037,13 @@ impl App {
             View::Issues => {
                 let (c, h, m) = self.get_risk_summary();
                 let t = c + h + m;
-                if t > 0 { Some(t) } else { None }
+                if t > 0 {
+                    Some(t)
+                } else {
+                    None
+                }
             }
-            View::Assurance => self
-                .boot_report
-                .as_ref()
-                .map(|b| b.score.round() as usize),
+            View::Assurance => self.boot_report.as_ref().map(|b| b.score.round() as usize),
             _ => None,
         };
         let prefix = if pinned { "★" } else { "" };
@@ -1036,7 +1070,10 @@ impl App {
 }}"#,
             self.image_path, self.os_name, self.hostname, self.architecture
         );
-        let path = format!("guestkit-migration-{}.json", self.hostname.replace('.', "-"));
+        let path = format!(
+            "guestkit-migration-{}.json",
+            self.hostname.replace('.', "-")
+        );
         std::fs::write(&path, &out)?;
         self.show_notification(format!("Wrote {}", path));
         Ok(path)

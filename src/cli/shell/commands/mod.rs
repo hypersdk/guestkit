@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Command implementations for interactive shell
 
+mod ai;
+mod analysis;
 mod core;
 mod navigation;
-mod analysis;
 mod workflow;
-mod ai;
 
 pub use self::core::*;
-pub use navigation::*;
-pub use analysis::*;
-pub use workflow::*;
 pub use ai::*;
+pub use analysis::*;
+pub use navigation::*;
+pub use workflow::*;
 
 use crate::Guestfs;
 use std::collections::HashMap;
@@ -111,13 +111,19 @@ pub fn resolve_path(current: &str, path: &str) -> String {
     for part in full_path.split('/') {
         match part {
             "" | "." => {}
-            ".." => { components.pop(); }
+            ".." => {
+                components.pop();
+            }
             other => components.push(other),
         }
     }
 
     let normalized = format!("/{}", components.join("/"));
-    if normalized.is_empty() { "/".to_string() } else { normalized }
+    if normalized.is_empty() {
+        "/".to_string()
+    } else {
+        normalized
+    }
 }
 
 pub fn format_bytes(bytes: u64) -> String {

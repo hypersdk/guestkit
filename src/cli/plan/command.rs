@@ -143,27 +143,44 @@ pub enum PlanFileFormat {
 impl PlanCommand {
     pub fn execute(&self) -> Result<()> {
         match &self.action {
-            PlanAction::Preview { plan_file, diff, summary } => {
-                self.preview_plan(plan_file, *diff, *summary)
-            }
-            PlanAction::Validate { plan_file, vm } => {
-                self.validate_plan(plan_file, vm.as_deref())
-            }
-            PlanAction::Export { plan_file, output, format } => {
-                self.export_plan(plan_file, output, format)
-            }
-            PlanAction::Apply { plan_file, vm, dry_run, yes, interactive, backup } => {
-                self.apply_plan(plan_file, vm.as_deref(), *dry_run, *yes, *interactive, backup.as_deref())
-            }
-            PlanAction::Rollback { backup_dir, vm, yes } => {
-                self.rollback(backup_dir, vm, *yes)
-            }
-            PlanAction::Generate { vm_disk, profile, output, format } => {
-                self.generate_plan(vm_disk, profile, output, format)
-            }
-            PlanAction::Stats { plan_file } => {
-                self.show_stats(plan_file)
-            }
+            PlanAction::Preview {
+                plan_file,
+                diff,
+                summary,
+            } => self.preview_plan(plan_file, *diff, *summary),
+            PlanAction::Validate { plan_file, vm } => self.validate_plan(plan_file, vm.as_deref()),
+            PlanAction::Export {
+                plan_file,
+                output,
+                format,
+            } => self.export_plan(plan_file, output, format),
+            PlanAction::Apply {
+                plan_file,
+                vm,
+                dry_run,
+                yes,
+                interactive,
+                backup,
+            } => self.apply_plan(
+                plan_file,
+                vm.as_deref(),
+                *dry_run,
+                *yes,
+                *interactive,
+                backup.as_deref(),
+            ),
+            PlanAction::Rollback {
+                backup_dir,
+                vm,
+                yes,
+            } => self.rollback(backup_dir, vm, *yes),
+            PlanAction::Generate {
+                vm_disk,
+                profile,
+                output,
+                format,
+            } => self.generate_plan(vm_disk, profile, output, format),
+            PlanAction::Stats { plan_file } => self.show_stats(plan_file),
         }
     }
 
@@ -182,7 +199,9 @@ impl PlanCommand {
             // Auto-detect
             serde_yaml::from_str(&content)
                 .or_else(|_| serde_json::from_str(&content))
-                .with_context(|| format!("Failed to parse plan file (tried YAML and JSON): {}", path))
+                .with_context(|| {
+                    format!("Failed to parse plan file (tried YAML and JSON): {}", path)
+                })
         }
     }
 
@@ -245,13 +264,15 @@ impl PlanCommand {
     fn export_plan(&self, plan_file: &str, output: &str, format: &ExportFormat) -> Result<()> {
         let plan = self.load_plan(plan_file)?;
 
-        println!("Exporting plan to {} format...",
+        println!(
+            "Exporting plan to {} format...",
             match format {
                 ExportFormat::Bash => "bash",
                 ExportFormat::Ansible => "ansible",
                 ExportFormat::Json => "JSON",
                 ExportFormat::Yaml => "YAML",
-            }.cyan()
+            }
+            .cyan()
         );
 
         let content = match format {
@@ -318,7 +339,10 @@ impl PlanCommand {
 
         if dry_run {
             println!();
-            println!("{}", "DRY RUN MODE - No changes will be made".yellow().bold());
+            println!(
+                "{}",
+                "DRY RUN MODE - No changes will be made".yellow().bold()
+            );
             println!();
         }
 
@@ -350,8 +374,16 @@ impl PlanCommand {
         println!("VM: {}", vm.bright_blue());
         println!("{}", "═".repeat(60).bright_black());
         println!();
-        println!("{}", "WARNING: This will restore files from backup.".yellow().bold());
-        println!("{}", "Any changes made after the backup will be lost.".yellow());
+        println!(
+            "{}",
+            "WARNING: This will restore files from backup."
+                .yellow()
+                .bold()
+        );
+        println!(
+            "{}",
+            "Any changes made after the backup will be lost.".yellow()
+        );
         println!();
 
         if !yes {
@@ -384,7 +416,11 @@ impl PlanCommand {
         output: &str,
         format: &PlanFileFormat,
     ) -> Result<()> {
-        println!("Generating {} plan for {}...", profile.cyan(), vm_disk.bright_blue());
+        println!(
+            "Generating {} plan for {}...",
+            profile.cyan(),
+            vm_disk.bright_blue()
+        );
 
         // Open VM with Guestfs
         let mut g = crate::guestfs::Guestfs::new()
@@ -395,7 +431,8 @@ impl PlanCommand {
             .map_err(|e| anyhow::anyhow!("Failed to launch Guestfs: {}", e))?;
 
         // Inspect OS
-        let roots = g.inspect_os()
+        let roots = g
+            .inspect_os()
             .map_err(|e| anyhow::anyhow!("Failed to inspect OS: {}", e))?;
         if roots.is_empty() {
             anyhow::bail!("No operating system found in {}", vm_disk);
@@ -416,7 +453,8 @@ impl PlanCommand {
         let inspection_profile = crate::cli::profiles::get_profile(profile)
             .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
 
-        let report = inspection_profile.inspect(&mut g, root)
+        let report = inspection_profile
+            .inspect(&mut g, root)
             .map_err(|e| anyhow::anyhow!("Profile inspection failed: {}", e))?;
 
         // Generate plan from report
@@ -425,8 +463,9 @@ impl PlanCommand {
 
         // Serialize to output format
         let content = match format {
-            PlanFileFormat::Yaml => serde_yaml::to_string(&plan)
-                .with_context(|| "Failed to serialize plan to YAML")?,
+            PlanFileFormat::Yaml => {
+                serde_yaml::to_string(&plan).with_context(|| "Failed to serialize plan to YAML")?
+            }
             PlanFileFormat::Json => serde_json::to_string_pretty(&plan)
                 .with_context(|| "Failed to serialize plan to JSON")?,
         };
@@ -454,13 +493,16 @@ impl PlanCommand {
         println!("VM: {}", plan.vm);
         println!("Profile: {}", plan.profile);
         println!("Generated: {}", plan.generated);
-        println!("Risk: {}", match plan.overall_risk.as_str() {
-            "critical" => plan.overall_risk.red().bold(),
-            "high" => plan.overall_risk.bright_red(),
-            "medium" => plan.overall_risk.yellow(),
-            "low" => plan.overall_risk.green(),
-            _ => plan.overall_risk.normal(),
-        });
+        println!(
+            "Risk: {}",
+            match plan.overall_risk.as_str() {
+                "critical" => plan.overall_risk.red().bold(),
+                "high" => plan.overall_risk.bright_red(),
+                "medium" => plan.overall_risk.yellow(),
+                "low" => plan.overall_risk.green(),
+                _ => plan.overall_risk.normal(),
+            }
+        );
         println!("Duration: {}", plan.estimated_duration);
         println!();
         println!("{}", "Operations:".bold());
@@ -471,16 +513,22 @@ impl PlanCommand {
         println!("  Low: {}", plan.count_by_priority(Priority::Low));
         println!("  Info: {}", plan.count_by_priority(Priority::Info));
         println!();
-        println!("Reversible: {}", if plan.metadata.reversible {
-            "Yes".green()
-        } else {
-            "No".red()
-        });
-        println!("Review Required: {}", if plan.metadata.review_required {
-            "Yes".yellow()
-        } else {
-            "No".green()
-        });
+        println!(
+            "Reversible: {}",
+            if plan.metadata.reversible {
+                "Yes".green()
+            } else {
+                "No".red()
+            }
+        );
+        println!(
+            "Review Required: {}",
+            if plan.metadata.review_required {
+                "Yes".yellow()
+            } else {
+                "No".green()
+            }
+        );
         println!();
 
         if !plan.post_apply.is_empty() {

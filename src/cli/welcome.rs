@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! No-subcommand welcome banner.
 
-use colored::Colorize;
 use crate::cli::invocation;
+use colored::Colorize;
 
 const ORANGE: u8 = 222;
 const ORANGE_G: u8 = 115;
@@ -36,7 +36,10 @@ pub fn print_welcome() {
     );
     println!(
         "  {}  Hypervisor-aware migration plan",
-        orange(&invocation::example("migrate-plan disk.vmdk --target proxmox")).dimmed()
+        orange(&invocation::example(
+            "migrate-plan disk.vmdk --target proxmox"
+        ))
+        .dimmed()
     );
     println!(
         "  {}  Inspect a disk image",
@@ -63,10 +66,7 @@ pub fn print_welcome() {
         "  {}  Shorthand: pass a disk image path to run inspect",
         "Tip:".yellow()
     );
-    println!(
-        "  {}",
-        orange(&invocation::example("disk.qcow2")).dimmed()
-    );
+    println!("  {}", orange(&invocation::example("disk.qcow2")).dimmed());
     println!();
     println!(
         "  {}  Full command list",

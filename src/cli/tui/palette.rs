@@ -10,37 +10,130 @@ pub struct PaletteCommand {
 }
 
 pub const COMMANDS: &[PaletteCommand] = &[
-    PaletteCommand { name: "goto dashboard", description: "Open dashboard" },
-    PaletteCommand { name: "goto assurance", description: "Migration assurance" },
-    PaletteCommand { name: "goto issues", description: "Security issues" },
-    PaletteCommand { name: "goto files", description: "File browser" },
-    PaletteCommand { name: "goto packages", description: "Installed packages" },
-    PaletteCommand { name: "goto profiles", description: "Profile reports" },
-    PaletteCommand { name: "goto analytics", description: "Analytics & charts" },
-    PaletteCommand { name: "goto timeline", description: "System timeline" },
-    PaletteCommand { name: "goto recommendations", description: "Recommendations" },
-    PaletteCommand { name: "goto topology", description: "System topology" },
-    PaletteCommand { name: "goto network", description: "Network configuration" },
-    PaletteCommand { name: "goto services", description: "System services" },
-    PaletteCommand { name: "goto databases", description: "Databases" },
-    PaletteCommand { name: "goto webservers", description: "Web servers" },
-    PaletteCommand { name: "goto security", description: "Security features" },
-    PaletteCommand { name: "goto storage", description: "Storage & filesystems" },
-    PaletteCommand { name: "goto users", description: "User accounts" },
-    PaletteCommand { name: "goto kernel", description: "Kernel configuration" },
-    PaletteCommand { name: "goto logs", description: "System logs" },
-    PaletteCommand { name: "doctor", description: "Run bootability doctor → Assurance" },
-    PaletteCommand { name: "assurance", description: "Open Assurance view + run doctor" },
-    PaletteCommand { name: "migrate-plan", description: "Score migration for current target" },
-    PaletteCommand { name: "export plan", description: "Export fix plan YAML to cwd" },
-    PaletteCommand { name: "plan preview", description: "Preview fix plan operations (read-only)" },
-    PaletteCommand { name: "export json", description: "Export current view as JSON" },
-    PaletteCommand { name: "export html", description: "Export security report HTML" },
-    PaletteCommand { name: "refresh", description: "Reload current view data" },
-    PaletteCommand { name: "refresh full", description: "Full re-inspect of image" },
-    PaletteCommand { name: "compare toggle", description: "Toggle comparison mode" },
-    PaletteCommand { name: "pin view", description: "Pin current tab" },
-    PaletteCommand { name: "help", description: "Toggle help overlay" },
+    PaletteCommand {
+        name: "goto dashboard",
+        description: "Open dashboard",
+    },
+    PaletteCommand {
+        name: "goto assurance",
+        description: "Migration assurance",
+    },
+    PaletteCommand {
+        name: "goto issues",
+        description: "Security issues",
+    },
+    PaletteCommand {
+        name: "goto files",
+        description: "File browser",
+    },
+    PaletteCommand {
+        name: "goto packages",
+        description: "Installed packages",
+    },
+    PaletteCommand {
+        name: "goto profiles",
+        description: "Profile reports",
+    },
+    PaletteCommand {
+        name: "goto analytics",
+        description: "Analytics & charts",
+    },
+    PaletteCommand {
+        name: "goto timeline",
+        description: "System timeline",
+    },
+    PaletteCommand {
+        name: "goto recommendations",
+        description: "Recommendations",
+    },
+    PaletteCommand {
+        name: "goto topology",
+        description: "System topology",
+    },
+    PaletteCommand {
+        name: "goto network",
+        description: "Network configuration",
+    },
+    PaletteCommand {
+        name: "goto services",
+        description: "System services",
+    },
+    PaletteCommand {
+        name: "goto databases",
+        description: "Databases",
+    },
+    PaletteCommand {
+        name: "goto webservers",
+        description: "Web servers",
+    },
+    PaletteCommand {
+        name: "goto security",
+        description: "Security features",
+    },
+    PaletteCommand {
+        name: "goto storage",
+        description: "Storage & filesystems",
+    },
+    PaletteCommand {
+        name: "goto users",
+        description: "User accounts",
+    },
+    PaletteCommand {
+        name: "goto kernel",
+        description: "Kernel configuration",
+    },
+    PaletteCommand {
+        name: "goto logs",
+        description: "System logs",
+    },
+    PaletteCommand {
+        name: "doctor",
+        description: "Run bootability doctor → Assurance",
+    },
+    PaletteCommand {
+        name: "assurance",
+        description: "Open Assurance view + run doctor",
+    },
+    PaletteCommand {
+        name: "migrate-plan",
+        description: "Score migration for current target",
+    },
+    PaletteCommand {
+        name: "export plan",
+        description: "Export fix plan YAML to cwd",
+    },
+    PaletteCommand {
+        name: "plan preview",
+        description: "Preview fix plan operations (read-only)",
+    },
+    PaletteCommand {
+        name: "export json",
+        description: "Export current view as JSON",
+    },
+    PaletteCommand {
+        name: "export html",
+        description: "Export security report HTML",
+    },
+    PaletteCommand {
+        name: "refresh",
+        description: "Reload current view data",
+    },
+    PaletteCommand {
+        name: "refresh full",
+        description: "Full re-inspect of image",
+    },
+    PaletteCommand {
+        name: "compare toggle",
+        description: "Toggle comparison mode",
+    },
+    PaletteCommand {
+        name: "pin view",
+        description: "Pin current tab",
+    },
+    PaletteCommand {
+        name: "help",
+        description: "Toggle help overlay",
+    },
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]

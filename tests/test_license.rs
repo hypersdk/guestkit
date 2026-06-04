@@ -65,45 +65,46 @@ mod analyzer_tests {
     fn test_find_violations_prohibited() {
         let analyzer = analyzer::LicenseAnalyzer::new();
 
-        let packages = vec![
-            PackageLicense {
-                package_name: "test-package".to_string(),
-                version: "1.0.0".to_string(),
-                license: "AGPL-3.0".to_string(),
-                license_type: LicenseType::StrongCopyleft,
-                risk_level: RiskLevel::Critical,
-                compatible_with: vec![],
-                incompatible_with: vec![],
-            },
-        ];
+        let packages = vec![PackageLicense {
+            package_name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "AGPL-3.0".to_string(),
+            license_type: LicenseType::StrongCopyleft,
+            risk_level: RiskLevel::Critical,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
 
         let prohibited = vec!["AGPL-3.0".to_string()];
         let violations = analyzer.find_violations(&packages, &prohibited);
 
         assert_eq!(violations.len(), 2); // Prohibited + AGPL network copyleft
-        assert!(violations.iter().any(|v| matches!(v.violation_type, ViolationType::ProhibitedLicense)));
+        assert!(violations
+            .iter()
+            .any(|v| matches!(v.violation_type, ViolationType::ProhibitedLicense)));
     }
 
     #[test]
     fn test_find_violations_missing_license() {
         let analyzer = analyzer::LicenseAnalyzer::new();
 
-        let packages = vec![
-            PackageLicense {
-                package_name: "test-package".to_string(),
-                version: "1.0.0".to_string(),
-                license: "Unknown".to_string(),
-                license_type: LicenseType::Unknown,
-                risk_level: RiskLevel::Medium,
-                compatible_with: vec![],
-                incompatible_with: vec![],
-            },
-        ];
+        let packages = vec![PackageLicense {
+            package_name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "Unknown".to_string(),
+            license_type: LicenseType::Unknown,
+            risk_level: RiskLevel::Medium,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
 
         let violations = analyzer.find_violations(&packages, &[]);
 
         assert_eq!(violations.len(), 1);
-        assert!(matches!(violations[0].violation_type, ViolationType::MissingLicense));
+        assert!(matches!(
+            violations[0].violation_type,
+            ViolationType::MissingLicense
+        ));
         assert_eq!(violations[0].risk_level, RiskLevel::Medium);
     }
 
@@ -111,17 +112,15 @@ mod analyzer_tests {
     fn test_no_violations() {
         let analyzer = analyzer::LicenseAnalyzer::new();
 
-        let packages = vec![
-            PackageLicense {
-                package_name: "safe-package".to_string(),
-                version: "1.0.0".to_string(),
-                license: "MIT".to_string(),
-                license_type: LicenseType::Permissive,
-                risk_level: RiskLevel::Low,
-                compatible_with: vec![],
-                incompatible_with: vec![],
-            },
-        ];
+        let packages = vec![PackageLicense {
+            package_name: "safe-package".to_string(),
+            version: "1.0.0".to_string(),
+            license: "MIT".to_string(),
+            license_type: LicenseType::Permissive,
+            risk_level: RiskLevel::Low,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
 
         let violations = analyzer.find_violations(&packages, &[]);
         assert_eq!(violations.len(), 0);
@@ -133,17 +132,15 @@ mod reporter_tests {
     use super::*;
 
     fn create_test_report() -> LicenseReport {
-        let packages = vec![
-            PackageLicense {
-                package_name: "pkg1".to_string(),
-                version: "1.0.0".to_string(),
-                license: "MIT".to_string(),
-                license_type: LicenseType::Permissive,
-                risk_level: RiskLevel::Low,
-                compatible_with: vec![],
-                incompatible_with: vec![],
-            },
-        ];
+        let packages = vec![PackageLicense {
+            package_name: "pkg1".to_string(),
+            version: "1.0.0".to_string(),
+            license: "MIT".to_string(),
+            license_type: LicenseType::Permissive,
+            risk_level: RiskLevel::Low,
+            compatible_with: vec![],
+            incompatible_with: vec![],
+        }];
 
         let mut license_summary = HashMap::new();
         license_summary.insert("MIT".to_string(), 1);

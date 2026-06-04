@@ -251,9 +251,10 @@ impl Guestfs {
             if let Ok(entries) = self.ls("/lib/systemd/system") {
                 for entry in entries {
                     if (entry.ends_with(".service") || entry.ends_with(".target"))
-                        && !units.contains(&entry) {
-                            units.push(entry);
-                        }
+                        && !units.contains(&entry)
+                    {
+                        units.push(entry);
+                    }
                 }
             }
         }

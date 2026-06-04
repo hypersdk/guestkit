@@ -93,8 +93,7 @@ impl JsonRpcResponse {
 
 impl JsonRpcRequest {
     pub fn parse(bytes: &[u8]) -> Result<Self, AgentError> {
-        serde_json::from_slice(bytes)
-            .map_err(|e| AgentError::Parse(e.to_string()))
+        serde_json::from_slice(bytes).map_err(|e| AgentError::Parse(e.to_string()))
     }
 
     pub fn validate(&self) -> Result<(), AgentError> {
@@ -121,8 +120,8 @@ mod tests {
 
     #[test]
     fn parse_ping_request() {
-        let req = JsonRpcRequest::parse(br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#)
-            .unwrap();
+        let req =
+            JsonRpcRequest::parse(br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#).unwrap();
         assert_eq!(req.method(), RpcMethod::Ping);
     }
 }

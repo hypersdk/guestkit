@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+pub mod boot;
 pub mod journal;
 pub mod services;
-pub mod boot;
 
 /// Systemd journal entry
 #[derive(Debug, Clone)]
@@ -239,7 +239,13 @@ mod tests {
     #[test]
     fn test_systemd_analyzer_creation() {
         let analyzer = SystemdAnalyzer::new("/tmp");
-        assert_eq!(analyzer.systemd_dir(), PathBuf::from("/tmp/etc/systemd/system"));
-        assert_eq!(analyzer.journal_dir(), PathBuf::from("/tmp/var/log/journal"));
+        assert_eq!(
+            analyzer.systemd_dir(),
+            PathBuf::from("/tmp/etc/systemd/system")
+        );
+        assert_eq!(
+            analyzer.journal_dir(),
+            PathBuf::from("/tmp/var/log/journal")
+        );
     }
 }

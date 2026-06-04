@@ -7,9 +7,9 @@
 //! diff_command, find_large_command, disk_usage_command
 #![allow(clippy::too_many_arguments)]
 
-use anyhow::Result;
 use crate::core::ProgressReporter;
 use crate::Guestfs;
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 use tempfile;
 
@@ -30,7 +30,12 @@ pub fn create_disk(path: &Path, size_mb: u64, format: &str, verbose: bool) -> Re
     );
 
     let size_bytes = (size_mb * 1024 * 1024) as i64;
-    g.disk_create(path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?, format, size_bytes)?;
+    g.disk_create(
+        path.to_str()
+            .ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?,
+        format,
+        size_bytes,
+    )?;
 
     println!("✓ Disk created successfully");
 
@@ -176,7 +181,11 @@ pub fn backup_files(
         .prefix("guestkit-backup-")
         .suffix(".tar.gz")
         .tempfile()?;
-    let temp_path = temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?.to_string();
+    let temp_path = temp_file
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?
+        .to_string();
     g.tar_out_opts(
         guest_path,
         &temp_path,
@@ -221,7 +230,11 @@ pub fn clone_command(
     let progress = ProgressReporter::spinner("Starting clone operation...");
 
     // Step 1: Copy image file
-    progress.set_message(format!("Copying {} to {}...", source.display(), dest.display()));
+    progress.set_message(format!(
+        "Copying {} to {}...",
+        source.display(),
+        dest.display()
+    ));
 
     std::fs::copy(source, dest)?;
 
@@ -230,7 +243,11 @@ pub fn clone_command(
     if sysprep {
         let mut g = Guestfs::new()?;
         g.set_verbose(verbose);
-        g.add_drive(dest.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", dest.display()))?)?;
+        g.add_drive(
+            dest.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", dest.display())
+            })?,
+        )?;
 
         progress.set_message("Launching appliance for sysprep...");
         g.launch()?;
@@ -277,7 +294,13 @@ pub fn clone_command(
             if g.is_file("/etc/hostname").unwrap_or(false) {
                 let temp_file = tempfile::NamedTempFile::new()?;
                 std::fs::write(temp_file.path(), format!("{}\n", new_hostname))?;
-                g.upload(temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, "/etc/hostname")?;
+                g.upload(
+                    temp_file
+                        .path()
+                        .to_str()
+                        .ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?,
+                    "/etc/hostname",
+                )?;
                 operations.push(format!("Set hostname to: {}", new_hostname));
             }
         }
@@ -295,10 +318,7 @@ pub fn clone_command(
 
         // Remove user history files if not preserving
         if !preserve_users {
-            let history_files = vec![
-                "/root/.bash_history",
-                "/root/.zsh_history",
-            ];
+            let history_files = vec!["/root/.bash_history", "/root/.zsh_history"];
 
             for hist in history_files {
                 if g.is_file(hist).unwrap_or(false) {
@@ -308,8 +328,12 @@ pub fn clone_command(
             }
         }
 
-        if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-        if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+        if let Err(e) = g.umount_all() {
+            log::warn!("Cleanup: umount_all failed: {}", e);
+        }
+        if let Err(e) = g.shutdown() {
+            log::warn!("Cleanup: shutdown failed: {}", e);
+        }
 
         progress.finish_and_clear();
 
@@ -354,12 +378,11 @@ pub fn lvm_clone_command(
 ) -> Result<()> {
     use crate::guestfs::lvm_clone::{lvm_clone, IsolationLevel, LvmCloneConfig};
 
-    let source_vg = source_vg
-        .ok_or_else(|| anyhow::anyhow!("--source-vg is required for LVM clone"))?;
-    let source_lv = source_lv
-        .ok_or_else(|| anyhow::anyhow!("--source-lv is required for LVM clone"))?;
-    let clone_lv_name =
-        clone_lv_name.unwrap_or_else(|| format!("{}-clone", source_lv));
+    let source_vg =
+        source_vg.ok_or_else(|| anyhow::anyhow!("--source-vg is required for LVM clone"))?;
+    let source_lv =
+        source_lv.ok_or_else(|| anyhow::anyhow!("--source-lv is required for LVM clone"))?;
+    let clone_lv_name = clone_lv_name.unwrap_or_else(|| format!("{}-clone", source_lv));
 
     let parsed_isolation = match isolation_level {
         "mount" => IsolationLevel::MountOnly,
@@ -676,10 +699,16 @@ pub fn benchmark_command(
     println!("  Total operations: {}", total_ops);
     println!("  Total bytes read: {}", total_bytes);
     println!();
-    println!("Note: Benchmark reads small system files. For comprehensive I/O testing, use fio or dd.");
+    println!(
+        "Note: Benchmark reads small system files. For comprehensive I/O testing, use fio or dd."
+    );
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -697,7 +726,9 @@ pub fn snapshot_command(
     match operation {
         "create" => {
             let snap_name = name.unwrap_or_else(|| {
-                chrono::Utc::now().format("snapshot-%Y%m%d-%H%M%S").to_string()
+                chrono::Utc::now()
+                    .format("snapshot-%Y%m%d-%H%M%S")
+                    .to_string()
             });
 
             progress.set_message(format!("Creating snapshot '{}'...", snap_name));
@@ -820,10 +851,18 @@ pub fn diff_command(
     progress.finish_and_clear();
 
     let cleanup = |g1: &mut crate::Guestfs, g2: &mut crate::Guestfs| {
-        if let Err(e) = g1.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-        if let Err(e) = g2.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-        if let Err(e) = g1.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
-        if let Err(e) = g2.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+        if let Err(e) = g1.umount_all() {
+            log::warn!("Cleanup: umount_all failed: {}", e);
+        }
+        if let Err(e) = g2.umount_all() {
+            log::warn!("Cleanup: umount_all failed: {}", e);
+        }
+        if let Err(e) = g1.shutdown() {
+            log::warn!("Cleanup: shutdown failed: {}", e);
+        }
+        if let Err(e) = g2.shutdown() {
+            log::warn!("Cleanup: shutdown failed: {}", e);
+        }
     };
 
     if !exists1 && !exists2 {
@@ -857,7 +896,10 @@ pub fn diff_command(
             println!("--- {} (image1)", path);
             println!("+++ {} (image2)", path);
 
-            if let (Ok(text1), Ok(text2)) = (std::str::from_utf8(&content1), std::str::from_utf8(&content2)) {
+            if let (Ok(text1), Ok(text2)) = (
+                std::str::from_utf8(&content1),
+                std::str::from_utf8(&content2),
+            ) {
                 let lines1: Vec<&str> = text1.lines().collect();
                 let lines2: Vec<&str> = text2.lines().collect();
 
@@ -866,25 +908,32 @@ pub fn diff_command(
                 }
 
                 for (idx, (line1, line2)) in lines1.iter().zip(lines2.iter()).enumerate() {
-                    if line1 != line2
-                        && (!ignore_whitespace || line1.trim() != line2.trim()) {
-                            if unified {
-                                println!("-{}", line1);
-                                println!("+{}", line2);
-                            } else {
-                                println!("{}c{}", idx + 1, idx + 1);
-                                println!("< {}", line1);
-                                println!("---");
-                                println!("> {}", line2);
-                            }
+                    if line1 != line2 && (!ignore_whitespace || line1.trim() != line2.trim()) {
+                        if unified {
+                            println!("-{}", line1);
+                            println!("+{}", line2);
+                        } else {
+                            println!("{}c{}", idx + 1, idx + 1);
+                            println!("< {}", line1);
+                            println!("---");
+                            println!("> {}", line2);
                         }
+                    }
                 }
 
                 if lines1.len() != lines2.len() {
-                    println!("File sizes differ: {} vs {} lines", lines1.len(), lines2.len());
+                    println!(
+                        "File sizes differ: {} vs {} lines",
+                        lines1.len(),
+                        lines2.len()
+                    );
                 }
             } else {
-                println!("Binary files differ: {} vs {} bytes", content1.len(), content2.len());
+                println!(
+                    "Binary files differ: {} vs {} bytes",
+                    content1.len(),
+                    content2.len()
+                );
             }
         }
     } else if g1.is_dir(path).unwrap_or(false) && g2.is_dir(path).unwrap_or(false) {
@@ -915,13 +964,24 @@ pub fn diff_command(
             println!("Directories have the same files: {}", path);
         }
     } else {
-        println!("Type mismatch: {} is different types in the two images", path);
+        println!(
+            "Type mismatch: {} is different types in the two images",
+            path
+        );
     }
 
-    if let Err(e) = g1.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g2.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g1.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
-    if let Err(e) = g2.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g1.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g2.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g1.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
+    if let Err(e) = g2.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -979,8 +1039,12 @@ pub fn find_large_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1026,7 +1090,8 @@ pub fn disk_usage_command(
     progress.finish_and_clear();
 
     // Sort by size
-    let mut sorted_dirs: Vec<_> = dir_sizes.iter()
+    let mut sorted_dirs: Vec<_> = dir_sizes
+        .iter()
         .filter(|&(_, size)| *size >= min_size)
         .collect();
     sorted_dirs.sort_by(|a, b| b.1.cmp(a.1));
@@ -1048,7 +1113,11 @@ pub fn disk_usage_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }

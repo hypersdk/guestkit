@@ -9,8 +9,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// TUI Configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TuiConfig {
     /// UI settings
     pub ui: UiConfig,
@@ -159,7 +158,6 @@ pub struct KeybindingsConfig {
     pub quick_jump_enabled: bool,
 }
 
-
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
@@ -206,8 +204,7 @@ impl Default for KeybindingsConfig {
 impl TuiConfig {
     /// Get the default config file path
     pub fn default_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir()
-            .context("Could not determine config directory")?;
+        let config_dir = dirs::config_dir().context("Could not determine config directory")?;
 
         Ok(config_dir.join("guestkit").join("tui.toml"))
     }
@@ -231,8 +228,7 @@ impl TuiConfig {
             }
         };
 
-        let config: TuiConfig = toml::from_str(&contents)
-            .context("Failed to parse config file")?;
+        let config: TuiConfig = toml::from_str(&contents).context("Failed to parse config file")?;
 
         Ok(config)
     }
@@ -244,15 +240,12 @@ impl TuiConfig {
 
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .context("Failed to create config directory")?;
+            fs::create_dir_all(parent).context("Failed to create config directory")?;
         }
 
-        let contents = toml::to_string_pretty(self)
-            .context("Failed to serialize config")?;
+        let contents = toml::to_string_pretty(self).context("Failed to serialize config")?;
 
-        fs::write(&path, contents)
-            .context("Failed to write config file")?;
+        fs::write(&path, contents).context("Failed to write config file")?;
 
         Ok(())
     }
@@ -293,7 +286,10 @@ mod tests {
         let deserialized: TuiConfig = toml::from_str(&toml_str).unwrap();
 
         assert_eq!(config.ui.show_splash, deserialized.ui.show_splash);
-        assert_eq!(config.behavior.default_view, deserialized.behavior.default_view);
+        assert_eq!(
+            config.behavior.default_view,
+            deserialized.behavior.default_view
+        );
     }
 
     #[test]
@@ -322,7 +318,6 @@ mod tests {
         assert!(kb.vim_mode);
         assert!(kb.quick_jump_enabled);
     }
-
 
     #[test]
     fn test_config_clone() {

@@ -38,7 +38,7 @@ impl DiskFormat {
     pub fn from_str(s: &str) -> Self {
         match s.parse() {
             Ok(v) => v,
-            Err(e) => match e {},  // Infallible — the match is exhaustive over Infallible
+            Err(e) => match e {}, // Infallible — the match is exhaustive over Infallible
         }
     }
 }

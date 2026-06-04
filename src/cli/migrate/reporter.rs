@@ -15,35 +15,58 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
     // Source information
     output.push_str("📊 Source System\n");
     output.push_str("----------------\n");
-    output.push_str(&format!("OS: {} {}\n", plan.source.os_name, plan.source.os_version));
+    output.push_str(&format!(
+        "OS: {} {}\n",
+        plan.source.os_name, plan.source.os_version
+    ));
     output.push_str(&format!("Hostname: {}\n", plan.source.hostname));
     output.push_str(&format!("Architecture: {}\n", plan.source.arch));
     output.push_str(&format!("Packages: {}\n", plan.source.packages.len()));
     output.push_str(&format!("Services: {}\n", plan.source.services.len()));
-    output.push_str(&format!("Total Size: {:.1} GB\n\n", plan.source.total_size_gb));
+    output.push_str(&format!(
+        "Total Size: {:.1} GB\n\n",
+        plan.source.total_size_gb
+    ));
 
     // Target information
     output.push_str("🎯 Target System\n");
     output.push_str("----------------\n");
-    output.push_str(&format!("Target: {} {}\n", plan.target_os, plan.target_version));
+    output.push_str(&format!(
+        "Target: {} {}\n",
+        plan.target_os, plan.target_version
+    ));
     output.push_str(&format!("Migration Type: {}\n\n", plan.migration_type));
 
     // Risk assessment
     output.push_str("⚠️  Risk Assessment\n");
     output.push_str("-------------------\n");
-    output.push_str(&format!("{} Overall Risk: {:?}\n",
-        plan.overall_risk.emoji(), plan.overall_risk));
-    output.push_str(&format!("📈 Compatibility Score: {:.1}%\n", plan.compatibility_score));
-    output.push_str(&format!("⏱️  Estimated Effort: {} hours\n\n", plan.estimated_effort_hours));
+    output.push_str(&format!(
+        "{} Overall Risk: {:?}\n",
+        plan.overall_risk.emoji(),
+        plan.overall_risk
+    ));
+    output.push_str(&format!(
+        "📈 Compatibility Score: {:.1}%\n",
+        plan.compatibility_score
+    ));
+    output.push_str(&format!(
+        "⏱️  Estimated Effort: {} hours\n\n",
+        plan.estimated_effort_hours
+    ));
 
     // Feasibility analysis
     let feasibility = analyzer::analyze_feasibility(plan);
     output.push_str("✅ Feasibility\n");
     output.push_str("--------------\n");
-    output.push_str(&format!("Feasible: {}\n",
-        if feasibility.is_feasible { "Yes" } else { "No" }));
+    output.push_str(&format!(
+        "Feasible: {}\n",
+        if feasibility.is_feasible { "Yes" } else { "No" }
+    ));
     output.push_str(&format!("Confidence: {}\n", feasibility.confidence));
-    output.push_str(&format!("Critical Blockers: {}\n", feasibility.critical_blockers));
+    output.push_str(&format!(
+        "Critical Blockers: {}\n",
+        feasibility.critical_blockers
+    ));
     output.push_str(&format!("High Risks: {}\n", feasibility.high_risks));
     output.push_str(&format!("💡 {}\n\n", feasibility.recommendation));
 
@@ -52,11 +75,16 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
     output.push_str("⏰ Downtime Estimate\n");
     output.push_str("--------------------\n");
     output.push_str(&format!("Minimum: {} minutes\n", downtime.minimum_minutes));
-    output.push_str(&format!("Expected: {} minutes ({:.1} hours)\n",
-        downtime.expected_minutes, downtime.expected_hours()));
+    output.push_str(&format!(
+        "Expected: {} minutes ({:.1} hours)\n",
+        downtime.expected_minutes,
+        downtime.expected_hours()
+    ));
     output.push_str(&format!("Maximum: {} minutes\n", downtime.maximum_minutes));
-    output.push_str(&format!("Rollback Available: {}\n\n",
-        if downtime.can_rollback { "Yes" } else { "No" }));
+    output.push_str(&format!(
+        "Rollback Available: {}\n\n",
+        if downtime.can_rollback { "Yes" } else { "No" }
+    ));
 
     // Issues
     if !plan.issues.is_empty() {
@@ -74,8 +102,12 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
         for severity in &["Critical", "High", "Medium", "Low"] {
             if let Some(issues) = issues_by_severity.get(*severity) {
                 for issue in issues {
-                    output.push_str(&format!("\n{} [{}] {}\n",
-                        issue.severity.emoji(), issue.category, issue.description));
+                    output.push_str(&format!(
+                        "\n{} [{}] {}\n",
+                        issue.severity.emoji(),
+                        issue.category,
+                        issue.description
+                    ));
                     output.push_str(&format!("   Impact: {}\n", issue.impact));
                     output.push_str(&format!("   💡 {}\n", issue.remediation));
                 }
@@ -89,10 +121,16 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
         output.push_str("🔧 Required Changes\n");
         output.push_str("-------------------\n");
         for change in &plan.required_changes {
-            output.push_str(&format!("{} [{}] {}\n",
-                change.priority.emoji(), change.category, change.description));
-            output.push_str(&format!("   Automated: {}\n",
-                if change.automated { "Yes" } else { "No" }));
+            output.push_str(&format!(
+                "{} [{}] {}\n",
+                change.priority.emoji(),
+                change.category,
+                change.description
+            ));
+            output.push_str(&format!(
+                "   Automated: {}\n",
+                if change.automated { "Yes" } else { "No" }
+            ));
         }
         output.push('\n');
     }
@@ -102,13 +140,19 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
         output.push_str("📦 Package Compatibility\n");
         output.push_str("------------------------\n");
 
-        let direct = plan.package_mappings.iter()
+        let direct = plan
+            .package_mappings
+            .iter()
             .filter(|m| m.mapping_type == MappingType::DirectMapping)
             .count();
-        let name_change = plan.package_mappings.iter()
+        let name_change = plan
+            .package_mappings
+            .iter()
             .filter(|m| m.mapping_type == MappingType::NameChange)
             .count();
-        let not_available = plan.package_mappings.iter()
+        let not_available = plan
+            .package_mappings
+            .iter()
             .filter(|m| m.mapping_type == MappingType::NotAvailable)
             .count();
 
@@ -118,11 +162,16 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
 
         if detailed && not_available > 0 {
             output.push_str("\nPackages requiring attention:\n");
-            for mapping in plan.package_mappings.iter()
+            for mapping in plan
+                .package_mappings
+                .iter()
                 .filter(|m| m.mapping_type == MappingType::NotAvailable)
                 .take(10)
             {
-                output.push_str(&format!("  - {}: {}\n", mapping.source_package, mapping.notes));
+                output.push_str(&format!(
+                    "  - {}: {}\n",
+                    mapping.source_package, mapping.notes
+                ));
             }
         }
         output.push('\n');
@@ -143,7 +192,10 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
         output.push_str("📋 Migration Steps\n");
         output.push_str("------------------\n");
         for step in &plan.steps {
-            output.push_str(&format!("\n{}. {} - {}\n", step.order, step.phase, step.description));
+            output.push_str(&format!(
+                "\n{}. {} - {}\n",
+                step.order, step.phase, step.description
+            ));
             if !step.commands.is_empty() {
                 output.push_str("   Commands:\n");
                 for cmd in &step.commands {
@@ -161,7 +213,12 @@ pub fn format_report(plan: &MigrationPlan, detailed: bool) -> String {
     // Summary
     output.push_str("📝 Summary\n");
     output.push_str("----------\n");
-    if plan.compatibility_score >= 80.0 && plan.issues.iter().all(|i| i.severity != RiskLevel::Critical) {
+    if plan.compatibility_score >= 80.0
+        && plan
+            .issues
+            .iter()
+            .all(|i| i.severity != RiskLevel::Critical)
+    {
         output.push_str("✅ Migration appears feasible with standard approach\n");
     } else if plan.compatibility_score >= 60.0 {
         output.push_str("⚠️  Migration is possible but requires careful planning\n");
@@ -183,7 +240,9 @@ pub fn format_html(plan: &MigrationPlan) -> String {
     html.push_str("<style>\n");
     html.push_str("body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }\n");
     html.push_str("h1, h2 { color: #333; }\n");
-    html.push_str(".info-box { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }\n");
+    html.push_str(
+        ".info-box { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }\n",
+    );
     html.push_str(".risk-critical { color: #d32f2f; }\n");
     html.push_str(".risk-high { color: #f57c00; }\n");
     html.push_str(".risk-medium { color: #ffa000; }\n");
@@ -199,22 +258,42 @@ pub fn format_html(plan: &MigrationPlan) -> String {
 
     html.push_str("<div class=\"info-box\">\n");
     html.push_str("<h2>Source System</h2>\n");
-    html.push_str(&format!("<p><strong>OS:</strong> {} {}</p>\n", plan.source.os_name, plan.source.os_version));
-    html.push_str(&format!("<p><strong>Hostname:</strong> {}</p>\n", plan.source.hostname));
-    html.push_str(&format!("<p><strong>Packages:</strong> {}</p>\n", plan.source.packages.len()));
+    html.push_str(&format!(
+        "<p><strong>OS:</strong> {} {}</p>\n",
+        plan.source.os_name, plan.source.os_version
+    ));
+    html.push_str(&format!(
+        "<p><strong>Hostname:</strong> {}</p>\n",
+        plan.source.hostname
+    ));
+    html.push_str(&format!(
+        "<p><strong>Packages:</strong> {}</p>\n",
+        plan.source.packages.len()
+    ));
     html.push_str("</div>\n");
 
     html.push_str("<div class=\"info-box\">\n");
     html.push_str("<h2>Target System</h2>\n");
-    html.push_str(&format!("<p><strong>Target:</strong> {} {}</p>\n", plan.target_os, plan.target_version));
-    html.push_str(&format!("<p><strong>Migration Type:</strong> {}</p>\n", plan.migration_type));
-    html.push_str(&format!("<p><strong>Compatibility Score:</strong> {:.1}%</p>\n", plan.compatibility_score));
+    html.push_str(&format!(
+        "<p><strong>Target:</strong> {} {}</p>\n",
+        plan.target_os, plan.target_version
+    ));
+    html.push_str(&format!(
+        "<p><strong>Migration Type:</strong> {}</p>\n",
+        plan.migration_type
+    ));
+    html.push_str(&format!(
+        "<p><strong>Compatibility Score:</strong> {:.1}%</p>\n",
+        plan.compatibility_score
+    ));
     html.push_str("</div>\n");
 
     if !plan.issues.is_empty() {
         html.push_str("<h2>Issues</h2>\n");
         html.push_str("<table>\n");
-        html.push_str("<tr><th>Severity</th><th>Category</th><th>Description</th><th>Remediation</th></tr>\n");
+        html.push_str(
+            "<tr><th>Severity</th><th>Category</th><th>Description</th><th>Remediation</th></tr>\n",
+        );
         for issue in &plan.issues {
             let risk_class = match issue.severity {
                 RiskLevel::Critical => "risk-critical",
@@ -234,7 +313,10 @@ pub fn format_html(plan: &MigrationPlan) -> String {
         html.push_str("<h2>Migration Steps</h2>\n");
         for step in &plan.steps {
             html.push_str("<div class=\"step\">\n");
-            html.push_str(&format!("<h3>Step {}: {} - {}</h3>\n", step.order, step.phase, step.description));
+            html.push_str(&format!(
+                "<h3>Step {}: {} - {}</h3>\n",
+                step.order, step.phase, step.description
+            ));
             if !step.commands.is_empty() {
                 html.push_str("<p><strong>Commands:</strong></p>\n<pre>\n");
                 for cmd in &step.commands {

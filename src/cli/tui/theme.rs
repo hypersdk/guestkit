@@ -158,8 +158,8 @@ fn glass_color(color: Color, opacity_pct: u8) -> Color {
 }
 
 pub fn resolve(cfg: &UiConfig) -> ResolvedTheme {
-    let use_glass = cfg.transparent
-        && !matches!(cfg.theme.as_str(), "high-contrast" | "high_contrast");
+    let use_glass =
+        cfg.transparent && !matches!(cfg.theme.as_str(), "high-contrast" | "high_contrast");
     if !use_glass {
         return ResolvedTheme::opaque();
     }
@@ -295,10 +295,7 @@ pub fn view_tab_span(
             Style::default().fg(LINK).bg(t.chip_bg),
         )
     } else {
-        Span::styled(
-            format!(" {label} "),
-            Style::default().fg(TEXT_MUTED),
-        )
+        Span::styled(format!(" {label} "), Style::default().fg(TEXT_MUTED))
     }
 }
 
@@ -307,11 +304,7 @@ pub fn chrome_header_block<'a>(title: &'a str, border: Color, t: &ResolvedTheme)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border))
         .title(format!(" {title} "))
-        .title_style(
-            Style::default()
-                .fg(LINK)
-                .add_modifier(Modifier::BOLD),
-        )
+        .title_style(Style::default().fg(LINK).add_modifier(Modifier::BOLD))
         .style(Style::default().bg(t.surface_raised))
 }
 

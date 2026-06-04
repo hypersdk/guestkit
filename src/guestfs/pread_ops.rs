@@ -28,7 +28,10 @@ impl Guestfs {
         }
 
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
 
         let host_path = self.resolve_guest_path(path)?;
@@ -65,7 +68,10 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
 
         let nbd_device_path = self
@@ -101,7 +107,10 @@ impl Guestfs {
         }
 
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
 
         let host_path = self.resolve_guest_path(path)?;
@@ -135,7 +144,10 @@ impl Guestfs {
         self.setup_nbd_if_needed()?;
 
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
 
         let nbd_device_path = self

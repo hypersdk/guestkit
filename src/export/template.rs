@@ -90,8 +90,9 @@ impl TemplateEngine {
 
     /// Load a custom template from file
     pub fn load_template<P: AsRef<Path>>(&mut self, name: &str, path: P) -> Result<()> {
-        let content = fs::read_to_string(path.as_ref())
-            .with_context(|| format!("Failed to read template file: {}", path.as_ref().display()))?;
+        let content = fs::read_to_string(path.as_ref()).with_context(|| {
+            format!("Failed to read template file: {}", path.as_ref().display())
+        })?;
 
         // Validate template
         self.validate_template(&content)?;
@@ -132,7 +133,11 @@ impl TemplateEngine {
     }
 
     /// Render a template with variables
-    pub fn render(&self, template_name: &str, variables: &HashMap<String, String>) -> Result<String> {
+    pub fn render(
+        &self,
+        template_name: &str,
+        variables: &HashMap<String, String>,
+    ) -> Result<String> {
         let template = self
             .get_template(template_name)
             .ok_or_else(|| anyhow::anyhow!("Template not found: {}", template_name))?;
@@ -287,7 +292,10 @@ pub fn create_variable_map(
         chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
     );
     vars.insert("tool_name".to_string(), "GuestKit".to_string());
-    vars.insert("tool_version".to_string(), env!("CARGO_PKG_VERSION").to_string());
+    vars.insert(
+        "tool_version".to_string(),
+        env!("CARGO_PKG_VERSION").to_string(),
+    );
 
     vars
 }
@@ -306,16 +314,11 @@ mod tests {
 
     #[test]
     fn test_template_name_generation() {
-        let name = TemplateEngine::get_template_name(
-            TemplateFormat::Html,
-            TemplateLevel::Minimal,
-        );
+        let name = TemplateEngine::get_template_name(TemplateFormat::Html, TemplateLevel::Minimal);
         assert_eq!(name, "html_minimal");
 
-        let name = TemplateEngine::get_template_name(
-            TemplateFormat::Markdown,
-            TemplateLevel::Detailed,
-        );
+        let name =
+            TemplateEngine::get_template_name(TemplateFormat::Markdown, TemplateLevel::Detailed);
         assert_eq!(name, "markdown_detailed");
     }
 
@@ -370,13 +373,7 @@ mod tests {
 
     #[test]
     fn test_create_variable_map() {
-        let vars = create_variable_map(
-            "test-vm",
-            "linux",
-            "ubuntu",
-            "22.04",
-            "x86_64",
-        );
+        let vars = create_variable_map("test-vm", "linux", "ubuntu", "22.04", "x86_64");
 
         assert_eq!(vars.get("hostname").unwrap(), "test-vm");
         assert_eq!(vars.get("os_type").unwrap(), "linux");
@@ -392,9 +389,7 @@ mod tests {
         let mut engine = TemplateEngine::new();
         let custom = "Custom template for {{hostname}}";
 
-        engine
-            .load_template_string("custom", custom)
-            .unwrap();
+        engine.load_template_string("custom", custom).unwrap();
 
         assert!(engine.has_template("custom"));
         assert_eq!(engine.get_template("custom").unwrap(), custom);

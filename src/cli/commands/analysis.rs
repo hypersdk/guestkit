@@ -18,7 +18,7 @@ pub fn timeline_command(
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
-    use chrono::{Utc, TimeZone};
+    use chrono::{TimeZone, Utc};
     use std::collections::BTreeMap;
 
     let progress = ProgressReporter::spinner("Loading disk image and launching appliance...");
@@ -38,13 +38,11 @@ pub fn timeline_command(
             for file in files.iter().take(100) {
                 if g.is_file(file).unwrap_or(false) {
                     if let Ok(stat) = g.stat(file) {
-                        timeline.entry(stat.mtime)
-                            .or_default()
-                            .push((
-                                "filesystem".to_string(),
-                                "file_modified".to_string(),
-                                format!("{} (size: {})", file, stat.size)
-                            ));
+                        timeline.entry(stat.mtime).or_default().push((
+                            "filesystem".to_string(),
+                            "file_modified".to_string(),
+                            format!("{} (size: {})", file, stat.size),
+                        ));
                     }
                 }
             }
@@ -55,21 +53,17 @@ pub fn timeline_command(
     // Note: skipped because libguestfs does not provide package install timestamps;
     // adding packages with epoch 0 would produce misleading forensic timeline data.
 
-
-
     // Source 3: Log entries (if 'logs' in sources)
     if sources.is_empty() || sources.contains(&"logs".to_string()) {
         let log_files = vec!["/var/log/messages", "/var/log/syslog", "/var/log/auth.log"];
         for log_file in log_files {
             if g.is_file(log_file).unwrap_or(false) {
                 if let Ok(stat) = g.stat(log_file) {
-                    timeline.entry(stat.mtime)
-                        .or_default()
-                        .push((
-                            "logs".to_string(),
-                            "log_updated".to_string(),
-                            log_file.to_string()
-                        ));
+                    timeline.entry(stat.mtime).or_default().push((
+                        "logs".to_string(),
+                        "log_updated".to_string(),
+                        log_file.to_string(),
+                    ));
                 }
             }
         }
@@ -89,7 +83,10 @@ pub fn timeline_command(
                         println!(",");
                     }
                     first = false;
-                    let dt = Utc.timestamp_opt(*timestamp, 0).single().unwrap_or_default();
+                    let dt = Utc
+                        .timestamp_opt(*timestamp, 0)
+                        .single()
+                        .unwrap_or_default();
                     let ts_escaped = serde_json::Value::String(dt.to_rfc3339());
                     let src_escaped = serde_json::Value::String(source.clone());
                     let evt_escaped = serde_json::Value::String(event_type.clone());
@@ -110,10 +107,19 @@ pub fn timeline_command(
             println!("timestamp,source,event_type,details");
             for (timestamp, events) in timeline.iter() {
                 for (source, event_type, details) in events {
-                    let dt = Utc.timestamp_opt(*timestamp, 0).single().unwrap_or_default();
+                    let dt = Utc
+                        .timestamp_opt(*timestamp, 0)
+                        .single()
+                        .unwrap_or_default();
                     // Escape CSV fields: wrap in double quotes and double any inner quotes
                     let escape_csv = |s: &str| format!("\"{}\"", s.replace('"', "\"\""));
-                    println!("{},{},{},{}", escape_csv(&dt.to_rfc3339()), escape_csv(source), escape_csv(event_type), escape_csv(details));
+                    println!(
+                        "{},{},{},{}",
+                        escape_csv(&dt.to_rfc3339()),
+                        escape_csv(source),
+                        escape_csv(event_type),
+                        escape_csv(details)
+                    );
                 }
             }
         }
@@ -121,11 +127,17 @@ pub fn timeline_command(
             println!("Forensic Timeline");
             println!("=================");
             println!("Image: {}", image.display());
-            println!("Total events: {}", timeline.values().map(|v| v.len()).sum::<usize>());
+            println!(
+                "Total events: {}",
+                timeline.values().map(|v| v.len()).sum::<usize>()
+            );
             println!();
 
             for (timestamp, events) in timeline.iter().rev().take(50) {
-                let dt = Utc.timestamp_opt(*timestamp, 0).single().unwrap_or_default();
+                let dt = Utc
+                    .timestamp_opt(*timestamp, 0)
+                    .single()
+                    .unwrap_or_default();
                 println!("[{}]", dt.format("%Y-%m-%d %H:%M:%S"));
                 for (source, event_type, details) in events {
                     println!("  [{:>15}] {}: {}", source, event_type, details);
@@ -135,8 +147,12 @@ pub fn timeline_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -148,7 +164,7 @@ pub fn fingerprint_command(
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     use std::fs;
 
     let progress = ProgressReporter::spinner("Loading disk image and launching appliance...");
@@ -179,7 +195,8 @@ pub fn fingerprint_command(
     // 2. Package list (sorted for consistency)
     if let Some(ref root) = root {
         if let Ok(apps) = g.inspect_list_applications(root) {
-            let mut pkg_list: Vec<_> = apps.iter()
+            let mut pkg_list: Vec<_> = apps
+                .iter()
                 .map(|app| format!("{}:{}", app.name, app.version))
                 .collect();
             pkg_list.sort();
@@ -191,12 +208,7 @@ pub fn fingerprint_command(
 
     // 3. Critical file hashes (if include_content)
     if include_content {
-        let critical_files = vec![
-            "/etc/passwd",
-            "/etc/group",
-            "/etc/fstab",
-            "/etc/hostname",
-        ];
+        let critical_files = vec!["/etc/passwd", "/etc/group", "/etc/fstab", "/etc/hostname"];
 
         for file in critical_files {
             if g.is_file(file).unwrap_or(false) {
@@ -209,7 +221,8 @@ pub fn fingerprint_command(
 
     // 4. Filesystem structure fingerprint
     if let Ok(files) = g.find("/etc") {
-        let mut sorted_files: Vec<_> = files.iter()
+        let mut sorted_files: Vec<_> = files
+            .iter()
             .filter(|f| g.is_file(f).unwrap_or(false))
             .collect();
         sorted_files.sort();
@@ -245,7 +258,10 @@ pub fn fingerprint_command(
     });
 
     if let Some(output_path) = output {
-        fs::write(&output_path, serde_json::to_string_pretty(&fingerprint_output)?)?;
+        fs::write(
+            &output_path,
+            serde_json::to_string_pretty(&fingerprint_output)?,
+        )?;
         println!("✓ Fingerprint saved to: {}", output_path.display());
     } else {
         println!("{}", serde_json::to_string_pretty(&fingerprint_output)?);
@@ -255,8 +271,12 @@ pub fn fingerprint_command(
     println!("Image Fingerprint: {}", fingerprint_hash);
     println!("Components analyzed: {}", fingerprint_data.len());
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -270,7 +290,8 @@ pub fn drift_command(
 ) -> Result<()> {
     use crate::core::ProgressReporter;
 
-    let progress = ProgressReporter::spinner("Loading baseline disk image and launching appliance...");
+    let progress =
+        ProgressReporter::spinner("Loading baseline disk image and launching appliance...");
     let mut g_baseline = init_guestfs_ro(baseline, verbose)?;
 
     progress.set_message("Loading current disk image and launching appliance...");
@@ -308,13 +329,18 @@ pub fn drift_command(
         if exists_baseline && exists_current {
             // Both exist - compare content
             if let (Ok(content_baseline), Ok(content_current)) =
-                (g_baseline.read_file(file), g_current.read_file(file)) {
+                (g_baseline.read_file(file), g_current.read_file(file))
+            {
                 if content_baseline != content_current {
                     drift_score += 10;
                     drifts.push((
                         "modified".to_string(),
                         file.to_string(),
-                        format!("Content changed ({} -> {} bytes)", content_baseline.len(), content_current.len())
+                        format!(
+                            "Content changed ({} -> {} bytes)",
+                            content_baseline.len(),
+                            content_current.len()
+                        ),
                     ));
                 }
             }
@@ -323,28 +349,30 @@ pub fn drift_command(
             drifts.push((
                 "deleted".to_string(),
                 file.to_string(),
-                "File removed from baseline".to_string()
+                "File removed from baseline".to_string(),
             ));
         } else if !exists_baseline && exists_current {
             drift_score += 15;
             drifts.push((
                 "added".to_string(),
                 file.to_string(),
-                "File added (not in baseline)".to_string()
+                "File added (not in baseline)".to_string(),
             ));
         }
     }
 
     // Check packages
     if let (Some(ref root_baseline), Some(ref root_current)) = (&_root_baseline, &_root_current) {
-        if let (Ok(apps_baseline), Ok(apps_current)) =
-            (g_baseline.inspect_list_applications(root_baseline),
-             g_current.inspect_list_applications(root_current)) {
-
-            let pkg_baseline: std::collections::HashSet<_> = apps_baseline.iter()
+        if let (Ok(apps_baseline), Ok(apps_current)) = (
+            g_baseline.inspect_list_applications(root_baseline),
+            g_current.inspect_list_applications(root_current),
+        ) {
+            let pkg_baseline: std::collections::HashSet<_> = apps_baseline
+                .iter()
                 .map(|app| format!("{}:{}", app.name, app.version))
                 .collect();
-            let pkg_current: std::collections::HashSet<_> = apps_current.iter()
+            let pkg_current: std::collections::HashSet<_> = apps_current
+                .iter()
                 .map(|app| format!("{}:{}", app.name, app.version))
                 .collect();
 
@@ -356,7 +384,7 @@ pub fn drift_command(
                 drifts.push((
                     "package_added".to_string(),
                     pkg.to_string(),
-                    "Package installed".to_string()
+                    "Package installed".to_string(),
                 ));
             }
 
@@ -365,7 +393,7 @@ pub fn drift_command(
                 drifts.push((
                     "package_removed".to_string(),
                     pkg.to_string(),
-                    "Package uninstalled".to_string()
+                    "Package uninstalled".to_string(),
                 ));
             }
         }
@@ -382,7 +410,10 @@ pub fn drift_command(
     println!("Baseline: {}", baseline.display());
     println!("Current:  {}", current.display());
     println!();
-    println!("Drift Score: {}/{}  ({}%)", drift_score, max_score, drift_percent);
+    println!(
+        "Drift Score: {}/{}  ({}%)",
+        drift_score, max_score, drift_percent
+    );
     println!("Threshold:   {}%", threshold);
     println!();
 
@@ -412,8 +443,13 @@ pub fn drift_command(
         use std::fs::File;
         use std::io::Write;
 
-        let report_path = format!("{}-drift-report.txt",
-            current.file_stem().and_then(|s| s.to_str()).unwrap_or("image"));
+        let report_path = format!(
+            "{}-drift-report.txt",
+            current
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("image")
+        );
         let mut output = File::create(&report_path)?;
         writeln!(output, "# Configuration Drift Report")?;
         writeln!(output, "Baseline: {}", baseline.display())?;
@@ -428,10 +464,18 @@ pub fn drift_command(
         println!("Report saved to: {}", report_path);
     }
 
-    if let Err(e) = g_baseline.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g_current.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g_baseline.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
-    if let Err(e) = g_current.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g_baseline.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g_current.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g_baseline.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
+    if let Err(e) = g_current.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -470,8 +514,12 @@ pub fn analyze_command(
                 }
             }
             if writable_count > 0 {
-                insights.push(format!("🔒 Found {} world-writable files in /etc", writable_count));
-                recommendations.push("Consider reviewing file permissions for security".to_string());
+                insights.push(format!(
+                    "🔒 Found {} world-writable files in /etc",
+                    writable_count
+                ));
+                recommendations
+                    .push("Consider reviewing file permissions for security".to_string());
             }
         }
 
@@ -482,12 +530,14 @@ pub fn analyze_command(
                     if text.contains("PermitRootLogin yes") {
                         risk_score += 30;
                         insights.push("🔐 SSH permits root login directly".to_string());
-                        recommendations.push("Disable direct root SSH login for better security".to_string());
+                        recommendations
+                            .push("Disable direct root SSH login for better security".to_string());
                     }
                     if text.contains("PasswordAuthentication yes") {
                         risk_score += 15;
                         insights.push("🔑 SSH allows password authentication".to_string());
-                        recommendations.push("Consider using key-based authentication only".to_string());
+                        recommendations
+                            .push("Consider using key-based authentication only".to_string());
                     }
                 }
             }
@@ -509,8 +559,12 @@ pub fn analyze_command(
                 }
             }
             if large_logs > 0 {
-                insights.push(format!("📊 Found {} log files larger than 100MB", large_logs));
-                recommendations.push("Implement log rotation to prevent disk space issues".to_string());
+                insights.push(format!(
+                    "📊 Found {} log files larger than 100MB",
+                    large_logs
+                ));
+                recommendations
+                    .push("Implement log rotation to prevent disk space issues".to_string());
             }
         }
     }
@@ -521,7 +575,8 @@ pub fn analyze_command(
         if g.is_file("/etc/passwd").unwrap_or(false) {
             if let Ok(content) = g.read_file("/etc/passwd") {
                 if let Ok(text) = String::from_utf8(content) {
-                    let non_system_users: Vec<_> = text.lines()
+                    let non_system_users: Vec<_> = text
+                        .lines()
                         .filter_map(|line| {
                             let parts: Vec<&str> = line.split(':').collect();
                             if parts.len() >= 3 {
@@ -552,7 +607,10 @@ pub fn analyze_command(
                 insights.push(format!("📦 Total packages installed: {}", apps.len()));
 
                 if apps.len() > 500 {
-                    recommendations.push("Consider minimizing installed packages for better maintainability".to_string());
+                    recommendations.push(
+                        "Consider minimizing installed packages for better maintainability"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -576,7 +634,10 @@ pub fn analyze_command(
         ("LOW", "🟢")
     };
 
-    println!("Risk Assessment: {} {} (score: {})", risk_level.1, risk_level.0, risk_score);
+    println!(
+        "Risk Assessment: {} {} (score: {})",
+        risk_level.1, risk_level.0, risk_score
+    );
     println!();
 
     // Insights
@@ -601,8 +662,12 @@ pub fn analyze_command(
 
     println!("Analysis complete. {} insights generated.", insights.len());
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -623,16 +688,31 @@ pub fn simulate_command(
     println!("=======================");
     println!("Change Type: {}", change_type);
     println!("Target: {}", target);
-    println!("Mode: {}", if dry_run { "Simulation Only" } else { "Live Execution" });
+    println!(
+        "Mode: {}",
+        if dry_run {
+            "Simulation Only"
+        } else {
+            "Live Execution"
+        }
+    );
     println!();
 
     let mut g = Guestfs::new()?;
     g.set_verbose(verbose);
 
     if dry_run {
-        g.add_drive_ro(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive_ro(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     } else {
-        g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     }
 
     progress.set_message("Launching appliance...");
@@ -677,7 +757,8 @@ pub fn simulate_command(
                         println!();
 
                         // Simulated dependency analysis
-                        let dependents = vec!["lib-dependent-1", "app-using-lib", "service-requiring-pkg"];
+                        let dependents =
+                            vec!["lib-dependent-1", "app-using-lib", "service-requiring-pkg"];
 
                         println!("  Impact Analysis:");
                         println!("  ❌ {} packages will be affected", dependents.len());
@@ -698,7 +779,6 @@ pub fn simulate_command(
                             risk_score += 20;
                         }
                         println!();
-
                     } else {
                         println!("  ✓ Package '{}' not found - no impact", target);
                     }
@@ -785,7 +865,10 @@ pub fn simulate_command(
             println!();
             println!("  Dependent Services:");
             println!("     Note: Would require systemd dependency analysis");
-            println!("     Potential impacts on services depending on {}", service_path);
+            println!(
+                "     Potential impacts on services depending on {}",
+                service_path
+            );
 
             println!();
         }
@@ -869,8 +952,12 @@ pub fn simulate_command(
         );
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -914,8 +1001,13 @@ pub fn score_command(
     }
 
     let check_dimensions = if dimensions.is_empty() {
-        vec!["security".to_string(), "compliance".to_string(), "reliability".to_string(),
-             "performance".to_string(), "maintainability".to_string()]
+        vec![
+            "security".to_string(),
+            "compliance".to_string(),
+            "reliability".to_string(),
+            "performance".to_string(),
+            "maintainability".to_string(),
+        ]
     } else {
         dimensions
     };
@@ -1069,7 +1161,7 @@ pub fn score_command(
                 maint_score
             }
 
-            _ => 0
+            _ => 0,
         };
 
         dimension_scores.insert(dimension.clone(), score);
@@ -1142,14 +1234,22 @@ pub fn score_command(
         writeln!(output, "## Dimension Scores")?;
         for (dimension, score) in &dimension_scores {
             let weight = weight_map.get(dimension.as_str()).copied().unwrap_or(0);
-            writeln!(output, "- {}: {} / 100 (weight: {}%)", dimension, score, weight)?;
+            writeln!(
+                output,
+                "- {}: {} / 100 (weight: {}%)",
+                dimension, score, weight
+            )?;
         }
 
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1185,64 +1285,151 @@ pub fn hunt_command(
     let mut attack_techniques: HashMap<&str, Vec<(&str, &str, &str)>> = HashMap::new();
 
     // Initial Access
-    attack_techniques.insert("initial-access", vec![
-        ("T1190", "Exploit Public-Facing Application", "/var/log/apache2,/var/log/nginx"),
-        ("T1133", "External Remote Services", "/etc/ssh/sshd_config,/var/log/auth.log"),
-        ("T1078", "Valid Accounts", "/etc/passwd,/etc/shadow,/var/log/secure"),
-    ]);
+    attack_techniques.insert(
+        "initial-access",
+        vec![
+            (
+                "T1190",
+                "Exploit Public-Facing Application",
+                "/var/log/apache2,/var/log/nginx",
+            ),
+            (
+                "T1133",
+                "External Remote Services",
+                "/etc/ssh/sshd_config,/var/log/auth.log",
+            ),
+            (
+                "T1078",
+                "Valid Accounts",
+                "/etc/passwd,/etc/shadow,/var/log/secure",
+            ),
+        ],
+    );
 
     // Persistence
-    attack_techniques.insert("persistence", vec![
-        ("T1053", "Scheduled Task/Job", "/etc/cron.d,/etc/crontab,/var/spool/cron"),
-        ("T1543", "Create/Modify System Process", "/etc/systemd/system,/lib/systemd/system"),
-        ("T1136", "Create Account", "/etc/passwd,/etc/group"),
-        ("T1098", "Account Manipulation", "/home/*/.ssh/authorized_keys"),
-    ]);
+    attack_techniques.insert(
+        "persistence",
+        vec![
+            (
+                "T1053",
+                "Scheduled Task/Job",
+                "/etc/cron.d,/etc/crontab,/var/spool/cron",
+            ),
+            (
+                "T1543",
+                "Create/Modify System Process",
+                "/etc/systemd/system,/lib/systemd/system",
+            ),
+            ("T1136", "Create Account", "/etc/passwd,/etc/group"),
+            (
+                "T1098",
+                "Account Manipulation",
+                "/home/*/.ssh/authorized_keys",
+            ),
+        ],
+    );
 
     // Privilege Escalation
-    attack_techniques.insert("privilege-escalation", vec![
-        ("T1548", "Abuse Elevation Control", "/etc/sudoers,/etc/sudoers.d"),
-        ("T1068", "Exploitation for Privilege Escalation", "/var/log/kern.log"),
-        ("T1574", "Hijack Execution Flow", "/etc/ld.so.preload"),
-    ]);
+    attack_techniques.insert(
+        "privilege-escalation",
+        vec![
+            (
+                "T1548",
+                "Abuse Elevation Control",
+                "/etc/sudoers,/etc/sudoers.d",
+            ),
+            (
+                "T1068",
+                "Exploitation for Privilege Escalation",
+                "/var/log/kern.log",
+            ),
+            ("T1574", "Hijack Execution Flow", "/etc/ld.so.preload"),
+        ],
+    );
 
     // Defense Evasion
-    attack_techniques.insert("defense-evasion", vec![
-        ("T1070", "Indicator Removal", "/var/log,/root/.bash_history"),
-        ("T1562", "Impair Defenses", "/etc/selinux,/etc/apparmor.d"),
-        ("T1036", "Masquerading", "/usr/bin,/usr/sbin"),
-    ]);
+    attack_techniques.insert(
+        "defense-evasion",
+        vec![
+            ("T1070", "Indicator Removal", "/var/log,/root/.bash_history"),
+            ("T1562", "Impair Defenses", "/etc/selinux,/etc/apparmor.d"),
+            ("T1036", "Masquerading", "/usr/bin,/usr/sbin"),
+        ],
+    );
 
     // Credential Access
-    attack_techniques.insert("credential-access", vec![
-        ("T1003", "OS Credential Dumping", "/etc/shadow,/var/log/auth.log"),
-        ("T1552", "Unsecured Credentials", "/root/.ssh,/home/*/.aws,/home/*/.docker"),
-    ]);
+    attack_techniques.insert(
+        "credential-access",
+        vec![
+            (
+                "T1003",
+                "OS Credential Dumping",
+                "/etc/shadow,/var/log/auth.log",
+            ),
+            (
+                "T1552",
+                "Unsecured Credentials",
+                "/root/.ssh,/home/*/.aws,/home/*/.docker",
+            ),
+        ],
+    );
 
     // Discovery
-    attack_techniques.insert("discovery", vec![
-        ("T1082", "System Information Discovery", "/proc/version,/etc/os-release"),
-        ("T1083", "File and Directory Discovery", "/tmp,/var/tmp"),
-        ("T1046", "Network Service Discovery", "/etc/services,/proc/net"),
-    ]);
+    attack_techniques.insert(
+        "discovery",
+        vec![
+            (
+                "T1082",
+                "System Information Discovery",
+                "/proc/version,/etc/os-release",
+            ),
+            ("T1083", "File and Directory Discovery", "/tmp,/var/tmp"),
+            (
+                "T1046",
+                "Network Service Discovery",
+                "/etc/services,/proc/net",
+            ),
+        ],
+    );
 
     // Collection
-    attack_techniques.insert("collection", vec![
-        ("T1005", "Data from Local System", "/home,/var/www,/opt"),
-        ("T1560", "Archive Collected Data", "/tmp/*.tar,/tmp/*.zip"),
-    ]);
+    attack_techniques.insert(
+        "collection",
+        vec![
+            ("T1005", "Data from Local System", "/home,/var/www,/opt"),
+            ("T1560", "Archive Collected Data", "/tmp/*.tar,/tmp/*.zip"),
+        ],
+    );
 
     // Command and Control
-    attack_techniques.insert("command-control", vec![
-        ("T1071", "Application Layer Protocol", "/etc/hosts,/proc/net/tcp"),
-        ("T1573", "Encrypted Channel", "/var/log/syslog"),
-    ]);
+    attack_techniques.insert(
+        "command-control",
+        vec![
+            (
+                "T1071",
+                "Application Layer Protocol",
+                "/etc/hosts,/proc/net/tcp",
+            ),
+            ("T1573", "Encrypted Channel", "/var/log/syslog"),
+        ],
+    );
 
     // Exfiltration
-    attack_techniques.insert("exfiltration", vec![
-        ("T1041", "Exfiltration Over C2 Channel", "/var/log/syslog,/proc/net"),
-        ("T1567", "Exfiltration Over Web Service", "/root/.aws,/home/*/.config"),
-    ]);
+    attack_techniques.insert(
+        "exfiltration",
+        vec![
+            (
+                "T1041",
+                "Exfiltration Over C2 Channel",
+                "/var/log/syslog,/proc/net",
+            ),
+            (
+                "T1567",
+                "Exfiltration Over Web Service",
+                "/root/.aws,/home/*/.config",
+            ),
+        ],
+    );
 
     let hunt_depth = match depth {
         "surface" => 1,
@@ -1307,7 +1494,8 @@ pub fn hunt_command(
                         if let Ok(files) = g.find(location) {
                             let file_count = files.len();
                             if file_count > 0 {
-                                tactic_evidence.push(format!("{} ({} items)", location, file_count));
+                                tactic_evidence
+                                    .push(format!("{} ({} items)", location, file_count));
                             }
                         }
                     }
@@ -1316,7 +1504,12 @@ pub fn hunt_command(
                 if !tactic_evidence.is_empty() {
                     println!("🎯 EVIDENCE FOUND");
                     evidence_items += tactic_evidence.len();
-                    findings.push((tactic.to_string(), tech_id.to_string(), tech_name.to_string(), tactic_evidence));
+                    findings.push((
+                        tactic.to_string(),
+                        tech_id.to_string(),
+                        tech_name.to_string(),
+                        tactic_evidence,
+                    ));
                 } else {
                     println!("✓ Clear");
                 }
@@ -1338,13 +1531,21 @@ pub fn hunt_command(
         println!("   The system appears clean based on the hunt criteria.");
         println!("   Consider expanding hunt scope or refining hypothesis.");
     } else {
-        println!("⚠️  Hunt Complete - {} pieces of evidence collected", evidence_items);
+        println!(
+            "⚠️  Hunt Complete - {} pieces of evidence collected",
+            evidence_items
+        );
         println!("   Hypothesis: {}", hypothesis);
         println!("   Result: SUPPORTED - Further investigation required");
         println!();
 
         for (tactic, tech_id, tech_name, evidence) in &findings {
-            println!("  🔴 [{}] {} - {}", tech_id, tactic.to_uppercase(), tech_name);
+            println!(
+                "  🔴 [{}] {} - {}",
+                tech_id,
+                tactic.to_uppercase(),
+                tech_name
+            );
             for item in evidence.iter().take(5) {
                 println!("     • {}", item);
             }
@@ -1357,7 +1558,10 @@ pub fn hunt_command(
         // Correlation analysis
         if findings.len() >= 3 {
             println!("  ⚠️  MULTI-STAGE ATTACK PATTERN DETECTED");
-            println!("     {} tactics with evidence suggests sophisticated threat", findings.len());
+            println!(
+                "     {} tactics with evidence suggests sophisticated threat",
+                findings.len()
+            );
             println!("     Recommendation: Full incident response required");
             println!();
         }
@@ -1401,8 +1605,12 @@ pub fn hunt_command(
         println!("Hunt report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1431,7 +1639,11 @@ pub fn reconstruct_command(
     println!("================================");
     println!("Incident Type: {}", incident_type);
     if let Some(ref start) = start_time {
-        println!("Time Window: {} to {}", start, end_time.as_ref().unwrap_or(&"present".to_string()));
+        println!(
+            "Time Window: {} to {}",
+            start,
+            end_time.as_ref().unwrap_or(&"present".to_string())
+        );
     }
     println!();
 
@@ -1451,14 +1663,12 @@ pub fn reconstruct_command(
                 for file in files.iter().take(50) {
                     if g.is_file(file).unwrap_or(false) {
                         if let Ok(stat) = g.stat(file) {
-                            timeline.entry(stat.mtime)
-                                .or_default()
-                                .push((
-                                    "FILESYSTEM".to_string(),
-                                    "File Modified".to_string(),
-                                    file.clone(),
-                                    format!("size: {}, mode: {:o}", stat.size, stat.mode & 0o777)
-                                ));
+                            timeline.entry(stat.mtime).or_default().push((
+                                "FILESYSTEM".to_string(),
+                                "File Modified".to_string(),
+                                file.clone(),
+                                format!("size: {}, mode: {:o}", stat.size, stat.mode & 0o777),
+                            ));
                             fs_artifacts += 1;
                         }
                     }
@@ -1476,14 +1686,12 @@ pub fn reconstruct_command(
             if let Ok(text) = String::from_utf8(content) {
                 for (idx, line) in text.lines().take(100).enumerate() {
                     if line.contains("sudo") || line.contains("su") || line.contains("session") {
-                        timeline.entry(1700000000 + idx as i64)
-                            .or_default()
-                            .push((
-                                "USER".to_string(),
-                                "Authentication Event".to_string(),
-                                line.to_string(),
-                                "auth.log".to_string()
-                            ));
+                        timeline.entry(1700000000 + idx as i64).or_default().push((
+                            "USER".to_string(),
+                            "Authentication Event".to_string(),
+                            line.to_string(),
+                            "auth.log".to_string(),
+                        ));
                         user_activities += 1;
                     }
                 }
@@ -1497,14 +1705,12 @@ pub fn reconstruct_command(
     let mut network_events = 0;
     if g.is_file("/etc/hosts").unwrap_or(false) {
         if let Ok(stat) = g.stat("/etc/hosts") {
-            timeline.entry(stat.mtime)
-                .or_default()
-                .push((
-                    "NETWORK".to_string(),
-                    "Hosts File Modified".to_string(),
-                    "/etc/hosts".to_string(),
-                    "Potential DNS manipulation".to_string()
-                ));
+            timeline.entry(stat.mtime).or_default().push((
+                "NETWORK".to_string(),
+                "Hosts File Modified".to_string(),
+                "/etc/hosts".to_string(),
+                "Potential DNS manipulation".to_string(),
+            ));
             network_events += 1;
         }
     }
@@ -1517,14 +1723,12 @@ pub fn reconstruct_command(
     for path in &cron_paths {
         if g.exists(path).unwrap_or(false) {
             if let Ok(stat) = g.stat(path) {
-                timeline.entry(stat.mtime)
-                    .or_default()
-                    .push((
-                        "PROCESS".to_string(),
-                        "Scheduled Task".to_string(),
-                        path.to_string(),
-                        "Cron configuration".to_string()
-                    ));
+                timeline.entry(stat.mtime).or_default().push((
+                    "PROCESS".to_string(),
+                    "Scheduled Task".to_string(),
+                    path.to_string(),
+                    "Cron configuration".to_string(),
+                ));
                 process_artifacts += 1;
             }
         }
@@ -1534,18 +1738,21 @@ pub fn reconstruct_command(
     // System configuration
     print!("  [5/6] System configuration ... ");
     let mut config_changes = 0;
-    let config_files = vec!["/etc/ssh/sshd_config", "/etc/sudoers", "/etc/passwd", "/etc/group"];
+    let config_files = vec![
+        "/etc/ssh/sshd_config",
+        "/etc/sudoers",
+        "/etc/passwd",
+        "/etc/group",
+    ];
     for file in &config_files {
         if g.is_file(file).unwrap_or(false) {
             if let Ok(stat) = g.stat(file) {
-                timeline.entry(stat.mtime)
-                    .or_default()
-                    .push((
-                        "CONFIG".to_string(),
-                        "Configuration Change".to_string(),
-                        file.to_string(),
-                        "Security-relevant configuration".to_string()
-                    ));
+                timeline.entry(stat.mtime).or_default().push((
+                    "CONFIG".to_string(),
+                    "Configuration Change".to_string(),
+                    file.to_string(),
+                    "Security-relevant configuration".to_string(),
+                ));
                 config_changes += 1;
             }
         }
@@ -1560,14 +1767,12 @@ pub fn reconstruct_command(
             for file in files.iter().take(20) {
                 if file.ends_with(".log") && g.is_file(file).unwrap_or(false) {
                     if let Ok(stat) = g.stat(file) {
-                        timeline.entry(stat.mtime)
-                            .or_default()
-                            .push((
-                                "LOG".to_string(),
-                                "Log Entry".to_string(),
-                                file.clone(),
-                                format!("size: {}", stat.size)
-                            ));
+                        timeline.entry(stat.mtime).or_default().push((
+                            "LOG".to_string(),
+                            "Log Entry".to_string(),
+                            file.clone(),
+                            format!("size: {}", stat.size),
+                        ));
                         log_entries += 1;
                     }
                 }
@@ -1596,14 +1801,16 @@ pub fn reconstruct_command(
 
         let mut event_count = 0;
         for (timestamp, events) in timeline.iter().rev().take(20) {
-            let dt = chrono::DateTime::from_timestamp(*timestamp, 0)
-                .unwrap_or_else(chrono::Utc::now);
+            let dt =
+                chrono::DateTime::from_timestamp(*timestamp, 0).unwrap_or_else(chrono::Utc::now);
 
             for (category, event_type, artifact, details) in events {
-                println!("    {} | [{}] {}",
+                println!(
+                    "    {} | [{}] {}",
                     dt.format("%Y-%m-%d %H:%M:%S"),
                     category,
-                    event_type);
+                    event_type
+                );
                 println!("       └─ {}", artifact);
                 if !details.is_empty() && details != artifact {
                     println!("          {}", details);
@@ -1632,25 +1839,48 @@ pub fn reconstruct_command(
         match incident_type {
             "compromise" => {
                 println!("    Based on evidence analysis, the incident appears to involve:");
-                println!("    1. Initial access via remote service ({} network events)", network_events);
-                println!("    2. Privilege escalation attempt ({} user activities)", user_activities);
-                println!("    3. Persistence mechanism ({} process artifacts)", process_artifacts);
-                println!("    4. System modification ({} config changes)", config_changes);
+                println!(
+                    "    1. Initial access via remote service ({} network events)",
+                    network_events
+                );
+                println!(
+                    "    2. Privilege escalation attempt ({} user activities)",
+                    user_activities
+                );
+                println!(
+                    "    3. Persistence mechanism ({} process artifacts)",
+                    process_artifacts
+                );
+                println!(
+                    "    4. System modification ({} config changes)",
+                    config_changes
+                );
                 println!();
-                println!("    Attack sophistication: {}",
-                    if config_changes > 3 { "HIGH" } else { "MEDIUM" });
+                println!(
+                    "    Attack sophistication: {}",
+                    if config_changes > 3 { "HIGH" } else { "MEDIUM" }
+                );
             }
             "data-exfiltration" => {
                 println!("    Evidence suggests data exfiltration scenario:");
-                println!("    1. Large file access ({} filesystem artifacts)", fs_artifacts);
+                println!(
+                    "    1. Large file access ({} filesystem artifacts)",
+                    fs_artifacts
+                );
                 println!("    2. Network activity spike ({} events)", network_events);
-                println!("    3. User session analysis ({} activities)", user_activities);
+                println!(
+                    "    3. User session analysis ({} activities)",
+                    user_activities
+                );
                 println!();
             }
             "ransomware" => {
                 println!("    Ransomware incident indicators:");
                 println!("    1. Mass file modification ({} artifacts)", fs_artifacts);
-                println!("    2. System configuration changes ({} changes)", config_changes);
+                println!(
+                    "    2. System configuration changes ({} changes)",
+                    config_changes
+                );
                 println!("    3. Potential encryption activity detected");
                 println!();
             }
@@ -1709,26 +1939,36 @@ pub fn reconstruct_command(
         writeln!(output)?;
 
         for (timestamp, events) in timeline.iter().rev() {
-            let dt = chrono::DateTime::from_timestamp(*timestamp, 0)
-                .unwrap_or_else(chrono::Utc::now);
+            let dt =
+                chrono::DateTime::from_timestamp(*timestamp, 0).unwrap_or_else(chrono::Utc::now);
 
             for (category, event_type, artifact, details) in events {
-                writeln!(output, "- {} | [{}] {}: {}",
+                writeln!(
+                    output,
+                    "- {} | [{}] {}: {}",
                     dt.format("%Y-%m-%d %H:%M:%S"),
                     category,
                     event_type,
-                    artifact)?;
+                    artifact
+                )?;
                 if !details.is_empty() {
                     writeln!(output, "  Details: {}", details)?;
                 }
             }
         }
 
-        println!("Reconstruction report exported to: {}", export_path.display());
+        println!(
+            "Reconstruction report exported to: {}",
+            export_path.display()
+        );
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1780,7 +2020,8 @@ pub fn evolve_command(
         }
     }
     if !g.is_file("/etc/selinux/config").unwrap_or(false)
-        && !g.is_dir("/etc/apparmor.d").unwrap_or(false) {
+        && !g.is_dir("/etc/apparmor.d").unwrap_or(false)
+    {
         sec_score -= 15;
         improvement_areas.push(("Security", "Enable MAC system (SELinux/AppArmor)", 2, 15));
     }
@@ -1855,18 +2096,22 @@ pub fn evolve_command(
     improvement_areas.sort_by_key(|&(_, _, stage, _)| stage);
 
     for stage_num in 1..=stages {
-        let stage_improvements: Vec<_> = improvement_areas.iter()
+        let stage_improvements: Vec<_> = improvement_areas
+            .iter()
             .filter(|(_, _, s, _)| *s == stage_num)
             .collect();
 
         if !stage_improvements.is_empty() {
-            println!("  Stage {} - {} Strategy:", stage_num,
+            println!(
+                "  Stage {} - {} Strategy:",
+                stage_num,
                 match stage_num {
                     1 => "Quick Wins",
                     2 => "Foundation Building",
                     3 => "Advanced Hardening",
                     _ => "Optimization",
-                });
+                }
+            );
             println!();
 
             for (category, improvement, _, gain) in stage_improvements {
@@ -1903,7 +2148,10 @@ pub fn evolve_command(
         _ => ("MEDIUM", "Default risk profile"),
     };
 
-    println!("  Evolution Risk: {} - {}", evolution_risk.0, evolution_risk.1);
+    println!(
+        "  Evolution Risk: {} - {}",
+        evolution_risk.0, evolution_risk.1
+    );
     println!();
 
     println!("⚙️  Implementation Guidelines:");
@@ -1930,20 +2178,29 @@ pub fn evolve_command(
         writeln!(output, "Stages: {}", stages)?;
         writeln!(output)?;
         writeln!(output, "## Current State: {}/100", current_avg)?;
-        writeln!(output, "## Projected State: {}/100", projected_score.min(100))?;
+        writeln!(
+            output,
+            "## Projected State: {}/100",
+            projected_score.min(100)
+        )?;
         writeln!(output)?;
         writeln!(output, "## Evolution Stages")?;
         writeln!(output)?;
 
         for stage_num in 1..=stages {
-            let stage_improvements: Vec<_> = improvement_areas.iter()
+            let stage_improvements: Vec<_> = improvement_areas
+                .iter()
                 .filter(|(_, _, s, _)| *s == stage_num)
                 .collect();
 
             if !stage_improvements.is_empty() {
                 writeln!(output, "### Stage {}", stage_num)?;
                 for (category, improvement, _, gain) in stage_improvements {
-                    writeln!(output, "- [{}] {} (+{} points)", category, improvement, gain)?;
+                    writeln!(
+                        output,
+                        "- [{}] {} (+{} points)",
+                        category, improvement, gain
+                    )?;
                 }
                 writeln!(output)?;
             }
@@ -1952,7 +2209,11 @@ pub fn evolve_command(
         println!("Evolution plan exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }

@@ -27,10 +27,10 @@ impl MockDiskType {
     /// Get size in bytes for this disk type
     pub fn size_bytes(&self) -> u64 {
         match self {
-            MockDiskType::Minimal => 1024 * 1024,           // 1 MB
-            MockDiskType::Small => 10 * 1024 * 1024,        // 10 MB
-            MockDiskType::Medium => 100 * 1024 * 1024,      // 100 MB
-            MockDiskType::Large => 1024 * 1024 * 1024,      // 1 GB
+            MockDiskType::Minimal => 1024 * 1024,      // 1 MB
+            MockDiskType::Small => 10 * 1024 * 1024,   // 10 MB
+            MockDiskType::Medium => 100 * 1024 * 1024, // 100 MB
+            MockDiskType::Large => 1024 * 1024 * 1024, // 1 GB
             MockDiskType::Custom(size) => *size,
         }
     }

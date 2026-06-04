@@ -2,10 +2,10 @@
 //! File operations: cat, hash, search, list, extract, grep, copy, find_duplicates
 #![allow(clippy::too_many_arguments)]
 
+use super::{format_size, init_guestfs_ro, mount_all_ro};
 use anyhow::{Context, Result};
 use std::path::Path;
 use tempfile;
-use super::{format_size, init_guestfs_ro, mount_all_ro};
 
 /// Enhanced cat with line numbers and special character display
 pub fn cat_file_enhanced(
@@ -85,11 +85,14 @@ pub fn cat_file_enhanced(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Calculate file checksums
 pub fn hash_command(
@@ -147,11 +150,14 @@ pub fn hash_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Search for files by name or content
 pub fn search_command(
@@ -236,18 +242,15 @@ pub fn search_command(
             let is_link = g.is_symlink(&file).unwrap_or(false);
 
             match ftype.as_str() {
-                "dir" | "directory"
-                    if !is_dir => {
-                        continue;
-                    }
-                "file"
-                    if !is_file => {
-                        continue;
-                    }
-                "link" | "symlink"
-                    if !is_link => {
-                        continue;
-                    }
+                "dir" | "directory" if !is_dir => {
+                    continue;
+                }
+                "file" if !is_file => {
+                    continue;
+                }
+                "link" | "symlink" if !is_link => {
+                    continue;
+                }
                 _ => {}
             }
         }
@@ -288,11 +291,14 @@ pub fn search_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Enhanced list files with comprehensive options
 pub fn list_files_enhanced(
@@ -310,8 +316,8 @@ pub fn list_files_enhanced(
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
+    use chrono::{TimeZone, Utc};
     use regex::Regex;
-    use chrono::{Utc, TimeZone};
 
     let progress = ProgressReporter::spinner("Loading disk image...");
 
@@ -430,7 +436,10 @@ pub fn list_files_enhanced(
                 format!("{}", stat.size)
             };
 
-            let mtime = Utc.timestamp_opt(stat.mtime, 0).single().unwrap_or_default();
+            let mtime = Utc
+                .timestamp_opt(stat.mtime, 0)
+                .single()
+                .unwrap_or_default();
             let time_str = mtime.format("%b %d %H:%M").to_string();
 
             println!(
@@ -443,11 +452,14 @@ pub fn list_files_enhanced(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Enhanced extract with recursive, preserve, and verification
 pub fn extract_file_enhanced(
@@ -500,7 +512,10 @@ pub fn extract_file_enhanced(
 
             // Reject any path containing ".." components before creating directories
             let rel_as_path = Path::new(rel_path.trim_start_matches('/'));
-            if rel_as_path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+            if rel_as_path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
                 eprintln!("Skipping path traversal attempt: {}", file_path);
                 continue;
             }
@@ -509,7 +524,9 @@ pub fn extract_file_enhanced(
 
             // Verify target stays within host_path to prevent path traversal
             let canonical_host = fs::canonicalize(host_path)?;
-            if let Ok(canonical_target) = fs::canonicalize(target_path.parent().unwrap_or(&target_path)) {
+            if let Ok(canonical_target) =
+                fs::canonicalize(target_path.parent().unwrap_or(&target_path))
+            {
                 if !canonical_target.starts_with(&canonical_host) {
                     eprintln!("Skipping path that escapes target directory: {}", file_path);
                     continue;
@@ -530,7 +547,12 @@ pub fn extract_file_enhanced(
                     fs::create_dir_all(parent)?;
                 }
 
-                g.download(&file_path, target_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", target_path.display()))?)?;
+                g.download(
+                    &file_path,
+                    target_path.to_str().ok_or_else(|| {
+                        anyhow::anyhow!("Path contains invalid UTF-8: {}", target_path.display())
+                    })?,
+                )?;
 
                 if let Ok(stat) = g.stat(&file_path) {
                     total_bytes += stat.size as u64;
@@ -555,7 +577,12 @@ pub fn extract_file_enhanced(
             anyhow::bail!("Output file exists (use -f to overwrite)");
         }
 
-        g.download(guest_path, host_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", host_path.display()))?)?;
+        g.download(
+            guest_path,
+            host_path.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", host_path.display())
+            })?,
+        )?;
 
         if let Ok(stat) = g.stat(guest_path) {
             total_bytes = stat.size as u64;
@@ -583,11 +610,14 @@ pub fn extract_file_enhanced(
         println!("✓ Verification complete");
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Search file contents like grep
 pub fn grep_command(
@@ -724,8 +754,12 @@ pub fn grep_command(
         eprintln!("No matches found");
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -767,13 +801,19 @@ pub fn copy_command(
         None
     };
 
-    if let Err(e) = g_src.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g_src.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g_src.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g_src.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
 
     // Write to destination (read-write mode)
     let mut g_dst = Guestfs::new()?;
     g_dst.set_verbose(verbose);
-    g_dst.add_drive(dest_image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", dest_image.display()))?)?;
+    g_dst.add_drive(dest_image.to_str().ok_or_else(|| {
+        anyhow::anyhow!("Path contains invalid UTF-8: {}", dest_image.display())
+    })?)?;
 
     progress.set_message("Launching destination appliance...");
     g_dst.launch()?;
@@ -803,7 +843,13 @@ pub fn copy_command(
     let temp_file = tempfile::NamedTempFile::new()?;
     fs::write(temp_file.path(), &content)?;
 
-    g_dst.upload(temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, dest_path)?;
+    g_dst.upload(
+        temp_file
+            .path()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?,
+        dest_path,
+    )?;
 
     if let Some(s) = stat {
         if preserve {
@@ -814,14 +860,21 @@ pub fn copy_command(
 
     progress.finish_and_clear();
 
-    println!("✓ Copied {} bytes from {} to {}",
-        content.len(), source_path, dest_path);
+    println!(
+        "✓ Copied {} bytes from {} to {}",
+        content.len(),
+        source_path,
+        dest_path
+    );
 
-    if let Err(e) = g_dst.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g_dst.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g_dst.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g_dst.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Find duplicate files in disk image
 pub fn find_duplicates_command(
@@ -853,7 +906,8 @@ pub fn find_duplicates_command(
             if let Ok(stat) = g.stat(&file) {
                 if stat.size >= 0 && (stat.size as u64) >= min_size {
                     if let Ok(hash) = g.checksum(algorithm, &file) {
-                        hash_map.entry(hash)
+                        hash_map
+                            .entry(hash)
                             .or_default()
                             .push((file, stat.size as u64));
                         processed += 1;
@@ -870,7 +924,8 @@ pub fn find_duplicates_command(
     progress.finish_and_clear();
 
     // Find duplicates
-    let mut duplicates: Vec<_> = hash_map.iter()
+    let mut duplicates: Vec<_> = hash_map
+        .iter()
         .filter(|(_, files)| files.len() > 1)
         .collect();
 
@@ -898,8 +953,13 @@ pub fn find_duplicates_command(
             let wasted = file_size.saturating_mul(files.len().saturating_sub(1) as u64);
             total_wasted += wasted;
 
-            println!("Group {}: {} duplicates ({} each, {} wasted)",
-                group_num, files.len(), format_size(file_size), format_size(wasted));
+            println!(
+                "Group {}: {} duplicates ({} each, {} wasted)",
+                group_num,
+                files.len(),
+                format_size(file_size),
+                format_size(wasted)
+            );
             println!("Hash: {}", hash);
             for (file, _) in files {
                 println!("  {}", file);
@@ -910,8 +970,11 @@ pub fn find_duplicates_command(
         println!("Total wasted space: {}", format_size(total_wasted));
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-

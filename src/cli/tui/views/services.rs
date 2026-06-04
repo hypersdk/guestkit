@@ -17,11 +17,13 @@ use ratatui::{
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     if app.services.is_empty() {
         let empty = Paragraph::new("⚠️  No systemd services found")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" ⚙️  Systemd Services ")
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR))
+                    .title(" ⚙️  Systemd Services ")
+                    .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
@@ -31,8 +33,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // Summary gauges
-            Constraint::Min(0),     // Service list
+            Constraint::Length(8), // Summary gauges
+            Constraint::Min(0),    // Service list
         ])
         .split(area);
 
@@ -74,15 +76,21 @@ fn draw_service_detail(f: &mut Frame, area: Rect, app: &App) {
         vec![
             Line::from(vec![
                 Span::styled("Unit: ", label_style()),
-                Span::styled(&svc.name, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &svc.name,
+                    Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("State: ", label_style()),
-                Span::styled(&svc.state, Style::default().fg(if svc.state == "running" {
-                    SUCCESS_COLOR
-                } else {
-                    WARNING_COLOR
-                })),
+                Span::styled(
+                    &svc.state,
+                    Style::default().fg(if svc.state == "running" {
+                        SUCCESS_COLOR
+                    } else {
+                        WARNING_COLOR
+                    }),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Enabled: ", label_style()),
@@ -108,7 +116,11 @@ fn draw_service_detail(f: &mut Frame, area: Rect, app: &App) {
 fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {
     let enabled_count = app.services.iter().filter(|s| s.enabled).count();
     let disabled_count = app.services.len() - enabled_count;
-    let running_count = app.services.iter().filter(|s| s.state == "running" || s.state == "active").count();
+    let running_count = app
+        .services
+        .iter()
+        .filter(|s| s.state == "running" || s.state == "active")
+        .count();
     let stopped_count = app.services.len() - running_count;
 
     let enabled_pct = if !app.services.is_empty() {
@@ -127,40 +139,51 @@ fn draw_service_summary(f: &mut Frame, area: Rect, app: &App) {
     let gauge_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // Header
-            Constraint::Length(3),  // Enabled gauge
-            Constraint::Length(3),  // Running gauge
-            Constraint::Length(1),  // Padding
+            Constraint::Length(1), // Header
+            Constraint::Length(3), // Enabled gauge
+            Constraint::Length(3), // Running gauge
+            Constraint::Length(1), // Padding
         ])
         .split(area);
 
     // Header
-    let header = Paragraph::new(Line::from(vec![
-        Span::styled(" 📊 Service Status Overview", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-    ]));
+    let header = Paragraph::new(Line::from(vec![Span::styled(
+        " 📊 Service Status Overview",
+        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+    )]));
     f.render_widget(header, gauge_chunks[0]);
 
     // Enabled/Disabled gauge
     let enabled_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Enabled Services "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" Enabled Services "),
+        )
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .percent(enabled_pct)
-        .label(format!("{} enabled • {} disabled ({}%)", enabled_count, disabled_count, enabled_pct));
+        .label(format!(
+            "{} enabled • {} disabled ({}%)",
+            enabled_count, disabled_count, enabled_pct
+        ));
 
     f.render_widget(enabled_gauge, gauge_chunks[1]);
 
     // Running/Stopped gauge
     let running_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Running Services "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" Running Services "),
+        )
         .gauge_style(Style::default().fg(INFO_COLOR))
         .percent(running_pct)
-        .label(format!("{} running • {} stopped ({}%)", running_count, stopped_count, running_pct));
+        .label(format!(
+            "{} running • {} stopped ({}%)",
+            running_count, stopped_count, running_pct
+        ));
 
     f.render_widget(running_gauge, gauge_chunks[2]);
 }
@@ -183,8 +206,13 @@ fn draw_service_list_view(f: &mut Frame, area: Rect, app: &App) {
             .into_iter()
             .filter(|&idx| {
                 let svc = &app.services[idx];
-                svc.name.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || svc.state.to_lowercase().contains(&app.search_query.to_lowercase())
+                svc.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
+                    || svc
+                        .state
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
@@ -250,7 +278,12 @@ fn draw_service_list_view(f: &mut Frame, area: Rect, app: &App) {
             ListItem::new(ratatui::text::Line::from(vec![
                 ratatui::text::Span::styled(prefix, Style::default().fg(prefix_color)),
                 ratatui::text::Span::raw(format!("{} ", status_symbol)),
-                ratatui::text::Span::styled(&svc.name, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+                ratatui::text::Span::styled(
+                    &svc.name,
+                    Style::default()
+                        .fg(LIGHT_ORANGE)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 ratatui::text::Span::raw("  "),
                 ratatui::text::Span::styled(&svc.state, Style::default().fg(state_color)),
             ]))
@@ -258,7 +291,11 @@ fn draw_service_list_view(f: &mut Frame, area: Rect, app: &App) {
         .collect();
 
     let enabled_count = app.services.iter().filter(|s| s.enabled).count();
-    let running_count = app.services.iter().filter(|s| s.state == "running" || s.state == "active").count();
+    let running_count = app
+        .services
+        .iter()
+        .filter(|s| s.state == "running" || s.state == "active")
+        .count();
 
     // Calculate scroll position
     let visible_items = area.height.saturating_sub(2) as usize;
@@ -296,13 +333,22 @@ fn draw_service_list_view(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" ⚙️  Systemd Services • {} showing • {} enabled • {} running{}{}{}{} ",
-                filtered_indices.len(), enabled_count, running_count, scroll_indicator, multiselect_indicator, filter_indicator, sort_indicator))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " ⚙️  Systemd Services • {} showing • {} enabled • {} running{}{}{}{} ",
+                filtered_indices.len(),
+                enabled_count,
+                running_count,
+                scroll_indicator,
+                multiselect_indicator,
+                filter_indicator,
+                sort_indicator
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }
@@ -317,8 +363,13 @@ fn draw_service_table_view(f: &mut Frame, area: Rect, app: &App) {
             .into_iter()
             .filter(|&idx| {
                 let svc = &app.services[idx];
-                svc.name.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || svc.state.to_lowercase().contains(&app.search_query.to_lowercase())
+                svc.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
+                    || svc
+                        .state
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
@@ -327,11 +378,26 @@ fn draw_service_table_view(f: &mut Frame, area: Rect, app: &App) {
 
     // Create table header
     let header = Row::new(vec![
-        Cell::from(Span::styled("#", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Status", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Service Name", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("State", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Enabled", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+        Cell::from(Span::styled(
+            "#",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Status",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Service Name",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "State",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Enabled",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
     ])
     .height(1)
     .bottom_margin(1);
@@ -373,20 +439,40 @@ fn draw_service_table_view(f: &mut Frame, area: Rect, app: &App) {
             };
 
             Row::new(vec![
-                Cell::from(format!("{}{}", checkbox, if checkbox.is_empty() { "" } else { " " })),
-                Cell::from(Span::styled(status_symbol, Style::default().fg(status_color))),
-                Cell::from(Span::styled(&svc.name, Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))),
+                Cell::from(format!(
+                    "{}{}",
+                    checkbox,
+                    if checkbox.is_empty() { "" } else { " " }
+                )),
+                Cell::from(Span::styled(
+                    status_symbol,
+                    Style::default().fg(status_color),
+                )),
+                Cell::from(Span::styled(
+                    &svc.name,
+                    Style::default()
+                        .fg(LIGHT_ORANGE)
+                        .add_modifier(Modifier::BOLD),
+                )),
                 Cell::from(Span::styled(&svc.state, Style::default().fg(state_color))),
                 Cell::from(Span::styled(
                     if svc.enabled { "Yes" } else { "No" },
-                    Style::default().fg(if svc.enabled { SUCCESS_COLOR } else { TEXT_COLOR }),
+                    Style::default().fg(if svc.enabled {
+                        SUCCESS_COLOR
+                    } else {
+                        TEXT_COLOR
+                    }),
                 )),
             ])
         })
         .collect();
 
     let enabled_count = app.services.iter().filter(|s| s.enabled).count();
-    let running_count = app.services.iter().filter(|s| s.state == "running" || s.state == "active").count();
+    let running_count = app
+        .services
+        .iter()
+        .filter(|s| s.state == "running" || s.state == "active")
+        .count();
 
     // Calculate indicators
     let visible_items = area.height.saturating_sub(4) as usize;

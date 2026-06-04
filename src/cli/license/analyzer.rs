@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! License analyzer for finding violations and risks
 
-use super::{LicenseViolation, PackageLicense, ViolationType};
 use super::RiskLevel;
+use super::{LicenseViolation, PackageLicense, ViolationType};
 
 /// License analyzer
-pub struct LicenseAnalyzer {
-}
+pub struct LicenseAnalyzer {}
 
 impl Default for LicenseAnalyzer {
     fn default() -> Self {
@@ -33,10 +32,7 @@ impl LicenseAnalyzer {
                 violations.push(LicenseViolation {
                     package_name: pkg.package_name.clone(),
                     violation_type: ViolationType::ProhibitedLicense,
-                    description: format!(
-                        "Package uses prohibited license: {}",
-                        pkg.license
-                    ),
+                    description: format!("Package uses prohibited license: {}", pkg.license),
                     risk_level: RiskLevel::Critical,
                     remediation: format!(
                         "Remove package {} or obtain license exception",

@@ -113,9 +113,7 @@ impl DiskReader {
 
     /// Read bytes at offset
     pub fn read_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<usize> {
-        self.file
-            .seek(SeekFrom::Start(offset))
-            .map_err(Error::Io)?;
+        self.file.seek(SeekFrom::Start(offset)).map_err(Error::Io)?;
         self.file.read(buf).map_err(Error::Io)
     }
 
@@ -131,9 +129,7 @@ impl DiskReader {
 
     /// Read exact bytes at offset
     pub fn read_exact_at(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        self.file
-            .seek(SeekFrom::Start(offset))
-            .map_err(Error::Io)?;
+        self.file.seek(SeekFrom::Start(offset)).map_err(Error::Io)?;
 
         // For block devices, we might need to read in chunks
         let mut total_read = 0;
@@ -166,7 +162,11 @@ mod tests {
     #[test]
     fn test_block_device_detection() {
         // Regular files should not be detected as block devices
-        assert!(!DiskReader::is_block_device(std::path::Path::new("/etc/hosts")));
-        assert!(!DiskReader::is_block_device(std::path::Path::new("/nonexistent")));
+        assert!(!DiskReader::is_block_device(std::path::Path::new(
+            "/etc/hosts"
+        )));
+        assert!(!DiskReader::is_block_device(std::path::Path::new(
+            "/nonexistent"
+        )));
     }
 }

@@ -34,14 +34,21 @@ fn parse_comparison(expr: &str) -> Option<(&str, &str, &str)> {
     for op in [">=", "<=", "!=", "==", ">", "<"] {
         if let Some(idx) = expr.find(op) {
             let field = expr[..idx].trim();
-            let value = expr[idx + op.len()..].trim().trim_matches('\'').trim_matches('"');
+            let value = expr[idx + op.len()..]
+                .trim()
+                .trim_matches('\'')
+                .trim_matches('"');
             return Some((field, op, value));
         }
     }
     None
 }
 
-fn resolve_field(field: &str, evidence: &EvidenceSnapshot, boot_score: Option<f64>) -> Result<String> {
+fn resolve_field(
+    field: &str,
+    evidence: &EvidenceSnapshot,
+    boot_score: Option<f64>,
+) -> Result<String> {
     if field == "bootability.score" {
         return Ok(boot_score.unwrap_or(0.0).to_string());
     }
@@ -78,7 +85,10 @@ fn eval_numeric_compare(suffix: &str, score: f64) -> Result<bool> {
             return eval_op(&score.to_string(), op, &expected.to_string());
         }
     }
-    anyhow::bail!("Invalid bootability expression: bootability.score{}", suffix)
+    anyhow::bail!(
+        "Invalid bootability expression: bootability.score{}",
+        suffix
+    )
 }
 
 #[cfg(test)]

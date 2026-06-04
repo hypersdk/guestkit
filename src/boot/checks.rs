@@ -237,10 +237,14 @@ impl BootCheck for VirtioReadinessCheck {
         let modules = &evidence.boot.loaded_modules;
         let has_virtio_blk = modules.iter().any(|m| m.contains("virtio_blk"));
         let has_virtio_net = modules.iter().any(|m| m.contains("virtio_net"));
-        let has_virtio = has_virtio_blk || has_virtio_net
-            || modules.iter().any(|m| m.contains("virtio"));
+        let has_virtio =
+            has_virtio_blk || has_virtio_net || modules.iter().any(|m| m.contains("virtio"));
 
-        let vmware_tools = evidence.vm_tools.detected.iter().any(|t| t.contains("vmware"));
+        let vmware_tools = evidence
+            .vm_tools
+            .detected
+            .iter()
+            .any(|t| t.contains("vmware"));
         let passed = has_virtio || !vmware_tools;
 
         CheckResult {
@@ -255,7 +259,8 @@ impl BootCheck for VirtioReadinessCheck {
             message: if has_virtio {
                 "Virtio modules available".to_string()
             } else if vmware_tools {
-                "VMware tools detected but no virtio modules — driver injection may be required".to_string()
+                "VMware tools detected but no virtio modules — driver injection may be required"
+                    .to_string()
             } else {
                 "Virtio modules not detected in module tree".to_string()
             },
@@ -293,7 +298,8 @@ impl BootCheck for NicRenameCheck {
             passed: true,
             severity: CheckSeverity::Info,
             message: if has_persistent {
-                "Persistent udev net rules present — interface names may change on new hardware".to_string()
+                "Persistent udev net rules present — interface names may change on new hardware"
+                    .to_string()
             } else {
                 "No persistent net rules — predict ens3/eth0 rename on migration".to_string()
             },
@@ -328,7 +334,8 @@ impl BootCheck for CloudInitCheck {
             name: self.name().to_string(),
             passed: true,
             severity: CheckSeverity::Warning,
-            message: "Cloud-init present — verify instance-id and datasource on target platform".to_string(),
+            message: "Cloud-init present — verify instance-id and datasource on target platform"
+                .to_string(),
             weight: self.weight(),
         }
     }

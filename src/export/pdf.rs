@@ -141,40 +141,99 @@ impl PdfExporter {
         );
 
         // Use built-in font (Helvetica)
-        let font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        let font = doc
+            .add_builtin_font(BuiltinFont::Helvetica)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
-        let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+        let bold_font = doc
+            .add_builtin_font(BuiltinFont::HelveticaBold)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let current_layer = doc.get_page(page1).get_layer(layer1);
 
         // Add title
         let title = "VM Inspection Report".to_string();
-        current_layer.use_text(&title, self.options.font_size + 8.0, Mm(20.0), Mm(height_mm - 30.0), &bold_font);
+        current_layer.use_text(
+            &title,
+            self.options.font_size + 8.0,
+            Mm(20.0),
+            Mm(height_mm - 30.0),
+            &bold_font,
+        );
 
-        let subtitle = format!("{} - {}", data.hostname, chrono::Local::now().format("%Y-%m-%d"));
-        current_layer.use_text(&subtitle, self.options.font_size, Mm(20.0), Mm(height_mm - 40.0), &font);
+        let subtitle = format!(
+            "{} - {}",
+            data.hostname,
+            chrono::Local::now().format("%Y-%m-%d")
+        );
+        current_layer.use_text(
+            &subtitle,
+            self.options.font_size,
+            Mm(20.0),
+            Mm(height_mm - 40.0),
+            &font,
+        );
 
         // Current Y position for content
         let mut y_pos = height_mm - 60.0;
 
         // System Information Section
         y_pos = self.add_section_header(&current_layer, "System Information", y_pos, &bold_font);
-        y_pos = self.add_text_line(&current_layer, &format!("OS Type: {}", data.os_type), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Distribution: {}", data.distribution), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Version: {}", data.version), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Architecture: {}", data.architecture), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Product: {}", data.product_name), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Package Format: {}", data.package_format), y_pos, &font);
-        y_pos = self.add_text_line(&current_layer, &format!("Package Manager: {}", data.package_manager), y_pos, &font);
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("OS Type: {}", data.os_type),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Distribution: {}", data.distribution),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Version: {}", data.version),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Architecture: {}", data.architecture),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Product: {}", data.product_name),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Package Format: {}", data.package_format),
+            y_pos,
+            &font,
+        );
+        y_pos = self.add_text_line(
+            &current_layer,
+            &format!("Package Manager: {}", data.package_manager),
+            y_pos,
+            &font,
+        );
 
         if let Some(kernel) = &data.kernel_version {
-            y_pos = self.add_text_line(&current_layer, &format!("Kernel: {}", kernel), y_pos, &font);
+            y_pos =
+                self.add_text_line(&current_layer, &format!("Kernel: {}", kernel), y_pos, &font);
         }
 
         if let Some(mem) = data.total_memory {
-            y_pos = self.add_text_line(&current_layer, &format!("Memory: {} GB", mem / 1024 / 1024 / 1024), y_pos, &font);
+            y_pos = self.add_text_line(
+                &current_layer,
+                &format!("Memory: {} GB", mem / 1024 / 1024 / 1024),
+                y_pos,
+                &font,
+            );
         }
 
         if let Some(vcpus) = data.vcpus {
@@ -188,7 +247,8 @@ impl PdfExporter {
             y_pos = self.add_section_header(&current_layer, "Filesystems", y_pos, &bold_font);
 
             for fs in data.filesystems.iter().take(10) {
-                let fs_text = format!("{} -> {} ({}) - {:.1} GB / {:.1} GB",
+                let fs_text = format!(
+                    "{} -> {} ({}) - {:.1} GB / {:.1} GB",
                     fs.device,
                     fs.mountpoint,
                     fs.fstype,
@@ -208,8 +268,14 @@ impl PdfExporter {
 
         // Packages Section (show count)
         if !data.packages.is_empty() {
-            y_pos = self.add_section_header(&current_layer, "Installed Packages", y_pos, &bold_font);
-            y_pos = self.add_text_line(&current_layer, &format!("Total packages: {}", data.packages.len()), y_pos, &font);
+            y_pos =
+                self.add_section_header(&current_layer, "Installed Packages", y_pos, &bold_font);
+            y_pos = self.add_text_line(
+                &current_layer,
+                &format!("Total packages: {}", data.packages.len()),
+                y_pos,
+                &font,
+            );
 
             // Show first 20 packages
             let packages_to_show = data.packages.iter().take(20);
@@ -223,7 +289,12 @@ impl PdfExporter {
             }
 
             if data.packages.len() > 20 {
-                y_pos = self.add_text_line(&current_layer, &format!("... and {} more packages", data.packages.len() - 20), y_pos, &font);
+                y_pos = self.add_text_line(
+                    &current_layer,
+                    &format!("... and {} more packages", data.packages.len() - 20),
+                    y_pos,
+                    &font,
+                );
             }
 
             y_pos -= 10.0;
@@ -234,11 +305,9 @@ impl PdfExporter {
             y_pos = self.add_section_header(&current_layer, "User Accounts", y_pos, &bold_font);
 
             for user in data.users.iter().take(15) {
-                let user_text = format!("{} (UID: {}) - {} [{}]",
-                    user.username,
-                    user.uid,
-                    user.home,
-                    user.shell,
+                let user_text = format!(
+                    "{} (UID: {}) - {} [{}]",
+                    user.username, user.uid, user.home, user.shell,
                 );
                 y_pos = self.add_text_line(&current_layer, &user_text, y_pos, &font);
 
@@ -252,10 +321,12 @@ impl PdfExporter {
 
         // Network Interfaces Section
         if !data.interfaces.is_empty() {
-            y_pos = self.add_section_header(&current_layer, "Network Interfaces", y_pos, &bold_font);
+            y_pos =
+                self.add_section_header(&current_layer, "Network Interfaces", y_pos, &bold_font);
 
             for iface in &data.interfaces {
-                let iface_text = format!("{} - {} [{}] - {}",
+                let iface_text = format!(
+                    "{} - {} [{}] - {}",
                     iface.name,
                     iface.mac_address,
                     iface.ip_addresses.join(", "),
@@ -271,7 +342,13 @@ impl PdfExporter {
 
         // Add footer with page number if enabled
         if self.options.include_page_numbers {
-            current_layer.use_text("Page 1", self.options.font_size - 2.0, Mm(width_mm / 2.0 - 10.0), Mm(15.0), &font);
+            current_layer.use_text(
+                "Page 1",
+                self.options.font_size - 2.0,
+                Mm(width_mm / 2.0 - 10.0),
+                Mm(15.0),
+                &font,
+            );
         }
 
         // Save the PDF
@@ -289,7 +366,13 @@ impl PdfExporter {
         y_pos: f32,
         font: &IndirectFontRef,
     ) -> f32 {
-        layer.use_text(text, self.options.font_size + 4.0, Mm(20.0), Mm(y_pos), font);
+        layer.use_text(
+            text,
+            self.options.font_size + 4.0,
+            Mm(20.0),
+            Mm(y_pos),
+            font,
+        );
         y_pos - 10.0
     }
 

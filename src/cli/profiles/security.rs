@@ -2,8 +2,8 @@
 //! Security audit profile
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 pub struct SecurityProfile;
 
