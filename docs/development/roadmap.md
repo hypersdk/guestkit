@@ -13,6 +13,7 @@ High-level direction for GuestKit / GuestCtl. Shipped work is tracked in [CHANGE
 
 | Area | Goal |
 |------|------|
+| **AI Guest Agent Phase 0** | Richer systemd + Windows evidence in schema v2 — see [ai-guest-agent-roadmap.md](ai-guest-agent-roadmap.md) |
 | **TUI plan apply** | Apply fix plans from TUI with write mount, backups, progress (preview-only today) |
 | **Performance** | Parallel inspect, faster fleet scans, cache improvements |
 | **Windows boot** | Deeper EFI/BCD diagnostics for migration |

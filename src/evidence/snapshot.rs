@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-//! Evidence snapshot schema (v1).
+//! Evidence snapshot schema (v2).
 
 use serde::{Deserialize, Serialize};
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Normalized evidence collected from an offline disk image.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,7 +19,9 @@ pub struct EvidenceSnapshot {
     pub packages: PackageEvidence,
     pub security: SecurityEvidence,
     pub vm_tools: VmToolsEvidence,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub systemd: Option<SystemdInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub windows: Option<WindowsEvidence>,
 }
 
@@ -107,6 +109,89 @@ pub struct VmToolsEvidence {
     pub detected: Vec<String>,
 }
 
+/// Systemd unit and static analysis collected from disk.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    pub unit_count: usize,
+    pub service_count: usize,
+    pub timer_count: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub units: Vec<SystemdUnit>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub problem_hints: Vec<SystemdProblemHint>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdUnit {
+    pub name: String,
+    pub unit_type: String,
+    pub path: String,
+    pub state: SystemdUnitState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exec_start: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restart: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remain_after_exit: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub after: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub before: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub wants: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub wanted_by: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub on_calendar: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<SystemdUnitSection>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemdUnitState {
+    #[default]
+    Disabled,
+    Enabled,
+    Masked,
+    Static,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdUnitSection {
+    pub name: String,
+    pub keys: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemdProblemHint {
+    pub unit: String,
+    pub code: String,
+    pub severity: SystemdProblemSeverity,
+    pub message: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemdProblemSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WindowsEvidence {
     pub systemroot: String,
@@ -123,6 +208,83 @@ pub struct WindowsEvidence {
     pub hypervisor_remnants: Vec<String>,
     pub av_edr: Vec<String>,
     pub minidump_count: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub services: Vec<WindowsServiceEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub installed_apps: Vec<WindowsAppEntry>,
+    #[serde(default)]
+    pub persistence: WindowsPersistenceEvidence,
+    #[serde(default)]
+    pub event_logs: WindowsEventLogSummary,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsServiceEntry {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_path: Option<String>,
+    pub start_type: WindowsStartType,
+    pub service_type: WindowsServiceType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub object_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub kernel_driver: bool,
+    pub auto_start: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsStartType {
+    Boot,
+    System,
+    Automatic,
+    Manual,
+    Disabled,
+    #[default]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsServiceType {
+    KernelDriver,
+    FileSystemDriver,
+    Win32,
+    #[default]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsAppEntry {
+    pub name: String,
+    pub version: String,
+    pub publisher: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub install_location: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsPersistenceEvidence {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub run_keys: Vec<WindowsPersistenceEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scheduled_tasks: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsPersistenceEntry {
+    pub location: String,
+    pub name: String,
+    pub command: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsEventLogSummary {
+    pub log_count: usize,
+    pub total_bytes: u64,
 }
 
 impl EvidenceSnapshot {
@@ -138,6 +300,14 @@ impl EvidenceSnapshot {
             }
             ["boot", "bootloader"] => Some(self.boot.bootloader.clone()),
             ["packages", "count"] => Some(self.packages.count.to_string()),
+            ["systemd", "service_count"] => self
+                .systemd
+                .as_ref()
+                .map(|s| s.service_count.to_string()),
+            ["systemd", "problem_count"] => self
+                .systemd
+                .as_ref()
+                .map(|s| s.problem_hints.len().to_string()),
             _ => None,
         }
     }

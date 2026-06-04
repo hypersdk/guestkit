@@ -129,7 +129,7 @@ jobs:
 
       - name: Test CLI - inspect JSON
         run: |
-          sudo ./target/release/guestkit inspect --json \
+          sudo ./target/release/guestkit inspect --output json \
             test-images/${{ matrix.os }}.img > inspect.json
 
           cat inspect.json | jq '.'

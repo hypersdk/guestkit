@@ -21,6 +21,7 @@ pub struct NicRenameCheck;
 pub struct CloudInitCheck;
 pub struct SelinuxRelabelCheck;
 pub struct VmToolsRemnantsCheck;
+pub struct SystemdStaticCheck;
 
 impl BootCheck for FstabUuidCheck {
     fn id(&self) -> &str {
@@ -433,6 +434,88 @@ impl BootCheck for VmToolsRemnantsCheck {
     }
 }
 
+impl BootCheck for SystemdStaticCheck {
+    fn id(&self) -> &str {
+        "BOOT-011"
+    }
+    fn name(&self) -> &str {
+        "Systemd static analysis"
+    }
+    fn weight(&self) -> f64 {
+        8.0
+    }
+    fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        let Some(systemd) = evidence.systemd.as_ref() else {
+            return CheckResult {
+                id: self.id().to_string(),
+                name: self.name().to_string(),
+                passed: true,
+                severity: CheckSeverity::Info,
+                message: "No systemd evidence collected".to_string(),
+                weight: 0.0,
+            };
+        };
+
+        let critical: Vec<_> = systemd
+            .problem_hints
+            .iter()
+            .filter(|h| h.severity == crate::evidence::SystemdProblemSeverity::Critical)
+            .collect();
+        let warnings: Vec<_> = systemd
+            .problem_hints
+            .iter()
+            .filter(|h| h.severity == crate::evidence::SystemdProblemSeverity::Warning)
+            .collect();
+
+        let passed = critical.is_empty();
+        let severity = if !critical.is_empty() {
+            CheckSeverity::Blocker
+        } else if !warnings.is_empty() {
+            CheckSeverity::Warning
+        } else {
+            CheckSeverity::Info
+        };
+
+        let message = if !critical.is_empty() {
+            format!(
+                "{} critical systemd issue(s): {}",
+                critical.len(),
+                critical
+                    .iter()
+                    .take(3)
+                    .map(|h| format!("{} ({})", h.unit, h.code))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else if !warnings.is_empty() {
+            format!(
+                "{} systemd warning(s): {}",
+                warnings.len(),
+                warnings
+                    .iter()
+                    .take(3)
+                    .map(|h| format!("{} ({})", h.unit, h.code))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else {
+            format!(
+                "No systemd static issues in {} units",
+                systemd.unit_count
+            )
+        };
+
+        CheckResult {
+            id: self.id().to_string(),
+            name: self.name().to_string(),
+            passed,
+            severity,
+            message,
+            weight: self.weight(),
+        }
+    }
+}
+
 pub fn all_checks() -> Vec<Box<dyn BootCheck>> {
     vec![
         Box::new(FstabUuidCheck),
@@ -445,5 +528,6 @@ pub fn all_checks() -> Vec<Box<dyn BootCheck>> {
         Box::new(CloudInitCheck),
         Box::new(SelinuxRelabelCheck),
         Box::new(VmToolsRemnantsCheck),
+        Box::new(SystemdStaticCheck),
     ]
 }
