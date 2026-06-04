@@ -5,7 +5,7 @@ use super::types::{FixPlan, Operation};
 use std::collections::{HashMap, VecDeque};
 
 /// Sort operations respecting `depends_on` edges.
-pub fn topological_sort<'a>(plan: &'a FixPlan) -> Vec<&'a Operation> {
+pub fn topological_sort(plan: &FixPlan) -> Vec<&Operation> {
     if plan.operations.is_empty() {
         return Vec::new();
     }
