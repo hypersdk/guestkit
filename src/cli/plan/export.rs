@@ -179,6 +179,26 @@ impl PlanExporter {
         writeln!(playbook, "  become: yes")?;
         writeln!(playbook, "  tasks:")?;
 
+        if plan.metadata.tags.iter().any(|t| t == "inject-agent") {
+            writeln!(playbook, "    - name: Install GuestKit agent binary")?;
+            writeln!(playbook, "      copy:")?;
+            writeln!(playbook, "        src: guestkit")?;
+            writeln!(playbook, "        dest: /usr/local/bin/guestkit")?;
+            writeln!(playbook, "        mode: '0755'")?;
+            writeln!(playbook, "    - name: Install guestkit-agent systemd unit")?;
+            writeln!(playbook, "      copy:")?;
+            writeln!(playbook, "        src: guestkit-agent.service")?;
+            writeln!(
+                playbook,
+                "        dest: /etc/systemd/system/guestkit-agent.service"
+            )?;
+            writeln!(playbook, "    - name: Enable guestkit-agent")?;
+            writeln!(playbook, "      systemd:")?;
+            writeln!(playbook, "        name: guestkit-agent")?;
+            writeln!(playbook, "        enabled: yes")?;
+            writeln!(playbook, "        daemon_reload: yes")?;
+        }
+
         for op in &plan.operations {
             Self::operation_to_ansible(&mut playbook, op)?;
         }

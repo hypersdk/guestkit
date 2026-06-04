@@ -67,6 +67,13 @@ struct Cli {
     command: Option<Commands>,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum AgentChannelArg {
+    Virtio,
+    Vsock,
+    Stdio,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Inspect a disk image and display OS information
@@ -1257,6 +1264,18 @@ enum Commands {
         /// Backup before repair
         #[arg(short = 'b', long)]
         backup: bool,
+
+        /// Inject GuestKit agent binary and systemd unit into disk image
+        #[arg(long)]
+        inject_agent: bool,
+
+        /// Path to guestkit binary for agent injection
+        #[arg(long, value_name = "PATH")]
+        agent_binary: Option<PathBuf>,
+
+        /// Path to guestkit-agent.service unit file
+        #[arg(long, value_name = "PATH")]
+        agent_unit: Option<PathBuf>,
     },
 
     /// System hardening configuration
@@ -1772,6 +1791,18 @@ enum Commands {
         /// Export executable fix plan (YAML or JSON from file extension)
         #[arg(long, value_name = "FILE")]
         export: Option<PathBuf>,
+
+        /// Include GuestKit agent install ops in exported fix plan
+        #[arg(long)]
+        inject_agent: bool,
+
+        /// Path to guestkit binary for agent injection (export / repair)
+        #[arg(long, value_name = "PATH")]
+        agent_binary: Option<PathBuf>,
+
+        /// Path to guestkit-agent.service unit file
+        #[arg(long, value_name = "PATH")]
+        agent_unit: Option<PathBuf>,
     },
 
     /// Forensic diff with security drift scoring
@@ -1786,6 +1817,37 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+    },
+
+    /// Run GuestKit in-guest agent daemon (requires --features agent)
+    Agent {
+        /// Communication channel
+        #[arg(long, value_enum, default_value = "virtio")]
+        channel: AgentChannelArg,
+
+        /// Virtio device path override
+        #[arg(long, value_name = "PATH")]
+        device: Option<String>,
+
+        /// Reserved: vsock socket override
+        #[arg(long, value_name = "PATH")]
+        socket: Option<String>,
+
+        /// Reserved: drop privileges to user
+        #[arg(long, value_name = "USER")]
+        user: Option<String>,
+    },
+
+    /// Host-side proxy to guest agent unix socket (requires --features agent)
+    #[command(name = "agent-proxy")]
+    AgentProxy {
+        /// Libvirt channel unix socket path
+        #[arg(long, value_name = "PATH")]
+        socket: String,
+
+        /// Optional HTTP listen address (e.g. 127.0.0.1:8765)
+        #[arg(long, value_name = "ADDR")]
+        listen: Option<String>,
     },
 }
 
@@ -2715,9 +2777,27 @@ pub fn run() -> anyhow::Result<()> {
             dry_run,
             force,
             backup,
+            inject_agent,
+            agent_binary,
+            agent_unit,
         } => {
             if fix.as_deref() == Some("boot") {
-                repair_boot_command(&image, dry_run, cli.verbose)?;
+                #[cfg(feature = "agent")]
+                {
+                    repair_boot_command(
+                        &image,
+                        dry_run,
+                        cli.verbose,
+                        inject_agent,
+                        agent_binary.as_deref(),
+                        agent_unit.as_deref(),
+                    )?;
+                }
+                #[cfg(not(feature = "agent"))]
+                {
+                    let _ = (&agent_binary, &agent_unit);
+                    repair_boot_command(&image, dry_run, cli.verbose, inject_agent)?;
+                }
             } else if let Some(rt) = repair_type {
                 repair_command(&image, &rt, force, backup, cli.verbose)?;
             } else {
@@ -3018,19 +3098,90 @@ pub fn run() -> anyhow::Result<()> {
             explain,
             output,
             export,
+            inject_agent,
+            agent_binary,
+            agent_unit,
         } => {
-            migrate_plan_command(
-                &image,
-                &target,
-                explain,
-                &output,
-                export.as_deref(),
-                cli.verbose,
-            )?;
+            #[cfg(feature = "agent")]
+            {
+                migrate_plan_command(
+                    &image,
+                    &target,
+                    explain,
+                    &output,
+                    export.as_deref(),
+                    cli.verbose,
+                    inject_agent,
+                    agent_binary.as_deref(),
+                    agent_unit.as_deref(),
+                )?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (&agent_binary, &agent_unit);
+                migrate_plan_command(
+                    &image,
+                    &target,
+                    explain,
+                    &output,
+                    export.as_deref(),
+                    cli.verbose,
+                    inject_agent,
+                )?;
+            }
         }
 
         Commands::ForensicDiff { old, new, output } => {
             forensic_diff_command(&old, &new, &output, cli.verbose)?;
+        }
+
+        Commands::Agent {
+            channel,
+            device,
+            socket,
+            user,
+        } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent, AgentArgs, AgentChannel};
+                let channel = match channel {
+                    AgentChannelArg::Virtio => AgentChannel::Virtio,
+                    AgentChannelArg::Vsock => AgentChannel::Vsock,
+                    AgentChannelArg::Stdio => AgentChannel::Stdio,
+                };
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent")?;
+                rt.block_on(run_agent(AgentArgs {
+                    channel,
+                    device,
+                    socket,
+                    user,
+                }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (channel, device, socket, user);
+                anyhow::bail!(
+                    "guestkit agent requires rebuilding with --features agent"
+                );
+            }
+        }
+
+        Commands::AgentProxy { socket, listen } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent_proxy, AgentProxyArgs};
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent-proxy")?;
+                rt.block_on(run_agent_proxy(AgentProxyArgs { socket, listen }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (socket, listen);
+                anyhow::bail!(
+                    "guestkit agent-proxy requires rebuilding with --features agent"
+                );
+            }
         }
     }
 

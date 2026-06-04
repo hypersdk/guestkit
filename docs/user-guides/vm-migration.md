@@ -46,6 +46,27 @@ guestkit doctor vm.vmdk --target proxmox
 
 See [Migration assurance](../features/migration-assurance.md) for `fleet analyze`, `policy check`, and `forensic-diff`.
 
+### Live guest agent (optional)
+
+After migration, run assurance **inside** a booted VM via the GuestKit agent (virtio-serial channel `com.zyvor.guestkit.0`):
+
+```bash
+# Pre-bake agent during offline prep
+guestkit repair vm.qcow2 --fix boot --inject-agent \
+  --agent-binary ./target/x86_64-unknown-linux-musl/release/guestkit
+
+# Or include agent ops in exported migrate plan
+guestkit migrate-plan vm.qcow2 --target kvm --export plan.yaml --inject-agent
+
+# Host-side bridge (libvirt channel → HTTP)
+guestkit agent-proxy \
+  --socket /var/lib/libvirt/qemu/channel/target/$VM/com.zyvor.guestkit.0 \
+  --listen 127.0.0.1:8765
+curl -s http://127.0.0.1:8765/doctor | jq .
+```
+
+See [Guest agent](../features/guest-agent.md) for KubeVirt channel YAML, RPC methods, and worker job integration.
+
 **TUI:** `guestctl tui vm.qcow2` → Security → **Assurance** (or Dashboard **`a`**, palette `: doctor`). Preview operations with **`p`** before exporting `migrate-plan --export`.
 
 ### Basic Migration Workflow

@@ -41,11 +41,19 @@ fn draw_boot_gate(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled("  target ", label_style()),
                 Span::styled(&app.assurance_target, Style::default().fg(ACCENT)),
             ]),
-            Line::from(Span::styled(
-                boot.boot_probability_message(),
-                Style::default().fg(SUCCESS),
-            )),
         ];
+        if app.agent_live {
+            lines[0].spans.push(Span::styled(
+                "  LIVE",
+                Style::default()
+                    .fg(SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        lines.push(Line::from(Span::styled(
+            boot.boot_probability_message(),
+            Style::default().fg(SUCCESS),
+        )));
         if !boot.blockers.is_empty() {
             lines.push(Line::from(Span::styled(
                 "Blockers:",
