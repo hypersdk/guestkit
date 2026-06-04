@@ -55,7 +55,10 @@ where
     Fut: std::future::Future<Output = Result<T, E>>,
     E: std::fmt::Display,
 {
-    assert!(config.max_attempts > 0, "retry_with_backoff called with max_attempts == 0");
+    assert!(
+        config.max_attempts > 0,
+        "retry_with_backoff called with max_attempts == 0"
+    );
 
     let mut last_err = None;
     for attempt in 1..=config.max_attempts {

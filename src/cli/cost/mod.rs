@@ -5,8 +5,8 @@ pub mod analyzer;
 pub mod estimator;
 pub mod reporter;
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -176,19 +176,12 @@ pub fn analyze_costs<P: AsRef<Path>>(
     let workload_profile = determine_workload_profile(&metrics);
 
     // Estimate current costs
-    let current_estimate = estimator::estimate_current_costs(
-        &metrics,
-        provider,
-        region,
-        &workload_profile,
-    );
+    let current_estimate =
+        estimator::estimate_current_costs(&metrics, provider, region, &workload_profile);
 
     // Find optimization opportunities
-    let savings_opportunities = analyzer::find_savings_opportunities(
-        &metrics,
-        &current_estimate,
-        provider,
-    );
+    let savings_opportunities =
+        analyzer::find_savings_opportunities(&metrics, &current_estimate, provider);
 
     // Calculate optimized estimate
     let optimized_estimate = estimator::calculate_optimized_costs(
@@ -199,11 +192,8 @@ pub fn analyze_costs<P: AsRef<Path>>(
     );
 
     // Generate recommendations
-    let recommendations = analyzer::generate_recommendations(
-        &metrics,
-        &savings_opportunities,
-        provider,
-    );
+    let recommendations =
+        analyzer::generate_recommendations(&metrics, &savings_opportunities, provider);
 
     // Calculate total savings
     let total_monthly_savings = current_estimate.total_monthly - optimized_estimate.total_monthly;
@@ -269,28 +259,26 @@ fn extract_metrics<P: AsRef<Path>>(image_path: P, verbose: bool) -> Result<Syste
     let storage_gb = total_storage as f64 / 1_073_741_824.0;
 
     // Detect services
-    let has_database = applications.iter()
-        .any(|(name, _, _)| {
-            name.contains("mysql") || name.contains("postgresql") ||
-            name.contains("mariadb") || name.contains("redis")
-        });
+    let has_database = applications.iter().any(|(name, _, _)| {
+        name.contains("mysql")
+            || name.contains("postgresql")
+            || name.contains("mariadb")
+            || name.contains("redis")
+    });
 
-    let has_cache = applications.iter()
+    let has_cache = applications
+        .iter()
         .any(|(name, _, _)| name.contains("redis") || name.contains("memcached"));
 
-    let has_web_server = applications.iter()
-        .any(|(name, _, _)| {
-            name.contains("nginx") || name.contains("apache") ||
-            name.contains("httpd")
-        });
+    let has_web_server = applications.iter().any(|(name, _, _)| {
+        name.contains("nginx") || name.contains("apache") || name.contains("httpd")
+    });
 
     // Count services
     let mut service_count = 0;
     if g.is_dir("/lib/systemd/system").unwrap_or(false) {
         if let Ok(entries) = g.ls("/lib/systemd/system") {
-            service_count = entries.iter()
-                .filter(|e| e.ends_with(".service"))
-                .count();
+            service_count = entries.iter().filter(|e| e.ends_with(".service")).count();
         }
     }
 
@@ -380,11 +368,7 @@ fn determine_workload_profile(metrics: &SystemMetrics) -> WorkloadProfile {
     };
 
     // Estimate network egress
-    let network_egress_gb = if metrics.has_web_server {
-        100.0
-    } else {
-        10.0
-    };
+    let network_egress_gb = if metrics.has_web_server { 100.0 } else { 10.0 };
 
     WorkloadProfile {
         cpu_usage_percent,
@@ -412,7 +396,7 @@ mod tests {
             has_cache: false,
             has_web_server: true,
         };
-        
+
         assert_eq!(profile.cpu_usage_percent, 60.0);
         assert!(profile.has_database);
         assert_eq!(profile.storage_type, "ssd");
@@ -430,7 +414,7 @@ mod tests {
             network_monthly: 10.0,
             total_monthly: 45.0,
         };
-        
+
         assert_eq!(estimate.total_monthly, 45.0);
         assert_eq!(
             estimate.total_monthly,
@@ -449,10 +433,13 @@ mod tests {
             effort: OptimizationEffort::Low,
             priority: OptimizationPriority::High,
         };
-        
+
         assert_eq!(opportunity.category, "Right-sizing");
         assert_eq!(opportunity.monthly_savings, 50.0);
-        assert_eq!(opportunity.current_cost - opportunity.optimized_cost, opportunity.monthly_savings);
+        assert_eq!(
+            opportunity.current_cost - opportunity.optimized_cost,
+            opportunity.monthly_savings
+        );
     }
 
     #[test]
@@ -463,7 +450,7 @@ mod tests {
             estimated_savings: 200.0,
             implementation_steps: vec!["Purchase RI".to_string()],
         };
-        
+
         assert_eq!(recommendation.title, "Use Reserved Instances");
         assert_eq!(recommendation.estimated_savings, 200.0);
         assert_eq!(recommendation.implementation_steps.len(), 1);

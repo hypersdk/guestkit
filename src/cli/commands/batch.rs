@@ -2,8 +2,8 @@
 //! Batch inspection commands
 #![allow(clippy::too_many_arguments)]
 
-use anyhow::Result;
 use crate::cli::formatters::*;
+use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 use super::collect_inspection_data;
@@ -27,8 +27,7 @@ pub fn inspect_batch(
 
     // Shared results vector
     type BatchResults = Vec<(String, Result<InspectionReport>)>;
-    let results: Arc<Mutex<BatchResults>> =
-        Arc::new(Mutex::new(Vec::new()));
+    let results: Arc<Mutex<BatchResults>> = Arc::new(Mutex::new(Vec::new()));
 
     // Create work queue
     let work_queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(images.to_vec()));
@@ -104,13 +103,18 @@ pub fn inspect_batch(
         }
     }
     if panic_count > 0 {
-        eprintln!("\nWarning: {} worker thread(s) panicked during processing", panic_count);
+        eprintln!(
+            "\nWarning: {} worker thread(s) panicked during processing",
+            panic_count
+        );
     }
 
     println!("\n=== Results ===\n");
 
     // Print results
-    let final_results = results.lock().map_err(|e| anyhow::anyhow!("Failed to lock results: {}", e))?;
+    let final_results = results
+        .lock()
+        .map_err(|e| anyhow::anyhow!("Failed to lock results: {}", e))?;
     let mut success_count = 0;
     let mut error_count = 0;
 

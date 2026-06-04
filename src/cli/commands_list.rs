@@ -90,14 +90,7 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Interactive",
-        &[
-            "tui",
-            "shell",
-            "interactive",
-            "explore",
-            "script",
-            "ai",
-        ],
+        &["tui", "shell", "interactive", "explore", "script", "ai"],
     ),
     (
         "Utilities",

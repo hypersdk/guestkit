@@ -107,7 +107,9 @@ impl Guestfs {
 
         // Try RPM
         if self.exists("/var/lib/rpm")? {
-            if let Ok(output) = self.command(&["rpm", "-qi", package]) { return Ok(output) }
+            if let Ok(output) = self.command(&["rpm", "-qi", package]) {
+                return Ok(output);
+            }
         }
 
         Err(Error::NotFound(format!("Package {} not found", package)))
@@ -131,8 +133,9 @@ impl Guestfs {
         }
 
         // Try RPM
-        if self.exists("/var/lib/rpm")?
-            && self.command(&["rpm", "-q", package]).is_ok() { return Ok(true) }
+        if self.exists("/var/lib/rpm")? && self.command(&["rpm", "-q", package]).is_ok() {
+            return Ok(true);
+        }
 
         Ok(false)
     }

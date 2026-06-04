@@ -2,7 +2,10 @@
 //! Timeline view showing system events and changes
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR,
+    WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -55,8 +58,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Summary header
-            Constraint::Min(0),     // Timeline events
+            Constraint::Length(3), // Summary header
+            Constraint::Min(0),    // Timeline events
         ])
         .split(area);
 
@@ -65,24 +68,24 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_timeline_summary(f: &mut Frame, area: Rect, app: &App) {
-    let summary_text = vec![
-        Line::from(vec![
-            Span::styled("📅 System Timeline", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(" │ "),
-            Span::styled("OS: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(&app.os_name, Style::default().fg(LIGHT_ORANGE)),
-            Span::raw(" │ "),
-            Span::styled("Kernel: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(&app.kernel_version, Style::default().fg(LIGHT_ORANGE)),
-        ]),
-    ];
+    let summary_text = vec![Line::from(vec![
+        Span::styled(
+            "📅 System Timeline",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" │ "),
+        Span::styled("OS: ", Style::default().fg(TEXT_COLOR)),
+        Span::styled(&app.os_name, Style::default().fg(LIGHT_ORANGE)),
+        Span::raw(" │ "),
+        Span::styled("Kernel: ", Style::default().fg(TEXT_COLOR)),
+        Span::styled(&app.kernel_version, Style::default().fg(LIGHT_ORANGE)),
+    ])];
 
-    let summary = Paragraph::new(summary_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let summary = Paragraph::new(summary_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(summary, area);
 }
@@ -122,16 +125,15 @@ fn draw_timeline_events(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    format!("⏰ Timeline Events ({} total)", events.len()),
-                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
-                ))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title(Span::styled(
+                format!("⏰ Timeline Events ({} total)", events.len()),
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(list, area);
 }
@@ -226,7 +228,10 @@ fn generate_timeline_events(app: &App) -> Vec<TimelineEvent> {
         events.push(TimelineEvent {
             icon: "👥",
             category: "Users",
-            description: format!("{} user accounts created ({} privileged)", user_count, privileged_users),
+            description: format!(
+                "{} user accounts created ({} privileged)",
+                user_count, privileged_users
+            ),
             severity: if privileged_users > 1 {
                 Severity::Critical
             } else {
@@ -264,8 +269,7 @@ fn generate_timeline_events(app: &App) -> Vec<TimelineEvent> {
             events.push(TimelineEvent {
                 icon: "🌐",
                 category: "Network",
-                description: format!("Interface {} configured",
-                    iface.name),
+                description: format!("Interface {} configured", iface.name),
                 severity: Severity::Low,
                 timestamp: "T-0d".to_string(),
             });
@@ -277,9 +281,11 @@ fn generate_timeline_events(app: &App) -> Vec<TimelineEvent> {
         events.push(TimelineEvent {
             icon: "💾",
             category: "Storage",
-            description: format!("LVM configured: {} VG(s), {} LV(s)",
+            description: format!(
+                "LVM configured: {} VG(s), {} LV(s)",
                 lvm.volume_groups.len(),
-                lvm.logical_volumes.len()),
+                lvm.logical_volumes.len()
+            ),
             severity: Severity::Info,
             timestamp: "T-0d".to_string(),
         });

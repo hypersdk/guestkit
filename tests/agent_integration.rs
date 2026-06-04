@@ -14,18 +14,14 @@ fn agent_ping_via_handler() {
 #[test]
 fn agent_get_capabilities() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(
-        br#"{"jsonrpc":"2.0","method":"guestkit.getCapabilities","id":2}"#,
-    );
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.getCapabilities","id":2}"#);
     assert!(resp.result.is_some());
 }
 
 #[test]
 fn agent_get_evidence_live() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(
-        br#"{"jsonrpc":"2.0","method":"guestkit.getEvidence","id":3}"#,
-    );
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.getEvidence","id":3}"#);
     assert!(resp.result.is_some(), "{:?}", resp.error);
 }
 

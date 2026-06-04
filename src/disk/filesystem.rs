@@ -285,14 +285,13 @@ impl FileSystem {
         reader.read_exact_at(header_offset, &mut header)?;
 
         // Check HFS+ signature "H+" or "HX" at offset 0-1
-        if header.len() >= 2
-            && header[0] == b'H' && (header[1] == b'+' || header[1] == b'X') {
-                return Ok(Self {
-                    fs_type: FileSystemType::HfsPlus,
-                    label: None,
-                    uuid: None,
-                });
-            }
+        if header.len() >= 2 && header[0] == b'H' && (header[1] == b'+' || header[1] == b'X') {
+            return Ok(Self {
+                fs_type: FileSystemType::HfsPlus,
+                label: None,
+                uuid: None,
+            });
+        }
 
         Err(Error::Detection("Not an HFS+ filesystem".to_string()))
     }

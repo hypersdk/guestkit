@@ -2,8 +2,8 @@
 //! Migration planning profile
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 pub struct MigrationProfile;
 
@@ -187,7 +187,12 @@ impl MigrationProfile {
                 findings.push(Finding {
                     item: "LVM Volume Groups".to_string(),
                     status: FindingStatus::Info,
-                    message: lvm.volume_groups.iter().map(|vg| vg.name.as_str()).collect::<Vec<_>>().join(", "),
+                    message: lvm
+                        .volume_groups
+                        .iter()
+                        .map(|vg| vg.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", "),
                     risk_level: None,
                 });
             }
@@ -196,7 +201,12 @@ impl MigrationProfile {
                 findings.push(Finding {
                     item: "LVM Logical Volumes".to_string(),
                     status: FindingStatus::Info,
-                    message: lvm.logical_volumes.iter().map(|lv| lv.name.as_str()).collect::<Vec<_>>().join(", "),
+                    message: lvm
+                        .logical_volumes
+                        .iter()
+                        .map(|lv| lv.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", "),
                     risk_level: None,
                 });
             }

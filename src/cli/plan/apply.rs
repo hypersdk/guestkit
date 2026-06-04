@@ -2,7 +2,7 @@
 //! Plan application - executes fix plans with safety checks
 
 use super::types::*;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use std::path::Path;
 
 /// Applies fix plans to VM disks
@@ -115,7 +115,9 @@ impl PlanApplicator {
                 operations_applied: 0,
                 operations_failed: 1,
                 operations_skipped: plan.operations.len(),
-                message: "No operating system detected in VM disk. Cannot apply plan without a valid OS.".to_string(),
+                message:
+                    "No operating system detected in VM disk. Cannot apply plan without a valid OS."
+                        .to_string(),
             });
         }
 
@@ -173,7 +175,8 @@ impl PlanApplicator {
     fn apply_operation(&self, g: &mut crate::guestfs::Guestfs, op: &Operation) -> Result<bool> {
         match &op.op_type {
             OperationType::FileEdit(fe) => {
-                let content = g.cat(&fe.file)
+                let content = g
+                    .cat(&fe.file)
                     .map_err(|e| anyhow::anyhow!("Failed to read {}: {}", fe.file, e))?;
                 let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
 
@@ -198,8 +201,13 @@ impl PlanApplicator {
                 let new_content = lines.join("\n") + "\n";
                 let temp = tempfile::NamedTempFile::new()?;
                 std::fs::write(temp.path(), new_content.as_bytes())?;
-                g.upload(temp.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, &fe.file)
-                    .map_err(|e| anyhow::anyhow!("Failed to upload {}: {}", fe.file, e))?;
+                g.upload(
+                    temp.path()
+                        .to_str()
+                        .ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?,
+                    &fe.file,
+                )
+                .map_err(|e| anyhow::anyhow!("Failed to upload {}: {}", fe.file, e))?;
 
                 Ok(true)
             }
@@ -217,10 +225,19 @@ impl PlanApplicator {
             }
             OperationType::FilePermissions(fp) => {
                 let mode_str = if fp.mode.is_empty() { "0" } else { &fp.mode };
-                let mode = i32::from_str_radix(mode_str, 8)
-                    .map_err(|_| anyhow::anyhow!("Invalid octal permission mode '{}' for {}", fp.mode, fp.path))?;
+                let mode = i32::from_str_radix(mode_str, 8).map_err(|_| {
+                    anyhow::anyhow!(
+                        "Invalid octal permission mode '{}' for {}",
+                        fp.mode,
+                        fp.path
+                    )
+                })?;
                 if !(0..=0o7777).contains(&mode) {
-                    anyhow::bail!("Permission mode '{}' out of range (0000-7777) for {}", fp.mode, fp.path);
+                    anyhow::bail!(
+                        "Permission mode '{}' out of range (0000-7777) for {}",
+                        fp.mode,
+                        fp.path
+                    );
                 }
                 g.chmod(mode, &fp.path)
                     .map_err(|e| anyhow::anyhow!("chmod failed on {}: {}", fp.path, e))?;
@@ -232,8 +249,9 @@ impl PlanApplicator {
                 Ok(true)
             }
             OperationType::FileCopy(fc) => {
-                g.cp_a(&fc.source, &fc.destination)
-                    .map_err(|e| anyhow::anyhow!("cp_a failed {} -> {}: {}", fc.source, fc.destination, e))?;
+                g.cp_a(&fc.source, &fc.destination).map_err(|e| {
+                    anyhow::anyhow!("cp_a failed {} -> {}: {}", fc.source, fc.destination, e)
+                })?;
                 Ok(true)
             }
             OperationType::SelinuxMode(sm) => {
@@ -243,7 +261,9 @@ impl PlanApplicator {
                         .lines()
                         .map(|line| {
                             let trimmed = line.trim_start();
-                            if !trimmed.starts_with('#') && trimmed.starts_with(&format!("SELINUX={}", sm.current)) {
+                            if !trimmed.starts_with('#')
+                                && trimmed.starts_with(&format!("SELINUX={}", sm.current))
+                            {
                                 format!("SELINUX={}", sm.target)
                             } else {
                                 line.to_string()
@@ -254,8 +274,13 @@ impl PlanApplicator {
                         + "\n";
                     let temp = tempfile::NamedTempFile::new()?;
                     std::fs::write(temp.path(), new_content.as_bytes())?;
-                    g.upload(temp.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, &sm.file)
-                        .map_err(|e| anyhow::anyhow!("Failed to upload {}: {}", sm.file, e))?;
+                    g.upload(
+                        temp.path().to_str().ok_or_else(|| {
+                            anyhow::anyhow!("Temp file path contains invalid UTF-8")
+                        })?,
+                        &sm.file,
+                    )
+                    .map_err(|e| anyhow::anyhow!("Failed to upload {}: {}", sm.file, e))?;
                     Ok(true)
                 } else {
                     eprintln!("Warning: SELinux config file not found: {}", sm.file);
@@ -358,7 +383,9 @@ impl PlanApplicator {
         }
 
         // Warn about non-reversible operations
-        let non_reversible: Vec<&str> = plan.operations.iter()
+        let non_reversible: Vec<&str> = plan
+            .operations
+            .iter()
             .filter(|op| !op.reversible)
             .map(|op| op.id.as_str())
             .collect();
@@ -370,10 +397,7 @@ impl PlanApplicator {
             ));
         }
 
-        Ok(ValidationResult {
-            errors,
-            warnings,
-        })
+        Ok(ValidationResult { errors, warnings })
     }
 
     /// Check for circular dependencies using Kahn's algorithm
@@ -443,10 +467,14 @@ impl PlanApplicator {
 
         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let stem = vm.file_stem().unwrap_or_default().to_string_lossy();
-        let ext = vm.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+        let ext = vm
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_default();
         let backup_name = format!("{}.backup_{}{}", stem, timestamp, ext);
 
-        let backup_path = vm.parent()
+        let backup_path = vm
+            .parent()
             .unwrap_or_else(|| Path::new("."))
             .join(&backup_name);
 
@@ -469,8 +497,12 @@ impl PlanApplicator {
             anyhow::bail!("VM disk not found: {}", self.vm_path);
         }
 
-        std::fs::copy(backup, vm)
-            .with_context(|| format!("Failed to restore backup from {} to {}", backup_path, self.vm_path))?;
+        std::fs::copy(backup, vm).with_context(|| {
+            format!(
+                "Failed to restore backup from {} to {}",
+                backup_path, self.vm_path
+            )
+        })?;
 
         Ok(())
     }
@@ -512,7 +544,13 @@ mod tests {
         let vm_path = dir.path().join("test.qcow2");
         let mut file = fs::File::create(&vm_path).unwrap();
         file.write_all(b"fake vm disk").unwrap();
-        (dir, vm_path.to_str().expect("Test path contains invalid UTF-8").to_string())
+        (
+            dir,
+            vm_path
+                .to_str()
+                .expect("Test path contains invalid UTF-8")
+                .to_string(),
+        )
     }
 
     #[test]
@@ -721,7 +759,10 @@ mod tests {
         let result = applicator.rollback("/nonexistent/backup/path");
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Backup file not found"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Backup file not found"));
     }
 
     #[test]
@@ -732,8 +773,20 @@ mod tests {
         fs::write(&vm_path, b"current state").unwrap();
         fs::write(&backup_path, b"backup state").unwrap();
 
-        let applicator = PlanApplicator::new(vm_path.to_str().expect("Test path contains invalid UTF-8").to_string(), false);
-        applicator.rollback(backup_path.to_str().expect("Test path contains invalid UTF-8")).unwrap();
+        let applicator = PlanApplicator::new(
+            vm_path
+                .to_str()
+                .expect("Test path contains invalid UTF-8")
+                .to_string(),
+            false,
+        );
+        applicator
+            .rollback(
+                backup_path
+                    .to_str()
+                    .expect("Test path contains invalid UTF-8"),
+            )
+            .unwrap();
 
         let content = fs::read(&vm_path).unwrap();
         assert_eq!(content, b"backup state");

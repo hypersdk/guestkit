@@ -2,8 +2,8 @@
 //! Performance benchmarks for GuestKit operations
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::hint::black_box;
 use guestkit::guestfs::Guestfs;
+use std::hint::black_box;
 use std::path::PathBuf;
 
 // Test image paths (set via environment or use defaults)

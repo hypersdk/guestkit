@@ -172,7 +172,10 @@ impl ParallelInspector {
         let start = Instant::now();
 
         if self.config.verbose {
-            println!("🚀 Starting parallel inspection of {} disks", disk_paths.len());
+            println!(
+                "🚀 Starting parallel inspection of {} disks",
+                disk_paths.len()
+            );
             println!("👷 Workers: {}", self.num_workers());
         }
 
@@ -219,11 +222,7 @@ impl ParallelInspector {
             }
             Err(e) => {
                 let duration = start.elapsed();
-                InspectionResult::failure(
-                    disk_path.to_path_buf(),
-                    duration,
-                    e.to_string(),
-                )
+                InspectionResult::failure(disk_path.to_path_buf(), duration, e.to_string())
             }
         }
     }
@@ -308,8 +307,13 @@ impl ParallelInspector {
         let mut g = crate::guestfs::Guestfs::new()
             .map_err(|e| Error::CommandFailed(format!("Failed to create guestfs handle: {}", e)))?;
 
-        g.add_drive_ro(disk_path)
-            .map_err(|e| Error::CommandFailed(format!("Failed to add drive {}: {}", disk_path.display(), e)))?;
+        g.add_drive_ro(disk_path).map_err(|e| {
+            Error::CommandFailed(format!(
+                "Failed to add drive {}: {}",
+                disk_path.display(),
+                e
+            ))
+        })?;
 
         g.launch()
             .map_err(|e| Error::CommandFailed(format!("Failed to launch guestfs: {}", e)))?;
@@ -321,8 +325,12 @@ impl ParallelInspector {
         }
 
         let root = &roots[0];
-        let os_type = g.inspect_get_type(root).unwrap_or_else(|_| "unknown".to_string());
-        let product_name = g.inspect_get_product_name(root).unwrap_or_else(|_| "Unknown".to_string());
+        let os_type = g
+            .inspect_get_type(root)
+            .unwrap_or_else(|_| "unknown".to_string());
+        let product_name = g
+            .inspect_get_product_name(root)
+            .unwrap_or_else(|_| "Unknown".to_string());
 
         let _ = g.shutdown();
 
@@ -351,7 +359,11 @@ impl ParallelInspector {
         println!("❌ Failed:        {}", failed);
         println!("💾 From cache:    {}", from_cache);
         println!("⏱️  Total time:    {:?}", total_duration);
-        let avg = if results.is_empty() { Duration::ZERO } else { total_duration / results.len() as u32 };
+        let avg = if results.is_empty() {
+            Duration::ZERO
+        } else {
+            total_duration / results.len() as u32
+        };
         println!("⚡ Avg per disk:  {:?}", avg);
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     }
@@ -862,9 +874,11 @@ mod tests {
     #[test]
     fn test_inspect_all_failures() {
         let inspector = ParallelInspector::default();
-        let disks = [PathBuf::from("/nonexistent1.img"),
+        let disks = [
+            PathBuf::from("/nonexistent1.img"),
             PathBuf::from("/nonexistent2.img"),
-            PathBuf::from("/nonexistent3.img")];
+            PathBuf::from("/nonexistent3.img"),
+        ];
 
         let disk_refs: Vec<&PathBuf> = disks.iter().collect();
         let results = inspector.inspect_batch(&disk_refs).unwrap();

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Migration assurance CLI commands (doctor, policy, fleet, migrate-plan, forensic diff).
 
-use anyhow::{Context, Result};
-use colored::Colorize;
 use crate::boot::{analyze_bootability, BootTarget};
 use crate::evidence::build_evidence;
 use crate::fleet::analyze_fleet;
 use crate::inference::infer_root_cause;
+use anyhow::{Context, Result};
+use colored::Colorize;
 use std::path::{Path, PathBuf};
 
 use super::{init_guestfs_ro, mount_all_ro, validate_command};
@@ -16,9 +16,14 @@ pub fn collect_assurance_data(
     image: &Path,
     target: BootTarget,
     verbose: bool,
-) -> Result<(crate::evidence::EvidenceSnapshot, crate::boot::BootabilityReport)> {
+) -> Result<(
+    crate::evidence::EvidenceSnapshot,
+    crate::boot::BootabilityReport,
+)> {
     let resolved = crate::storage::resolve_to_local_path(
-        image.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
     )
     .unwrap_or_else(|_| image.to_path_buf());
 
@@ -69,7 +74,10 @@ pub fn doctor_command(
     println!("{}", "Bootability Assessment".bold().cyan());
     println!("{}", "═".repeat(50));
     println!();
-    println!("  {}", boot_report.boot_probability_message().green().bold());
+    println!(
+        "  {}",
+        boot_report.boot_probability_message().green().bold()
+    );
     println!();
 
     if !boot_report.blockers.is_empty() {
@@ -96,7 +104,11 @@ pub fn doctor_command(
         if check.weight <= 0.0 {
             continue;
         }
-        let icon = if check.passed { "✓".green() } else { "✗".red() };
+        let icon = if check.passed {
+            "✓".green()
+        } else {
+            "✗".red()
+        };
         println!("  {} [{}] {}", icon, check.id, check.message);
     }
 
@@ -212,7 +224,12 @@ pub fn fleet_analyze_command(dir: &Path, output_format: &str, verbose: bool) -> 
         println!();
         println!("{}", "Migration blockers:".red().bold());
         for b in &report.migration_blockers {
-            println!("  {} {} (boot score: {:.0}%)", "✗".red(), b.image, b.boot_score);
+            println!(
+                "  {} {} (boot score: {:.0}%)",
+                "✗".red(),
+                b.image,
+                b.boot_score
+            );
         }
     }
 
@@ -293,11 +310,8 @@ fn migrate_plan_command_impl(
     };
 
     let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
-    let migration_score = crate::cli::migrate::plan::compute_migration_score(
-        &evidence,
-        &boot_report,
-        target,
-    );
+    let migration_score =
+        crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
 
     if let Some(export_path) = export {
         use crate::cli::plan::{PlanExporter, PlanGenerator};
@@ -324,10 +338,7 @@ fn migrate_plan_command_impl(
             anyhow::bail!("--inject-agent requires rebuilding guestkit with --features agent");
         }
 
-        let content = if export_path
-            .extension()
-            .is_some_and(|e| e == "json")
-        {
+        let content = if export_path.extension().is_some_and(|e| e == "json") {
             PlanExporter::to_json(&plan)?
         } else {
             PlanExporter::to_yaml(&plan)?
@@ -434,7 +445,10 @@ pub fn forensic_diff_command(
     println!();
     println!("{}", "Forensic Diff Report".bold().cyan());
     println!("  {}", forensic.summary);
-    println!("  Security drift score: {:.0}%", forensic.security_drift_score);
+    println!(
+        "  Security drift score: {:.0}%",
+        forensic.security_drift_score
+    );
     println!("  Config drift items: {}", forensic.config_drift_count);
 
     if !forensic.suspicious_persistence.is_empty() {

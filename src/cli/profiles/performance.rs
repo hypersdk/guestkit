@@ -2,8 +2,8 @@
 //! Performance tuning profile
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 pub struct PerformanceProfile;
 

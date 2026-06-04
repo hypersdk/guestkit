@@ -76,7 +76,9 @@ impl Guestfs {
 
         // Get NBD partition device path
         let nbd = self.nbd_device.as_ref().ok_or_else(|| {
-            Error::InvalidState("NBD device not initialized. Call setup_nbd_if_needed() first.".to_string())
+            Error::InvalidState(
+                "NBD device not initialized. Call setup_nbd_if_needed() first.".to_string(),
+            )
         })?;
         let nbd_partition = if partition_num > 0 {
             nbd.partition_path(partition_num)

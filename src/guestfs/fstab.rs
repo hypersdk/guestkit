@@ -14,7 +14,7 @@
 //! Never keeps: /dev/sdX, /dev/vdX, /dev/nbdX, /dev/disk/by-path/*
 
 use crate::core::Result;
-use crate::guestfs::device_inventory::{Inventory, find_by_spec};
+use crate::guestfs::device_inventory::{find_by_spec, Inventory};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -209,8 +209,11 @@ pub fn rewrite_fstab(
                 if entry.fstype == "btrfs" {
                     // Add/update subvol= option if configured
                     if let Some(subvol) = btrfs_subvol_map.get(&entry.mountpoint) {
-                        entry.options =
-                            set_mount_option(&entry.options, "subvol", &format!("subvol={}", subvol));
+                        entry.options = set_mount_option(
+                            &entry.options,
+                            "subvol",
+                            &format!("subvol={}", subvol),
+                        );
                         // Remove subvolid= to prevent conflicts
                         entry.options = remove_mount_option(&entry.options, "subvolid");
                     }

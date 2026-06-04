@@ -89,9 +89,7 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
         ("GET", "/evidence") | ("GET", "/api/evidence") => "guestkit.getEvidence",
         ("GET", "/doctor") | ("GET", "/api/doctor") => "guestkit.doctor",
         ("GET", "/ping") | ("GET", "/api/ping") => "guestkit.ping",
-        ("GET", "/capabilities") | ("GET", "/api/capabilities") => {
-            "guestkit.getCapabilities"
-        }
+        ("GET", "/capabilities") | ("GET", "/api/capabilities") => "guestkit.getCapabilities",
         ("POST", "/fix-plan") | ("POST", "/api/fix-plan") => "guestkit.runFixPlan",
         _ => {
             return write_http_error(&mut stream, 404, "not found").await;
@@ -99,8 +97,7 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
     };
 
     let params = if rpc_method == "guestkit.runFixPlan" {
-        serde_json::from_slice::<serde_json::Value>(body)
-            .unwrap_or_else(|_| serde_json::json!({}))
+        serde_json::from_slice::<serde_json::Value>(body).unwrap_or_else(|_| serde_json::json!({}))
     } else if rpc_method == "guestkit.doctor" {
         serde_json::json!({ "target": "kvm" })
     } else {
@@ -156,9 +153,7 @@ mod tests {
 
     #[test]
     fn local_ping() {
-        let resp = handle_local_request(
-            br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#,
-        );
+        let resp = handle_local_request(br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#);
         assert!(resp.result.is_some());
     }
 }

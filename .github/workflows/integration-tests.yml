@@ -56,7 +56,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            -tools \
+            libguestfs-tools \
             qemu-kvm \
             qemu-utils \
             libvirt-daemon-system \
@@ -198,7 +198,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}
           path: |
@@ -220,7 +220,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y -tools qemu-kvm
+          sudo apt-get install -y libguestfs-tools qemu-kvm
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
@@ -249,7 +249,7 @@ jobs:
           cargo bench --bench operations -- --save-baseline main
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: target/criterion/

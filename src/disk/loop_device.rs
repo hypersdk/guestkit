@@ -164,9 +164,10 @@ impl LoopDevice {
 
     /// Wait for loop device to become available
     fn wait_for_device(&self) -> Result<()> {
-        let device_path = self.device_path.as_ref().ok_or_else(|| {
-            Error::InvalidState("No device path set".to_string())
-        })?;
+        let device_path = self
+            .device_path
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No device path set".to_string()))?;
 
         for _i in 0..50 {
             if let Ok(file) = std::fs::File::open(device_path) {
@@ -206,9 +207,10 @@ impl LoopDevice {
             return Ok(());
         }
 
-        let device_path = self.device_path.as_ref().ok_or_else(|| {
-            Error::InvalidState("No device path to disconnect".to_string())
-        })?;
+        let device_path = self
+            .device_path
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No device path to disconnect".to_string()))?;
 
         // Use cached sudo check (cached in constructor)
         let mut cmd = if self.need_sudo {
@@ -219,11 +221,9 @@ impl LoopDevice {
             Command::new("losetup")
         };
 
-        let output = cmd
-            .arg("-d")
-            .arg(device_path)
-            .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to disconnect loop device: {}", e)))?;
+        let output = cmd.arg("-d").arg(device_path).output().map_err(|e| {
+            Error::CommandFailed(format!("Failed to disconnect loop device: {}", e))
+        })?;
 
         if !output.status.success() {
             eprintln!(
@@ -249,9 +249,9 @@ impl LoopDevice {
     ///
     /// * `partition_num` - Partition number (1-based)
     pub fn partition_path(&self, partition_num: u32) -> Option<PathBuf> {
-        self.device_path.as_ref().map(|dev| {
-            PathBuf::from(format!("{}p{}", dev.display(), partition_num))
-        })
+        self.device_path
+            .as_ref()
+            .map(|dev| PathBuf::from(format!("{}p{}", dev.display(), partition_num)))
     }
 
     /// Check if connected
@@ -265,9 +265,10 @@ impl LoopDevice {
             return Err(Error::InvalidState("Loop device not connected".to_string()));
         }
 
-        let device_path = self.device_path.as_ref().ok_or_else(|| {
-            Error::InvalidState("No device path set".to_string())
-        })?;
+        let device_path = self
+            .device_path
+            .as_ref()
+            .ok_or_else(|| Error::InvalidState("No device path set".to_string()))?;
 
         let mut partitions = Vec::new();
 
@@ -305,7 +306,9 @@ impl LoopDevice {
 impl Drop for LoopDevice {
     fn drop(&mut self) {
         if let Err(e) = self.disconnect() {
-            let dev = self.device_path.as_ref()
+            let dev = self
+                .device_path
+                .as_ref()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "<unknown>".to_string());
             eprintln!(

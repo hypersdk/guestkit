@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Inspection profiles for focused use cases
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 pub mod compliance;
@@ -189,14 +189,12 @@ mod tests {
     fn test_report_section_creation() {
         let section = ReportSection {
             title: "Network Security".to_string(),
-            findings: vec![
-                Finding {
-                    item: "Firewall".to_string(),
-                    status: FindingStatus::Pass,
-                    message: "Firewall enabled".to_string(),
-                    risk_level: Some(RiskLevel::High),
-                },
-            ],
+            findings: vec![Finding {
+                item: "Firewall".to_string(),
+                status: FindingStatus::Pass,
+                message: "Firewall enabled".to_string(),
+                risk_level: Some(RiskLevel::High),
+            }],
         };
 
         assert_eq!(section.title, "Network Security");
