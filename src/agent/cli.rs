@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//! CLI entry points for agent subcommands.
+
+use crate::agent::daemon::AgentDaemon;
+use crate::agent::proxy;
+use crate::agent::transport::{ChannelKind, TransportConfig};
+use anyhow::{Context, Result};
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum AgentChannel {
+    Virtio,
+    Vsock,
+    Stdio,
+}
+
+impl AgentChannel {
+    pub fn to_kind(&self) -> ChannelKind {
+        match self {
+            Self::Virtio => ChannelKind::Virtio,
+            Self::Vsock => ChannelKind::Vsock,
+            Self::Stdio => ChannelKind::Stdio,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentArgs {
+    pub channel: AgentChannel,
+    pub device: Option<String>,
+    pub socket: Option<String>,
+    pub user: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentProxyArgs {
+    pub socket: String,
+    pub listen: Option<String>,
+}
+
+pub async fn run_agent(args: AgentArgs) -> Result<()> {
+    let config = TransportConfig {
+        kind: args.channel.to_kind(),
+        device_path: args
+            .device
+            .unwrap_or_else(|| crate::agent::transport::virtio::DEFAULT_DEVICE.to_string()),
+        vsock_cid: None,
+        vsock_port: None,
+    };
+
+    if let Some(user) = args.user {
+        drop(user);
+        // User drop is best-effort; full privilege separation deferred to systemd unit.
+        log::warn!("--user is reserved for future privilege separation; running as current user");
+    }
+
+    let daemon = AgentDaemon::new(config);
+    daemon.run().await.context("agent daemon failed")
+}
+
+pub async fn run_agent_proxy(args: AgentProxyArgs) -> Result<()> {
+    proxy::run_proxy(&args.socket, args.listen.as_deref())
+        .await
+        .context("agent proxy failed")
+}

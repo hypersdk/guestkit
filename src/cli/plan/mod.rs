@@ -17,6 +17,10 @@ pub mod apply;
 pub mod export;
 pub mod command;
 
+pub mod topo_sort;
+#[cfg(feature = "agent")]
+pub mod executor_live;
+
 pub use types::{
     FixPlan,
     Operation,
@@ -32,6 +36,8 @@ pub use types::{
 
 pub use generator::PlanGenerator;
 pub use preview::PlanPreview;
-pub use apply::PlanApplicator;
+pub use apply::{ApplyResult, PlanApplicator};
+#[cfg(feature = "agent")]
+pub use executor_live::LivePlanExecutor;
 pub use export::PlanExporter;
 pub use command::PlanCommand;

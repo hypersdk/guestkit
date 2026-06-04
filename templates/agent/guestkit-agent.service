@@ -1,0 +1,14 @@
+[Unit]
+Description=GuestKit Agent (Zyvor)
+After=network.target
+ConditionPathExists=/dev/virtio-ports/com.zyvor.guestkit.0
+
+[Service]
+ExecStart=/usr/local/bin/guestkit agent --channel virtio
+Restart=on-failure
+User=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
