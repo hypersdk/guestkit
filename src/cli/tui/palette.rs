@@ -165,9 +165,8 @@ fn fuzzy_match(query: &str, name: &str) -> bool {
     if query.is_empty() {
         return true;
     }
-    let mut qi = query.chars();
     let mut nc = name.chars();
-    while let Some(qc) = qi.next() {
+    for qc in query.chars() {
         loop {
             match nc.next() {
                 Some(nc) if nc == qc => break,

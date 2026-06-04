@@ -42,9 +42,7 @@ fn collect_os_live() -> OsEvidence {
                 let v = v.trim_matches('"');
                 match k {
                     "ID" => os.os_type = v.to_string(),
-                    "NAME" => if os.distribution.is_empty() {
-                        os.distribution = v.to_string();
-                    },
+                    "NAME" if os.distribution.is_empty() => os.distribution = v.to_string(),
                     "VERSION_ID" => os.version = v.to_string(),
                     _ => {}
                 }
