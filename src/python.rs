@@ -2556,6 +2556,7 @@ impl Guestfs {
 
     /// Create tar archive with options
     #[pyo3(signature = (directory, tarfile, compress=None, numericowner=false, xattrs=false, selinux=false, acls=false))]
+    #[allow(clippy::too_many_arguments)]
     fn tar_out_opts(&mut self, directory: String, tarfile: String, compress: Option<String>, numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> PyResult<()> {
         self.handle.tar_out_opts(&directory, &tarfile, compress.as_deref(), numericowner, xattrs, selinux, acls)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
@@ -2880,6 +2881,7 @@ impl Guestfs {
 
     /// XFS admin operations
     #[pyo3(signature = (device, extunwritten=false, imgfile=false, v2log=false, projid32bit=false, lazycounter=false, label=None, uuid=None))]
+    #[allow(clippy::too_many_arguments)]
     fn xfs_admin(&mut self, device: String, extunwritten: bool, imgfile: bool, v2log: bool, projid32bit: bool, lazycounter: bool, label: Option<String>, uuid: Option<String>) -> PyResult<i32> {
         self.handle.xfs_admin(&device, extunwritten, imgfile, v2log, projid32bit, lazycounter, label.as_deref(), uuid.as_deref())
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))

@@ -136,6 +136,23 @@ pub fn filtered_commands(query: &str) -> Vec<(&'static str, &'static str)> {
     iter.map(|c| (c.name, c.description)).collect()
 }
 
+fn fuzzy_match(query: &str, name: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+    let mut nc = name.chars();
+    for qc in query.chars() {
+        loop {
+            match nc.next() {
+                Some(nc) if nc == qc => break,
+                Some(_) => continue,
+                None => return false,
+            }
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,21 +176,4 @@ mod tests {
         assert_eq!(parse_command("export plan"), PaletteAction::ExportFixPlan);
         assert_eq!(parse_command("plan preview"), PaletteAction::PlanPreview);
     }
-}
-
-fn fuzzy_match(query: &str, name: &str) -> bool {
-    if query.is_empty() {
-        return true;
-    }
-    let mut nc = name.chars();
-    for qc in query.chars() {
-        loop {
-            match nc.next() {
-                Some(nc) if nc == qc => break,
-                Some(_) => continue,
-                None => return false,
-            }
-        }
-    }
-    true
 }
