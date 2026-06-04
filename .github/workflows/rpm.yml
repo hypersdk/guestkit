@@ -297,11 +297,11 @@ jobs:
 
       - name: Initialize Mock
         run: |
-          mock --init -r fedora-41-x86_64
+          sudo mock --init -r fedora-41-x86_64
 
       - name: Build with Mock
         run: |
-          mock -r fedora-41-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
+          sudo mock -r fedora-41-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
 
       - name: List Mock results
         run: |
