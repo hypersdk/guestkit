@@ -6,6 +6,8 @@ use super::ShellContext;
 use colored::Colorize;
 
 #[cfg(feature = "ai")]
+use crate::Guestfs;
+#[cfg(feature = "ai")]
 use reqwest;
 
 #[cfg(feature = "ai")]

@@ -5,7 +5,6 @@ use super::local::LocalDiskSource;
 use super::uri::{DiskSource, DiskSourceMetadata};
 use anyhow::{Context, Result};
 use std::io::{Read, Seek, SeekFrom};
-use std::path::PathBuf;
 use std::process::Command;
 use tempfile::NamedTempFile;
 
