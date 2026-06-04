@@ -51,7 +51,7 @@ jobs:
 
       - name: Install RPM build dependencies
         run: |
-          dnf install -y \
+          dnf install -y --setopt=install_weak_deps=False \
             rpm-build \
             rpmdevtools \
             rust \
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install build dependencies from spec
         run: |
-          dnf builddep -y ~/rpmbuild/SPECS/guestkit.spec
+          dnf builddep -y --setopt=install_weak_deps=False ~/rpmbuild/SPECS/guestkit.spec
 
       - name: Build source RPM
         run: |
@@ -164,7 +164,7 @@ jobs:
 
       - name: Install RPM build dependencies
         run: |
-          dnf install -y \
+          dnf install -y --setopt=install_weak_deps=False \
             rpm-build \
             rpmdevtools \
             rust \
@@ -203,7 +203,7 @@ jobs:
 
       - name: Install build dependencies from spec
         run: |
-          dnf builddep -y ~/rpmbuild/SPECS/guestkit-full.spec
+          dnf builddep -y --setopt=install_weak_deps=False ~/rpmbuild/SPECS/guestkit-full.spec
 
       - name: Build source RPM
         run: |
@@ -229,7 +229,7 @@ jobs:
 
       - name: Test installation
         run: |
-          dnf install -y ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm \
+          dnf install -y --setopt=install_weak_deps=False ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm \
                          ~/rpmbuild/RPMS/x86_64/python3-guestkit-*.rpm || true
 
       - name: Test binaries
@@ -256,7 +256,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: fedora:41
-      options: --privileged
+      options: --privileged --user root
 
     steps:
       - name: Install dependencies
@@ -297,11 +297,11 @@ jobs:
 
       - name: Initialize Mock
         run: |
-          sudo mock --init -r fedora-41-x86_64
+          mock --init -r fedora-41-x86_64
 
       - name: Build with Mock
         run: |
-          sudo mock -r fedora-41-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
+          mock -r fedora-41-x86_64 ~/rpmbuild/SRPMS/guestkit-*.src.rpm
 
       - name: List Mock results
         run: |
