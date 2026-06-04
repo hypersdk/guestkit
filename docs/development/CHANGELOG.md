@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **In-guest agent** — optional `agent` feature: `guestkit agent` (virtio-serial JSON-RPC daemon), `guestkit agent-proxy` (host HTTP bridge), live evidence + fix-plan execution inside running VMs
+- **`guestkit-agent-protocol`** — shared length-prefixed JSON-RPC types for agent and proxy
+- **`repair --inject-agent` / `migrate-plan --export --inject-agent`** — offline guestfs injection of agent binary + systemd unit
+- **Worker jobs** — `guestkit.agent.evidence` and `guestkit.agent.fix` via agent-proxy HTTP
+- **TUI LIVE badge** — assurance view when `GUESTKIT_AGENT_SOCKET` responds to ping
+- **CI** — `agent-release.yml` musl artifact workflow; integration tests behind `--features agent`
+
 ## [0.3.6] - 2026-05-27
 
 ### Added

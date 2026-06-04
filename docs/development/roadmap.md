@@ -4,6 +4,7 @@ High-level direction for GuestKit / GuestCtl. Shipped work is tracked in [CHANGE
 
 ## Shipped (recent)
 
+- **v0.3.7 (unreleased)** — In-guest agent (`guestkit agent`, agent-proxy), live evidence, offline `--inject-agent`
 - **v0.3.5–0.3.6** — Migration assurance (`doctor`, `migrate-plan`, fix plans), TUI Assurance view, fix-plan preview, fleet/policy/forensic-diff
 - **v0.3.3–0.3.4** — Carbon TUI theme, `guestctl` binary, release tarballs, two-tier navigation
 - **v0.3.1+** — VM migration (fstab/crypttab), Windows registry inspect, interactive shell
