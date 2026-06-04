@@ -2,6 +2,7 @@
 //! Live evidence collection from a running guest (no guestfs).
 
 use super::snapshot::*;
+use crate::evidence::collectors::collect_systemd_live;
 use anyhow::Result;
 use chrono::Utc;
 use std::fs;
@@ -17,6 +18,7 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
     let packages = collect_packages_live();
     let security = collect_security_live();
     let vm_tools = collect_vm_tools_live();
+    let systemd = collect_systemd_live();
 
     Ok(EvidenceSnapshot {
         schema_version: SCHEMA_VERSION,
@@ -30,6 +32,7 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
         packages,
         security,
         vm_tools,
+        systemd,
         windows: None,
     })
 }

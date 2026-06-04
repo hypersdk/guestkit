@@ -116,7 +116,7 @@ jobs:
 
       - name: Test installation
         run: |
-          dnf install -y ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm
+          dnf install -y --setopt=install_weak_deps=False ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm
 
       - name: Test guestkit binary
         run: |
@@ -253,6 +253,7 @@ jobs:
 
   build-mock:
     name: Build with Mock (clean chroot)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     container:
       image: fedora:41

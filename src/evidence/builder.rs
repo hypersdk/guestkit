@@ -2,6 +2,7 @@
 //! Build evidence snapshots from Guestfs inspection.
 
 use super::snapshot::*;
+use crate::evidence::collectors::{collect_systemd_guest, collect_windows_details};
 use crate::Guestfs;
 use anyhow::Result;
 use chrono::Utc;
@@ -23,6 +24,7 @@ impl EvidenceBuilder {
         let packages = Self::collect_packages(g, root);
         let security = Self::collect_security(g, root);
         let vm_tools = Self::collect_vm_tools(g, root);
+        let systemd = collect_systemd_guest(g, &os.init_system);
         let windows = if os.os_type.to_lowercase().contains("windows") {
             Some(Self::collect_windows(g, root))
         } else {
@@ -41,6 +43,7 @@ impl EvidenceBuilder {
             packages,
             security,
             vm_tools,
+            systemd,
             windows,
         })
     }
@@ -370,6 +373,8 @@ impl EvidenceBuilder {
         let minidump_path = format!("{}/Minidump", systemroot);
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
 
+        let details = collect_windows_details(g, root);
+
         WindowsEvidence {
             systemroot,
             product_name,
@@ -385,6 +390,10 @@ impl EvidenceBuilder {
             hypervisor_remnants,
             av_edr,
             minidump_count,
+            services: details.services,
+            installed_apps: details.installed_apps,
+            persistence: details.persistence,
+            event_logs: details.event_logs,
         }
     }
 }

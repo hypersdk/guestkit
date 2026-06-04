@@ -115,6 +115,7 @@ mod tests {
                 ..Default::default()
             },
             vm_tools: VmToolsEvidence::default(),
+            systemd: None,
             windows: None,
         }
     }

@@ -137,6 +137,7 @@ mod tests {
             security: SecurityEvidence::default(),
             network: Default::default(),
             vm_tools: VmToolsEvidence::default(),
+            systemd: None,
             windows: None,
         }
     }
