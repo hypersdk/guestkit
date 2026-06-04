@@ -2,6 +2,7 @@
 //! Normalized evidence snapshot — digital twin primitive for migration assurance.
 
 pub mod builder;
+pub mod collectors;
 pub mod snapshot;
 
 #[cfg(feature = "agent")]
@@ -12,5 +13,7 @@ pub use builder::{build_evidence, EvidenceBuilder};
 pub use live::build_evidence_live;
 pub use snapshot::{
     BootEvidence, EvidenceSnapshot, NetworkEvidence, OsEvidence, PackageEvidence, SecurityEvidence,
-    StorageEvidence, VmToolsEvidence, WindowsEvidence, SCHEMA_VERSION,
+    StorageEvidence, SystemdInfo, SystemdProblemHint, SystemdProblemSeverity, SystemdUnit,
+    SystemdUnitState, VmToolsEvidence, WindowsAppEntry, WindowsEvidence, WindowsServiceEntry,
+    WindowsStartType, SCHEMA_VERSION,
 };

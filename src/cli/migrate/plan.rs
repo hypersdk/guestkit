@@ -122,6 +122,7 @@ mod tests {
             vm_tools: VmToolsEvidence {
                 detected: vec!["open-vm-tools".to_string()],
             },
+            systemd: None,
             windows: None,
         }
     }

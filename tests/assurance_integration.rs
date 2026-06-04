@@ -191,6 +191,7 @@ fn from_migration_report_unit_pipeline() {
         vm_tools: VmToolsEvidence {
             detected: vec!["vmware-tools".to_string()],
         },
+        systemd: None,
         windows: None,
     };
     let boot = BootabilityReport {
