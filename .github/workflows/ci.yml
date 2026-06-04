@@ -183,5 +183,5 @@ jobs:
       - name: Check with minimal versions
         run: |
           cargo +nightly update -Z minimal-versions
-          cargo +nightly update -p ahash --precise 0.8.11
+          cargo +nightly update -p ahash@0.8.4 --precise 0.8.11
           cargo +nightly check --all-features
