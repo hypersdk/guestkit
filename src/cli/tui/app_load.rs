@@ -680,6 +680,12 @@ impl App {
                 self.migration_report = Some(migration_report);
                 self.plan_preview = None;
                 self.show_plan_preview = false;
+                #[cfg(feature = "agent")]
+                {
+                    self.agent_live = std::env::var("GUESTKIT_AGENT_SOCKET")
+                        .map(|s| crate::agent::ping_agent_socket(&s))
+                        .unwrap_or(false);
+                }
                 self.show_notification(format!("Assurance updated (target: {target_str})"));
                 Ok(())
             }

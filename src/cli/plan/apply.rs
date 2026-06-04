@@ -120,7 +120,7 @@ impl PlanApplicator {
         }
 
         // Topological sort of operations
-        let sorted_ops = self.topological_sort(plan);
+        let sorted_ops = super::topo_sort::topological_sort(plan);
 
         let mut applied = 0usize;
         let mut failed = 0usize;
@@ -167,67 +167,6 @@ impl PlanApplicator {
             operations_skipped: skipped,
             message,
         })
-    }
-
-    /// Topological sort of operations respecting dependencies
-    fn topological_sort<'a>(&self, plan: &'a FixPlan) -> Vec<&'a Operation> {
-        use std::collections::{HashMap, VecDeque};
-
-        if plan.operations.is_empty() {
-            return Vec::new();
-        }
-
-        let mut in_degree: HashMap<&str, usize> = HashMap::new();
-        let mut adj: HashMap<&str, Vec<&str>> = HashMap::new();
-        let mut op_map: HashMap<&str, &Operation> = HashMap::new();
-
-        for op in &plan.operations {
-            in_degree.entry(op.id.as_str()).or_insert(0);
-            adj.entry(op.id.as_str()).or_default();
-            op_map.insert(op.id.as_str(), op);
-        }
-
-        for op in &plan.operations {
-            for dep_id in &op.depends_on {
-                adj.entry(dep_id.as_str()).or_default().push(op.id.as_str());
-                *in_degree.entry(op.id.as_str()).or_insert(0) += 1;
-            }
-        }
-
-        let mut queue: VecDeque<&str> = in_degree
-            .iter()
-            .filter(|(_, &deg)| deg == 0)
-            .map(|(&node, _)| node)
-            .collect();
-
-        let mut sorted = Vec::new();
-
-        while let Some(node) = queue.pop_front() {
-            if let Some(&op) = op_map.get(node) {
-                sorted.push(op);
-            }
-            if let Some(neighbors) = adj.get(node) {
-                for &neighbor in neighbors {
-                    if let Some(deg) = in_degree.get_mut(neighbor) {
-                        *deg -= 1;
-                        if *deg == 0 {
-                            queue.push_back(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-
-        if sorted.len() < plan.operations.len() {
-            eprintln!(
-                "Warning: {} operations were dropped due to cyclic dependencies (sorted {} of {})",
-                plan.operations.len() - sorted.len(),
-                sorted.len(),
-                plan.operations.len()
-            );
-        }
-
-        sorted
     }
 
     /// Apply a single operation, returning Ok(true) for applied, Ok(false) for skipped
@@ -538,7 +477,7 @@ impl PlanApplicator {
 }
 
 /// Result of applying a plan
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ApplyResult {
     pub success: bool,
     pub operations_applied: usize,

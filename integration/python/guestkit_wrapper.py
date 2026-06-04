@@ -201,6 +201,88 @@ class GuestkitWrapper:
             self.logger.error(f"JSON parse error: {e}")
             return {}
 
+    def doctor(
+        self,
+        image_path: str,
+        target: str = "kvm",
+        output_format: str = "json",
+    ) -> Dict[str, Any]:
+        """Run guestkit doctor on a disk image."""
+        cmd = [
+            self.guestkit_path,
+            "doctor",
+            image_path,
+            "--target",
+            target,
+            "-f",
+            output_format,
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return json.loads(result.stdout) if output_format == "json" else {"raw": result.stdout}
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"doctor failed: {e.stderr}")
+            return {"success": False, "error": e.stderr}
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": str(e)}
+
+    def migrate_plan(
+        self,
+        image_path: str,
+        target: str = "kvm",
+        export_path: Optional[str] = None,
+        output_format: str = "json",
+    ) -> Dict[str, Any]:
+        """Run guestkit migrate-plan."""
+        cmd = [
+            self.guestkit_path,
+            "migrate-plan",
+            image_path,
+            "--target",
+            target,
+            "-f",
+            output_format,
+        ]
+        if export_path:
+            cmd.extend(["--export", export_path])
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            if output_format == "json" and result.stdout.strip():
+                return json.loads(result.stdout)
+            return {"raw": result.stdout, "export": export_path}
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"migrate-plan failed: {e.stderr}")
+            return {"success": False, "error": e.stderr}
+
+    def repair_inject_agent(
+        self,
+        image_path: str,
+        agent_binary: Optional[str] = None,
+        agent_unit: Optional[str] = None,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Run guestkit repair --fix boot --inject-agent."""
+        cmd = [
+            self.guestkit_path,
+            "repair",
+            image_path,
+            "--fix",
+            "boot",
+            "--inject-agent",
+        ]
+        if agent_binary:
+            cmd.extend(["--agent-binary", agent_binary])
+        if agent_unit:
+            cmd.extend(["--agent-unit", agent_unit])
+        if dry_run:
+            cmd.append("--dry-run")
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return {"success": True, "stdout": result.stdout}
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"repair --inject-agent failed: {e.stderr}")
+            return {"success": False, "error": e.stderr}
+
     def _extract_format_from_output(self, output: str, prefix: str) -> Optional[str]:
         """Extract format from conversion output"""
         for line in output.split('\n'):

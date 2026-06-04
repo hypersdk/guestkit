@@ -998,7 +998,7 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "guestkit"
-version = "0.3.2"
+version = "0.3.6"
 dependencies = [
  "anyhow",
  "base64",
@@ -1019,6 +1019,7 @@ dependencies = [
  "memmap2",
  "miette",
  "nt_hive2",
+ "once_cell",
  "owo-colors",
  "printpdf",
  "rand 0.8.5",

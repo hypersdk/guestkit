@@ -314,7 +314,6 @@ impl PlanGenerator {
                 validation: None,
                 undo: None,
             });
-            op_counter += 1;
         }
 
         for warning in &migration.licensing_warnings {
@@ -334,6 +333,18 @@ impl PlanGenerator {
 
         plan.estimated_duration = Self::estimate_duration(plan.operations.len());
         self.add_post_apply_actions(&mut plan);
+        Ok(plan)
+    }
+
+    /// Append agent injection ops when exporting migration plans for KVM targets.
+    #[cfg(feature = "agent")]
+    pub fn with_agent_injection(
+        &self,
+        mut plan: FixPlan,
+        binary: &std::path::Path,
+        unit_content: &str,
+    ) -> Result<FixPlan> {
+        crate::agent::inject::append_agent_ops(&mut plan, binary, unit_content)?;
         Ok(plan)
     }
 

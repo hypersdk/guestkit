@@ -62,6 +62,9 @@ pub mod detectors;
 #[cfg(feature = "python-bindings")]
 pub mod python;
 
+#[cfg(feature = "agent")]
+pub mod agent;
+
 // Re-exports for convenience
 pub use converters::DiskConverter;
 pub use core::types::*;

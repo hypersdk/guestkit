@@ -405,6 +405,8 @@ pub struct App {
     pub migration_report: Option<crate::cli::migrate::plan::MigrationScoreReport>,
     pub assurance_evidence: Option<crate::evidence::EvidenceSnapshot>,
     pub assurance_target: String,
+    /// True when live guest agent responds (GUESTKIT_AGENT_SOCKET)
+    pub agent_live: bool,
     /// First visible tab index in the view tab row
     pub view_tab_scroll: usize,
 
@@ -579,6 +581,7 @@ impl App {
             migration_report: None,
             assurance_evidence: None,
             assurance_target,
+            agent_live: false,
             view_tab_scroll: 0,
             show_plan_preview: false,
             plan_preview: None,
