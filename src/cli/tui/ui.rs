@@ -2,26 +2,24 @@
 //! UI rendering orchestration
 
 use super::app::{App, JumpMenuRow, View};
-use std::path::Path;
 use super::cache;
 use super::theme::{self, fill_background, key_muted, key_primary, pane_block, risk_border_color};
-use super::widgets::{self, progress_bar, stat_chip, truncate_path};
-use super::views;
 pub use super::theme::{
-    chrome_footer_style, chrome_header_block, content_block, group_tab_span, modal_block,
-    tab_strip_block, toast_block, view_tab_span, ACCENT, ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR,
-    DARK_ORANGE, ERROR_COLOR, focus_style, INFO_COLOR, label_style, LIGHT_ORANGE, LINK, ORANGE,
-    SUCCESS_COLOR, SURFACE, SURFACE_RAISED, TEXT_COLOR, TEXT_MUTED, value_style, WARNING_COLOR,
+    chrome_footer_style, chrome_header_block, content_block, focus_style, group_tab_span,
+    label_style, modal_block, tab_strip_block, toast_block, value_style, view_tab_span, ACCENT,
+    ACCENT_SOFT, BG, BG_COLOR, BORDER_COLOR, DARK_ORANGE, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE,
+    LINK, ORANGE, SUCCESS_COLOR, SURFACE, SURFACE_RAISED, TEXT_COLOR, TEXT_MUTED, WARNING_COLOR,
 };
+use super::views;
+use super::widgets::{self, progress_bar, stat_chip, truncate_path};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, List, ListItem, Paragraph,
-    },
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
+use std::path::Path;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     app.terminal_width = f.area().width;
@@ -148,7 +146,14 @@ fn draw_fleet_sidebar(f: &mut Frame, area: Rect, app: &App) {
         };
         let marker = if i == app.fleet_index { "▌" } else { " " };
         lines.push(Line::from(vec![
-            Span::styled(marker, Style::default().fg(if i == app.fleet_index { ACCENT } else { TEXT_MUTED })),
+            Span::styled(
+                marker,
+                Style::default().fg(if i == app.fleet_index {
+                    ACCENT
+                } else {
+                    TEXT_MUTED
+                }),
+            ),
             Span::styled(format!(" {name}"), style),
         ]));
     }
@@ -167,16 +172,32 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let health_color = widgets::health_score_color(health);
 
     let mut line1 = vec![
-        Span::styled("GuestKit", Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "GuestKit",
+            Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" · ", theme::label_style()),
-        Span::styled("zyvor.dev", Style::default().fg(LINK).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Span::styled(
+            "zyvor.dev",
+            Style::default()
+                .fg(LINK)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        ),
         Span::styled("  │  ", theme::label_style()),
         Span::raw(format!("{} ", view_icon)),
-        Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            app.current_view.title(),
+            Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(": ", theme::label_style()),
         Span::styled(view_desc, theme::value_style()),
         Span::styled("  │  ", theme::label_style()),
-        Span::styled(format!("{}%", health), Style::default().fg(health_color).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{}%", health),
+            Style::default()
+                .fg(health_color)
+                .add_modifier(Modifier::BOLD),
+        ),
     ];
     if let Some(crumb) = widgets::breadcrumb_line(app) {
         line1.push(Span::styled("  │  ", theme::label_style()));
@@ -189,7 +210,11 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     ];
     if app.fleet_active() {
         line2.push(Span::styled(
-            format!("  │  fleet {}/{}", app.fleet_index + 1, app.fleet_images.len()),
+            format!(
+                "  │  fleet {}/{}",
+                app.fleet_index + 1,
+                app.fleet_images.len()
+            ),
             theme::label_style(),
         ));
     }
@@ -199,8 +224,9 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
 
     let (critical, high, medium) = app.get_risk_summary();
     let header_border = risk_border_color(critical, high, medium);
-    let header = Paragraph::new(vec![Line::from(line1), Line::from(line2)])
-        .block(chrome_header_block(" HyperSDK · offline inspect ", header_border, app.theme()));
+    let header = Paragraph::new(vec![Line::from(line1), Line::from(line2)]).block(
+        chrome_header_block(" HyperSDK · offline inspect ", header_border, app.theme()),
+    );
 
     f.render_widget(header, area);
 }
@@ -210,20 +236,39 @@ fn draw_stats_bar(f: &mut Frame, area: Rect, app: &App) {
     let emoji = theme::use_emoji(&app.config.ui);
 
     let mut spans = vec![
-        stat_chip("Pkgs", &app.packages.package_count.to_string(), SUCCESS_COLOR, app.theme()),
+        stat_chip(
+            "Pkgs",
+            &app.packages.package_count.to_string(),
+            SUCCESS_COLOR,
+            app.theme(),
+        ),
         Span::raw(" "),
-        stat_chip("Svcs", &app.services.len().to_string(), SUCCESS_COLOR, app.theme()),
+        stat_chip(
+            "Svcs",
+            &app.services.len().to_string(),
+            SUCCESS_COLOR,
+            app.theme(),
+        ),
         Span::raw(" "),
-        stat_chip("Users", &app.users.len().to_string(), INFO_COLOR, app.theme()),
+        stat_chip(
+            "Users",
+            &app.users.len().to_string(),
+            INFO_COLOR,
+            app.theme(),
+        ),
         Span::raw(" "),
         Span::styled(" Risk ", theme::label_style()),
     ];
     spans.extend(widgets::risk_dots(critical, high, medium, emoji));
     spans.push(Span::raw(" "));
-    spans.push(stat_chip("Bm", &app.bookmarks.len().to_string(), INFO_COLOR, app.theme()));
+    spans.push(stat_chip(
+        "Bm",
+        &app.bookmarks.len().to_string(),
+        INFO_COLOR,
+        app.theme(),
+    ));
 
-    let stats = Paragraph::new(Line::from(spans))
-        .style(chrome_footer_style(app.theme()));
+    let stats = Paragraph::new(Line::from(spans)).style(chrome_footer_style(app.theme()));
 
     f.render_widget(stats, area);
 }
@@ -243,7 +288,10 @@ fn draw_group_tabs(f: &mut Frame, area: Rect, app: &App) {
     let mut spans: Vec<Span> = Vec::new();
     for (i, group) in View::all_groups().iter().enumerate() {
         if i > 0 {
-            spans.push(Span::styled(" ", Style::default().bg(app.theme().tab_strip_bg)));
+            spans.push(Span::styled(
+                " ",
+                Style::default().bg(app.theme().tab_strip_bg),
+            ));
         }
         spans.push(group_tab_span(group, *group == current, app.theme()));
     }
@@ -289,10 +337,13 @@ fn draw_loading_banner(f: &mut Frame, app: &App) {
             height: 2,
         };
         let idx = loading.stage.index() + 1;
-        let bar = progress_bar(idx, LoadingStage::TOTAL, &loading.message, area.width.saturating_sub(24));
-        let line = Line::from(vec![
-            Span::styled(bar, theme::value_style()),
-        ]);
+        let bar = progress_bar(
+            idx,
+            LoadingStage::TOTAL,
+            &loading.message,
+            area.width.saturating_sub(24),
+        );
+        let line = Line::from(vec![Span::styled(bar, theme::value_style())]);
         f.render_widget(
             Paragraph::new(line).block(
                 Block::default()
@@ -324,7 +375,9 @@ fn draw_palette(f: &mut Frame, app: &App) {
         let style = if i == app.palette_selected {
             focus_style(app.theme())
         } else {
-            Style::default().fg(TEXT_COLOR).bg(app.theme().surface_raised)
+            Style::default()
+                .fg(TEXT_COLOR)
+                .bg(app.theme().surface_raised)
         };
         lines.push(Line::from(vec![
             Span::styled(format!("  {}  ", name), style),
@@ -367,18 +420,40 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
         let mode_indicator = app.get_search_mode_indicator();
         vec![
             Span::styled("🔍 ", Style::default().fg(ORANGE)),
-            Span::styled("Search: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Search: ",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(mode_indicator, Style::default().fg(INFO_COLOR)),
-            Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                &app.search_query,
+                Style::default()
+                    .fg(TEXT_COLOR)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled("_", Style::default().fg(ORANGE)),
             Span::styled(" │ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+I", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+I",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw(": Case • "),
-            Span::styled("Ctrl+R", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+R",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw(": Regex • "),
-            Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "ESC",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw(": Cancel • "),
-            Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw(": Finish"),
         ]
     } else {
@@ -396,7 +471,12 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
             Span::styled(" palette ", key_muted()),
             Span::styled("r", key_primary()),
             Span::styled(" refresh ", key_muted()),
-            Span::styled("q", Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "q",
+                Style::default()
+                    .fg(ERROR_COLOR)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" quit ", key_muted()),
             Span::styled(app.get_time_since_update(), theme::value_style()),
         ];
@@ -431,10 +511,7 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
 
     if app.help_context {
         let ctx = context_help_for_view(app.current_view);
-        let help_text: Vec<Line> = ctx
-            .into_iter()
-            .map(|s| Line::from(Span::raw(s)))
-            .collect();
+        let help_text: Vec<Line> = ctx.into_iter().map(|s| Line::from(Span::raw(s))).collect();
         let block = Paragraph::new(help_text)
             .block(
                 Block::default()
@@ -449,310 +526,502 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
     }
 
     let help_text = vec![
-        Line::from(vec![
-            Span::styled("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                Style::default().fg(ORANGE))
-        ]),
+        Line::from(vec![Span::styled(
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            Style::default().fg(ORANGE),
+        )]),
         Line::from(vec![
             Span::raw("                    "),
-            Span::styled("🔍 GuestKit TUI - Complete Keyboard Reference",
-                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+            Span::styled(
+                "🔍 GuestKit TUI - Complete Keyboard Reference",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
         ]),
-        Line::from(vec![
-            Span::styled("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                Style::default().fg(ORANGE))
-        ]),
+        Line::from(vec![Span::styled(
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            Style::default().fg(ORANGE),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("NAVIGATION & MOVEMENT", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ─────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "NAVIGATION & MOVEMENT",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ─────────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Tab          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Tab          ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Next view in current group                                       "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Shift+Tab    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Shift+Tab    ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Previous view in current group                                   "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("{ / }        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "{ / }        ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Previous / next view group (Overview, System, Security)          "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled(", / .        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                ", / .        ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Scroll view tab row when tabs overflow                           "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("p            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "p            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Jump to Profiles view                                            "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("←/→          ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "←/→          ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Switch profile tabs (when in Profiles view)                      "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+P       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+P       ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Quick jump menu with fuzzy search                                "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("SCROLLING & BROWSING", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ───────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "SCROLLING & BROWSING",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ───────────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("↑/↓ or j/k   ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↑/↓ or j/k   ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Scroll up/down one line (vim-style)                              "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("PgUp/PgDn    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "PgUp/PgDn    ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Scroll up/down one page (also Ctrl-u/Ctrl-d)                     "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Home or g    ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Home or g    ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Jump to top of list (vim-style)                                  "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("End or G     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "End or G     ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Jump to bottom of list (vim-style)                               "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("DATA OPERATIONS", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ─────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "DATA OPERATIONS",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ─────────────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("r            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "r            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Refresh data and update timestamp                                "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("s            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "s            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Cycle sort mode (Default → Name ↑ → Name ↓)                      "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("/            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "/            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Start search/filter (saved to history)                           "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+I       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+I       ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle case-sensitive search (while searching)                   "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+R       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+R       ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle regex mode (while searching)                              "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Enter        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Enter        ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Show detailed view for current item                              "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "e            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Open export menu (JSON, YAML, HTML, PDF)                         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("ASSURANCE (Security group)", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ─────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "ASSURANCE (Security group)",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ─────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("d            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "d            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Run doctor (boot gate + migration score)                         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("t            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "t            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Cycle target kvm → proxmox → aws                                 "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("e            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "e            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Export fix plan YAML (Assurance view, after load)                "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("p            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "p            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Preview fix plan operations (read-only modal)                      "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("a            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "a            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Open Assurance from Dashboard                                    "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled(": doctor     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                ": doctor     ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Palette: open Assurance + run doctor                               "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("MULTI-SELECT & FILTERING", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ──────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "MULTI-SELECT & FILTERING",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ──────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("m            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "m            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle multi-select mode (shows checkboxes)                      "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Space        ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Space        ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle selection for current item (in multi-select mode)         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+A       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+A       ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Select all items in current view                                 "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("f            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "f            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Cycle through quick filters (critical/enabled/running/etc.)      "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("l            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "l            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle live filtering (filter as you type in search)             "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("UI CUSTOMIZATION", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ──────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "UI CUSTOMIZATION",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ──────────────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("i            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "i            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle statistics bar (shows pkgs, services, risk summary)       "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("b            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "b            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Bookmark current view (max 20 bookmarks)                         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("t            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "t            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle table/list view mode (table has columns)                  "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("c            ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "c            ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle comparison mode (shows changes since snapshot)            "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("h or F1      ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "h or F1      ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Toggle this help overlay                                         "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("┌─ ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("EXIT & CONTROL", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-            Span::styled(" ────────────────────────────────────────────────────────┐", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "EXIT & CONTROL",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled(
+                " ────────────────────────────────────────────────────────┐",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("q or ESC     ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "q or ESC     ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Quit application / Close overlay / Cancel action                "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("│  ", Style::default().fg(DARK_ORANGE)),
-            Span::styled("Ctrl+C       ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+C       ",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("Force quit immediately                                           "),
             Span::styled("   │", Style::default().fg(DARK_ORANGE)),
         ]),
         Line::from(vec![
             Span::styled("└", Style::default().fg(DARK_ORANGE)),
-            Span::styled("────────────────────────────────────────────────────────────────────────┘", Style::default().fg(DARK_ORANGE)),
+            Span::styled(
+                "────────────────────────────────────────────────────────────────────────┘",
+                Style::default().fg(DARK_ORANGE),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("💡 ", Style::default().fg(WARNING_COLOR)),
-            Span::styled("Pro Tips:", Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw("  Ctrl+P jumps to any view • j/k scrolls this help • Search is live")
+            Span::styled(
+                "Pro Tips:",
+                Style::default()
+                    .fg(WARNING_COLOR)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("  Ctrl+P jumps to any view • j/k scrolls this help • Search is live"),
         ]),
         Line::from(vec![
             Span::raw("             Color coding: "),
@@ -763,10 +1032,12 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
             Span::styled("🔴 Error/Critical", Style::default().fg(ERROR_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC, h, or F1 to close • j/k or PgUp/PgDn to scroll",
-                Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC, h, or F1 to close • j/k or PgUp/PgDn to scroll",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ];
 
     let inner_height = area.height.saturating_sub(2) as usize;
@@ -786,18 +1057,20 @@ fn draw_help_overlay(f: &mut Frame, app: &App) {
     };
 
     let help = Paragraph::new(visible)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-            .title(vec![
-                Span::raw(" "),
-                Span::styled(
-                    format!("📖 Help & Keyboard Shortcuts{scroll_label}"),
-                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-            ])
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
+                .title(vec![
+                    Span::raw(" "),
+                    Span::styled(
+                        format!("📖 Help & Keyboard Shortcuts{scroll_label}"),
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw(" "),
+                ])
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
         .alignment(Alignment::Left);
 
@@ -813,93 +1086,120 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
     let export_text = match &app.export_mode {
         Some(ExportMode::Selecting) => {
             vec![
-                Line::from(vec![
-                    Span::styled("Export Menu - Select Format",
-                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Export Menu - Select Format",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("Exporting: ", Style::default().fg(LIGHT_ORANGE)),
                     Span::styled(app.current_view.title(), Style::default().fg(TEXT_COLOR)),
                 ]),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Select export format:",
-                        Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Select export format:",
+                    Style::default()
+                        .fg(LIGHT_ORANGE)
+                        .add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  1  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("JSON  - Machine-readable data (recommended)")
+                    Span::styled(
+                        "  1  ",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("JSON  - Machine-readable data (recommended)"),
                 ]),
                 Line::from(vec![
-                    Span::styled("  2  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("YAML  - Human-readable data")
+                    Span::styled(
+                        "  2  ",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("YAML  - Human-readable data"),
                 ]),
                 Line::from(vec![
-                    Span::styled("  3  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("HTML  - Rich formatted report")
+                    Span::styled(
+                        "  3  ",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("HTML  - Rich formatted report"),
                 ]),
                 Line::from(vec![
-                    Span::styled("  4  ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                    Span::raw("PDF   - Portable document (CLI only)")
+                    Span::styled(
+                        "  4  ",
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("PDF   - Portable document (CLI only)"),
                 ]),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Press 1-4 to select format, ESC to cancel",
-                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Press 1-4 to select format, ESC to cancel",
+                    Style::default()
+                        .fg(DARK_ORANGE)
+                        .add_modifier(Modifier::ITALIC),
+                )]),
             ]
         }
         Some(ExportMode::EnteringFilename) => {
             vec![
-                Line::from(vec![
-                    Span::styled("Export Menu - Enter Filename",
-                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Export Menu - Enter Filename",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("Format: ", Style::default().fg(LIGHT_ORANGE)),
                     Span::styled(
                         app.export_format.map(|f| f.name()).unwrap_or("Unknown"),
-                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)
+                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
                     ),
                 ]),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Filename:",
-                        Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Filename:",
+                    Style::default()
+                        .fg(LIGHT_ORANGE)
+                        .add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(&app.export_filename, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::UNDERLINED)),
+                    Span::styled(
+                        &app.export_filename,
+                        Style::default()
+                            .fg(TEXT_COLOR)
+                            .add_modifier(Modifier::UNDERLINED),
+                    ),
                     Span::styled("_", Style::default().fg(ORANGE)),
                 ]),
                 Line::from(""),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Press Enter to export, ESC to go back",
-                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Press Enter to export, ESC to go back",
+                    Style::default()
+                        .fg(DARK_ORANGE)
+                        .add_modifier(Modifier::ITALIC),
+                )]),
             ]
         }
         Some(ExportMode::Exporting) => {
             vec![
-                Line::from(vec![
-                    Span::styled("Exporting...",
-                        Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Exporting...",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from("Please wait..."),
             ]
         }
         Some(ExportMode::Success(filename)) => {
             vec![
-                Line::from(vec![
-                    Span::styled("✓ Export Successful!",
-                        Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "✓ Export Successful!",
+                    Style::default()
+                        .fg(SUCCESS_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("Saved to: ", Style::default().fg(LIGHT_ORANGE)),
@@ -907,18 +1207,22 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
                 ]),
                 Line::from(""),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Press ESC or e to close",
-                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Press ESC or e to close",
+                    Style::default()
+                        .fg(DARK_ORANGE)
+                        .add_modifier(Modifier::ITALIC),
+                )]),
             ]
         }
         Some(ExportMode::Error(error)) => {
             vec![
-                Line::from(vec![
-                    Span::styled("✗ Export Failed",
-                        Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD))
-                ]),
+                Line::from(vec![Span::styled(
+                    "✗ Export Failed",
+                    Style::default()
+                        .fg(ERROR_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("Error: ", Style::default().fg(ERROR_COLOR)),
@@ -926,10 +1230,12 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
                 ]),
                 Line::from(""),
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled("Press ESC or e to close",
-                        Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-                ]),
+                Line::from(vec![Span::styled(
+                    "Press ESC or e to close",
+                    Style::default()
+                        .fg(DARK_ORANGE)
+                        .add_modifier(Modifier::ITALIC),
+                )]),
             ]
         }
         None => {
@@ -938,11 +1244,13 @@ fn draw_export_menu(f: &mut Frame, app: &App) {
     };
 
     let export_menu = Paragraph::new(export_text)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE))
-            .title(" Export ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE))
+                .title(" Export ")
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
         .alignment(Alignment::Left);
 
@@ -980,25 +1288,26 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
                 lines.push(Line::from(boot.boot_probability_message()));
             }
             if let Some(ref mig) = app.migration_report {
-                lines.push(Line::from(format!(
-                    "Migration score: {:.0}%",
-                    mig.score
-                )));
+                lines.push(Line::from(format!("Migration score: {:.0}%", mig.score)));
             }
             lines
         }
         View::Files => {
             // Files view doesn't use detail overlay - file preview/info overlays are used instead
-            vec![Line::from("Use 'v' to preview files and 'i' to view file information.")]
-        },
+            vec![Line::from(
+                "Use 'v' to preview files and 'i' to view file information.",
+            )]
+        }
     };
 
     let detail = Paragraph::new(detail_text)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(ORANGE))
-            .title(format!(" {} - Detailed View ", app.current_view.title()))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(ORANGE))
+                .title(format!(" {} - Detailed View ", app.current_view.title()))
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .style(Style::default().bg(Color::Black).fg(TEXT_COLOR))
         .wrap(ratatui::widgets::Wrap { trim: false });
 
@@ -1008,9 +1317,12 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
 
 fn generate_dashboard_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("System Overview", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "System Overview",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Operating System: ", Style::default().fg(LIGHT_ORANGE)),
@@ -1037,55 +1349,88 @@ fn generate_dashboard_details(app: &App) -> Vec<Line<'static>> {
             Span::styled(app.init_system.clone(), Style::default().fg(TEXT_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Inventory Summary", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Inventory Summary",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Packages:         ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.packages.package_count),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Services:         ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.services.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Network Interfaces:", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.network_interfaces.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.network_interfaces.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("User Accounts:    ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.users.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.users.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Kernel Modules:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.kernel_modules.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.kernel_modules.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_network_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Network Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Network Configuration",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total Interfaces: ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.network_interfaces.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.network_interfaces.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("DNS Servers:      ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.dns_servers.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.dns_servers.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("DNS Server List:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
+        Line::from(vec![Span::styled(
+            "DNS Server List:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
     ]
     .into_iter()
     .chain(app.dns_servers.iter().take(10).map(|dns| {
@@ -1095,17 +1440,23 @@ fn generate_network_details(app: &App) -> Vec<Line<'static>> {
         ])
     }))
     .chain(std::iter::once(Line::from("")))
-    .chain(std::iter::once(Line::from(vec![
-        Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-    ])))
+    .chain(std::iter::once(Line::from(vec![Span::styled(
+        "Press ESC or Enter to close",
+        Style::default()
+            .fg(DARK_ORANGE)
+            .add_modifier(Modifier::ITALIC),
+    )])))
     .collect()
 }
 
 fn generate_packages_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Package Management", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Package Management",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Package Manager:  ", Style::default().fg(LIGHT_ORANGE)),
@@ -1113,142 +1464,284 @@ fn generate_packages_details(app: &App) -> Vec<Line<'static>> {
         ]),
         Line::from(vec![
             Span::styled("Total Packages:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.packages.package_count),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Sort Mode:        ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(app.sort_mode.label().to_string(), Style::default().fg(ORANGE)),
+            Span::styled(
+                app.sort_mode.label().to_string(),
+                Style::default().fg(ORANGE),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press 's' to cycle sort modes", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press 's' to cycle sort modes",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_services_details(app: &App) -> Vec<Line<'static>> {
     let enabled_count = app.services.iter().filter(|s| s.enabled).count();
     vec![
-        Line::from(vec![
-            Span::styled("System Services", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "System Services",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total Services:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.services.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Enabled:          ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", enabled_count), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", enabled_count),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Disabled:         ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.services.len() - enabled_count), Style::default().fg(WARNING_COLOR)),
+            Span::styled(
+                format!("{}", app.services.len() - enabled_count),
+                Style::default().fg(WARNING_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_security_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Security Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Security Configuration",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("SELinux:    ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(app.security.selinux.clone(), Style::default().fg(if &app.security.selinux != "disabled" { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                app.security.selinux.clone(),
+                Style::default().fg(if &app.security.selinux != "disabled" {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("AppArmor:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if app.security.apparmor { "enabled" } else { "disabled" }, Style::default().fg(if app.security.apparmor { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                if app.security.apparmor {
+                    "enabled"
+                } else {
+                    "disabled"
+                },
+                Style::default().fg(if app.security.apparmor {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("fail2ban:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if app.security.fail2ban { "installed" } else { "not installed" }, Style::default().fg(if app.security.fail2ban { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                if app.security.fail2ban {
+                    "installed"
+                } else {
+                    "not installed"
+                },
+                Style::default().fg(if app.security.fail2ban {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("AIDE:       ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if app.security.aide { "installed" } else { "not installed" }, Style::default().fg(if app.security.aide { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                if app.security.aide {
+                    "installed"
+                } else {
+                    "not installed"
+                },
+                Style::default().fg(if app.security.aide {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("auditd:     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if app.security.auditd { "enabled" } else { "disabled" }, Style::default().fg(if app.security.auditd { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                if app.security.auditd {
+                    "enabled"
+                } else {
+                    "disabled"
+                },
+                Style::default().fg(if app.security.auditd {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Firewall:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(app.firewall.firewall_type.clone(), Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                app.firewall.firewall_type.clone(),
+                Style::default().fg(TEXT_COLOR),
+            ),
             Span::raw(" "),
-            Span::styled(if app.firewall.enabled { "(enabled)" } else { "(disabled)" }, Style::default().fg(if app.firewall.enabled { SUCCESS_COLOR } else { ERROR_COLOR })),
+            Span::styled(
+                if app.firewall.enabled {
+                    "(enabled)"
+                } else {
+                    "(disabled)"
+                },
+                Style::default().fg(if app.firewall.enabled {
+                    SUCCESS_COLOR
+                } else {
+                    ERROR_COLOR
+                }),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_storage_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Storage Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Storage Configuration",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Mount Points:     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.fstab.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.fstab.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("LVM Configured:   ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if app.lvm_info.is_some() { "Yes" } else { "No" }, Style::default().fg(if app.lvm_info.is_some() { SUCCESS_COLOR } else { TEXT_COLOR })),
+            Span::styled(
+                if app.lvm_info.is_some() { "Yes" } else { "No" },
+                Style::default().fg(if app.lvm_info.is_some() {
+                    SUCCESS_COLOR
+                } else {
+                    TEXT_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("RAID Arrays:      ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.raid_arrays.len()), Style::default().fg(if app.raid_arrays.is_empty() { TEXT_COLOR } else { SUCCESS_COLOR })),
+            Span::styled(
+                format!("{}", app.raid_arrays.len()),
+                Style::default().fg(if app.raid_arrays.is_empty() {
+                    TEXT_COLOR
+                } else {
+                    SUCCESS_COLOR
+                }),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_users_details(app: &App) -> Vec<Line<'static>> {
     let root_users = app.users.iter().filter(|u| u.uid == "0").count();
-    let system_users = app.users.iter().filter(|u| {
-        if let Ok(uid) = u.uid.parse::<i32>() {
-            uid > 0 && uid < 1000
-        } else {
-            false
-        }
-    }).count();
-    let normal_users = app.users.iter().filter(|u| {
-        if let Ok(uid) = u.uid.parse::<i32>() {
-            uid >= 1000
-        } else {
-            false
-        }
-    }).count();
+    let system_users = app
+        .users
+        .iter()
+        .filter(|u| {
+            if let Ok(uid) = u.uid.parse::<i32>() {
+                uid > 0 && uid < 1000
+            } else {
+                false
+            }
+        })
+        .count();
+    let normal_users = app
+        .users
+        .iter()
+        .filter(|u| {
+            if let Ok(uid) = u.uid.parse::<i32>() {
+                uid >= 1000
+            } else {
+                false
+            }
+        })
+        .count();
 
     vec![
-        Line::from(vec![
-            Span::styled("User Accounts", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "User Accounts",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total Users:      ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.users.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.users.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Root (UID 0):     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", root_users), Style::default().fg(if root_users > 1 { ERROR_COLOR } else { SUCCESS_COLOR })),
+            Span::styled(
+                format!("{}", root_users),
+                Style::default().fg(if root_users > 1 {
+                    ERROR_COLOR
+                } else {
+                    SUCCESS_COLOR
+                }),
+            ),
         ]),
         Line::from(vec![
             Span::styled("System Users:     ", Style::default().fg(LIGHT_ORANGE)),
@@ -1256,33 +1749,51 @@ fn generate_users_details(app: &App) -> Vec<Line<'static>> {
         ]),
         Line::from(vec![
             Span::styled("Normal Users:     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", normal_users), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", normal_users),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_kernel_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Kernel Configuration", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Kernel Configuration",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Boot Modules:     ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.kernel_modules.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.kernel_modules.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Kernel Parameters:", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.kernel_params.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.kernel_params.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
@@ -1296,142 +1807,220 @@ fn generate_profiles_details(app: &App) -> Vec<Line<'static>> {
     ];
 
     let mut lines = vec![
-        Line::from(vec![
-            Span::styled("Profile Reports", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Profile Reports",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
     ];
 
     for (name, available) in &profiles_available {
         lines.push(Line::from(vec![
             Span::styled(format!("{:12} ", name), Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(if *available { "✓ Available" } else { "✗ Not available" }, Style::default().fg(if *available { SUCCESS_COLOR } else { WARNING_COLOR })),
+            Span::styled(
+                if *available {
+                    "✓ Available"
+                } else {
+                    "✗ Not available"
+                },
+                Style::default().fg(if *available {
+                    SUCCESS_COLOR
+                } else {
+                    WARNING_COLOR
+                }),
+            ),
         ]));
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from(vec![
-        Span::styled("Use ←/→ to switch between profile tabs", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-    ]));
-    lines.push(Line::from(vec![
-        Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        "Use ←/→ to switch between profile tabs",
+        Style::default()
+            .fg(DARK_ORANGE)
+            .add_modifier(Modifier::ITALIC),
+    )]));
+    lines.push(Line::from(vec![Span::styled(
+        "Press ESC or Enter to close",
+        Style::default()
+            .fg(DARK_ORANGE)
+            .add_modifier(Modifier::ITALIC),
+    )]));
 
     lines
 }
 
 fn generate_databases_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Database Installations", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Database Installations",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total Databases:  ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.databases.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.databases.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_webservers_details(app: &App) -> Vec<Line<'static>> {
     let enabled_count = app.web_servers.iter().filter(|ws| ws.enabled).count();
     vec![
-        Line::from(vec![
-            Span::styled("Web Server Installations", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Web Server Installations",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total Web Servers:", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.web_servers.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.web_servers.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Enabled:          ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", enabled_count), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", enabled_count),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Disabled:         ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", app.web_servers.len() - enabled_count), Style::default().fg(WARNING_COLOR)),
+            Span::styled(
+                format!("{}", app.web_servers.len() - enabled_count),
+                Style::default().fg(WARNING_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_issues_details(app: &App) -> Vec<Line<'static>> {
     let (critical, high, medium) = app.get_risk_summary();
     vec![
-        Line::from(vec![
-            Span::styled("Security Issues Summary", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Security Issues Summary",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Critical Issues:  ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{}", critical),
+                Style::default()
+                    .fg(ERROR_COLOR)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("High Risk:        ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", high), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{}", high),
+                Style::default()
+                    .fg(WARNING_COLOR)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Medium Risk:      ", Style::default().fg(LIGHT_ORANGE)),
             Span::styled(format!("{}", medium), Style::default().fg(WARNING_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Sources:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Security Profile"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Hardening Profile"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Compliance Profile"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Sources:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Security Profile")]),
+        Line::from(vec![Span::raw("  • Hardening Profile")]),
+        Line::from(vec![Span::raw("  • Compliance Profile")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_analytics_details(app: &App) -> Vec<Line<'static>> {
     let (critical, high, medium) = app.get_risk_summary();
     vec![
-        Line::from(vec![
-            Span::styled("Analytics & Charts", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Analytics & Charts",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Package Distribution:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
+        Line::from(vec![Span::styled(
+            "Package Distribution:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  Total Packages:  ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", app.packages.package_count), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.packages.package_count),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Service Status:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
+        Line::from(vec![Span::styled(
+            "Service Status:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  Total Services:  ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", app.services.len()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.services.len()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("  Enabled:         ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", app.services.iter().filter(|s| s.enabled).count()), Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                format!("{}", app.services.iter().filter(|s| s.enabled).count()),
+                Style::default().fg(SUCCESS_COLOR),
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Security Score:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
+        Line::from(vec![Span::styled(
+            "Security Score:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  Critical:        ", Style::default().fg(TEXT_COLOR)),
             Span::styled(format!("{}", critical), Style::default().fg(ERROR_COLOR)),
@@ -1445,17 +2034,23 @@ fn generate_analytics_details(app: &App) -> Vec<Line<'static>> {
             Span::styled(format!("{}", medium), Style::default().fg(INFO_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_timeline_details(app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("System Timeline", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "System Timeline",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Operating System: ", Style::default().fg(LIGHT_ORANGE)),
@@ -1466,153 +2061,149 @@ fn generate_timeline_details(app: &App) -> Vec<Line<'static>> {
             Span::styled(app.kernel_version.clone(), Style::default().fg(TEXT_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Timeline Events:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
+        Line::from(vec![Span::styled(
+            "Timeline Events:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  Total Events:    ", Style::default().fg(TEXT_COLOR)),
             Span::styled("Multiple", Style::default().fg(SUCCESS_COLOR)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::raw("View timeline for chronological system events"),
-        ]),
+        Line::from(vec![Span::raw(
+            "View timeline for chronological system events",
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_logs_details(_app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("System Logs", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "System Logs",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Log Categories:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Authentication Logs"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • System Logs"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Kernel Logs"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Security Logs"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Application Logs"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Log Categories:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Authentication Logs")]),
+        Line::from(vec![Span::raw("  • System Logs")]),
+        Line::from(vec![Span::raw("  • Kernel Logs")]),
+        Line::from(vec![Span::raw("  • Security Logs")]),
+        Line::from(vec![Span::raw("  • Application Logs")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Features:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Filter logs with /"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Switch categories with Tab"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Scroll with ↑↓"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Features:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Filter logs with /")]),
+        Line::from(vec![Span::raw("  • Switch categories with Tab")]),
+        Line::from(vec![Span::raw("  • Scroll with ↑↓")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_recommendations_details(_app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("Smart Recommendations", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "Smart Recommendations",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("AI-Powered Analysis:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Security hardening recommendations"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Performance optimization suggestions"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Maintenance and compliance guidance"),
-        ]),
+        Line::from(vec![Span::styled(
+            "AI-Powered Analysis:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Security hardening recommendations")]),
+        Line::from(vec![Span::raw("  • Performance optimization suggestions")]),
+        Line::from(vec![Span::raw("  • Maintenance and compliance guidance")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Features:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Priority-based sorting (Critical → Info)"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Impact and effort analysis"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Step-by-step remediation guides"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Quick wins identification"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Features:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw(
+            "  • Priority-based sorting (Critical → Info)",
+        )]),
+        Line::from(vec![Span::raw("  • Impact and effort analysis")]),
+        Line::from(vec![Span::raw("  • Step-by-step remediation guides")]),
+        Line::from(vec![Span::raw("  • Quick wins identification")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
 fn generate_topology_details(_app: &App) -> Vec<Line<'static>> {
     vec![
-        Line::from(vec![
-            Span::styled("System Topology", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))
-        ]),
+        Line::from(vec![Span::styled(
+            "System Topology",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        )]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Architecture Layers:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Applications & Services layer"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • System Services layer"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Operating System layer"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Kernel layer"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Hardware layer"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Architecture Layers:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Applications & Services layer")]),
+        Line::from(vec![Span::raw("  • System Services layer")]),
+        Line::from(vec![Span::raw("  • Operating System layer")]),
+        Line::from(vec![Span::raw("  • Kernel layer")]),
+        Line::from(vec![Span::raw("  • Hardware layer")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Network Topology:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::raw("  • Internet connectivity flow"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Firewall configuration"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Network interface mapping"),
-        ]),
-        Line::from(vec![
-            Span::raw("  • Service dependencies"),
-        ]),
+        Line::from(vec![Span::styled(
+            "Network Topology:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::raw("  • Internet connectivity flow")]),
+        Line::from(vec![Span::raw("  • Firewall configuration")]),
+        Line::from(vec![Span::raw("  • Network interface mapping")]),
+        Line::from(vec![Span::raw("  • Service dependencies")]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ESC or Enter to close", Style::default().fg(DARK_ORANGE).add_modifier(Modifier::ITALIC))
-        ]),
+        Line::from(vec![Span::styled(
+            "Press ESC or Enter to close",
+            Style::default()
+                .fg(DARK_ORANGE)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ]
 }
 
@@ -1642,7 +2233,10 @@ fn draw_global_search(f: &mut Frame, app: &App) {
     let area = centered_rect(65, 50, f.area());
     f.render_widget(ratatui::widgets::Clear, area);
     let mut lines = vec![Line::from(vec![
-        Span::styled("Global search ", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Global search ",
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(&app.search_query, theme::value_style()),
     ])];
     if app.global_search_hits.is_empty() {
@@ -1658,7 +2252,10 @@ fn draw_global_search(f: &mut Frame, app: &App) {
             Style::default().fg(TEXT_COLOR)
         };
         lines.push(Line::from(vec![
-            Span::styled(format!("  {} ", hit.view.title()), Style::default().fg(ORANGE)),
+            Span::styled(
+                format!("  {} ", hit.view.title()),
+                Style::default().fg(ORANGE),
+            ),
             Span::styled(&hit.label, style),
         ]));
     }
@@ -1685,14 +2282,19 @@ fn draw_jump_menu(f: &mut Frame, app: &mut App) {
         .map(|row| match row {
             JumpMenuRow::Header(group) => ListItem::new(Line::from(Span::styled(
                 format!("── {group} ──"),
-                Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD),
             ))),
             JumpMenuRow::Item { group, title, .. } => {
                 let is_selected = item_idx == app.jump_selected_index;
                 item_idx += 1;
                 let line = if is_selected {
                     Line::from(vec![
-                        Span::styled(" ▶ ", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            " ▶ ",
+                            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled(title.as_str(), theme::focus_style(app.theme())),
                     ])
                 } else {
@@ -1719,24 +2321,40 @@ fn draw_jump_menu(f: &mut Frame, app: &mut App) {
         app.jump_query.clone()
     };
     let list = List::new(items)
-        .block(
-            modal_block(" Quick Jump ", app.theme())
-                .title(vec![
-                    Span::styled(" filter: ", Style::default().fg(TEXT_MUTED)),
-                    Span::styled(query, Style::default().fg(LINK).add_modifier(Modifier::BOLD)),
-                    Span::raw(" "),
-                ]),
-        )
-        .style(Style::default().bg(app.theme().surface_raised).fg(TEXT_COLOR));
+        .block(modal_block(" Quick Jump ", app.theme()).title(vec![
+            Span::styled(" filter: ", Style::default().fg(TEXT_MUTED)),
+            Span::styled(
+                query,
+                Style::default().fg(LINK).add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" "),
+        ]))
+        .style(
+            Style::default()
+                .bg(app.theme().surface_raised)
+                .fg(TEXT_COLOR),
+        );
 
     let help_text = vec![
-        Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "↑↓",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Navigate  "),
-        Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Enter",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Select  "),
-        Span::styled("Esc", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Esc",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Cancel  "),
-        Span::styled("Type", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Type",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Search"),
     ];
 
@@ -1822,9 +2440,15 @@ fn draw_file_preview(f: &mut Frame, app: &App) {
 
     let footer = Paragraph::new(Line::from(vec![
         Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
-        Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "ESC",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" or ", Style::default().fg(TEXT_COLOR)),
-        Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "q",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" to close", Style::default().fg(TEXT_COLOR)),
     ]))
     .alignment(Alignment::Center)
@@ -1842,7 +2466,12 @@ fn draw_file_info(f: &mut Frame, app: &App) {
         .map(|line| {
             if let Some((key, value)) = line.split_once(": ") {
                 Line::from(vec![
-                    Span::styled(format!("{}: ", key), Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("{}: ", key),
+                        Style::default()
+                            .fg(LIGHT_ORANGE)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(value, Style::default().fg(TEXT_COLOR)),
                 ])
             } else {
@@ -1876,9 +2505,15 @@ fn draw_file_info(f: &mut Frame, app: &App) {
 
     let footer = Paragraph::new(Line::from(vec![
         Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
-        Span::styled("ESC", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "ESC",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" or ", Style::default().fg(TEXT_COLOR)),
-        Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "q",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" to close", Style::default().fg(TEXT_COLOR)),
     ]))
     .alignment(Alignment::Center)

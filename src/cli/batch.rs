@@ -2,8 +2,8 @@
 //! Batch script execution for guestkit CLI
 
 use super::errors::builders as errors;
-use anyhow::{Context, Result};
 use crate::Guestfs;
+use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use std::collections::HashMap;
 use std::fs;
@@ -38,7 +38,10 @@ impl BatchExecutor {
     /// Create a new batch executor
     pub fn new(disk_path: PathBuf, fail_fast: bool, verbose: bool) -> Result<Self> {
         if verbose {
-            println!("{}", "Initializing batch executor...".truecolor(222, 115, 86));
+            println!(
+                "{}",
+                "Initializing batch executor...".truecolor(222, 115, 86)
+            );
         }
 
         // Create handle
@@ -46,10 +49,16 @@ impl BatchExecutor {
 
         // Add drive
         if verbose {
-            println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
+            println!(
+                "  {} Loading disk: {}",
+                "→".truecolor(222, 115, 86),
+                disk_path.display()
+            );
         }
         handle
-            .add_drive_ro(disk_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", disk_path.display()))?)
+            .add_drive_ro(disk_path.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", disk_path.display())
+            })?)
             .context("Failed to add drive")?;
 
         // Launch
@@ -331,7 +340,9 @@ impl BatchExecutor {
                 .create(true)
                 .append(true)
                 .open(&redirect.path)
-                .with_context(|| format!("Failed to open output file for append: {}", redirect.path))?,
+                .with_context(|| {
+                    format!("Failed to open output file for append: {}", redirect.path)
+                })?,
         };
 
         let mut writer = std::io::BufWriter::new(file);
@@ -343,7 +354,12 @@ impl BatchExecutor {
                 RedirectMode::Write => "Wrote",
                 RedirectMode::Append => "Appended",
             };
-            println!("  {} {} output to {}", "→".truecolor(222, 115, 86), mode_str, redirect.path);
+            println!(
+                "  {} {} output to {}",
+                "→".truecolor(222, 115, 86),
+                mode_str,
+                redirect.path
+            );
         }
 
         Ok(())
@@ -377,8 +393,16 @@ impl ExecutionReport {
         println!("{}", "Batch Execution Report".bold());
         println!("{}", "=".repeat(60).dimmed());
 
-        println!("\n{}: {}", "Script".truecolor(222, 115, 86), self.script_path.display());
-        println!("{}: {}", "Total Commands".truecolor(222, 115, 86), self.total_commands);
+        println!(
+            "\n{}: {}",
+            "Script".truecolor(222, 115, 86),
+            self.script_path.display()
+        );
+        println!(
+            "{}: {}",
+            "Total Commands".truecolor(222, 115, 86),
+            self.total_commands
+        );
         println!("{}: {}", "Successful".green(), self.successful_commands);
 
         if self.failed_commands > 0 {

@@ -12,11 +12,11 @@ use std::process::Command;
 /// Block device type from lsblk
 #[derive(Debug, Clone, PartialEq)]
 pub enum BlockType {
-    Part,      // partition
-    Lvm,       // LVM logical volume
-    Crypt,     // dm-crypt/LUKS
-    Raid,      // mdraid
-    Disk,      // whole disk
+    Part,  // partition
+    Lvm,   // LVM logical volume
+    Crypt, // dm-crypt/LUKS
+    Raid,  // mdraid
+    Disk,  // whole disk
     Other(String),
 }
 
@@ -101,8 +101,7 @@ impl DevInfo {
         // Only prefer PARTUUID if:
         // - it's a real partition
         // - mount is boot-critical (/, /boot, /boot/efi)
-        self.is_partition()
-            && matches!(mountpoint, "/" | "/boot" | "/boot/efi" | "/efi")
+        self.is_partition() && matches!(mountpoint, "/" | "/boot" | "/boot/efi" | "/efi")
     }
 }
 

@@ -136,19 +136,16 @@ impl PartitionTable {
         }
 
         let mut cursor = Cursor::new(&gpt_header[72..]);
-        let partition_entries_lba = cursor
-            .read_u64::<LittleEndian>()
-            .map_err(Error::Io)?;
-        let num_entries = cursor
-            .read_u32::<LittleEndian>()
-            .map_err(Error::Io)?;
-        let entry_size = cursor
-            .read_u32::<LittleEndian>()
-            .map_err(Error::Io)?;
+        let partition_entries_lba = cursor.read_u64::<LittleEndian>().map_err(Error::Io)?;
+        let num_entries = cursor.read_u32::<LittleEndian>().map_err(Error::Io)?;
+        let entry_size = cursor.read_u32::<LittleEndian>().map_err(Error::Io)?;
 
         // Validate entry size to prevent excessive memory allocation or undersize entries
         if !(48..=8192).contains(&entry_size) {
-            return Err(Error::Detection(format!("Invalid GPT entry size: {}", entry_size)));
+            return Err(Error::Detection(format!(
+                "Invalid GPT entry size: {}",
+                entry_size
+            )));
         }
 
         // Read partition entries
@@ -176,12 +173,8 @@ impl PartitionTable {
             );
 
             let mut cursor = Cursor::new(&entry[32..]);
-            let start_lba = cursor
-                .read_u64::<LittleEndian>()
-                .map_err(Error::Io)?;
-            let end_lba = cursor
-                .read_u64::<LittleEndian>()
-                .map_err(Error::Io)?;
+            let start_lba = cursor.read_u64::<LittleEndian>().map_err(Error::Io)?;
+            let end_lba = cursor.read_u64::<LittleEndian>().map_err(Error::Io)?;
 
             if start_lba == 0 && end_lba == 0 {
                 continue;

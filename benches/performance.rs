@@ -30,17 +30,13 @@ fn benchmark_inspection(c: &mut Criterion) {
 
     // Simulate inspection of different OS types
     for os_type in &["linux", "windows", "freebsd"] {
-        group.bench_with_input(
-            BenchmarkId::new("detect_os", os_type),
-            os_type,
-            |b, &os| {
-                b.iter(|| {
-                    // Simulate OS detection
-                    std::thread::sleep(Duration::from_millis(500));
-                    black_box(os);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("detect_os", os_type), os_type, |b, &os| {
+            b.iter(|| {
+                // Simulate OS detection
+                std::thread::sleep(Duration::from_millis(500));
+                black_box(os);
+            });
+        });
     }
 
     group.finish();
@@ -114,9 +110,8 @@ fn benchmark_package_operations(c: &mut Criterion) {
             |b, &count| {
                 b.iter(|| {
                     // Simulate package listing
-                    let packages: Vec<String> = (0..count)
-                        .map(|i| format!("package-{}", i))
-                        .collect();
+                    let packages: Vec<String> =
+                        (0..count).map(|i| format!("package-{}", i)).collect();
                     black_box(packages);
                 });
             },
@@ -178,9 +173,7 @@ fn benchmark_parallel(c: &mut Criterion) {
 fn benchmark_string_ops(c: &mut Criterion) {
     let mut group = c.benchmark_group("strings");
 
-    let strings: Vec<String> = (0..1000)
-        .map(|i| format!("package-name-{}", i))
-        .collect();
+    let strings: Vec<String> = (0..1000).map(|i| format!("package-name-{}", i)).collect();
 
     group.bench_function("clone_strings", |b| {
         b.iter(|| {
@@ -193,9 +186,7 @@ fn benchmark_string_ops(c: &mut Criterion) {
     use std::sync::Arc;
 
     group.bench_function("arc_strings", |b| {
-        let arc_strings: Vec<Arc<String>> = strings.iter()
-            .map(|s| Arc::new(s.clone()))
-            .collect();
+        let arc_strings: Vec<Arc<String>> = strings.iter().map(|s| Arc::new(s.clone())).collect();
 
         b.iter(|| {
             let cloned: Vec<Arc<String>> = arc_strings.clone();
@@ -235,7 +226,7 @@ fn benchmark_memory(c: &mut Criterion) {
 
 /// Benchmark hash operations (for cache keys)
 fn benchmark_hashing(c: &mut Criterion) {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     let mut group = c.benchmark_group("hashing");
 

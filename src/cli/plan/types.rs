@@ -346,9 +346,7 @@ impl Priority {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum PostApplyAction {
     /// Restart services
-    ServiceRestart {
-        services: Vec<String>,
-    },
+    ServiceRestart { services: Vec<String> },
 
     /// Run validation
     Validation {
@@ -358,14 +356,10 @@ pub enum PostApplyAction {
     },
 
     /// Display message
-    Message {
-        message: String,
-    },
+    Message { message: String },
 
     /// Reboot required
-    RebootRequired {
-        reason: String,
-    },
+    RebootRequired { reason: String },
 }
 
 impl FixPlan {
@@ -407,13 +401,18 @@ impl FixPlan {
 
     /// Get count by priority
     pub fn count_by_priority(&self, priority: Priority) -> usize {
-        self.operations.iter().filter(|op| op.priority == priority).count()
+        self.operations
+            .iter()
+            .filter(|op| op.priority == priority)
+            .count()
     }
 
     /// Check if plan has any critical operations
     #[allow(dead_code)]
     pub fn has_critical(&self) -> bool {
-        self.operations.iter().any(|op| op.priority == Priority::Critical)
+        self.operations
+            .iter()
+            .any(|op| op.priority == Priority::Critical)
     }
 }
 
@@ -502,14 +501,12 @@ mod tests {
         let file_edit = FileEdit {
             file: "/etc/ssh/sshd_config".to_string(),
             backup: true,
-            changes: vec![
-                FileChange {
-                    line: 15,
-                    before: "PermitRootLogin yes".to_string(),
-                    after: "PermitRootLogin no".to_string(),
-                    context: None,
-                }
-            ],
+            changes: vec![FileChange {
+                line: 15,
+                before: "PermitRootLogin yes".to_string(),
+                after: "PermitRootLogin no".to_string(),
+                context: None,
+            }],
         };
 
         assert_eq!(file_edit.file, "/etc/ssh/sshd_config");

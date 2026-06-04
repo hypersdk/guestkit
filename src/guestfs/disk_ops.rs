@@ -235,7 +235,9 @@ impl Guestfs {
         }
 
         if len < 0 {
-            return Err(Error::InvalidOperation("fill length must be non-negative".to_string()));
+            return Err(Error::InvalidOperation(
+                "fill length must be non-negative".to_string(),
+            ));
         }
 
         let host_path = self.resolve_guest_path(path)?;
@@ -256,11 +258,15 @@ impl Guestfs {
         }
 
         if len < 0 {
-            return Err(Error::InvalidOperation("fill_pattern length must be non-negative".to_string()));
+            return Err(Error::InvalidOperation(
+                "fill_pattern length must be non-negative".to_string(),
+            ));
         }
 
         if pattern.is_empty() {
-            return Err(Error::InvalidOperation("fill pattern must not be empty".to_string()));
+            return Err(Error::InvalidOperation(
+                "fill pattern must not be empty".to_string(),
+            ));
         }
 
         let host_path = self.resolve_guest_path(path)?;

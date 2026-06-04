@@ -100,8 +100,8 @@ impl LivePlanExecutor {
         match &op.op_type {
             OperationType::FileEdit(fe) => {
                 self.snapshot_file(&fe.file, rollback_dir)?;
-                let content = fs::read_to_string(&fe.file)
-                    .with_context(|| format!("read {}", fe.file))?;
+                let content =
+                    fs::read_to_string(&fe.file).with_context(|| format!("read {}", fe.file))?;
                 let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
                 for change in &fe.changes {
                     let mut found = false;
@@ -137,10 +137,7 @@ impl LivePlanExecutor {
             }
             OperationType::FilePermissions(fp) => {
                 self.snapshot_file(&fp.path, rollback_dir)?;
-                let mode = u32::from_str_radix(
-                    if fp.mode.is_empty() { "0" } else { &fp.mode },
-                    8,
-                )?;
+                let mode = u32::from_str_radix(if fp.mode.is_empty() { "0" } else { &fp.mode }, 8)?;
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
@@ -209,7 +206,11 @@ impl LivePlanExecutor {
                         .status();
                 }
                 if let Some(state) = &so.state {
-                    let action = if state == "enabled" { "enable" } else { "disable" };
+                    let action = if state == "enabled" {
+                        "enable"
+                    } else {
+                        "disable"
+                    };
                     let _ = Command::new("systemctl")
                         .args([action, &so.service])
                         .status();
@@ -282,9 +283,7 @@ impl LivePlanExecutor {
             match action {
                 PostApplyAction::ServiceRestart { services } => {
                     for svc in services {
-                        let _ = Command::new("systemctl")
-                            .args(["restart", svc])
-                            .status();
+                        let _ = Command::new("systemctl").args(["restart", svc]).status();
                     }
                 }
                 PostApplyAction::Validation {
@@ -321,7 +320,11 @@ impl LivePlanExecutor {
 }
 
 fn plan_id_for(plan: &FixPlan) -> String {
-    format!("{}-{}", plan.vm.replace('/', "_"), plan.generated.timestamp())
+    format!(
+        "{}-{}",
+        plan.vm.replace('/', "_"),
+        plan.generated.timestamp()
+    )
 }
 
 #[derive(Debug, Serialize, Deserialize)]

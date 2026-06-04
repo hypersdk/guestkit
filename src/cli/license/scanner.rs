@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! License scanner for packages
 
-use super::{PackageLicense, database::LICENSE_DB};
+use super::{database::LICENSE_DB, PackageLicense};
 use crate::cli::inventory::licenses;
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 /// Scan package licenses from disk image
 pub fn scan_package_licenses(
@@ -21,14 +21,15 @@ pub fn scan_package_licenses(
         }
 
         // Get license from detection
-        let license_str = licenses::detect_license(&name, "")
-            .unwrap_or_else(|| "Unknown".to_string());
+        let license_str =
+            licenses::detect_license(&name, "").unwrap_or_else(|| "Unknown".to_string());
 
         // Get license info from database
         let license_type = LICENSE_DB.get_type(&license_str);
         let risk_level = LICENSE_DB.get_risk_level(&license_str);
 
-        let (compatible_with, incompatible_with) = if let Some(info) = LICENSE_DB.get(&license_str) {
+        let (compatible_with, incompatible_with) = if let Some(info) = LICENSE_DB.get(&license_str)
+        {
             (info.compatible_with.clone(), info.incompatible_with.clone())
         } else {
             (vec![], vec![])

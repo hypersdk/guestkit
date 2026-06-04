@@ -42,7 +42,9 @@ pub fn open(device_path: &str) -> Result<FramedTransport> {
         .open(Path::new(path))
         .with_context(|| format!("failed to open virtio channel {path}"))?;
     Ok(FramedTransport {
-        reader: Box::new(DeviceIo { inner: file.try_clone()? }),
+        reader: Box::new(DeviceIo {
+            inner: file.try_clone()?,
+        }),
         writer: Box::new(DeviceIo { inner: file }),
     })
 }

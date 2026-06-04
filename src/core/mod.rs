@@ -10,7 +10,7 @@ pub mod retry;
 pub mod systemd;
 pub mod types;
 
-pub use binary_cache::{BinaryCache, CachedInspection, CacheStats};
+pub use binary_cache::{BinaryCache, CacheStats, CachedInspection};
 pub use diagnostics::DiagnosticError;
 pub use error::{Error, Result};
 pub use progress::{MultiProgressReporter, ProgressReporter};

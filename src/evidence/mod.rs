@@ -11,6 +11,6 @@ pub use builder::{build_evidence, EvidenceBuilder};
 #[cfg(feature = "agent")]
 pub use live::build_evidence_live;
 pub use snapshot::{
-    BootEvidence, EvidenceSnapshot, NetworkEvidence, OsEvidence, PackageEvidence,
-    SecurityEvidence, StorageEvidence, VmToolsEvidence, WindowsEvidence, SCHEMA_VERSION,
+    BootEvidence, EvidenceSnapshot, NetworkEvidence, OsEvidence, PackageEvidence, SecurityEvidence,
+    StorageEvidence, VmToolsEvidence, WindowsEvidence, SCHEMA_VERSION,
 };

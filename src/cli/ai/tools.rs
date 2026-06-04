@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Tool functions that the AI can call to inspect VMs
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde_json::json;
 
 /// Context for AI tools with access to guestfs
@@ -75,7 +75,10 @@ impl DiagnosticTools {
 
     /// Get kernel information
     pub fn get_kernel_info(&mut self) -> Result<String> {
-        let modules = self.guestfs.inspect_kernel_modules(&self.root).unwrap_or_default();
+        let modules = self
+            .guestfs
+            .inspect_kernel_modules(&self.root)
+            .unwrap_or_default();
         let info = json!({
             "modules_count": modules.len(),
             "modules": modules.iter().take(20).collect::<Vec<_>>(),
@@ -101,7 +104,9 @@ impl DiagnosticTools {
         // Check for initramfs
         match self.guestfs.ls("/boot") {
             Ok(files) => {
-                let has_initramfs = files.iter().any(|f| f.starts_with("initramfs") || f.starts_with("initrd"));
+                let has_initramfs = files
+                    .iter()
+                    .any(|f| f.starts_with("initramfs") || f.starts_with("initrd"));
                 if !has_initramfs {
                     issues.push("No initramfs/initrd found in /boot".to_string());
                 }
@@ -131,7 +136,10 @@ impl DiagnosticTools {
 
         if let Ok(size) = self.guestfs.filesize(path) {
             if size > MAX_SIZE {
-                return Ok(format!("File too large ({} bytes), showing first 100KB", size));
+                return Ok(format!(
+                    "File too large ({} bytes), showing first 100KB",
+                    size
+                ));
             }
         }
 

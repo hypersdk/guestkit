@@ -4,7 +4,7 @@
 use anyhow::Result;
 use colored::Colorize;
 
-use super::{ShellContext, resolve_path};
+use super::{resolve_path, ShellContext};
 
 /// List files in current or specified directory
 pub fn cmd_ls(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
@@ -37,8 +37,16 @@ pub fn cmd_ls(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         Err(e) => {
             // Check if it's a file (common mistake: ls on a file instead of cat)
             if ctx.guestfs.is_file(&full_path).unwrap_or(false) {
-                eprintln!("{} '{}' is a file, not a directory", "Error:".red(), full_path);
-                eprintln!("{} Use 'cat {}' to view the file contents", "Hint:".yellow(), full_path);
+                eprintln!(
+                    "{} '{}' is a file, not a directory",
+                    "Error:".red(),
+                    full_path
+                );
+                eprintln!(
+                    "{} Use 'cat {}' to view the file contents",
+                    "Hint:".yellow(),
+                    full_path
+                );
             } else {
                 eprintln!("{} {}", "Error:".red(), e);
             }
@@ -70,11 +78,7 @@ pub fn cmd_cat(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Change directory
 pub fn cmd_cd(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
-    let path = if args.is_empty() {
-        "/"
-    } else {
-        args[0]
-    };
+    let path = if args.is_empty() { "/" } else { args[0] };
 
     let new_path = resolve_path(&ctx.current_path, path);
 
@@ -108,7 +112,12 @@ pub fn cmd_find(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         ctx.current_path.clone()
     };
 
-    println!("{} files matching '{}' from '{}'...", "Searching".cyan(), pattern, search_path);
+    println!(
+        "{} files matching '{}' from '{}'...",
+        "Searching".cyan(),
+        pattern,
+        search_path
+    );
 
     // Recursive search implementation
     search_recursive(ctx, &search_path, pattern, 0)?;
@@ -116,12 +125,23 @@ pub fn cmd_find(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn search_recursive(ctx: &mut ShellContext, path: &str, pattern: &str, depth: usize) -> Result<()> {
+pub fn search_recursive(
+    ctx: &mut ShellContext,
+    path: &str,
+    pattern: &str,
+    depth: usize,
+) -> Result<()> {
     use std::collections::HashSet;
     search_recursive_inner(ctx, path, pattern, depth, &mut HashSet::new())
 }
 
-fn search_recursive_inner(ctx: &mut ShellContext, path: &str, pattern: &str, depth: usize, visited: &mut std::collections::HashSet<String>) -> Result<()> {
+fn search_recursive_inner(
+    ctx: &mut ShellContext,
+    path: &str,
+    pattern: &str,
+    depth: usize,
+    visited: &mut std::collections::HashSet<String>,
+) -> Result<()> {
     if depth > 50 {
         return Ok(()); // Limit recursion depth to prevent stack overflow
     }
@@ -142,7 +162,8 @@ fn search_recursive_inner(ctx: &mut ShellContext, path: &str, pattern: &str, dep
             }
 
             if ctx.guestfs.is_dir(&full_path).unwrap_or(false) && entry != "." && entry != ".." {
-                if let Err(e) = search_recursive_inner(ctx, &full_path, pattern, depth + 1, visited) {
+                if let Err(e) = search_recursive_inner(ctx, &full_path, pattern, depth + 1, visited)
+                {
                     log::warn!("Search error in {}: {}", full_path, e);
                 }
             }
@@ -167,8 +188,11 @@ pub fn cmd_grep(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
             let text = String::from_utf8_lossy(&contents);
             for (i, line) in text.lines().enumerate() {
                 if line.contains(pattern) {
-                    println!("{}:{}", format!("{}", i + 1).cyan(),
-                            line.replace(pattern, &pattern.red().to_string()));
+                    println!(
+                        "{}:{}",
+                        format!("{}", i + 1).cyan(),
+                        line.replace(pattern, &pattern.red().to_string())
+                    );
                 }
             }
             Ok(())
@@ -230,13 +254,19 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}  - Show file contents", "cat <file>".green());
     println!("  {}  - Change directory", "cd <path>".green());
     println!("  {}     - Print working directory", "pwd".green());
-    println!("  {}  - Find files by name", "find <pattern> [path]".green());
+    println!(
+        "  {}  - Find files by name",
+        "find <pattern> [path]".green()
+    );
     println!("  {} - Search in file", "grep <pattern> <file>".green());
 
     println!("\n{}", "System Commands:".yellow().bold());
     println!("  {}    - Show system information", "info".green());
     println!("  {}  - Show mounted filesystems", "mounts".green());
-    println!("  {} - Search installed packages", "packages <pattern>".green());
+    println!(
+        "  {} - Search installed packages",
+        "packages <pattern>".green()
+    );
     println!("  {} - List system services", "services [pattern]".green());
     println!("  {}   - List user accounts", "users".green());
     println!("  {} - Show network configuration", "network".green());
@@ -247,53 +277,95 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {}   - Show security risks", "risks".green());
 
     println!("\n{}", "Interactive Navigation:".yellow().bold());
-    println!("  {} - Interactive file explorer (TUI)", "explore, ex [path]".green());
+    println!(
+        "  {} - Interactive file explorer (TUI)",
+        "explore, ex [path]".green()
+    );
     println!("           Visual file browser with preview & actions");
     println!("           Use ↑↓/j/k to navigate, Enter to open, h for help");
 
     println!("\n{}", "Overview & Visualization:".yellow().bold());
-    println!("  {} - Beautiful system dashboard", "dashboard, dash".green());
+    println!(
+        "  {} - Beautiful system dashboard",
+        "dashboard, dash".green()
+    );
     println!("  {} - Quick system summary", "summary, sum".green());
-    println!("  {} - Visualize directory tree", "tree [path] [depth]".green());
+    println!(
+        "  {} - Visualize directory tree",
+        "tree [path] [depth]".green()
+    );
     println!("  {}     - Random helpful tip", "tips, tip".green());
 
     println!("\n{}", "Data Export & Reporting:".yellow().bold());
-    println!("  {} - Export data in various formats", "export <type> <format> [file]".green());
+    println!(
+        "  {} - Export data in various formats",
+        "export <type> <format> [file]".green()
+    );
     println!("           Types: packages, users, services, system");
     println!("           Formats: json, csv, md, txt");
     println!("           Example: export packages json packages.json");
-    println!("  {} - Generate comprehensive snapshot report", "snapshot, snap [file]".green());
+    println!(
+        "  {} - Generate comprehensive snapshot report",
+        "snapshot, snap [file]".green()
+    );
     println!("           Creates detailed Markdown report");
     println!("           Example: snapshot system-report.md");
-    println!("  {}      - Compare and analyze", "diff <type> <filter>".green());
+    println!(
+        "  {}      - Compare and analyze",
+        "diff <type> <filter>".green()
+    );
     println!("           Example: diff package kernel");
 
     #[cfg(feature = "ai")]
     {
         println!("\n{}", "AI Assistant:".yellow().bold());
-        println!("  {}    - Ask AI for help (requires OPENAI_API_KEY)", "ai <query>".green());
+        println!(
+            "  {}    - Ask AI for help (requires OPENAI_API_KEY)",
+            "ai <query>".green()
+        );
         println!("           Example: ai why won't this boot?");
     }
 
     println!("\n{}", "Intelligence & Discovery:".yellow().bold());
-    println!("  {} - Smart recommendations engine", "recommend, rec".green());
-    println!("  {} - System profiling & detection", "profile <type>".green());
+    println!(
+        "  {} - Smart recommendations engine",
+        "recommend, rec".green()
+    );
+    println!(
+        "  {} - System profiling & detection",
+        "profile <type>".green()
+    );
     println!("           Types: create, quick, detect, show");
-    println!("  {} - Automatic system discovery", "discover, disco <type>".green());
+    println!(
+        "  {} - Automatic system discovery",
+        "discover, disco <type>".green()
+    );
     println!("           Types: files, apps, network, all");
-    println!("  {}  - Formatted report generator", "report <type>".green());
+    println!(
+        "  {}  - Formatted report generator",
+        "report <type>".green()
+    );
     println!("           Types: executive, technical, security, compliance");
 
     println!("\n{}", "Guided Workflows:".yellow().bold());
-    println!("  {} - Interactive task wizards", "wizard, wiz <type>".green());
+    println!(
+        "  {} - Interactive task wizards",
+        "wizard, wiz <type>".green()
+    );
     println!("           Types: security, health, packages, config, export");
     println!("  {}    - System scanners", "scan <type>".green());
     println!("           Types: security, issues, vulns, all");
-    println!("  {} - File/directory comparison", "compare, cmp <type>".green());
+    println!(
+        "  {} - File/directory comparison",
+        "compare, cmp <type>".green()
+    );
     println!("           Types: files, dirs");
 
     println!("\n{}", "Advanced Features:".yellow().bold());
-    println!("  {} - Smart search with filters", "search <pattern> [options]".green());
+    println!(
+        "  {} - Smart search with filters",
+        "search <pattern> [options]".green()
+    );
     println!("           Options: --path, --type, --content");
     println!("  {}   - Batch operations", "batch <operation>".green());
     println!("           Operations: cat, find, export");
@@ -303,7 +375,10 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("\n{}", "Quick Commands:".yellow().bold());
     println!("  {}   - Quick actions menu", "quick".green());
     println!("  {}   - Command cheat sheet", "cheat".green());
-    println!("  {}  - Recently modified files", "recent [path] [limit]".green());
+    println!(
+        "  {}  - Recently modified files",
+        "recent [path] [limit]".green()
+    );
     println!("  {}       - Enhanced history analysis", "h".green());
 
     println!("\n{}", "Automation & Utilities:".yellow().bold());
@@ -323,15 +398,27 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("           Aspects: security, performance, network, storage, users");
     println!("  {} - Operational playbooks", "playbook <name>".green());
     println!("           Playbooks: incident, hardening, audit, forensics, migration, recovery");
-    println!("  {} - Deep component inspection", "inspect <component>".green());
+    println!(
+        "  {} - Deep component inspection",
+        "inspect <component>".green()
+    );
     println!("           Components: boot, logging, packages, services, kernel");
 
     println!("\n{}", "Planning & Strategy:".yellow().bold());
-    println!("  {} - Narrative system explanations", "story <topic>".green());
+    println!(
+        "  {} - Narrative system explanations",
+        "story <topic>".green()
+    );
     println!("           Topics: system, security, config, timeline");
-    println!("  {} - Interactive advisor Q&A", "advisor <question>".green());
+    println!(
+        "  {} - Interactive advisor Q&A",
+        "advisor <question>".green()
+    );
     println!("           Questions: secure, performance, troubleshoot, backup, monitoring, upgrade, compliance, migration");
-    println!("  {} - System verification checks", "verify <check>".green());
+    println!(
+        "  {} - System verification checks",
+        "verify <check>".green()
+    );
     println!("           Checks: integrity, security, boot, network, all");
     println!("  {} - Optimization recommendations", "optimize".green());
     println!("  {} - Improvement roadmaps", "roadmap <timeframe>".green());
@@ -340,17 +427,29 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("\n{}", "Intelligence & Analytics:".yellow().bold());
     println!("  {} - AI-like intelligent insights", "insights".green());
     println!("  {}  - Comprehensive health diagnostic", "doctor".green());
-    println!("  {}   - Goal setting and tracking", "goals <command>".green());
+    println!(
+        "  {}   - Goal setting and tracking",
+        "goals <command>".green()
+    );
     println!("           Commands: suggest, list, check");
     println!("  {}  - Shell usage analysis", "habits".green());
-    println!("  {} - Team collaboration reports", "collaborate <type>".green());
+    println!(
+        "  {} - Team collaboration reports",
+        "collaborate <type>".green()
+    );
     println!("           Types: handoff, incident, change, status");
 
-    println!("\n{}", "Advanced Analytics & Visualization:".yellow().bold());
+    println!(
+        "\n{}",
+        "Advanced Analytics & Visualization:".yellow().bold()
+    );
     println!("  {}  - Predictive issue analysis", "predict".green());
     println!("  {}   - Data visualization charts", "chart <type>".green());
     println!("           Types: packages, users, services, storage, security");
-    println!("  {} - Compliance checking", "compliance <standard>".green());
+    println!(
+        "  {} - Compliance checking",
+        "compliance <standard>".green()
+    );
     println!("           Standards: cis, pci-dss, hipaa, gdpr, soc2");
 
     println!("\n{}", "Automation & Operations:".yellow().bold());
@@ -358,26 +457,53 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("           Templates: security-audit, health-check, compliance-review");
     println!("           performance-analysis, export-all, pre-migration");
     println!("  {}   - Comprehensive system scoring", "score".green());
-    println!("  {}   - SQL-like query interface", "query <statement>".green());
-    println!("  {} - System monitoring & alerts", "monitor <type>".green());
+    println!(
+        "  {}   - SQL-like query interface",
+        "query <statement>".green()
+    );
+    println!(
+        "  {} - System monitoring & alerts",
+        "monitor <type>".green()
+    );
     println!("           Types: security, health, changes, alerts");
-    println!("  {} - Migration readiness assessment", "migrate <target>".green());
+    println!(
+        "  {} - Migration readiness assessment",
+        "migrate <target>".green()
+    );
     println!("           Targets: cloud, container");
 
     println!("\n{}", "Diagnostics & Remediation:".yellow().bold());
-    println!("  {} - Intelligent troubleshooting", "troubleshoot <category>".green());
+    println!(
+        "  {} - Intelligent troubleshooting",
+        "troubleshoot <category>".green()
+    );
     println!("           Categories: boot, network, services, performance, security, auto");
-    println!("  {} - Package dependency analysis", "depends <command>".green());
+    println!(
+        "  {} - Package dependency analysis",
+        "depends <command>".green()
+    );
     println!("           Commands: search, analyze, dev, libs");
-    println!("  {} - Configuration validation", "validate <target>".green());
+    println!(
+        "  {} - Configuration validation",
+        "validate <target>".green()
+    );
     println!("           Targets: all, config");
 
     println!("\n{}", "Security & Forensics:".yellow().bold());
-    println!("  {} - Digital forensics workflows", "forensics <workflow>".green());
+    println!(
+        "  {} - Digital forensics workflows",
+        "forensics <workflow>".green()
+    );
     println!("           Workflows: collect, timeline, suspicious, activity, integrity, memory");
-    println!("  {} - Security audit trail analysis", "audit <type>".green());
+    println!(
+        "  {} - Security audit trail analysis",
+        "audit <type>".green()
+    );
     println!("           Types: auth, users, config, packages, sudo, full");
-    println!("  {} - Security baseline management", "baseline <command>".green());
+    println!(
+        "  {} - Security baseline management",
+        "baseline <command>".green()
+    );
     println!("           Commands: create, show, drift, cis, export");
 
     println!("\n{}", "Shell Commands:".yellow().bold());
@@ -393,7 +519,10 @@ pub fn cmd_help(_ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("  {} - Remove an alias", "unalias <name>".green());
     println!("  {} - List bookmarks", "bookmark".green());
     println!("  {} - Bookmark current path", "bookmark <name>".green());
-    println!("  {} - Bookmark specific path", "bookmark <name> <path>".green());
+    println!(
+        "  {} - Bookmark specific path",
+        "bookmark <name> <path>".green()
+    );
     println!("  {} - Jump to bookmark", "goto <name>".green());
 
     println!("\n{}", "Default Aliases:".yellow().bold());
@@ -437,7 +566,13 @@ pub fn cmd_tree(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn print_tree(ctx: &mut ShellContext, path: &str, prefix: &str, depth: usize, max_depth: usize) -> Result<()> {
+pub fn print_tree(
+    ctx: &mut ShellContext,
+    path: &str,
+    prefix: &str,
+    depth: usize,
+    max_depth: usize,
+) -> Result<()> {
     if depth >= max_depth {
         return Ok(());
     }

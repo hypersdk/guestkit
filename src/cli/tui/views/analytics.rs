@@ -2,7 +2,10 @@
 //! Analytics view with charts and visualizations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR,
+    WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -51,10 +54,15 @@ fn draw_health_gauges(f: &mut Frame, area: Rect, app: &App) {
     };
 
     let security_gauge = Gauge::default()
-        .block(Block::default()
-            .title(Span::styled("🔒 Security", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR)))
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    "🔒 Security",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR)),
+        )
         .gauge_style(Style::default().fg(if security_health >= 80 {
             SUCCESS_COLOR
         } else if security_health >= 60 {
@@ -79,10 +87,15 @@ fn draw_health_gauges(f: &mut Frame, area: Rect, app: &App) {
         .unwrap_or(0) as u16;
 
     let service_gauge = Gauge::default()
-        .block(Block::default()
-            .title(Span::styled("⚙️  Services", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR)))
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    "⚙️  Services",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR)),
+        )
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .ratio(service_health as f64 / 100.0)
         .label(Span::styled(
@@ -93,17 +106,25 @@ fn draw_health_gauges(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(service_gauge, chunks[1]);
 
     // Package Health Gauge (dev packages ratio)
-    let dev_packages = app.packages.packages.iter()
+    let dev_packages = app
+        .packages
+        .packages
+        .iter()
         .filter(|p| p.name.contains("devel") || p.name.contains("-dev"))
         .count();
     let total_packages = app.packages.packages.len().max(1);
     let package_ratio = (dev_packages * 100 / total_packages) as u16;
 
     let package_gauge = Gauge::default()
-        .block(Block::default()
-            .title(Span::styled("📦 Packages", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR)))
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    "📦 Packages",
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR)),
+        )
         .gauge_style(Style::default().fg(INFO_COLOR))
         .ratio(package_ratio as f64 / 100.0)
         .label(Span::styled(
@@ -169,10 +190,7 @@ fn draw_service_status(f: &mut Frame, area: Rect, app: &App) {
     let disabled = app.services.len() as u64 - enabled;
     let running_count = app.services.iter().filter(|s| s.state == "running").count();
 
-    let data = vec![
-        ("Enabled", enabled),
-        ("Disabled", disabled),
-    ];
+    let data = vec![("Enabled", enabled), ("Disabled", disabled)];
 
     let barchart = BarChart::default()
         .block(
@@ -295,19 +313,25 @@ fn draw_risk_trends(f: &mut Frame, area: Rect, app: &App) {
             Span::styled("Total Issues: ", Style::default().fg(TEXT_COLOR)),
             Span::styled(
                 format!("{}", total_issues),
-                Style::default().fg(if total_issues > 10 {
-                    ERROR_COLOR
-                } else if total_issues > 5 {
-                    WARNING_COLOR
-                } else {
-                    SUCCESS_COLOR
-                }).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(if total_issues > 10 {
+                        ERROR_COLOR
+                    } else if total_issues > 5 {
+                        WARNING_COLOR
+                    } else {
+                        SUCCESS_COLOR
+                    })
+                    .add_modifier(Modifier::BOLD),
             ),
         ]),
         Line::from(vec![
             Span::styled("Trend: ", Style::default().fg(TEXT_COLOR)),
             Span::styled(
-                if total_issues > 5 { "⬆ Increasing" } else { "⬇ Stable" },
+                if total_issues > 5 {
+                    "⬆ Increasing"
+                } else {
+                    "⬇ Stable"
+                },
                 Style::default().fg(WARNING_COLOR),
             ),
         ]),

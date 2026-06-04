@@ -1,5 +1,5 @@
 // Integration test: lvm_clone_podman with a real RHEL VM
-use guestkit::guestfs::lvm_clone::{lvm_clone_podman, LvmCloneConfig, IsolationLevel};
+use guestkit::guestfs::lvm_clone::{lvm_clone_podman, IsolationLevel, LvmCloneConfig};
 
 fn main() {
     let config = LvmCloneConfig {
@@ -42,7 +42,10 @@ fn main() {
             println!("boot_verified: {}", result.boot_verified);
             println!("UUID mappings: {}", result.uuid_mappings.len());
             for m in &result.uuid_mappings {
-                println!("  {} ({}): {} -> {}", m.device, m.fs_type, m.old_uuid, m.new_uuid);
+                println!(
+                    "  {} ({}): {} -> {}",
+                    m.device, m.fs_type, m.old_uuid, m.new_uuid
+                );
             }
             if !result.security_warnings.is_empty() {
                 println!("Security warnings:");

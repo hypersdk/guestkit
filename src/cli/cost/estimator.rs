@@ -163,9 +163,7 @@ pub fn calculate_optimized_costs(
     provider: CloudProvider,
     _region: &str,
 ) -> ResourceEstimate {
-    let _total_savings: f64 = opportunities.iter()
-        .map(|o| o.monthly_savings)
-        .sum();
+    let _total_savings: f64 = opportunities.iter().map(|o| o.monthly_savings).sum();
 
     // Determine optimized instance type (downsize if possible)
     let (instance_type, vcpus, memory_gb, compute_monthly) = match provider {
@@ -175,21 +173,36 @@ pub fn calculate_optimized_costs(
             } else if current.instance_type.contains("medium") {
                 ("t3.small", 2, 2.0, current.compute_monthly * 0.5)
             } else {
-                (current.instance_type.as_str(), current.vcpus, current.memory_gb, current.compute_monthly)
+                (
+                    current.instance_type.as_str(),
+                    current.vcpus,
+                    current.memory_gb,
+                    current.compute_monthly,
+                )
             }
         }
         CloudProvider::Azure => {
             if current.vcpus > 2 {
                 ("Standard_B2ms", 2, 8.0, current.compute_monthly * 0.6)
             } else {
-                (current.instance_type.as_str(), current.vcpus, current.memory_gb, current.compute_monthly)
+                (
+                    current.instance_type.as_str(),
+                    current.vcpus,
+                    current.memory_gb,
+                    current.compute_monthly,
+                )
             }
         }
         CloudProvider::GCP => {
             if current.vcpus > 2 {
                 ("e2-medium", 2, 4.0, current.compute_monthly * 0.55)
             } else {
-                (current.instance_type.as_str(), current.vcpus, current.memory_gb, current.compute_monthly)
+                (
+                    current.instance_type.as_str(),
+                    current.vcpus,
+                    current.memory_gb,
+                    current.compute_monthly,
+                )
             }
         }
     };

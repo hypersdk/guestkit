@@ -177,7 +177,10 @@ pub mod builders {
             .with_suggestion("Try clearing the cache or running without --cache")
             .with_examples(vec![
                 invocation::example("cache-clear"),
-                format!("{}  # without --cache", invocation::example("inspect vm.qcow2")),
+                format!(
+                    "{}  # without --cache",
+                    invocation::example("inspect vm.qcow2")
+                ),
             ])
     }
 
@@ -189,9 +192,7 @@ pub mod builders {
                 "# Verify output directory:".to_string(),
                 "ls -ld $(dirname output.html)".to_string(),
                 "# Try different output location:".to_string(),
-                invocation::example(
-                    "inspect vm.qcow2 --export html --export-output ~/report.html",
-                ),
+                invocation::example("inspect vm.qcow2 --export html --export-output ~/report.html"),
             ])
     }
 
@@ -407,7 +408,11 @@ mod tests {
         let err = builders::invalid_argument("--format", "json, yaml, or text");
         assert!(err.message.contains("Invalid argument"));
         assert!(err.message.contains("--format"));
-        assert!(err.suggestion.as_ref().unwrap().contains("json, yaml, or text"));
+        assert!(err
+            .suggestion
+            .as_ref()
+            .unwrap()
+            .contains("json, yaml, or text"));
     }
 
     #[test]
@@ -415,7 +420,11 @@ mod tests {
         let err = builders::feature_not_available("AI assistant", "Requires --features ai");
         assert!(err.message.contains("Feature not available"));
         assert!(err.message.contains("AI assistant"));
-        assert!(err.suggestion.as_ref().unwrap().contains("Requires --features ai"));
+        assert!(err
+            .suggestion
+            .as_ref()
+            .unwrap()
+            .contains("Requires --features ai"));
     }
 
     #[test]

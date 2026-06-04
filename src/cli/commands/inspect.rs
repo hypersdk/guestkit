@@ -11,7 +11,9 @@ use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
 
-use super::{collect_inspection_data, init_guestfs_ro, print_inspection_report, print_profile_report};
+use super::{
+    collect_inspection_data, init_guestfs_ro, print_inspection_report, print_profile_report,
+};
 
 /// Inspect a disk image and display OS information
 pub fn inspect_image(
@@ -64,10 +66,12 @@ pub fn inspect_image(
     if verbose {
         eprintln!("[VERBOSE] Adding drive: {}", image.display());
     }
-    g.add_drive_ro(
-        image.to_str()
-            .ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8: {}", image.display()))?,
-    )?;
+    g.add_drive_ro(image.to_str().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Disk image path contains invalid UTF-8: {}",
+            image.display()
+        )
+    })?)?;
 
     progress.set_message("Launching appliance...");
     if verbose {
@@ -101,7 +105,10 @@ pub fn inspect_image(
                 g.shutdown()?;
                 return Ok(());
             } else {
-                eprintln!("Unknown profile: {}. Available: security, migration, performance", profile_name);
+                eprintln!(
+                    "Unknown profile: {}. Available: security, migration, performance",
+                    profile_name
+                );
                 g.shutdown()?;
                 return Err(anyhow::anyhow!("Invalid profile"));
             }
@@ -158,11 +165,13 @@ pub fn inspect_image(
         if verbose {
             eprintln!("[VERBOSE] Found device: {} ({} bytes)", device, size);
         }
-        println!("  {} {} {} ({:.2} GB)",
+        println!(
+            "  {} {} {} ({:.2} GB)",
             "▪".truecolor(222, 115, 86),
             device.bright_white().bold(),
             format!("{} bytes", size).bright_black(),
-            size as f64 / 1e9);
+            size as f64 / 1e9
+        );
 
         // Additional device information
         if let Ok(ro) = g.blockdev_getro(device) {
@@ -173,7 +182,11 @@ pub fn inspect_image(
             }
         }
         if let Ok(ss) = g.blockdev_getss(device) {
-            println!("    {} Sector size: {}", "•".bright_black(), format!("{} bytes", ss).bright_white());
+            println!(
+                "    {} Sector size: {}",
+                "•".bright_black(),
+                format!("{} bytes", ss).bright_white()
+            );
         }
     }
 
@@ -188,21 +201,40 @@ pub fn inspect_image(
         if verbose {
             eprintln!("[VERBOSE] Examining partition: {}", partition);
         }
-        println!("  {} {}", "📦".truecolor(222, 115, 86), partition.bright_white().bold());
+        println!(
+            "  {} {}",
+            "📦".truecolor(222, 115, 86),
+            partition.bright_white().bold()
+        );
 
-        let device = partition.split(|c: char| c.is_ascii_digit()).next().unwrap_or(partition);
+        let device = partition
+            .split(|c: char| c.is_ascii_digit())
+            .next()
+            .unwrap_or(partition);
         if let Ok(part_list) = g.part_list(device) {
             let part_num = g.part_to_partnum(partition)?;
             if let Some(p) = part_list.iter().find(|p| p.part_num == part_num) {
-                println!("    {} Number: {}", "•".bright_black(), format!("{}", p.part_num).yellow());
-                println!("    {} Start:  {}", "•".bright_black(), format!("{} bytes", p.part_start).bright_black());
+                println!(
+                    "    {} Number: {}",
+                    "•".bright_black(),
+                    format!("{}", p.part_num).yellow()
+                );
+                println!(
+                    "    {} Start:  {}",
+                    "•".bright_black(),
+                    format!("{} bytes", p.part_start).bright_black()
+                );
                 println!(
                     "    {} Size:   {} ({})",
                     "•".bright_black(),
                     format!("{} bytes", p.part_size).bright_black(),
                     format!("{:.2} GB", p.part_size as f64 / 1e9).bright_white()
                 );
-                println!("    {} End:    {}", "•".bright_black(), format!("{} bytes", p.part_end).bright_black());
+                println!(
+                    "    {} End:    {}",
+                    "•".bright_black(),
+                    format!("{} bytes", p.part_end).bright_black()
+                );
             }
         }
     }
@@ -212,7 +244,10 @@ pub fn inspect_image(
         eprintln!("[VERBOSE] Detecting partition scheme...");
     }
     if let Ok(scheme) = g.part_get_parttype("/dev/sda") {
-        println!("\n{}", "⚙️  Partition Scheme".truecolor(222, 115, 86).bold());
+        println!(
+            "\n{}",
+            "⚙️  Partition Scheme".truecolor(222, 115, 86).bold()
+        );
         println!("{}", "─".repeat(60).bright_black());
         let scheme_icon = match scheme.as_str() {
             "gpt" => "🔷",
@@ -248,9 +283,19 @@ pub fn inspect_image(
         };
 
         if fstype == "unknown" {
-            println!("  {} {} {}", fs_icon, device.yellow(), fstype.bright_black());
+            println!(
+                "  {} {} {}",
+                fs_icon,
+                device.yellow(),
+                fstype.bright_black()
+            );
         } else {
-            println!("  {} {} {}", fs_icon, device.yellow(), fstype.bright_white().bold());
+            println!(
+                "  {} {} {}",
+                fs_icon,
+                device.yellow(),
+                fstype.bright_white().bold()
+            );
         }
 
         if fstype != "unknown" && fstype != "swap" {
@@ -293,7 +338,10 @@ pub fn inspect_image(
             g.shutdown()?;
             return Ok(());
         } else {
-            eprintln!("Unknown profile: {}. Available: security, migration, performance", profile_name);
+            eprintln!(
+                "Unknown profile: {}. Available: security, migration, performance",
+                profile_name
+            );
             g.shutdown()?;
             return Err(anyhow::anyhow!("Invalid profile"));
         }
@@ -304,7 +352,11 @@ pub fn inspect_image(
     // Print Quick Summary first
     if !roots.is_empty() {
         println!("\n╭─────────────────────────────────────────────────────────╮");
-        println!("│ {} {}", "✨ Quick Summary".truecolor(222, 115, 86).bold(), " ".repeat(38));
+        println!(
+            "│ {} {}",
+            "✨ Quick Summary".truecolor(222, 115, 86).bold(),
+            " ".repeat(38)
+        );
         println!("╰─────────────────────────────────────────────────────────╯");
 
         for root in &roots {
@@ -316,8 +368,12 @@ pub fn inspect_image(
                     _ => "💻",
                 };
 
-                let product = g.inspect_get_product_name(root).unwrap_or_else(|_| "Unknown".to_string());
-                let distro = g.inspect_get_distro(root).unwrap_or_else(|_| "unknown".to_string());
+                let product = g
+                    .inspect_get_product_name(root)
+                    .unwrap_or_else(|_| "Unknown".to_string());
+                let distro = g
+                    .inspect_get_distro(root)
+                    .unwrap_or_else(|_| "unknown".to_string());
                 let major = g.inspect_get_major_version(root).unwrap_or(0);
                 let minor = g.inspect_get_minor_version(root).unwrap_or(0);
 
@@ -335,7 +391,11 @@ pub fn inspect_image(
     println!("{}", "─".repeat(60).bright_black());
 
     if roots.is_empty() {
-        println!("  {} {}", "⚠️".yellow(), "No operating systems found".bright_black());
+        println!(
+            "  {} {}",
+            "⚠️".yellow(),
+            "No operating systems found".bright_black()
+        );
         if verbose {
             eprintln!("[VERBOSE] No bootable operating systems detected");
         }
@@ -344,7 +404,11 @@ pub fn inspect_image(
             if verbose {
                 eprintln!("[VERBOSE] Inspecting OS at root: {}", root);
             }
-            println!("  {} Root: {}", "🔹".truecolor(222, 115, 86), root.bright_white().bold());
+            println!(
+                "  {} Root: {}",
+                "🔹".truecolor(222, 115, 86),
+                root.bright_white().bold()
+            );
             println!();
 
             if let Ok(ostype) = g.inspect_get_type(root) {
@@ -357,29 +421,49 @@ pub fn inspect_image(
                     "freebsd" => "👿",
                     _ => "💻",
                 };
-                println!("    {} Type:         {}", os_icon, ostype.bright_white().bold());
+                println!(
+                    "    {} Type:         {}",
+                    os_icon,
+                    ostype.bright_white().bold()
+                );
             }
             if let Ok(distro) = g.inspect_get_distro(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Distribution: {}", distro);
                 }
                 if distro == "unknown" {
-                    println!("    {} Distribution: {}", "📦".bright_black(), distro.bright_black());
+                    println!(
+                        "    {} Distribution: {}",
+                        "📦".bright_black(),
+                        distro.bright_black()
+                    );
                 } else {
-                    println!("    {} Distribution: {}", "📦".green(), distro.bright_green().bold());
+                    println!(
+                        "    {} Distribution: {}",
+                        "📦".green(),
+                        distro.bright_green().bold()
+                    );
                 }
             }
             if let Ok(product) = g.inspect_get_product_name(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Product name: {}", product);
                 }
-                println!("    {} Product:      {}", "🏷️".green(), product.bright_green().bold());
+                println!(
+                    "    {} Product:      {}",
+                    "🏷️".green(),
+                    product.bright_green().bold()
+                );
             }
             if let Ok(arch) = g.inspect_get_arch(root) {
                 if verbose {
                     eprintln!("[VERBOSE] Architecture: {}", arch);
                 }
-                println!("    {} Architecture: {}", "⚙️".truecolor(222, 115, 86), arch.truecolor(222, 115, 86).bold());
+                println!(
+                    "    {} Architecture: {}",
+                    "⚙️".truecolor(222, 115, 86),
+                    arch.truecolor(222, 115, 86).bold()
+                );
             }
             if let Ok(major) = g.inspect_get_major_version(root) {
                 if let Ok(minor) = g.inspect_get_minor_version(root) {
@@ -388,9 +472,17 @@ pub fn inspect_image(
                     }
                     let version = format!("{}.{}", major, minor);
                     if version == "0.0" {
-                        println!("    {} Version:      {}", "🔢".bright_black(), version.bright_black());
+                        println!(
+                            "    {} Version:      {}",
+                            "🔢".bright_black(),
+                            version.bright_black()
+                        );
                     } else {
-                        println!("    {} Version:      {}", "🔢".green(), version.bright_green().bold());
+                        println!(
+                            "    {} Version:      {}",
+                            "🔢".green(),
+                            version.bright_green().bold()
+                        );
                     }
                 }
             }
@@ -399,9 +491,17 @@ pub fn inspect_image(
                     eprintln!("[VERBOSE] Hostname: {}", hostname);
                 }
                 if hostname == "localhost" {
-                    println!("    {} Hostname:     {}", "🏠".bright_black(), hostname.bright_black());
+                    println!(
+                        "    {} Hostname:     {}",
+                        "🏠".bright_black(),
+                        hostname.bright_black()
+                    );
                 } else {
-                    println!("    {} Hostname:     {}", "🏠".blue(), hostname.bright_blue().bold());
+                    println!(
+                        "    {} Hostname:     {}",
+                        "🏠".blue(),
+                        hostname.bright_blue().bold()
+                    );
                 }
             }
             if let Ok(pkg_fmt) = g.inspect_get_package_format(root) {
@@ -417,7 +517,11 @@ pub fn inspect_image(
                 if pkg_fmt == "unknown" {
                     println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_black());
                 } else {
-                    println!("    {} Packages:     {}", pkg_icon, pkg_fmt.bright_magenta().bold());
+                    println!(
+                        "    {} Packages:     {}",
+                        pkg_icon,
+                        pkg_fmt.bright_magenta().bold()
+                    );
                 }
             }
 
@@ -427,9 +531,17 @@ pub fn inspect_image(
             }
             if let Ok(init) = g.inspect_get_init_system(root) {
                 if init == "unknown" {
-                    println!("    {} Init system:  {}", "⚡".bright_black(), init.bright_black());
+                    println!(
+                        "    {} Init system:  {}",
+                        "⚡".bright_black(),
+                        init.bright_black()
+                    );
                 } else {
-                    println!("    {} Init system:  {}", "⚡".yellow(), init.truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {} Init system:  {}",
+                        "⚡".yellow(),
+                        init.truecolor(222, 115, 86).bold()
+                    );
                 }
             }
 
@@ -438,9 +550,17 @@ pub fn inspect_image(
             }
             if let Ok(pkg_mgr) = g.inspect_get_package_management(root) {
                 if pkg_mgr == "unknown" {
-                    println!("    {} Pkg Manager:  {}", "🔧".yellow(), pkg_mgr.bright_black());
+                    println!(
+                        "    {} Pkg Manager:  {}",
+                        "🔧".yellow(),
+                        pkg_mgr.bright_black()
+                    );
                 } else {
-                    println!("    {} Pkg Manager:  {}", "🔧".yellow(), pkg_mgr.bright_white().bold());
+                    println!(
+                        "    {} Pkg Manager:  {}",
+                        "🔧".yellow(),
+                        pkg_mgr.bright_white().bold()
+                    );
                 }
             }
 
@@ -448,7 +568,11 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Checking OS format...");
             }
             if let Ok(format) = g.inspect_get_format(root) {
-                println!("    {} Format:       {}", "💿".yellow(), format.bright_white());
+                println!(
+                    "    {} Format:       {}",
+                    "💿".yellow(),
+                    format.bright_white()
+                );
             }
 
             if verbose {
@@ -585,22 +709,41 @@ pub fn inspect_image(
                 eprintln!("[VERBOSE] Gathering system configuration...");
             }
             println!();
-            println!("    {}", "⚙️  System Configuration".truecolor(222, 115, 86).bold());
+            println!(
+                "    {}",
+                "⚙️  System Configuration".truecolor(222, 115, 86).bold()
+            );
             println!("    {}", "─".repeat(56).bright_black());
 
             if let Ok(timezone) = g.inspect_timezone(root) {
                 if timezone == "unknown" {
-                    println!("      {} Timezone:    {}", "🌍".yellow(), timezone.bright_black());
+                    println!(
+                        "      {} Timezone:    {}",
+                        "🌍".yellow(),
+                        timezone.bright_black()
+                    );
                 } else {
-                    println!("      {} Timezone:    {}", "🌍".yellow(), timezone.bright_white().bold());
+                    println!(
+                        "      {} Timezone:    {}",
+                        "🌍".yellow(),
+                        timezone.bright_white().bold()
+                    );
                 }
             }
 
             if let Ok(locale) = g.inspect_locale(root) {
                 if locale == "unknown" {
-                    println!("      {} Locale:      {}", "🗣️".yellow(), locale.bright_black());
+                    println!(
+                        "      {} Locale:      {}",
+                        "🗣️".yellow(),
+                        locale.bright_black()
+                    );
                 } else {
-                    println!("      {} Locale:      {}", "🗣️".yellow(), locale.bright_white());
+                    println!(
+                        "      {} Locale:      {}",
+                        "🗣️".yellow(),
+                        locale.bright_white()
+                    );
                 }
             }
 
@@ -617,7 +760,11 @@ pub fn inspect_image(
             // Cloud-init
             if let Ok(has_cloud_init) = g.inspect_cloud_init(root) {
                 if has_cloud_init {
-                    println!("      {} Cloud-init:  {}", "☁️".yellow(), "yes".green().bold());
+                    println!(
+                        "      {} Cloud-init:  {}",
+                        "☁️".yellow(),
+                        "yes".green().bold()
+                    );
                 }
             }
 
@@ -627,7 +774,11 @@ pub fn inspect_image(
             }
             if let Ok(vm_tools) = g.inspect_vm_tools(root) {
                 if !vm_tools.is_empty() {
-                    println!("      {} VM Tools:    {}", "🔧".yellow(), vm_tools.join(", ").bright_white().bold());
+                    println!(
+                        "      {} VM Tools:    {}",
+                        "🔧".yellow(),
+                        vm_tools.join(", ").bright_white().bold()
+                    );
                 }
             }
 
@@ -638,20 +789,43 @@ pub fn inspect_image(
             if let Ok(interfaces) = g.inspect_network(root) {
                 if !interfaces.is_empty() {
                     println!();
-                    println!("    {}", "🌐 Network Configuration".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "🌐 Network Configuration".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
                     for iface in &interfaces {
-                        println!("      {} Interface: {}", "📡".yellow(), iface.name.bright_white().bold());
+                        println!(
+                            "      {} Interface: {}",
+                            "📡".yellow(),
+                            iface.name.bright_white().bold()
+                        );
                         if !iface.ip_address.is_empty() {
-                            println!("        {} IP:   {}", "•".bright_black(), iface.ip_address.join(", ").bright_white());
+                            println!(
+                                "        {} IP:   {}",
+                                "•".bright_black(),
+                                iface.ip_address.join(", ").bright_white()
+                            );
                         }
                         if !iface.mac_address.is_empty() {
-                            println!("        {} MAC:  {}", "•".bright_black(), iface.mac_address.bright_black());
+                            println!(
+                                "        {} MAC:  {}",
+                                "•".bright_black(),
+                                iface.mac_address.bright_black()
+                            );
                         }
                         if iface.dhcp {
-                            println!("        {} DHCP: {}", "•".bright_black(), "yes".green().bold());
+                            println!(
+                                "        {} DHCP: {}",
+                                "•".bright_black(),
+                                "yes".green().bold()
+                            );
                         } else {
-                            println!("        {} DHCP: {}", "•".bright_black(), "no".bright_black());
+                            println!(
+                                "        {} DHCP: {}",
+                                "•".bright_black(),
+                                "no".bright_black()
+                            );
                         }
                     }
                 }
@@ -659,7 +833,11 @@ pub fn inspect_image(
 
             if let Ok(dns_servers) = g.inspect_dns(root) {
                 if !dns_servers.is_empty() {
-                    println!("      {} DNS:  {}", "🌐".yellow(), dns_servers.join(", ").bright_white().bold());
+                    println!(
+                        "      {} DNS:  {}",
+                        "🌐".yellow(),
+                        dns_servers.join(", ").bright_white().bold()
+                    );
                 }
             }
 
@@ -690,9 +868,14 @@ pub fn inspect_image(
                     println!("    {}", "─".repeat(56).bright_black());
 
                     if !regular_users.is_empty() {
-                        println!("      {} Regular users: {}", "👤".yellow(), regular_users.len().to_string().bright_white().bold());
+                        println!(
+                            "      {} Regular users: {}",
+                            "👤".yellow(),
+                            regular_users.len().to_string().bright_white().bold()
+                        );
                         for user in regular_users.iter().take(10) {
-                            println!("        {} {} {} {} {}",
+                            println!(
+                                "        {} {} {} {} {}",
                                 "•".bright_black(),
                                 user.username.bright_white().bold(),
                                 format!("(uid: {})", user.uid).bright_black(),
@@ -701,11 +884,19 @@ pub fn inspect_image(
                             );
                         }
                         if regular_users.len() > 10 {
-                            println!("        {} and {} more...", "•".bright_black(), (regular_users.len() - 10).to_string().bright_black());
+                            println!(
+                                "        {} and {} more...",
+                                "•".bright_black(),
+                                (regular_users.len() - 10).to_string().bright_black()
+                            );
                         }
                     }
 
-                    println!("      {} System users: {}", "⚙️".bright_black(), system_users.len().to_string().bright_black());
+                    println!(
+                        "      {} System users: {}",
+                        "⚙️".bright_black(),
+                        system_users.len().to_string().bright_black()
+                    );
                 }
             }
 
@@ -716,23 +907,46 @@ pub fn inspect_image(
             if let Ok(ssh_config) = g.inspect_ssh_config(root) {
                 if !ssh_config.is_empty() {
                     println!();
-                    println!("    {}", "🔐 SSH Configuration".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "🔐 SSH Configuration".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
                     if let Some(port) = ssh_config.get("Port") {
-                        println!("      {} Port: {}", "•".bright_black(), port.bright_white().bold());
+                        println!(
+                            "      {} Port: {}",
+                            "•".bright_black(),
+                            port.bright_white().bold()
+                        );
                     }
                     if let Some(permit_root) = ssh_config.get("PermitRootLogin") {
                         if permit_root == "yes" {
-                            println!("      {} PermitRootLogin: {}", "•".bright_black(), permit_root.red());
+                            println!(
+                                "      {} PermitRootLogin: {}",
+                                "•".bright_black(),
+                                permit_root.red()
+                            );
                         } else {
-                            println!("      {} PermitRootLogin: {}", "•".bright_black(), permit_root.green());
+                            println!(
+                                "      {} PermitRootLogin: {}",
+                                "•".bright_black(),
+                                permit_root.green()
+                            );
                         }
                     }
                     if let Some(password_auth) = ssh_config.get("PasswordAuthentication") {
                         if password_auth == "no" {
-                            println!("      {} PasswordAuth: {}", "•".bright_black(), password_auth.green());
+                            println!(
+                                "      {} PasswordAuth: {}",
+                                "•".bright_black(),
+                                password_auth.green()
+                            );
                         } else {
-                            println!("      {} PasswordAuth: {}", "•".bright_black(), password_auth.yellow());
+                            println!(
+                                "      {} PasswordAuth: {}",
+                                "•".bright_black(),
+                                password_auth.yellow()
+                            );
                         }
                     }
                 }
@@ -745,14 +959,29 @@ pub fn inspect_image(
             if let Ok(services) = g.inspect_systemd_services(root) {
                 if !services.is_empty() {
                     println!();
-                    println!("    {}", "⚙️  Systemd Services".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "⚙️  Systemd Services".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
-                    println!("      {} Enabled: {}", "✓".green(), services.len().to_string().bright_white().bold());
+                    println!(
+                        "      {} Enabled: {}",
+                        "✓".green(),
+                        services.len().to_string().bright_white().bold()
+                    );
                     for service in services.iter().take(15) {
-                        println!("        {} {}", "•".bright_black(), service.name.bright_white());
+                        println!(
+                            "        {} {}",
+                            "•".bright_black(),
+                            service.name.bright_white()
+                        );
                     }
                     if services.len() > 15 {
-                        println!("        {} and {} more...", "•".bright_black(), (services.len() - 15).to_string().bright_black());
+                        println!(
+                            "        {} and {} more...",
+                            "•".bright_black(),
+                            (services.len() - 15).to_string().bright_black()
+                        );
                     }
                 }
             }
@@ -764,7 +993,10 @@ pub fn inspect_image(
             if let Ok(runtimes) = g.inspect_runtimes(root) {
                 if !runtimes.is_empty() {
                     println!();
-                    println!("    {}", "💻 Language Runtimes".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "💻 Language Runtimes".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
 
                     // Define icons for each runtime
@@ -790,7 +1022,10 @@ pub fn inspect_image(
             if let Ok(container_runtimes) = g.inspect_container_runtimes(root) {
                 if !container_runtimes.is_empty() {
                     println!();
-                    println!("    {}", "🐳 Container Runtimes".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "🐳 Container Runtimes".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
                     for runtime in &container_runtimes {
                         let (icon, name) = match runtime.as_str() {
@@ -815,18 +1050,43 @@ pub fn inspect_image(
                     || !lvm_info.logical_volumes.is_empty()
                 {
                     println!();
-                    println!("    {}", "💾 LVM Configuration".truecolor(222, 115, 86).bold());
+                    println!(
+                        "    {}",
+                        "💾 LVM Configuration".truecolor(222, 115, 86).bold()
+                    );
                     println!("    {}", "─".repeat(56).bright_black());
                     if !lvm_info.physical_volumes.is_empty() {
-                        println!("      {} Physical Volumes: {}", "🔷".bright_blue(), lvm_info.physical_volumes.join(", ").bright_white());
+                        println!(
+                            "      {} Physical Volumes: {}",
+                            "🔷".bright_blue(),
+                            lvm_info.physical_volumes.join(", ").bright_white()
+                        );
                     }
                     if !lvm_info.volume_groups.is_empty() {
-                        let vg_names = lvm_info.volume_groups.iter().map(|vg| vg.name.as_str()).collect::<Vec<_>>().join(", ");
-                        println!("      {} Volume Groups: {}", "📦".yellow(), vg_names.bright_white().bold());
+                        let vg_names = lvm_info
+                            .volume_groups
+                            .iter()
+                            .map(|vg| vg.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        println!(
+                            "      {} Volume Groups: {}",
+                            "📦".yellow(),
+                            vg_names.bright_white().bold()
+                        );
                     }
                     if !lvm_info.logical_volumes.is_empty() {
-                        let lv_names = lvm_info.logical_volumes.iter().map(|lv| lv.name.as_str()).collect::<Vec<_>>().join(", ");
-                        println!("      {} Logical Volumes: {}", "💿".truecolor(222, 115, 86), lv_names.bright_white());
+                        let lv_names = lvm_info
+                            .logical_volumes
+                            .iter()
+                            .map(|lv| lv.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        println!(
+                            "      {} Logical Volumes: {}",
+                            "💿".truecolor(222, 115, 86),
+                            lv_names.bright_white()
+                        );
                     }
                 }
             }
@@ -965,7 +1225,11 @@ pub fn list_filesystems(image: &Path, detailed: bool, verbose: bool) -> Result<(
     println!("{}", "Block Devices".bright_white().bold());
     println!("{}", "─".repeat(50).bright_black());
     for device in devices {
-        println!("  {} {}", "▪".truecolor(222, 115, 86), device.bright_white().bold());
+        println!(
+            "  {} {}",
+            "▪".truecolor(222, 115, 86),
+            device.bright_white().bold()
+        );
 
         if detailed {
             if let Ok(size) = g.blockdev_getsize64(&device) {
@@ -1074,7 +1338,9 @@ pub fn list_filesystems(image: &Path, detailed: bool, verbose: bool) -> Result<(
 
     println!("\n{}", "═".repeat(70).bright_blue());
 
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1208,7 +1474,11 @@ pub fn list_packages(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }

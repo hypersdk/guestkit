@@ -64,7 +64,11 @@ impl Guestfs {
         let host_path = self.resolve_guest_path(path)?;
 
         // Write ACL to temporary file
-        let temp_acl = format!("/tmp/guestfs-acl-{}-{}.txt", std::process::id(), uuid::Uuid::new_v4());
+        let temp_acl = format!(
+            "/tmp/guestfs-acl-{}-{}.txt",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        );
         std::fs::write(&temp_acl, acl).map_err(Error::Io)?;
 
         let mut cmd = Command::new("setfacl");
@@ -240,7 +244,11 @@ impl Guestfs {
         }
 
         // Write to temporary file
-        let temp_acl = format!("/tmp/guestfs-acl-copy-{}-{}.txt", std::process::id(), uuid::Uuid::new_v4());
+        let temp_acl = format!(
+            "/tmp/guestfs-acl-copy-{}-{}.txt",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        );
         std::fs::write(&temp_acl, &output.stdout).map_err(Error::Io)?;
 
         // Apply to destination

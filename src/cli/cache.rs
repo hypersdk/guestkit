@@ -183,10 +183,7 @@ impl EvidenceCache {
         self.0.store_evidence(image_path, evidence)
     }
 
-    pub fn get(
-        &self,
-        image_path: &Path,
-    ) -> Result<Option<crate::evidence::EvidenceSnapshot>> {
+    pub fn get(&self, image_path: &Path) -> Result<Option<crate::evidence::EvidenceSnapshot>> {
         self.0.get_evidence(image_path)
     }
 }

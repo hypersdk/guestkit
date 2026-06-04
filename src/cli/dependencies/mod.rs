@@ -5,8 +5,8 @@ pub mod analyzer;
 pub mod graph;
 pub mod visualizer;
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -148,8 +148,11 @@ pub fn analyze_dependencies<P: AsRef<Path>>(
     // Build dependency information
     let (packages, dependencies) = if os_lower.contains("debian") || os_lower.contains("ubuntu") {
         extract_debian_dependencies(&mut g, &applications, verbose)?
-    } else if os_lower.contains("red hat") || os_lower.contains("centos") ||
-              os_lower.contains("fedora") || os_lower.contains("rocky") {
+    } else if os_lower.contains("red hat")
+        || os_lower.contains("centos")
+        || os_lower.contains("fedora")
+        || os_lower.contains("rocky")
+    {
         extract_rpm_dependencies(&mut g, &applications, verbose)?
     } else {
         // Fallback to basic dependency extraction
@@ -169,13 +172,17 @@ pub fn analyze_dependencies<P: AsRef<Path>>(
     let conflicts = analyzer::detect_conflicts(&packages, &dependencies);
 
     // Calculate statistics
-    let statistics = calculate_statistics(&packages, &dependencies, &circular_dependencies, &conflicts);
+    let statistics =
+        calculate_statistics(&packages, &dependencies, &circular_dependencies, &conflicts);
 
     if verbose {
         println!("✅ Dependency analysis complete");
         println!("  Total packages: {}", statistics.total_packages);
         println!("  Total dependencies: {}", statistics.total_dependencies);
-        println!("  Circular dependencies: {}", statistics.circular_dependencies);
+        println!(
+            "  Circular dependencies: {}",
+            statistics.circular_dependencies
+        );
         println!("  Conflicts: {}", statistics.conflicts);
     }
 
@@ -214,7 +221,8 @@ fn extract_debian_dependencies(
     // Build reverse dependency map
     for (pkg, deps) in &dep_map {
         for dep in deps {
-            reverse_dep_map.entry(dep.clone())
+            reverse_dep_map
+                .entry(dep.clone())
                 .or_default()
                 .push(pkg.clone());
         }
@@ -315,15 +323,16 @@ fn parse_dpkg_status(content: &str, dep_map: &mut HashMap<String, Vec<String>>) 
                 dep_map.insert(current_package.clone(), current_deps.clone());
             }
 
-            current_package = line.strip_prefix("Package:").unwrap_or("").trim().to_string();
+            current_package = line
+                .strip_prefix("Package:")
+                .unwrap_or("")
+                .trim()
+                .to_string();
             current_deps.clear();
         } else if line.starts_with("Depends:") {
             let deps_str = line.strip_prefix("Depends:").unwrap_or("").trim();
             for dep in deps_str.split(',') {
-                let dep_name = dep.split_whitespace()
-                    .next()
-                    .unwrap_or("")
-                    .to_string();
+                let dep_name = dep.split_whitespace().next().unwrap_or("").to_string();
                 if !dep_name.is_empty() {
                     current_deps.push(dep_name);
                 }
@@ -412,7 +421,7 @@ mod tests {
             is_root: false,
             depth: 1,
         };
-        
+
         assert_eq!(package.name, "test-pkg");
         assert_eq!(package.version, "1.0.0");
         assert_eq!(package.depth, 1);
@@ -428,7 +437,7 @@ mod tests {
             dependency_type: DependencyType::Required,
             is_optional: false,
         };
-        
+
         assert_eq!(dependency.from, "pkg-a");
         assert_eq!(dependency.to, "pkg-b");
         assert!(!dependency.is_optional);
@@ -446,7 +455,7 @@ mod tests {
             conflicts: 0,
             average_dependencies: 1.5,
         };
-        
+
         assert_eq!(stats.total_packages, 10);
         assert_eq!(stats.total_dependencies, 15);
         assert_eq!(stats.circular_dependencies, 0);
@@ -456,10 +465,14 @@ mod tests {
     #[test]
     fn test_circular_dependency() {
         let circular = CircularDependency {
-            cycle: vec!["pkg-a".to_string(), "pkg-b".to_string(), "pkg-a".to_string()],
+            cycle: vec![
+                "pkg-a".to_string(),
+                "pkg-b".to_string(),
+                "pkg-a".to_string(),
+            ],
             length: 3,
         };
-        
+
         assert_eq!(circular.cycle.len(), 3);
         assert_eq!(circular.length, 3);
     }
@@ -482,7 +495,7 @@ mod tests {
                 average_dependencies: 0.0,
             },
         };
-        
+
         assert_eq!(graph.packages.len(), 0);
         assert_eq!(graph.dependencies.len(), 0);
         assert_eq!(graph.statistics.total_packages, 0);

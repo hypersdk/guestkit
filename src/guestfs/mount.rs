@@ -46,11 +46,15 @@ impl Guestfs {
 
             if let Some(loop_dev) = &self.loop_device {
                 if partition_num > 0 {
-                    loop_dev.partition_path(partition_num)
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                    loop_dev.partition_path(partition_num).ok_or_else(|| {
+                        Error::InvalidState("Loop device not connected".to_string())
+                    })?
                 } else {
-                    loop_dev.device_path()
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                    loop_dev
+                        .device_path()
+                        .ok_or_else(|| {
+                            Error::InvalidState("Loop device not connected".to_string())
+                        })?
                         .to_path_buf()
                 }
             } else if let Some(nbd) = &self.nbd_device {
@@ -68,8 +72,8 @@ impl Guestfs {
 
         // Create mount root if needed
         if self.mount_root.is_none() {
-            let mount_dir = std::path::PathBuf::from("/run")
-                .join(format!("guestkit-{}", std::process::id()));
+            let mount_dir =
+                std::path::PathBuf::from("/run").join(format!("guestkit-{}", std::process::id()));
             fs::create_dir_all(&mount_dir)
                 .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
             self.mount_root.get_or_insert(mount_dir);
@@ -124,7 +128,8 @@ impl Guestfs {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
+        {
             Ok(v) => v,
             Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
             Err(e) => return Err(e),
@@ -134,11 +139,14 @@ impl Guestfs {
 
         // Detect filesystem type to use appropriate mount options
         // Use the original mountable parameter, as device_partition might not exist yet (LVM)
-        let fs_type = self.vfs_type(mountable)
-            .unwrap_or_else(|e| {
-                log::debug!("Could not detect filesystem type for {}: {}. Falling back to 'auto'.", mountable, e);
-                "auto".to_string()
-            });
+        let fs_type = self.vfs_type(mountable).unwrap_or_else(|e| {
+            log::debug!(
+                "Could not detect filesystem type for {}: {}. Falling back to 'auto'.",
+                mountable,
+                e
+            );
+            "auto".to_string()
+        });
 
         // Build mount command
         let mut cmd = if need_sudo {
@@ -245,7 +253,8 @@ impl Guestfs {
             }
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
+        {
             Ok(v) => v,
             Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
             Err(e) => return Err(e),
@@ -322,7 +331,8 @@ impl Guestfs {
             }
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint) {
+        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
+        {
             Ok(v) => v,
             Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
             Err(e) => return Err(e),
@@ -382,9 +392,24 @@ impl Guestfs {
         // Validate VFS type against whitelist of known filesystem types
         {
             const ALLOWED_VFS_TYPES: &[&str] = &[
-                "proc", "sysfs", "devtmpfs", "tmpfs", "devpts", "cgroup", "cgroup2",
-                "securityfs", "debugfs", "tracefs", "configfs", "fusectl", "pstore",
-                "efivarfs", "bpf", "hugetlbfs", "mqueue", "overlay",
+                "proc",
+                "sysfs",
+                "devtmpfs",
+                "tmpfs",
+                "devpts",
+                "cgroup",
+                "cgroup2",
+                "securityfs",
+                "debugfs",
+                "tracefs",
+                "configfs",
+                "fusectl",
+                "pstore",
+                "efivarfs",
+                "bpf",
+                "hugetlbfs",
+                "mqueue",
+                "overlay",
             ];
             if !vfstype.is_empty() && !ALLOWED_VFS_TYPES.contains(&vfstype) {
                 return Err(Error::SecurityViolation(format!(
@@ -411,18 +436,23 @@ impl Guestfs {
 
         // Determine the actual device path to mount
         let device_partition = if mountable.starts_with("/dev/mapper/")
-            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3) {
+            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3)
+        {
             std::path::PathBuf::from(mountable)
         } else {
             let partition_num = self.parse_device_name(mountable)?;
 
             if let Some(loop_dev) = &self.loop_device {
                 if partition_num > 0 {
-                    loop_dev.partition_path(partition_num)
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                    loop_dev.partition_path(partition_num).ok_or_else(|| {
+                        Error::InvalidState("Loop device not connected".to_string())
+                    })?
                 } else {
-                    loop_dev.device_path()
-                        .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?
+                    loop_dev
+                        .device_path()
+                        .ok_or_else(|| {
+                            Error::InvalidState("Loop device not connected".to_string())
+                        })?
                         .to_path_buf()
                 }
             } else if let Some(nbd) = &self.nbd_device {
@@ -440,8 +470,8 @@ impl Guestfs {
 
         // Create mount root if needed
         if self.mount_root.is_none() {
-            let mount_dir = std::path::PathBuf::from("/run")
-                .join(format!("guestkit-{}", std::process::id()));
+            let mount_dir =
+                std::path::PathBuf::from("/run").join(format!("guestkit-{}", std::process::id()));
             fs::create_dir_all(&mount_dir)
                 .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
             self.mount_root.get_or_insert(mount_dir);
@@ -590,15 +620,17 @@ impl Guestfs {
 
             // Always check what's using the mountpoint before unmounting
             // This helps diagnose unmount failures
-            let lsof_output = Command::new("lsof")
-                .arg(mountpoint)
-                .output();
+            let lsof_output = Command::new("lsof").arg(mountpoint).output();
             let mut has_users = false;
             if let Ok(out) = lsof_output {
                 if !out.stdout.is_empty() {
                     has_users = true;
                     if self.debug {
-                        eprintln!("guestfs: processes using {}:\n{}", mountpoint, String::from_utf8_lossy(&out.stdout));
+                        eprintln!(
+                            "guestfs: processes using {}:\n{}",
+                            mountpoint,
+                            String::from_utf8_lossy(&out.stdout)
+                        );
                     }
                 }
             }
@@ -613,16 +645,18 @@ impl Guestfs {
             };
 
             let output = cmd
-                .arg("-R")  // Recursive unmount to handle stacked mounts from previous runs
+                .arg("-R") // Recursive unmount to handle stacked mounts from previous runs
                 .arg(mountpoint)
                 .output()
                 .map_err(|e| Error::CommandFailed(format!("Failed to execute umount: {}", e)))?;
 
             if self.debug {
-                eprintln!("[DEBUG] umount {} exited with status: {}, stderr: {}",
+                eprintln!(
+                    "[DEBUG] umount {} exited with status: {}, stderr: {}",
                     mountpoint,
                     output.status,
-                    String::from_utf8_lossy(&output.stderr));
+                    String::from_utf8_lossy(&output.stderr)
+                );
             }
 
             if !output.status.success() {
@@ -647,10 +681,7 @@ impl Guestfs {
                     Command::new("umount")
                 };
 
-                let force_output = force_cmd
-                    .arg("-f")
-                    .arg(mountpoint)
-                    .output();
+                let force_output = force_cmd.arg("-f").arg(mountpoint).output();
 
                 match force_output {
                     Ok(out) if out.status.success() => {
@@ -659,7 +690,10 @@ impl Guestfs {
                         }
                     }
                     Ok(out) => {
-                        eprintln!("Warning: force umount also failed: {}", String::from_utf8_lossy(&out.stderr));
+                        eprintln!(
+                            "Warning: force umount also failed: {}",
+                            String::from_utf8_lossy(&out.stderr)
+                        );
 
                         // Last resort: lazy unmount
                         if self.trace {
@@ -683,8 +717,11 @@ impl Guestfs {
                                 // Mark that we used lazy unmount - directory cleanup should be skipped
                                 self.lazy_unmount_used = true;
                             } else {
-                                eprintln!("Warning: lazy unmount also failed for {}: {}",
-                                    mountpoint, String::from_utf8_lossy(&lazy_out.stderr));
+                                eprintln!(
+                                    "Warning: lazy unmount also failed for {}: {}",
+                                    mountpoint,
+                                    String::from_utf8_lossy(&lazy_out.stderr)
+                                );
                             }
                         }
                     }

@@ -46,13 +46,17 @@ fn cis_ubuntu_2004_policy() -> Policy {
             PolicyRule {
                 id: "CIS-1.1.1.1".to_string(),
                 name: "Ensure mounting of cramfs filesystems is disabled".to_string(),
-                description: "The cramfs filesystem type is a compressed read-only Linux filesystem".to_string(),
+                description:
+                    "The cramfs filesystem type is a compressed read-only Linux filesystem"
+                        .to_string(),
                 severity: "low".to_string(),
                 rule_type: RuleType::FileNotExists {
                     path: "/etc/modprobe.d/cramfs.conf".to_string(),
                 },
                 expr: None,
-                remediation: Some("echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string()),
+                remediation: Some(
+                    "echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string(),
+                ),
             },
             PolicyRule {
                 id: "CIS-1.5.1".to_string(),
@@ -69,14 +73,19 @@ fn cis_ubuntu_2004_policy() -> Policy {
             PolicyRule {
                 id: "CIS-5.2.1".to_string(),
                 name: "Ensure permissions on /etc/ssh/sshd_config are configured".to_string(),
-                description: "The /etc/ssh/sshd_config file must be owned by root with 600 permissions".to_string(),
+                description:
+                    "The /etc/ssh/sshd_config file must be owned by root with 600 permissions"
+                        .to_string(),
                 severity: "high".to_string(),
                 rule_type: RuleType::FilePermissions {
                     path: "/etc/ssh/sshd_config".to_string(),
                     mode: "600".to_string(),
                 },
                 expr: None,
-                remediation: Some("chmod 600 /etc/ssh/sshd_config && chown root:root /etc/ssh/sshd_config".to_string()),
+                remediation: Some(
+                    "chmod 600 /etc/ssh/sshd_config && chown root:root /etc/ssh/sshd_config"
+                        .to_string(),
+                ),
             },
             PolicyRule {
                 id: "CIS-5.2.4".to_string(),
@@ -109,13 +118,16 @@ fn cis_rhel8_policy() -> Policy {
                     path: "/etc/modprobe.d/cramfs.conf".to_string(),
                 },
                 expr: None,
-                remediation: Some("echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string()),
+                remediation: Some(
+                    "echo 'install cramfs /bin/true' > /etc/modprobe.d/cramfs.conf".to_string(),
+                ),
             },
             PolicyRule {
                 id: "CIS-1.5.1".to_string(),
                 name: "Ensure permissions on bootloader config are configured".to_string(),
                 severity: "high".to_string(),
-                description: "Bootloader configuration must have restricted permissions".to_string(),
+                description: "Bootloader configuration must have restricted permissions"
+                    .to_string(),
                 rule_type: RuleType::FilePermissions {
                     path: "/boot/grub2/grub.cfg".to_string(),
                     mode: "600".to_string(),
@@ -196,12 +208,15 @@ fn hipaa_policy() -> Policy {
     Policy {
         name: "HIPAA Security Rule".to_string(),
         version: "1.0".to_string(),
-        description: "Health Insurance Portability and Accountability Act security controls".to_string(),
+        description: "Health Insurance Portability and Accountability Act security controls"
+            .to_string(),
         rules: vec![
             PolicyRule {
                 id: "HIPAA-164.308".to_string(),
                 name: "Access Control".to_string(),
-                description: "Implement technical policies and procedures for systems that maintain ePHI".to_string(),
+                description:
+                    "Implement technical policies and procedures for systems that maintain ePHI"
+                        .to_string(),
                 severity: "critical".to_string(),
                 rule_type: RuleType::FileExists {
                     path: "/etc/passwd".to_string(),

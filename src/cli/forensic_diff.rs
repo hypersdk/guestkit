@@ -85,8 +85,8 @@ pub fn compute_forensic_diff(
         }
     }
 
-    let config_drift_count = inspection_diff.config_changes.len()
-        + inspection_diff.os_changes.len();
+    let config_drift_count =
+        inspection_diff.config_changes.len() + inspection_diff.os_changes.len();
 
     let summary = if security_drift_score > 70.0 {
         format!(
