@@ -176,6 +176,7 @@ jobs:
             python3-devel \
             python3-pip \
             python3-maturin \
+            openssl-devel \
             qemu-img \
             rpmlint
 
@@ -255,6 +256,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: fedora:41
+      options: --privileged
 
     steps:
       - name: Install dependencies
