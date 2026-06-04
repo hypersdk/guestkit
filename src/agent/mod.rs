@@ -6,6 +6,7 @@ pub mod daemon;
 pub mod handler;
 pub mod inject;
 pub mod proxy;
+pub mod qga;
 pub mod transport;
 
 pub use cli::{run_agent, run_agent_proxy, AgentArgs, AgentProxyArgs};
@@ -19,7 +20,7 @@ pub fn ping_agent_socket(socket_path: &str) -> bool {
     let Ok(mut stream) = UnixStream::connect(socket_path) else {
         return false;
     };
-    let req = br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#;
+    let req = br#"{"execute":"guest-ping"}"#;
     if write_frame(&mut stream, req).is_err() {
         return false;
     }
@@ -28,6 +29,6 @@ pub fn ping_agent_socket(socket_path: &str) -> bool {
     };
     serde_json::from_slice::<serde_json::Value>(&frame)
         .ok()
-        .and_then(|v| v.get("result").cloned())
+        .and_then(|v| v.get("return").cloned())
         .is_some()
 }

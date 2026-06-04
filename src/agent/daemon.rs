@@ -52,8 +52,7 @@ impl AgentDaemon {
                 }
                 last_request = Instant::now();
 
-                let response = handler.handle(&frame);
-                let payload = serde_json::to_vec(&response).context("serialize response")?;
+                let payload = handler.handle_frame(&frame);
                 if let Err(e) = transport.write_frame(&payload) {
                     log::error!("write frame: {e}");
                     break;

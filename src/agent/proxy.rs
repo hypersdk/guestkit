@@ -22,16 +22,19 @@ impl AgentClient {
         Ok(Self { stream })
     }
 
-    fn call(&mut self, method: &str, params: serde_json::Value) -> Result<JsonRpcResponse> {
+    fn call_raw(&mut self, payload: Vec<u8>) -> Result<Vec<u8>> {
+        write_frame(&mut self.stream, &payload)?;
+        read_frame(&mut self.stream).map_err(|e| anyhow::anyhow!("{e}"))
+    }
+
+    fn call(&mut self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
         let req = serde_json::json!({
             "jsonrpc": "2.0",
             "method": method,
             "params": params,
             "id": 1
         });
-        let payload = serde_json::to_vec(&req)?;
-        write_frame(&mut self.stream, &payload)?;
-        let frame = read_frame(&mut self.stream)?;
+        let frame = self.call_raw(serde_json::to_vec(&req)?)?;
         serde_json::from_slice(&frame).context("parse agent response")
     }
 }
@@ -107,14 +110,14 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
     let response = tokio::task::spawn_blocking({
         let socket_path = socket_path.to_string();
         let rpc_method = rpc_method.to_string();
-        move || -> Result<JsonRpcResponse> {
+        move || -> Result<serde_json::Value> {
             let mut client = AgentClient::connect(&socket_path)?;
             client.call(&rpc_method, params)
         }
     })
     .await??;
 
-    let status = if response.error.is_some() { 500 } else { 200 };
+    let status = if response.get("error").is_some() { 500 } else { 200 };
     let body = serde_json::to_string(&response)?;
     write_http_json(&mut stream, status, &body).await
 }
