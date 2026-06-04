@@ -24,6 +24,21 @@ impl RequestHandler {
         }
     }
 
+    /// Dispatch QGA (`execute`) or GuestKit JSON-RPC (`method`) on one virtio channel.
+    pub fn handle_frame(&self, bytes: &[u8]) -> Vec<u8> {
+        if crate::agent::qga::is_qga_request(bytes) {
+            return crate::agent::qga::handle(bytes);
+        }
+        serde_json::to_vec(&self.handle(bytes)).unwrap_or_else(|e| {
+            serde_json::to_vec(&JsonRpcResponse::error(
+                None,
+                RpcErrorCode::InternalError,
+                format!("serialize: {e}"),
+            ))
+            .unwrap_or_default()
+        })
+    }
+
     pub fn handle(&self, bytes: &[u8]) -> JsonRpcResponse {
         let req = match JsonRpcRequest::parse(bytes) {
             Ok(r) => r,
@@ -235,5 +250,13 @@ mod tests {
         let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#);
         assert!(resp.result.is_some());
         assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn qga_guest_ping_round_trip() {
+        let handler = RequestHandler::new();
+        let raw = handler.handle_frame(br#"{"execute":"guest-ping"}"#);
+        let v: serde_json::Value = serde_json::from_slice(&raw).unwrap();
+        assert!(v.get("return").is_some());
     }
 }

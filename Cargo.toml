@@ -99,7 +99,7 @@ pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 # In-guest agent (optional feature)
 guestkit-agent-protocol = { version = "0.1.0", path = "crates/guestkit-agent-protocol", optional = true }
 sysinfo = { version = "0.33", optional = true }
-nix = { version = "0.29", features = ["user"], optional = true }
+nix = { version = "0.29", features = ["user", "fs"], optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -121,6 +121,7 @@ cloud-azure = []
 cloud-gcs = []
 cloud = ["cloud-s3", "cloud-azure", "cloud-gcs"]
 agent = ["guestkit-agent-protocol", "sysinfo", "nix"]
+# nix fs for QGA guest-get-fsinfo statvfs
 
 # Python module (optional)
 [lib]

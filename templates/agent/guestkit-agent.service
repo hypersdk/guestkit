@@ -1,7 +1,7 @@
 [Unit]
 Description=GuestKit Agent (Zyvor)
 After=network.target
-ConditionPathExists=/dev/virtio-ports/com.zyvor.guestkit.0
+ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0
 
 [Service]
 ExecStart=/usr/local/bin/guestkit agent --channel virtio

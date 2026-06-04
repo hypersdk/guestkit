@@ -12,16 +12,16 @@ pub const GUEST_BINARY_DEST: &str = "/usr/local/bin/guestkit";
 pub const GUEST_UNIT_DEST: &str = "/etc/systemd/system/guestkit-agent.service";
 pub const DEFAULT_UNIT: &str = include_str!("../../templates/agent/guestkit-agent.service");
 
-const KUBEVIRT_CHANNEL_HINT: &str = r#"Add virtio-serial channel to VMI/libvirt domain:
+const KUBEVIRT_CHANNEL_HINT: &str = r#"Add virtio-serial channel (QGA-compatible) to VMI/libvirt domain:
 spec:
   domain:
     devices:
       channels:
-      - name: com.zyvor.guestkit.0
+      - name: org.qemu.guest_agent.0
         target:
           type: virtio
-          name: com.zyvor.guestkit.0
-Guest device: /dev/virtio-ports/com.zyvor.guestkit.0"#;
+          name: org.qemu.guest_agent.0
+Guest device: /dev/virtio-ports/org.qemu.guest_agent.0"#;
 
 /// Append agent install operations to a fix plan (for export / preview).
 pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -> Result<()> {
