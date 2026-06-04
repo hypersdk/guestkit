@@ -18,6 +18,7 @@ BuildRequires:  make
 # System libraries
 BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
+BuildRequires:  openssl-devel
 
 # Python bindings (optional)
 %bcond_without python
