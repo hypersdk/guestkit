@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 static EXEC_JOBS: LazyLock<Mutex<HashMap<u64, ExecJob>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_PID: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(1000));
+static FS_FROZEN: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
 #[derive(Debug)]
 struct ExecJob {
@@ -51,7 +52,11 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
         "guest-get-time" => guest_get_time(),
         "guest-set-time" => guest_set_time(&args),
         "guest-fstrim" => guest_fstrim(),
-        "guest-fsfreeze-status" => Ok(json!({ "frozen": 0 })),
+        "guest-fsfreeze-status" => guest_fsfreeze_status(),
+        "guest-fsfreeze-freeze" => guest_fsfreeze_freeze(),
+        "guest-fsfreeze-thaw" => guest_fsfreeze_thaw(),
+        "guest-network-get-interfaces" => guest_network_get_interfaces(),
+        "guest-get-host-name" => guest_get_host_name(),
         "guest-exec" => guest_exec(&args),
         "guest-exec-status" => guest_exec_status(&args),
         "guest-shutdown" => guest_shutdown(&args),
@@ -103,6 +108,10 @@ fn guest_info() -> Value {
             "guest-set-time",
             "guest-fstrim",
             "guest-fsfreeze-status",
+            "guest-fsfreeze-freeze",
+            "guest-fsfreeze-thaw",
+            "guest-network-get-interfaces",
+            "guest-get-host-name",
             "guest-exec",
             "guest-exec-status",
             "guest-shutdown",
@@ -281,6 +290,130 @@ fn guest_set_time(args: &Value) -> Result<Value, String> {
         Ok(s) => Err(format!("date failed: {s}")),
         Err(e) => Err(format!("set time: {e}")),
     }
+}
+
+fn guest_fsfreeze_status() -> Result<Value, String> {
+    let frozen = FS_FROZEN.lock().map_err(|e| e.to_string())?;
+    Ok(json!({ "frozen": if *frozen { 1 } else { 0 } }))
+}
+
+fn guest_fsfreeze_freeze() -> Result<Value, String> {
+    let status = Command::new("fsfreeze")
+        .arg("-f")
+        .arg("/")
+        .status()
+        .map_err(|e| format!("fsfreeze: {e}"))?;
+    if !status.success() {
+        return Err(format!("fsfreeze -f / failed: {status}"));
+    }
+    *FS_FROZEN.lock().map_err(|e| e.to_string())? = true;
+    Ok(json!({ "frozen": 1 }))
+}
+
+fn guest_fsfreeze_thaw() -> Result<Value, String> {
+    let status = Command::new("fsfreeze")
+        .arg("-u")
+        .arg("/")
+        .status()
+        .map_err(|e| format!("fsfreeze: {e}"))?;
+    if !status.success() {
+        return Err(format!("fsfreeze -u / failed: {status}"));
+    }
+    *FS_FROZEN.lock().map_err(|e| e.to_string())? = false;
+    Ok(json!({ "frozen": 0 }))
+}
+
+fn guest_get_host_name() -> Result<Value, String> {
+    let hostname = std::fs::read_to_string("/etc/hostname")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            Command::new("hostname")
+                .output()
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        })
+        .unwrap_or_else(|| "localhost".into());
+    Ok(json!({ "host-name": hostname }))
+}
+
+fn guest_network_get_interfaces() -> Result<Value, String> {
+    if let Ok(out) = Command::new("ip").args(["-j", "addr", "show"]).output() {
+        if out.status.success() {
+            if let Ok(interfaces) = serde_json::from_slice::<Value>(&out.stdout) {
+                if let Some(arr) = interfaces.as_array() {
+                    let mapped: Vec<Value> = arr
+                        .iter()
+                        .filter_map(|iface| map_ip_json_interface(iface))
+                        .collect();
+                    if !mapped.is_empty() {
+                        return Ok(json!(mapped));
+                    }
+                }
+            }
+        }
+    }
+    Ok(json!(collect_network_from_sysfs()))
+}
+
+fn map_ip_json_interface(iface: &Value) -> Option<Value> {
+    let name = iface.get("ifname")?.as_str()?;
+    if name == "lo" {
+        return None;
+    }
+    let mac = iface
+        .get("address")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let mut addrs = Vec::new();
+    if let Some(addr_info) = iface.get("addr_info").and_then(|v| v.as_array()) {
+        for info in addr_info {
+            let family = info.get("family").and_then(|v| v.as_str()).unwrap_or("");
+            let ip_type = match family {
+                "inet" => "ipv4",
+                "inet6" => "ipv6",
+                _ => continue,
+            };
+            if let Some(local) = info.get("local").and_then(|v| v.as_str()) {
+                let prefix = info.get("prefixlen").and_then(|v| v.as_u64()).unwrap_or(0);
+                addrs.push(json!({
+                    "ip-address": local,
+                    "ip-address-type": ip_type,
+                    "prefix": prefix
+                }));
+            }
+        }
+    }
+    Some(json!({
+        "name": name,
+        "hardware-address": mac,
+        "ip-addresses": addrs
+    }))
+}
+
+fn collect_network_from_sysfs() -> Vec<Value> {
+    let mut interfaces = Vec::new();
+    let Ok(entries) = std::fs::read_dir("/sys/class/net") else {
+        return interfaces;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name == "lo" {
+            continue;
+        }
+        let mac = std::fs::read_to_string(format!("/sys/class/net/{name}/address"))
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        interfaces.push(json!({
+            "name": name,
+            "hardware-address": mac,
+            "ip-addresses": []
+        }));
+    }
+    interfaces
 }
 
 fn guest_fstrim() -> Result<Value, String> {
