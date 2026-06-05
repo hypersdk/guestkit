@@ -1,11 +1,12 @@
 [Unit]
 Description=GuestKit Agent (Zyvor)
-After=network.target
-ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/guestkit agent --channel virtio
-Restart=on-failure
+ExecStart=/bin/sh -c 'until [ -e /dev/virtio-ports/org.qemu.guest_agent.0 ]; do sleep 2; done; exec /usr/local/bin/guestkit agent --channel virtio'
+Restart=always
+RestartSec=5
 User=root
 StandardOutput=journal
 StandardError=journal

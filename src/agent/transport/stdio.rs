@@ -9,5 +9,6 @@ pub fn open() -> Result<FramedTransport> {
     Ok(FramedTransport {
         reader: Box::new(stdin()),
         writer: Box::new(stdout()),
+        line_framing: false,
     })
 }

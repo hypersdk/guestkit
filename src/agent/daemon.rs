@@ -38,11 +38,13 @@ impl AgentDaemon {
             let mut last_request = Instant::now() - MIN_REQUEST_INTERVAL;
 
             loop {
-                let frame = match transport.read_frame() {
+                let frame = match transport.read_message() {
                     Ok(f) => f,
                     Err(e) => {
-                        log::error!("read frame: {e}");
-                        break;
+                        // Host may not have sent a QGA frame yet (virtio channel idle).
+                        log::debug!("waiting for host frame: {e}");
+                        std::thread::sleep(Duration::from_millis(250));
+                        continue;
                     }
                 };
 
@@ -53,7 +55,11 @@ impl AgentDaemon {
                 last_request = Instant::now();
 
                 let payload = handler.handle_frame(&frame);
-                if let Err(e) = transport.write_frame(&payload) {
+                if let Err(e) = if crate::agent::qga::take_delimited_response() {
+                    transport.write_delimited_frame(&payload)
+                } else {
+                    transport.write_frame(&payload)
+                } {
                     log::error!("write frame: {e}");
                     break;
                 }
