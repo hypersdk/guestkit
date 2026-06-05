@@ -573,10 +573,8 @@ fn guest_reboot() -> Result<Value, String> {
 }
 
 fn guestkit_get_evidence() -> Result<Value, String> {
-    crate::evidence::build_evidence_live()
-        .and_then(|evidence| {
-            serde_json::to_value(evidence).map_err(|e| format!("serialize evidence: {e}"))
-        })
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    serde_json::to_value(evidence).map_err(|e| format!("serialize evidence: {e}"))
 }
 
 fn guestkit_doctor(args: &Value) -> Result<Value, String> {
@@ -588,8 +586,8 @@ fn guestkit_doctor(args: &Value) -> Result<Value, String> {
     let boot_target = crate::boot::BootTarget::parse(target);
     let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
     Ok(json!({
-        "evidence": evidence,
-        "boot_report": boot_report,
+        "evidence": serde_json::to_value(&evidence).map_err(|e| e.to_string())?,
+        "boot_report": serde_json::to_value(&boot_report).map_err(|e| e.to_string())?,
     }))
 }
 
