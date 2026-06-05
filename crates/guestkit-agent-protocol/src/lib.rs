@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! GuestKit agent JSON-RPC protocol (v1).
 //!
 //! Framing: 4-byte big-endian length prefix + UTF-8 JSON body.

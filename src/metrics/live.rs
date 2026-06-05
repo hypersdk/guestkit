@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Point-in-time CPU, memory, disk, and network metrics from inside the guest.
 
 use serde::{Deserialize, Serialize};

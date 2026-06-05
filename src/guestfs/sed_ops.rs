@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Sed-like file editing operations for disk image manipulation
 //!
 //! This implementation provides in-place file editing functionality.

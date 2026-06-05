@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Security commands: scan, secrets, rescue, optimize, network, compliance,
 //! malware, health, patch, audit, repair, intelligence, verify
 #![allow(clippy::too_many_arguments)]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! On-disk inspect cache for faster repeat TUI opens.
 
 use crate::cli::profiles::ProfileReport;

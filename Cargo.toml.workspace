@@ -6,10 +6,10 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["ZyvorAI Labs Private Limited <ssahani@redhat.com>"]
-license = "LGPL-3.0-or-later"
+authors = ["ZyvorAI Labs Private Limited <info@zyvor.dev>"]
+license = "Apache-2.0"
 edition = "2024"
-repository = "https://github.com/ssahani/guestkit"
+repository = "https://github.com/hypersdk/guestkit"
 
 [workspace.dependencies]
 # Shared dependencies

@@ -237,4 +237,4 @@ sudo apt install qemu-utils
 
 ## License
 
-LGPL-3.0-or-later
+Apache-2.0

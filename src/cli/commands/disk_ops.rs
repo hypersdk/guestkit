@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Disk operations module
 //!
 //! Functions: create_disk, check_filesystem, show_disk_usage, execute_command,

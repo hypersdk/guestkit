@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Hivex (Windows Registry) operations for disk image manipulation
 //!
 //! This implementation provides Windows registry hive manipulation functionality

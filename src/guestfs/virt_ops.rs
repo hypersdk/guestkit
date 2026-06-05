@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Virt operations for disk image manipulation virt-* tools
 //!
 //! This implementation provides equivalents to virt-* command-line tools.

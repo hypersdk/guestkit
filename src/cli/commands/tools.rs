@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Tool commands for guestkit CLI
 //!
 //! This module contains commands for various image analysis and management tools:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! CLI tests for guestctl alias and UX entry points.
 
 use assert_cmd::Command;

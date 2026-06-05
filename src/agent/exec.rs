@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Synchronous guest command execution for VMRogue (replaces K8s guest-exec subresource).
 
 use base64::{engine::general_purpose::STANDARD, Engine};

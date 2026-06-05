@@ -2,8 +2,8 @@
 name = "guestkit"
 version = "0.3.6"
 edition = "2021"
-authors = ["ZyvorAI Labs Private Limited <ssahani@gmail.com>"]
-license = "LGPL-3.0-or-later"
+authors = ["ZyvorAI Labs Private Limited <info@zyvor.dev>"]
+license = "Apache-2.0"
 description = "Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support"
 readme = "README.md"
 repository = "https://github.com/hypersdk/guestkit"

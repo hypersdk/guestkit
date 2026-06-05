@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! NBD (Network Block Device) support using qemu-nbd
 //!
 //! This module provides NBD device management for mounting disk images

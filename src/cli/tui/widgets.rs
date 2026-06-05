@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Shared TUI widgets — chips, list rows, empty states, progress, severity.
 
 use super::app::App;

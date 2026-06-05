@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Realistic Arch Linux disk image testing
 //!
 //! This test creates production-quality Arch Linux disk images with:

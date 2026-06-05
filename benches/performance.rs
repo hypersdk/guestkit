@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Performance benchmarks for guestkit operations
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};

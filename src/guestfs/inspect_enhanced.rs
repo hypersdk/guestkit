@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Enhanced inspection operations for comprehensive guest analysis
 use crate::core::Result;
 use crate::guestfs::Guestfs;

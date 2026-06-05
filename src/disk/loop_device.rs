@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Loop device support for mounting disk images
 //!
 //! This module provides loop device management for mounting disk images
