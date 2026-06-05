@@ -193,6 +193,10 @@ fn from_migration_report_unit_pipeline() {
         },
         systemd: None,
         windows: None,
+        kubevirt: None,
+        cloud_init: None,
+        network_probes: None,
+        snapshot_readiness: None,
     };
     let boot = BootabilityReport {
         score: 70.0,

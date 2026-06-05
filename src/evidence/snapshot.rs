@@ -23,6 +23,14 @@ pub struct EvidenceSnapshot {
     pub systemd: Option<SystemdInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub windows: Option<WindowsEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kubevirt: Option<KubevirtEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cloud_init: Option<CloudInitEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub network_probes: Option<NetworkProbeEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snapshot_readiness: Option<SnapshotReadinessEvidence>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -102,6 +110,10 @@ pub struct SecurityEvidence {
     pub firewall_enabled: bool,
     pub ssh_root_login: Option<bool>,
     pub auditd: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub open_ports: Vec<u16>,
+    #[serde(default)]
+    pub pending_security_updates: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -190,6 +202,59 @@ pub enum SystemdProblemSeverity {
     Info,
     Warning,
     Critical,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct KubevirtEvidence {
+    pub hostname: String,
+    pub virtio_channel_present: bool,
+    pub virtio_channel_path: String,
+    pub cloud_init_config_present: bool,
+    pub config_drive_mounted: bool,
+    pub agent_service_active: bool,
+    pub guestkit_version: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub virtio_disks: Vec<VirtioDiskEntry>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct VirtioDiskEntry {
+    pub device: String,
+    pub serial: String,
+    pub mountpoints: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CloudInitEvidence {
+    pub installed: bool,
+    pub status: String,
+    pub datasource: String,
+    pub boot_finished: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub errors: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_log_line: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NetworkProbeEvidence {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dns_servers: Vec<String>,
+    pub cluster_dns_reachable: bool,
+    pub api_service_reachable: bool,
+    pub internet_reachable: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub probe_details: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SnapshotReadinessEvidence {
+    pub fs_frozen: bool,
+    pub guest_agent_connected: bool,
+    pub quiesce_supported: bool,
+    pub fstrim_recommended: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

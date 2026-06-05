@@ -19,6 +19,11 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
     let security = collect_security_live();
     let vm_tools = collect_vm_tools_live();
     let systemd = collect_systemd_live();
+    let kubevirt = Some(crate::evidence::collectors::collect_kubevirt_live());
+    let cloud_init = Some(crate::evidence::collectors::collect_cloud_init_live());
+    let network_probes = Some(crate::evidence::collectors::collect_network_probes_live());
+    let snapshot_readiness = Some(crate::evidence::collectors::collect_snapshot_readiness_live());
+    let windows = crate::evidence::collectors::collect_windows_live();
 
     Ok(EvidenceSnapshot {
         schema_version: SCHEMA_VERSION,
@@ -33,7 +38,11 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
         security,
         vm_tools,
         systemd,
-        windows: None,
+        windows,
+        kubevirt,
+        cloud_init,
+        network_probes,
+        snapshot_readiness,
     })
 }
 
@@ -288,7 +297,50 @@ fn collect_security_live() -> SecurityEvidence {
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "active")
             .unwrap_or(false);
+    security.open_ports = collect_listening_ports();
+    security.pending_security_updates = detect_pending_security_updates();
     security
+}
+
+fn collect_listening_ports() -> Vec<u16> {
+    let mut ports = Vec::new();
+    if let Ok(out) = Command::new("ss").args(["-lntH"]).output() {
+        for line in String::from_utf8_lossy(&out.stdout).lines() {
+            if let Some(col) = line.split_whitespace().nth(3) {
+                if let Some(port) = col.rsplit(':').next().and_then(|p| p.parse().ok()) {
+                    if !ports.contains(&port) {
+                        ports.push(port);
+                    }
+                }
+            }
+        }
+    }
+    ports.sort_unstable();
+    ports.truncate(32);
+    ports
+}
+
+fn detect_pending_security_updates() -> bool {
+    if Path::new("/usr/bin/apt").exists() {
+        return Command::new("apt")
+            .args(["list", "--upgradable"])
+            .output()
+            .map(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .skip(1)
+                    .any(|l| l.contains("security") || l.contains("-security"))
+            })
+            .unwrap_or(false);
+    }
+    if Path::new("/usr/bin/dnf").exists() {
+        return Command::new("dnf")
+            .args(["check-update", "--security", "-q"])
+            .output()
+            .map(|o| !o.stdout.is_empty())
+            .unwrap_or(false);
+    }
+    false
 }
 
 fn collect_vm_tools_live() -> VmToolsEvidence {

@@ -12,8 +12,9 @@ pub use builder::{build_evidence, EvidenceBuilder};
 #[cfg(feature = "agent")]
 pub use live::build_evidence_live;
 pub use snapshot::{
-    BootEvidence, EvidenceSnapshot, NetworkEvidence, OsEvidence, PackageEvidence, SecurityEvidence,
+    BootEvidence, CloudInitEvidence, EvidenceSnapshot, KubevirtEvidence, NetworkEvidence,
+    NetworkProbeEvidence, OsEvidence, PackageEvidence, SecurityEvidence, SnapshotReadinessEvidence,
     StorageEvidence, SystemdInfo, SystemdProblemHint, SystemdProblemSeverity, SystemdUnit,
-    SystemdUnitState, VmToolsEvidence, WindowsAppEntry, WindowsEvidence, WindowsServiceEntry,
-    WindowsStartType, SCHEMA_VERSION,
+    SystemdUnitState, VirtioDiskEntry, VmToolsEvidence, WindowsAppEntry, WindowsEvidence,
+    WindowsServiceEntry, WindowsStartType, SCHEMA_VERSION,
 };
