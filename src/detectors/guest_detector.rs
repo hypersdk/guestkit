@@ -93,16 +93,13 @@ impl GuestDetector {
                             else if l.contains("rhel") || l.contains("redhat") {
                                 os_name = "Red Hat Enterprise Linux".to_string();
                                 distro = Some("rhel".to_string());
-                            }
-                            else if l.contains("centos") {
+                            } else if l.contains("centos") {
                                 os_name = "CentOS Linux".to_string();
                                 distro = Some("centos".to_string());
-                            }
-                            else if l.contains("almalinux") || l.contains("alma") {
+                            } else if l.contains("almalinux") || l.contains("alma") {
                                 os_name = "AlmaLinux".to_string();
                                 distro = Some("almalinux".to_string());
-                            }
-                            else if l.contains("rocky") {
+                            } else if l.contains("rocky") {
                                 os_name = "Rocky Linux".to_string();
                                 distro = Some("rocky".to_string());
                             }
@@ -110,8 +107,7 @@ impl GuestDetector {
                             else if l.contains("arch") {
                                 os_name = "Arch Linux".to_string();
                                 distro = Some("arch".to_string());
-                            }
-                            else if l.contains("manjaro") {
+                            } else if l.contains("manjaro") {
                                 os_name = "Manjaro Linux".to_string();
                                 distro = Some("manjaro".to_string());
                             }
@@ -119,8 +115,7 @@ impl GuestDetector {
                             else if l.contains("opensuse") || l.contains("suse") {
                                 os_name = "openSUSE".to_string();
                                 distro = Some("opensuse".to_string());
-                            }
-                            else if l.contains("sle") {
+                            } else if l.contains("sle") {
                                 os_name = "SUSE Linux Enterprise".to_string();
                                 distro = Some("sles".to_string());
                             }
@@ -130,7 +125,12 @@ impl GuestDetector {
                                 distro = Some("kali".to_string());
                             }
                             // Oracle Linux
-                            else if l.contains("oraclelinux") || l.contains("oracle") || l.starts_with("ol_") || l.starts_with("ol-") || l == "ol" {
+                            else if l.contains("oraclelinux")
+                                || l.contains("oracle")
+                                || l.starts_with("ol_")
+                                || l.starts_with("ol-")
+                                || l == "ol"
+                            {
                                 os_name = "Oracle Linux".to_string();
                                 distro = Some("oracle".to_string());
                             }
@@ -179,9 +179,10 @@ impl GuestDetector {
                     }
 
                     crate::disk::FileSystemType::Fat32
-                        if partition.start_lba < 2048 && partition.size_sectors < 1024 * 1024 => {
-                            firmware = Firmware::Uefi;
-                        }
+                        if partition.start_lba < 2048 && partition.size_sectors < 1024 * 1024 =>
+                    {
+                        firmware = Firmware::Uefi;
+                    }
 
                     _ => {}
                 }

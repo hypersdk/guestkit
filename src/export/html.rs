@@ -63,7 +63,11 @@ impl HtmlExporter {
     }
 
     /// Generate HTML report from inspection data
-    pub fn generate<P: AsRef<Path>>(&self, output_path: P, data: &InspectionData) -> std::io::Result<()> {
+    pub fn generate<P: AsRef<Path>>(
+        &self,
+        output_path: P,
+        data: &InspectionData,
+    ) -> std::io::Result<()> {
         let html = self.build_html(data);
         let mut file = File::create(output_path)?;
         file.write_all(html.as_bytes())?;
@@ -79,8 +83,13 @@ impl HtmlExporter {
         html.push_str("<html lang=\"en\">\n");
         html.push_str("<head>\n");
         html.push_str("    <meta charset=\"UTF-8\">\n");
-        html.push_str("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
-        html.push_str(&format!("    <title>VM Inspection Report - {}</title>\n", html_escape(&data.hostname)));
+        html.push_str(
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
+        html.push_str(&format!(
+            "    <title>VM Inspection Report - {}</title>\n",
+            html_escape(&data.hostname)
+        ));
 
         // Include styles
         if self.options.include_styles {
@@ -177,7 +186,8 @@ impl HtmlExporter {
         .dark-theme table tr:hover {
             background-color: #353535;
         }
-        "#.to_string()
+        "#
+        .to_string()
     }
 
     /// Build header section
@@ -208,16 +218,19 @@ impl HtmlExporter {
             <li><a href="#network">Network Configuration</a></li>
         </ul>
     </nav>
-"##.to_string()
+"##
+        .to_string()
     }
 
     /// Build overview section
     fn build_overview_section(&self, data: &InspectionData) -> String {
         let mut html = String::new();
-        html.push_str(r#"        <section id="overview" class="section">
+        html.push_str(
+            r#"        <section id="overview" class="section">
             <h2>📊 Overview</h2>
             <div class="stats-grid">
-"#);
+"#,
+        );
 
         html.push_str(&format!(
             r#"                <div class="stat-card">
@@ -246,10 +259,12 @@ impl HtmlExporter {
         html.push_str("            </div>\n");
 
         if self.options.include_charts {
-            html.push_str(r#"            <div class="chart-container">
+            html.push_str(
+                r#"            <div class="chart-container">
                 <canvas id="overviewChart"></canvas>
             </div>
-"#);
+"#,
+            );
         }
 
         html.push_str("        </section>\n");
@@ -288,7 +303,8 @@ impl HtmlExporter {
     /// Build filesystems section
     fn build_filesystems_section(&self, data: &InspectionData) -> String {
         let mut html = String::new();
-        html.push_str(r#"        <section id="filesystems" class="section">
+        html.push_str(
+            r#"        <section id="filesystems" class="section">
             <h2>💾 Filesystems</h2>
             <div class="info-table">
                 <table>
@@ -303,7 +319,8 @@ impl HtmlExporter {
                         </tr>
                     </thead>
                     <tbody>
-"#);
+"#,
+        );
 
         for fs in &data.filesystems {
             html.push_str(&format!(
@@ -325,16 +342,20 @@ impl HtmlExporter {
             ));
         }
 
-        html.push_str(r#"                    </tbody>
+        html.push_str(
+            r#"                    </tbody>
                 </table>
             </div>
-"#);
+"#,
+        );
 
         if self.options.include_charts {
-            html.push_str(r#"            <div class="chart-container">
+            html.push_str(
+                r#"            <div class="chart-container">
                 <canvas id="filesystemChart"></canvas>
             </div>
-"#);
+"#,
+            );
         }
 
         html.push_str("        </section>\n");
@@ -371,7 +392,9 @@ impl HtmlExporter {
                             <td>{}</td>
                         </tr>
 "#,
-                html_escape(&pkg.name), html_escape(&pkg.version), html_escape(&pkg.arch)
+                html_escape(&pkg.name),
+                html_escape(&pkg.version),
+                html_escape(&pkg.arch)
             ));
         }
 
@@ -385,18 +408,21 @@ impl HtmlExporter {
             ));
         }
 
-        html.push_str(r#"                    </tbody>
+        html.push_str(
+            r#"                    </tbody>
                 </table>
             </div>
         </section>
-"#);
+"#,
+        );
         html
     }
 
     /// Build users section
     fn build_users_section(&self, data: &InspectionData) -> String {
         let mut html = String::new();
-        html.push_str(r#"        <section id="users" class="section">
+        html.push_str(
+            r#"        <section id="users" class="section">
             <h2>👤 User Accounts</h2>
             <div class="info-table">
                 <table>
@@ -409,7 +435,8 @@ impl HtmlExporter {
                         </tr>
                     </thead>
                     <tbody>
-"#);
+"#,
+        );
 
         for user in &data.users {
             html.push_str(&format!(
@@ -420,15 +447,20 @@ impl HtmlExporter {
                             <td><code>{}</code></td>
                         </tr>
 "#,
-                html_escape(&user.username), html_escape(&user.uid), html_escape(&user.home), html_escape(&user.shell)
+                html_escape(&user.username),
+                html_escape(&user.uid),
+                html_escape(&user.home),
+                html_escape(&user.shell)
             ));
         }
 
-        html.push_str(r#"                    </tbody>
+        html.push_str(
+            r#"                    </tbody>
                 </table>
             </div>
         </section>
-"#);
+"#,
+        );
         html
     }
 
@@ -439,11 +471,13 @@ impl HtmlExporter {
             <h2>🌐 Network Configuration</h2>
             <p><em>No network information available</em></p>
         </section>
-"#.to_string();
+"#
+            .to_string();
         }
 
         let mut html = String::new();
-        html.push_str(r#"        <section id="network" class="section">
+        html.push_str(
+            r#"        <section id="network" class="section">
             <h2>🌐 Network Configuration</h2>
             <div class="info-table">
                 <table>
@@ -456,7 +490,8 @@ impl HtmlExporter {
                         </tr>
                     </thead>
                     <tbody>
-"#);
+"#,
+        );
 
         for iface in &data.interfaces {
             html.push_str(&format!(
@@ -467,15 +502,20 @@ impl HtmlExporter {
                             <td><span class="status-badge">{}</span></td>
                         </tr>
 "#,
-                html_escape(&iface.name), html_escape(&iface.ip_addresses), html_escape(&iface.mac_address), html_escape(&iface.state)
+                html_escape(&iface.name),
+                html_escape(&iface.ip_addresses),
+                html_escape(&iface.mac_address),
+                html_escape(&iface.state)
             ));
         }
 
-        html.push_str(r#"                    </tbody>
+        html.push_str(
+            r#"                    </tbody>
                 </table>
             </div>
         </section>
-"#);
+"#,
+        );
         html
     }
 
@@ -561,8 +601,22 @@ impl HtmlExporter {
             data.packages.len(),
             data.users.len(),
             data.interfaces.len(),
-            serde_json::to_string(&data.filesystems.iter().map(|fs| &fs.device).collect::<Vec<_>>()).unwrap_or_else(|_| "[]".to_string()),
-            serde_json::to_string(&data.filesystems.iter().map(|fs| fs.size).collect::<Vec<_>>()).unwrap_or_else(|_| "[]".to_string())
+            serde_json::to_string(
+                &data
+                    .filesystems
+                    .iter()
+                    .map(|fs| &fs.device)
+                    .collect::<Vec<_>>()
+            )
+            .unwrap_or_else(|_| "[]".to_string()),
+            serde_json::to_string(
+                &data
+                    .filesystems
+                    .iter()
+                    .map(|fs| fs.size)
+                    .collect::<Vec<_>>()
+            )
+            .unwrap_or_else(|_| "[]".to_string())
         )
     }
 

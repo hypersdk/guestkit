@@ -281,12 +281,14 @@ pub fn to_csv(inventory: &Inventory) -> Result<String> {
 
     // Data rows
     for pkg in &inventory.packages {
-        let size_str = pkg.size
+        let size_str = pkg
+            .size
             .map(format_size)
             .unwrap_or_else(|| "N/A".to_string());
 
         let cve_count = pkg.vulnerabilities.len();
-        let max_severity = pkg.vulnerabilities
+        let max_severity = pkg
+            .vulnerabilities
             .iter()
             .map(|v| v.severity.as_str())
             .max_by_key(|s| severity_rank(s))
@@ -339,15 +341,13 @@ mod tests {
                     installed_date: None,
                     files: vec![],
                     dependencies: vec![],
-                    vulnerabilities: vec![
-                        VulnerabilityInfo {
-                            cve: "CVE-2023-44487".to_string(),
-                            severity: "high".to_string(),
-                            score: Some(7.5),
-                            description: "HTTP/2 rapid reset attack".to_string(),
-                            fixed_version: Some("1.20.1".to_string()),
-                        },
-                    ],
+                    vulnerabilities: vec![VulnerabilityInfo {
+                        cve: "CVE-2023-44487".to_string(),
+                        severity: "high".to_string(),
+                        score: Some(7.5),
+                        description: "HTTP/2 rapid reset attack".to_string(),
+                        fixed_version: Some("1.20.1".to_string()),
+                    }],
                     checksum: None,
                 },
                 PackageInfo {
@@ -444,7 +444,10 @@ mod tests {
         assert_eq!(spdx.packages.len(), 2);
         assert_eq!(spdx.packages[0].name, "nginx");
         assert_eq!(spdx.packages[0].version_info, Some("1.20.0".to_string()));
-        assert_eq!(spdx.packages[0].license_concluded, Some("BSD-2-Clause".to_string()));
+        assert_eq!(
+            spdx.packages[0].license_concluded,
+            Some("BSD-2-Clause".to_string())
+        );
     }
 
     #[test]
@@ -464,7 +467,10 @@ mod tests {
 
         assert_eq!(spdx.creation_info.created, "2024-01-01T00:00:00Z");
         assert!(spdx.creation_info.creators[0].contains("guestkit"));
-        assert_eq!(spdx.creation_info.license_list_version, Some("3.21".to_string()));
+        assert_eq!(
+            spdx.creation_info.license_list_version,
+            Some("3.21".to_string())
+        );
     }
 
     #[test]

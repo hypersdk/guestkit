@@ -4,8 +4,8 @@
 //! Provides actionable security hardening recommendations with remediation steps
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 pub struct HardeningProfile;
 
@@ -54,7 +54,8 @@ impl HardeningProfile {
 
         // Check /etc/sysctl.conf and /etc/sysctl.d/
         if let Ok(sysctl_conf) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/etc/sysctl.conf")
+            guestfs
+                .read_file("/etc/sysctl.conf")
                 .or_else(|_| guestfs.read_file("/etc/sysctl.d/99-sysctl.conf"))
         }) {
             let content = String::from_utf8_lossy(&sysctl_conf);
@@ -77,7 +78,9 @@ impl HardeningProfile {
             }
 
             // Check kernel.kptr_restrict (hide kernel pointers)
-            if content.contains("kernel.kptr_restrict") && (content.contains("= 1") || content.contains("= 2")) {
+            if content.contains("kernel.kptr_restrict")
+                && (content.contains("= 1") || content.contains("= 2"))
+            {
                 findings.push(Finding {
                     item: "kernel.kptr_restrict".to_string(),
                     status: FindingStatus::Pass,
@@ -139,7 +142,8 @@ impl HardeningProfile {
                 findings.push(Finding {
                     item: "fs.protected_symlinks".to_string(),
                     status: FindingStatus::Fail,
-                    message: "Symlink following not protected (privilege escalation risk)".to_string(),
+                    message: "Symlink following not protected (privilege escalation risk)"
+                        .to_string(),
                     risk_level: Some(RiskLevel::High),
                 });
             }
@@ -163,7 +167,8 @@ impl HardeningProfile {
         let mut findings = Vec::new();
 
         if let Ok(sysctl_conf) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/etc/sysctl.conf")
+            guestfs
+                .read_file("/etc/sysctl.conf")
                 .or_else(|_| guestfs.read_file("/etc/sysctl.d/99-sysctl.conf"))
         }) {
             let content = String::from_utf8_lossy(&sysctl_conf);
@@ -220,7 +225,8 @@ impl HardeningProfile {
             }
 
             // Source routing disabled
-            if content.contains("net.ipv4.conf.all.accept_source_route") && content.contains("= 0") {
+            if content.contains("net.ipv4.conf.all.accept_source_route") && content.contains("= 0")
+            {
                 findings.push(Finding {
                     item: "net.ipv4.conf.all.accept_source_route".to_string(),
                     status: FindingStatus::Pass,
@@ -287,11 +293,13 @@ impl HardeningProfile {
             let tmp_entry = fstab_entries.iter().find(|(_, mp, _)| mp == "/tmp");
             if let Some((_device, _, _fstype)) = tmp_entry {
                 // Read actual mount options from fstab
-                if let Ok(fstab_content) = g.with_mount(root, |guestfs| {
-                    guestfs.read_file("/etc/fstab")
-                }) {
+                if let Ok(fstab_content) =
+                    g.with_mount(root, |guestfs| guestfs.read_file("/etc/fstab"))
+                {
                     let content = String::from_utf8_lossy(&fstab_content);
-                    let tmp_line = content.lines().find(|l| l.contains("/tmp") && !l.trim().starts_with('#'));
+                    let tmp_line = content
+                        .lines()
+                        .find(|l| l.contains("/tmp") && !l.trim().starts_with('#'));
 
                     if let Some(line) = tmp_line {
                         let has_noexec = line.contains("noexec");
@@ -310,7 +318,11 @@ impl HardeningProfile {
                                 (!has_noexec).then_some("noexec"),
                                 (!has_nosuid).then_some("nosuid"),
                                 (!has_nodev).then_some("nodev"),
-                            ].into_iter().flatten().collect::<Vec<_>>().join(",");
+                            ]
+                            .into_iter()
+                            .flatten()
+                            .collect::<Vec<_>>()
+                            .join(",");
 
                             findings.push(Finding {
                                 item: "/tmp mount options".to_string(),
@@ -373,7 +385,9 @@ impl HardeningProfile {
             ];
 
             for (svc_name, desc) in unnecessary_services {
-                let found = services.iter().any(|s| s.name.contains(svc_name) && s.enabled);
+                let found = services
+                    .iter()
+                    .any(|s| s.name.contains(svc_name) && s.enabled);
                 if found {
                     findings.push(Finding {
                         item: format!("{} service", svc_name),
@@ -392,13 +406,13 @@ impl HardeningProfile {
             }
 
             // Check that essential security services are enabled
-            let essential_services = vec![
-                ("auditd", "Audit daemon"),
-                ("firewalld", "Firewall daemon"),
-            ];
+            let essential_services =
+                vec![("auditd", "Audit daemon"), ("firewalld", "Firewall daemon")];
 
             for (svc_name, desc) in essential_services {
-                let found = services.iter().any(|s| s.name.contains(svc_name) && s.enabled);
+                let found = services
+                    .iter()
+                    .any(|s| s.name.contains(svc_name) && s.enabled);
                 if found {
                     findings.push(Finding {
                         item: format!("{} service", svc_name),
@@ -429,19 +443,25 @@ impl HardeningProfile {
 
         if let Ok(users) = g.inspect_users(root) {
             // Check user count
-            let regular_users: Vec<_> = users.iter()
+            let regular_users: Vec<_> = users
+                .iter()
                 .filter(|u| u.uid.parse::<u32>().unwrap_or(0) >= 1000)
                 .collect();
 
             findings.push(Finding {
                 item: "User Accounts".to_string(),
                 status: FindingStatus::Info,
-                message: format!("{} total users ({} regular users)", users.len(), regular_users.len()),
+                message: format!(
+                    "{} total users ({} regular users)",
+                    users.len(),
+                    regular_users.len()
+                ),
                 risk_level: None,
             });
 
             // Check for users with UID 0 (besides root)
-            let root_equivalent_users: Vec<_> = users.iter()
+            let root_equivalent_users: Vec<_> = users
+                .iter()
                 .filter(|u| u.uid == "0" && u.username != "root")
                 .collect();
 
@@ -456,15 +476,22 @@ impl HardeningProfile {
                 findings.push(Finding {
                     item: "Root-equivalent Users".to_string(),
                     status: FindingStatus::Fail,
-                    message: format!("{} non-root user(s) with UID 0: {}",
+                    message: format!(
+                        "{} non-root user(s) with UID 0: {}",
                         root_equivalent_users.len(),
-                        root_equivalent_users.iter().map(|u| u.username.as_str()).collect::<Vec<_>>().join(", ")),
+                        root_equivalent_users
+                            .iter()
+                            .map(|u| u.username.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
                     risk_level: Some(RiskLevel::Critical),
                 });
             }
 
             // Check for users without home directories
-            let homeless_users: Vec<_> = users.iter()
+            let homeless_users: Vec<_> = users
+                .iter()
                 .filter(|u| u.home.is_empty() || u.home == "/nonexistent")
                 .filter(|u| !u.shell.contains("nologin") && !u.shell.contains("false"))
                 .collect();
@@ -473,14 +500,18 @@ impl HardeningProfile {
                 findings.push(Finding {
                     item: "Users without Home Directories".to_string(),
                     status: FindingStatus::Warning,
-                    message: format!("{} user(s) without proper home directories", homeless_users.len()),
+                    message: format!(
+                        "{} user(s) without proper home directories",
+                        homeless_users.len()
+                    ),
                     risk_level: Some(RiskLevel::Medium),
                 });
             }
 
             // Check default umask
             if let Ok(profile_content) = g.with_mount(root, |guestfs| {
-                guestfs.read_file("/etc/profile")
+                guestfs
+                    .read_file("/etc/profile")
                     .or_else(|_| guestfs.read_file("/etc/bash.bashrc"))
             }) {
                 let content = String::from_utf8_lossy(&profile_content);

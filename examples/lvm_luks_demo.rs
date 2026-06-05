@@ -57,7 +57,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to open LUKS device if passphrase provided
     if let (Some(device), Some(pass)) = (luks_devices.first(), passphrase) {
-
         println!("\nAttempting to open LUKS device...");
         match g.luks_open(device, pass, "cryptroot") {
             Ok(_) => {

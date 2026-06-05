@@ -3,22 +3,21 @@
 
 pub mod ai;
 pub mod batch;
-pub mod commands_list;
-pub mod entry;
-pub mod invocation;
-pub mod welcome;
 pub mod blueprint;
 pub mod cache;
 pub mod commands;
+pub mod commands_list;
 pub mod cost;
 pub mod dependencies;
 pub mod diff;
+pub mod entry;
 pub mod errors;
 pub mod exporters;
 pub mod forensic_diff;
 pub mod formatters;
 pub mod interactive;
 pub mod inventory;
+pub mod invocation;
 pub mod license;
 pub mod migrate;
 pub mod output;
@@ -28,6 +27,7 @@ pub mod profiles;
 pub mod shell;
 pub mod tui;
 pub mod validate;
+pub mod welcome;
 
 pub use batch::*;
 pub use interactive::*;

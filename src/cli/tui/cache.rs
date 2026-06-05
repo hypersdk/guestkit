@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! On-disk inspect cache for faster repeat TUI opens.
 
-use anyhow::{Context, Result};
 use crate::cli::profiles::ProfileReport;
 use crate::guestfs::inspect_enhanced::{
     FirewallInfo, NetworkInterface, PackageInfo, SecurityInfo, SystemService, UserAccount,
 };
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::hash::{Hash, Hasher};

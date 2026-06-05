@@ -2,23 +2,27 @@
 //! Web servers view - Web server installations and configurations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::Line,
-    widgets::{Block, Borders, BarChart, Gauge, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     if app.web_servers.is_empty() {
         let empty = Paragraph::new("⚠️  No web server installations found")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" 🌐 Web Servers ")
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR))
+                    .title(" 🌐 Web Servers ")
+                    .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
@@ -39,11 +43,30 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_server_summary(f: &mut Frame, area: Rect, app: &App) {
     // Count server types
-    let nginx_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("nginx")).count();
-    let apache_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("apache") || ws.name.to_lowercase().contains("httpd")).count();
-    let caddy_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("caddy")).count();
-    let lighttpd_count = app.web_servers.iter().filter(|ws| ws.name.to_lowercase().contains("lighttpd")).count();
-    let other_count = app.web_servers.len() - nginx_count - apache_count - caddy_count - lighttpd_count;
+    let nginx_count = app
+        .web_servers
+        .iter()
+        .filter(|ws| ws.name.to_lowercase().contains("nginx"))
+        .count();
+    let apache_count = app
+        .web_servers
+        .iter()
+        .filter(|ws| {
+            ws.name.to_lowercase().contains("apache") || ws.name.to_lowercase().contains("httpd")
+        })
+        .count();
+    let caddy_count = app
+        .web_servers
+        .iter()
+        .filter(|ws| ws.name.to_lowercase().contains("caddy"))
+        .count();
+    let lighttpd_count = app
+        .web_servers
+        .iter()
+        .filter(|ws| ws.name.to_lowercase().contains("lighttpd"))
+        .count();
+    let other_count =
+        app.web_servers.len() - nginx_count - apache_count - caddy_count - lighttpd_count;
 
     let enabled_count = app.web_servers.iter().filter(|ws| ws.enabled).count();
     let total_count = app.web_servers.len();
@@ -82,11 +105,16 @@ fn draw_server_summary(f: &mut Frame, area: Rect, app: &App) {
     }
 
     let barchart = BarChart::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 📊 Web Server Type Distribution • {} total ", total_count))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(format!(
+                    " 📊 Web Server Type Distribution • {} total ",
+                    total_count
+                ))
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .data(&data)
         .bar_width(10)
         .bar_gap(2)
@@ -97,26 +125,38 @@ fn draw_server_summary(f: &mut Frame, area: Rect, app: &App) {
 
     // Enabled status gauge
     let enabled_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" ⚡ Enabled Web Servers "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" ⚡ Enabled Web Servers "),
+        )
         .gauge_style(Style::default().fg(SUCCESS_COLOR))
         .percent(enabled_pct)
-        .label(format!("{}/{} enabled ({}%)", enabled_count, total_count, enabled_pct));
+        .label(format!(
+            "{}/{} enabled ({}%)",
+            enabled_count, total_count, enabled_pct
+        ));
 
     f.render_widget(enabled_gauge, chunks[1]);
 }
 
 fn draw_server_list(f: &mut Frame, area: Rect, app: &App) {
-
     let filtered_webservers: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.web_servers
             .iter()
             .filter(|ws| {
-                ws.name.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || ws.version.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || ws.config_path.to_lowercase().contains(&app.search_query.to_lowercase())
+                ws.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
+                    || ws
+                        .version
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
+                    || ws
+                        .config_path
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
@@ -148,19 +188,21 @@ fn draw_server_list(f: &mut Frame, area: Rect, app: &App) {
                 ratatui::text::Span::raw(format!("{} ", icon)),
                 ratatui::text::Span::styled(
                     format!("{:15} ", ws.name),
-                    Style::default().fg(server_color).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(server_color)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 ratatui::text::Span::styled(
                     format!("{} ", status.0),
-                    Style::default().fg(status.1).add_modifier(Modifier::BOLD)
+                    Style::default().fg(status.1).add_modifier(Modifier::BOLD),
                 ),
                 ratatui::text::Span::styled(
                     format!("v{:10} ", ws.version),
-                    Style::default().fg(LIGHT_ORANGE)
+                    Style::default().fg(LIGHT_ORANGE),
                 ),
                 ratatui::text::Span::styled(
                     format!("config: {}", ws.config_path),
-                    Style::default().fg(TEXT_COLOR)
+                    Style::default().fg(TEXT_COLOR),
                 ),
             ]))
         })
@@ -181,13 +223,17 @@ fn draw_server_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 🌐 Web Server List • {} showing{} ",
-                filtered_webservers.len(), scroll_indicator))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " 🌐 Web Server List • {} showing{} ",
+                filtered_webservers.len(),
+                scroll_indicator
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }

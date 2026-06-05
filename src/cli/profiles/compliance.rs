@@ -4,8 +4,8 @@
 //! Checks for regulatory compliance (CIS Benchmarks, FIPS, HIPAA, PCI-DSS)
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 
 pub struct ComplianceProfile;
 
@@ -84,7 +84,8 @@ impl ComplianceProfile {
 
         // CIS 1.5.1: Ensure permissions on bootloader config are configured
         if let Ok(stat) = g.with_mount(root, |guestfs| {
-            guestfs.stat("/boot/grub2/grub.cfg")
+            guestfs
+                .stat("/boot/grub2/grub.cfg")
                 .or_else(|_| guestfs.stat("/boot/grub/grub.cfg"))
         }) {
             let mode = stat.mode & 0o777;
@@ -99,7 +100,10 @@ impl ComplianceProfile {
                 findings.push(Finding {
                     item: "CIS 1.5.1 - Bootloader permissions".to_string(),
                     status: FindingStatus::Fail,
-                    message: format!("grub.cfg has insecure permissions: {:o} (should be 0400 or 0600)", mode),
+                    message: format!(
+                        "grub.cfg has insecure permissions: {:o} (should be 0400 or 0600)",
+                        mode
+                    ),
                     risk_level: Some(RiskLevel::High),
                 });
             }
@@ -107,7 +111,9 @@ impl ComplianceProfile {
 
         // CIS 3.4.1: Ensure TCP Wrappers is installed
         if let Ok(packages) = g.inspect_packages(root) {
-            let has_tcp_wrappers = packages.packages.iter()
+            let has_tcp_wrappers = packages
+                .packages
+                .iter()
                 .any(|pkg| pkg.name.contains("tcp_wrappers") || pkg.name.contains("tcpd"));
 
             if has_tcp_wrappers {
@@ -129,7 +135,9 @@ impl ComplianceProfile {
 
         // CIS 4.1.1.1: Ensure auditd is installed
         if let Ok(packages) = g.inspect_packages(root) {
-            let has_auditd = packages.packages.iter()
+            let has_auditd = packages
+                .packages
+                .iter()
                 .any(|pkg| pkg.name.contains("audit"));
 
             if has_auditd {
@@ -150,9 +158,7 @@ impl ComplianceProfile {
         }
 
         // CIS 5.2.1: Ensure permissions on /etc/ssh/sshd_config are configured
-        if let Ok(stat) = g.with_mount(root, |guestfs| {
-            guestfs.stat("/etc/ssh/sshd_config")
-        }) {
+        if let Ok(stat) = g.with_mount(root, |guestfs| guestfs.stat("/etc/ssh/sshd_config")) {
             let mode = stat.mode & 0o777;
             if mode == 0o600 {
                 findings.push(Finding {
@@ -165,7 +171,10 @@ impl ComplianceProfile {
                 findings.push(Finding {
                     item: "CIS 5.2.1 - SSH config permissions".to_string(),
                     status: FindingStatus::Fail,
-                    message: format!("sshd_config has insecure permissions: {:o} (should be 0600)", mode),
+                    message: format!(
+                        "sshd_config has insecure permissions: {:o} (should be 0600)",
+                        mode
+                    ),
                     risk_level: Some(RiskLevel::High),
                 });
             }
@@ -213,8 +222,10 @@ impl ComplianceProfile {
 
         // Check for FIPS-approved cryptographic libraries
         if let Ok(packages) = g.inspect_packages(root) {
-            let has_fips_openssl = packages.packages.iter()
-                .any(|pkg| pkg.name.contains("openssl-fips") || pkg.name.contains("openssl") && pkg.name.contains("fips"));
+            let has_fips_openssl = packages.packages.iter().any(|pkg| {
+                pkg.name.contains("openssl-fips")
+                    || pkg.name.contains("openssl") && pkg.name.contains("fips")
+            });
 
             if has_fips_openssl {
                 findings.push(Finding {
@@ -234,9 +245,7 @@ impl ComplianceProfile {
         }
 
         // Check kernel cmdline for fips=1
-        if let Ok(cmdline) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/proc/cmdline")
-        }) {
+        if let Ok(cmdline) = g.with_mount(root, |guestfs| guestfs.read_file("/proc/cmdline")) {
             let cmdline_str = String::from_utf8_lossy(&cmdline);
             if cmdline_str.contains("fips=1") {
                 findings.push(Finding {
@@ -266,9 +275,7 @@ impl ComplianceProfile {
         let mut findings = Vec::new();
 
         // Check /etc/login.defs for password aging
-        if let Ok(login_defs) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/etc/login.defs")
-        }) {
+        if let Ok(login_defs) = g.with_mount(root, |guestfs| guestfs.read_file("/etc/login.defs")) {
             let content = String::from_utf8_lossy(&login_defs);
 
             // PASS_MAX_DAYS (should be <= 90 per CIS)
@@ -343,7 +350,8 @@ impl ComplianceProfile {
 
         // Check PAM password quality requirements
         if let Ok(pam_pwquality) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/etc/security/pwquality.conf")
+            guestfs
+                .read_file("/etc/security/pwquality.conf")
                 .or_else(|_| guestfs.read_file("/etc/pam.d/system-auth"))
         }) {
             let content = String::from_utf8_lossy(&pam_pwquality);
@@ -377,7 +385,9 @@ impl ComplianceProfile {
 
         // Check if rsyslog or syslog-ng is installed
         if let Ok(packages) = g.inspect_packages(root) {
-            let has_syslog = packages.packages.iter()
+            let has_syslog = packages
+                .packages
+                .iter()
                 .any(|pkg| pkg.name.contains("rsyslog") || pkg.name.contains("syslog-ng"));
 
             if has_syslog {
@@ -399,7 +409,8 @@ impl ComplianceProfile {
 
         // Check if auditd is running (from services)
         if let Ok(services) = g.inspect_systemd_services(root) {
-            let auditd_enabled = services.iter()
+            let auditd_enabled = services
+                .iter()
                 .any(|svc| svc.name.contains("auditd") && svc.enabled);
 
             if auditd_enabled {
@@ -420,9 +431,9 @@ impl ComplianceProfile {
         }
 
         // Check for remote logging configuration
-        if let Ok(rsyslog_conf) = g.with_mount(root, |guestfs| {
-            guestfs.read_file("/etc/rsyslog.conf")
-        }) {
+        if let Ok(rsyslog_conf) =
+            g.with_mount(root, |guestfs| guestfs.read_file("/etc/rsyslog.conf"))
+        {
             let content = String::from_utf8_lossy(&rsyslog_conf);
             if content.contains("@@") || content.contains("@") {
                 findings.push(Finding {
@@ -485,7 +496,10 @@ impl ComplianceProfile {
                 findings.push(Finding {
                     item: "/etc/shadow permissions".to_string(),
                     status: FindingStatus::Fail,
-                    message: format!("Insecure permissions: {:o} (should be 0000, 0400, or 0600)", mode),
+                    message: format!(
+                        "Insecure permissions: {:o} (should be 0000, 0400, or 0600)",
+                        mode
+                    ),
                     risk_level: Some(RiskLevel::Critical),
                 });
             }
@@ -505,7 +519,10 @@ impl ComplianceProfile {
                 findings.push(Finding {
                     item: "/etc/gshadow permissions".to_string(),
                     status: FindingStatus::Fail,
-                    message: format!("Insecure permissions: {:o} (should be 0000, 0400, or 0600)", mode),
+                    message: format!(
+                        "Insecure permissions: {:o} (should be 0000, 0400, or 0600)",
+                        mode
+                    ),
                     risk_level: Some(RiskLevel::Critical),
                 });
             }

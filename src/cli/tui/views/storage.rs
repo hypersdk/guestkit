@@ -2,7 +2,9 @@
 //! Storage view - LVM, RAID, and mount points
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -15,9 +17,9 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // LVM summary
-            Constraint::Length(6),  // RAID arrays
-            Constraint::Min(0),     // Fstab entries
+            Constraint::Length(8), // LVM summary
+            Constraint::Length(6), // RAID arrays
+            Constraint::Min(0),    // Fstab entries
         ])
         .split(area);
 
@@ -33,13 +35,19 @@ fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
         // Physical volumes
         items.push(ListItem::new(Line::from(vec![
             Span::styled("Physical Volumes: ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", lvm.physical_volumes.len()), Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                format!("{}", lvm.physical_volumes.len()),
+                Style::default().fg(TEXT_COLOR),
+            ),
         ])));
 
         // Volume groups
         items.push(ListItem::new(Line::from(vec![
             Span::styled("Volume Groups:    ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", lvm.volume_groups.len()), Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                format!("{}", lvm.volume_groups.len()),
+                Style::default().fg(TEXT_COLOR),
+            ),
         ])));
 
         if !lvm.volume_groups.is_empty() {
@@ -49,7 +57,10 @@ fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
                     Span::styled(&vg.name, Style::default().fg(ORANGE)),
                     Span::raw(": "),
                     Span::styled(format!("{} ", vg.size), Style::default().fg(TEXT_COLOR)),
-                    Span::styled(format!("({} PV, {} LV)", vg.pv_count, vg.lv_count), Style::default().fg(LIGHT_ORANGE)),
+                    Span::styled(
+                        format!("({} PV, {} LV)", vg.pv_count, vg.lv_count),
+                        Style::default().fg(LIGHT_ORANGE),
+                    ),
                 ])));
             }
         }
@@ -57,20 +68,25 @@ fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
         // Logical volumes
         items.push(ListItem::new(Line::from(vec![
             Span::styled("Logical Volumes:  ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", lvm.logical_volumes.len()), Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                format!("{}", lvm.logical_volumes.len()),
+                Style::default().fg(TEXT_COLOR),
+            ),
         ])));
     } else {
-        items.push(ListItem::new(Line::from(vec![
-            Span::styled("No LVM detected", Style::default().fg(TEXT_COLOR)),
-        ])));
+        items.push(ListItem::new(Line::from(vec![Span::styled(
+            "No LVM detected",
+            Style::default().fg(TEXT_COLOR),
+        )])));
     }
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(" 💾 LVM Configuration ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }
@@ -78,11 +94,13 @@ fn draw_lvm_summary(f: &mut Frame, area: Rect, app: &App) {
 fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
     if app.raid_arrays.is_empty() {
         let empty = Paragraph::new("No RAID arrays detected")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" 🔧 RAID Arrays ")
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR))
+                    .title(" 🔧 RAID Arrays ")
+                    .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
@@ -90,7 +108,9 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
 
     // Calculate RAID health metrics
     let total_arrays = app.raid_arrays.len();
-    let healthy_arrays = app.raid_arrays.iter()
+    let healthy_arrays = app
+        .raid_arrays
+        .iter()
         .filter(|r| r.status == "active" && r.active_devices == r.total_devices)
         .count();
     let degraded_arrays = total_arrays - healthy_arrays;
@@ -105,8 +125,8 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Health gauge
-            Constraint::Min(0),     // RAID list
+            Constraint::Length(3), // Health gauge
+            Constraint::Min(0),    // RAID list
         ])
         .split(area);
 
@@ -120,47 +140,64 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
     };
 
     let health_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🔧 RAID Array Health "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" 🔧 RAID Array Health "),
+        )
         .gauge_style(Style::default().fg(gauge_color))
         .percent(health_pct)
-        .label(format!("{}/{} healthy • {} degraded ({}%)", healthy_arrays, total_arrays, degraded_arrays, health_pct));
+        .label(format!(
+            "{}/{} healthy • {} degraded ({}%)",
+            healthy_arrays, total_arrays, degraded_arrays, health_pct
+        ));
 
     f.render_widget(health_gauge, chunks[0]);
 
     // RAID array list
-    let items: Vec<ListItem> = app.raid_arrays
+    let items: Vec<ListItem> = app
+        .raid_arrays
         .iter()
         .map(|raid| {
-            let (status_icon, status_color) = if raid.status == "active" && raid.active_devices == raid.total_devices {
-                ("✓", SUCCESS_COLOR)
-            } else if raid.active_devices < raid.total_devices {
-                ("⚠", ERROR_COLOR)
-            } else {
-                ("●", WARNING_COLOR)
-            };
+            let (status_icon, status_color) =
+                if raid.status == "active" && raid.active_devices == raid.total_devices {
+                    ("✓", SUCCESS_COLOR)
+                } else if raid.active_devices < raid.total_devices {
+                    ("⚠", ERROR_COLOR)
+                } else {
+                    ("●", WARNING_COLOR)
+                };
 
             ListItem::new(Line::from(vec![
                 Span::raw(format!("{} ", status_icon)),
-                Span::styled(&raid.device, Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &raid.device,
+                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(": "),
                 Span::styled(&raid.level, Style::default().fg(LIGHT_ORANGE)),
                 Span::raw(" - "),
                 Span::styled(&raid.status, Style::default().fg(status_color)),
                 Span::raw(" "),
-                Span::styled(format!("[{}/{}]", raid.active_devices, raid.total_devices), Style::default().fg(status_color)),
+                Span::styled(
+                    format!("[{}/{}]", raid.active_devices, raid.total_devices),
+                    Style::default().fg(status_color),
+                ),
             ]))
         })
         .collect();
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 📋 RAID Arrays • {} configured ", app.raid_arrays.len()))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " 📋 RAID Arrays • {} configured ",
+                app.raid_arrays.len()
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, chunks[1]);
 }
@@ -168,11 +205,13 @@ fn draw_raid_summary(f: &mut Frame, area: Rect, app: &App) {
 fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
     if app.fstab.is_empty() {
         let empty = Paragraph::new("⚠️  No fstab entries found")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" 📁 Mount Points ")
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR))
+                    .title(" 📁 Mount Points ")
+                    .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
@@ -187,9 +226,15 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
             .into_iter()
             .filter(|&idx| {
                 let (device, mountpoint, fstype) = &app.fstab[idx];
-                device.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || mountpoint.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || fstype.to_lowercase().contains(&app.search_query.to_lowercase())
+                device
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
+                    || mountpoint
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
+                    || fstype
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
@@ -205,7 +250,10 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
             ListItem::new(Line::from(vec![
                 Span::styled(format!("{:25} ", device), Style::default().fg(LIGHT_ORANGE)),
                 Span::raw("→ "),
-                Span::styled(format!("{:20} ", mountpoint), Style::default().fg(TEXT_COLOR)),
+                Span::styled(
+                    format!("{:20} ", mountpoint),
+                    Style::default().fg(TEXT_COLOR),
+                ),
                 Span::styled(format!("({})", fstype), Style::default().fg(ORANGE)),
             ]))
         })
@@ -218,12 +266,18 @@ fn draw_fstab(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 📁 Mount Points / fstab • {} showing of {} total{} ", filtered_indices.len(), app.fstab.len(), sort_indicator))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " 📁 Mount Points / fstab • {} showing of {} total{} ",
+                filtered_indices.len(),
+                app.fstab.len(),
+                sort_indicator
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }

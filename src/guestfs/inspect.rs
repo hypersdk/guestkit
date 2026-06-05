@@ -132,9 +132,10 @@ impl Guestfs {
                     | crate::disk::FileSystemType::Xfs
                     | crate::disk::FileSystemType::Btrfs
                     | crate::disk::FileSystemType::Ntfs
-                        if self.validate_root_partition(&dev)? => {
-                            roots.push(dev);
-                        }
+                        if self.validate_root_partition(&dev)? =>
+                    {
+                        roots.push(dev);
+                    }
                     _ => {}
                 }
             }
@@ -376,7 +377,8 @@ impl Guestfs {
         }
 
         if let Ok(ref data) = result {
-            self.windows_version_cache.insert(root.to_string(), data.clone());
+            self.windows_version_cache
+                .insert(root.to_string(), data.clone());
         }
 
         if !was_mounted {
@@ -420,7 +422,9 @@ impl Guestfs {
             } else {
                 "unknown".to_string()
             }
-        } else if self.exists("/etc/SuSE-release").unwrap_or(false) || self.exists("/etc/os-release").unwrap_or(false) {
+        } else if self.exists("/etc/SuSE-release").unwrap_or(false)
+            || self.exists("/etc/os-release").unwrap_or(false)
+        {
             // SuSE-release is legacy; os-release should have ID=sles/opensuse
             if let Ok(osr) = self.read_os_release(root) {
                 if osr.id.contains("sles") {
@@ -713,9 +717,8 @@ impl Guestfs {
         // Fallback map from distro string
         let distro = self.inspect_get_distro(root)?;
         match distro.as_str() {
-            "fedora" | "rhel" | "centos" | "photon" | "opensuse" | "sles" | "rocky" | "alma" | "ol" => {
-                Ok("rpm".to_string())
-            }
+            "fedora" | "rhel" | "centos" | "photon" | "opensuse" | "sles" | "rocky" | "alma"
+            | "ol" => Ok("rpm".to_string()),
             "ubuntu" | "debian" => Ok("deb".to_string()),
             "arch" => Ok("pacman".to_string()),
             "alpine" => Ok("apk".to_string()),
@@ -736,10 +739,25 @@ impl Guestfs {
         // Try to parse /etc/fstab for additional mountpoints
         if let Ok(fstab_content) = self.cat("/etc/fstab") {
             // Pseudo-filesystems to skip
-            let pseudo_fs = ["proc", "sysfs", "tmpfs", "devpts", "devtmpfs",
-                             "cgroup", "cgroup2", "debugfs", "securityfs",
-                             "configfs", "fusectl", "mqueue", "hugetlbfs",
-                             "pstore", "binfmt_misc", "autofs", "efivarfs"];
+            let pseudo_fs = [
+                "proc",
+                "sysfs",
+                "tmpfs",
+                "devpts",
+                "devtmpfs",
+                "cgroup",
+                "cgroup2",
+                "debugfs",
+                "securityfs",
+                "configfs",
+                "fusectl",
+                "mqueue",
+                "hugetlbfs",
+                "pstore",
+                "binfmt_misc",
+                "autofs",
+                "efivarfs",
+            ];
 
             for line in fstab_content.lines() {
                 let trimmed = line.trim();
@@ -803,12 +821,7 @@ impl Guestfs {
         self.ensure_ready()?;
 
         // Check for common live CD/USB indicators
-        let live_indicators = [
-            "/run/live",
-            "/lib/live",
-            "/casper",
-            "/run/initramfs/live",
-        ];
+        let live_indicators = ["/run/live", "/lib/live", "/casper", "/run/initramfs/live"];
 
         for path in &live_indicators {
             if self.exists(path).unwrap_or(false) {
@@ -905,10 +918,16 @@ impl OsRelease {
         // Parse version into major.minor (default to 0 for non-numeric components)
         let (version_major, version_minor) = if !version_id.is_empty() {
             let parts: Vec<&str> = version_id.split('.').collect();
-            let major = parts.first().and_then(|s| s.parse().ok()).unwrap_or_else(|| {
-                log::debug!("Non-numeric major version in '{}', defaulting to 0", version_id);
-                0
-            });
+            let major = parts
+                .first()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| {
+                    log::debug!(
+                        "Non-numeric major version in '{}', defaulting to 0",
+                        version_id
+                    );
+                    0
+                });
             let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
             (major, minor)
         } else {
@@ -953,8 +972,10 @@ fn build_partition_path(disk: &str, part_num: u32) -> String {
 /// Strong Linux root markers.
 /// Keep this strict-ish to reduce false positives.
 fn looks_like_linux_root(g: &mut Guestfs) -> bool {
-    let osr = g.exists("/etc/os-release").unwrap_or(false) || g.exists("/usr/lib/os-release").unwrap_or(false);
-    let shellish = g.exists("/bin/sh").unwrap_or(false) || g.exists("/usr/bin/env").unwrap_or(false);
+    let osr = g.exists("/etc/os-release").unwrap_or(false)
+        || g.exists("/usr/lib/os-release").unwrap_or(false);
+    let shellish =
+        g.exists("/bin/sh").unwrap_or(false) || g.exists("/usr/bin/env").unwrap_or(false);
     osr && shellish
 }
 
@@ -962,7 +983,8 @@ fn looks_like_linux_root(g: &mut Guestfs) -> bool {
 /// Keep strict-ish to avoid NTFS data volumes being misclassified.
 fn looks_like_windows_root(g: &mut Guestfs) -> bool {
     // Case-insensitive filesystems make this fairly robust.
-    let win = g.exists("/Windows/System32").unwrap_or(false) || g.exists("/WINDOWS/System32").unwrap_or(false);
+    let win = g.exists("/Windows/System32").unwrap_or(false)
+        || g.exists("/WINDOWS/System32").unwrap_or(false);
     let hive = g.exists("/Windows/System32/config").unwrap_or(false)
         || g.exists("/Windows/System32/Config").unwrap_or(false)
         || g.exists("/WINDOWS/System32/config").unwrap_or(false)

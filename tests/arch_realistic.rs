@@ -243,7 +243,8 @@ fn make_systemd_boot_entry(_kernel_version: &str) -> String {
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
 options root=UUID=ROOT-UUID rw rootflags=subvol=/@ quiet loglevel=3
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn make_passwd() -> String {
@@ -482,7 +483,10 @@ fn create_realistic_arch_image() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 9: Create systemd units
     println!("\n[9/18] Creating systemd units...");
-    g.write("/usr/lib/systemd/system/sshd.service", make_ssh_service().as_bytes())?;
+    g.write(
+        "/usr/lib/systemd/system/sshd.service",
+        make_ssh_service().as_bytes(),
+    )?;
     g.write(
         "/usr/lib/systemd/system/NetworkManager.service",
         make_networkmanager_service().as_bytes(),

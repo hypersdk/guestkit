@@ -2,7 +2,10 @@
 //! AI-like intelligent recommendations view
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR,
+    WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -111,10 +114,10 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Length(5),  // Quick stats
-            Constraint::Min(0),     // Recommendations list
-            Constraint::Length(3),  // Footer
+            Constraint::Length(3), // Header
+            Constraint::Length(5), // Quick stats
+            Constraint::Min(0),    // Recommendations list
+            Constraint::Length(3), // Footer
         ])
         .split(area);
 
@@ -126,28 +129,47 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_recommendations_header(f: &mut Frame, area: Rect, app: &App) {
     let recommendations = generate_recommendations(app);
-    let critical_count = recommendations.iter().filter(|r| matches!(r.priority, Priority::Critical)).count();
-    let high_count = recommendations.iter().filter(|r| matches!(r.priority, Priority::High)).count();
+    let critical_count = recommendations
+        .iter()
+        .filter(|r| matches!(r.priority, Priority::Critical))
+        .count();
+    let high_count = recommendations
+        .iter()
+        .filter(|r| matches!(r.priority, Priority::High))
+        .count();
 
-    let header_text = vec![
-        Line::from(vec![
-            Span::styled("🤖 ", Style::default().fg(ORANGE)),
-            Span::styled("Intelligent Recommendations", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(" │ "),
-            Span::styled(format!("{} total", recommendations.len()), Style::default().fg(TEXT_COLOR)),
-            Span::raw(" │ "),
-            Span::styled(format!("🔴 {}", critical_count), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(" "),
-            Span::styled(format!("🟠 {}", high_count), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-        ]),
-    ];
+    let header_text = vec![Line::from(vec![
+        Span::styled("🤖 ", Style::default().fg(ORANGE)),
+        Span::styled(
+            "Intelligent Recommendations",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" │ "),
+        Span::styled(
+            format!("{} total", recommendations.len()),
+            Style::default().fg(TEXT_COLOR),
+        ),
+        Span::raw(" │ "),
+        Span::styled(
+            format!("🔴 {}", critical_count),
+            Style::default()
+                .fg(ERROR_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" "),
+        Span::styled(
+            format!("🟠 {}", high_count),
+            Style::default()
+                .fg(WARNING_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ])];
 
-    let header = Paragraph::new(header_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let header = Paragraph::new(header_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(header, area);
 }
@@ -155,42 +177,63 @@ fn draw_recommendations_header(f: &mut Frame, area: Rect, app: &App) {
 fn draw_quick_stats(f: &mut Frame, area: Rect, app: &App) {
     let recommendations = generate_recommendations(app);
 
-    let quick_wins = recommendations.iter()
-        .filter(|r| matches!(r.effort, Effort::Low) && matches!(r.impact, Impact::High | Impact::Medium))
+    let quick_wins = recommendations
+        .iter()
+        .filter(|r| {
+            matches!(r.effort, Effort::Low) && matches!(r.impact, Impact::High | Impact::Medium)
+        })
         .count();
 
-    let security_recs = recommendations.iter()
+    let security_recs = recommendations
+        .iter()
         .filter(|r| r.category == "Security")
         .count();
 
-    let performance_recs = recommendations.iter()
+    let performance_recs = recommendations
+        .iter()
         .filter(|r| r.category == "Performance")
         .count();
 
     let stats_text = vec![
-        Line::from(vec![
-            Span::styled("📊 Quick Stats:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "📊 Quick Stats:",
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  Quick Wins: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", quick_wins), Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)),
-            Span::styled(" (Low effort, high impact)", Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                format!("{}", quick_wins),
+                Style::default()
+                    .fg(SUCCESS_COLOR)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " (Low effort, high impact)",
+                Style::default().fg(TEXT_COLOR),
+            ),
         ]),
         Line::from(vec![
             Span::styled("  Security: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", security_recs), Style::default().fg(WARNING_COLOR)),
+            Span::styled(
+                format!("{}", security_recs),
+                Style::default().fg(WARNING_COLOR),
+            ),
             Span::raw("  │  "),
             Span::styled("Performance: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("{}", performance_recs), Style::default().fg(INFO_COLOR)),
+            Span::styled(
+                format!("{}", performance_recs),
+                Style::default().fg(INFO_COLOR),
+            ),
         ]),
     ];
 
-    let stats = Paragraph::new(stats_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let stats = Paragraph::new(stats_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(stats, area);
 }
@@ -219,20 +262,26 @@ fn draw_recommendations_list(f: &mut Frame, area: Rect, app: &App) {
             );
 
             let impact_badge = Span::styled(
-                format!("Impact:{}", match rec.impact {
-                    Impact::High => "⬆️",
-                    Impact::Medium => "➡️",
-                    Impact::Low => "⬇️",
-                }),
+                format!(
+                    "Impact:{}",
+                    match rec.impact {
+                        Impact::High => "⬆️",
+                        Impact::Medium => "➡️",
+                        Impact::Low => "⬇️",
+                    }
+                ),
                 Style::default().fg(rec.impact.color()),
             );
 
             let effort_badge = Span::styled(
-                format!("Effort:{}", match rec.effort {
-                    Effort::High => "🔴",
-                    Effort::Medium => "🟡",
-                    Effort::Low => "🟢",
-                }),
+                format!(
+                    "Effort:{}",
+                    match rec.effort {
+                        Effort::High => "🔴",
+                        Effort::Medium => "🟡",
+                        Effort::Low => "🟢",
+                    }
+                ),
                 Style::default().fg(rec.effort.color()),
             );
 
@@ -248,7 +297,10 @@ fn draw_recommendations_list(f: &mut Frame, area: Rect, app: &App) {
                     Span::raw(" "),
                     Span::styled(rec.category, Style::default().fg(LIGHT_ORANGE)),
                     Span::raw(": "),
-                    Span::styled(&rec.title, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &rec.title,
+                        Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::raw("    "),
@@ -263,9 +315,12 @@ fn draw_recommendations_list(f: &mut Frame, area: Rect, app: &App) {
             ];
 
             if is_selected && !rec.steps.is_empty() {
-                lines.push(Line::from(vec![
-                    Span::styled("    Steps:", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    "    Steps:",
+                    Style::default()
+                        .fg(LIGHT_ORANGE)
+                        .add_modifier(Modifier::BOLD),
+                )]));
                 for (idx, step) in rec.steps.iter().enumerate() {
                     lines.push(Line::from(vec![
                         Span::raw(format!("      {}. ", idx + 1)),
@@ -280,42 +335,54 @@ fn draw_recommendations_list(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    format!("💡 Recommendations ({}/{})",
-                        recommendations.len().min(app.scroll_offset + (area.height as usize).saturating_sub(2)),
-                        recommendations.len()),
-                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
-                ))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title(Span::styled(
+                format!(
+                    "💡 Recommendations ({}/{})",
+                    recommendations
+                        .len()
+                        .min(app.scroll_offset + (area.height as usize).saturating_sub(2)),
+                    recommendations.len()
+                ),
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(list, area);
 }
 
 fn draw_recommendations_footer(f: &mut Frame, area: Rect) {
-    let footer_text = vec![
-        Line::from(vec![
-            Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Scroll │ "),
-            Span::styled("Enter", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Expand │ "),
-            Span::styled("q", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Quick Wins Filter │ "),
-            Span::styled("s", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-            Span::raw(": Security Only"),
-        ]),
-    ];
+    let footer_text = vec![Line::from(vec![
+        Span::styled(
+            "↑↓",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Scroll │ "),
+        Span::styled(
+            "Enter",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Expand │ "),
+        Span::styled(
+            "q",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Quick Wins Filter │ "),
+        Span::styled(
+            "s",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Security Only"),
+    ])];
 
-    let footer = Paragraph::new(footer_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let footer = Paragraph::new(footer_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(footer, area);
 }
@@ -330,7 +397,9 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Security",
             priority: Priority::Critical,
             title: "Enable Firewall Protection".to_string(),
-            description: "Firewall is currently disabled, leaving system exposed to network threats".to_string(),
+            description:
+                "Firewall is currently disabled, leaving system exposed to network threats"
+                    .to_string(),
             impact: Impact::High,
             effort: Effort::Low,
             steps: vec![
@@ -349,7 +418,8 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Security",
             priority: Priority::High,
             title: "Enable Mandatory Access Control (MAC)".to_string(),
-            description: "No MAC system (SELinux/AppArmor) is active, reducing security isolation".to_string(),
+            description: "No MAC system (SELinux/AppArmor) is active, reducing security isolation"
+                .to_string(),
             impact: Impact::High,
             effort: Effort::Medium,
             steps: vec![
@@ -369,7 +439,10 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Security",
             priority: Priority::Critical,
             title: "Remove Non-Root UID 0 Accounts".to_string(),
-            description: format!("Found {} accounts with UID 0 - only root should have superuser privileges", privileged_users),
+            description: format!(
+                "Found {} accounts with UID 0 - only root should have superuser privileges",
+                privileged_users
+            ),
             impact: Impact::High,
             effort: Effort::Low,
             steps: vec![
@@ -389,7 +462,10 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Performance",
             priority: Priority::Medium,
             title: "Reduce Package Bloat".to_string(),
-            description: format!("{} packages installed - consider cleanup to improve performance", app.packages.package_count),
+            description: format!(
+                "{} packages installed - consider cleanup to improve performance",
+                app.packages.package_count
+            ),
             impact: Impact::Medium,
             effort: Effort::Medium,
             steps: vec![
@@ -409,7 +485,10 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Performance",
             priority: Priority::Medium,
             title: "Optimize Service Load".to_string(),
-            description: format!("{} services enabled - reducing unnecessary services improves boot time", enabled_services),
+            description: format!(
+                "{} services enabled - reducing unnecessary services improves boot time",
+                enabled_services
+            ),
             impact: Impact::Medium,
             effort: Effort::Low,
             steps: vec![
@@ -429,7 +508,10 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Maintenance",
             priority: Priority::Low,
             title: "Regular Database Maintenance".to_string(),
-            description: format!("{} database(s) detected - schedule regular maintenance tasks", app.databases.len()),
+            description: format!(
+                "{} database(s) detected - schedule regular maintenance tasks",
+                app.databases.len()
+            ),
             impact: Impact::Medium,
             effort: Effort::Low,
             steps: vec![
@@ -448,7 +530,10 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Security",
             priority: Priority::High,
             title: "Harden Web Server Configuration".to_string(),
-            description: format!("{} web server(s) detected - ensure security best practices", app.web_servers.len()),
+            description: format!(
+                "{} web server(s) detected - ensure security best practices",
+                app.web_servers.len()
+            ),
             impact: Impact::High,
             effort: Effort::Medium,
             steps: vec![
@@ -506,7 +591,8 @@ fn generate_recommendations(app: &App) -> Vec<Recommendation> {
             category: "Monitoring",
             priority: Priority::Medium,
             title: "Set Up System Monitoring".to_string(),
-            description: "Proactive monitoring prevents issues before they impact operations".to_string(),
+            description: "Proactive monitoring prevents issues before they impact operations"
+                .to_string(),
             impact: Impact::High,
             effort: Effort::Medium,
             steps: vec![

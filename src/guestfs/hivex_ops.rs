@@ -30,11 +30,18 @@ macro_rules! open_hive {
         use nt_hive2::{Hive, HiveParseMode};
         use std::fs::File;
 
-        let host_path = $self.open_hives.get(&$handle)
+        let host_path = $self
+            .open_hives
+            .get(&$handle)
             .ok_or_else(|| Error::InvalidState(format!("No hive open with handle {}", $handle)))?;
 
-        let file = File::open(host_path)
-            .map_err(|e| Error::CommandFailed(format!("Failed to open hive {}: {}", host_path.display(), e)))?;
+        let file = File::open(host_path).map_err(|e| {
+            Error::CommandFailed(format!(
+                "Failed to open hive {}: {}",
+                host_path.display(),
+                e
+            ))
+        })?;
 
         let hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
             .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
@@ -70,7 +77,8 @@ impl Guestfs {
             // Validate by parsing - root_key_node() forces type inference
             let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
                 .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
-            let _root = hive.root_key_node()
+            let _root = hive
+                .root_key_node()
                 .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
         }
 
@@ -117,7 +125,8 @@ impl Guestfs {
 
         // Verify hive is open and valid
         let mut hive = open_hive!(self, handle);
-        let _root = hive.root_key_node()
+        let _root = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         // Root node is always represented as 0
@@ -135,12 +144,16 @@ impl Guestfs {
         let mut hive = open_hive!(self, handle);
 
         if node == 0 {
-            let root_key = hive.root_key_node()
+            let root_key = hive
+                .root_key_node()
                 .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
             return Ok(root_key.name().to_string());
         }
 
-        Err(Error::NotFound(format!("Node {} not found (use hivex_node_get_child to navigate)", node)))
+        Err(Error::NotFound(format!(
+            "Node {} not found (use hivex_node_get_child to navigate)",
+            node
+        )))
     }
 
     /// Get child nodes
@@ -154,10 +167,12 @@ impl Guestfs {
         let mut hive = open_hive!(self, handle);
 
         if node == 0 {
-            let root_key = hive.root_key_node()
+            let root_key = hive
+                .root_key_node()
                 .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
-            let subkeys = root_key.subkeys(&mut hive)
+            let subkeys = root_key
+                .subkeys(&mut hive)
                 .map_err(|e| Error::CommandFailed(format!("Failed to get subkeys: {:?}", e)))?;
 
             let children: Vec<i64> = (1..=subkeys.len() as i64).collect();
@@ -178,7 +193,8 @@ impl Guestfs {
         let mut hive = open_hive!(self, handle);
 
         if node == 0 {
-            let root_key = hive.root_key_node()
+            let root_key = hive
+                .root_key_node()
                 .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
             let count = root_key.values().len();
@@ -200,7 +216,8 @@ impl Guestfs {
         let mut hive = open_hive!(self, handle);
 
         if node == 0 {
-            let root_key = hive.root_key_node()
+            let root_key = hive
+                .root_key_node()
                 .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
             match root_key.subkey(name, &mut hive) {
@@ -212,7 +229,10 @@ impl Guestfs {
                     Ok((hasher.finish() & 0x7FFF_FFFF) as i64 + 1)
                 }
                 Ok(None) => Err(Error::NotFound(format!("Child node not found: {}", name))),
-                Err(e) => Err(Error::CommandFailed(format!("Failed to get child: {:?}", e))),
+                Err(e) => Err(Error::CommandFailed(format!(
+                    "Failed to get child: {:?}",
+                    e
+                ))),
             }
         } else {
             Err(Error::NotFound(format!("Child node not found: {}", name)))
@@ -229,12 +249,16 @@ impl Guestfs {
 
         let mut hive = open_hive!(self, handle);
 
-        let root_key = hive.root_key_node()
+        let root_key = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         let values = root_key.values();
         if value < 1 {
-            return Err(Error::InvalidOperation(format!("Value index must be >= 1, got {}", value)));
+            return Err(Error::InvalidOperation(format!(
+                "Value index must be >= 1, got {}",
+                value
+            )));
         }
         let idx = (value - 1) as usize;
         if idx < values.len() {
@@ -254,12 +278,16 @@ impl Guestfs {
 
         let mut hive = open_hive!(self, handle);
 
-        let root_key = hive.root_key_node()
+        let root_key = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         let values = root_key.values();
         if value < 1 {
-            return Err(Error::InvalidOperation(format!("Value index must be >= 1, got {}", value)));
+            return Err(Error::InvalidOperation(format!(
+                "Value index must be >= 1, got {}",
+                value
+            )));
         }
         let idx = (value - 1) as usize;
         if idx < values.len() {
@@ -289,17 +317,22 @@ impl Guestfs {
 
         let mut hive = open_hive!(self, handle);
 
-        let root_key = hive.root_key_node()
+        let root_key = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         let values = root_key.values();
         if value < 1 {
-            return Err(Error::InvalidOperation(format!("Value index must be >= 1, got {}", value)));
+            return Err(Error::InvalidOperation(format!(
+                "Value index must be >= 1, got {}",
+                value
+            )));
         }
         let idx = (value - 1) as usize;
         if idx < values.len() {
             match values[idx].value() {
-                nt_hive2::RegistryValue::RegSZ(data) | nt_hive2::RegistryValue::RegExpandSZ(data) => {
+                nt_hive2::RegistryValue::RegSZ(data)
+                | nt_hive2::RegistryValue::RegExpandSZ(data) => {
                     return Ok(data.clone());
                 }
                 _ => return Ok(String::new()),
@@ -319,12 +352,16 @@ impl Guestfs {
 
         let mut hive = open_hive!(self, handle);
 
-        let root_key = hive.root_key_node()
+        let root_key = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         let values = root_key.values();
         if value < 1 {
-            return Err(Error::InvalidOperation(format!("Value index must be >= 1, got {}", value)));
+            return Err(Error::InvalidOperation(format!(
+                "Value index must be >= 1, got {}",
+                value
+            )));
         }
         let idx = (value - 1) as usize;
         if idx < values.len() {
@@ -346,12 +383,16 @@ impl Guestfs {
 
         let mut hive = open_hive!(self, handle);
 
-        let root_key = hive.root_key_node()
+        let root_key = hive
+            .root_key_node()
             .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
 
         let values = root_key.values();
         if value < 1 {
-            return Err(Error::InvalidOperation(format!("Value index must be >= 1, got {}", value)));
+            return Err(Error::InvalidOperation(format!(
+                "Value index must be >= 1, got {}",
+                value
+            )));
         }
         let idx = (value - 1) as usize;
         if idx < values.len() {

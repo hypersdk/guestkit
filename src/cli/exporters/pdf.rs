@@ -2,11 +2,9 @@
 //! PDF report generation with professional layout
 
 use crate::cli::formatters::InspectionReport;
+use crate::export::pdf::{FilesystemInfo, InspectionData, NetworkInterface, PackageInfo, UserInfo};
+use crate::export::{PaperSize, PdfExportOptions, PdfExporter};
 use anyhow::Result;
-use crate::export::{PaperSize, PdfExporter, PdfExportOptions};
-use crate::export::pdf::{
-    FilesystemInfo, InspectionData, NetworkInterface, PackageInfo, UserInfo,
-};
 use tempfile::NamedTempFile;
 
 /// Generate PDF report from inspection data
@@ -111,9 +109,9 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
                     device: fs.device.clone(),
                     mountpoint: fs.mountpoint.clone(),
                     fstype: fs.fstype.clone(),
-                    size: 0,  // Size not available in fstab
-                    used: 0,  // Used not available in fstab
-                    available: 0,  // Available not available in fstab
+                    size: 0,      // Size not available in fstab
+                    used: 0,      // Used not available in fstab
+                    available: 0, // Available not available in fstab
                 })
                 .collect()
         } else {

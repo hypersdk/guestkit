@@ -188,7 +188,10 @@ impl Guestfs {
             }
 
             // 4. Check NetworkManager (modern distros)
-            if guestfs.is_dir("/etc/NetworkManager/system-connections").unwrap_or(false) {
+            if guestfs
+                .is_dir("/etc/NetworkManager/system-connections")
+                .unwrap_or(false)
+            {
                 if let Ok(files) = guestfs.ls("/etc/NetworkManager/system-connections") {
                     for file in files.iter().filter(|f| f.ends_with(".nmconnection")) {
                         let path = format!("/etc/NetworkManager/system-connections/{}", file);
@@ -291,7 +294,9 @@ impl Guestfs {
                 let key = key.trim();
                 let value = value.trim_matches('"').trim();
                 match key {
-                    "BOOTPROTO" => iface.dhcp = matches!(value.to_lowercase().as_str(), "dhcp" | "bootp"),
+                    "BOOTPROTO" => {
+                        iface.dhcp = matches!(value.to_lowercase().as_str(), "dhcp" | "bootp")
+                    }
                     "IPADDR" => iface.ip_address.push(value.to_string()),
                     k if k.starts_with("IPADDR") => {
                         if let Some(suffix) = k.get(6..) {
@@ -355,7 +360,8 @@ impl Guestfs {
                                     }
                                     if let Some(match_obj) = iface.get("match") {
                                         if let Some(mac) = match_obj.get("macaddress") {
-                                            intf.mac_address = mac.as_str().unwrap_or("").to_string();
+                                            intf.mac_address =
+                                                mac.as_str().unwrap_or("").to_string();
                                         }
                                     } else if let Some(mac) = iface.get("macaddress") {
                                         intf.mac_address = mac.as_str().unwrap_or("").to_string();
@@ -384,7 +390,10 @@ impl Guestfs {
 
     fn parse_networkmanager(&self, content: &str, filename: &str) -> Option<NetworkInterface> {
         let mut iface = NetworkInterface {
-            name: filename.strip_suffix(".nmconnection").unwrap_or(filename).to_string(),
+            name: filename
+                .strip_suffix(".nmconnection")
+                .unwrap_or(filename)
+                .to_string(),
             ip_address: Vec::new(),
             mac_address: String::new(),
             dhcp: false,
@@ -404,14 +413,12 @@ impl Guestfs {
                 let key = key.trim();
                 let value = value.trim();
                 match current_section {
-                    "connection"
-                        if key == "interface-name" => {
-                            iface.name = value.to_string();
-                        }
-                    "ethernet" | "wifi"
-                        if key == "mac-address" => {
-                            iface.mac_address = value.to_string();
-                        }
+                    "connection" if key == "interface-name" => {
+                        iface.name = value.to_string();
+                    }
+                    "ethernet" | "wifi" if key == "mac-address" => {
+                        iface.mac_address = value.to_string();
+                    }
                     "ipv4" => {
                         if key == "method" {
                             iface.dhcp = value == "auto";
@@ -497,13 +504,12 @@ impl Guestfs {
                             }
                         }
                     }
-                    "Address"
-                        if key == "Address" => {
-                            let ip = value.split('/').next().unwrap_or("").to_string();
-                            if !ip.is_empty() {
-                                ip_address.push(ip);
-                            }
+                    "Address" if key == "Address" => {
+                        let ip = value.split('/').next().unwrap_or("").to_string();
+                        if !ip.is_empty() {
+                            ip_address.push(ip);
                         }
+                    }
                     _ => {}
                 }
             }
@@ -519,7 +525,10 @@ impl Guestfs {
             });
         } else if interfaces.is_empty() {
             // If no interfaces parsed, create one with filename as fallback
-            let name = filename.strip_suffix(".network").unwrap_or(filename).to_string();
+            let name = filename
+                .strip_suffix(".network")
+                .unwrap_or(filename)
+                .to_string();
             if !name.is_empty() {
                 interfaces.push(NetworkInterface {
                     name,
@@ -569,7 +578,12 @@ impl Guestfs {
             }
 
             // If resolv.conf points to loopback (e.g., 127.0.0.53 for systemd-resolved), parse resolved.conf
-            if has_resolv_conf && is_loopback_only && guestfs.exists("/etc/systemd/resolved.conf").unwrap_or(false) {
+            if has_resolv_conf
+                && is_loopback_only
+                && guestfs
+                    .exists("/etc/systemd/resolved.conf")
+                    .unwrap_or(false)
+            {
                 // Parse main resolved.conf
                 if let Ok(content) = guestfs.cat("/etc/systemd/resolved.conf") {
                     let mut parsed = guestfs.parse_systemd_resolved_content(&content);
@@ -578,11 +592,13 @@ impl Guestfs {
                 }
 
                 // Parse drop-ins in /etc/systemd/resolved.conf.d/
-                if guestfs.is_dir("/etc/systemd/resolved.conf.d").unwrap_or(false) {
+                if guestfs
+                    .is_dir("/etc/systemd/resolved.conf.d")
+                    .unwrap_or(false)
+                {
                     if let Ok(files) = guestfs.ls("/etc/systemd/resolved.conf.d") {
-                        let mut conf_files: Vec<String> = files.into_iter()
-                            .filter(|f| f.ends_with(".conf"))
-                            .collect();
+                        let mut conf_files: Vec<String> =
+                            files.into_iter().filter(|f| f.ends_with(".conf")).collect();
                         conf_files.sort();
                         for file in conf_files {
                             let path = format!("/etc/systemd/resolved.conf.d/{}", file);
@@ -614,7 +630,10 @@ impl Guestfs {
                 }
 
                 // For NetworkManager global DNS
-                if guestfs.exists("/etc/NetworkManager/NetworkManager.conf").unwrap_or(false) {
+                if guestfs
+                    .exists("/etc/NetworkManager/NetworkManager.conf")
+                    .unwrap_or(false)
+                {
                     if let Ok(content) = guestfs.cat("/etc/NetworkManager/NetworkManager.conf") {
                         let mut in_dns_section = false;
                         for line in content.lines() {
@@ -624,7 +643,8 @@ impl Guestfs {
                             } else if in_dns_section && line.starts_with('[') {
                                 in_dns_section = false;
                             } else if in_dns_section && line.starts_with("dns=") {
-                                let value = line.split_once('=').map(|(_, v)| v.trim()).unwrap_or("");
+                                let value =
+                                    line.split_once('=').map(|(_, v)| v.trim()).unwrap_or("");
                                 for server in value.split(';') {
                                     let server = server.trim();
                                     if !server.is_empty() {
@@ -843,7 +863,11 @@ impl Guestfs {
             for lv_path in lvs {
                 // Parse LV path to get VG and LV names
                 // Format is usually /dev/mapper/vgname-lvname or /dev/vgname/lvname
-                let lv_name = lv_path.split('/').next_back().unwrap_or(&lv_path).to_string();
+                let lv_name = lv_path
+                    .split('/')
+                    .next_back()
+                    .unwrap_or(&lv_path)
+                    .to_string();
 
                 // Try to get VG name from LV
                 let vg_name = if lv_path.contains("/mapper/") {
@@ -865,7 +889,11 @@ impl Guestfs {
                 lvm_info.logical_volumes.push(lv_info);
 
                 // Update VG counts
-                if let Some(vg) = lvm_info.volume_groups.iter_mut().find(|v| v.name == vg_name) {
+                if let Some(vg) = lvm_info
+                    .volume_groups
+                    .iter_mut()
+                    .find(|v| v.name == vg_name)
+                {
                     vg.lv_count += 1;
                 }
             }
@@ -888,7 +916,10 @@ impl Guestfs {
                     let line = line.trim();
 
                     // Skip header and empty lines
-                    if line.is_empty() || line.starts_with("Personalities") || line.starts_with("unused devices") {
+                    if line.is_empty()
+                        || line.starts_with("Personalities")
+                        || line.starts_with("unused devices")
+                    {
                         continue;
                     }
 
@@ -906,7 +937,8 @@ impl Guestfs {
                             let level = parts[3].to_string(); // raid0, raid1, raid5, etc.
 
                             // Extract device list
-                            let devices: Vec<String> = parts.iter()
+                            let devices: Vec<String> = parts
+                                .iter()
                                 .skip(4)
                                 .filter_map(|s| {
                                     // Format: sda1[0] or sdb1[1](F) for failed
@@ -932,7 +964,7 @@ impl Guestfs {
                             // Extract [n/m] status
                             if let Some(start) = line.rfind('[') {
                                 if let Some(end) = line.rfind(']') {
-                                    let status_part = &line[start+1..end];
+                                    let status_part = &line[start + 1..end];
                                     if status_part.contains('/') {
                                         let nums: Vec<&str> = status_part.split('/').collect();
                                         if nums.len() == 2 {
@@ -1087,15 +1119,27 @@ impl Guestfs {
                 let mut issuer = "Unknown".to_string();
                 let mut expiry = "Unknown".to_string();
                 if has_openssl {
-                    if let Ok(output) = guestfs.command(&["openssl", "x509", "-in", &path, "-noout", "-subject", "-issuer", "-enddate"]) {
+                    if let Ok(output) = guestfs.command(&[
+                        "openssl", "x509", "-in", &path, "-noout", "-subject", "-issuer",
+                        "-enddate",
+                    ]) {
                         for line in output.lines() {
                             let trimmed = line.trim();
                             if trimmed.starts_with("subject=") {
-                                subject = trimmed.strip_prefix("subject=").unwrap_or(&subject).to_string();
+                                subject = trimmed
+                                    .strip_prefix("subject=")
+                                    .unwrap_or(&subject)
+                                    .to_string();
                             } else if trimmed.starts_with("issuer=") {
-                                issuer = trimmed.strip_prefix("issuer=").unwrap_or(&issuer).to_string();
+                                issuer = trimmed
+                                    .strip_prefix("issuer=")
+                                    .unwrap_or(&issuer)
+                                    .to_string();
                             } else if trimmed.starts_with("notAfter=") {
-                                expiry = trimmed.strip_prefix("notAfter=").unwrap_or(&expiry).to_string();
+                                expiry = trimmed
+                                    .strip_prefix("notAfter=")
+                                    .unwrap_or(&expiry)
+                                    .to_string();
                             }
                         }
                     }
@@ -1135,7 +1179,9 @@ impl Guestfs {
         self.with_mount(root, |guestfs| {
             let mut tools = Vec::new();
             // VMware Tools
-            if guestfs.exists("/usr/bin/vmware-toolbox-cmd").unwrap_or(false)
+            if guestfs
+                .exists("/usr/bin/vmware-toolbox-cmd")
+                .unwrap_or(false)
                 || guestfs.exists("/etc/vmware-tools").unwrap_or(false)
             {
                 tools.push("vmware-tools".to_string());
@@ -1168,47 +1214,62 @@ impl Guestfs {
                 kernel_cmdline: String::new(),
             };
             // Check GRUB2
-            let grub_paths = vec!["/boot/grub2/grub.cfg", "/boot/grub/grub.cfg", "/etc/grub2.cfg"];
+            let grub_paths = vec![
+                "/boot/grub2/grub.cfg",
+                "/boot/grub/grub.cfg",
+                "/etc/grub2.cfg",
+            ];
             for grub_cfg in grub_paths {
                 if guestfs.exists(grub_cfg).unwrap_or(false) {
                     config.bootloader = "GRUB2".to_string();
                     if let Ok(content) = guestfs.cat(grub_cfg) {
-                    // Parse basic GRUB config
-                    let mut default_index: Option<usize> = None;
-                    let mut current_entry = 0;
-                    let mut in_menuentry = false;
-                    for line in content.lines() {
-                        let trimmed = line.trim();
-                        if trimmed.starts_with("set timeout=") {
-                            config.timeout = trimmed.split('=').nth(1).unwrap_or("unknown").trim_matches('"').to_string();
-                        } else if trimmed.starts_with("set default=") {
-                            let default_str = trimmed.split('=').nth(1).unwrap_or("0").trim_matches('"');
-                            default_index = default_str.parse::<usize>().ok();
-                        } else if trimmed.starts_with("menuentry ") || trimmed.starts_with("submenu ") {
-                            if in_menuentry {
-                                current_entry += 1;
-                            }
-                            in_menuentry = true;
-                            let title_parts: Vec<&str> = trimmed.splitn(3, '\'').collect();
-                            let current_title = if title_parts.len() >= 2 {
-                                title_parts[1].to_string()
-                            } else {
-                                "unknown".to_string()
-                            };
-                            if Some(current_entry) == default_index {
-                                config.default_entry = current_title;
-                            }
-                        } else if in_menuentry && (trimmed.starts_with("linux") || trimmed.starts_with("linux16") || trimmed.starts_with("linuxefi")) {
-                            let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                            if parts.len() > 1 && Some(current_entry) == default_index {
-                                config.kernel_cmdline = parts[1..].join(" ");
-                            }
-                        } else if trimmed == "}"
-                            && in_menuentry {
+                        // Parse basic GRUB config
+                        let mut default_index: Option<usize> = None;
+                        let mut current_entry = 0;
+                        let mut in_menuentry = false;
+                        for line in content.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("set timeout=") {
+                                config.timeout = trimmed
+                                    .split('=')
+                                    .nth(1)
+                                    .unwrap_or("unknown")
+                                    .trim_matches('"')
+                                    .to_string();
+                            } else if trimmed.starts_with("set default=") {
+                                let default_str =
+                                    trimmed.split('=').nth(1).unwrap_or("0").trim_matches('"');
+                                default_index = default_str.parse::<usize>().ok();
+                            } else if trimmed.starts_with("menuentry ")
+                                || trimmed.starts_with("submenu ")
+                            {
+                                if in_menuentry {
+                                    current_entry += 1;
+                                }
+                                in_menuentry = true;
+                                let title_parts: Vec<&str> = trimmed.splitn(3, '\'').collect();
+                                let current_title = if title_parts.len() >= 2 {
+                                    title_parts[1].to_string()
+                                } else {
+                                    "unknown".to_string()
+                                };
+                                if Some(current_entry) == default_index {
+                                    config.default_entry = current_title;
+                                }
+                            } else if in_menuentry
+                                && (trimmed.starts_with("linux")
+                                    || trimmed.starts_with("linux16")
+                                    || trimmed.starts_with("linuxefi"))
+                            {
+                                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                                if parts.len() > 1 && Some(current_entry) == default_index {
+                                    config.kernel_cmdline = parts[1..].join(" ");
+                                }
+                            } else if trimmed == "}" && in_menuentry {
                                 in_menuentry = false;
                                 current_entry += 1;
                             }
-                    }
+                        }
                     }
                     break;
                 }
@@ -1282,7 +1343,9 @@ impl Guestfs {
             // RPM-based (RHEL, Fedora, CentOS, openSUSE)
             if guestfs.exists("/usr/bin/rpm").unwrap_or(false) {
                 pkg_info.manager = "rpm".to_string();
-                if let Ok(output) = guestfs.command(&["rpm", "-qa", "--qf", "%{NAME}|%{VERSION}|%{RELEASE}\\n"]) {
+                if let Ok(output) =
+                    guestfs.command(&["rpm", "-qa", "--qf", "%{NAME}|%{VERSION}|%{RELEASE}\\n"])
+                {
                     for line in output.lines() {
                         let parts: Vec<&str> = line.split('|').collect();
                         if parts.len() >= 3 {
@@ -1298,7 +1361,9 @@ impl Guestfs {
             // DEB-based (Debian, Ubuntu)
             else if guestfs.exists("/usr/bin/dpkg").unwrap_or(false) {
                 pkg_info.manager = "dpkg".to_string();
-                if let Ok(output) = guestfs.command(&["dpkg-query", "-W", "-f=${Package}|${Version}\\n"]) {
+                if let Ok(output) =
+                    guestfs.command(&["dpkg-query", "-W", "-f=${Package}|${Version}\\n"])
+                {
                     for line in output.lines() {
                         if let Some((name, version)) = line.split_once('|') {
                             pkg_info.packages.push(Package {
@@ -1335,7 +1400,7 @@ impl Guestfs {
                         if let Some(pos) = line.rfind('-') {
                             pkg_info.packages.push(Package {
                                 name: line[..pos].to_string(),
-                                version: line[pos+1..].to_string(),
+                                version: line[pos + 1..].to_string(),
                                 manager: "apk".to_string(),
                             });
                         }
@@ -1377,7 +1442,8 @@ impl Guestfs {
 
                 // Get active zones
                 if let Ok(zones) = guestfs.ls("/etc/firewalld/zones") {
-                    fw_info.zones = zones.into_iter()
+                    fw_info.zones = zones
+                        .into_iter()
                         .filter(|z| z.ends_with(".xml"))
                         .map(|z| z.strip_suffix(".xml").unwrap_or(&z).to_string())
                         .collect();
@@ -1397,7 +1463,8 @@ impl Guestfs {
 
                 // Count rules
                 if let Ok(rules) = guestfs.cat("/etc/ufw/user.rules") {
-                    fw_info.rules_count = rules.lines()
+                    fw_info.rules_count = rules
+                        .lines()
                         .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
                         .count();
                 }
@@ -1407,9 +1474,12 @@ impl Guestfs {
                 fw_info.firewall_type = "iptables".to_string();
 
                 // Check for rules files
-                if let Ok(rules) = guestfs.cat("/etc/sysconfig/iptables")
-                    .or_else(|_| guestfs.cat("/etc/iptables/rules.v4")) {
-                    fw_info.rules_count = rules.lines()
+                if let Ok(rules) = guestfs
+                    .cat("/etc/sysconfig/iptables")
+                    .or_else(|_| guestfs.cat("/etc/iptables/rules.v4"))
+                {
+                    fw_info.rules_count = rules
+                        .lines()
                         .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
                         .count();
                     fw_info.enabled = fw_info.rules_count > 0;
@@ -1433,19 +1503,22 @@ impl Guestfs {
         self.with_mount(root, |guestfs| {
             // systemd
             if guestfs.is_dir("/run/systemd/system").unwrap_or(false)
-                || guestfs.exists("/usr/lib/systemd/systemd").unwrap_or(false) {
+                || guestfs.exists("/usr/lib/systemd/systemd").unwrap_or(false)
+            {
                 return Ok("systemd".to_string());
             }
 
             // upstart
             if guestfs.exists("/sbin/initctl").unwrap_or(false)
-                && guestfs.is_dir("/etc/init").unwrap_or(false) {
+                && guestfs.is_dir("/etc/init").unwrap_or(false)
+            {
                 return Ok("upstart".to_string());
             }
 
             // OpenRC
             if guestfs.exists("/sbin/openrc").unwrap_or(false)
-                || guestfs.exists("/sbin/rc-service").unwrap_or(false) {
+                || guestfs.exists("/sbin/rc-service").unwrap_or(false)
+            {
                 return Ok("openrc".to_string());
             }
 
@@ -1478,7 +1551,8 @@ impl Guestfs {
 
             // Apache
             if guestfs.exists("/usr/sbin/httpd").unwrap_or(false)
-                || guestfs.exists("/usr/sbin/apache2").unwrap_or(false) {
+                || guestfs.exists("/usr/sbin/apache2").unwrap_or(false)
+            {
                 let mut apache = WebServer {
                     name: "apache".to_string(),
                     version: "unknown".to_string(),
@@ -1495,7 +1569,9 @@ impl Guestfs {
 
                 // Check if enabled
                 if let Ok(links) = guestfs.ls(SYSTEMD_SERVICES_DIR) {
-                    apache.enabled = links.iter().any(|l| l.contains("httpd") || l.contains("apache"));
+                    apache.enabled = links
+                        .iter()
+                        .any(|l| l.contains("httpd") || l.contains("apache"));
                 }
 
                 servers.push(apache);
@@ -1547,7 +1623,8 @@ impl Guestfs {
 
             // PostgreSQL
             if guestfs.exists("/usr/bin/postgres").unwrap_or(false)
-                || guestfs.exists("/usr/lib/postgresql").unwrap_or(false) {
+                || guestfs.exists("/usr/lib/postgresql").unwrap_or(false)
+            {
                 databases.push(Database {
                     name: "postgresql".to_string(),
                     data_dir: "/var/lib/pgsql/data".to_string(),
@@ -1557,7 +1634,8 @@ impl Guestfs {
 
             // MySQL/MariaDB
             if guestfs.exists("/usr/bin/mysqld").unwrap_or(false)
-                || guestfs.exists("/usr/sbin/mysqld").unwrap_or(false) {
+                || guestfs.exists("/usr/sbin/mysqld").unwrap_or(false)
+            {
                 let name = if guestfs.exists("/usr/bin/mariadb").unwrap_or(false) {
                     "mariadb"
                 } else {
@@ -1624,7 +1702,9 @@ impl Guestfs {
 
             // AppArmor
             sec_info.apparmor = guestfs.exists("/etc/apparmor.d").unwrap_or(false)
-                || guestfs.exists("/sys/kernel/security/apparmor").unwrap_or(false);
+                || guestfs
+                    .exists("/sys/kernel/security/apparmor")
+                    .unwrap_or(false);
 
             // fail2ban
             sec_info.fail2ban = guestfs.exists("/etc/fail2ban").unwrap_or(false);
@@ -1640,7 +1720,8 @@ impl Guestfs {
                 for user in users {
                     let key_path = format!("/home/{}/.ssh/authorized_keys", user);
                     if let Ok(content) = guestfs.cat(&key_path) {
-                        let key_count = content.lines()
+                        let key_count = content
+                            .lines()
                             .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
                             .count();
                         if key_count > 0 {
@@ -1735,10 +1816,9 @@ impl Guestfs {
     pub fn inspect_windows_software(&mut self, root: &str) -> Result<Vec<WindowsApplication>> {
         let mut applications = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted
-            && self.mount_ro(root, "/").is_err() {
-                return Ok(applications);
-            }
+        if !was_mounted && self.mount_ro(root, "/").is_err() {
+            return Ok(applications);
+        }
         // Get SOFTWARE registry hive path
         let systemroot = self
             .inspect_get_windows_systemroot(root)
@@ -1767,10 +1847,9 @@ impl Guestfs {
     pub fn inspect_windows_services(&mut self, root: &str) -> Result<Vec<WindowsService>> {
         let mut services = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted
-            && self.mount_ro(root, "/").is_err() {
-                return Ok(services);
-            }
+        if !was_mounted && self.mount_ro(root, "/").is_err() {
+            return Ok(services);
+        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1797,10 +1876,9 @@ impl Guestfs {
     pub fn inspect_windows_network(&mut self, root: &str) -> Result<Vec<WindowsNetworkAdapter>> {
         let mut adapters = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted
-            && self.mount_ro(root, "/").is_err() {
-                return Ok(adapters);
-            }
+        if !was_mounted && self.mount_ro(root, "/").is_err() {
+            return Ok(adapters);
+        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1831,10 +1909,9 @@ impl Guestfs {
     pub fn inspect_windows_updates(&mut self, root: &str) -> Result<Vec<WindowsUpdate>> {
         let mut updates = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted
-            && self.mount_ro(root, "/").is_err() {
-                return Ok(updates);
-            }
+        if !was_mounted && self.mount_ro(root, "/").is_err() {
+            return Ok(updates);
+        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
@@ -1915,10 +1992,9 @@ impl Guestfs {
     ) -> Result<Vec<WindowsEventLogEntry>> {
         let mut events = Vec::new();
         let was_mounted = self.mounted.contains_key("/");
-        if !was_mounted
-            && self.mount_ro(root, "/").is_err() {
-                return Ok(events);
-            }
+        if !was_mounted && self.mount_ro(root, "/").is_err() {
+            return Ok(events);
+        }
         let systemroot = self
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());

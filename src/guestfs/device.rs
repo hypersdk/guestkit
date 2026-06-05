@@ -17,7 +17,8 @@ impl Guestfs {
         for (i, _) in self.drives.iter().enumerate() {
             if i >= 26 {
                 return Err(Error::InvalidOperation(format!(
-                    "Too many drives ({}) - maximum 26 supported", self.drives.len()
+                    "Too many drives ({}) - maximum 26 supported",
+                    self.drives.len()
                 )));
             }
             let letter = (b'a' + i as u8) as char;
@@ -92,7 +93,9 @@ impl Guestfs {
         self.ensure_ready()?;
 
         // For LVM volumes (/dev/mapper/* or /dev/vgname/lvname), use blkid directly
-        if device.starts_with("/dev/mapper/") || (device.starts_with("/dev/") && device.matches('/').count() >= 3) {
+        if device.starts_with("/dev/mapper/")
+            || (device.starts_with("/dev/") && device.matches('/').count() >= 3)
+        {
             // Use blkid to detect filesystem type on LVM volumes
             let need_sudo = crate::guestfs::mount::need_sudo();
 
@@ -264,7 +267,10 @@ impl Guestfs {
         let device = device.trim_start_matches("/dev/");
 
         // Convert variations to canonical form
-        if let Some(suffix) = device.strip_prefix("hd").or_else(|| device.strip_prefix("vd")) {
+        if let Some(suffix) = device
+            .strip_prefix("hd")
+            .or_else(|| device.strip_prefix("vd"))
+        {
             Ok(format!("/dev/sd{}", suffix))
         } else {
             Ok(format!("/dev/{}", device))
