@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! In-guest agent daemon and host-side proxy.
 
+pub mod agent_call;
 pub mod cli;
 pub mod daemon;
 pub mod handler;
@@ -9,7 +10,8 @@ pub mod proxy;
 pub mod qga;
 pub mod transport;
 
-pub use cli::{run_agent, run_agent_proxy, AgentArgs, AgentProxyArgs};
+pub use agent_call::call_agent_socket;
+pub use cli::{run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentProxyArgs};
 pub use daemon::AgentDaemon;
 
 /// Ping guest agent via libvirt channel unix socket.

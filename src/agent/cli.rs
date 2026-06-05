@@ -58,6 +58,30 @@ pub async fn run_agent(args: AgentArgs) -> Result<()> {
     daemon.run().await.context("agent daemon failed")
 }
 
+#[derive(Debug, Clone)]
+pub struct AgentCallArgs {
+    pub socket: String,
+    pub method: String,
+    pub params: Option<String>,
+}
+
+pub async fn run_agent_call(args: AgentCallArgs) -> Result<()> {
+    let params = match args.params.as_deref() {
+        Some(raw) if !raw.trim().is_empty() => {
+            serde_json::from_str(raw).context("parse --params JSON")?
+        }
+        _ => serde_json::json!({}),
+    };
+    let socket = args.socket;
+    let method = args.method;
+    let result = tokio::task::spawn_blocking(move || {
+        crate::agent::agent_call::call_agent_socket(&socket, &method, params)
+    })
+    .await??;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
 pub async fn run_agent_proxy(args: AgentProxyArgs) -> Result<()> {
     proxy::run_proxy(&args.socket, args.listen.as_deref())
         .await

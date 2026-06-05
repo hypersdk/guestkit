@@ -6,12 +6,12 @@ GuestKit can run **inside** a Linux guest as an in-guest agent (similar to `qemu
 
 ```
 Host (libvirt / KubeVirt virt-launcher)
-          │  virtio-serial  com.zyvor.guestkit.0
+          │  virtio-serial  org.qemu.guest_agent.0
           ▼
 Guest VM: guestkit agent --channel virtio
 ```
 
-Protocol: JSON-RPC 2.0 over 4-byte big-endian length-prefixed frames.
+Protocol: JSON-RPC 2.0 over 4-byte big-endian length-prefixed frames. QGA `{"execute":...}` commands are also supported on the same channel for KubeVirt compatibility.
 
 ## Build
 
@@ -40,11 +40,22 @@ Connect to the libvirt channel unix socket and expose HTTP:
 
 ```bash
 guestkit agent-proxy \
-  --socket /var/lib/libvirt/qemu/channel/target/$VM/com.zyvor.guestkit.0 \
+  --socket /var/lib/libvirt/qemu/channel/target/$VM/org.qemu.guest_agent.0 \
   --listen 127.0.0.1:8765
 ```
 
-HTTP endpoints:
+## Host-side one-shot RPC
+
+For automation (e.g. VMRogue pod exec):
+
+```bash
+guestkit agent-call \
+  --socket /var/run/kubevirt-private/.../org.qemu.guest_agent.0 \
+  --method guestkit.getEvidence \
+  --params '{}'
+```
+
+HTTP endpoints (via `agent-proxy`):
 
 | Method | Path | RPC |
 |--------|------|-----|
@@ -60,13 +71,13 @@ spec:
   domain:
     devices:
       channels:
-      - name: com.zyvor.guestkit.0
+      - name: org.qemu.guest_agent.0
         target:
           type: virtio
-          name: com.zyvor.guestkit.0
+          name: org.qemu.guest_agent.0
 ```
 
-Guest opens: `/dev/virtio-ports/com.zyvor.guestkit.0`
+Guest opens: `/dev/virtio-ports/org.qemu.guest_agent.0`
 
 ## Offline injection
 
@@ -76,6 +87,10 @@ During migration prep:
 guestkit repair /path/to/disk.qcow2 --fix boot --inject-agent \
   --agent-binary ./target/x86_64-unknown-linux-musl/release/guestkit
 ```
+
+## QGA compatibility
+
+GuestKit implements common QGA commands including `guest-ping`, `guest-exec`, `guest-fsfreeze-freeze/thaw`, `guest-network-get-interfaces`, and `guest-get-host-name` for KubeVirt `AgentConnected`, snapshot freeze, and guest-exec subresources.
 
 ## RPC methods
 
