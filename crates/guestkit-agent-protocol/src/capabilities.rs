@@ -24,6 +24,11 @@ pub const METHOD_DOCTOR: &str = "guestkit.doctor";
 pub const METHOD_MIGRATE_SCORE: &str = "guestkit.migrateScore";
 pub const METHOD_RUN_FIX_PLAN: &str = "guestkit.runFixPlan";
 pub const METHOD_RUN_FIX_PLAN_ROLLBACK: &str = "guestkit.runFixPlanRollback";
+pub const METHOD_GET_METRICS: &str = "guestkit.getMetrics";
+pub const METHOD_GET_FILESYSTEM: &str = "guestkit.getFilesystem";
+pub const METHOD_EXEC: &str = "guestkit.exec";
+pub const METHOD_ENABLE_RDP: &str = "guestkit.enableRdp";
+pub const METHOD_DISABLE_RDP: &str = "guestkit.disableRdp";
 
 /// Capability flags returned during negotiation.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,6 +54,11 @@ impl AgentCapabilities {
                 METHOD_GET_EVIDENCE.to_string(),
                 METHOD_DOCTOR.to_string(),
                 METHOD_MIGRATE_SCORE.to_string(),
+                METHOD_GET_METRICS.to_string(),
+                METHOD_GET_FILESYSTEM.to_string(),
+                METHOD_EXEC.to_string(),
+                METHOD_ENABLE_RDP.to_string(),
+                METHOD_DISABLE_RDP.to_string(),
                 METHOD_RUN_FIX_PLAN.to_string(),
                 METHOD_RUN_FIX_PLAN_ROLLBACK.to_string(),
             ],

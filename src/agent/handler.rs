@@ -56,6 +56,11 @@ impl RequestHandler {
             RpcMethod::GetEvidence => self.get_evidence(req.id),
             RpcMethod::Doctor => self.doctor(req.id, &req.params),
             RpcMethod::MigrateScore => self.migrate_score(req.id, &req.params),
+            RpcMethod::GetMetrics => self.get_metrics(req.id),
+            RpcMethod::GetFilesystem => self.get_filesystem(req.id),
+            RpcMethod::Exec => self.exec(req.id, &req.params),
+            RpcMethod::EnableRdp => self.enable_rdp(req.id),
+            RpcMethod::DisableRdp => self.disable_rdp(req.id),
             RpcMethod::RunFixPlan => self.run_fix_plan(req.id, &req.params),
             RpcMethod::RunFixPlanRollback => self.run_fix_plan_rollback(req.id, &req.params),
             RpcMethod::Unknown(name) => JsonRpcResponse::error(
@@ -153,6 +158,46 @@ impl RequestHandler {
                 RpcErrorCode::InternalError,
                 format!("migrate score failed: {e}"),
             ),
+        }
+    }
+
+    fn get_metrics(&self, id: Option<Value>) -> JsonRpcResponse {
+        let metrics = crate::metrics::collect_metrics_live();
+        JsonRpcResponse::success(
+            id,
+            serde_json::to_value(metrics).unwrap_or(json!({})),
+        )
+    }
+
+    fn get_filesystem(&self, id: Option<Value>) -> JsonRpcResponse {
+        match crate::agent::qga::filesystem_mounts_normalized() {
+            Ok(v) => JsonRpcResponse::success(id, v),
+            Err(e) => JsonRpcResponse::error(
+                id,
+                RpcErrorCode::InternalError,
+                e,
+            ),
+        }
+    }
+
+    fn exec(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
+        match crate::agent::exec::exec_sync(params) {
+            Ok(v) => JsonRpcResponse::success(id, v),
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e),
+        }
+    }
+
+    fn enable_rdp(&self, id: Option<Value>) -> JsonRpcResponse {
+        match crate::agent::rdp::enable_rdp() {
+            Ok(v) => JsonRpcResponse::success(id, v),
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e),
+        }
+    }
+
+    fn disable_rdp(&self, id: Option<Value>) -> JsonRpcResponse {
+        match crate::agent::rdp::disable_rdp() {
+            Ok(v) => JsonRpcResponse::success(id, v),
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e),
         }
     }
 

@@ -124,6 +124,10 @@ mod tests {
             },
             systemd: None,
             windows: None,
+            kubevirt: None,
+            cloud_init: None,
+            network_probes: None,
+            snapshot_readiness: None,
         }
     }
 

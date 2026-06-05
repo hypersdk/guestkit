@@ -45,6 +45,10 @@ impl EvidenceBuilder {
             vm_tools,
             systemd,
             windows,
+            kubevirt: None,
+            cloud_init: None,
+            network_probes: None,
+            snapshot_readiness: None,
         })
     }
 
@@ -313,6 +317,8 @@ impl EvidenceBuilder {
             firewall_enabled,
             ssh_root_login,
             auditd: sec.auditd,
+            open_ports: Vec::new(),
+            pending_security_updates: false,
         }
     }
 

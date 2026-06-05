@@ -4,10 +4,12 @@
 pub mod agent_call;
 pub mod cli;
 pub mod daemon;
+pub mod exec;
 pub mod handler;
 pub mod inject;
 pub mod proxy;
 pub mod qga;
+pub mod rdp;
 pub mod transport;
 
 pub use agent_call::call_agent_socket;

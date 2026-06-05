@@ -55,6 +55,9 @@ pub mod guestfs;
 pub mod inference;
 pub mod storage;
 
+#[cfg(feature = "agent")]
+pub mod metrics;
+
 // Optional modules
 #[cfg(feature = "guest-inspect")]
 pub mod detectors;
