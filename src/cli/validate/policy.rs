@@ -34,20 +34,48 @@ pub struct PolicyRule {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RuleType {
-    PackageInstalled { package: String },
-    PackageForbidden { package: String },
-    FileExists { path: String },
-    FileNotExists { path: String },
-    FileContains { path: String, pattern: String },
-    FilePermissions { path: String, mode: String },
-    ServiceEnabled { service: String },
-    ServiceDisabled { service: String },
-    UserExists { username: String },
-    UserNotExists { username: String },
-    PortClosed { port: u16 },
-    Custom { check: String },
+    PackageInstalled {
+        package: String,
+    },
+    PackageForbidden {
+        package: String,
+    },
+    FileExists {
+        path: String,
+    },
+    FileNotExists {
+        path: String,
+    },
+    FileContains {
+        path: String,
+        pattern: String,
+    },
+    FilePermissions {
+        path: String,
+        mode: String,
+    },
+    ServiceEnabled {
+        service: String,
+    },
+    ServiceDisabled {
+        service: String,
+    },
+    UserExists {
+        username: String,
+    },
+    UserNotExists {
+        username: String,
+    },
+    PortClosed {
+        port: u16,
+    },
+    Custom {
+        check: String,
+    },
     /// Expression-based rule over evidence fields
-    Expression { expr: String },
+    Expression {
+        expr: String,
+    },
 }
 
 impl Policy {

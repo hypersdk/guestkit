@@ -1,0 +1,37 @@
+name: Agent Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-agent-musl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          rustup target add x86_64-unknown-linux-musl
+
+      - name: Build guestkit agent (musl)
+        run: |
+          cargo build --release --features agent --no-default-features \
+            --target x86_64-unknown-linux-musl -p guestkit
+
+      - name: Package artifact
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-musl/release/guestkit dist/guestkit-agent-linux-amd64
+          cp templates/agent/guestkit-agent.service dist/
+          tar czf guestkit-agent-linux-amd64.tar.gz -C dist .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: guestkit-agent-linux-amd64
+          path: guestkit-agent-linux-amd64.tar.gz

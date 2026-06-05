@@ -7,8 +7,8 @@
 mod helpers;
 
 use helpers::{MockDisk, MockDiskBuilder, MockDiskType};
-use std::time::Duration;
 use std::path::Path;
+use std::time::Duration;
 use tempfile::TempDir;
 
 /// Performance test result
@@ -112,13 +112,21 @@ impl PerfTestSuite {
     }
 
     /// Compare against baseline and detect regressions
-    pub fn compare_with_baseline(&self, baseline: &PerfTestSuite, threshold: f64) -> ComparisonReport {
+    pub fn compare_with_baseline(
+        &self,
+        baseline: &PerfTestSuite,
+        threshold: f64,
+    ) -> ComparisonReport {
         let mut improvements = Vec::new();
         let mut regressions = Vec::new();
         let mut unchanged = Vec::new();
 
         for result in &self.results {
-            if let Some(baseline_result) = baseline.results.iter().find(|r| r.test_name == result.test_name) {
+            if let Some(baseline_result) = baseline
+                .results
+                .iter()
+                .find(|r| r.test_name == result.test_name)
+            {
                 let improvement = result.improvement_vs(baseline_result);
 
                 if improvement > threshold {
@@ -194,7 +202,10 @@ impl ComparisonReport {
             report.push('\n');
         }
 
-        report.push_str(&format!("\n**Overall improvement:** {:.2}%\n", self.overall_improvement()));
+        report.push_str(&format!(
+            "\n**Overall improvement:** {:.2}%\n",
+            self.overall_improvement()
+        ));
 
         report
     }
@@ -214,7 +225,11 @@ impl WorkloadGenerator {
     }
 
     /// Generate a batch of mock disks for testing
-    pub fn generate_disk_batch(&self, count: usize, disk_type: MockDiskType) -> std::io::Result<Vec<MockDisk>> {
+    pub fn generate_disk_batch(
+        &self,
+        count: usize,
+        disk_type: MockDiskType,
+    ) -> std::io::Result<Vec<MockDisk>> {
         let mut disks = Vec::with_capacity(count);
 
         for i in 0..count {
@@ -357,7 +372,9 @@ mod tests {
     #[test]
     fn test_workload_generator_disk_batch() {
         let generator = WorkloadGenerator::new().unwrap();
-        let disks = generator.generate_disk_batch(3, MockDiskType::Minimal).unwrap();
+        let disks = generator
+            .generate_disk_batch(3, MockDiskType::Minimal)
+            .unwrap();
 
         assert_eq!(disks.len(), 3);
         for disk in &disks {

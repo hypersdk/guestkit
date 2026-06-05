@@ -165,9 +165,9 @@ fn repair_boot_dry_run_on_test_image() {
 
 #[test]
 fn from_migration_report_unit_pipeline() {
+    use guestkit::boot::BootabilityReport;
     use guestkit::cli::migrate::plan::compute_migration_score;
     use guestkit::cli::plan::PlanGenerator;
-    use guestkit::boot::BootabilityReport;
     use guestkit::evidence::snapshot::{
         BootEvidence, EvidenceSnapshot, OsEvidence, PackageEvidence, SecurityEvidence,
         StorageEvidence, VmToolsEvidence, SCHEMA_VERSION,
@@ -191,6 +191,7 @@ fn from_migration_report_unit_pipeline() {
         vm_tools: VmToolsEvidence {
             detected: vec!["vmware-tools".to_string()],
         },
+        systemd: None,
         windows: None,
     };
     let boot = BootabilityReport {

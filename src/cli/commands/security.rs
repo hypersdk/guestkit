@@ -50,11 +50,7 @@ pub fn scan_command(
 
     if scan_type == "config" || scan_type == "all" {
         // Check for insecure configurations
-        let config_files = vec![
-            "/etc/ssh/sshd_config",
-            "/etc/sudoers",
-            "/etc/shadow",
-        ];
+        let config_files = vec!["/etc/ssh/sshd_config", "/etc/sudoers", "/etc/shadow"];
 
         for file in config_files {
             if g.is_file(file).unwrap_or(false) {
@@ -62,7 +58,8 @@ pub fn scan_command(
                     if stat.mode & 0o044 != 0 {
                         findings.push(format!(
                             "Warning: {} is world-readable (mode: {:o})",
-                            file, stat.mode & 0o777
+                            file,
+                            stat.mode & 0o777
                         ));
                     }
                 }
@@ -78,7 +75,8 @@ pub fn scan_command(
                     if stat.mode & 0o002 != 0 {
                         findings.push(format!(
                             "Warning: {} is world-writable (mode: {:o})",
-                            file, stat.mode & 0o777
+                            file,
+                            stat.mode & 0o777
                         ));
                     }
                 }
@@ -113,8 +111,13 @@ pub fn scan_command(
     }
 
     if report {
-        let report_path = format!("{}-security-scan.txt",
-            image.file_stem().and_then(|s| s.to_str()).unwrap_or("image"));
+        let report_path = format!(
+            "{}-security-scan.txt",
+            image
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("image")
+        );
         let mut output = std::fs::File::create(&report_path)?;
         use std::io::Write;
         writeln!(output, "# Security Scan Report")?;
@@ -133,8 +136,12 @@ pub fn scan_command(
         println!("Report saved to: {}", report_path);
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -163,17 +170,51 @@ pub fn secrets_command(
 
     // Default secret patterns
     let mut secret_patterns: Vec<(String, &str)> = vec![
-        (r"(?i)(password|passwd|pwd)\s*[:=]\s*\S{8,}".to_string(), "Password"),
-        (r"(?i)(api[_-]?key|apikey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(), "API Key"),
-        (r"(?i)(secret[_-]?key|secretkey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(), "Secret Key"),
-        (r"(?i)(private[_-]?key|privatekey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(), "Private Key"),
-        (r"-----BEGIN (RSA |DSA |EC )?PRIVATE KEY-----".to_string(), "SSH Private Key"),
-        (r"(?i)(bearer|token)\s*[:=]\s*[A-Za-z0-9_\-\.]{20,}".to_string(), "Bearer Token"),
-        (r"(?i)(aws_access_key_id|aws_secret_access_key)\s*[:=]\s*[A-Za-z0-9/+=]{20,}".to_string(), "AWS Credential"),
-        (r"(?i)mongodb(\+srv)?://[^:]+:[^@]+@".to_string(), "MongoDB Connection String"),
-        (r"(?i)(mysql|postgresql|postgres)://[^:]+:[^@]+@".to_string(), "Database Connection String"),
-        (r"ghp_[A-Za-z0-9]{36}".to_string(), "GitHub Personal Access Token"),
-        (r"glpat-[A-Za-z0-9_\-]{20,}".to_string(), "GitLab Personal Access Token"),
+        (
+            r"(?i)(password|passwd|pwd)\s*[:=]\s*\S{8,}".to_string(),
+            "Password",
+        ),
+        (
+            r"(?i)(api[_-]?key|apikey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(),
+            "API Key",
+        ),
+        (
+            r"(?i)(secret[_-]?key|secretkey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(),
+            "Secret Key",
+        ),
+        (
+            r"(?i)(private[_-]?key|privatekey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}".to_string(),
+            "Private Key",
+        ),
+        (
+            r"-----BEGIN (RSA |DSA |EC )?PRIVATE KEY-----".to_string(),
+            "SSH Private Key",
+        ),
+        (
+            r"(?i)(bearer|token)\s*[:=]\s*[A-Za-z0-9_\-\.]{20,}".to_string(),
+            "Bearer Token",
+        ),
+        (
+            r"(?i)(aws_access_key_id|aws_secret_access_key)\s*[:=]\s*[A-Za-z0-9/+=]{20,}"
+                .to_string(),
+            "AWS Credential",
+        ),
+        (
+            r"(?i)mongodb(\+srv)?://[^:]+:[^@]+@".to_string(),
+            "MongoDB Connection String",
+        ),
+        (
+            r"(?i)(mysql|postgresql|postgres)://[^:]+:[^@]+@".to_string(),
+            "Database Connection String",
+        ),
+        (
+            r"ghp_[A-Za-z0-9]{36}".to_string(),
+            "GitHub Personal Access Token",
+        ),
+        (
+            r"glpat-[A-Za-z0-9_\-]{20,}".to_string(),
+            "GitLab Personal Access Token",
+        ),
         (r"sk_live_[A-Za-z0-9]{24,}".to_string(), "Stripe Live Key"),
         (r"AIza[A-Za-z0-9_\-]{35}".to_string(), "Google API Key"),
     ];
@@ -220,7 +261,8 @@ pub fn secrets_command(
                                 scanned_files += 1;
 
                                 if scanned_files % 100 == 0 {
-                                    progress.set_message(format!("Scanned {} files...", scanned_files));
+                                    progress
+                                        .set_message(format!("Scanned {} files...", scanned_files));
                                 }
 
                                 // Check against all patterns
@@ -327,8 +369,12 @@ pub fn secrets_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -349,7 +395,11 @@ pub fn rescue_command(
     g.set_verbose(verbose);
 
     let progress = ProgressReporter::spinner("Loading disk image...");
-    g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+    g.add_drive(
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?,
+    )?;
 
     progress.set_message("Launching rescue environment...");
     g.launch()?;
@@ -370,8 +420,10 @@ pub fn rescue_command(
 
     match operation {
         "reset-password" => {
-            let username = user.ok_or_else(|| anyhow::anyhow!("Username required for password reset"))?;
-            let new_password = password.ok_or_else(|| anyhow::anyhow!("Password required for reset (use --password)"))?;
+            let username =
+                user.ok_or_else(|| anyhow::anyhow!("Username required for password reset"))?;
+            let new_password = password
+                .ok_or_else(|| anyhow::anyhow!("Password required for reset (use --password)"))?;
 
             progress.set_message(format!("Resetting password for user '{}'...", username));
 
@@ -383,8 +435,9 @@ pub fn rescue_command(
                         .suffix(".bak")
                         .tempfile()?;
                     std::fs::write(backup_file.path(), content)?;
-                    let backup_path = backup_file.into_temp_path().keep()
-                        .map_err(|e| anyhow::anyhow!("Failed to persist shadow backup: {}", e.error))?;
+                    let backup_path = backup_file.into_temp_path().keep().map_err(|e| {
+                        anyhow::anyhow!("Failed to persist shadow backup: {}", e.error)
+                    })?;
                     println!("Backed up /etc/shadow to {}", backup_path.display());
                 }
             }
@@ -394,7 +447,8 @@ pub fn rescue_command(
                 use rand::Rng;
 
                 // Generate random 16-char salt from ./0-9A-Za-z
-                const SALT_CHARS: &[u8] = b"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+                const SALT_CHARS: &[u8] =
+                    b"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
                 let mut rng = rand::thread_rng();
                 let salt: String = (0..16)
                     .map(|_| SALT_CHARS[rng.gen_range(0..SALT_CHARS.len())] as char)
@@ -412,7 +466,8 @@ pub fn rescue_command(
 
                 if let Some(mut stdin) = child.stdin.take() {
                     use std::io::Write;
-                    stdin.write_all(new_password.as_bytes())
+                    stdin
+                        .write_all(new_password.as_bytes())
                         .context("Failed to write password to openssl stdin")?;
                 }
 
@@ -423,8 +478,11 @@ pub fn rescue_command(
                     let timeout = Duration::from_secs(30);
                     loop {
                         match child.try_wait() {
-                            Ok(Some(_)) => break child.wait_with_output()
-                                .context("Failed to read openssl output")?,
+                            Ok(Some(_)) => {
+                                break child
+                                    .wait_with_output()
+                                    .context("Failed to read openssl output")?
+                            }
                             Ok(None) => {
                                 if start.elapsed() > timeout {
                                     let _ = child.kill();
@@ -458,7 +516,12 @@ pub fn rescue_command(
                         if line.starts_with(&format!("{}:", username)) {
                             let parts: Vec<&str> = line.split(':').collect();
                             if parts.len() >= 3 {
-                                new_lines.push(format!("{}:{}:{}", username, hash, parts[2..].join(":")));
+                                new_lines.push(format!(
+                                    "{}:{}:{}",
+                                    username,
+                                    hash,
+                                    parts[2..].join(":")
+                                ));
                                 user_found = true;
                             }
                         } else {
@@ -469,17 +532,30 @@ pub fn rescue_command(
                     if !user_found && force {
                         // Validate username doesn't contain colons (would corrupt shadow format)
                         if username.contains(':') {
-                            anyhow::bail!("Invalid username '{}': contains ':' character", username);
+                            anyhow::bail!(
+                                "Invalid username '{}': contains ':' character",
+                                username
+                            );
                         }
                         // Validate user exists in /etc/passwd before force-adding shadow entry
-                        let user_exists_in_passwd = g.read_file("/etc/passwd")
+                        let user_exists_in_passwd = g
+                            .read_file("/etc/passwd")
                             .ok()
                             .and_then(|c| String::from_utf8(c).ok())
-                            .map(|text| text.lines().any(|l| l.starts_with(&format!("{}:", username))))
+                            .map(|text| {
+                                text.lines()
+                                    .any(|l| l.starts_with(&format!("{}:", username)))
+                            })
                             .unwrap_or(false);
                         if !user_exists_in_passwd {
-                            progress.abandon_with_message(format!("User '{}' not found in /etc/passwd", username));
-                            anyhow::bail!("Cannot add shadow entry: user '{}' does not exist in /etc/passwd", username);
+                            progress.abandon_with_message(format!(
+                                "User '{}' not found in /etc/passwd",
+                                username
+                            ));
+                            anyhow::bail!(
+                                "Cannot add shadow entry: user '{}' does not exist in /etc/passwd",
+                                username
+                            );
                         }
                         new_lines.push(format!("{}:{}:18000:0:99999:7:::", username, hash));
                     }
@@ -487,7 +563,12 @@ pub fn rescue_command(
                     // Write updated shadow file (ensure trailing newline)
                     let temp_file = tempfile::NamedTempFile::new()?;
                     std::fs::write(temp_file.path(), format!("{}\n", new_lines.join("\n")))?;
-                    g.upload(temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, "/etc/shadow")?;
+                    g.upload(
+                        temp_file.path().to_str().ok_or_else(|| {
+                            anyhow::anyhow!("Temp file path contains invalid UTF-8")
+                        })?,
+                        "/etc/shadow",
+                    )?;
 
                     progress.finish_and_clear();
                     println!("✓ Password reset for user '{}'", username);
@@ -509,8 +590,9 @@ pub fn rescue_command(
                         .suffix(".bak")
                         .tempfile()?;
                     std::fs::write(backup_file.path(), content)?;
-                    let backup_path = backup_file.into_temp_path().keep()
-                        .map_err(|e| anyhow::anyhow!("Failed to persist fstab backup: {}", e.error))?;
+                    let backup_path = backup_file.into_temp_path().keep().map_err(|e| {
+                        anyhow::anyhow!("Failed to persist fstab backup: {}", e.error)
+                    })?;
                     println!("Backed up /etc/fstab to {}", backup_path.display());
                 }
             }
@@ -536,7 +618,8 @@ pub fn rescue_command(
 
                             // Comment out missing devices
                             if device.starts_with("/dev/") && !g.exists(device).unwrap_or(false) {
-                                fixed_lines.push(format!("# DISABLED (device not found): {}", line));
+                                fixed_lines
+                                    .push(format!("# DISABLED (device not found): {}", line));
                                 issues_found += 1;
                                 println!("  Disabled missing device: {}", device);
                             } else {
@@ -550,7 +633,12 @@ pub fn rescue_command(
                     if issues_found > 0 {
                         let temp_file = tempfile::NamedTempFile::new()?;
                         std::fs::write(temp_file.path(), fixed_lines.join("\n"))?;
-                        g.upload(temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, "/etc/fstab")?;
+                        g.upload(
+                            temp_file.path().to_str().ok_or_else(|| {
+                                anyhow::anyhow!("Temp file path contains invalid UTF-8")
+                            })?,
+                            "/etc/fstab",
+                        )?;
 
                         progress.finish_and_clear();
                         println!("✓ Fixed {} issues in /etc/fstab", issues_found);
@@ -596,7 +684,9 @@ pub fn rescue_command(
             progress.set_message("Enabling SSH access...");
 
             // Check if SSH is installed
-            if g.is_file("/usr/sbin/sshd").unwrap_or(false) || g.is_file("/usr/bin/sshd").unwrap_or(false) {
+            if g.is_file("/usr/sbin/sshd").unwrap_or(false)
+                || g.is_file("/usr/bin/sshd").unwrap_or(false)
+            {
                 // Enable sshd service (systemd)
                 if g.is_dir("/etc/systemd/system").unwrap_or(false) {
                     let _service_link = "/etc/systemd/system/multi-user.target.wants/sshd.service";
@@ -615,7 +705,12 @@ pub fn rescue_command(
 
                                 let temp_file = tempfile::NamedTempFile::new()?;
                                 std::fs::write(temp_file.path(), text)?;
-                                g.upload(temp_file.path().to_str().ok_or_else(|| anyhow::anyhow!("Temp file path contains invalid UTF-8"))?, "/etc/ssh/sshd_config")?;
+                                g.upload(
+                                    temp_file.path().to_str().ok_or_else(|| {
+                                        anyhow::anyhow!("Temp file path contains invalid UTF-8")
+                                    })?,
+                                    "/etc/ssh/sshd_config",
+                                )?;
 
                                 println!("✓ Enabled root SSH login");
                             }
@@ -637,8 +732,12 @@ pub fn rescue_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -659,9 +758,17 @@ pub fn optimize_command(
     let progress = ProgressReporter::spinner("Loading disk image...");
 
     if dry_run {
-        g.add_drive_ro(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive_ro(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     } else {
-        g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     }
 
     progress.set_message("Launching appliance...");
@@ -720,7 +827,10 @@ pub fn optimize_command(
                     }
                 }
 
-                println!("✓ Temporary files: {} files ({} bytes)", files_removed, total_freed);
+                println!(
+                    "✓ Temporary files: {} files ({} bytes)",
+                    files_removed, total_freed
+                );
             }
 
             "logs" => {
@@ -735,22 +845,21 @@ pub fn optimize_command(
                         if let Ok(files) = g.find(path) {
                             for file in files {
                                 // Only clean .log and .log.* files
-                                if file.contains(".log")
-                                    && g.is_file(&file).unwrap_or(false) {
-                                        if let Ok(stat) = g.stat(&file) {
-                                            log_freed += stat.size as u64;
-                                            logs_cleaned += 1;
+                                if file.contains(".log") && g.is_file(&file).unwrap_or(false) {
+                                    if let Ok(stat) = g.stat(&file) {
+                                        log_freed += stat.size as u64;
+                                        logs_cleaned += 1;
 
-                                            if !dry_run {
-                                                if aggressive {
-                                                    g.rm(&file).ok();
-                                                } else {
-                                                    // Truncate instead of remove
-                                                    g.truncate(&file).ok();
-                                                }
+                                        if !dry_run {
+                                            if aggressive {
+                                                g.rm(&file).ok();
+                                            } else {
+                                                // Truncate instead of remove
+                                                g.truncate(&file).ok();
                                             }
                                         }
                                     }
+                                }
                             }
                         }
                     }
@@ -763,10 +872,7 @@ pub fn optimize_command(
             "cache" => {
                 progress.set_message("Cleaning cache files...");
 
-                let cache_paths = vec![
-                    "/var/cache",
-                    "/root/.cache",
-                ];
+                let cache_paths = vec!["/var/cache", "/root/.cache"];
 
                 let mut cache_freed = 0u64;
                 let mut cache_cleaned = 0;
@@ -790,7 +896,10 @@ pub fn optimize_command(
                     }
                 }
 
-                println!("✓ Cache files: {} files ({} bytes)", cache_cleaned, cache_freed);
+                println!(
+                    "✓ Cache files: {} files ({} bytes)",
+                    cache_cleaned, cache_freed
+                );
                 total_freed += cache_freed;
             }
 
@@ -827,7 +936,10 @@ pub fn optimize_command(
                     }
                 }
 
-                println!("✓ Package cache: {} files ({} bytes)", pkg_cleaned, pkg_freed);
+                println!(
+                    "✓ Package cache: {} files ({} bytes)",
+                    pkg_cleaned, pkg_freed
+                );
                 total_freed += pkg_freed;
             }
 
@@ -849,8 +961,11 @@ pub fn optimize_command(
         println!("Mode: LIVE");
     }
 
-    println!("Total space that can be freed: {} bytes ({:.2} MB)",
-        total_freed, total_freed as f64 / 1_048_576.0);
+    println!(
+        "Total space that can be freed: {} bytes ({:.2} MB)",
+        total_freed,
+        total_freed as f64 / 1_048_576.0
+    );
     println!("Files to be removed: {}", files_removed);
 
     if !dry_run {
@@ -859,8 +974,12 @@ pub fn optimize_command(
         println!("      Run: qemu-img convert -O qcow2 -c old.qcow2 new.qcow2");
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -895,10 +1014,10 @@ pub fn network_command(
 
         // Check for network configuration files
         let net_configs = vec![
-            "/etc/network/interfaces",           // Debian/Ubuntu
-            "/etc/sysconfig/network-scripts",    // RedHat/CentOS
-            "/etc/netplan",                      // Ubuntu 18.04+
-            "/etc/systemd/network",              // systemd-networkd
+            "/etc/network/interfaces",        // Debian/Ubuntu
+            "/etc/sysconfig/network-scripts", // RedHat/CentOS
+            "/etc/netplan",                   // Ubuntu 18.04+
+            "/etc/systemd/network",           // systemd-networkd
         ];
 
         for config in net_configs {
@@ -969,8 +1088,12 @@ pub fn network_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1007,8 +1130,14 @@ pub fn compliance_command(
             println!();
 
             // CIS 1.1.x - Filesystem Configuration
-            checks.push(("CIS 1.1.1", "Ensure mounting of cramfs filesystems is disabled"));
-            checks.push(("CIS 1.1.2", "Ensure mounting of freevxfs filesystems is disabled"));
+            checks.push((
+                "CIS 1.1.1",
+                "Ensure mounting of cramfs filesystems is disabled",
+            ));
+            checks.push((
+                "CIS 1.1.2",
+                "Ensure mounting of freevxfs filesystems is disabled",
+            ));
 
             // CIS 1.3.x - Mandatory Access Control
             checks.push(("CIS 1.3.1", "Ensure SELinux/AppArmor is installed"));
@@ -1026,7 +1155,10 @@ pub fn compliance_command(
             checks.push(("CIS 4.1.1", "Ensure auditing is enabled"));
 
             // CIS 5.x - Access Control
-            checks.push(("CIS 5.2.1", "Ensure permissions on /etc/ssh/sshd_config are configured"));
+            checks.push((
+                "CIS 5.2.1",
+                "Ensure permissions on /etc/ssh/sshd_config are configured",
+            ));
             checks.push(("CIS 5.2.2", "Ensure SSH Protocol is set to 2"));
 
             // CIS 6.x - System Maintenance
@@ -1038,7 +1170,10 @@ pub fn compliance_command(
             println!("Running PCI-DSS compliance checks...");
             println!();
 
-            checks.push(("PCI 2.2.1", "Implement only one primary function per server"));
+            checks.push((
+                "PCI 2.2.1",
+                "Implement only one primary function per server",
+            ));
             checks.push(("PCI 2.2.2", "Enable only necessary services"));
             checks.push(("PCI 2.2.3", "Implement additional security features"));
             checks.push(("PCI 2.2.4", "Configure security parameters"));
@@ -1078,40 +1213,42 @@ pub fn compliance_command(
         let result = match check_id {
             id if id.contains("5.2.1")
                 // Check SSH config permissions
-                && g.is_file("/etc/ssh/sshd_config").unwrap_or(false) => {
-                    if let Ok(stat) = g.stat("/etc/ssh/sshd_config") {
-                        let mode = stat.mode & 0o777;
-                        if mode <= 0o600 {
-                            "PASS"
-                        } else {
-                            "FAIL"
-                        }
+                && g.is_file("/etc/ssh/sshd_config").unwrap_or(false) =>
+            {
+                if let Ok(stat) = g.stat("/etc/ssh/sshd_config") {
+                    let mode = stat.mode & 0o777;
+                    if mode <= 0o600 {
+                        "PASS"
                     } else {
-                        "WARN"
+                        "FAIL"
                     }
+                } else {
+                    "WARN"
                 }
+            }
 
             id if id.contains("6.2.1")
                 // Check for empty password fields
-                && g.is_file("/etc/shadow").unwrap_or(false) => {
-                    if let Ok(content) = g.read_file("/etc/shadow") {
-                        if let Ok(text) = String::from_utf8(content) {
-                            let has_empty = text.lines().any(|line| {
-                                let parts: Vec<&str> = line.split(':').collect();
-                                parts.len() >= 2 && (parts[1].is_empty() || parts[1] == "!")
-                            });
-                            if has_empty {
-                                "FAIL"
-                            } else {
-                                "PASS"
-                            }
+                && g.is_file("/etc/shadow").unwrap_or(false) =>
+            {
+                if let Ok(content) = g.read_file("/etc/shadow") {
+                    if let Ok(text) = String::from_utf8(content) {
+                        let has_empty = text.lines().any(|line| {
+                            let parts: Vec<&str> = line.split(':').collect();
+                            parts.len() >= 2 && (parts[1].is_empty() || parts[1] == "!")
+                        });
+                        if has_empty {
+                            "FAIL"
                         } else {
-                            "WARN"
+                            "PASS"
                         }
                     } else {
                         "WARN"
                     }
+                } else {
+                    "WARN"
                 }
+            }
 
             id if id.contains("1.3.1") => {
                 // Check for SELinux/AppArmor
@@ -1163,7 +1300,11 @@ pub fn compliance_command(
     println!("Total checks: {}", checks.len());
     println!("Passed: {} ({}%)", passed, (passed * 100) / total_checks);
     println!("Failed: {} ({}%)", failed, (failed * 100) / total_checks);
-    println!("Warnings: {} ({}%)", warnings, (warnings * 100) / total_checks);
+    println!(
+        "Warnings: {} ({}%)",
+        warnings,
+        (warnings * 100) / total_checks
+    );
     println!();
 
     let compliance_score = (passed * 100) / total_checks;
@@ -1213,8 +1354,12 @@ pub fn compliance_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -1243,11 +1388,7 @@ pub fn malware_command(
     let mut suspicious_files = HashSet::new();
 
     // 1. Check for suspicious executables in temp directories
-    let suspicious_paths = vec![
-        "/tmp",
-        "/var/tmp",
-        "/dev/shm",
-    ];
+    let suspicious_paths = vec!["/tmp", "/var/tmp", "/dev/shm"];
 
     for path in suspicious_paths {
         if g.is_dir(path).unwrap_or(false) {
@@ -1304,22 +1445,24 @@ pub fn malware_command(
             "/usr/bin/umount",
             "/bin/ping",
             "/bin/ping6",
-        ].iter().copied().collect();
+        ]
+        .iter()
+        .copied()
+        .collect();
 
         if let Ok(files) = g.find("/usr") {
             for file in files.iter().take(1000) {
                 if g.is_file(file).unwrap_or(false) {
                     if let Ok(stat) = g.stat(file) {
                         // Check for SUID bit
-                        if stat.mode & 0o4000 != 0
-                            && !known_suid.contains(file.as_str()) {
-                                findings.push((
-                                    "Unknown SUID binary".to_string(),
-                                    file.clone(),
-                                    "HIGH".to_string(),
-                                ));
-                                suspicious_files.insert(file.clone());
-                            }
+                        if stat.mode & 0o4000 != 0 && !known_suid.contains(file.as_str()) {
+                            findings.push((
+                                "Unknown SUID binary".to_string(),
+                                file.clone(),
+                                "HIGH".to_string(),
+                            ));
+                            suspicious_files.insert(file.clone());
+                        }
                     }
                 }
             }
@@ -1364,15 +1507,17 @@ pub fn malware_command(
             if let Ok(text) = String::from_utf8(content) {
                 for line in text.lines() {
                     // Check for DNS hijacking
-                    if (line.contains("google.com") || line.contains("facebook.com")
+                    if (line.contains("google.com")
+                        || line.contains("facebook.com")
                         || line.contains("microsoft.com"))
-                        && !line.starts_with('#') {
-                            findings.push((
-                                "Suspicious hosts file entry (possible DNS hijack)".to_string(),
-                                line.to_string(),
-                                "HIGH".to_string(),
-                            ));
-                        }
+                        && !line.starts_with('#')
+                    {
+                        findings.push((
+                            "Suspicious hosts file entry (possible DNS hijack)".to_string(),
+                            line.to_string(),
+                            "HIGH".to_string(),
+                        ));
+                    }
                 }
             }
         }
@@ -1381,7 +1526,10 @@ pub fn malware_command(
     // 6. YARA scanning (if rules provided)
     if let Some(yara_path) = yara_rules {
         println!("Note: YARA scanning requires the yara CLI tool");
-        println!("      Install yara and run: yara {} <mounted_path>", yara_path.display());
+        println!(
+            "      Install yara and run: yara {} <mounted_path>",
+            yara_path.display()
+        );
     }
 
     progress.finish_and_clear();
@@ -1389,8 +1537,14 @@ pub fn malware_command(
     // Display results
     println!("Malware Scan Report");
     println!("==================");
-    println!("Scan depth: {}", if deep_scan { "Deep" } else { "Standard" });
-    println!("Rootkit check: {}", if check_rootkits { "Yes" } else { "No" });
+    println!(
+        "Scan depth: {}",
+        if deep_scan { "Deep" } else { "Standard" }
+    );
+    println!(
+        "Rootkit check: {}",
+        if check_rootkits { "Yes" } else { "No" }
+    );
     println!();
 
     if findings.is_empty() {
@@ -1401,9 +1555,7 @@ pub fn malware_command(
 
         // Group by severity
         for severity in ["CRITICAL", "HIGH", "MEDIUM", "LOW"] {
-            let items: Vec<_> = findings.iter()
-                .filter(|(_, _, s)| s == severity)
-                .collect();
+            let items: Vec<_> = findings.iter().filter(|(_, _, s)| s == severity).collect();
 
             if !items.is_empty() {
                 println!("{} - {} items:", severity, items.len());
@@ -1420,11 +1572,14 @@ pub fn malware_command(
         println!("Note: Quarantine not implemented in read-only mode");
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// System health and diagnostics
 pub fn health_command(
@@ -1451,8 +1606,13 @@ pub fn health_command(
     println!();
 
     let checks_to_run = if checks.is_empty() || checks.iter().any(|c| c == "all") {
-        vec!["disk".to_string(), "services".to_string(), "security".to_string(),
-             "packages".to_string(), "logs".to_string()]
+        vec![
+            "disk".to_string(),
+            "services".to_string(),
+            "security".to_string(),
+            "packages".to_string(),
+            "logs".to_string(),
+        ]
     } else {
         checks
     };
@@ -1474,10 +1634,18 @@ pub fn health_command(
                     if blocks > 0 && bsize > 0 {
                         let total = blocks.saturating_mul(bsize) / (1024 * 1024); // MB
                         let free = bfree.saturating_mul(bsize) / (1024 * 1024); // MB
-                        let used_percent = if total > 0 { (total.saturating_sub(free)).saturating_mul(100) / total } else { 0 };
+                        let used_percent = if total > 0 {
+                            (total.saturating_sub(free)).saturating_mul(100) / total
+                        } else {
+                            0
+                        };
 
-                        println!("  Disk usage: {}% ({} MB used of {} MB)",
-                            used_percent, total - free, total);
+                        println!(
+                            "  Disk usage: {}% ({} MB used of {} MB)",
+                            used_percent,
+                            total - free,
+                            total
+                        );
 
                         if used_percent > 90 {
                             println!("  ⚠ WARNING: Disk usage critical (>90%)");
@@ -1504,9 +1672,8 @@ pub fn health_command(
 
                     // Count service files
                     if let Ok(files) = g.find("/etc/systemd/system") {
-                        let service_count = files.iter()
-                            .filter(|f| f.ends_with(".service"))
-                            .count();
+                        let service_count =
+                            files.iter().filter(|f| f.ends_with(".service")).count();
                         println!("  Service units found: {}", service_count);
                     }
 
@@ -1558,7 +1725,8 @@ pub fn health_command(
 
                 // Check firewall
                 if g.is_file("/etc/sysconfig/iptables").unwrap_or(false)
-                    || g.is_dir("/etc/ufw").unwrap_or(false) {
+                    || g.is_dir("/etc/ufw").unwrap_or(false)
+                {
                     println!("  ✓ Firewall configuration found");
                 } else {
                     println!("  ⚠ No firewall configuration detected");
@@ -1578,12 +1746,16 @@ pub fn health_command(
                         println!("  Installed packages: {}", apps.len());
 
                         // Count packages by name patterns
-                        let dev_packages = apps.iter()
+                        let dev_packages = apps
+                            .iter()
                             .filter(|a| a.name.contains("-dev") || a.name.contains("-devel"))
                             .count();
 
                         if dev_packages > 50 {
-                            println!("  ⚠ Many development packages ({}) - consider cleanup", dev_packages);
+                            println!(
+                                "  ⚠ Many development packages ({}) - consider cleanup",
+                                dev_packages
+                            );
                             issues.push("Excessive development packages".to_string());
                         }
 
@@ -1607,14 +1779,18 @@ pub fn health_command(
                                 if let Ok(stat) = g.stat(&file) {
                                     total_log_size += stat.size as u64;
 
-                                    if stat.size > 100_000_000 { // > 100MB
+                                    if stat.size > 100_000_000 {
+                                        // > 100MB
                                         large_logs.push((file, stat.size));
                                     }
                                 }
                             }
                         }
 
-                        println!("  Total log size: {:.2} MB", total_log_size as f64 / 1_048_576.0);
+                        println!(
+                            "  Total log size: {:.2} MB",
+                            total_log_size as f64 / 1_048_576.0
+                        );
 
                         if !large_logs.is_empty() {
                             println!("  ⚠ Large log files found:");
@@ -1679,11 +1855,14 @@ pub fn health_command(
         println!("Report exported to: {}", json_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Security patch analysis and CVE detection
 pub fn patch_command(
@@ -1735,37 +1914,66 @@ pub fn patch_command(
 
         // Simulated CVE checking (in production, this would query a CVE database)
         let vulnerable_packages = vec![
-            ("openssl", "1.1.1k", "CVE-2021-3711", "HIGH", "Buffer overflow in SM2 decryption"),
-            ("sudo", "1.8.31", "CVE-2021-3156", "CRITICAL", "Heap buffer overflow (Baron Samedit)"),
-            ("systemd", "245", "CVE-2020-13776", "MEDIUM", "Improper access control"),
-            ("kernel", "5.4.0", "CVE-2022-0847", "CRITICAL", "Dirty Pipe privilege escalation"),
-            ("glibc", "2.31", "CVE-2021-33574", "HIGH", "Use-after-free in mq_notify"),
+            (
+                "openssl",
+                "1.1.1k",
+                "CVE-2021-3711",
+                "HIGH",
+                "Buffer overflow in SM2 decryption",
+            ),
+            (
+                "sudo",
+                "1.8.31",
+                "CVE-2021-3156",
+                "CRITICAL",
+                "Heap buffer overflow (Baron Samedit)",
+            ),
+            (
+                "systemd",
+                "245",
+                "CVE-2020-13776",
+                "MEDIUM",
+                "Improper access control",
+            ),
+            (
+                "kernel",
+                "5.4.0",
+                "CVE-2022-0847",
+                "CRITICAL",
+                "Dirty Pipe privilege escalation",
+            ),
+            (
+                "glibc",
+                "2.31",
+                "CVE-2021-33574",
+                "HIGH",
+                "Use-after-free in mq_notify",
+            ),
         ];
 
         let severity_filter = severity.as_deref().unwrap_or("ALL");
 
         for (pkg, ver, cve, sev, desc) in vulnerable_packages {
-            if packages.contains_key(pkg)
-                && (severity_filter == "ALL" || severity_filter == sev) {
-                    let icon = match sev {
-                        "CRITICAL" => "🔴",
-                        "HIGH" => "🟠",
-                        "MEDIUM" => "🟡",
-                        _ => "🟢",
-                    };
+            if packages.contains_key(pkg) && (severity_filter == "ALL" || severity_filter == sev) {
+                let icon = match sev {
+                    "CRITICAL" => "🔴",
+                    "HIGH" => "🟠",
+                    "MEDIUM" => "🟡",
+                    _ => "🟢",
+                };
 
-                    println!("{} {} [{}]", icon, cve, sev);
-                    println!("   Package: {} {}", pkg, ver);
-                    println!("   Description: {}", desc);
-                    println!();
+                println!("{} {} [{}]", icon, cve, sev);
+                println!("   Package: {} {}", pkg, ver);
+                println!("   Description: {}", desc);
+                println!();
 
-                    match sev {
-                        "CRITICAL" => critical_cves += 1,
-                        "HIGH" => high_cves += 1,
-                        "MEDIUM" => medium_cves += 1,
-                        _ => {}
-                    }
+                match sev {
+                    "CRITICAL" => critical_cves += 1,
+                    "HIGH" => high_cves += 1,
+                    "MEDIUM" => medium_cves += 1,
+                    _ => {}
                 }
+            }
         }
 
         println!("CVE Summary:");
@@ -1775,7 +1983,10 @@ pub fn patch_command(
         println!();
 
         if critical_cves > 0 {
-            println!("⚠️  URGENT: {} critical vulnerabilities require immediate patching!", critical_cves);
+            println!(
+                "⚠️  URGENT: {} critical vulnerabilities require immediate patching!",
+                critical_cves
+            );
         }
     }
 
@@ -1838,11 +2049,14 @@ pub fn patch_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Comprehensive security audit with detailed reporting
 pub fn audit_command(
@@ -1866,14 +2080,22 @@ pub fn audit_command(
     progress.finish_and_clear();
 
     let audit_categories = if categories.is_empty() {
-        vec!["permissions".to_string(), "users".to_string(), "network".to_string(), "services".to_string()]
+        vec![
+            "permissions".to_string(),
+            "users".to_string(),
+            "network".to_string(),
+            "services".to_string(),
+        ]
     } else {
         categories
     };
 
     println!("Security Audit Report");
     println!("====================");
-    println!("Timestamp: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "Timestamp: {}",
+        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+    );
     println!();
 
     let mut total_issues = 0;
@@ -1897,11 +2119,15 @@ pub fn audit_command(
                                     if let Ok(stat) = g.stat(file) {
                                         // World-writable files
                                         if stat.mode & 0o002 != 0 {
-                                            println!("  ⚠️  World-writable: {} (mode: {:o})",
-                                                file, stat.mode & 0o777);
+                                            println!(
+                                                "  ⚠️  World-writable: {} (mode: {:o})",
+                                                file,
+                                                stat.mode & 0o777
+                                            );
                                             findings.push((
                                                 "CRITICAL".to_string(),
-                                                "World-writable file in critical location".to_string(),
+                                                "World-writable file in critical location"
+                                                    .to_string(),
                                                 file.clone(),
                                             ));
                                             total_issues += 1;
@@ -1921,8 +2147,10 @@ pub fn audit_command(
                             if g.is_file(file).unwrap_or(false) {
                                 if let Ok(stat) = g.stat(file) {
                                     if stat.mode & 0o4000 != 0 {
-                                        println!("  🔑 SUID binary: {} (owner: {})",
-                                            file, stat.uid);
+                                        println!(
+                                            "  🔑 SUID binary: {} (owner: {})",
+                                            file, stat.uid
+                                        );
                                         findings.push((
                                             "MEDIUM".to_string(),
                                             "SUID binary found".to_string(),
@@ -1973,10 +2201,14 @@ pub fn audit_command(
                                         for line in shadow_text.lines() {
                                             let parts: Vec<&str> = line.split(':').collect();
                                             if parts.len() >= 2
-                                                && (parts[1].is_empty() || parts[1] == "!") {
-                                                    println!("  ⚠️  Account with no password: {}", parts[0]);
-                                                    no_password_accounts += 1;
-                                                }
+                                                && (parts[1].is_empty() || parts[1] == "!")
+                                            {
+                                                println!(
+                                                    "  ⚠️  Account with no password: {}",
+                                                    parts[0]
+                                                );
+                                                no_password_accounts += 1;
+                                            }
                                         }
                                     }
                                 }
@@ -2009,15 +2241,16 @@ pub fn audit_command(
                     for service in network_services {
                         let service_path = format!("/etc/systemd/system/{}", service);
                         if g.exists(&service_path).unwrap_or(false)
-                            && (service.contains("telnet") || service.contains("rsh")) {
-                                println!("  ⚠️  Insecure service enabled: {}", service);
-                                findings.push((
-                                    "HIGH".to_string(),
-                                    "Insecure network service".to_string(),
-                                    service.to_string(),
-                                ));
-                                total_issues += 1;
-                            }
+                            && (service.contains("telnet") || service.contains("rsh"))
+                        {
+                            println!("  ⚠️  Insecure service enabled: {}", service);
+                            findings.push((
+                                "HIGH".to_string(),
+                                "Insecure network service".to_string(),
+                                service.to_string(),
+                            ));
+                            total_issues += 1;
+                        }
                     }
                 }
 
@@ -2045,11 +2278,7 @@ pub fn audit_command(
                 println!();
 
                 // Check for unnecessary services
-                let unnecessary_services = vec![
-                    "avahi-daemon",
-                    "cups",
-                    "bluetooth",
-                ];
+                let unnecessary_services = vec!["avahi-daemon", "cups", "bluetooth"];
 
                 for service in unnecessary_services {
                     let service_path = format!("/etc/systemd/system/{}.service", service);
@@ -2084,7 +2313,10 @@ pub fn audit_command(
     if total_issues == 0 {
         println!("✅ No security issues detected");
     } else if critical_issues > 0 {
-        println!("❌ CRITICAL: Immediate action required for {} issues", critical_issues);
+        println!(
+            "❌ CRITICAL: Immediate action required for {} issues",
+            critical_issues
+        );
     } else {
         println!("⚠️  Review and remediate {} issues", total_issues);
     }
@@ -2141,11 +2373,14 @@ pub fn audit_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Automated system repair operations
 pub fn repair_command(
@@ -2162,7 +2397,11 @@ pub fn repair_command(
     g.set_verbose(verbose);
 
     let progress = ProgressReporter::spinner("Loading disk image...");
-    g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+    g.add_drive(
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?,
+    )?;
 
     progress.set_message("Launching repair environment...");
     g.launch()?;
@@ -2202,7 +2441,10 @@ pub fn repair_command(
                         let current_mode = stat.mode & 0o777;
                         if current_mode != correct_mode {
                             if backup {
-                                println!("  Would fix: {} ({:o} → {:o})", file, current_mode, correct_mode);
+                                println!(
+                                    "  Would fix: {} ({:o} → {:o})",
+                                    file, current_mode, correct_mode
+                                );
                             }
                             g.chmod(correct_mode as i32, file).ok();
                             fixed += 1;
@@ -2282,12 +2524,18 @@ pub fn repair_command(
 
         _ => {
             progress.abandon_with_message(format!("Unknown repair type: {}", repair_type));
-            anyhow::bail!("Supported types: permissions, packages, network, bootloader, filesystem");
+            anyhow::bail!(
+                "Supported types: permissions, packages, network, bootloader, filesystem"
+            );
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -2308,9 +2556,17 @@ pub fn harden_command(
     let progress = ProgressReporter::spinner("Loading disk image...");
 
     if apply {
-        g.add_drive(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     } else {
-        g.add_drive_ro(image.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display()))?)?;
+        g.add_drive_ro(
+            image.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image.display())
+            })?,
+        )?;
     }
 
     progress.set_message("Launching appliance...");
@@ -2344,36 +2600,154 @@ pub fn harden_command(
 
     let hardening_steps = match profile {
         "basic" => vec![
-            ("SSH", "Disable root login", "/etc/ssh/sshd_config", "PermitRootLogin no"),
-            ("SSH", "Disable password auth", "/etc/ssh/sshd_config", "PasswordAuthentication no"),
-            ("System", "Enable firewall", "/etc/firewalld", "firewall-cmd --permanent --add-service=ssh"),
-            ("System", "Disable unused services", "/etc/systemd/system", "systemctl disable avahi-daemon"),
+            (
+                "SSH",
+                "Disable root login",
+                "/etc/ssh/sshd_config",
+                "PermitRootLogin no",
+            ),
+            (
+                "SSH",
+                "Disable password auth",
+                "/etc/ssh/sshd_config",
+                "PasswordAuthentication no",
+            ),
+            (
+                "System",
+                "Enable firewall",
+                "/etc/firewalld",
+                "firewall-cmd --permanent --add-service=ssh",
+            ),
+            (
+                "System",
+                "Disable unused services",
+                "/etc/systemd/system",
+                "systemctl disable avahi-daemon",
+            ),
         ],
         "moderate" => vec![
-            ("SSH", "Disable root login", "/etc/ssh/sshd_config", "PermitRootLogin no"),
-            ("SSH", "Disable password auth", "/etc/ssh/sshd_config", "PasswordAuthentication no"),
-            ("SSH", "Use protocol 2 only", "/etc/ssh/sshd_config", "Protocol 2"),
-            ("System", "Enable SELinux", "/etc/selinux/config", "SELINUX=enforcing"),
-            ("System", "Enable firewall", "/etc/firewalld", "firewall-cmd --set-default-zone=drop"),
-            ("Network", "Disable IPv6", "/etc/sysctl.conf", "net.ipv6.conf.all.disable_ipv6=1"),
-            ("Audit", "Enable auditd", "/etc/audit/auditd.conf", "systemctl enable auditd"),
+            (
+                "SSH",
+                "Disable root login",
+                "/etc/ssh/sshd_config",
+                "PermitRootLogin no",
+            ),
+            (
+                "SSH",
+                "Disable password auth",
+                "/etc/ssh/sshd_config",
+                "PasswordAuthentication no",
+            ),
+            (
+                "SSH",
+                "Use protocol 2 only",
+                "/etc/ssh/sshd_config",
+                "Protocol 2",
+            ),
+            (
+                "System",
+                "Enable SELinux",
+                "/etc/selinux/config",
+                "SELINUX=enforcing",
+            ),
+            (
+                "System",
+                "Enable firewall",
+                "/etc/firewalld",
+                "firewall-cmd --set-default-zone=drop",
+            ),
+            (
+                "Network",
+                "Disable IPv6",
+                "/etc/sysctl.conf",
+                "net.ipv6.conf.all.disable_ipv6=1",
+            ),
+            (
+                "Audit",
+                "Enable auditd",
+                "/etc/audit/auditd.conf",
+                "systemctl enable auditd",
+            ),
         ],
         "strict" => vec![
-            ("SSH", "Disable root login", "/etc/ssh/sshd_config", "PermitRootLogin no"),
-            ("SSH", "Disable password auth", "/etc/ssh/sshd_config", "PasswordAuthentication no"),
-            ("SSH", "Use protocol 2 only", "/etc/ssh/sshd_config", "Protocol 2"),
-            ("SSH", "Limit max auth tries", "/etc/ssh/sshd_config", "MaxAuthTries 3"),
-            ("System", "Enable SELinux enforcing", "/etc/selinux/config", "SELINUX=enforcing"),
-            ("System", "Enable AppArmor", "/etc/apparmor", "systemctl enable apparmor"),
-            ("System", "Restrictive firewall", "/etc/firewalld", "firewall-cmd --panic-on"),
-            ("Network", "Disable IPv6", "/etc/sysctl.conf", "net.ipv6.conf.all.disable_ipv6=1"),
-            ("Network", "Disable IP forwarding", "/etc/sysctl.conf", "net.ipv4.ip_forward=0"),
-            ("Kernel", "Restrict core dumps", "/etc/security/limits.conf", "* hard core 0"),
-            ("Audit", "Enable auditd", "/etc/audit/auditd.conf", "systemctl enable auditd"),
-            ("Audit", "Log all commands", "/etc/audit/rules.d", "auditctl -w /bin -p x"),
+            (
+                "SSH",
+                "Disable root login",
+                "/etc/ssh/sshd_config",
+                "PermitRootLogin no",
+            ),
+            (
+                "SSH",
+                "Disable password auth",
+                "/etc/ssh/sshd_config",
+                "PasswordAuthentication no",
+            ),
+            (
+                "SSH",
+                "Use protocol 2 only",
+                "/etc/ssh/sshd_config",
+                "Protocol 2",
+            ),
+            (
+                "SSH",
+                "Limit max auth tries",
+                "/etc/ssh/sshd_config",
+                "MaxAuthTries 3",
+            ),
+            (
+                "System",
+                "Enable SELinux enforcing",
+                "/etc/selinux/config",
+                "SELINUX=enforcing",
+            ),
+            (
+                "System",
+                "Enable AppArmor",
+                "/etc/apparmor",
+                "systemctl enable apparmor",
+            ),
+            (
+                "System",
+                "Restrictive firewall",
+                "/etc/firewalld",
+                "firewall-cmd --panic-on",
+            ),
+            (
+                "Network",
+                "Disable IPv6",
+                "/etc/sysctl.conf",
+                "net.ipv6.conf.all.disable_ipv6=1",
+            ),
+            (
+                "Network",
+                "Disable IP forwarding",
+                "/etc/sysctl.conf",
+                "net.ipv4.ip_forward=0",
+            ),
+            (
+                "Kernel",
+                "Restrict core dumps",
+                "/etc/security/limits.conf",
+                "* hard core 0",
+            ),
+            (
+                "Audit",
+                "Enable auditd",
+                "/etc/audit/auditd.conf",
+                "systemctl enable auditd",
+            ),
+            (
+                "Audit",
+                "Log all commands",
+                "/etc/audit/rules.d",
+                "auditctl -w /bin -p x",
+            ),
         ],
         _ => {
-            anyhow::bail!("Unknown profile: {}. Available: basic, moderate, strict", profile);
+            anyhow::bail!(
+                "Unknown profile: {}. Available: basic, moderate, strict",
+                profile
+            );
         }
     };
 
@@ -2403,12 +2777,19 @@ pub fn harden_command(
         println!("  3. Verify service functionality");
         println!("  4. Check firewall rules don't block required services");
     } else {
-        println!("Note: This is a {} mode. No changes made.", if preview { "preview" } else { "dry-run" });
+        println!(
+            "Note: This is a {} mode. No changes made.",
+            if preview { "preview" } else { "dry-run" }
+        );
         println!("      Use --apply to implement hardening");
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -2443,14 +2824,22 @@ pub fn anomaly_command(
     let mut anomaly_score = 0u32;
 
     let check_categories = if categories.is_empty() {
-        vec!["files".to_string(), "config".to_string(), "processes".to_string(), "network".to_string()]
+        vec![
+            "files".to_string(),
+            "config".to_string(),
+            "processes".to_string(),
+            "network".to_string(),
+        ]
     } else {
         categories
     };
 
     println!("Anomaly Detection Analysis");
     println!("=========================");
-    println!("Sensitivity: {} (threshold: {})", sensitivity, sensitivity_threshold);
+    println!(
+        "Sensitivity: {} (threshold: {})",
+        sensitivity, sensitivity_threshold
+    );
     println!();
 
     for category in &check_categories {
@@ -2489,7 +2878,10 @@ pub fn anomaly_command(
                                     score,
                                     format!("{} suspicious files in {}", count, path),
                                 ));
-                                println!("  ⚠️  {}: {} items (score: {})", description, count, score);
+                                println!(
+                                    "  ⚠️  {}: {} items (score: {})",
+                                    description, count, score
+                                );
                             }
                         }
                     }
@@ -2517,8 +2909,10 @@ pub fn anomaly_command(
                                 score,
                                 format!("{} files owned by root", root_owned),
                             ));
-                            println!("  ⚠️  Unusual ownership: {} root-owned files in /home (score: {})",
-                                root_owned, score);
+                            println!(
+                                "  ⚠️  Unusual ownership: {} root-owned files in /home (score: {})",
+                                root_owned, score
+                            );
                         }
                     }
                 }
@@ -2549,8 +2943,10 @@ pub fn anomaly_command(
                                 score,
                                 format!("{} files modified in last 24h", recently_modified),
                             ));
-                            println!("  ⚠️  Recent modifications: {} files in /etc (score: {})",
-                                recently_modified, score);
+                            println!(
+                                "  ⚠️  Recent modifications: {} files in /etc (score: {})",
+                                recently_modified, score
+                            );
                         }
                     }
                 }
@@ -2597,8 +2993,10 @@ pub fn anomaly_command(
                                         score,
                                         "curl | bash detected".to_string(),
                                     ));
-                                    println!("  🚨 CRITICAL: Download-and-execute in {} (score: {})",
-                                        desc, score);
+                                    println!(
+                                        "  🚨 CRITICAL: Download-and-execute in {} (score: {})",
+                                        desc, score
+                                    );
                                 }
                             }
                         }
@@ -2615,7 +3013,8 @@ pub fn anomaly_command(
                 if g.is_file("/etc/hosts").unwrap_or(false) {
                     if let Ok(content) = g.read_file("/etc/hosts") {
                         if let Ok(text) = String::from_utf8(content) {
-                            let entries = text.lines()
+                            let entries = text
+                                .lines()
                                 .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
                                 .count();
 
@@ -2628,12 +3027,15 @@ pub fn anomaly_command(
                                     score,
                                     format!("{} entries", entries),
                                 ));
-                                println!("  ⚠️  Large hosts file: {} entries (score: {})",
-                                    entries, score);
+                                println!(
+                                    "  ⚠️  Large hosts file: {} entries (score: {})",
+                                    entries, score
+                                );
                             }
 
                             // Check for suspicious redirects
-                            let suspicious_domains = vec!["google.com", "facebook.com", "microsoft.com"];
+                            let suspicious_domains =
+                                vec!["google.com", "facebook.com", "microsoft.com"];
                             for domain in suspicious_domains {
                                 if text.contains(domain) {
                                     let score = 30;
@@ -2644,8 +3046,10 @@ pub fn anomaly_command(
                                         score,
                                         "Possible DNS hijacking".to_string(),
                                     ));
-                                    println!("  🚨 CRITICAL: Hosts redirect for {} (score: {})",
-                                        domain, score);
+                                    println!(
+                                        "  🚨 CRITICAL: Hosts redirect for {} (score: {})",
+                                        domain, score
+                                    );
                                 }
                             }
                         }
@@ -2679,8 +3083,10 @@ pub fn anomaly_command(
                                 score,
                                 format!("{} suspicious units", suspicious_services),
                             ));
-                            println!("  ⚠️  Suspicious services: {} units (score: {})",
-                                suspicious_services, score);
+                            println!(
+                                "  ⚠️  Suspicious services: {} units (score: {})",
+                                suspicious_services, score
+                            );
                         }
                     }
                 }
@@ -2718,8 +3124,10 @@ pub fn anomaly_command(
         anomalies.sort_by_key(|b| std::cmp::Reverse(b.2)); // Sort by score descending
 
         for (category, description, score, details) in anomalies.iter().take(10) {
-            println!("  • [{}] {} - {} (score: {})",
-                category, description, details, score);
+            println!(
+                "  • [{}] {} - {} (score: {})",
+                category, description, details, score
+            );
         }
     }
 
@@ -2733,15 +3141,22 @@ pub fn anomaly_command(
         if baseline_path.exists() {
             if let Ok(baseline_content) = std::fs::read_to_string(&baseline_path) {
                 // Parse baseline anomaly count from report
-                let baseline_count = baseline_content.lines()
+                let baseline_count = baseline_content
+                    .lines()
                     .filter(|l| l.starts_with("  •"))
                     .count();
                 let current_count = anomalies.len();
 
                 if current_count > baseline_count {
-                    println!("  ⚠ {} new anomalies detected since baseline", current_count - baseline_count);
+                    println!(
+                        "  ⚠ {} new anomalies detected since baseline",
+                        current_count - baseline_count
+                    );
                 } else if current_count < baseline_count {
-                    println!("  ✓ {} anomalies resolved since baseline", baseline_count - current_count);
+                    println!(
+                        "  ✓ {} anomalies resolved since baseline",
+                        baseline_count - current_count
+                    );
                 } else {
                     println!("  ~ Anomaly count unchanged from baseline");
                 }
@@ -2769,16 +3184,23 @@ pub fn anomaly_command(
         writeln!(output)?;
         writeln!(output, "## Anomalies")?;
         for (category, description, score, details) in anomalies {
-            writeln!(output, "- [{}] {} : {} (score: {})",
-                category, description, details, score)?;
+            writeln!(
+                output,
+                "- [{}] {} : {} (score: {})",
+                category, description, details, score
+            )?;
         }
 
         println!();
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -2808,7 +3230,11 @@ pub fn recommend_command(
     println!();
 
     let focus_areas = if focus.is_empty() {
-        vec!["security".to_string(), "performance".to_string(), "reliability".to_string()]
+        vec![
+            "security".to_string(),
+            "performance".to_string(),
+            "reliability".to_string(),
+        ]
     } else {
         focus
     };
@@ -2841,8 +3267,10 @@ pub fn recommend_command(
                                     "Security".to_string(),
                                     "Enforce SSH key-based authentication".to_string(),
                                     85,
-                                    "Password-based auth is vulnerable to brute force attacks".to_string(),
-                                    "Add 'PasswordAuthentication no' and use SSH keys only".to_string(),
+                                    "Password-based auth is vulnerable to brute force attacks"
+                                        .to_string(),
+                                    "Add 'PasswordAuthentication no' and use SSH keys only"
+                                        .to_string(),
                                 ));
                             }
                         }
@@ -2859,7 +3287,8 @@ pub fn recommend_command(
                         "Enable and configure firewall".to_string(),
                         95,
                         "No firewall detected - all ports may be exposed".to_string(),
-                        "Install and configure ufw or firewalld, enable default deny policy".to_string(),
+                        "Install and configure ufw or firewalld, enable default deny policy"
+                            .to_string(),
                     ));
                 }
 
@@ -2872,7 +3301,8 @@ pub fn recommend_command(
                         "Security".to_string(),
                         "Enable Mandatory Access Control".to_string(),
                         80,
-                        "No MAC system (SELinux/AppArmor) provides additional security layer".to_string(),
+                        "No MAC system (SELinux/AppArmor) provides additional security layer"
+                            .to_string(),
                         "Install and enable SELinux or AppArmor in enforcing mode".to_string(),
                     ));
                 }
@@ -2902,7 +3332,8 @@ pub fn recommend_command(
                                 "Implement log rotation".to_string(),
                                 70,
                                 format!("{} large log files consuming disk space", large_logs),
-                                "Configure logrotate with appropriate retention policies".to_string(),
+                                "Configure logrotate with appropriate retention policies"
+                                    .to_string(),
                             ));
                         }
                     }
@@ -2937,7 +3368,8 @@ pub fn recommend_command(
                     "Implement automated backups".to_string(),
                     85,
                     "No backup mechanism detected - data loss risk".to_string(),
-                    "Set up automated backups with retention policy and off-site storage".to_string(),
+                    "Set up automated backups with retention policy and off-site storage"
+                        .to_string(),
                 ));
 
                 // Monitoring
@@ -2958,7 +3390,8 @@ pub fn recommend_command(
                                 "Establish patch management process".to_string(),
                                 75,
                                 format!("{} packages require regular security updates", apps.len()),
-                                "Implement automated security patching with testing workflow".to_string(),
+                                "Implement automated security patching with testing workflow"
+                                    .to_string(),
                             ));
                         }
                     }
@@ -3005,12 +3438,16 @@ pub fn recommend_command(
         _ => 50,
     };
 
-    let filtered_recs: Vec<_> = recommendations.iter()
+    let filtered_recs: Vec<_> = recommendations
+        .iter()
         .filter(|(_, _, score, _, _)| *score >= priority_threshold)
         .collect();
 
     println!();
-    println!("Actionable Recommendations (Priority >= {}):", priority_threshold);
+    println!(
+        "Actionable Recommendations (Priority >= {}):",
+        priority_threshold
+    );
     println!("==========================================");
     println!();
 
@@ -3043,8 +3480,12 @@ pub fn recommend_command(
         );
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -3087,7 +3528,8 @@ pub fn predict_command(
 
                 if blocks > 0 && bsize > 0 {
                     let total_gb = (blocks as f64 * bsize as f64) / (1024.0 * 1024.0 * 1024.0);
-                    let used_gb = (blocks.saturating_sub(bfree) as f64 * bsize as f64) / (1024.0 * 1024.0 * 1024.0);
+                    let used_gb = (blocks.saturating_sub(bfree) as f64 * bsize as f64)
+                        / (1024.0 * 1024.0 * 1024.0);
                     let free_gb = (bfree as f64 * bsize as f64) / (1024.0 * 1024.0 * 1024.0);
                     let usage_percent = (used_gb / total_gb * 100.0) as u32;
 
@@ -3105,7 +3547,10 @@ pub fn predict_command(
 
                     println!("  Prediction ({} days):", timeframe);
                     println!("    Estimated growth: {:.2} GB", predicted_growth_gb);
-                    println!("    Predicted usage: {:.2} GB ({}%)", predicted_used, predicted_percent);
+                    println!(
+                        "    Predicted usage: {:.2} GB ({}%)",
+                        predicted_used, predicted_percent
+                    );
                     println!("    Remaining free: {:.2} GB", total_gb - predicted_used);
                     println!();
 
@@ -3148,7 +3593,10 @@ pub fn predict_command(
                 let predicted_growth = (daily_log_growth_mb * timeframe as f64) / 1024.0;
                 let predicted_total = current_gb + predicted_growth;
 
-                println!("  Predicted ({} days): {:.2} GB", timeframe, predicted_total);
+                println!(
+                    "  Predicted ({} days): {:.2} GB",
+                    timeframe, predicted_total
+                );
                 println!();
 
                 if predicted_total > 10.0 {
@@ -3169,11 +3617,15 @@ pub fn predict_command(
 
                     // Simulate update prediction
                     let avg_updates_per_month = (package_count as f64 * 0.15) as u32; // 15% need updates
-                    let predicted_updates = (avg_updates_per_month as f64 * (timeframe as f64 / 30.0)) as u32;
+                    let predicted_updates =
+                        (avg_updates_per_month as f64 * (timeframe as f64 / 30.0)) as u32;
 
                     println!("  Total packages: {}", package_count);
                     println!("  Average updates/month: ~{}", avg_updates_per_month);
-                    println!("  Predicted updates ({} days): ~{}", timeframe, predicted_updates);
+                    println!(
+                        "  Predicted updates ({} days): ~{}",
+                        timeframe, predicted_updates
+                    );
                     println!();
                     println!("  Recommendation: Schedule maintenance window for updates");
                 }
@@ -3201,8 +3653,12 @@ pub fn predict_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -3236,23 +3692,50 @@ pub fn intelligence_command(
     let mut ioc_database: HashMap<String, (&str, &str, &str)> = HashMap::new();
 
     // IP addresses (IOC, threat level, description)
-    ioc_database.insert("192.168.100.50".to_string(), ("IP", "HIGH", "Known C2 server"));
-    ioc_database.insert("10.0.0.13".to_string(), ("IP", "MEDIUM", "Suspicious scanning host"));
+    ioc_database.insert(
+        "192.168.100.50".to_string(),
+        ("IP", "HIGH", "Known C2 server"),
+    );
+    ioc_database.insert(
+        "10.0.0.13".to_string(),
+        ("IP", "MEDIUM", "Suspicious scanning host"),
+    );
 
     // File hashes (MD5)
-    ioc_database.insert("5d41402abc4b2a76b9719d911017c592".to_string(), ("HASH", "CRITICAL", "Known ransomware"));
-    ioc_database.insert("098f6bcd4621d373cade4e832627b4f6".to_string(), ("HASH", "HIGH", "Trojan backdoor"));
+    ioc_database.insert(
+        "5d41402abc4b2a76b9719d911017c592".to_string(),
+        ("HASH", "CRITICAL", "Known ransomware"),
+    );
+    ioc_database.insert(
+        "098f6bcd4621d373cade4e832627b4f6".to_string(),
+        ("HASH", "HIGH", "Trojan backdoor"),
+    );
 
     // Domains
-    ioc_database.insert("malicious-domain.evil".to_string(), ("DOMAIN", "CRITICAL", "Command & Control"));
-    ioc_database.insert("phishing-site.bad".to_string(), ("DOMAIN", "HIGH", "Phishing campaign"));
+    ioc_database.insert(
+        "malicious-domain.evil".to_string(),
+        ("DOMAIN", "CRITICAL", "Command & Control"),
+    );
+    ioc_database.insert(
+        "phishing-site.bad".to_string(),
+        ("DOMAIN", "HIGH", "Phishing campaign"),
+    );
 
     // File paths
-    ioc_database.insert("/tmp/.hidden_miner".to_string(), ("FILE", "CRITICAL", "Cryptominer"));
-    ioc_database.insert("/dev/shm/backdoor".to_string(), ("FILE", "HIGH", "Backdoor payload"));
+    ioc_database.insert(
+        "/tmp/.hidden_miner".to_string(),
+        ("FILE", "CRITICAL", "Cryptominer"),
+    );
+    ioc_database.insert(
+        "/dev/shm/backdoor".to_string(),
+        ("FILE", "HIGH", "Backdoor payload"),
+    );
 
     // Usernames
-    ioc_database.insert("backdoor_user".to_string(), ("USER", "CRITICAL", "Unauthorized account"));
+    ioc_database.insert(
+        "backdoor_user".to_string(),
+        ("USER", "CRITICAL", "Unauthorized account"),
+    );
 
     // Load custom IOCs if provided
     if let Some(ioc_path) = ioc_file {
@@ -3273,8 +3756,13 @@ pub fn intelligence_command(
                 for line in text.lines() {
                     for (ioc, (ioc_type, level, desc)) in &ioc_database {
                         if line.contains(ioc) && (ioc_type == &"IP" || ioc_type == &"DOMAIN") {
-                            matches.push((ioc.clone(), ioc_type.to_string(), level.to_string(),
-                                desc.to_string(), "/etc/hosts".to_string()));
+                            matches.push((
+                                ioc.clone(),
+                                ioc_type.to_string(),
+                                level.to_string(),
+                                desc.to_string(),
+                                "/etc/hosts".to_string(),
+                            ));
                         }
                     }
                 }
@@ -3290,8 +3778,13 @@ pub fn intelligence_command(
                 for file in files.iter().take(100) {
                     for (ioc, (ioc_type, level, desc)) in &ioc_database {
                         if file.contains(ioc) && ioc_type == &"FILE" {
-                            matches.push((ioc.clone(), ioc_type.to_string(), level.to_string(),
-                                desc.to_string(), file.clone()));
+                            matches.push((
+                                ioc.clone(),
+                                ioc_type.to_string(),
+                                level.to_string(),
+                                desc.to_string(),
+                                file.clone(),
+                            ));
                         }
                     }
                 }
@@ -3306,8 +3799,13 @@ pub fn intelligence_command(
                 for line in text.lines() {
                     for (ioc, (ioc_type, level, desc)) in &ioc_database {
                         if line.contains(ioc) && ioc_type == &"USER" {
-                            matches.push((ioc.clone(), ioc_type.to_string(), level.to_string(),
-                                desc.to_string(), "/etc/passwd".to_string()));
+                            matches.push((
+                                ioc.clone(),
+                                ioc_type.to_string(),
+                                level.to_string(),
+                                desc.to_string(),
+                                "/etc/passwd".to_string(),
+                            ));
                         }
                     }
                 }
@@ -3327,7 +3825,8 @@ pub fn intelligence_command(
 
         // Group by threat level
         for level in ["CRITICAL", "HIGH", "MEDIUM", "LOW"] {
-            let level_matches: Vec<_> = matches.iter()
+            let level_matches: Vec<_> = matches
+                .iter()
                 .filter(|(_, _, l, _, _)| l == level)
                 .collect();
 
@@ -3339,7 +3838,12 @@ pub fn intelligence_command(
                     _ => "🟢",
                 };
 
-                println!("{} {} Severity ({} matches):", icon, level, level_matches.len());
+                println!(
+                    "{} {} Severity ({} matches):",
+                    icon,
+                    level,
+                    level_matches.len()
+                );
                 for (ioc, ioc_type, _, desc, location) in level_matches.iter().take(10) {
                     println!("  • [{}] {} - {}", ioc_type, desc, ioc);
                     println!("    Location: {}", location);
@@ -3357,7 +3861,10 @@ pub fn intelligence_command(
         println!("🔗 Correlation Analysis:");
         println!();
 
-        let critical_count = matches.iter().filter(|(_, _, l, _, _)| l == "CRITICAL").count();
+        let critical_count = matches
+            .iter()
+            .filter(|(_, _, l, _, _)| l == "CRITICAL")
+            .count();
         let high_count = matches.iter().filter(|(_, _, l, _, _)| l == "HIGH").count();
 
         if critical_count > 0 && high_count > 0 {
@@ -3368,8 +3875,12 @@ pub fn intelligence_command(
         }
 
         // Check for attack patterns
-        let has_c2 = matches.iter().any(|(_, _, _, desc, _)| desc.contains("C2") || desc.contains("Command"));
-        let has_backdoor = matches.iter().any(|(_, _, _, desc, _)| desc.contains("backdoor") || desc.contains("Backdoor"));
+        let has_c2 = matches
+            .iter()
+            .any(|(_, _, _, desc, _)| desc.contains("C2") || desc.contains("Command"));
+        let has_backdoor = matches
+            .iter()
+            .any(|(_, _, _, desc, _)| desc.contains("backdoor") || desc.contains("Backdoor"));
         let has_persistence = matches.iter().any(|(_, t, _, _, _)| t == "USER");
 
         if has_c2 && has_backdoor {
@@ -3383,7 +3894,10 @@ pub fn intelligence_command(
         }
 
         // Lateral movement indicators
-        if matches.iter().any(|(_, _, _, _, loc)| loc.contains("/etc/hosts")) {
+        if matches
+            .iter()
+            .any(|(_, _, _, _, loc)| loc.contains("/etc/hosts"))
+        {
             println!("  ⚡ Potential Lateral Movement:");
             println!("     Hosts file modification suggests network reconnaissance");
             println!();
@@ -3425,11 +3939,14 @@ pub fn intelligence_command(
         println!("Report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-
 
 /// Zero-trust continuous verification and supply chain integrity
 pub fn verify_command(
@@ -3496,12 +4013,16 @@ pub fn verify_command(
             if let Ok(content) = g.read_file("/etc/passwd") {
                 if let Ok(text) = String::from_utf8(content) {
                     let user_count = text.lines().count();
-                    let suspicious_users = text.lines()
+                    let suspicious_users = text
+                        .lines()
                         .filter(|l| l.contains("backdoor") || l.contains("hacker"))
                         .count();
 
                     if suspicious_users > 0 {
-                        println!("  ❌ Suspicious user accounts detected: {}", suspicious_users);
+                        println!(
+                            "  ❌ Suspicious user accounts detected: {}",
+                            suspicious_users
+                        );
                         verification_results.insert("user-accounts", "FAILED");
                         failed_checks += 1;
                     } else {
@@ -3580,7 +4101,8 @@ pub fn verify_command(
                 // Repository trust verification
                 total_checks += 1;
                 if g.is_dir("/etc/apt/sources.list.d").unwrap_or(false)
-                    || g.is_file("/etc/yum.repos.d").unwrap_or(false) {
+                    || g.is_file("/etc/yum.repos.d").unwrap_or(false)
+                {
                     println!("  ✓ Repository configuration present");
                     verification_results.insert("repo-trust", "VERIFIED");
                     passed_checks += 1;
@@ -3605,10 +4127,24 @@ pub fn verify_command(
     println!("====================");
     println!();
     println!("  Total Checks: {}", total_checks);
-    println!("  Passed: {} ({}%)", passed_checks,
-        if total_checks > 0 { passed_checks * 100 / total_checks } else { 0 });
-    println!("  Failed: {} ({}%)", failed_checks,
-        if total_checks > 0 { failed_checks * 100 / total_checks } else { 0 });
+    println!(
+        "  Passed: {} ({}%)",
+        passed_checks,
+        if total_checks > 0 {
+            passed_checks * 100 / total_checks
+        } else {
+            0
+        }
+    );
+    println!(
+        "  Failed: {} ({}%)",
+        failed_checks,
+        if total_checks > 0 {
+            failed_checks * 100 / total_checks
+        } else {
+            0
+        }
+    );
     println!();
 
     let trust_score = if total_checks > 0 {
@@ -3628,7 +4164,10 @@ pub fn verify_command(
     };
 
     println!("  Trust Score: {}/100", trust_score);
-    println!("  Trust Level: {} {} - {}", trust_level.1, trust_level.0, trust_level.2);
+    println!(
+        "  Trust Level: {} {} - {}",
+        trust_level.1, trust_level.0, trust_level.2
+    );
     println!();
 
     if failed_checks > 0 {
@@ -3681,8 +4220,11 @@ pub fn verify_command(
         println!("Verification report exported to: {}", export_path.display());
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
-

@@ -109,16 +109,24 @@ impl ServiceAnalyzer {
                         description = Some(value.to_string());
                     }
                     ("Unit", "Requires") => {
-                        dependencies.requires.extend(value.split_whitespace().map(String::from));
+                        dependencies
+                            .requires
+                            .extend(value.split_whitespace().map(String::from));
                     }
                     ("Unit", "Wants") => {
-                        dependencies.wants.extend(value.split_whitespace().map(String::from));
+                        dependencies
+                            .wants
+                            .extend(value.split_whitespace().map(String::from));
                     }
                     ("Unit", "After") => {
-                        dependencies.after.extend(value.split_whitespace().map(String::from));
+                        dependencies
+                            .after
+                            .extend(value.split_whitespace().map(String::from));
                     }
                     ("Unit", "Before") => {
-                        dependencies.before.extend(value.split_whitespace().map(String::from));
+                        dependencies
+                            .before
+                            .extend(value.split_whitespace().map(String::from));
                     }
                     _ => {}
                 }
@@ -176,7 +184,13 @@ impl ServiceAnalyzer {
         for req in &service.dependencies.requires {
             if let Some(dep_service) = all_services.iter().find(|s| s.name == *req) {
                 let mut dep_tree = DependencyTree::new(req.clone());
-                Self::build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
+                Self::build_dependency_tree(
+                    all_services,
+                    dep_service,
+                    &mut dep_tree,
+                    visited,
+                    depth + 1,
+                );
                 tree.dependencies.push(dep_tree);
             }
         }
@@ -186,7 +200,13 @@ impl ServiceAnalyzer {
             if let Some(dep_service) = all_services.iter().find(|s| s.name == *want) {
                 if !visited.contains(want) {
                     let mut dep_tree = DependencyTree::new(want.clone());
-                    Self::build_dependency_tree(all_services, dep_service, &mut dep_tree, visited, depth + 1);
+                    Self::build_dependency_tree(
+                        all_services,
+                        dep_service,
+                        &mut dep_tree,
+                        visited,
+                        depth + 1,
+                    );
                     tree.dependencies.push(dep_tree);
                 }
             }
@@ -206,7 +226,12 @@ impl ServiceAnalyzer {
     }
 
     /// Add dependency tree to Mermaid diagram
-    fn add_tree_to_diagram(&self, tree: &DependencyTree, diagram: &mut String, visited: &mut HashSet<String>) {
+    fn add_tree_to_diagram(
+        &self,
+        tree: &DependencyTree,
+        diagram: &mut String,
+        visited: &mut HashSet<String>,
+    ) {
         if visited.contains(&tree.service_name) {
             return;
         }
@@ -277,8 +302,10 @@ mod tests {
     #[test]
     fn test_dependency_tree_count() {
         let mut tree = DependencyTree::new("main.service".to_string());
-        tree.dependencies.push(DependencyTree::new("dep1.service".to_string()));
-        tree.dependencies.push(DependencyTree::new("dep2.service".to_string()));
+        tree.dependencies
+            .push(DependencyTree::new("dep1.service".to_string()));
+        tree.dependencies
+            .push(DependencyTree::new("dep2.service".to_string()));
 
         assert_eq!(tree.count_dependencies(), 2);
     }
@@ -288,7 +315,13 @@ mod tests {
         let analyzer = SystemdAnalyzer::new("/tmp");
         let service_analyzer = ServiceAnalyzer::new(analyzer);
 
-        assert_eq!(service_analyzer.sanitize_node_id("my-service.service"), "my_service_service");
-        assert_eq!(service_analyzer.sanitize_node_id("test.timer"), "test_timer");
+        assert_eq!(
+            service_analyzer.sanitize_node_id("my-service.service"),
+            "my_service_service"
+        );
+        assert_eq!(
+            service_analyzer.sanitize_node_id("test.timer"),
+            "test_timer"
+        );
     }
 }

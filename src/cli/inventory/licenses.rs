@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! License detection and mapping
 
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 /// Common license mappings for well-known packages
 static LICENSE_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
@@ -92,16 +92,31 @@ mod tests {
 
     #[test]
     fn test_detect_license_exact_match() {
-        assert_eq!(detect_license("nginx", "deb"), Some("BSD-2-Clause".to_string()));
-        assert_eq!(detect_license("apache2", "deb"), Some("Apache-2.0".to_string()));
-        assert_eq!(detect_license("python3", "deb"), Some("PSF-2.0".to_string()));
+        assert_eq!(
+            detect_license("nginx", "deb"),
+            Some("BSD-2-Clause".to_string())
+        );
+        assert_eq!(
+            detect_license("apache2", "deb"),
+            Some("Apache-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("python3", "deb"),
+            Some("PSF-2.0".to_string())
+        );
     }
 
     #[test]
     fn test_detect_license_prefix_match() {
         // libssl should match "openssl" prefix
-        assert_eq!(detect_license("libssl1.1", "deb"), Some("Apache-2.0".to_string()));
-        assert_eq!(detect_license("openssh-server", "deb"), Some("BSD-2-Clause".to_string()));
+        assert_eq!(
+            detect_license("libssl1.1", "deb"),
+            Some("Apache-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("openssh-server", "deb"),
+            Some("BSD-2-Clause".to_string())
+        );
     }
 
     #[test]
@@ -112,11 +127,23 @@ mod tests {
 
     #[test]
     fn test_detect_license_common_packages() {
-        assert_eq!(detect_license("bash", "deb"), Some("GPL-3.0-or-later".to_string()));
+        assert_eq!(
+            detect_license("bash", "deb"),
+            Some("GPL-3.0-or-later".to_string())
+        );
         assert_eq!(detect_license("curl", "deb"), Some("MIT".to_string()));
-        assert_eq!(detect_license("git", "deb"), Some("GPL-2.0-only".to_string()));
-        assert_eq!(detect_license("redis", "deb"), Some("BSD-3-Clause".to_string()));
-        assert_eq!(detect_license("postgresql", "deb"), Some("PostgreSQL".to_string()));
+        assert_eq!(
+            detect_license("git", "deb"),
+            Some("GPL-2.0-only".to_string())
+        );
+        assert_eq!(
+            detect_license("redis", "deb"),
+            Some("BSD-3-Clause".to_string())
+        );
+        assert_eq!(
+            detect_license("postgresql", "deb"),
+            Some("PostgreSQL".to_string())
+        );
     }
 
     #[test]
@@ -172,42 +199,96 @@ mod tests {
 
     #[test]
     fn test_license_map_web_servers() {
-        assert_eq!(detect_license("nginx", "deb"), Some("BSD-2-Clause".to_string()));
-        assert_eq!(detect_license("apache2", "deb"), Some("Apache-2.0".to_string()));
-        assert_eq!(detect_license("httpd", "deb"), Some("Apache-2.0".to_string()));
+        assert_eq!(
+            detect_license("nginx", "deb"),
+            Some("BSD-2-Clause".to_string())
+        );
+        assert_eq!(
+            detect_license("apache2", "deb"),
+            Some("Apache-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("httpd", "deb"),
+            Some("Apache-2.0".to_string())
+        );
     }
 
     #[test]
     fn test_license_map_databases() {
-        assert_eq!(detect_license("postgresql", "deb"), Some("PostgreSQL".to_string()));
-        assert_eq!(detect_license("mysql", "deb"), Some("GPL-2.0-only".to_string()));
-        assert_eq!(detect_license("mariadb", "deb"), Some("GPL-2.0-only".to_string()));
-        assert_eq!(detect_license("redis", "deb"), Some("BSD-3-Clause".to_string()));
-        assert_eq!(detect_license("sqlite3", "deb"), Some("Public-Domain".to_string()));
+        assert_eq!(
+            detect_license("postgresql", "deb"),
+            Some("PostgreSQL".to_string())
+        );
+        assert_eq!(
+            detect_license("mysql", "deb"),
+            Some("GPL-2.0-only".to_string())
+        );
+        assert_eq!(
+            detect_license("mariadb", "deb"),
+            Some("GPL-2.0-only".to_string())
+        );
+        assert_eq!(
+            detect_license("redis", "deb"),
+            Some("BSD-3-Clause".to_string())
+        );
+        assert_eq!(
+            detect_license("sqlite3", "deb"),
+            Some("Public-Domain".to_string())
+        );
     }
 
     #[test]
     fn test_license_map_programming_languages() {
-        assert_eq!(detect_license("python3", "deb"), Some("PSF-2.0".to_string()));
-        assert_eq!(detect_license("python2", "deb"), Some("PSF-2.0".to_string()));
-        assert_eq!(detect_license("perl", "deb"), Some("Artistic-2.0".to_string()));
+        assert_eq!(
+            detect_license("python3", "deb"),
+            Some("PSF-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("python2", "deb"),
+            Some("PSF-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("perl", "deb"),
+            Some("Artistic-2.0".to_string())
+        );
         assert_eq!(detect_license("nodejs", "deb"), Some("MIT".to_string()));
     }
 
     #[test]
     fn test_license_map_system_tools() {
-        assert_eq!(detect_license("bash", "deb"), Some("GPL-3.0-or-later".to_string()));
-        assert_eq!(detect_license("coreutils", "deb"), Some("GPL-3.0-or-later".to_string()));
-        assert_eq!(detect_license("systemd", "deb"), Some("LGPL-2.1-or-later".to_string()));
+        assert_eq!(
+            detect_license("bash", "deb"),
+            Some("GPL-3.0-or-later".to_string())
+        );
+        assert_eq!(
+            detect_license("coreutils", "deb"),
+            Some("GPL-3.0-or-later".to_string())
+        );
+        assert_eq!(
+            detect_license("systemd", "deb"),
+            Some("LGPL-2.1-or-later".to_string())
+        );
         assert_eq!(detect_license("vim", "deb"), Some("Vim".to_string()));
-        assert_eq!(detect_license("emacs", "deb"), Some("GPL-3.0-or-later".to_string()));
+        assert_eq!(
+            detect_license("emacs", "deb"),
+            Some("GPL-3.0-or-later".to_string())
+        );
     }
 
     #[test]
     fn test_license_map_libraries() {
-        assert_eq!(detect_license("openssl", "deb"), Some("Apache-2.0".to_string()));
-        assert_eq!(detect_license("glibc", "deb"), Some("LGPL-2.1-or-later".to_string()));
-        assert_eq!(detect_license("libc6", "deb"), Some("LGPL-2.1-or-later".to_string()));
+        assert_eq!(
+            detect_license("openssl", "deb"),
+            Some("Apache-2.0".to_string())
+        );
+        assert_eq!(
+            detect_license("glibc", "deb"),
+            Some("LGPL-2.1-or-later".to_string())
+        );
+        assert_eq!(
+            detect_license("libc6", "deb"),
+            Some("LGPL-2.1-or-later".to_string())
+        );
         assert_eq!(detect_license("zlib", "deb"), Some("Zlib".to_string()));
         assert_eq!(detect_license("curl", "deb"), Some("MIT".to_string()));
     }

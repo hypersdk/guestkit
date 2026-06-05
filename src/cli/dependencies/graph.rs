@@ -23,9 +23,8 @@ pub fn export_dot(graph: &DependencyGraph, show_all: bool) -> String {
         pkgs
     };
 
-    let package_names: std::collections::HashSet<_> = packages_to_show.iter()
-        .map(|p| &p.name)
-        .collect();
+    let package_names: std::collections::HashSet<_> =
+        packages_to_show.iter().map(|p| &p.name).collect();
 
     // Add nodes
     for pkg in &packages_to_show {
@@ -126,7 +125,9 @@ pub fn export_html(graph: &DependencyGraph) -> String {
     html.push_str("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n");
     html.push_str("th { background-color: #4CAF50; color: white; }\n");
     html.push_str("tr:nth-child(even) { background-color: #f2f2f2; }\n");
-    html.push_str(".stats { background: #e7f3fe; padding: 15px; margin: 10px 0; border-radius: 5px; }\n");
+    html.push_str(
+        ".stats { background: #e7f3fe; padding: 15px; margin: 10px 0; border-radius: 5px; }\n",
+    );
     html.push_str("</style>\n");
     html.push_str("</head>\n<body>\n");
 
@@ -135,15 +136,32 @@ pub fn export_html(graph: &DependencyGraph) -> String {
     // Statistics
     html.push_str("<div class=\"stats\">\n");
     html.push_str("<h2>Statistics</h2>\n");
-    html.push_str(&format!("<p><strong>Total Packages:</strong> {}</p>\n", graph.statistics.total_packages));
-    html.push_str(&format!("<p><strong>Total Dependencies:</strong> {}</p>\n", graph.statistics.total_dependencies));
-    html.push_str(&format!("<p><strong>Circular Dependencies:</strong> {}</p>\n", graph.statistics.circular_dependencies));
-    html.push_str(&format!("<p><strong>Conflicts:</strong> {}</p>\n", graph.statistics.conflicts));
-    html.push_str(&format!("<p><strong>Average Dependencies:</strong> {:.1}</p>\n", graph.statistics.average_dependencies));
+    html.push_str(&format!(
+        "<p><strong>Total Packages:</strong> {}</p>\n",
+        graph.statistics.total_packages
+    ));
+    html.push_str(&format!(
+        "<p><strong>Total Dependencies:</strong> {}</p>\n",
+        graph.statistics.total_dependencies
+    ));
+    html.push_str(&format!(
+        "<p><strong>Circular Dependencies:</strong> {}</p>\n",
+        graph.statistics.circular_dependencies
+    ));
+    html.push_str(&format!(
+        "<p><strong>Conflicts:</strong> {}</p>\n",
+        graph.statistics.conflicts
+    ));
+    html.push_str(&format!(
+        "<p><strong>Average Dependencies:</strong> {:.1}</p>\n",
+        graph.statistics.average_dependencies
+    ));
     html.push_str("</div>\n");
 
     // Top packages
-    let mut top_packages: Vec<_> = graph.packages.iter()
+    let mut top_packages: Vec<_> = graph
+        .packages
+        .iter()
         .filter(|p| !p.required_by.is_empty())
         .collect();
     top_packages.sort_by_key(|b| std::cmp::Reverse(b.required_by.len()));
@@ -154,7 +172,9 @@ pub fn export_html(graph: &DependencyGraph) -> String {
     for pkg in top_packages.iter().take(20) {
         html.push_str(&format!(
             "<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n",
-            pkg.name, pkg.version, pkg.required_by.len()
+            pkg.name,
+            pkg.version,
+            pkg.required_by.len()
         ));
     }
     html.push_str("</table>\n");
@@ -173,7 +193,9 @@ pub fn export_html(graph: &DependencyGraph) -> String {
     if !graph.conflicts.is_empty() {
         html.push_str("<h2>Dependency Conflicts</h2>\n");
         html.push_str("<table>\n");
-        html.push_str("<tr><th>Package 1</th><th>Package 2</th><th>Reason</th><th>Severity</th></tr>\n");
+        html.push_str(
+            "<tr><th>Package 1</th><th>Package 2</th><th>Reason</th><th>Severity</th></tr>\n",
+        );
         for conflict in &graph.conflicts {
             html.push_str(&format!(
                 "<tr><td>{}</td><td>{}</td><td>{}</td><td>{:?}</td></tr>\n",

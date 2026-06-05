@@ -2,7 +2,10 @@
 //! Interactive logs viewer with filtering
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, INFO_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR,
+    WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -94,10 +97,10 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Category tabs
-            Constraint::Length(3),  // Filter bar
-            Constraint::Min(0),     // Log entries
-            Constraint::Length(3),  // Summary footer
+            Constraint::Length(3), // Category tabs
+            Constraint::Length(3), // Filter bar
+            Constraint::Min(0),    // Log entries
+            Constraint::Length(3), // Summary footer
         ])
         .split(area);
 
@@ -121,44 +124,54 @@ fn draw_category_tabs(f: &mut Frame, area: Rect, app: &App) {
         )
         .select(selected_tab)
         .style(Style::default().fg(TEXT_COLOR))
-        .highlight_style(
-            Style::default()
-                .fg(ORANGE)
-                .add_modifier(Modifier::BOLD),
-        );
+        .highlight_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD));
 
     f.render_widget(tabs, area);
 }
 
 fn draw_filter_bar(f: &mut Frame, area: Rect, app: &App) {
     let filter_text = if app.searching {
-        vec![
-            Line::from(vec![
-                Span::styled("🔍 Filter: ", Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR)),
-                Span::styled("_", Style::default().fg(ORANGE).add_modifier(Modifier::SLOW_BLINK)),
-            ]),
-        ]
+        vec![Line::from(vec![
+            Span::styled(
+                "🔍 Filter: ",
+                Style::default()
+                    .fg(LIGHT_ORANGE)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(&app.search_query, Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                "_",
+                Style::default()
+                    .fg(ORANGE)
+                    .add_modifier(Modifier::SLOW_BLINK),
+            ),
+        ])]
     } else {
-        vec![
-            Line::from(vec![
-                Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
-                Span::styled("/", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(" to filter logs │ ", Style::default().fg(TEXT_COLOR)),
-                Span::styled("↑↓", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(" scroll │ ", Style::default().fg(TEXT_COLOR)),
-                Span::styled("Tab", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-                Span::styled(" switch category", Style::default().fg(TEXT_COLOR)),
-            ]),
-        ]
+        vec![Line::from(vec![
+            Span::styled("Press ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                "/",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" to filter logs │ ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                "↑↓",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" scroll │ ", Style::default().fg(TEXT_COLOR)),
+            Span::styled(
+                "Tab",
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(" switch category", Style::default().fg(TEXT_COLOR)),
+        ])]
     };
 
-    let filter = Paragraph::new(filter_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let filter = Paragraph::new(filter_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(filter, area);
 }
@@ -174,8 +187,13 @@ fn draw_log_entries(f: &mut Frame, area: Rect, app: &App) {
                     log.message.contains(&app.search_query)
                         || log.source.contains(&app.search_query)
                 } else {
-                    log.message.to_lowercase().contains(&app.search_query.to_lowercase())
-                        || log.source.to_lowercase().contains(&app.search_query.to_lowercase())
+                    log.message
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
+                        || log
+                            .source
+                            .to_lowercase()
+                            .contains(&app.search_query.to_lowercase())
                 }
             })
             .collect()
@@ -204,7 +222,10 @@ fn draw_log_entries(f: &mut Frame, area: Rect, app: &App) {
             );
 
             let mut content = vec![
-                Span::styled(format!("{} ", log.timestamp), Style::default().fg(TEXT_COLOR)),
+                Span::styled(
+                    format!("{} ", log.timestamp),
+                    Style::default().fg(TEXT_COLOR),
+                ),
                 level_badge,
                 Span::raw(" "),
                 Span::styled(&log.source, Style::default().fg(log.category.color())),
@@ -222,16 +243,19 @@ fn draw_log_entries(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(Span::styled(
-                    format!("📋 Log Entries ({} / {} total)", filtered_logs.len(), logs.len()),
-                    Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
-                ))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title(Span::styled(
+                format!(
+                    "📋 Log Entries ({} / {} total)",
+                    filtered_logs.len(),
+                    logs.len()
+                ),
+                Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(list, area);
 }
@@ -239,27 +263,46 @@ fn draw_log_entries(f: &mut Frame, area: Rect, app: &App) {
 fn draw_log_summary(f: &mut Frame, area: Rect, app: &App) {
     let logs = generate_log_entries(app);
 
-    let error_count = logs.iter().filter(|l| matches!(l.level, LogLevel::Error)).count();
-    let warning_count = logs.iter().filter(|l| matches!(l.level, LogLevel::Warning)).count();
-    let info_count = logs.iter().filter(|l| matches!(l.level, LogLevel::Info)).count();
+    let error_count = logs
+        .iter()
+        .filter(|l| matches!(l.level, LogLevel::Error))
+        .count();
+    let warning_count = logs
+        .iter()
+        .filter(|l| matches!(l.level, LogLevel::Warning))
+        .count();
+    let info_count = logs
+        .iter()
+        .filter(|l| matches!(l.level, LogLevel::Info))
+        .count();
 
-    let summary_text = vec![
-        Line::from(vec![
-            Span::styled("Summary: ", Style::default().fg(TEXT_COLOR)),
-            Span::styled(format!("🔴 {} errors", error_count), Style::default().fg(ERROR_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(" │ "),
-            Span::styled(format!("🟠 {} warnings", warning_count), Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(" │ "),
-            Span::styled(format!("🔵 {} info", info_count), Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD)),
-        ]),
-    ];
+    let summary_text = vec![Line::from(vec![
+        Span::styled("Summary: ", Style::default().fg(TEXT_COLOR)),
+        Span::styled(
+            format!("🔴 {} errors", error_count),
+            Style::default()
+                .fg(ERROR_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" │ "),
+        Span::styled(
+            format!("🟠 {} warnings", warning_count),
+            Style::default()
+                .fg(WARNING_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" │ "),
+        Span::styled(
+            format!("🔵 {} info", info_count),
+            Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD),
+        ),
+    ])];
 
-    let summary = Paragraph::new(summary_text)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)),
-        );
+    let summary = Paragraph::new(summary_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(summary, area);
 }
@@ -282,7 +325,10 @@ fn generate_log_entries(app: &App) -> Vec<LogEntry> {
             timestamp: "2024-01-27 10:01:00".to_string(),
             level: LogLevel::Info,
             category: LogCategory::Auth,
-            message: format!("User account created: {} (UID: {})", user.username, user.uid),
+            message: format!(
+                "User account created: {} (UID: {})",
+                user.username, user.uid
+            ),
             source: "useradd".to_string(),
         });
 
@@ -304,7 +350,10 @@ fn generate_log_entries(app: &App) -> Vec<LogEntry> {
                 timestamp: "2024-01-27 10:02:00".to_string(),
                 level: LogLevel::Info,
                 category: LogCategory::System,
-                message: format!("Service {} enabled (state: {})", service.name, service.state),
+                message: format!(
+                    "Service {} enabled (state: {})",
+                    service.name, service.state
+                ),
                 source: "systemd".to_string(),
             });
         }
@@ -337,7 +386,10 @@ fn generate_log_entries(app: &App) -> Vec<LogEntry> {
             timestamp: "2024-01-27 10:04:00".to_string(),
             level: LogLevel::Warning,
             category: LogCategory::Application,
-            message: format!("High package count: {} packages installed", app.packages.package_count),
+            message: format!(
+                "High package count: {} packages installed",
+                app.packages.package_count
+            ),
             source: "package-manager".to_string(),
         });
     }
@@ -347,7 +399,11 @@ fn generate_log_entries(app: &App) -> Vec<LogEntry> {
         timestamp: "2024-01-27 10:05:00".to_string(),
         level: LogLevel::Info,
         category: LogCategory::Kernel,
-        message: format!("Kernel {} loaded with {} modules", app.kernel_version, app.kernel_modules.len()),
+        message: format!(
+            "Kernel {} loaded with {} modules",
+            app.kernel_version,
+            app.kernel_modules.len()
+        ),
         source: "kernel".to_string(),
     });
 

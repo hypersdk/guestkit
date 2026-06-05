@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! AI-related command implementations for interactive shell
 
-use anyhow::Result;
 use super::ShellContext;
+use anyhow::Result;
 use colored::Colorize;
 
+#[cfg(feature = "ai")]
+use crate::Guestfs;
 #[cfg(feature = "ai")]
 use reqwest;
 
@@ -25,7 +27,11 @@ pub fn cmd_ai(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
     // Check for API key
     if std::env::var("OPENAI_API_KEY").is_err() {
-        eprintln!("\n{} {}", "⚠".yellow().bold(), "OPENAI_API_KEY environment variable not set.".yellow());
+        eprintln!(
+            "\n{} {}",
+            "⚠".yellow().bold(),
+            "OPENAI_API_KEY environment variable not set.".yellow()
+        );
         eprintln!("\nTo use AI features:");
         eprintln!("  1. Get an API key from https://platform.openai.com/api-keys");
         eprintln!("  2. Set the environment variable:");
@@ -58,7 +64,10 @@ pub fn cmd_ai(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     println!("{}", "═".repeat(70).cyan());
     println!();
 
-    println!("{} Review suggestions carefully before applying", "⚠".yellow().bold());
+    println!(
+        "{} Review suggestions carefully before applying",
+        "⚠".yellow().bold()
+    );
     println!();
 
     Ok(())
@@ -105,7 +114,10 @@ fn gather_diagnostic_context(guestfs: &mut Guestfs, root: &str, query: &str) -> 
         }
     }
 
-    if query_lower.contains("mount") || query_lower.contains("fstab") || query_lower.contains("filesystem") {
+    if query_lower.contains("mount")
+        || query_lower.contains("fstab")
+        || query_lower.contains("filesystem")
+    {
         context.push_str("\nCurrent Mounts:\n");
         if let Ok(mounts) = guestfs.mounts() {
             context.push_str(&mounts.join("\n"));
@@ -119,14 +131,20 @@ fn gather_diagnostic_context(guestfs: &mut Guestfs, root: &str, query: &str) -> 
         }
     }
 
-    if query_lower.contains("boot") || query_lower.contains("kernel") || query_lower.contains("grub") {
+    if query_lower.contains("boot")
+        || query_lower.contains("kernel")
+        || query_lower.contains("grub")
+    {
         context.push_str("\nBoot Configuration:\n");
         if guestfs.is_dir("/boot").unwrap_or(false) {
             context.push_str("Boot directory accessible\n");
         }
     }
 
-    if query_lower.contains("security") || query_lower.contains("selinux") || query_lower.contains("firewall") {
+    if query_lower.contains("security")
+        || query_lower.contains("selinux")
+        || query_lower.contains("firewall")
+    {
         context.push_str("\nSecurity Status:\n");
         if let Ok(sec) = guestfs.inspect_security(root) {
             context.push_str(&serde_json::to_string_pretty(&sec).unwrap_or_default());
@@ -167,8 +185,8 @@ Always explain WHAT the command does and WHY it's needed.
 "#;
 
     // Get API key from environment
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .context("OPENAI_API_KEY environment variable not set")?;
+    let api_key =
+        std::env::var("OPENAI_API_KEY").context("OPENAI_API_KEY environment variable not set")?;
 
     // Use tokio runtime for async call
     let runtime = tokio::runtime::Runtime::new()?;

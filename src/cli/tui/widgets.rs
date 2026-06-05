@@ -93,7 +93,10 @@ pub fn empty_state<'a>(title: &'a str, hint: &'a str, t: &theme::ResolvedTheme) 
         "    │   no data    │",
         "    └──────────────┘",
     ];
-    let mut lines: Vec<Line> = art.iter().map(|l| Line::from(Span::styled(*l, theme::label_style()))).collect();
+    let mut lines: Vec<Line> = art
+        .iter()
+        .map(|l| Line::from(Span::styled(*l, theme::label_style())))
+        .collect();
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(title, theme::value_style())));
     lines.push(Line::from(Span::styled(hint, theme::label_style())));
@@ -110,14 +113,17 @@ pub fn progress_bar(current: u8, total: u8, label: &str, width: u16) -> String {
     let total = total.max(1);
     let w = width.max(8) as usize;
     let filled = (current as usize * w) / total as usize;
-    let bar: String = (0..w)
-        .map(|i| if i < filled { '█' } else { '░' })
-        .collect();
+    let bar: String = (0..w).map(|i| if i < filled { '█' } else { '░' }).collect();
     format!("{} {}/{} {}", bar, current, total, label)
 }
 
 /// Horizontal donut-style risk meter `[####··] 62% healthy`
-pub fn risk_donut_ascii(critical: usize, high: usize, medium: usize, width: usize) -> (String, Color) {
+pub fn risk_donut_ascii(
+    critical: usize,
+    high: usize,
+    medium: usize,
+    width: usize,
+) -> (String, Color) {
     let total = critical + high + medium;
     if total == 0 {
         return (format!("[{:width$}]", "ok", width = width), SUCCESS);

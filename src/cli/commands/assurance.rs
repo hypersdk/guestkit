@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Migration assurance CLI commands (doctor, policy, fleet, migrate-plan, forensic diff).
 
-use anyhow::{Context, Result};
-use colored::Colorize;
 use crate::boot::{analyze_bootability, BootTarget};
 use crate::evidence::build_evidence;
 use crate::fleet::analyze_fleet;
 use crate::inference::infer_root_cause;
+use anyhow::{Context, Result};
+use colored::Colorize;
 use std::path::{Path, PathBuf};
 
 use super::{init_guestfs_ro, mount_all_ro, validate_command};
@@ -16,9 +16,14 @@ pub fn collect_assurance_data(
     image: &Path,
     target: BootTarget,
     verbose: bool,
-) -> Result<(crate::evidence::EvidenceSnapshot, crate::boot::BootabilityReport)> {
+) -> Result<(
+    crate::evidence::EvidenceSnapshot,
+    crate::boot::BootabilityReport,
+)> {
     let resolved = crate::storage::resolve_to_local_path(
-        image.to_str().ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
     )
     .unwrap_or_else(|_| image.to_path_buf());
 
@@ -69,7 +74,10 @@ pub fn doctor_command(
     println!("{}", "Bootability Assessment".bold().cyan());
     println!("{}", "═".repeat(50));
     println!();
-    println!("  {}", boot_report.boot_probability_message().green().bold());
+    println!(
+        "  {}",
+        boot_report.boot_probability_message().green().bold()
+    );
     println!();
 
     if !boot_report.blockers.is_empty() {
@@ -96,7 +104,11 @@ pub fn doctor_command(
         if check.weight <= 0.0 {
             continue;
         }
-        let icon = if check.passed { "✓".green() } else { "✗".red() };
+        let icon = if check.passed {
+            "✓".green()
+        } else {
+            "✗".red()
+        };
         println!("  {} [{}] {}", icon, check.id, check.message);
     }
 
@@ -212,7 +224,12 @@ pub fn fleet_analyze_command(dir: &Path, output_format: &str, verbose: bool) -> 
         println!();
         println!("{}", "Migration blockers:".red().bold());
         for b in &report.migration_blockers {
-            println!("  {} {} (boot score: {:.0}%)", "✗".red(), b.image, b.boot_score);
+            println!(
+                "  {} {} (boot score: {:.0}%)",
+                "✗".red(),
+                b.image,
+                b.boot_score
+            );
         }
     }
 
@@ -228,6 +245,7 @@ pub fn fleet_analyze_command(dir: &Path, output_format: &str, verbose: bool) -> 
 }
 
 /// Migration plan: `guestkit migrate-plan`
+#[cfg(feature = "agent")]
 pub fn migrate_plan_command(
     image: &Path,
     target: &str,
@@ -235,6 +253,54 @@ pub fn migrate_plan_command(
     output_format: &str,
     export: Option<&Path>,
     verbose: bool,
+    inject_agent: bool,
+    agent_binary: Option<&Path>,
+    agent_unit: Option<&Path>,
+) -> Result<()> {
+    migrate_plan_command_impl(
+        image,
+        target,
+        explain,
+        output_format,
+        export,
+        verbose,
+        inject_agent,
+        Some((agent_binary, agent_unit)),
+    )
+}
+
+#[cfg(not(feature = "agent"))]
+pub fn migrate_plan_command(
+    image: &Path,
+    target: &str,
+    explain: bool,
+    output_format: &str,
+    export: Option<&Path>,
+    verbose: bool,
+    inject_agent: bool,
+) -> Result<()> {
+    migrate_plan_command_impl(
+        image,
+        target,
+        explain,
+        output_format,
+        export,
+        verbose,
+        inject_agent,
+        None,
+    )
+}
+
+fn migrate_plan_command_impl(
+    image: &Path,
+    target: &str,
+    explain: bool,
+    output_format: &str,
+    export: Option<&Path>,
+    verbose: bool,
+    inject_agent: bool,
+    #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
+    #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
 ) -> Result<()> {
     let boot_target = match target.to_lowercase().as_str() {
         "proxmox" | "kvm" | "qemu" => BootTarget::Proxmox,
@@ -244,22 +310,35 @@ pub fn migrate_plan_command(
     };
 
     let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
-    let migration_score = crate::cli::migrate::plan::compute_migration_score(
-        &evidence,
-        &boot_report,
-        target,
-    );
+    let migration_score =
+        crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
 
     if let Some(export_path) = export {
         use crate::cli::plan::{PlanExporter, PlanGenerator};
         use std::fs;
 
         let generator = PlanGenerator::new(image.display().to_string());
-        let plan = generator.from_migration_report(&migration_score, &boot_report, target, image)?;
-        let content = if export_path
-            .extension()
-            .is_some_and(|e| e == "json")
-        {
+        #[cfg(feature = "agent")]
+        let mut plan =
+            generator.from_migration_report(&migration_score, &boot_report, target, image)?;
+        #[cfg(not(feature = "agent"))]
+        let plan =
+            generator.from_migration_report(&migration_score, &boot_report, target, image)?;
+
+        #[cfg(feature = "agent")]
+        if inject_agent {
+            let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
+            let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
+            let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
+            crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
+        }
+
+        #[cfg(not(feature = "agent"))]
+        if inject_agent {
+            anyhow::bail!("--inject-agent requires rebuilding guestkit with --features agent");
+        }
+
+        let content = if export_path.extension().is_some_and(|e| e == "json") {
             PlanExporter::to_json(&plan)?
         } else {
             PlanExporter::to_yaml(&plan)?
@@ -366,7 +445,10 @@ pub fn forensic_diff_command(
     println!();
     println!("{}", "Forensic Diff Report".bold().cyan());
     println!("  {}", forensic.summary);
-    println!("  Security drift score: {:.0}%", forensic.security_drift_score);
+    println!(
+        "  Security drift score: {:.0}%",
+        forensic.security_drift_score
+    );
     println!("  Config drift items: {}", forensic.config_drift_count);
 
     if !forensic.suspicious_persistence.is_empty() {
@@ -389,60 +471,126 @@ pub fn forensic_diff_command(
 }
 
 /// Transactional boot repair: `guestkit repair --fix boot`
-pub fn repair_boot_command(image: &Path, dry_run: bool, verbose: bool) -> Result<()> {
+#[cfg(feature = "agent")]
+pub fn repair_boot_command(
+    image: &Path,
+    dry_run: bool,
+    verbose: bool,
+    inject_agent: bool,
+    agent_binary: Option<&Path>,
+    agent_unit: Option<&Path>,
+) -> Result<()> {
+    repair_boot_command_impl(
+        image,
+        dry_run,
+        verbose,
+        inject_agent,
+        Some((agent_binary, agent_unit)),
+    )
+}
+
+#[cfg(not(feature = "agent"))]
+pub fn repair_boot_command(
+    image: &Path,
+    dry_run: bool,
+    verbose: bool,
+    inject_agent: bool,
+) -> Result<()> {
+    repair_boot_command_impl(image, dry_run, verbose, inject_agent, None)
+}
+
+fn repair_boot_command_impl(
+    image: &Path,
+    dry_run: bool,
+    verbose: bool,
+    inject_agent: bool,
+    #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
+    #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
+) -> Result<()> {
     use crate::cli::plan::{PlanApplicator, PlanGenerator};
 
     let (_, boot_report) = collect_assurance_data(image, BootTarget::Kvm, verbose)?;
 
-    if boot_report.blockers.is_empty() && boot_report.warnings.is_empty() {
+    let has_boot_issues = !boot_report.blockers.is_empty() || !boot_report.warnings.is_empty();
+
+    if !has_boot_issues && !inject_agent {
         println!("{}", "No boot issues detected — nothing to repair.".green());
         return Ok(());
     }
 
-    println!("{}", "Boot Repair Plan".bold().cyan());
-    for b in boot_report
-        .blockers
-        .iter()
-        .chain(boot_report.warnings.iter())
-    {
-        println!("  • [{}] {}", b.check_id, b.title);
-    }
-
-    let generator = PlanGenerator::new(image.display().to_string());
-    let plan = generator.from_boot_report(&boot_report, image)?;
-
-    if dry_run {
-        println!();
-        println!("{}", "Dry run — no changes applied.".yellow());
-        for op in &plan.operations {
-            println!("  → {}: {}", op.id, op.description);
+    if has_boot_issues {
+        println!("{}", "Boot Repair Plan".bold().cyan());
+        for b in boot_report
+            .blockers
+            .iter()
+            .chain(boot_report.warnings.iter())
+        {
+            println!("  • [{}] {}", b.check_id, b.title);
         }
-        return Ok(());
-    }
 
-    let before_score = boot_report.score;
-    let applicator = PlanApplicator::new(image.to_str().unwrap().to_string(), false);
-    let result = applicator.apply(&plan)?;
+        let generator = PlanGenerator::new(image.display().to_string());
+        #[cfg(feature = "agent")]
+        let mut plan = generator.from_boot_report(&boot_report, image)?;
+        #[cfg(not(feature = "agent"))]
+        let plan = generator.from_boot_report(&boot_report, image)?;
 
-    if !result.success {
-        anyhow::bail!("Repair failed: {}", result.message);
-    }
+        #[cfg(feature = "agent")]
+        if inject_agent {
+            let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
+            let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
+            let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
+            crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
+        }
 
-    let (_, after_report) = collect_assurance_data(image, BootTarget::Kvm, verbose)?;
-    println!(
-        "{}",
-        format!(
-            "Repair complete. Boot score: {:.0}% → {:.0}%",
-            before_score, after_report.score
-        )
-        .green()
-    );
+        if dry_run {
+            println!();
+            println!("{}", "Dry run — no changes applied.".yellow());
+            for op in &plan.operations {
+                println!("  → {}: {}", op.id, op.description);
+            }
+            return Ok(());
+        }
 
-    if after_report.score < before_score {
+        let before_score = boot_report.score;
+        let applicator = PlanApplicator::new(image.to_str().unwrap().to_string(), false);
+        let result = applicator.apply(&plan)?;
+
+        if !result.success {
+            anyhow::bail!("Repair failed: {}", result.message);
+        }
+
+        let (_, after_report) = collect_assurance_data(image, BootTarget::Kvm, verbose)?;
         println!(
             "{}",
-            "Warning: boot score decreased after repair — review changes".yellow()
+            format!(
+                "Repair complete. Boot score: {:.0}% → {:.0}%",
+                before_score, after_report.score
+            )
+            .green()
         );
+
+        if after_report.score < before_score {
+            println!(
+                "{}",
+                "Warning: boot score decreased after repair — review changes".yellow()
+            );
+        }
+    } else if dry_run {
+        println!("{}", "Dry run — would inject GuestKit agent only.".yellow());
+    }
+
+    #[cfg(feature = "agent")]
+    if inject_agent && !dry_run {
+        let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
+        let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
+        let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
+        crate::agent::inject::inject_agent_into_image(image, &binary, &unit, false, verbose)?;
+        println!("{}", "GuestKit agent injected.".green());
+    }
+
+    #[cfg(not(feature = "agent"))]
+    if inject_agent {
+        anyhow::bail!("--inject-agent requires rebuilding guestkit with --features agent");
     }
 
     Ok(())

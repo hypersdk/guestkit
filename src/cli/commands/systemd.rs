@@ -2,12 +2,12 @@
 //! Systemd analysis commands
 #![allow(clippy::too_many_arguments)]
 
-use anyhow::Result;
-use crate::core::{ProgressReporter, SystemdAnalyzer};
 use crate::core::systemd::boot::BootAnalyzer;
 use crate::core::systemd::journal::{JournalFilter, JournalReader};
 use crate::core::systemd::services::ServiceAnalyzer;
+use crate::core::{ProgressReporter, SystemdAnalyzer};
 use crate::Guestfs;
+use anyhow::Result;
 use owo_colors::OwoColorize;
 use std::path::Path;
 
@@ -163,8 +163,12 @@ pub fn systemd_journal_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -220,7 +224,12 @@ pub fn systemd_services_command(
             println!("{}", mermaid);
         } else {
             let dep_tree = service_analyzer.get_dependency_tree(service_name)?;
-            println!("{}", format!("Dependency Tree for {}", service_name).bold().underline());
+            println!(
+                "{}",
+                format!("Dependency Tree for {}", service_name)
+                    .bold()
+                    .underline()
+            );
             println!();
             println!("Service: {}", dep_tree.service_name.bright_blue());
             println!("Dependencies: {}", dep_tree.count_dependencies());
@@ -291,8 +300,12 @@ pub fn systemd_services_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }
 
@@ -389,7 +402,11 @@ pub fn systemd_boot_command(
         }
     }
 
-    if let Err(e) = g.umount_all() { log::warn!("Cleanup: umount_all failed: {}", e); }
-    if let Err(e) = g.shutdown() { log::warn!("Cleanup: shutdown failed: {}", e); }
+    if let Err(e) = g.umount_all() {
+        log::warn!("Cleanup: umount_all failed: {}", e);
+    }
+    if let Err(e) = g.shutdown() {
+        log::warn!("Cleanup: shutdown failed: {}", e);
+    }
     Ok(())
 }

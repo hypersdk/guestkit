@@ -26,13 +26,18 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     };
 
     if app.packages.packages.is_empty() {
-        let empty = Paragraph::new(format!("⚠️  No packages found (manager: {})", app.packages.manager))
-            .block(Block::default()
+        let empty = Paragraph::new(format!(
+            "⚠️  No packages found (manager: {})",
+            app.packages.manager
+        ))
+        .block(
+            Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(BORDER_COLOR))
                 .title(format!(" {} Installed Packages ", manager_icon))
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
-            .style(Style::default().fg(TEXT_COLOR));
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
+        .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
     }
@@ -41,8 +46,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(9),  // Summary with statistics
-            Constraint::Min(0),     // Package list
+            Constraint::Length(9), // Summary with statistics
+            Constraint::Min(0),    // Package list
         ])
         .split(area);
 
@@ -84,7 +89,10 @@ fn draw_package_detail(f: &mut Frame, area: Rect, app: &App) {
         vec![
             Line::from(vec![
                 Span::styled("Name: ", label_style()),
-                Span::styled(&pkg.name, Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &pkg.name,
+                    Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Version: ", label_style()),
@@ -104,10 +112,7 @@ fn draw_package_detail(f: &mut Frame, area: Rect, app: &App) {
             ]),
         ]
     } else {
-        vec![Line::from(Span::styled(
-            "Select a package",
-            label_style(),
-        ))]
+        vec![Line::from(Span::styled("Select a package", label_style()))]
     };
     f.render_widget(
         Paragraph::new(lines)
@@ -119,8 +124,18 @@ fn draw_package_detail(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {
     // Count packages by prefix
-    let lib_count = app.packages.packages.iter().filter(|p| p.name.starts_with("lib")).count();
-    let python_count = app.packages.packages.iter().filter(|p| p.name.starts_with("python")).count();
+    let lib_count = app
+        .packages
+        .packages
+        .iter()
+        .filter(|p| p.name.starts_with("lib"))
+        .count();
+    let python_count = app
+        .packages
+        .packages
+        .iter()
+        .filter(|p| p.name.starts_with("python"))
+        .count();
     let total_count = app.packages.package_count;
 
     let lib_pct = if total_count > 0 {
@@ -139,37 +154,48 @@ fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Length(3),  // Lib packages gauge
-            Constraint::Length(3),  // Python packages gauge
+            Constraint::Length(3), // Header
+            Constraint::Length(3), // Lib packages gauge
+            Constraint::Length(3), // Python packages gauge
         ])
         .split(area);
 
     // Header with package info
     let header = Paragraph::new(vec![
-        Line::from(vec![
-            Span::styled(" 📊 Package Statistics", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            " 📊 Package Statistics",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("Total Packages: ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(format!("{}", total_count), Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{}", total_count),
+                Style::default().fg(TEXT_COLOR).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("  │  "),
             Span::styled("Manager: ", Style::default().fg(LIGHT_ORANGE)),
-            Span::styled(&app.packages.manager, Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.packages.manager,
+                Style::default().fg(INFO_COLOR).add_modifier(Modifier::BOLD),
+            ),
         ]),
     ])
-    .block(Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER_COLOR)));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(BORDER_COLOR)),
+    );
 
     f.render_widget(header, chunks[0]);
 
     // Library packages gauge
     let lib_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 📚 Library Packages (lib*) "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" 📚 Library Packages (lib*) "),
+        )
         .gauge_style(Style::default().fg(INFO_COLOR))
         .percent(lib_pct)
         .label(format!("{} libraries ({}% of total)", lib_count, lib_pct));
@@ -178,13 +204,18 @@ fn draw_package_summary(f: &mut Frame, area: Rect, app: &App) {
 
     // Python packages gauge
     let python_gauge = Gauge::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" 🐍 Python Packages "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" 🐍 Python Packages "),
+        )
         .gauge_style(Style::default().fg(WARNING_COLOR))
         .percent(python_pct)
-        .label(format!("{} python packages ({}% of total)", python_count, python_pct));
+        .label(format!(
+            "{} python packages ({}% of total)",
+            python_count, python_pct
+        ));
 
     f.render_widget(python_gauge, chunks[2]);
 }
@@ -216,7 +247,9 @@ fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
             .into_iter()
             .filter(|&idx| {
                 let pkg = &app.packages.packages[idx];
-                pkg.name.to_lowercase().contains(&app.search_query.to_lowercase())
+                pkg.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
                     || pkg.version.contains(&app.search_query)
             })
             .collect()
@@ -232,7 +265,11 @@ fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
         .map(|(display_idx, &pkg_idx)| {
             let pkg = &app.packages.packages[pkg_idx];
             // Alternate colors for better readability
-            let name_color = if display_idx % 2 == 0 { LIGHT_ORANGE } else { ORANGE };
+            let name_color = if display_idx % 2 == 0 {
+                LIGHT_ORANGE
+            } else {
+                ORANGE
+            };
             let actual_idx = app.scroll_offset + display_idx;
 
             // Multi-select checkbox or comparison indicator
@@ -262,7 +299,10 @@ fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
 
             ListItem::new(Line::from(vec![
                 ratatui::text::Span::styled(prefix, Style::default().fg(prefix_color)),
-                ratatui::text::Span::styled(&pkg.name, Style::default().fg(name_color).add_modifier(Modifier::BOLD)),
+                ratatui::text::Span::styled(
+                    &pkg.name,
+                    Style::default().fg(name_color).add_modifier(Modifier::BOLD),
+                ),
                 ratatui::text::Span::raw("  "),
                 ratatui::text::Span::styled("v", Style::default().fg(INFO_COLOR)),
                 ratatui::text::Span::styled(&pkg.version, Style::default().fg(SUCCESS_COLOR)),
@@ -306,14 +346,23 @@ fn draw_package_list_view(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" {} Installed Packages • {} showing of {} total • Manager: {}{}{}{}{} ",
-                manager_icon, filtered_indices.len(), app.packages.package_count, app.packages.manager,
-                scroll_indicator, multiselect_indicator, filter_indicator, sort_indicator))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " {} Installed Packages • {} showing of {} total • Manager: {}{}{}{}{} ",
+                manager_icon,
+                filtered_indices.len(),
+                app.packages.package_count,
+                app.packages.manager,
+                scroll_indicator,
+                multiselect_indicator,
+                filter_indicator,
+                sort_indicator
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }
@@ -337,7 +386,9 @@ fn draw_package_table_view(f: &mut Frame, area: Rect, app: &App) {
             .into_iter()
             .filter(|&idx| {
                 let pkg = &app.packages.packages[idx];
-                pkg.name.to_lowercase().contains(&app.search_query.to_lowercase())
+                pkg.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
                     || pkg.version.contains(&app.search_query)
             })
             .collect()
@@ -347,10 +398,22 @@ fn draw_package_table_view(f: &mut Frame, area: Rect, app: &App) {
 
     // Create table header
     let header = Row::new(vec![
-        Cell::from(Span::styled("#", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Package Name", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Version", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
-        Cell::from(Span::styled("Manager", Style::default().fg(ORANGE).add_modifier(Modifier::BOLD))),
+        Cell::from(Span::styled(
+            "#",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Package Name",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Version",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
+        Cell::from(Span::styled(
+            "Manager",
+            Style::default().fg(ORANGE).add_modifier(Modifier::BOLD),
+        )),
     ])
     .height(1)
     .bottom_margin(1);
@@ -384,9 +447,19 @@ fn draw_package_table_view(f: &mut Frame, area: Rect, app: &App) {
             };
 
             Row::new(vec![
-                Cell::from(format!("{}{}", checkbox, if checkbox.is_empty() { "" } else { " " })),
-                Cell::from(Span::styled(&pkg.name, Style::default().add_modifier(Modifier::BOLD))),
-                Cell::from(Span::styled(&pkg.version, Style::default().fg(SUCCESS_COLOR))),
+                Cell::from(format!(
+                    "{}{}",
+                    checkbox,
+                    if checkbox.is_empty() { "" } else { " " }
+                )),
+                Cell::from(Span::styled(
+                    &pkg.name,
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Cell::from(Span::styled(
+                    &pkg.version,
+                    Style::default().fg(SUCCESS_COLOR),
+                )),
                 Cell::from(Span::styled(&pkg.manager, Style::default().fg(INFO_COLOR))),
             ])
             .style(row_style)

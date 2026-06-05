@@ -72,9 +72,7 @@ impl NbdDevice {
             .arg("nbd")
             .arg("max_part=16")
             .output()
-            .map_err(|e| {
-                Error::CommandFailed(format!("Failed to execute modprobe: {}", e))
-            })?;
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute modprobe: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -251,12 +249,12 @@ impl NbdDevice {
                 Command::new("qemu-nbd")
             };
 
-            if let Err(e) = cmd
-                .arg("--disconnect")
-                .arg(&self.device_path)
-                .output()
-            {
-                log::warn!("NBD disconnect failed for {}: {}", self.device_path.display(), e);
+            if let Err(e) = cmd.arg("--disconnect").arg(&self.device_path).output() {
+                log::warn!(
+                    "NBD disconnect failed for {}: {}",
+                    self.device_path.display(),
+                    e
+                );
             }
 
             // Wait for disconnect to complete
@@ -295,8 +293,7 @@ impl NbdDevice {
 
         // Use short flags: -c instead of --connect, -f instead of --format
         // This is important! Long flags cause qemu-nbd to exit immediately
-        cmd.arg("-c").arg(&self.device_path)
-            .arg("-f").arg(format);
+        cmd.arg("-c").arg(&self.device_path).arg("-f").arg(format);
 
         // CRITICAL: Use -r (read-only) flag to prevent file locking issues
         // This allows multiple qemu-nbd processes to access the same file
@@ -335,7 +332,10 @@ impl NbdDevice {
         let process_exited = match child.try_wait() {
             Ok(Some(status)) => {
                 if is_debug_enabled() {
-                    eprintln!("[DEBUG NBD] qemu-nbd process exited with status: {}", status);
+                    eprintln!(
+                        "[DEBUG NBD] qemu-nbd process exited with status: {}",
+                        status
+                    );
                 }
                 // Process exited - could be normal (daemonized) or an error
                 // We'll check if device is connected below
@@ -349,7 +349,8 @@ impl NbdDevice {
             }
             Err(e) => {
                 return Err(Error::CommandFailed(format!(
-                    "Failed to check qemu-nbd process status: {}", e
+                    "Failed to check qemu-nbd process status: {}",
+                    e
                 )));
             }
         };
@@ -370,12 +371,15 @@ impl NbdDevice {
                     "qemu-nbd exited and device did not become ready. \
                      Device {} may already be in use or the image may be corrupted. \
                      Original error: {}. Try: sudo qemu-nbd --disconnect {}",
-                    self.device_path.display(), e, self.device_path.display()
+                    self.device_path.display(),
+                    e,
+                    self.device_path.display()
                 )));
             } else {
                 return Err(Error::CommandFailed(format!(
                     "Device did not become ready: {}. Try: sudo qemu-nbd --disconnect {}",
-                    e, self.device_path.display()
+                    e,
+                    self.device_path.display()
                 )));
             }
         }
@@ -459,7 +463,11 @@ impl NbdDevice {
         for i in 0..20 {
             if !Self::is_nbd_device_in_use(&self.device_path) {
                 if is_debug_enabled() {
-                    eprintln!("[DEBUG NBD] Device {} disconnected after {} attempts", self.device_path.display(), i + 1);
+                    eprintln!(
+                        "[DEBUG NBD] Device {} disconnected after {} attempts",
+                        self.device_path.display(),
+                        i + 1
+                    );
                 }
                 if let Some(mut child) = self.qemu_nbd_process.take() {
                     let _ = child.kill();
@@ -473,9 +481,7 @@ impl NbdDevice {
 
         // Device still appears connected after retries - force disconnect one more time
         if is_debug_enabled() {
-            eprintln!(
-                "[DEBUG NBD] Device still connected after 2s, attempting force disconnect"
-            );
+            eprintln!("[DEBUG NBD] Device still connected after 2s, attempting force disconnect");
         }
 
         // Try one more disconnect with -d flag (detach)
@@ -493,7 +499,10 @@ impl NbdDevice {
         thread::sleep(Duration::from_millis(500));
         if !Self::is_nbd_device_in_use(&self.device_path) {
             if is_debug_enabled() {
-                eprintln!("[DEBUG NBD] Device {} disconnected after force disconnect", self.device_path.display());
+                eprintln!(
+                    "[DEBUG NBD] Device {} disconnected after force disconnect",
+                    self.device_path.display()
+                );
             }
             if let Some(mut child) = self.qemu_nbd_process.take() {
                 let _ = child.kill();

@@ -3,7 +3,9 @@
 
 use crate::cli::plan::types::{Operation, Priority};
 use crate::cli::tui::app::App;
-use crate::cli::tui::theme::{self, modal_block, focus_style, ResolvedTheme, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING};
+use crate::cli::tui::theme::{
+    self, focus_style, modal_block, ResolvedTheme, ACCENT, ERROR, INFO, SUCCESS, TEXT, WARNING,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -35,14 +37,22 @@ pub fn draw(f: &mut Frame, app: &App) {
             Span::styled("  risk ", theme::label_style()),
             Span::styled(&plan.overall_risk, priority_style_str(&plan.overall_risk)),
             Span::styled(
-                format!("  · {} ops (preview only — not applied)", plan.operations.len()),
+                format!(
+                    "  · {} ops (preview only — not applied)",
+                    plan.operations.len()
+                ),
                 theme::label_style(),
             ),
         ]),
         Line::from(""),
     ];
 
-    for (idx, op) in plan.operations.iter().enumerate().skip(app.plan_preview_scroll) {
+    for (idx, op) in plan
+        .operations
+        .iter()
+        .enumerate()
+        .skip(app.plan_preview_scroll)
+    {
         if lines.len() >= visible + 2 {
             break;
         }
@@ -86,8 +96,14 @@ fn operation_line(op: &Operation, selected: bool, th: &ResolvedTheme) -> Line<'s
     };
     Line::from(vec![
         Span::styled("[ ] ", Style::default().fg(INFO)),
-        Span::styled(format!("{:<9} ", op.priority.as_str()), priority_style_priority(&op.priority)),
-        Span::styled(format!("{}  ", op.id), Style::default().fg(TEXT).add_modifier(Modifier::DIM)),
+        Span::styled(
+            format!("{:<9} ", op.priority.as_str()),
+            priority_style_priority(&op.priority),
+        ),
+        Span::styled(
+            format!("{}  ", op.id),
+            Style::default().fg(TEXT).add_modifier(Modifier::DIM),
+        ),
         Span::styled(op.description.clone(), desc_style),
     ])
 }

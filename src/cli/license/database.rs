@@ -52,7 +52,11 @@ impl LicenseDatabase {
             name: "Apache-2.0".to_string(),
             license_type: LicenseType::Permissive,
             risk_level: RiskLevel::Low,
-            compatible_with: vec!["MIT".to_string(), "BSD-2-Clause".to_string(), "BSD-3-Clause".to_string()],
+            compatible_with: vec![
+                "MIT".to_string(),
+                "BSD-2-Clause".to_string(),
+                "BSD-3-Clause".to_string(),
+            ],
             incompatible_with: vec![],
         });
 

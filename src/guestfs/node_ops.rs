@@ -197,7 +197,9 @@ impl Guestfs {
         }
 
         if size < 0 {
-            return Err(Error::InvalidOperation("truncate size must be non-negative".to_string()));
+            return Err(Error::InvalidOperation(
+                "truncate size must be non-negative".to_string(),
+            ));
         }
 
         let host_path = self.resolve_guest_path(path)?;

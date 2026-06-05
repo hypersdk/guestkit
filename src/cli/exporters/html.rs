@@ -2,9 +2,11 @@
 //! HTML report generation with Chart.js visualizations
 
 use crate::cli::formatters::InspectionReport;
+use crate::export::html::{
+    FilesystemInfo, InspectionData, NetworkInterface, PackageInfo, UserInfo,
+};
+use crate::export::{HtmlExportOptions, HtmlExporter};
 use anyhow::Result;
-use crate::export::{HtmlExporter, HtmlExportOptions};
-use crate::export::html::{InspectionData, FilesystemInfo, PackageInfo, UserInfo, NetworkInterface};
 use tempfile::NamedTempFile;
 
 /// Generate HTML report from inspection data using Chart.js
@@ -49,16 +51,19 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
     // Convert filesystems from storage/fstab_mounts
     let filesystems = if let Some(ref storage_section) = report.storage {
         if let Some(ref mounts) = storage_section.fstab_mounts {
-            mounts.iter().map(|fs| {
-                FilesystemInfo {
-                    device: fs.device.clone(),
-                    mountpoint: fs.mountpoint.clone(),
-                    fstype: fs.fstype.clone(),
-                    size: 0,  // Size not available in fstab
-                    used: 0,  // Used not available in fstab
-                    available: 0,  // Available not available in fstab
-                }
-            }).collect()
+            mounts
+                .iter()
+                .map(|fs| {
+                    FilesystemInfo {
+                        device: fs.device.clone(),
+                        mountpoint: fs.mountpoint.clone(),
+                        fstype: fs.fstype.clone(),
+                        size: 0,      // Size not available in fstab
+                        used: 0,      // Used not available in fstab
+                        available: 0, // Available not available in fstab
+                    }
+                })
+                .collect()
         } else {
             Vec::new()
         }
@@ -68,27 +73,32 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
 
     // Convert packages
     let packages = if let Some(ref pkg_section) = report.packages {
-        pkg_section.kernels.iter().take(100).map(|k| {
-            PackageInfo {
+        pkg_section
+            .kernels
+            .iter()
+            .take(100)
+            .map(|k| PackageInfo {
                 name: k.clone(),
                 version: format!("{} package", pkg_section.format),
                 arch: architecture.to_string(),
-            }
-        }).collect()
+            })
+            .collect()
     } else {
         Vec::new()
     };
 
     // Convert users
     let users = if let Some(ref user_section) = report.users {
-        user_section.regular_users.iter().map(|u| {
-            UserInfo {
+        user_section
+            .regular_users
+            .iter()
+            .map(|u| UserInfo {
                 username: u.username.clone(),
                 uid: u.uid.clone(),
                 home: u.home.clone(),
                 shell: u.shell.clone(),
-            }
-        }).collect()
+            })
+            .collect()
     } else {
         Vec::new()
     };
@@ -96,14 +106,17 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
     // Convert network interfaces
     let interfaces = if let Some(ref net_section) = report.network {
         if let Some(ref intfs) = net_section.interfaces {
-            intfs.iter().map(|i| {
-                NetworkInterface {
-                    name: i.name.clone(),
-                    mac_address: i.mac_address.clone(),
-                    ip_addresses: i.ip_address.join(", "),
-                    state: "up".to_string(), // Assume up if listed
-                }
-            }).collect()
+            intfs
+                .iter()
+                .map(|i| {
+                    NetworkInterface {
+                        name: i.name.clone(),
+                        mac_address: i.mac_address.clone(),
+                        ip_addresses: i.ip_address.join(", "),
+                        state: "up".to_string(), // Assume up if listed
+                    }
+                })
+                .collect()
         } else {
             Vec::new()
         }
@@ -121,8 +134,8 @@ fn convert_to_inspection_data(report: &InspectionReport) -> InspectionData {
         package_format: package_format.to_string(),
         package_manager: package_manager.to_string(),
         kernel_version: None, // Not available in current report format
-        total_memory: None, // Not available in current report format
-        vcpus: None, // Not available in current report format
+        total_memory: None,   // Not available in current report format
+        vcpus: None,          // Not available in current report format
         filesystems,
         packages,
         users,

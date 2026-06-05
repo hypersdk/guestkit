@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Software Bill of Materials (SBOM) generation module
 
-pub mod sbom;
-pub mod formats;
 pub mod cve;
+pub mod formats;
 pub mod licenses;
+pub mod sbom;
 
+use crate::Guestfs;
 use anyhow::{Context, Result};
 use chrono::Utc;
-use crate::Guestfs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-
 
 /// SBOM output format
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,11 +130,14 @@ pub fn generate_inventory<P: AsRef<Path>>(
     }
 
     // Get OS information
-    let os_name = g.inspect_get_product_name(root)
+    let os_name = g
+        .inspect_get_product_name(root)
         .unwrap_or_else(|_| "Unknown".to_string());
-    let os_version = g.inspect_get_product_variant(root)
+    let os_version = g
+        .inspect_get_product_variant(root)
         .unwrap_or_else(|_| "Unknown".to_string());
-    let architecture = g.inspect_get_arch(root)
+    let architecture = g
+        .inspect_get_arch(root)
         .unwrap_or_else(|_| "Unknown".to_string());
 
     // Scan packages
@@ -302,17 +304,12 @@ pub fn export_inventory(
             let bom = formats::to_cyclonedx(inventory)?;
             serde_json::to_string_pretty(&bom)?
         }
-        SbomFormat::Json => {
-            serde_json::to_string_pretty(inventory)?
-        }
-        SbomFormat::Csv => {
-            formats::to_csv(inventory)?
-        }
+        SbomFormat::Json => serde_json::to_string_pretty(inventory)?,
+        SbomFormat::Csv => formats::to_csv(inventory)?,
     };
 
     if let Some(path) = output {
-        std::fs::write(path, content)
-            .context(format!("Failed to write to {}", path))?;
+        std::fs::write(path, content).context(format!("Failed to write to {}", path))?;
         println!("✅ SBOM written to: {}", path);
     } else {
         println!("{}", content);
@@ -329,7 +326,10 @@ mod tests {
     fn test_sbom_format_from_str() {
         assert_eq!(SbomFormat::from_str("spdx").unwrap(), SbomFormat::Spdx);
         assert_eq!(SbomFormat::from_str("SPDX").unwrap(), SbomFormat::Spdx);
-        assert_eq!(SbomFormat::from_str("cyclonedx").unwrap(), SbomFormat::CycloneDx);
+        assert_eq!(
+            SbomFormat::from_str("cyclonedx").unwrap(),
+            SbomFormat::CycloneDx
+        );
         assert_eq!(SbomFormat::from_str("json").unwrap(), SbomFormat::Json);
         assert_eq!(SbomFormat::from_str("csv").unwrap(), SbomFormat::Csv);
     }
@@ -417,15 +417,13 @@ mod tests {
                 installed_date: None,
                 files: vec![],
                 dependencies: vec![],
-                vulnerabilities: vec![
-                    VulnerabilityInfo {
-                        cve: "CVE-2024-001".to_string(),
-                        severity: "HIGH".to_string(),
-                        score: Some(8.5),
-                        description: "Test vuln".to_string(),
-                        fixed_version: None,
-                    }
-                ],
+                vulnerabilities: vec![VulnerabilityInfo {
+                    cve: "CVE-2024-001".to_string(),
+                    severity: "HIGH".to_string(),
+                    score: Some(8.5),
+                    description: "Test vuln".to_string(),
+                    fixed_version: None,
+                }],
                 checksum: None,
             },
             PackageInfo {
@@ -451,7 +449,7 @@ mod tests {
                         score: Some(5.0),
                         description: "Test vuln 3".to_string(),
                         fixed_version: None,
-                    }
+                    },
                 ],
                 checksum: None,
             },
@@ -480,20 +478,18 @@ mod tests {
 
     #[test]
     fn test_statistics_without_size() {
-        let packages = vec![
-            PackageInfo {
-                name: "pkg1".to_string(),
-                version: "1.0".to_string(),
-                package_type: "deb".to_string(),
-                license: None,
-                size: None, // No size information
-                installed_date: None,
-                files: vec![],
-                dependencies: vec![],
-                vulnerabilities: vec![],
-                checksum: None,
-            }
-        ];
+        let packages = vec![PackageInfo {
+            name: "pkg1".to_string(),
+            version: "1.0".to_string(),
+            package_type: "deb".to_string(),
+            license: None,
+            size: None, // No size information
+            installed_date: None,
+            files: vec![],
+            dependencies: vec![],
+            vulnerabilities: vec![],
+            checksum: None,
+        }];
 
         let stats = calculate_statistics(&packages);
 

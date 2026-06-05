@@ -17,12 +17,18 @@ fn to_pyerr(err: crate::core::Error) -> PyErr {
     let msg = err.to_string();
     match &err {
         crate::core::Error::Io(_) => PyErr::new::<pyo3::exceptions::PyIOError, _>(msg),
-        crate::core::Error::NotFound(_) => PyErr::new::<pyo3::exceptions::PyFileNotFoundError, _>(msg),
-        crate::core::Error::PermissionDenied(_) => PyErr::new::<pyo3::exceptions::PyPermissionError, _>(msg),
+        crate::core::Error::NotFound(_) => {
+            PyErr::new::<pyo3::exceptions::PyFileNotFoundError, _>(msg)
+        }
+        crate::core::Error::PermissionDenied(_) => {
+            PyErr::new::<pyo3::exceptions::PyPermissionError, _>(msg)
+        }
         crate::core::Error::InvalidFormat(_) | crate::core::Error::InputValidation(_) => {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(msg)
         }
-        crate::core::Error::Unsupported(_) => PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(msg),
+        crate::core::Error::Unsupported(_) => {
+            PyErr::new::<pyo3::exceptions::PyNotImplementedError, _>(msg)
+        }
         _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(msg),
     }
 }
@@ -148,8 +154,7 @@ impl DiskConverter {
             .map_err(to_pyerr)?;
 
         Python::attach(|py| {
-            let json_str = serde_json::to_string(&info)
-                .map_err(to_pyerr_generic)?;
+            let json_str = serde_json::to_string(&info).map_err(to_pyerr_generic)?;
 
             let json_module = py.import("json")?;
             let loads = json_module.getattr("loads")?;
@@ -186,8 +191,7 @@ impl Guestfs {
     /// ```
     #[new]
     fn new() -> PyResult<Self> {
-        let handle = crate::guestfs::Guestfs::new()
-            .map_err(to_pyerr)?;
+        let handle = crate::guestfs::Guestfs::new().map_err(to_pyerr)?;
 
         Ok(Self { handle })
     }
@@ -874,10 +878,7 @@ impl Guestfs {
     ///
     /// Dictionary with stat information
     fn stat(&mut self, path: String) -> PyResult<Py<PyAny>> {
-        let stat = self
-            .handle
-            .stat(&path)
-            .map_err(to_pyerr)?;
+        let stat = self.handle.stat(&path).map_err(to_pyerr)?;
 
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -908,10 +909,7 @@ impl Guestfs {
     ///
     /// Dictionary with filesystem statistics
     fn statvfs(&mut self, path: String) -> PyResult<Py<PyAny>> {
-        let statvfs = self
-            .handle
-            .statvfs(&path)
-            .map_err(to_pyerr)?;
+        let statvfs = self.handle.statvfs(&path).map_err(to_pyerr)?;
 
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -960,43 +958,51 @@ impl Guestfs {
 
     /// Get image format
     fn inspect_get_format(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_format(&root)
+        self.handle
+            .inspect_get_format(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get init system type from inspection
     fn inspect_get_init_system(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_init_system(&root)
+        self.handle
+            .inspect_get_init_system(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get product variant
     fn inspect_get_product_variant(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_product_variant(&root)
+        self.handle
+            .inspect_get_product_variant(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get osinfo ID
     fn inspect_get_osinfo_id(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_osinfo_id(&root)
+        self.handle
+            .inspect_get_osinfo_id(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if disk is multipart
     fn inspect_is_multipart(&mut self, root: String) -> PyResult<bool> {
-        self.handle.inspect_is_multipart(&root)
+        self.handle
+            .inspect_is_multipart(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if disk is a netinst image
     fn inspect_is_netinst(&mut self, root: String) -> PyResult<bool> {
-        self.handle.inspect_is_netinst(&root)
+        self.handle
+            .inspect_is_netinst(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List applications (version 2, returns tuples of name, version, release)
     fn inspect_list_applications2(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let apps = self.handle.inspect_list_applications2(&root)
+        let apps = self
+            .handle
+            .inspect_list_applications2(&root)
             .map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
@@ -1010,19 +1016,22 @@ impl Guestfs {
 
     /// Get OS icon data
     fn inspect_get_os_icon(&mut self, root: String) -> PyResult<Vec<u8>> {
-        self.handle.inspect_get_os_icon(&root)
+        self.handle
+            .inspect_get_os_icon(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get Windows current control set key
     fn inspect_get_windows_current_control_set_key(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_windows_current_control_set_key(&root)
+        self.handle
+            .inspect_get_windows_current_control_set_key(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if disk is a live image
     fn inspect_is_live(&mut self, root: String) -> PyResult<bool> {
-        self.handle.inspect_is_live(&root)
+        self.handle
+            .inspect_is_live(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -1030,8 +1039,7 @@ impl Guestfs {
 
     /// Inspect boot configuration
     fn inspect_boot_config(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let config = self.handle.inspect_boot_config(&root)
-            .map_err(to_pyerr)?;
+        let config = self.handle.inspect_boot_config(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("bootloader", config.bootloader)?;
@@ -1044,8 +1052,7 @@ impl Guestfs {
 
     /// Inspect SSL/TLS certificates
     fn inspect_certificates(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let certs = self.handle.inspect_certificates(&root)
-            .map_err(to_pyerr)?;
+        let certs = self.handle.inspect_certificates(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for cert in certs {
@@ -1062,26 +1069,28 @@ impl Guestfs {
 
     /// Check if cloud-init is present
     fn inspect_cloud_init(&mut self, root: String) -> PyResult<bool> {
-        self.handle.inspect_cloud_init(&root)
+        self.handle
+            .inspect_cloud_init(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect container runtimes
     fn inspect_container_runtimes(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_container_runtimes(&root)
+        self.handle
+            .inspect_container_runtimes(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect cron jobs
     fn inspect_cron(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_cron(&root)
+        self.handle
+            .inspect_cron(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect databases
     fn inspect_databases(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let dbs = self.handle.inspect_databases(&root)
-            .map_err(to_pyerr)?;
+        let dbs = self.handle.inspect_databases(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for db in dbs {
@@ -1097,14 +1106,14 @@ impl Guestfs {
 
     /// Inspect DNS configuration
     fn inspect_dns(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_dns(&root)
+        self.handle
+            .inspect_dns(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect firewall configuration
     fn inspect_firewall(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let fw = self.handle.inspect_firewall(&root)
-            .map_err(to_pyerr)?;
+        let fw = self.handle.inspect_firewall(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("firewall_type", fw.firewall_type)?;
@@ -1117,8 +1126,7 @@ impl Guestfs {
 
     /// Inspect fstab entries (returns list of [device, mountpoint, fstype])
     fn inspect_fstab(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let entries = self.handle.inspect_fstab(&root)
-            .map_err(to_pyerr)?;
+        let entries = self.handle.inspect_fstab(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for (dev, mp, fs) in entries {
@@ -1131,8 +1139,7 @@ impl Guestfs {
 
     /// Inspect /etc/hosts entries
     fn inspect_hosts(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let entries = self.handle.inspect_hosts(&root)
-            .map_err(to_pyerr)?;
+        let entries = self.handle.inspect_hosts(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for entry in entries {
@@ -1147,20 +1154,21 @@ impl Guestfs {
 
     /// Inspect init system
     fn inspect_init_system(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_init_system(&root)
+        self.handle
+            .inspect_init_system(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect kernel modules
     fn inspect_kernel_modules(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_kernel_modules(&root)
+        self.handle
+            .inspect_kernel_modules(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect kernel parameters
     fn inspect_kernel_params(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let params = self.handle.inspect_kernel_params(&root)
-            .map_err(to_pyerr)?;
+        let params = self.handle.inspect_kernel_params(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             for (k, v) in params {
@@ -1172,14 +1180,14 @@ impl Guestfs {
 
     /// Inspect locale
     fn inspect_locale(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_locale(&root)
+        self.handle
+            .inspect_locale(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect LVM configuration
     fn inspect_lvm(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let info = self.handle.inspect_lvm(&root)
-            .map_err(to_pyerr)?;
+        let info = self.handle.inspect_lvm(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("physical_volumes", &info.physical_volumes)?;
@@ -1209,8 +1217,7 @@ impl Guestfs {
 
     /// Inspect network interfaces
     fn inspect_network(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let ifaces = self.handle.inspect_network(&root)
-            .map_err(to_pyerr)?;
+        let ifaces = self.handle.inspect_network(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for iface in ifaces {
@@ -1228,8 +1235,7 @@ impl Guestfs {
 
     /// Inspect packages
     fn inspect_packages(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let info = self.handle.inspect_packages(&root)
-            .map_err(to_pyerr)?;
+        let info = self.handle.inspect_packages(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("manager", &info.manager)?;
@@ -1249,8 +1255,7 @@ impl Guestfs {
 
     /// Inspect RAID arrays
     fn inspect_raid(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let arrays = self.handle.inspect_raid(&root)
-            .map_err(to_pyerr)?;
+        let arrays = self.handle.inspect_raid(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for arr in arrays {
@@ -1269,8 +1274,7 @@ impl Guestfs {
 
     /// Inspect runtimes (Python, Ruby, Node, etc.)
     fn inspect_runtimes(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let runtimes = self.handle.inspect_runtimes(&root)
-            .map_err(to_pyerr)?;
+        let runtimes = self.handle.inspect_runtimes(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             for (k, v) in runtimes {
@@ -1282,8 +1286,7 @@ impl Guestfs {
 
     /// Inspect security configuration
     fn inspect_security(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let info = self.handle.inspect_security(&root)
-            .map_err(to_pyerr)?;
+        let info = self.handle.inspect_security(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("selinux", info.selinux)?;
@@ -1303,14 +1306,14 @@ impl Guestfs {
 
     /// Inspect SELinux status
     fn inspect_selinux(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_selinux(&root)
+        self.handle
+            .inspect_selinux(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect SSH configuration
     fn inspect_ssh_config(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let config = self.handle.inspect_ssh_config(&root)
-            .map_err(to_pyerr)?;
+        let config = self.handle.inspect_ssh_config(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             for (k, v) in config {
@@ -1322,13 +1325,16 @@ impl Guestfs {
 
     /// Inspect swap partitions
     fn inspect_swap(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_swap(&root)
+        self.handle
+            .inspect_swap(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect systemd services
     fn inspect_systemd_services(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let svcs = self.handle.inspect_systemd_services(&root)
+        let svcs = self
+            .handle
+            .inspect_systemd_services(&root)
             .map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
@@ -1345,20 +1351,21 @@ impl Guestfs {
 
     /// Inspect systemd timers
     fn inspect_systemd_timers(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_systemd_timers(&root)
+        self.handle
+            .inspect_systemd_timers(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect timezone
     fn inspect_timezone(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_timezone(&root)
+        self.handle
+            .inspect_timezone(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect user accounts
     fn inspect_users(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let users = self.handle.inspect_users(&root)
-            .map_err(to_pyerr)?;
+        let users = self.handle.inspect_users(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for user in users {
@@ -1376,14 +1383,14 @@ impl Guestfs {
 
     /// Inspect VM tools installed
     fn inspect_vm_tools(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_vm_tools(&root)
+        self.handle
+            .inspect_vm_tools(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Inspect web servers
     fn inspect_web_servers(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let servers = self.handle.inspect_web_servers(&root)
-            .map_err(to_pyerr)?;
+        let servers = self.handle.inspect_web_servers(&root).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for srv in servers {
@@ -1402,61 +1409,71 @@ impl Guestfs {
 
     /// Set device read-only
     fn blockdev_setro(&mut self, device: String) -> PyResult<()> {
-        self.handle.blockdev_setro(&device)
+        self.handle
+            .blockdev_setro(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set device read-write
     fn blockdev_setrw(&mut self, device: String) -> PyResult<()> {
-        self.handle.blockdev_setrw(&device)
+        self.handle
+            .blockdev_setrw(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get device read-only flag
     fn blockdev_getro(&mut self, device: String) -> PyResult<bool> {
-        self.handle.blockdev_getro(&device)
+        self.handle
+            .blockdev_getro(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Flush device buffers
     fn blockdev_flushbufs(&mut self, device: String) -> PyResult<()> {
-        self.handle.blockdev_flushbufs(&device)
+        self.handle
+            .blockdev_flushbufs(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Re-read partition table
     fn blockdev_rereadpt(&mut self, device: String) -> PyResult<()> {
-        self.handle.blockdev_rereadpt(&device)
+        self.handle
+            .blockdev_rereadpt(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get device block size
     fn blockdev_getbsz(&mut self, device: String) -> PyResult<i32> {
-        self.handle.blockdev_getbsz(&device)
+        self.handle
+            .blockdev_getbsz(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set device block size
     fn blockdev_setbsz(&mut self, device: String, blocksize: i32) -> PyResult<()> {
-        self.handle.blockdev_setbsz(&device, blocksize)
+        self.handle
+            .blockdev_setbsz(&device, blocksize)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get total device sectors
     fn blockdev_getsectors(&mut self, device: String) -> PyResult<i64> {
-        self.handle.blockdev_getsectors(&device)
+        self.handle
+            .blockdev_getsectors(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get device sector size
     fn blockdev_getss(&mut self, device: String) -> PyResult<i32> {
-        self.handle.blockdev_getss(&device)
+        self.handle
+            .blockdev_getss(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get device size in 512-byte sectors
     fn blockdev_getsz(&self, device: String) -> PyResult<i64> {
-        self.handle.blockdev_getsz(&device)
+        self.handle
+            .blockdev_getsz(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -1464,8 +1481,7 @@ impl Guestfs {
 
     /// List partitions on a device
     fn part_list(&self, device: String) -> PyResult<Py<PyAny>> {
-        let parts = self.handle.part_list(&device)
-            .map_err(to_pyerr)?;
+        let parts = self.handle.part_list(&device).map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for p in parts {
@@ -1481,110 +1497,134 @@ impl Guestfs {
     }
 
     /// Add a partition
-    fn part_add(&mut self, device: String, prlogex: String, startsect: i64, endsect: i64) -> PyResult<()> {
-        self.handle.part_add(&device, &prlogex, startsect, endsect)
+    fn part_add(
+        &mut self,
+        device: String,
+        prlogex: String,
+        startsect: i64,
+        endsect: i64,
+    ) -> PyResult<()> {
+        self.handle
+            .part_add(&device, &prlogex, startsect, endsect)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Delete a partition
     fn part_del(&mut self, device: String, partnum: i32) -> PyResult<()> {
-        self.handle.part_del(&device, partnum)
+        self.handle
+            .part_del(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Initialize partition table
     fn part_init(&mut self, device: String, parttype: String) -> PyResult<()> {
-        self.handle.part_init(&device, &parttype)
+        self.handle
+            .part_init(&device, &parttype)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Resize a partition
     fn part_resize(&mut self, device: String, partnum: i32, endsect: i64) -> PyResult<()> {
-        self.handle.part_resize(&device, partnum, endsect)
+        self.handle
+            .part_resize(&device, partnum, endsect)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get bootable flag
     fn part_get_bootable(&self, device: String, partnum: i32) -> PyResult<bool> {
-        self.handle.part_get_bootable(&device, partnum)
+        self.handle
+            .part_get_bootable(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set bootable flag
     fn part_set_bootable(&mut self, device: String, partnum: i32, bootable: bool) -> PyResult<()> {
-        self.handle.part_set_bootable(&device, partnum, bootable)
+        self.handle
+            .part_set_bootable(&device, partnum, bootable)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get MBR partition type ID
     fn part_get_mbr_id(&self, device: String, partnum: i32) -> PyResult<i32> {
-        self.handle.part_get_mbr_id(&device, partnum)
+        self.handle
+            .part_get_mbr_id(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set MBR partition type ID
     fn part_set_mbr_id(&mut self, device: String, partnum: i32, idbyte: i32) -> PyResult<()> {
-        self.handle.part_set_mbr_id(&device, partnum, idbyte)
+        self.handle
+            .part_set_mbr_id(&device, partnum, idbyte)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get partition name
     fn part_get_name(&mut self, device: String, partnum: i32) -> PyResult<String> {
-        self.handle.part_get_name(&device, partnum)
+        self.handle
+            .part_get_name(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set partition name
     fn part_set_name(&mut self, device: String, partnum: i32, name: String) -> PyResult<()> {
-        self.handle.part_set_name(&device, partnum, &name)
+        self.handle
+            .part_set_name(&device, partnum, &name)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get partition table type
     fn part_get_parttype(&self, device: String) -> PyResult<String> {
-        self.handle.part_get_parttype(&device)
+        self.handle
+            .part_get_parttype(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set partition table type
     fn part_set_parttype(&mut self, device: String, parttype: String) -> PyResult<()> {
-        self.handle.part_set_parttype(&device, &parttype)
+        self.handle
+            .part_set_parttype(&device, &parttype)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get device name from partition
     fn part_to_dev(&self, partition: String) -> PyResult<String> {
-        self.handle.part_to_dev(&partition)
+        self.handle
+            .part_to_dev(&partition)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get partition number
     fn part_to_partnum(&self, partition: String) -> PyResult<i32> {
-        self.handle.part_to_partnum(&partition)
+        self.handle
+            .part_to_partnum(&partition)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get GPT partition type GUID
     fn part_get_gpt_type(&mut self, device: String, partnum: i32) -> PyResult<String> {
-        self.handle.part_get_gpt_type(&device, partnum)
+        self.handle
+            .part_get_gpt_type(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set GPT partition type GUID
     fn part_set_gpt_type(&mut self, device: String, partnum: i32, guid: String) -> PyResult<()> {
-        self.handle.part_set_gpt_type(&device, partnum, &guid)
+        self.handle
+            .part_set_gpt_type(&device, partnum, &guid)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get GPT partition GUID
     fn part_get_gpt_guid(&mut self, device: String, partnum: i32) -> PyResult<String> {
-        self.handle.part_get_gpt_guid(&device, partnum)
+        self.handle
+            .part_get_gpt_guid(&device, partnum)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get disk GUID
     fn part_get_disk_guid(&mut self, device: String) -> PyResult<String> {
-        self.handle.part_get_disk_guid(&device)
+        self.handle
+            .part_get_disk_guid(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -1592,106 +1632,150 @@ impl Guestfs {
 
     /// Create a filesystem
     fn mkfs(&mut self, fstype: String, device: String) -> PyResult<()> {
-        self.handle.mkfs(&fstype, &device)
+        self.handle
+            .mkfs(&fstype, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create a filesystem with options
     #[pyo3(signature = (fstype, device, blocksize=None, features=None, label=None))]
-    fn mkfs_opts(&mut self, fstype: String, device: String, blocksize: Option<i32>, features: Option<String>, label: Option<String>) -> PyResult<()> {
-        self.handle.mkfs_opts(&fstype, &device, blocksize, features.as_deref(), label.as_deref())
+    fn mkfs_opts(
+        &mut self,
+        fstype: String,
+        device: String,
+        blocksize: Option<i32>,
+        features: Option<String>,
+        label: Option<String>,
+    ) -> PyResult<()> {
+        self.handle
+            .mkfs_opts(
+                &fstype,
+                &device,
+                blocksize,
+                features.as_deref(),
+                label.as_deref(),
+            )
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check filesystem
     fn fsck(&mut self, fstype: String, device: String) -> PyResult<i32> {
-        self.handle.fsck(&fstype, &device)
+        self.handle
+            .fsck(&fstype, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check ext2/3/4 filesystem
     fn e2fsck(&mut self, device: String, correct: bool, forceall: bool) -> PyResult<()> {
-        self.handle.e2fsck(&device, correct, forceall)
+        self.handle
+            .e2fsck(&device, correct, forceall)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Tune ext2/3/4 filesystem
     #[pyo3(signature = (device, force=false, maxmountcount=None, label=None))]
-    fn tune2fs(&mut self, device: String, force: bool, maxmountcount: Option<i32>, label: Option<String>) -> PyResult<()> {
-        self.handle.tune2fs(&device, force, maxmountcount, label.as_deref())
+    fn tune2fs(
+        &mut self,
+        device: String,
+        force: bool,
+        maxmountcount: Option<i32>,
+        label: Option<String>,
+    ) -> PyResult<()> {
+        self.handle
+            .tune2fs(&device, force, maxmountcount, label.as_deref())
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Repair XFS filesystem
     #[pyo3(signature = (device, forcelogzero=false, nomodify=false))]
     fn xfs_repair(&mut self, device: String, forcelogzero: bool, nomodify: bool) -> PyResult<i32> {
-        self.handle.xfs_repair(&device, forcelogzero, nomodify)
+        self.handle
+            .xfs_repair(&device, forcelogzero, nomodify)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get XFS filesystem info
     fn xfs_info(&mut self, pathordevice: String) -> PyResult<String> {
-        self.handle.xfs_info(&pathordevice)
+        self.handle
+            .xfs_info(&pathordevice)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create ext2/3/4 filesystem
-    fn mke2fs(&mut self, device: String, blockscount: i64, blocksize: i64, fragsize: i64, reserved: i64, inode: i64) -> PyResult<()> {
-        self.handle.mke2fs(&device, blockscount, blocksize, fragsize, reserved, inode)
+    fn mke2fs(
+        &mut self,
+        device: String,
+        blockscount: i64,
+        blocksize: i64,
+        fragsize: i64,
+        reserved: i64,
+        inode: i64,
+    ) -> PyResult<()> {
+        self.handle
+            .mke2fs(&device, blockscount, blocksize, fragsize, reserved, inode)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Zero free blocks on ext2/3/4
     fn zerofree(&mut self, device: String) -> PyResult<()> {
-        self.handle.zerofree(&device)
+        self.handle
+            .zerofree(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Trim filesystem
     fn fstrim(&mut self, mountpoint: String) -> PyResult<()> {
-        self.handle.fstrim(&mountpoint)
+        self.handle
+            .fstrim(&mountpoint)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get filesystem label
     fn get_label(&mut self, mountable: String) -> PyResult<String> {
-        self.handle.get_label(&mountable)
+        self.handle
+            .get_label(&mountable)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set filesystem label
     fn set_label(&mut self, mountable: String, label: String) -> PyResult<()> {
-        self.handle.set_label(&mountable, &label)
+        self.handle
+            .set_label(&mountable, &label)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get filesystem UUID
     fn get_uuid(&mut self, device: String) -> PyResult<String> {
-        self.handle.get_uuid(&device)
+        self.handle
+            .get_uuid(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set filesystem UUID
     fn set_uuid(&mut self, device: String, uuid: String) -> PyResult<()> {
-        self.handle.set_uuid(&device, &uuid)
+        self.handle
+            .set_uuid(&device, &uuid)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set random filesystem UUID
     fn set_uuid_random(&mut self, device: String) -> PyResult<()> {
-        self.handle.set_uuid_random(&device)
+        self.handle
+            .set_uuid_random(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get disk usage report
     fn df(&mut self) -> PyResult<String> {
-        self.handle.df()
+        self.handle
+            .df()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get human-readable disk usage report
     fn df_h(&mut self) -> PyResult<String> {
-        self.handle.df_h()
+        self.handle
+            .df_h()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -1699,163 +1783,190 @@ impl Guestfs {
 
     /// Copy file
     fn cp(&mut self, src: String, dest: String) -> PyResult<()> {
-        self.handle.cp(&src, &dest)
+        self.handle
+            .cp(&src, &dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Copy file preserving attributes
     fn cp_a(&mut self, src: String, dest: String) -> PyResult<()> {
-        self.handle.cp_a(&src, &dest)
+        self.handle
+            .cp_a(&src, &dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Copy file recursively
     fn cp_r(&mut self, src: String, dest: String) -> PyResult<()> {
-        self.handle.cp_r(&src, &dest)
+        self.handle
+            .cp_r(&src, &dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Move file
     fn mv(&mut self, src: String, dest: String) -> PyResult<()> {
-        self.handle.mv(&src, &dest)
+        self.handle
+            .mv(&src, &dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Touch (create/update timestamp) file
     fn touch(&mut self, path: String) -> PyResult<()> {
-        self.handle.touch(&path)
+        self.handle
+            .touch(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Find files recursively
     fn find(&mut self, directory: String) -> PyResult<Vec<String>> {
-        self.handle.find(&directory)
+        self.handle
+            .find(&directory)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Find files and write null-separated list
     fn find0(&mut self, directory: String, files: String) -> PyResult<()> {
-        self.handle.find0(&directory, &files)
+        self.handle
+            .find0(&directory, &files)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Grep file contents
     fn grep(&mut self, regex: String, path: String) -> PyResult<Vec<String>> {
-        self.handle.grep(&regex, &path)
+        self.handle
+            .grep(&regex, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Extended grep
     fn egrep(&mut self, regex: String, path: String) -> PyResult<Vec<String>> {
-        self.handle.egrep(&regex, &path)
+        self.handle
+            .egrep(&regex, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Fixed-string grep
     fn fgrep(&mut self, pattern: String, path: String) -> PyResult<Vec<String>> {
-        self.handle.fgrep(&pattern, &path)
+        self.handle
+            .fgrep(&pattern, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read first 10 lines of file
     fn head(&mut self, path: String) -> PyResult<Vec<String>> {
-        self.handle.head(&path)
+        self.handle
+            .head(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read first N lines of file
     fn head_n(&mut self, nrlines: i32, path: String) -> PyResult<Vec<String>> {
-        self.handle.head_n(nrlines, &path)
+        self.handle
+            .head_n(nrlines, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read last 10 lines of file
     fn tail(&mut self, path: String) -> PyResult<Vec<String>> {
-        self.handle.tail(&path)
+        self.handle
+            .tail(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read last N lines of file
     fn tail_n(&mut self, nrlines: i32, path: String) -> PyResult<Vec<String>> {
-        self.handle.tail_n(nrlines, &path)
+        self.handle
+            .tail_n(nrlines, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get disk usage of path
     fn du(&mut self, path: String) -> PyResult<i64> {
-        self.handle.du(&path)
+        self.handle
+            .du(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file size
     fn filesize(&mut self, file: String) -> PyResult<i64> {
-        self.handle.filesize(&file)
+        self.handle
+            .filesize(&file)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Resolve path to absolute
     fn realpath(&mut self, path: String) -> PyResult<String> {
-        self.handle.realpath(&path)
+        self.handle
+            .realpath(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read file lines
     fn read_lines(&mut self, path: String) -> PyResult<Vec<String>> {
-        self.handle.read_lines(&path)
+        self.handle
+            .read_lines(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Append data to file
     fn write_append(&mut self, path: String, content: Vec<u8>) -> PyResult<()> {
-        self.handle.write_append(&path, &content)
+        self.handle
+            .write_append(&path, &content)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Long listing of directory
     fn ll(&mut self, directory: String) -> PyResult<String> {
-        self.handle.ll(&directory)
+        self.handle
+            .ll(&directory)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create hard link
     fn ln(&mut self, target: String, linkname: String) -> PyResult<()> {
-        self.handle.ln(&target, &linkname)
+        self.handle
+            .ln(&target, &linkname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create hard link (force)
     fn ln_f(&mut self, target: String, linkname: String) -> PyResult<()> {
-        self.handle.ln_f(&target, &linkname)
+        self.handle
+            .ln_f(&target, &linkname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create symbolic link
     fn ln_s(&mut self, target: String, linkname: String) -> PyResult<()> {
-        self.handle.ln_s(&target, &linkname)
+        self.handle
+            .ln_s(&target, &linkname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create symbolic link (force)
     fn ln_sf(&mut self, target: String, linkname: String) -> PyResult<()> {
-        self.handle.ln_sf(&target, &linkname)
+        self.handle
+            .ln_sf(&target, &linkname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read symbolic link target
     fn readlink(&mut self, path: String) -> PyResult<String> {
-        self.handle.readlink(&path)
+        self.handle
+            .readlink(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Truncate file to zero size
     fn truncate(&mut self, path: String) -> PyResult<()> {
-        self.handle.truncate(&path)
+        self.handle
+            .truncate(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Truncate file to given size
     fn truncate_size(&mut self, path: String, size: i64) -> PyResult<()> {
-        self.handle.truncate_size(&path, size)
+        self.handle
+            .truncate_size(&path, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -1863,8 +1974,7 @@ impl Guestfs {
 
     /// Get file stat (without following symlinks)
     fn lstat(&mut self, path: String) -> PyResult<Py<PyAny>> {
-        let stat = self.handle.lstat(&path)
-            .map_err(to_pyerr)?;
+        let stat = self.handle.lstat(&path).map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("dev", stat.dev)?;
@@ -1886,115 +1996,134 @@ impl Guestfs {
 
     /// Get file mode
     fn get_mode(&mut self, path: String) -> PyResult<u32> {
-        self.handle.get_mode(&path)
+        self.handle
+            .get_mode(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file UID
     fn get_uid(&mut self, path: String) -> PyResult<u32> {
-        self.handle.get_uid(&path)
+        self.handle
+            .get_uid(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file GID
     fn get_gid(&mut self, path: String) -> PyResult<u32> {
-        self.handle.get_gid(&path)
+        self.handle
+            .get_gid(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file access time
     fn get_atime(&mut self, path: String) -> PyResult<i64> {
-        self.handle.get_atime(&path)
+        self.handle
+            .get_atime(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file modification time
     fn get_mtime(&mut self, path: String) -> PyResult<i64> {
-        self.handle.get_mtime(&path)
+        self.handle
+            .get_mtime(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file change time
     fn get_ctime(&mut self, path: String) -> PyResult<i64> {
-        self.handle.get_ctime(&path)
+        self.handle
+            .get_ctime(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file size
     fn get_size(&mut self, path: String) -> PyResult<i64> {
-        self.handle.get_size(&path)
+        self.handle
+            .get_size(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get number of hard links
     fn get_nlink(&mut self, path: String) -> PyResult<u64> {
-        self.handle.get_nlink(&path)
+        self.handle
+            .get_nlink(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if path is a symbolic link
     fn is_symlink(&mut self, path: String) -> PyResult<bool> {
-        self.handle.is_symlink(&path)
+        self.handle
+            .is_symlink(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if path is a block device
     fn is_blockdev(&mut self, path: String) -> PyResult<bool> {
-        self.handle.is_blockdev(&path)
+        self.handle
+            .is_blockdev(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if path is a character device
     fn is_chardev(&mut self, path: String) -> PyResult<bool> {
-        self.handle.is_chardev(&path)
+        self.handle
+            .is_chardev(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if path is a FIFO
     fn is_fifo(&mut self, path: String) -> PyResult<bool> {
-        self.handle.is_fifo(&path)
+        self.handle
+            .is_fifo(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if path is a socket
     fn is_socket(&mut self, path: String) -> PyResult<bool> {
-        self.handle.is_socket(&path)
+        self.handle
+            .is_socket(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Recursively change permissions
     fn chmod_recursive(&mut self, mode: i32, path: String) -> PyResult<()> {
-        self.handle.chmod_recursive(mode, &path)
+        self.handle
+            .chmod_recursive(mode, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Change owner by name
     fn chown_by_name(&mut self, username: String, groupname: String, path: String) -> PyResult<()> {
-        self.handle.chown_by_name(&username, &groupname, &path)
+        self.handle
+            .chown_by_name(&username, &groupname, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Recursively change owner
     fn chown_recursive(&mut self, owner: i32, group: i32, path: String) -> PyResult<()> {
-        self.handle.chown_recursive(owner, group, &path)
+        self.handle
+            .chown_recursive(owner, group, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file owner UID
     fn file_owner(&mut self, path: String) -> PyResult<u32> {
-        self.handle.file_owner(&path)
+        self.handle
+            .file_owner(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file group GID
     fn file_group(&mut self, path: String) -> PyResult<u32> {
-        self.handle.file_group(&path)
+        self.handle
+            .file_group(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file permissions mode
     fn file_mode(&mut self, path: String) -> PyResult<u32> {
-        self.handle.file_mode(&path)
+        self.handle
+            .file_mode(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2002,25 +2131,29 @@ impl Guestfs {
 
     /// Get extended attribute value
     fn getxattr(&mut self, path: String, name: String) -> PyResult<Vec<u8>> {
-        self.handle.getxattr(&path, &name)
+        self.handle
+            .getxattr(&path, &name)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set extended attribute
     fn setxattr(&mut self, xattr: String, val: String, vallen: i32, path: String) -> PyResult<()> {
-        self.handle.setxattr(&xattr, &val, vallen, &path)
+        self.handle
+            .setxattr(&xattr, &val, vallen, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Remove extended attribute
     fn removexattr(&mut self, xattr: String, path: String) -> PyResult<()> {
-        self.handle.removexattr(&xattr, &path)
+        self.handle
+            .removexattr(&xattr, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List extended attributes
     fn listxattrs(&mut self, path: String) -> PyResult<Vec<String>> {
-        self.handle.listxattrs(&path)
+        self.handle
+            .listxattrs(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2028,31 +2161,36 @@ impl Guestfs {
 
     /// Get file ACL
     fn acl_get_file(&mut self, path: String, acltype: String) -> PyResult<String> {
-        self.handle.acl_get_file(&path, &acltype)
+        self.handle
+            .acl_get_file(&path, &acltype)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set file ACL
     fn acl_set_file(&mut self, path: String, acltype: String, acl: String) -> PyResult<()> {
-        self.handle.acl_set_file(&path, &acltype, &acl)
+        self.handle
+            .acl_set_file(&path, &acltype, &acl)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Delete default ACL
     fn acl_delete_def_file(&mut self, path: String) -> PyResult<()> {
-        self.handle.acl_delete_def_file(&path)
+        self.handle
+            .acl_delete_def_file(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get POSIX ACL as text
     fn getfacl(&mut self, path: String) -> PyResult<String> {
-        self.handle.getfacl(&path)
+        self.handle
+            .getfacl(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set POSIX ACL from text
     fn setfacl(&mut self, mode: String, path: String, acl: String) -> PyResult<()> {
-        self.handle.setfacl(&mode, &path, &acl)
+        self.handle
+            .setfacl(&mode, &path, &acl)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2060,20 +2198,21 @@ impl Guestfs {
 
     /// Create logical volume
     fn lvcreate(&mut self, logvol: String, volgroup: String, mbytes: i32) -> PyResult<()> {
-        self.handle.lvcreate(&logvol, &volgroup, mbytes)
+        self.handle
+            .lvcreate(&logvol, &volgroup, mbytes)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Remove logical volume
     fn lvremove(&mut self, device: String) -> PyResult<()> {
-        self.handle.lvremove(&device)
+        self.handle
+            .lvremove(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List logical volumes with full details
     fn lvs_full(&self) -> PyResult<Py<PyAny>> {
-        let lvs = self.handle.lvs_full()
-            .map_err(to_pyerr)?;
+        let lvs = self.handle.lvs_full().map_err(to_pyerr)?;
         Python::attach(|py| {
             let list = pyo3::types::PyList::empty(py);
             for lv in lvs {
@@ -2092,13 +2231,15 @@ impl Guestfs {
     /// Activate volume groups
     fn vg_activate(&mut self, activate: bool, volgroups: Vec<String>) -> PyResult<()> {
         let refs: Vec<&str> = volgroups.iter().map(|s| s.as_str()).collect();
-        self.handle.vg_activate(activate, &refs)
+        self.handle
+            .vg_activate(activate, &refs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Activate all volume groups
     fn vg_activate_all(&mut self, activate: bool) -> PyResult<()> {
-        self.handle.vg_activate_all(activate)
+        self.handle
+            .vg_activate_all(activate)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2106,37 +2247,49 @@ impl Guestfs {
 
     /// Format device with LUKS encryption
     fn luks_format(&mut self, device: String, key: String, keyslot: i32) -> PyResult<()> {
-        self.handle.luks_format(&device, &key, keyslot)
+        self.handle
+            .luks_format(&device, &key, keyslot)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Open LUKS device
     fn luks_open(&mut self, device: String, key: String, mapname: String) -> PyResult<()> {
-        self.handle.luks_open(&device, &key, &mapname)
+        self.handle
+            .luks_open(&device, &key, &mapname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Open LUKS device read-only
     fn luks_open_ro(&mut self, device: String, key: String, mapname: String) -> PyResult<()> {
-        self.handle.luks_open_ro(&device, &key, &mapname)
+        self.handle
+            .luks_open_ro(&device, &key, &mapname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Close LUKS device
     fn luks_close(&mut self, device: String) -> PyResult<()> {
-        self.handle.luks_close(&device)
+        self.handle
+            .luks_close(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Add LUKS key
-    fn luks_add_key(&mut self, device: String, key: String, newkey: String, keyslot: i32) -> PyResult<()> {
-        self.handle.luks_add_key(&device, &key, &newkey, keyslot)
+    fn luks_add_key(
+        &mut self,
+        device: String,
+        key: String,
+        newkey: String,
+        keyslot: i32,
+    ) -> PyResult<()> {
+        self.handle
+            .luks_add_key(&device, &key, &newkey, keyslot)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get LUKS UUID
     fn luks_uuid(&mut self, device: String) -> PyResult<String> {
-        self.handle.luks_uuid(&device)
+        self.handle
+            .luks_uuid(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2144,67 +2297,78 @@ impl Guestfs {
 
     /// Get bootloader type
     fn get_bootloader(&mut self) -> PyResult<String> {
-        self.handle.get_bootloader()
+        self.handle
+            .get_bootloader()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get kernel command line
     fn get_cmdline(&mut self) -> PyResult<String> {
-        self.handle.get_cmdline()
+        self.handle
+            .get_cmdline()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get default kernel path
     fn get_default_kernel(&mut self) -> PyResult<String> {
-        self.handle.get_default_kernel()
+        self.handle
+            .get_default_kernel()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get initrd path for a kernel
     fn get_initrd(&mut self, kernel: String) -> PyResult<String> {
-        self.handle.get_initrd(&kernel)
+        self.handle
+            .get_initrd(&kernel)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if system uses UEFI
     fn is_uefi(&mut self) -> PyResult<bool> {
-        self.handle.is_uefi()
+        self.handle
+            .is_uefi()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List available kernels
     fn list_kernels(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_kernels()
+        self.handle
+            .list_kernels()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List fstab entries as strings
     fn list_fstab(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_fstab()
+        self.handle
+            .list_fstab()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read fstab content
     fn read_fstab(&mut self) -> PyResult<String> {
-        self.handle.read_fstab()
+        self.handle
+            .read_fstab()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Install GRUB bootloader
     fn grub_install(&mut self, root: String, device: String) -> PyResult<()> {
-        self.handle.grub_install(&root, &device)
+        self.handle
+            .grub_install(&root, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read GRUB configuration
     fn grub_read_config(&mut self, path: String) -> PyResult<String> {
-        self.handle.grub_read_config(&path)
+        self.handle
+            .grub_read_config(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List GRUB boot entries
     fn grub_list_entries(&mut self) -> PyResult<Vec<String>> {
-        self.handle.grub_list_entries()
+        self.handle
+            .grub_list_entries()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2212,37 +2376,43 @@ impl Guestfs {
 
     /// Get hostname
     fn get_hostname(&mut self) -> PyResult<String> {
-        self.handle.get_hostname()
+        self.handle
+            .get_hostname()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set hostname
     fn set_hostname(&mut self, hostname: String) -> PyResult<()> {
-        self.handle.set_hostname(&hostname)
+        self.handle
+            .set_hostname(&hostname)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get DNS servers
     fn get_dns(&mut self) -> PyResult<Vec<String>> {
-        self.handle.get_dns()
+        self.handle
+            .get_dns()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get network configuration for an interface
     fn get_network_config(&mut self, interface: String) -> PyResult<String> {
-        self.handle.get_network_config(&interface)
+        self.handle
+            .get_network_config(&interface)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List network interfaces
     fn list_network_interfaces(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_network_interfaces()
+        self.handle
+            .list_network_interfaces()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read /etc/hosts content
     fn read_etc_hosts(&mut self) -> PyResult<String> {
-        self.handle.read_etc_hosts()
+        self.handle
+            .read_etc_hosts()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2250,97 +2420,113 @@ impl Guestfs {
 
     /// Get init system type
     fn get_init_system(&mut self) -> PyResult<String> {
-        self.handle.get_init_system()
+        self.handle
+            .get_init_system()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List all services
     fn list_services(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_services()
+        self.handle
+            .list_services()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List enabled services
     fn list_enabled_services(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_enabled_services()
+        self.handle
+            .list_enabled_services()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List disabled services
     fn list_disabled_services(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_disabled_services()
+        self.handle
+            .list_disabled_services()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if service is enabled
     fn is_service_enabled(&mut self, service: String) -> PyResult<bool> {
-        self.handle.is_service_enabled(&service)
+        self.handle
+            .is_service_enabled(&service)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get service status
     fn get_service_status(&mut self, service: String) -> PyResult<String> {
-        self.handle.get_service_status(&service)
+        self.handle
+            .get_service_status(&service)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get kernel version
     fn get_kernel_version(&mut self) -> PyResult<String> {
-        self.handle.get_kernel_version()
+        self.handle
+            .get_kernel_version()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get locale
     fn get_locale(&mut self) -> PyResult<String> {
-        self.handle.get_locale()
+        self.handle
+            .get_locale()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get timezone
     fn get_timezone(&mut self) -> PyResult<String> {
-        self.handle.get_timezone()
+        self.handle
+            .get_timezone()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set locale
     fn set_locale(&mut self, locale: String) -> PyResult<()> {
-        self.handle.set_locale(&locale)
+        self.handle
+            .set_locale(&locale)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set timezone
     fn set_timezone(&mut self, timezone: String) -> PyResult<()> {
-        self.handle.set_timezone(&timezone)
+        self.handle
+            .set_timezone(&timezone)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get machine ID
     fn get_machine_id(&mut self) -> PyResult<String> {
-        self.handle.get_machine_id()
+        self.handle
+            .get_machine_id()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List users
     fn list_users(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_users()
+        self.handle
+            .list_users()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List groups
     fn list_groups(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_groups()
+        self.handle
+            .list_groups()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List systemd units
     fn list_systemd_units(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_systemd_units()
+        self.handle
+            .list_systemd_units()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get environment variables
     fn get_environment(&mut self) -> PyResult<Vec<String>> {
-        self.handle.get_environment()
+        self.handle
+            .get_environment()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2348,37 +2534,43 @@ impl Guestfs {
 
     /// Get SELinux context
     fn getcon(&mut self) -> PyResult<String> {
-        self.handle.getcon()
+        self.handle
+            .getcon()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set SELinux context
     fn setcon(&mut self, context: String) -> PyResult<()> {
-        self.handle.setcon(&context)
+        self.handle
+            .setcon(&context)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Relabel SELinux contexts
     fn selinux_relabel(&mut self, specfile: String, path: String, force: bool) -> PyResult<()> {
-        self.handle.selinux_relabel(&specfile, &path, force)
+        self.handle
+            .selinux_relabel(&specfile, &path, force)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Restore SELinux contexts
     fn restorecon(&mut self, path: String, recursive: bool) -> PyResult<()> {
-        self.handle.restorecon(&path, recursive)
+        self.handle
+            .restorecon(&path, recursive)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file capabilities
     fn getcap(&mut self, path: String) -> PyResult<String> {
-        self.handle.getcap(&path)
+        self.handle
+            .getcap(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set file capabilities
     fn setcap(&mut self, cap: String, path: String) -> PyResult<()> {
-        self.handle.setcap(&cap, &path)
+        self.handle
+            .setcap(&cap, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2386,49 +2578,57 @@ impl Guestfs {
 
     /// Run all sysprep operations
     fn sysprep_all(&mut self) -> PyResult<()> {
-        self.handle.sysprep_all()
+        self.handle
+            .sysprep_all()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Clear bash history
     fn sysprep_bash_history(&mut self) -> PyResult<()> {
-        self.handle.sysprep_bash_history()
+        self.handle
+            .sysprep_bash_history()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Remove SSH host keys
     fn sysprep_ssh_hostkeys(&mut self) -> PyResult<()> {
-        self.handle.sysprep_ssh_hostkeys()
+        self.handle
+            .sysprep_ssh_hostkeys()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Reset machine ID
     fn sysprep_machine_id(&mut self) -> PyResult<()> {
-        self.handle.sysprep_machine_id()
+        self.handle
+            .sysprep_machine_id()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Clear log files
     fn sysprep_logfiles(&mut self) -> PyResult<()> {
-        self.handle.sysprep_logfiles()
+        self.handle
+            .sysprep_logfiles()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Clear temporary files
     fn sysprep_tmp_files(&mut self) -> PyResult<()> {
-        self.handle.sysprep_tmp_files()
+        self.handle
+            .sysprep_tmp_files()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Remove network hardware addresses
     fn sysprep_net_hwaddr(&mut self) -> PyResult<()> {
-        self.handle.sysprep_net_hwaddr()
+        self.handle
+            .sysprep_net_hwaddr()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Clear package manager cache
     fn sysprep_package_cache(&mut self) -> PyResult<()> {
-        self.handle.sysprep_package_cache()
+        self.handle
+            .sysprep_package_cache()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2436,31 +2636,37 @@ impl Guestfs {
 
     /// Get Windows system root
     fn inspect_get_windows_systemroot(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_windows_systemroot(&root)
+        self.handle
+            .inspect_get_windows_systemroot(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get Windows version (major, minor)
     fn inspect_get_windows_version(&mut self, root: String) -> PyResult<(i32, i32)> {
-        self.handle.inspect_get_windows_version(&root)
+        self.handle
+            .inspect_get_windows_version(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get path to Windows SOFTWARE hive
     fn inspect_get_windows_software_hive(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_windows_software_hive(&root)
+        self.handle
+            .inspect_get_windows_software_hive(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get path to Windows SYSTEM hive
     fn inspect_get_windows_system_hive(&mut self, root: String) -> PyResult<String> {
-        self.handle.inspect_get_windows_system_hive(&root)
+        self.handle
+            .inspect_get_windows_system_hive(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get Windows drive letter mappings
     fn inspect_get_drive_mappings(&mut self, root: String) -> PyResult<Py<PyAny>> {
-        let mappings = self.handle.inspect_get_drive_mappings(&root)
+        let mappings = self
+            .handle
+            .inspect_get_drive_mappings(&root)
             .map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -2473,31 +2679,36 @@ impl Guestfs {
 
     /// List Windows drivers
     fn inspect_list_windows_drivers(&mut self, root: String) -> PyResult<Vec<String>> {
-        self.handle.inspect_list_windows_drivers(&root)
+        self.handle
+            .inspect_list_windows_drivers(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if Windows is hibernated
     fn is_windows_hibernated(&mut self) -> PyResult<bool> {
-        self.handle.is_windows_hibernated()
+        self.handle
+            .is_windows_hibernated()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Download a registry hive
     fn download_hive(&mut self, hive_path: String, local_path: String) -> PyResult<()> {
-        self.handle.download_hive(&hive_path, &local_path)
+        self.handle
+            .download_hive(&hive_path, &local_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Upload a registry hive
     fn upload_hive(&mut self, local_path: String, hive_path: String) -> PyResult<()> {
-        self.handle.upload_hive(&local_path, &hive_path)
+        self.handle
+            .upload_hive(&local_path, &hive_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get OS icon
     fn inspect_get_icon(&mut self, root: String) -> PyResult<Vec<u8>> {
-        self.handle.inspect_get_icon(&root)
+        self.handle
+            .inspect_get_icon(&root)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2505,43 +2716,50 @@ impl Guestfs {
 
     /// Create a disk image
     fn disk_create(&mut self, filename: String, format: String, size: i64) -> PyResult<()> {
-        self.handle.disk_create(&filename, &format, size)
+        self.handle
+            .disk_create(&filename, &format, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Detect disk image format
     fn disk_format(&mut self, filename: String) -> PyResult<String> {
-        self.handle.disk_format(&filename)
+        self.handle
+            .disk_format(&filename)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get virtual disk size
     fn disk_virtual_size(&mut self, filename: String) -> PyResult<i64> {
-        self.handle.disk_virtual_size(&filename)
+        self.handle
+            .disk_virtual_size(&filename)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if disk has backing file
     fn disk_has_backing_file(&mut self, filename: String) -> PyResult<bool> {
-        self.handle.disk_has_backing_file(&filename)
+        self.handle
+            .disk_has_backing_file(&filename)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Resize disk image
     fn disk_resize(&mut self, filename: String, size: i64) -> PyResult<()> {
-        self.handle.disk_resize(&filename, size)
+        self.handle
+            .disk_resize(&filename, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Zero free space on filesystem
     fn zero_free_space(&mut self, directory: String) -> PyResult<()> {
-        self.handle.zero_free_space(&directory)
+        self.handle
+            .zero_free_space(&directory)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Sparsify a disk image
     fn sparsify(&mut self, input: String, output: String) -> PyResult<()> {
-        self.handle.sparsify(&input, &output)
+        self.handle
+            .sparsify(&input, &output)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2549,51 +2767,92 @@ impl Guestfs {
 
     /// Extract tar archive with options
     #[pyo3(signature = (tarfile, directory, compress=None, xattrs=false, selinux=false, acls=false))]
-    fn tar_in_opts(&mut self, tarfile: String, directory: String, compress: Option<String>, xattrs: bool, selinux: bool, acls: bool) -> PyResult<()> {
-        self.handle.tar_in_opts(&tarfile, &directory, compress.as_deref(), xattrs, selinux, acls)
+    fn tar_in_opts(
+        &mut self,
+        tarfile: String,
+        directory: String,
+        compress: Option<String>,
+        xattrs: bool,
+        selinux: bool,
+        acls: bool,
+    ) -> PyResult<()> {
+        self.handle
+            .tar_in_opts(
+                &tarfile,
+                &directory,
+                compress.as_deref(),
+                xattrs,
+                selinux,
+                acls,
+            )
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create tar archive with options
     #[pyo3(signature = (directory, tarfile, compress=None, numericowner=false, xattrs=false, selinux=false, acls=false))]
-    fn tar_out_opts(&mut self, directory: String, tarfile: String, compress: Option<String>, numericowner: bool, xattrs: bool, selinux: bool, acls: bool) -> PyResult<()> {
-        self.handle.tar_out_opts(&directory, &tarfile, compress.as_deref(), numericowner, xattrs, selinux, acls)
+    #[allow(clippy::too_many_arguments)]
+    fn tar_out_opts(
+        &mut self,
+        directory: String,
+        tarfile: String,
+        compress: Option<String>,
+        numericowner: bool,
+        xattrs: bool,
+        selinux: bool,
+        acls: bool,
+    ) -> PyResult<()> {
+        self.handle
+            .tar_out_opts(
+                &directory,
+                &tarfile,
+                compress.as_deref(),
+                numericowner,
+                xattrs,
+                selinux,
+                acls,
+            )
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Extract CPIO archive
     fn cpio_in(&mut self, cpiofile: String, directory: String) -> PyResult<()> {
-        self.handle.cpio_in(&cpiofile, &directory)
+        self.handle
+            .cpio_in(&cpiofile, &directory)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create CPIO archive
     fn cpio_out(&mut self, directory: String, cpiofile: String, format: String) -> PyResult<()> {
-        self.handle.cpio_out(&directory, &cpiofile, &format)
+        self.handle
+            .cpio_out(&directory, &cpiofile, &format)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Compress a file
     fn compress_out(&mut self, ctype: String, file: String, output: String) -> PyResult<()> {
-        self.handle.compress_out(&ctype, &file, &output)
+        self.handle
+            .compress_out(&ctype, &file, &output)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Decompress a file
     fn decompress_file(&mut self, src: String, dest: String, ctype: String) -> PyResult<()> {
-        self.handle.decompress_file(&src, &dest, &ctype)
+        self.handle
+            .decompress_file(&src, &dest, &ctype)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Base64 decode file into guest
     fn base64_in(&mut self, base64file: String, filename: String) -> PyResult<()> {
-        self.handle.base64_in(&base64file, &filename)
+        self.handle
+            .base64_in(&base64file, &filename)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Base64 encode file from guest
     fn base64_out(&mut self, filename: String, base64file: String) -> PyResult<()> {
-        self.handle.base64_out(&filename, &base64file)
+        self.handle
+            .base64_out(&filename, &base64file)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2601,67 +2860,98 @@ impl Guestfs {
 
     /// Copy data between files/devices
     fn dd(&mut self, src: String, dest: String) -> PyResult<()> {
-        self.handle.dd(&src, &dest)
+        self.handle
+            .dd(&src, &dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read bytes from file at offset
     fn pread(&mut self, path: String, count: i32, offset: i64) -> PyResult<Vec<u8>> {
-        self.handle.pread(&path, count, offset)
+        self.handle
+            .pread(&path, count, offset)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Read bytes from device at offset
     fn pread_device(&mut self, device: String, count: i32, offset: i64) -> PyResult<Vec<u8>> {
-        self.handle.pread_device(&device, count, offset)
+        self.handle
+            .pread_device(&device, count, offset)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Write bytes to file at offset
     fn pwrite(&mut self, path: String, content: Vec<u8>, offset: i64) -> PyResult<i32> {
-        self.handle.pwrite(&path, &content, offset)
+        self.handle
+            .pwrite(&path, &content, offset)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Write bytes to device at offset
     fn pwrite_device(&mut self, device: String, content: Vec<u8>, offset: i64) -> PyResult<i32> {
-        self.handle.pwrite_device(&device, &content, offset)
+        self.handle
+            .pwrite_device(&device, &content, offset)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Zero a device
     fn zero(&mut self, device: String) -> PyResult<()> {
-        self.handle.zero(&device)
+        self.handle
+            .zero(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Zero an entire device
     fn zero_device(&mut self, device: String) -> PyResult<()> {
-        self.handle.zero_device(&device)
+        self.handle
+            .zero_device(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Copy file to file with offsets
-    fn copy_file_to_file(&mut self, src: String, dest: String, srcoffset: i64, destoffset: i64, size: i64) -> PyResult<()> {
-        self.handle.copy_file_to_file(&src, &dest, srcoffset, destoffset, size)
+    fn copy_file_to_file(
+        &mut self,
+        src: String,
+        dest: String,
+        srcoffset: i64,
+        destoffset: i64,
+        size: i64,
+    ) -> PyResult<()> {
+        self.handle
+            .copy_file_to_file(&src, &dest, srcoffset, destoffset, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Copy device to device with offsets
-    fn copy_device_to_device(&mut self, src: String, dest: String, srcoffset: i64, destoffset: i64, size: i64) -> PyResult<()> {
-        self.handle.copy_device_to_device(&src, &dest, srcoffset, destoffset, size)
+    fn copy_device_to_device(
+        &mut self,
+        src: String,
+        dest: String,
+        srcoffset: i64,
+        destoffset: i64,
+        size: i64,
+    ) -> PyResult<()> {
+        self.handle
+            .copy_device_to_device(&src, &dest, srcoffset, destoffset, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Download file with offset
-    fn download_offset(&mut self, remote: String, local: String, offset: i64, size: i64) -> PyResult<()> {
-        self.handle.download_offset(&remote, &local, offset, size)
+    fn download_offset(
+        &mut self,
+        remote: String,
+        local: String,
+        offset: i64,
+        size: i64,
+    ) -> PyResult<()> {
+        self.handle
+            .download_offset(&remote, &local, offset, size)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Upload file with offset
     fn upload_offset(&mut self, local: String, remote: String, offset: i64) -> PyResult<()> {
-        self.handle.upload_offset(&local, &remote, offset)
+        self.handle
+            .upload_offset(&local, &remote, offset)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2669,31 +2959,36 @@ impl Guestfs {
 
     /// List RPM packages
     fn rpm_list(&mut self) -> PyResult<Vec<String>> {
-        self.handle.rpm_list()
+        self.handle
+            .rpm_list()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List DPKG packages
     fn dpkg_list(&mut self) -> PyResult<Vec<String>> {
-        self.handle.dpkg_list()
+        self.handle
+            .dpkg_list()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get package info
     fn get_package_info(&mut self, package: String) -> PyResult<String> {
-        self.handle.get_package_info(&package)
+        self.handle
+            .get_package_info(&package)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if package is installed
     fn is_package_installed(&mut self, package: String) -> PyResult<bool> {
-        self.handle.is_package_installed(&package)
+        self.handle
+            .is_package_installed(&package)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List files owned by package
     fn package_files(&mut self, package: String) -> PyResult<Vec<String>> {
-        self.handle.package_files(&package)
+        self.handle
+            .package_files(&package)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2701,38 +2996,44 @@ impl Guestfs {
 
     /// Get SSH host keys
     fn get_ssh_host_keys(&mut self) -> PyResult<Vec<String>> {
-        self.handle.get_ssh_host_keys()
+        self.handle
+            .get_ssh_host_keys()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get SSH authorized keys for user
     fn get_ssh_authorized_keys(&mut self, user: String) -> PyResult<Vec<String>> {
-        self.handle.get_ssh_authorized_keys(&user)
+        self.handle
+            .get_ssh_authorized_keys(&user)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Set SSH authorized keys for user
     fn set_ssh_authorized_keys(&mut self, user: String, keys: Vec<String>) -> PyResult<()> {
         let refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
-        self.handle.set_ssh_authorized_keys(&user, &refs)
+        self.handle
+            .set_ssh_authorized_keys(&user, &refs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get sshd configuration
     fn get_sshd_config(&mut self) -> PyResult<String> {
-        self.handle.get_sshd_config()
+        self.handle
+            .get_sshd_config()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List user SSH keys
     fn list_user_ssh_keys(&mut self, user: String) -> PyResult<Vec<String>> {
-        self.handle.list_user_ssh_keys(&user)
+        self.handle
+            .list_user_ssh_keys(&user)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List SSL certificates
     fn list_ssl_certificates(&mut self) -> PyResult<Vec<String>> {
-        self.handle.list_ssl_certificates()
+        self.handle
+            .list_ssl_certificates()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2740,69 +3041,85 @@ impl Guestfs {
 
     /// Get guestkit version
     fn version(&self) -> PyResult<(i64, i64, i64)> {
-        self.handle.version()
+        self.handle
+            .version()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Check if feature group is available
     fn available(&mut self, groups: Vec<String>) -> PyResult<bool> {
         let refs: Vec<&str> = groups.iter().map(|s| s.as_str()).collect();
-        self.handle.available(&refs)
+        self.handle
+            .available(&refs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file type description
     fn file_type(&mut self, path: String) -> PyResult<String> {
-        self.handle.file_type(&path)
+        self.handle
+            .file_type(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get file architecture
     fn file_architecture(&mut self, path: String) -> PyResult<String> {
-        self.handle.file_architecture(&path)
+        self.handle
+            .file_architecture(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get umask
     fn get_umask(&mut self) -> PyResult<i32> {
-        self.handle.get_umask()
+        self.handle
+            .get_umask()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get memory info
     fn get_meminfo(&mut self) -> PyResult<String> {
-        self.handle.get_meminfo()
+        self.handle
+            .get_meminfo()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get disk usage of path
     fn disk_usage(&mut self, path: String) -> PyResult<i64> {
-        self.handle.disk_usage(&path)
+        self.handle
+            .disk_usage(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Create a swap device
     #[pyo3(signature = (device, label=None, uuid=None))]
-    fn mkswap(&mut self, device: String, label: Option<String>, uuid: Option<String>) -> PyResult<()> {
-        self.handle.mkswap(&device, label.as_deref(), uuid.as_deref())
+    fn mkswap(
+        &mut self,
+        device: String,
+        label: Option<String>,
+        uuid: Option<String>,
+    ) -> PyResult<()> {
+        self.handle
+            .mkswap(&device, label.as_deref(), uuid.as_deref())
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Hexdump file content
     fn hexdump(&mut self, path: String) -> PyResult<String> {
-        self.handle.hexdump(&path)
+        self.handle
+            .hexdump(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get printable strings from file
     fn strings(&mut self, path: String) -> PyResult<Vec<String>> {
-        self.handle.strings(&path)
+        self.handle
+            .strings(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Fill file with byte pattern
     fn fill(&mut self, c: i32, len: i32, path: String) -> PyResult<()> {
-        self.handle.fill(c, len, &path)
+        self.handle
+            .fill(c, len, &path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2810,25 +3127,34 @@ impl Guestfs {
 
     /// Fix NTFS filesystem
     fn ntfsfix(&mut self, device: String, clearbadsectors: bool) -> PyResult<()> {
-        self.handle.ntfsfix(&device, clearbadsectors)
+        self.handle
+            .ntfsfix(&device, clearbadsectors)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Restore NTFS from backup
     fn ntfsclone_in(&mut self, backupfile: String, device: String) -> PyResult<()> {
-        self.handle.ntfsclone_in(&backupfile, &device)
+        self.handle
+            .ntfsclone_in(&backupfile, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Backup NTFS to file
-    fn ntfsclone_out(&mut self, device: String, backupfile: String, metadataonly: bool) -> PyResult<()> {
-        self.handle.ntfsclone_out(&device, &backupfile, metadataonly)
+    fn ntfsclone_out(
+        &mut self,
+        device: String,
+        backupfile: String,
+        metadataonly: bool,
+    ) -> PyResult<()> {
+        self.handle
+            .ntfsclone_out(&device, &backupfile, metadataonly)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Probe NTFS volume
     fn ntfs_3g_probe(&mut self, rw: bool, device: String) -> PyResult<i32> {
-        self.handle.ntfs_3g_probe(rw, &device)
+        self.handle
+            .ntfs_3g_probe(rw, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2836,43 +3162,50 @@ impl Guestfs {
 
     /// Create btrfs subvolume
     fn btrfs_subvolume_create(&mut self, dest: String) -> PyResult<()> {
-        self.handle.btrfs_subvolume_create(&dest)
+        self.handle
+            .btrfs_subvolume_create(&dest)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Delete btrfs subvolume
     fn btrfs_subvolume_delete(&mut self, subvolume: String) -> PyResult<()> {
-        self.handle.btrfs_subvolume_delete(&subvolume)
+        self.handle
+            .btrfs_subvolume_delete(&subvolume)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List btrfs subvolumes
     fn btrfs_subvolume_list(&mut self, fs: String) -> PyResult<Vec<String>> {
-        self.handle.btrfs_subvolume_list(&fs)
+        self.handle
+            .btrfs_subvolume_list(&fs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Snapshot btrfs subvolume
     fn btrfs_subvolume_snapshot(&mut self, source: String, dest: String, ro: bool) -> PyResult<()> {
-        self.handle.btrfs_subvolume_snapshot(&source, &dest, ro)
+        self.handle
+            .btrfs_subvolume_snapshot(&source, &dest, ro)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Balance btrfs filesystem
     fn btrfs_balance(&mut self, fs: String) -> PyResult<()> {
-        self.handle.btrfs_balance(&fs)
+        self.handle
+            .btrfs_balance(&fs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Scrub btrfs filesystem
     fn btrfs_scrub(&mut self, fs: String) -> PyResult<()> {
-        self.handle.btrfs_scrub(&fs)
+        self.handle
+            .btrfs_scrub(&fs)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Show btrfs filesystem info
     fn btrfs_filesystem_show(&mut self, device: String) -> PyResult<String> {
-        self.handle.btrfs_filesystem_show(&device)
+        self.handle
+            .btrfs_filesystem_show(&device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2880,35 +3213,69 @@ impl Guestfs {
 
     /// XFS admin operations
     #[pyo3(signature = (device, extunwritten=false, imgfile=false, v2log=false, projid32bit=false, lazycounter=false, label=None, uuid=None))]
-    fn xfs_admin(&mut self, device: String, extunwritten: bool, imgfile: bool, v2log: bool, projid32bit: bool, lazycounter: bool, label: Option<String>, uuid: Option<String>) -> PyResult<i32> {
-        self.handle.xfs_admin(&device, extunwritten, imgfile, v2log, projid32bit, lazycounter, label.as_deref(), uuid.as_deref())
+    #[allow(clippy::too_many_arguments)]
+    fn xfs_admin(
+        &mut self,
+        device: String,
+        extunwritten: bool,
+        imgfile: bool,
+        v2log: bool,
+        projid32bit: bool,
+        lazycounter: bool,
+        label: Option<String>,
+        uuid: Option<String>,
+    ) -> PyResult<i32> {
+        self.handle
+            .xfs_admin(
+                &device,
+                extunwritten,
+                imgfile,
+                v2log,
+                projid32bit,
+                lazycounter,
+                label.as_deref(),
+                uuid.as_deref(),
+            )
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     // === Mount Operations (extended) ===
 
     /// Mount with options
-    fn mount_options(&mut self, options: String, mountable: String, mountpoint: String) -> PyResult<()> {
-        self.handle.mount_options(&options, &mountable, &mountpoint)
+    fn mount_options(
+        &mut self,
+        options: String,
+        mountable: String,
+        mountpoint: String,
+    ) -> PyResult<()> {
+        self.handle
+            .mount_options(&options, &mountable, &mountpoint)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Mount with virtual filesystem type
-    fn mount_vfs(&mut self, options: String, vfstype: String, mountable: String, mountpoint: String) -> PyResult<()> {
-        self.handle.mount_vfs(&options, &vfstype, &mountable, &mountpoint)
+    fn mount_vfs(
+        &mut self,
+        options: String,
+        vfstype: String,
+        mountable: String,
+        mountpoint: String,
+    ) -> PyResult<()> {
+        self.handle
+            .mount_vfs(&options, &vfstype, &mountable, &mountpoint)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// List current mounts
     fn mounts(&self) -> PyResult<Vec<String>> {
-        self.handle.mounts()
+        self.handle
+            .mounts()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get current mountpoints as dictionary
     fn mountpoints(&self) -> PyResult<Py<PyAny>> {
-        let mps = self.handle.mountpoints()
-            .map_err(to_pyerr)?;
+        let mps = self.handle.mountpoints().map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             for (k, v) in mps.iter() {
@@ -2920,8 +3287,7 @@ impl Guestfs {
 
     /// List filesystems
     fn list_filesystems(&mut self) -> PyResult<Py<PyAny>> {
-        let fss = self.handle.list_filesystems()
-            .map_err(to_pyerr)?;
+        let fss = self.handle.list_filesystems().map_err(to_pyerr)?;
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             for (k, v) in fss {
@@ -2933,20 +3299,28 @@ impl Guestfs {
 
     /// Get device file description
     fn file(&mut self, path: String) -> PyResult<String> {
-        self.handle.file(&path)
+        self.handle
+            .file(&path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Get checksum of a device
     fn checksum_device(&mut self, csumtype: String, device: String) -> PyResult<String> {
-        self.handle.checksum_device(&csumtype, &device)
+        self.handle
+            .checksum_device(&csumtype, &device)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Add drive with options
     #[pyo3(signature = (filename, readonly=false, format=None))]
-    fn add_drive_opts(&mut self, filename: String, readonly: bool, format: Option<String>) -> PyResult<()> {
-        self.handle.add_drive_opts(&filename, readonly, format.as_deref())
+    fn add_drive_opts(
+        &mut self,
+        filename: String,
+        readonly: bool,
+        format: Option<String>,
+    ) -> PyResult<()> {
+        self.handle
+            .add_drive_opts(&filename, readonly, format.as_deref())
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -2967,13 +3341,15 @@ impl Guestfs {
 
     /// Close the handle
     fn close(&mut self) -> PyResult<()> {
-        self.handle.close()
+        self.handle
+            .close()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
     /// Ping the daemon
     fn ping_daemon(&self) -> PyResult<bool> {
-        self.handle.ping_daemon()
+        self.handle
+            .ping_daemon()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
@@ -3064,8 +3440,7 @@ impl LvmCloner {
             container_image: None,
         };
 
-        let result = crate::guestfs::lvm_clone::lvm_clone(&config, verbose)
-            .map_err(to_pyerr)?;
+        let result = crate::guestfs::lvm_clone::lvm_clone(&config, verbose).map_err(to_pyerr)?;
 
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -3149,8 +3524,8 @@ impl LvmCloner {
             container_image,
         };
 
-        let result = crate::guestfs::lvm_clone::lvm_clone_podman(&config, verbose)
-            .map_err(to_pyerr)?;
+        let result =
+            crate::guestfs::lvm_clone::lvm_clone_podman(&config, verbose).map_err(to_pyerr)?;
 
         Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
@@ -3230,7 +3605,13 @@ impl LvmCloner {
     }
 
     /// Convert a disk image to another format
-    fn convert_disk_image(&self, source: String, output: String, output_format: String, verbose: bool) -> PyResult<()> {
+    fn convert_disk_image(
+        &self,
+        source: String,
+        output: String,
+        output_format: String,
+        verbose: bool,
+    ) -> PyResult<()> {
         crate::guestfs::lvm_clone::convert_disk_image(
             Path::new(&source),
             Path::new(&output),

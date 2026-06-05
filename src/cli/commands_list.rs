@@ -71,7 +71,18 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Migrate & plan",
-        &["migrate", "migrate-plan", "blueprint", "plan", "cost", "dependencies", "risk", "fleet"],
+        &[
+            "migrate",
+            "migrate-plan",
+            "blueprint",
+            "plan",
+            "cost",
+            "dependencies",
+            "risk",
+            "fleet",
+            "agent",
+            "agent-proxy",
+        ],
     ),
     (
         "Systemd",
@@ -79,14 +90,7 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Interactive",
-        &[
-            "tui",
-            "shell",
-            "interactive",
-            "explore",
-            "script",
-            "ai",
-        ],
+        &["tui", "shell", "interactive", "explore", "script", "ai"],
     ),
     (
         "Utilities",

@@ -640,7 +640,10 @@ fn create_realistic_debian_image(
 
     // Step 7: Write Debian metadata files
     println!("\n[7/16] Writing Debian metadata files...");
-    g.write("/etc/debian_version", make_debian_version(version).as_bytes())?;
+    g.write(
+        "/etc/debian_version",
+        make_debian_version(version).as_bytes(),
+    )?;
     g.write("/etc/os-release", make_os_release(version).as_bytes())?;
     g.write("/etc/hostname", b"debian.invalid\n")?;
     g.write("/etc/fstab", make_fstab(use_efi).as_bytes())?;
@@ -655,7 +658,10 @@ fn create_realistic_debian_image(
 
     // Step 9: Create systemd units
     println!("\n[9/16] Creating systemd units...");
-    g.write("/lib/systemd/system/ssh.service", make_ssh_service().as_bytes())?;
+    g.write(
+        "/lib/systemd/system/ssh.service",
+        make_ssh_service().as_bytes(),
+    )?;
     g.write(
         "/lib/systemd/system/networking.service",
         make_networking_service().as_bytes(),
@@ -693,12 +699,18 @@ fn create_realistic_debian_image(
 
     // Step 10: Create APT sources list
     println!("\n[10/16] Creating APT sources list...");
-    g.write("/etc/apt/sources.list", make_apt_sources(version).as_bytes())?;
+    g.write(
+        "/etc/apt/sources.list",
+        make_apt_sources(version).as_bytes(),
+    )?;
     println!("  ✓ APT sources configured for {}", metadata.codename);
 
     // Step 11: Create GRUB configuration
     println!("\n[11/16] Creating GRUB configuration...");
-    g.write("/boot/grub/grub.cfg", make_grub_config(version, use_efi).as_bytes())?;
+    g.write(
+        "/boot/grub/grub.cfg",
+        make_grub_config(version, use_efi).as_bytes(),
+    )?;
     if use_efi {
         g.write(
             "/boot/efi/EFI/debian/grub.cfg",
@@ -720,7 +732,10 @@ fn create_realistic_debian_image(
 
     // Step 13: Create network configuration
     println!("\n[13/16] Creating network configuration...");
-    g.write("/etc/network/interfaces", make_network_interfaces().as_bytes())?;
+    g.write(
+        "/etc/network/interfaces",
+        make_network_interfaces().as_bytes(),
+    )?;
     g.write("/etc/resolv.conf", make_resolv_conf().as_bytes())?;
     println!("  ✓ Network configuration created");
 

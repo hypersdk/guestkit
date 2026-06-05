@@ -162,10 +162,9 @@ impl Guestfs {
 
         let mut removed = 0;
         for backup in backups {
-            if old_backups.contains(&backup)
-                && self.rm(&backup).is_ok() {
-                    removed += 1;
-                }
+            if old_backups.contains(&backup) && self.rm(&backup).is_ok() {
+                removed += 1;
+            }
         }
 
         Ok(removed)

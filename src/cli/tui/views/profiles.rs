@@ -3,7 +3,9 @@
 
 use crate::cli::profiles::{FindingStatus, ProfileReport, RiskLevel};
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, ERROR_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -16,8 +18,8 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Tab bar
-            Constraint::Min(0),     // Content area
+            Constraint::Length(3), // Tab bar
+            Constraint::Min(0),    // Content area
         ])
         .split(area);
 
@@ -26,18 +28,28 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: Rect, app: &App) {
-    let tab_titles = vec!["Security", "Migration", "Performance", "Compliance", "Hardening"];
+    let tab_titles = vec![
+        "Security",
+        "Migration",
+        "Performance",
+        "Compliance",
+        "Hardening",
+    ];
     let tabs = Tabs::new(tab_titles)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(" Profile Reports ")
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" Profile Reports ")
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .select(app.selected_profile_tab)
         .style(Style::default().fg(TEXT_COLOR))
-        .highlight_style(Style::default()
-            .fg(ORANGE)
-            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
+        .highlight_style(
+            Style::default()
+                .fg(ORANGE)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        );
 
     f.render_widget(tabs, area);
 }
@@ -47,9 +59,11 @@ fn draw_profile_content(f: &mut Frame, area: Rect, app: &App) {
         draw_profile_report(f, area, report, app);
     } else {
         let empty = Paragraph::new("Profile data not available")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
     }
@@ -59,8 +73,8 @@ fn draw_profile_report(f: &mut Frame, area: Rect, report: &ProfileReport, app: &
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Summary/Overall Risk
-            Constraint::Min(0),     // Findings list
+            Constraint::Length(3), // Summary/Overall Risk
+            Constraint::Min(0),    // Findings list
         ])
         .split(area);
 
@@ -88,22 +102,24 @@ fn draw_summary(f: &mut Frame, area: Rect, report: &ProfileReport) {
         };
         vec![
             Span::raw("  Overall Risk: "),
-            Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                risk_text,
+                Style::default().fg(risk_color).add_modifier(Modifier::BOLD),
+            ),
         ]
     } else {
         vec![Span::raw("  No risk assessment available")]
     };
 
-    let summary_paragraph = Paragraph::new(vec![
-        Line::from(summary_text),
-        Line::from(risk_info),
-    ])
-    .block(Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER_COLOR))
-        .title(" Summary ")
-        .title_style(Style::default().fg(ORANGE)))
-    .style(Style::default().fg(TEXT_COLOR));
+    let summary_paragraph = Paragraph::new(vec![Line::from(summary_text), Line::from(risk_info)])
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(" Summary ")
+                .title_style(Style::default().fg(ORANGE)),
+        )
+        .style(Style::default().fg(TEXT_COLOR));
 
     f.render_widget(summary_paragraph, area);
 }
@@ -114,12 +130,12 @@ fn draw_findings(f: &mut Frame, area: Rect, report: &ProfileReport, app: &App) {
     // Collect all findings from all sections
     for section in &report.sections {
         // Add section header
-        items.push(ListItem::new(Line::from(vec![
-            Span::styled(
-                format!("▶ {}", section.title),
-                Style::default().fg(LIGHT_ORANGE).add_modifier(Modifier::BOLD),
-            ),
-        ])));
+        items.push(ListItem::new(Line::from(vec![Span::styled(
+            format!("▶ {}", section.title),
+            Style::default()
+                .fg(LIGHT_ORANGE)
+                .add_modifier(Modifier::BOLD),
+        )])));
 
         // Add findings
         for finding in &section.findings {
@@ -149,7 +165,10 @@ fn draw_findings(f: &mut Frame, area: Rect, report: &ProfileReport, app: &App) {
                     RiskLevel::Low => (" [LOW]", SUCCESS_COLOR),
                     RiskLevel::Info => (" [INFO]", TEXT_COLOR),
                 };
-                spans.push(Span::styled(risk_text, Style::default().fg(risk_color).add_modifier(Modifier::BOLD)));
+                spans.push(Span::styled(
+                    risk_text,
+                    Style::default().fg(risk_color).add_modifier(Modifier::BOLD),
+                ));
             }
 
             items.push(ListItem::new(Line::from(spans)));
@@ -166,12 +185,13 @@ fn draw_findings(f: &mut Frame, area: Rect, report: &ProfileReport, app: &App) {
         .take(area.height.saturating_sub(2) as usize)
         .collect();
 
-    let list = List::new(visible_items)
-        .block(Block::default()
+    let list = List::new(visible_items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
             .title(format!(" {} Findings ", report.profile_name))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }

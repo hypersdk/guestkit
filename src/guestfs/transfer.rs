@@ -29,7 +29,10 @@ impl Guestfs {
 
         // Validate offset and transfer size
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
         const MAX_TRANSFER_SIZE: usize = 100 * 1024 * 1024; // 100MB
         if size < 0 || size as u64 > MAX_TRANSFER_SIZE as u64 {
@@ -49,9 +52,7 @@ impl Guestfs {
             .map_err(Error::Io)?;
 
         let mut buffer = vec![0u8; size as usize];
-        remote_file
-            .read_exact(&mut buffer)
-            .map_err(Error::Io)?;
+        remote_file.read_exact(&mut buffer).map_err(Error::Io)?;
 
         // Write to local file
         let mut local_file = File::create(local).map_err(Error::Io)?;
@@ -67,7 +68,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if offset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: {}", offset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: {}",
+                offset
+            )));
         }
 
         if self.verbose {
@@ -88,9 +92,7 @@ impl Guestfs {
         }
 
         let mut buffer = Vec::new();
-        local_file
-            .read_to_end(&mut buffer)
-            .map_err(Error::Io)?;
+        local_file.read_to_end(&mut buffer).map_err(Error::Io)?;
 
         // Write to remote file with offset
         let mut remote_file = OpenOptions::new()
@@ -122,7 +124,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if srcoffset < 0 || destoffset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: src={}, dest={}",
+                srcoffset, destoffset
+            )));
         }
 
         if self.verbose {
@@ -202,8 +207,12 @@ impl Guestfs {
         let src_partition = format!(
             "{}p{}",
             nbd_device.device_path().display(),
-            src.chars().last().and_then(|c| c.to_digit(10))
-                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
+            src.chars()
+                .last()
+                .and_then(|c| c.to_digit(10))
+                .ok_or_else(|| Error::InvalidOperation(
+                    "Device path does not end with a partition number".to_string()
+                ))?
         );
         let dest_partition = format!(
             "{}p{}",
@@ -211,7 +220,9 @@ impl Guestfs {
             dest.chars()
                 .last()
                 .and_then(|c| c.to_digit(10))
-                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
+                .ok_or_else(|| Error::InvalidOperation(
+                    "Device path does not end with a partition number".to_string()
+                ))?
         );
 
         // Use dd for device-to-device copy
@@ -250,7 +261,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if srcoffset < 0 || destoffset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: src={}, dest={}",
+                srcoffset, destoffset
+            )));
         }
 
         if self.verbose {
@@ -284,7 +298,9 @@ impl Guestfs {
             dest.chars()
                 .last()
                 .and_then(|c| c.to_digit(10))
-                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
+                .ok_or_else(|| Error::InvalidOperation(
+                    "Device path does not end with a partition number".to_string()
+                ))?
         );
 
         // Read from source file
@@ -325,7 +341,10 @@ impl Guestfs {
         self.ensure_ready()?;
 
         if srcoffset < 0 || destoffset < 0 {
-            return Err(Error::InvalidOperation(format!("Negative offset not allowed: src={}, dest={}", srcoffset, destoffset)));
+            return Err(Error::InvalidOperation(format!(
+                "Negative offset not allowed: src={}, dest={}",
+                srcoffset, destoffset
+            )));
         }
 
         if self.verbose {
@@ -354,8 +373,12 @@ impl Guestfs {
         let src_partition = format!(
             "{}p{}",
             nbd_device.device_path().display(),
-            src.chars().last().and_then(|c| c.to_digit(10))
-                .ok_or_else(|| Error::InvalidOperation("Device path does not end with a partition number".to_string()))?
+            src.chars()
+                .last()
+                .and_then(|c| c.to_digit(10))
+                .ok_or_else(|| Error::InvalidOperation(
+                    "Device path does not end with a partition number".to_string()
+                ))?
         );
 
         // Read from device

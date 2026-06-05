@@ -113,7 +113,8 @@ impl Guestfs {
         // Reject commands with dangerous shell metacharacters.
         // Callers should use command() with explicit arg arrays for any input
         // that could contain user-controlled data.
-        const DANGEROUS_PATTERNS: &[&str] = &["$(", "`", "&&", "||", ">>", "<<", "|", ";", ">", "\n", "\r"];
+        const DANGEROUS_PATTERNS: &[&str] =
+            &["$(", "`", "&&", "||", ">>", "<<", "|", ";", ">", "\n", "\r"];
         for pattern in DANGEROUS_PATTERNS {
             if command.contains(pattern) {
                 return Err(Error::SecurityViolation(format!(

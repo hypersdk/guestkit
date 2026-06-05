@@ -2,23 +2,27 @@
 //! Databases view - Database installations and configurations
 
 use crate::cli::tui::app::App;
-use crate::cli::tui::ui::{BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR};
+use crate::cli::tui::ui::{
+    BORDER_COLOR, LIGHT_ORANGE, ORANGE, SUCCESS_COLOR, TEXT_COLOR, WARNING_COLOR,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::Line,
-    widgets::{Block, Borders, BarChart, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     if app.databases.is_empty() {
         let empty = Paragraph::new("⚠️  No database installations found")
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR))
-                .title(" 🗄️  Databases ")
-                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BORDER_COLOR))
+                    .title(" 🗄️  Databases ")
+                    .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+            )
             .style(Style::default().fg(TEXT_COLOR));
         f.render_widget(empty, area);
         return;
@@ -39,22 +43,44 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
 fn draw_database_chart(f: &mut Frame, area: Rect, app: &App) {
     // Count database types
-    let postgres_count = app.databases.iter()
-        .filter(|db| db.name.to_lowercase().contains("postgres") || db.name.to_lowercase().contains("postgresql"))
+    let postgres_count = app
+        .databases
+        .iter()
+        .filter(|db| {
+            db.name.to_lowercase().contains("postgres")
+                || db.name.to_lowercase().contains("postgresql")
+        })
         .count();
-    let mysql_count = app.databases.iter()
-        .filter(|db| db.name.to_lowercase().contains("mysql") || db.name.to_lowercase().contains("mariadb"))
+    let mysql_count = app
+        .databases
+        .iter()
+        .filter(|db| {
+            db.name.to_lowercase().contains("mysql") || db.name.to_lowercase().contains("mariadb")
+        })
         .count();
-    let mongodb_count = app.databases.iter()
-        .filter(|db| db.name.to_lowercase().contains("mongodb") || db.name.to_lowercase().contains("mongo"))
+    let mongodb_count = app
+        .databases
+        .iter()
+        .filter(|db| {
+            db.name.to_lowercase().contains("mongodb") || db.name.to_lowercase().contains("mongo")
+        })
         .count();
-    let redis_count = app.databases.iter()
+    let redis_count = app
+        .databases
+        .iter()
         .filter(|db| db.name.to_lowercase().contains("redis"))
         .count();
-    let sqlite_count = app.databases.iter()
+    let sqlite_count = app
+        .databases
+        .iter()
         .filter(|db| db.name.to_lowercase().contains("sqlite"))
         .count();
-    let other_count = app.databases.len() - postgres_count - mysql_count - mongodb_count - redis_count - sqlite_count;
+    let other_count = app.databases.len()
+        - postgres_count
+        - mysql_count
+        - mongodb_count
+        - redis_count
+        - sqlite_count;
 
     // Create bar chart data
     let mut data = Vec::new();
@@ -78,11 +104,16 @@ fn draw_database_chart(f: &mut Frame, area: Rect, app: &App) {
     }
 
     let barchart = BarChart::default()
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 📊 Database Type Distribution • {} total ", app.databases.len()))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR))
+                .title(format!(
+                    " 📊 Database Type Distribution • {} total ",
+                    app.databases.len()
+                ))
+                .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+        )
         .data(&data)
         .bar_width(8)
         .bar_gap(2)
@@ -93,14 +124,21 @@ fn draw_database_chart(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn draw_database_list(f: &mut Frame, area: Rect, app: &App) {
-
     let filtered_databases: Vec<_> = if app.is_searching() && !app.search_query.is_empty() {
         app.databases
             .iter()
             .filter(|db| {
-                db.name.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || db.data_dir.to_lowercase().contains(&app.search_query.to_lowercase())
-                    || db.config_path.to_lowercase().contains(&app.search_query.to_lowercase())
+                db.name
+                    .to_lowercase()
+                    .contains(&app.search_query.to_lowercase())
+                    || db
+                        .data_dir
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
+                    || db
+                        .config_path
+                        .to_lowercase()
+                        .contains(&app.search_query.to_lowercase())
             })
             .collect()
     } else {
@@ -126,15 +164,15 @@ fn draw_database_list(f: &mut Frame, area: Rect, app: &App) {
                 ratatui::text::Span::raw(format!("{} ", icon)),
                 ratatui::text::Span::styled(
                     format!("{:20} ", db.name),
-                    Style::default().fg(db_color).add_modifier(Modifier::BOLD)
+                    Style::default().fg(db_color).add_modifier(Modifier::BOLD),
                 ),
                 ratatui::text::Span::styled(
                     format!("data: {:25} ", db.data_dir),
-                    Style::default().fg(TEXT_COLOR)
+                    Style::default().fg(TEXT_COLOR),
                 ),
                 ratatui::text::Span::styled(
                     format!("config: {}", db.config_path),
-                    Style::default().fg(LIGHT_ORANGE)
+                    Style::default().fg(LIGHT_ORANGE),
                 ),
             ]))
         })
@@ -155,13 +193,17 @@ fn draw_database_list(f: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(BORDER_COLOR))
-            .title(format!(" 🗄️  Databases • {} total{} ",
-                filtered_databases.len(), scroll_indicator))
-            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)));
+            .title(format!(
+                " 🗄️  Databases • {} total{} ",
+                filtered_databases.len(),
+                scroll_indicator
+            ))
+            .title_style(Style::default().fg(ORANGE).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(list, area);
 }

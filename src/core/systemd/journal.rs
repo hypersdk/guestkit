@@ -101,9 +101,12 @@ impl JournalReader {
 
         // Read journal files (simplified - reads exported text journals)
         // In production, this would parse binary .journal files
-        for entry in fs::read_dir(&journal_dir)
-            .with_context(|| format!("Failed to read journal directory: {}", journal_dir.display()))?
-        {
+        for entry in fs::read_dir(&journal_dir).with_context(|| {
+            format!(
+                "Failed to read journal directory: {}",
+                journal_dir.display()
+            )
+        })? {
             let entry = entry?;
             let path = entry.path();
 
@@ -131,7 +134,11 @@ impl JournalReader {
     }
 
     /// Parse exported journal file (text format)
-    fn parse_exported_journal(&self, path: &Path, filter: &JournalFilter) -> Result<Vec<JournalEntry>> {
+    fn parse_exported_journal(
+        &self,
+        path: &Path,
+        filter: &JournalFilter,
+    ) -> Result<Vec<JournalEntry>> {
         let content = fs::read_to_string(path)
             .with_context(|| format!("Failed to read journal file: {}", path.display()))?;
 
@@ -185,7 +192,9 @@ impl JournalReader {
             .and_then(|s| s.parse::<u8>().ok())
             .unwrap_or(6); // Default to INFO
 
-        let unit = fields.get("_SYSTEMD_UNIT").cloned()
+        let unit = fields
+            .get("_SYSTEMD_UNIT")
+            .cloned()
             .or_else(|| fields.get("UNIT").cloned());
 
         let message = fields
@@ -193,9 +202,7 @@ impl JournalReader {
             .cloned()
             .unwrap_or_else(|| "(no message)".to_string());
 
-        let pid = fields
-            .get("_PID")
-            .and_then(|s| s.parse::<u32>().ok());
+        let pid = fields.get("_PID").and_then(|s| s.parse::<u32>().ok());
 
         JournalEntry {
             timestamp,

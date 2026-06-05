@@ -5,11 +5,15 @@ use super::*;
 
 /// Analyze migration feasibility
 pub fn analyze_feasibility(plan: &MigrationPlan) -> FeasibilityReport {
-    let critical_blockers = plan.issues.iter()
+    let critical_blockers = plan
+        .issues
+        .iter()
         .filter(|i| i.severity == RiskLevel::Critical)
         .count();
 
-    let high_risks = plan.issues.iter()
+    let high_risks = plan
+        .issues
+        .iter()
         .filter(|i| i.severity == RiskLevel::High)
         .count();
 
@@ -53,14 +57,16 @@ pub struct FeasibilityReport {
 /// Calculate downtime estimate
 pub fn estimate_downtime(plan: &MigrationPlan) -> DowntimeEstimate {
     let base_minutes = match plan.migration_type.as_str() {
-        "OS Upgrade" => 120, // 2 hours
+        "OS Upgrade" => 120,      // 2 hours
         "Cloud Migration" => 240, // 4 hours
         "Containerization" => 60, // 1 hour (minimal downtime)
         _ => 120,
     };
 
     // Add time for issues
-    let issue_minutes = plan.issues.iter()
+    let issue_minutes = plan
+        .issues
+        .iter()
         .map(|i| match i.severity {
             RiskLevel::Critical => 60,
             RiskLevel::High => 30,

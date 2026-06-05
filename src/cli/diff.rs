@@ -373,13 +373,11 @@ mod tests {
         let changes = PackageChanges {
             added: vec!["docker".to_string(), "kubernetes".to_string()],
             removed: vec!["apache2".to_string()],
-            updated: vec![
-                PackageUpdate {
-                    name: "nginx".to_string(),
-                    old_version: "1.18.0".to_string(),
-                    new_version: "1.20.0".to_string(),
-                }
-            ],
+            updated: vec![PackageUpdate {
+                name: "nginx".to_string(),
+                old_version: "1.18.0".to_string(),
+                new_version: "1.20.0".to_string(),
+            }],
         };
 
         assert_eq!(changes.added.len(), 2);

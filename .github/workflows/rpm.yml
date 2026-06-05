@@ -46,9 +46,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Install RPM build dependencies
         run: |
-          dnf install -y \
+          dnf install -y --setopt=install_weak_deps=False \
             rpm-build \
             rpmdevtools \
             rust \
@@ -83,7 +86,7 @@ jobs:
 
       - name: Install build dependencies from spec
         run: |
-          dnf builddep -y ~/rpmbuild/SPECS/guestkit.spec
+          dnf builddep -y --setopt=install_weak_deps=False ~/rpmbuild/SPECS/guestkit.spec
 
       - name: Build source RPM
         run: |
@@ -113,7 +116,7 @@ jobs:
 
       - name: Test installation
         run: |
-          dnf install -y ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm
+          dnf install -y --setopt=install_weak_deps=False ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm
 
       - name: Test guestkit binary
         run: |
@@ -156,9 +159,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Install RPM build dependencies
         run: |
-          dnf install -y \
+          dnf install -y --setopt=install_weak_deps=False \
             rpm-build \
             rpmdevtools \
             rust \
@@ -170,6 +176,7 @@ jobs:
             python3-devel \
             python3-pip \
             python3-maturin \
+            openssl-devel \
             qemu-img \
             rpmlint
 
@@ -196,7 +203,7 @@ jobs:
 
       - name: Install build dependencies from spec
         run: |
-          dnf builddep -y ~/rpmbuild/SPECS/guestkit-full.spec
+          dnf builddep -y --setopt=install_weak_deps=False ~/rpmbuild/SPECS/guestkit-full.spec
 
       - name: Build source RPM
         run: |
@@ -222,7 +229,7 @@ jobs:
 
       - name: Test installation
         run: |
-          dnf install -y ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm \
+          dnf install -y --setopt=install_weak_deps=False ~/rpmbuild/RPMS/x86_64/guestkit-*.rpm \
                          ~/rpmbuild/RPMS/x86_64/python3-guestkit-*.rpm || true
 
       - name: Test binaries
@@ -246,9 +253,11 @@ jobs:
 
   build-mock:
     name: Build with Mock (clean chroot)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     container:
       image: fedora:41
+      options: --privileged --user root
 
     steps:
       - name: Install dependencies
@@ -259,6 +268,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Setup RPM build tree
         run: |

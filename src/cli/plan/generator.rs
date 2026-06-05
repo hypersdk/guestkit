@@ -2,7 +2,7 @@
 //! Plan generator - converts profile findings into fix plans
 
 use super::types::*;
-use crate::cli::profiles::{ProfileReport, RiskLevel, ReportSection, Finding};
+use crate::cli::profiles::{Finding, ProfileReport, ReportSection, RiskLevel};
 use anyhow::Result;
 
 /// Generates fix plans from profile reports
@@ -29,9 +29,8 @@ impl PlanGenerator {
             None => "unknown".to_string(),
         };
 
-        plan.metadata.description = Some(
-            "Security hardening plan generated from security profile analysis".to_string()
-        );
+        plan.metadata.description =
+            Some("Security hardening plan generated from security profile analysis".to_string());
         plan.metadata.tags = vec!["security".to_string(), "automated".to_string()];
 
         // Convert findings to operations
@@ -41,7 +40,7 @@ impl PlanGenerator {
             for finding in &section.findings {
                 // Only create operations for findings with risk levels
                 if finding.risk_level.is_some() {
-                    let remediation = &finding.message;  // Use message as remediation hint
+                    let remediation = &finding.message; // Use message as remediation hint
                     let operation = self.finding_to_operation(
                         &format!("sec-{:03}", op_counter),
                         finding,
@@ -197,9 +196,10 @@ impl PlanGenerator {
         }
 
         // Check if we modified SELinux
-        let has_selinux = plan.operations.iter().any(|op| {
-            matches!(&op.op_type, OperationType::SelinuxMode(_))
-        });
+        let has_selinux = plan
+            .operations
+            .iter()
+            .any(|op| matches!(&op.op_type, OperationType::SelinuxMode(_)));
 
         if has_selinux {
             plan.post_apply.push(PostApplyAction::RebootRequired {
@@ -214,21 +214,13 @@ impl PlanGenerator {
         boot: &crate::boot::BootabilityReport,
         image: &std::path::Path,
     ) -> Result<FixPlan> {
-        let mut plan = FixPlan::new(
-            image.display().to_string(),
-            "boot-repair".to_string(),
-        );
-        plan.metadata.description = Some(
-            "Automated boot repair plan from doctor analysis".to_string(),
-        );
+        let mut plan = FixPlan::new(image.display().to_string(), "boot-repair".to_string());
+        plan.metadata.description =
+            Some("Automated boot repair plan from doctor analysis".to_string());
         plan.metadata.tags = vec!["boot".to_string(), "doctor".to_string()];
 
         let mut op_counter = 1;
-        for finding in boot
-            .blockers
-            .iter()
-            .chain(boot.warnings.iter())
-        {
+        for finding in boot.blockers.iter().chain(boot.warnings.iter()) {
             let remediation = finding
                 .remediation
                 .clone()
@@ -314,7 +306,6 @@ impl PlanGenerator {
                 validation: None,
                 undo: None,
             });
-            op_counter += 1;
         }
 
         for warning in &migration.licensing_warnings {
@@ -334,6 +325,18 @@ impl PlanGenerator {
 
         plan.estimated_duration = Self::estimate_duration(plan.operations.len());
         self.add_post_apply_actions(&mut plan);
+        Ok(plan)
+    }
+
+    /// Append agent injection ops when exporting migration plans for KVM targets.
+    #[cfg(feature = "agent")]
+    pub fn with_agent_injection(
+        &self,
+        mut plan: FixPlan,
+        binary: &std::path::Path,
+        unit_content: &str,
+    ) -> Result<FixPlan> {
+        crate::agent::inject::append_agent_ops(&mut plan, binary, unit_content)?;
         Ok(plan)
     }
 
@@ -395,15 +398,13 @@ mod tests {
         ProfileReport {
             profile_name: "security".to_string(),
             overall_risk: Some(RiskLevel::High),
-            sections: vec![
-                ReportSection {
-                    title: "SSH Configuration".to_string(),
-                    findings: vec![
-                        create_test_finding(RiskLevel::High, "Disable PermitRootLogin in SSH config"),
-                        create_test_finding(RiskLevel::Medium, "Enable firewall service"),
-                    ],
-                },
-            ],
+            sections: vec![ReportSection {
+                title: "SSH Configuration".to_string(),
+                findings: vec![
+                    create_test_finding(RiskLevel::High, "Disable PermitRootLogin in SSH config"),
+                    create_test_finding(RiskLevel::Medium, "Enable firewall service"),
+                ],
+            }],
             summary: None,
         }
     }
@@ -486,7 +487,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_ssh() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Disable PermitRootLogin in SSH config").unwrap();
+        let op_type = generator
+            .parse_remediation("Disable PermitRootLogin in SSH config")
+            .unwrap();
 
         match op_type {
             OperationType::FileEdit(fe) => {
@@ -500,7 +503,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_firewall_install() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Install firewall for security").unwrap();
+        let op_type = generator
+            .parse_remediation("Install firewall for security")
+            .unwrap();
 
         match op_type {
             OperationType::PackageInstall(pi) => {
@@ -513,7 +518,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_firewall_enable() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Enable firewall service").unwrap();
+        let op_type = generator
+            .parse_remediation("Enable firewall service")
+            .unwrap();
 
         match op_type {
             OperationType::ServiceOperation(so) => {
@@ -528,7 +535,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_selinux() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Set SELinux to enforcing mode").unwrap();
+        let op_type = generator
+            .parse_remediation("Set SELinux to enforcing mode")
+            .unwrap();
 
         match op_type {
             OperationType::SelinuxMode(sm) => {
@@ -543,7 +552,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_fail2ban() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Install fail2ban for brute force protection").unwrap();
+        let op_type = generator
+            .parse_remediation("Install fail2ban for brute force protection")
+            .unwrap();
 
         match op_type {
             OperationType::PackageInstall(pi) => {
@@ -556,7 +567,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_aide() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Install AIDE for file integrity").unwrap();
+        let op_type = generator
+            .parse_remediation("Install AIDE for file integrity")
+            .unwrap();
 
         match op_type {
             OperationType::PackageInstall(pi) => {
@@ -569,7 +582,9 @@ mod tests {
     #[test]
     fn test_parse_remediation_default_command() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
-        let op_type = generator.parse_remediation("Run custom security check").unwrap();
+        let op_type = generator
+            .parse_remediation("Run custom security check")
+            .unwrap();
 
         match op_type {
             OperationType::CommandExec(ce) => {
@@ -586,23 +601,33 @@ mod tests {
         let generator = PlanGenerator::new("test.qcow2".to_string());
 
         let finding_critical = create_test_finding(RiskLevel::Critical, "Test");
-        let op = generator.finding_to_operation("op-1", &finding_critical, "Test").unwrap();
+        let op = generator
+            .finding_to_operation("op-1", &finding_critical, "Test")
+            .unwrap();
         assert_eq!(op.priority, Priority::Critical);
 
         let finding_high = create_test_finding(RiskLevel::High, "Test");
-        let op = generator.finding_to_operation("op-2", &finding_high, "Test").unwrap();
+        let op = generator
+            .finding_to_operation("op-2", &finding_high, "Test")
+            .unwrap();
         assert_eq!(op.priority, Priority::High);
 
         let finding_medium = create_test_finding(RiskLevel::Medium, "Test");
-        let op = generator.finding_to_operation("op-3", &finding_medium, "Test").unwrap();
+        let op = generator
+            .finding_to_operation("op-3", &finding_medium, "Test")
+            .unwrap();
         assert_eq!(op.priority, Priority::Medium);
 
         let finding_low = create_test_finding(RiskLevel::Low, "Test");
-        let op = generator.finding_to_operation("op-4", &finding_low, "Test").unwrap();
+        let op = generator
+            .finding_to_operation("op-4", &finding_low, "Test")
+            .unwrap();
         assert_eq!(op.priority, Priority::Low);
 
         let finding_info = create_test_finding(RiskLevel::Info, "Test");
-        let op = generator.finding_to_operation("op-5", &finding_info, "Test").unwrap();
+        let op = generator
+            .finding_to_operation("op-5", &finding_info, "Test")
+            .unwrap();
         assert_eq!(op.priority, Priority::Info);
     }
 
@@ -610,7 +635,9 @@ mod tests {
     fn test_finding_to_operation_structure() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
         let finding = create_test_finding(RiskLevel::High, "Enable firewall");
-        let op = generator.finding_to_operation("op-test", &finding, "Enable firewall").unwrap();
+        let op = generator
+            .finding_to_operation("op-test", &finding, "Enable firewall")
+            .unwrap();
 
         assert_eq!(op.id, "op-test");
         assert_eq!(op.description, "Test finding");
@@ -703,9 +730,10 @@ mod tests {
 
         generator.add_post_apply_actions(&mut plan);
 
-        let has_reboot = plan.post_apply.iter().any(|action| {
-            matches!(action, PostApplyAction::RebootRequired { .. })
-        });
+        let has_reboot = plan
+            .post_apply
+            .iter()
+            .any(|action| matches!(action, PostApplyAction::RebootRequired { .. }));
         assert!(has_reboot);
     }
 
@@ -730,19 +758,15 @@ mod tests {
         let report = ProfileReport {
             profile_name: "security".to_string(),
             overall_risk: Some(RiskLevel::Medium),
-            sections: vec![
-                ReportSection {
-                    title: "Test Section".to_string(),
-                    findings: vec![
-                        Finding {
-                            item: "Finding without risk".to_string(),
-                            status: FindingStatus::Pass,
-                            message: "No action needed".to_string(),
-                            risk_level: None,
-                        },
-                    ],
-                },
-            ],
+            sections: vec![ReportSection {
+                title: "Test Section".to_string(),
+                findings: vec![Finding {
+                    item: "Finding without risk".to_string(),
+                    status: FindingStatus::Pass,
+                    message: "No action needed".to_string(),
+                    risk_level: None,
+                }],
+            }],
             summary: None,
         };
 

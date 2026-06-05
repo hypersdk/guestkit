@@ -4,7 +4,7 @@
 use anyhow::Result;
 use colored::Colorize;
 
-use super::{ShellContext, resolve_path, format_bytes};
+use super::{format_bytes, resolve_path, ShellContext};
 
 /// Manage aliases
 pub fn cmd_alias(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
@@ -32,7 +32,12 @@ pub fn cmd_alias(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     let command = args[1..].join(" ");
 
     ctx.add_alias(name.clone(), command.clone());
-    println!("{} Alias added: {} = {}", "✓".green(), name.cyan(), command.green());
+    println!(
+        "{} Alias added: {} = {}",
+        "✓".green(),
+        name.cyan(),
+        command.green()
+    );
 
     Ok(())
 }
@@ -67,13 +72,19 @@ pub fn cmd_bookmark(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         }
 
         if ctx.bookmarks.is_empty() {
-            println!("  {}",  "No bookmarks set".yellow());
+            println!("  {}", "No bookmarks set".yellow());
         }
 
         println!();
         println!("{}", "Usage:".yellow());
-        println!("  {} - Add bookmark for current path", "bookmark <name>".green());
-        println!("  {} - Add bookmark for specific path", "bookmark <name> <path>".green());
+        println!(
+            "  {} - Add bookmark for current path",
+            "bookmark <name>".green()
+        );
+        println!(
+            "  {} - Add bookmark for specific path",
+            "bookmark <name> <path>".green()
+        );
         println!("  {} - Jump to bookmark", "goto <name>".green());
         return Ok(());
     }
@@ -86,7 +97,12 @@ pub fn cmd_bookmark(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     };
 
     ctx.add_bookmark(name.clone(), path.clone());
-    println!("{} Bookmark added: {} → {}", "✓".green(), name.cyan(), path.blue());
+    println!(
+        "{} Bookmark added: {} → {}",
+        "✓".green(),
+        name.cyan(),
+        path.blue()
+    );
 
     Ok(())
 }
@@ -96,13 +112,13 @@ pub fn cmd_goto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     if args.is_empty() {
         println!("{}", "Usage: goto <bookmark>".red());
         println!();
-        cmd_bookmark(ctx, &[])?;  // Show available bookmarks
+        cmd_bookmark(ctx, &[])?; // Show available bookmarks
         return Ok(());
     }
 
     let name = args[0];
     if let Some(path) = ctx.get_bookmark(name) {
-        let path = path.clone();  // Clone to avoid borrow conflict
+        let path = path.clone(); // Clone to avoid borrow conflict
 
         // Verify path exists
         if ctx.guestfs.is_dir(&path).unwrap_or(false) {
@@ -114,7 +130,7 @@ pub fn cmd_goto(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
     } else {
         println!("{} Bookmark not found: {}", "⚠".yellow(), name);
         println!();
-        cmd_bookmark(ctx, &[])?;  // Show available bookmarks
+        cmd_bookmark(ctx, &[])?; // Show available bookmarks
     }
 
     Ok(())
@@ -125,10 +141,16 @@ pub fn cmd_stats(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
     println!("{}", "Shell Statistics:".yellow().bold());
     println!("  OS: {}", ctx.get_os_info().cyan());
     println!("  Current Path: {}", ctx.current_path.blue());
-    println!("  Commands Executed: {}", ctx.command_count.to_string().green());
+    println!(
+        "  Commands Executed: {}",
+        ctx.command_count.to_string().green()
+    );
 
     if let Some(duration) = ctx.last_command_time {
-        println!("  Last Command Time: {}", format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan());
+        println!(
+            "  Last Command Time: {}",
+            format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan()
+        );
     }
 
     println!("  Aliases: {}", ctx.aliases.len().to_string().cyan());
@@ -151,7 +173,11 @@ pub fn cmd_recent(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
         20
     };
 
-    println!("{} Finding recently modified files in: {}", "→".cyan(), path.yellow());
+    println!(
+        "{} Finding recently modified files in: {}",
+        "→".cyan(),
+        path.yellow()
+    );
     println!();
 
     // This is a simplified version - in a real impl, we'd walk the tree and sort by mtime
@@ -173,16 +199,17 @@ pub fn cmd_recent(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
         for (name, mtime, size) in files_with_time.iter().take(limit) {
             use chrono::{DateTime, Utc};
-            let dt = DateTime::<Utc>::from_timestamp(*mtime, 0)
-                .unwrap_or_else(Utc::now);
+            let dt = DateTime::<Utc>::from_timestamp(*mtime, 0).unwrap_or_else(Utc::now);
             let time_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
 
             let size_str = format_bytes(*size as u64);
-            println!("  {} {} {} {}",
+            println!(
+                "  {} {} {} {}",
                 time_str.bright_black(),
                 name.green(),
                 "-".bright_black(),
-                size_str.yellow());
+                size_str.yellow()
+            );
         }
         println!();
     }
@@ -192,20 +219,47 @@ pub fn cmd_recent(ctx: &mut ShellContext, args: &[&str]) -> Result<()> {
 
 /// Show command history with analysis
 pub fn cmd_history_enhanced(ctx: &ShellContext, _args: &[&str]) -> Result<()> {
-    println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan().bold());
-    println!("{}", "║          Command History Analysis               ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════╝".cyan().bold());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════╗"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║          Command History Analysis               ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════╝"
+            .cyan()
+            .bold()
+    );
     println!();
 
     println!("{}", "Session Statistics:".yellow().bold());
-    println!("  Commands executed: {}", ctx.command_count.to_string().green().bold());
+    println!(
+        "  Commands executed: {}",
+        ctx.command_count.to_string().green().bold()
+    );
 
     if let Some(duration) = ctx.last_command_time {
-        println!("  Last command time: {}", format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan());
+        println!(
+            "  Last command time: {}",
+            format!("{:.2}ms", duration.as_secs_f64() * 1000.0).cyan()
+        );
     }
 
-    println!("  Aliases defined: {}", ctx.aliases.len().to_string().cyan());
-    println!("  Bookmarks saved: {}", ctx.bookmarks.len().to_string().cyan());
+    println!(
+        "  Aliases defined: {}",
+        ctx.aliases.len().to_string().cyan()
+    );
+    println!(
+        "  Bookmarks saved: {}",
+        ctx.bookmarks.len().to_string().cyan()
+    );
     println!();
 
     println!("{}", "Most Useful Commands:".yellow().bold());

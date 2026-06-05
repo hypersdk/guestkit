@@ -2,7 +2,9 @@
 //! Splash screen — carbon surfaces, orange accent, Zyvor branding.
 
 use crate::cli::tui::config::UiConfig;
-use crate::cli::tui::theme::{fill_background, resolve, ACCENT, ACCENT_SOFT, BORDER_MUTED, LINK, TEXT, TEXT_MUTED};
+use crate::cli::tui::theme::{
+    fill_background, resolve, ACCENT, ACCENT_SOFT, BORDER_MUTED, LINK, TEXT, TEXT_MUTED,
+};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Modifier, Style},
@@ -57,11 +59,17 @@ pub fn draw_splash(f: &mut Frame, cfg: &UiConfig) {
     logo.push(Line::from(vec![
         Span::styled("  HyperSDK Platform  ", Style::default().fg(TEXT_MUTED)),
         Span::styled("·", Style::default().fg(BORDER_MUTED)),
-        Span::styled("  zyvor.dev  ", Style::default().fg(LINK).add_modifier(Modifier::UNDERLINED)),
+        Span::styled(
+            "  zyvor.dev  ",
+            Style::default().fg(LINK).add_modifier(Modifier::UNDERLINED),
+        ),
     ]));
     logo.push(Line::from(""));
     logo.push(Line::from(vec![
-        Span::styled("  GuestKit  ", Style::default().fg(TEXT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "  GuestKit  ",
+            Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("VM inspection & analysis", Style::default().fg(TEXT_MUTED)),
     ]));
     logo.push(Line::from(""));
@@ -70,14 +78,12 @@ pub fn draw_splash(f: &mut Frame, cfg: &UiConfig) {
         Style::default().fg(TEXT_MUTED),
     )));
 
-    let splash = Paragraph::new(logo)
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(ACCENT))
-                .style(Style::default().bg(th.surface_raised)),
-        );
+    let splash = Paragraph::new(logo).alignment(Alignment::Center).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(ACCENT))
+            .style(Style::default().bg(th.surface_raised)),
+    );
 
     f.render_widget(splash, logo_chunks[1]);
 }

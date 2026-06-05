@@ -32,7 +32,8 @@ pub fn build_fleet_list(primary: &Path, fleet_root: Option<&Path>) -> Result<Vec
 
 pub fn discover_images_in_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut found = Vec::new();
-    let entries = std::fs::read_dir(dir).with_context(|| format!("read fleet dir {}", dir.display()))?;
+    let entries =
+        std::fs::read_dir(dir).with_context(|| format!("read fleet dir {}", dir.display()))?;
     for entry in entries {
         let entry = entry?;
         let path = entry.path();

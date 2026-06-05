@@ -160,23 +160,24 @@ impl Guestfs {
         let product_name = self.inspect_get_product_name(root).unwrap_or_default();
 
         // Parse common Windows versions
-        let (major, minor) = if product_name.contains("Windows 11") || product_name.contains("Windows 10") {
-            (10, 0) // Windows 11 is actually 10.0
-        } else if product_name.contains("Windows 8.1") {
-            (6, 3)
-        } else if product_name.contains("Windows 8") {
-            (6, 2)
-        } else if product_name.contains("Windows 7") {
-            (6, 1)
-        } else if product_name.contains("Vista") {
-            (6, 0)
-        } else if product_name.contains("XP") {
-            (5, 1)
-        } else if product_name.contains("2000") {
-            (5, 0)
-        } else {
-            (0, 0)
-        };
+        let (major, minor) =
+            if product_name.contains("Windows 11") || product_name.contains("Windows 10") {
+                (10, 0) // Windows 11 is actually 10.0
+            } else if product_name.contains("Windows 8.1") {
+                (6, 3)
+            } else if product_name.contains("Windows 8") {
+                (6, 2)
+            } else if product_name.contains("Windows 7") {
+                (6, 1)
+            } else if product_name.contains("Vista") {
+                (6, 0)
+            } else if product_name.contains("XP") {
+                (5, 1)
+            } else if product_name.contains("2000") {
+                (5, 0)
+            } else {
+                (0, 0)
+            };
 
         Ok((major, minor))
     }

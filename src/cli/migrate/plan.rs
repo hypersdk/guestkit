@@ -63,7 +63,8 @@ pub fn compute_migration_score(
 
     if let Some(win) = &evidence.windows {
         if win.bitlocker_detected {
-            licensing_warnings.push("BitLocker encryption must be suspended before migration".to_string());
+            licensing_warnings
+                .push("BitLocker encryption must be suspended before migration".to_string());
             score -= 20.0;
         }
         if win.pending_reboot {
@@ -121,6 +122,7 @@ mod tests {
             vm_tools: VmToolsEvidence {
                 detected: vec!["open-vm-tools".to_string()],
             },
+            systemd: None,
             windows: None,
         }
     }
@@ -144,10 +146,7 @@ mod tests {
         ev.vm_tools.detected = vec!["vmware-tools".to_string()];
         let report = compute_migration_score(&ev, &boot_report(90.0), "proxmox");
         assert!(report.score < 90.0);
-        assert!(report
-            .required_changes
-            .iter()
-            .any(|c| c.contains("VMware")));
+        assert!(report.required_changes.iter().any(|c| c.contains("VMware")));
         assert!(!report.driver_injections.is_empty());
     }
 

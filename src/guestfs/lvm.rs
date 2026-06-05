@@ -36,7 +36,8 @@ impl Guestfs {
         let device_path = if let Some(nbd) = &self.nbd_device {
             nbd.device_path().display().to_string()
         } else if let Some(loop_dev) = &self.loop_device {
-            loop_dev.device_path()
+            loop_dev
+                .device_path()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "/dev/loop".to_string())
         } else {
@@ -100,16 +101,12 @@ impl Guestfs {
         };
 
         // Run vgscan with device filter to only scan our NBD/loop device
-        let output = cmd
-            .arg("--config")
-            .arg(&lvm_filter)
-            .output()
-            .map_err(|e| {
-                Error::CommandFailed(format!(
-                    "Failed to run vgscan: {}. Is lvm2 installed? Requires sudo/root.",
-                    e
-                ))
-            })?;
+        let output = cmd.arg("--config").arg(&lvm_filter).output().map_err(|e| {
+            Error::CommandFailed(format!(
+                "Failed to run vgscan: {}. Is lvm2 installed? Requires sudo/root.",
+                e
+            ))
+        })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -178,13 +175,14 @@ impl Guestfs {
         // Device-mapper creates nodes in /dev/mapper/ regardless of LVM_SYSTEM_DIR
         if activate {
             // Run udevadm settle to ensure device nodes are fully created
-            let settle_result = Command::new("udevadm")
-                .arg("settle")
-                .output();
+            let settle_result = Command::new("udevadm").arg("settle").output();
 
             if let Ok(settle_output) = settle_result {
                 if !settle_output.status.success() && self.verbose {
-                    eprintln!("guestfs: udevadm settle failed: {}", String::from_utf8_lossy(&settle_output.stderr));
+                    eprintln!(
+                        "guestfs: udevadm settle failed: {}",
+                        String::from_utf8_lossy(&settle_output.stderr)
+                    );
                 }
             }
 

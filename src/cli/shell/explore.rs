@@ -4,10 +4,10 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     cursor::MoveTo,
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     execute,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
 use std::io::{stdout, Write};
 
@@ -113,9 +113,8 @@ impl ExplorerState {
 
     fn apply_filter(&mut self) {
         if !self.filter.is_empty() {
-            self.entries.retain(|e| {
-                e.name.to_lowercase().contains(&self.filter.to_lowercase())
-            });
+            self.entries
+                .retain(|e| e.name.to_lowercase().contains(&self.filter.to_lowercase()));
         }
 
         if self.selected >= self.entries.len() {
@@ -127,12 +126,10 @@ impl ExplorerState {
     fn sort_entries(&mut self) {
         match self.sort_by {
             SortMode::Name => {
-                self.entries.sort_by(|a, b| {
-                    match (a.is_dir, b.is_dir) {
-                        (true, false) => std::cmp::Ordering::Less,
-                        (false, true) => std::cmp::Ordering::Greater,
-                        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-                    }
+                self.entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
                 });
             }
             SortMode::Size => {
@@ -216,8 +213,7 @@ fn load_entries(ctx: &mut ShellContext, path: &str, show_hidden: bool) -> Result
     }
 
     // List directory contents
-    let files = ctx.guestfs.ls(path)
-        .context("Failed to list directory")?;
+    let files = ctx.guestfs.ls(path).context("Failed to list directory")?;
 
     for file in files {
         // Skip hidden files if not showing them
@@ -252,19 +248,33 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
     execute!(stdout, Clear(ClearType::All), MoveTo(0, 0))?;
 
     // Header
-    println!("{}", "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan());
-    println!("{}", format!("║ {} GuestKit File Explorer - {}",
-        "📂",
-        ctx.get_os_info()).cyan());
-    println!("{}", "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan());
+    println!(
+        "{}",
+        "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan()
+    );
+    println!(
+        "{}",
+        format!("║ {} GuestKit File Explorer - {}", "📂", ctx.get_os_info()).cyan()
+    );
+    println!(
+        "{}",
+        "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan()
+    );
 
     // Current path with breadcrumbs
     let breadcrumb = if state.current_path.len() > 70 {
-        format!("...{}", &state.current_path[state.current_path.len() - 67..])
+        format!(
+            "...{}",
+            &state.current_path[state.current_path.len() - 67..]
+        )
     } else {
         state.current_path.clone()
     };
-    println!("{} {}", "📍 Path:".yellow().bold(), breadcrumb.bright_white());
+    println!(
+        "{} {}",
+        "📍 Path:".yellow().bold(),
+        breadcrumb.bright_white()
+    );
 
     // File count and filter
     let visible_count = state.entries.len();
@@ -274,19 +284,26 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
         String::new()
     };
 
-    println!("{} {}{}",
+    println!(
+        "{} {}{}",
         "📊 Items:".yellow().bold(),
         visible_count.to_string().bright_white(),
         filter_text.bright_black()
     );
 
-    println!("{}", "├───────────────────────────────────────────────────────────────────────────────┤".cyan());
+    println!(
+        "{}",
+        "├───────────────────────────────────────────────────────────────────────────────┤".cyan()
+    );
 
     // File list
     let visible_lines = state.panel_height as usize;
     let end_idx = (state.scroll_offset + visible_lines).min(state.entries.len());
 
-    for (idx, entry) in state.entries[state.scroll_offset..end_idx].iter().enumerate() {
+    for (idx, entry) in state.entries[state.scroll_offset..end_idx]
+        .iter()
+        .enumerate()
+    {
         let global_idx = state.scroll_offset + idx;
         let is_selected = global_idx == state.selected;
 
@@ -308,14 +325,16 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
         };
 
         if is_selected {
-            println!("{} {} {:<50} {:>12}",
+            println!(
+                "{} {} {:<50} {:>12}",
                 "▸".bright_yellow().bold(),
                 icon,
                 name_display.color(color).bold(),
                 size_str.bright_black()
             );
         } else {
-            println!("  {} {:<50} {:>12}",
+            println!(
+                "  {} {:<50} {:>12}",
                 icon,
                 name_display.color(color),
                 size_str.bright_black()
@@ -328,13 +347,17 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
         println!();
     }
 
-    println!("{}", "├───────────────────────────────────────────────────────────────────────────────┤".cyan());
+    println!(
+        "{}",
+        "├───────────────────────────────────────────────────────────────────────────────┤".cyan()
+    );
 
     // Selected file info
     if let Some(entry) = state.get_selected_entry() {
         if entry.name != ".." {
             let file_type = if entry.is_dir { "Directory" } else { "File" };
-            println!("{} {} | {} {}",
+            println!(
+                "{} {} | {} {}",
                 "ℹ️  Info:".yellow().bold(),
                 file_type.bright_white(),
                 "Size:".yellow(),
@@ -345,18 +368,32 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
         }
     }
 
-    println!("{}", "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan());
+    println!(
+        "{}",
+        "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan()
+    );
 
     // Help bar
-    println!("{}", format!(
-        "║ {} {} {} {} {} {} {} {}",
-        "↑↓".green().bold(), "Navigate".bright_black(),
-        "Enter".green().bold(), "Open".bright_black(),
-        "h".green().bold(), "Help".bright_black(),
-        "q".green().bold(), "Quit".bright_black(),
-    ).cyan());
+    println!(
+        "{}",
+        format!(
+            "║ {} {} {} {} {} {} {} {}",
+            "↑↓".green().bold(),
+            "Navigate".bright_black(),
+            "Enter".green().bold(),
+            "Open".bright_black(),
+            "h".green().bold(),
+            "Help".bright_black(),
+            "q".green().bold(),
+            "Quit".bright_black(),
+        )
+        .cyan()
+    );
 
-    println!("{}", "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan());
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan()
+    );
 
     stdout.flush()?;
     Ok(())
@@ -364,27 +401,106 @@ fn draw_explorer(state: &ExplorerState, ctx: &ShellContext) -> Result<()> {
 
 /// Show help overlay
 fn show_help() -> Result<()> {
-    println!("\n{}", "╔════════════════════ Explorer Help ═══════════════════╗".bright_cyan().bold());
-    println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} Navigation                                       ║", "📖").cyan());
-    println!("{}", "║   ↑/↓ or k/j    - Move selection up/down              ║".cyan());
-    println!("{}", "║   PgUp/PgDn     - Page up/down                        ║".cyan());
-    println!("{}", "║   Enter         - Enter directory / view file        ║".cyan());
-    println!("{}", "║   Backspace     - Go to parent directory             ║".cyan());
-    println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} Actions                                         ║", "⚡").cyan());
-    println!("{}", "║   v             - View file content                  ║".cyan());
-    println!("{}", "║   i             - Show file info                     ║".cyan());
-    println!("{}", "║   /             - Filter files                       ║".cyan());
-    println!("{}", "║   .             - Toggle hidden files                ║".cyan());
-    println!("{}", "║   s             - Cycle sort mode                    ║".cyan());
-    println!("{}", "║                                                       ║".cyan());
-    println!("{}", format!("║ {} General                                         ║", "🔧").cyan());
-    println!("{}", "║   h or ?        - Show this help                     ║".cyan());
-    println!("{}", "║   q or Esc      - Exit explorer                      ║".cyan());
-    println!("{}", "║   Ctrl+C        - Force exit                         ║".cyan());
-    println!("{}", "║                                                       ║".cyan());
-    println!("{}", "╚═══════════════════════════════════════════════════════╝".bright_cyan().bold());
+    println!(
+        "\n{}",
+        "╔════════════════════ Explorer Help ═══════════════════╗"
+            .bright_cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "║                                                       ║".cyan()
+    );
+    println!(
+        "{}",
+        format!(
+            "║ {} Navigation                                       ║",
+            "📖"
+        )
+        .cyan()
+    );
+    println!(
+        "{}",
+        "║   ↑/↓ or k/j    - Move selection up/down              ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   PgUp/PgDn     - Page up/down                        ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   Enter         - Enter directory / view file        ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   Backspace     - Go to parent directory             ║".cyan()
+    );
+    println!(
+        "{}",
+        "║                                                       ║".cyan()
+    );
+    println!(
+        "{}",
+        format!(
+            "║ {} Actions                                         ║",
+            "⚡"
+        )
+        .cyan()
+    );
+    println!(
+        "{}",
+        "║   v             - View file content                  ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   i             - Show file info                     ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   /             - Filter files                       ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   .             - Toggle hidden files                ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   s             - Cycle sort mode                    ║".cyan()
+    );
+    println!(
+        "{}",
+        "║                                                       ║".cyan()
+    );
+    println!(
+        "{}",
+        format!(
+            "║ {} General                                         ║",
+            "🔧"
+        )
+        .cyan()
+    );
+    println!(
+        "{}",
+        "║   h or ?        - Show this help                     ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   q or Esc      - Exit explorer                      ║".cyan()
+    );
+    println!(
+        "{}",
+        "║   Ctrl+C        - Force exit                         ║".cyan()
+    );
+    println!(
+        "{}",
+        "║                                                       ║".cyan()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════╝"
+            .bright_cyan()
+            .bold()
+    );
     println!("\n{}", "Press any key to continue...".yellow());
 
     // Wait for any key
@@ -399,8 +515,7 @@ fn show_help() -> Result<()> {
 
 /// View file content
 fn view_file(ctx: &mut ShellContext, path: &str) -> Result<()> {
-    let content = ctx.guestfs.cat(path)
-        .context("Failed to read file")?;
+    let content = ctx.guestfs.cat(path).context("Failed to read file")?;
 
     // Show in pager-like view
     println!("\n{}", format!("╔═ Viewing: {} ═╗", path).cyan().bold());
@@ -413,7 +528,10 @@ fn view_file(ctx: &mut ShellContext, path: &str) -> Result<()> {
     }
 
     if lines.len() > max_lines {
-        println!("\n{}", format!("... ({} more lines)", lines.len() - max_lines).yellow());
+        println!(
+            "\n{}",
+            format!("... ({} more lines)", lines.len() - max_lines).yellow()
+        );
     }
 
     println!("\n{}", "Press any key to return...".yellow());
@@ -430,22 +548,51 @@ fn view_file(ctx: &mut ShellContext, path: &str) -> Result<()> {
 
 /// Show file information
 fn show_file_info(ctx: &mut ShellContext, path: &str, entry: &FileEntry) -> Result<()> {
-    println!("\n{}", format!("╔═ File Information: {} ═╗", entry.name).cyan().bold());
+    println!(
+        "\n{}",
+        format!("╔═ File Information: {} ═╗", entry.name)
+            .cyan()
+            .bold()
+    );
     println!("{} {}", "Path:".yellow().bold(), path.bright_white());
-    println!("{} {}", "Type:".yellow().bold(), if entry.is_dir { "Directory" } else { "File" }.bright_white());
-    println!("{} {}", "Size:".yellow().bold(), format_size(entry.size).bright_white());
+    println!(
+        "{} {}",
+        "Type:".yellow().bold(),
+        if entry.is_dir { "Directory" } else { "File" }.bright_white()
+    );
+    println!(
+        "{} {}",
+        "Size:".yellow().bold(),
+        format_size(entry.size).bright_white()
+    );
 
     // Try to get permissions
     if let Ok(stat) = ctx.guestfs.stat(path) {
-        println!("{} {}", "Mode:".yellow().bold(), format!("{:o}", stat.mode).bright_white());
-        println!("{} {}", "UID:".yellow().bold(), stat.uid.to_string().bright_white());
-        println!("{} {}", "GID:".yellow().bold(), stat.gid.to_string().bright_white());
+        println!(
+            "{} {}",
+            "Mode:".yellow().bold(),
+            format!("{:o}", stat.mode).bright_white()
+        );
+        println!(
+            "{} {}",
+            "UID:".yellow().bold(),
+            stat.uid.to_string().bright_white()
+        );
+        println!(
+            "{} {}",
+            "GID:".yellow().bold(),
+            stat.gid.to_string().bright_white()
+        );
     }
 
     // For non-directories, show file type details
     if !entry.is_dir {
         if let Ok(file_type) = ctx.guestfs.file(path) {
-            println!("{} {}", "File Type:".yellow().bold(), file_type.bright_white());
+            println!(
+                "{} {}",
+                "File Type:".yellow().bold(),
+                file_type.bright_white()
+            );
         }
     }
 
@@ -506,7 +653,10 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
         draw_explorer(state, ctx)?;
 
         // Handle input
-        if let Event::Key(KeyEvent { code, modifiers, .. }) = event::read()? {
+        if let Event::Key(KeyEvent {
+            code, modifiers, ..
+        }) = event::read()?
+        {
             match (code, modifiers) {
                 // Navigation
                 (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
@@ -536,7 +686,8 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                             };
 
                             state.current_path = new_path;
-                            state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
+                            state.entries =
+                                load_entries(ctx, &state.current_path, state.show_hidden)?;
                             state.sort_entries();
                             state.reset_navigation();
                         } else {
@@ -550,13 +701,12 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                 }
 
                 // Go to parent
-                (KeyCode::Backspace, _)
-                    if state.current_path != "/" => {
-                        state.current_path = state.parent_path();
-                        state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
-                        state.sort_entries();
-                        state.reset_navigation();
-                    }
+                (KeyCode::Backspace, _) if state.current_path != "/" => {
+                    state.current_path = state.parent_path();
+                    state.entries = load_entries(ctx, &state.current_path, state.show_hidden)?;
+                    state.sort_entries();
+                    state.reset_navigation();
+                }
 
                 // View file content
                 (KeyCode::Char('v'), KeyModifiers::NONE) => {
@@ -615,7 +765,8 @@ fn explorer_loop(ctx: &mut ShellContext, state: &mut ExplorerState) -> Result<()
                 }
 
                 // Help
-                (KeyCode::Char('h'), KeyModifiers::NONE) | (KeyCode::Char('?'), KeyModifiers::NONE) => {
+                (KeyCode::Char('h'), KeyModifiers::NONE)
+                | (KeyCode::Char('?'), KeyModifiers::NONE) => {
                     disable_raw_mode()?;
                     let _ = show_help();
                     enable_raw_mode()?;
@@ -903,12 +1054,16 @@ mod tests {
 
         // Should be sorted by extension, then name
         // png, txt (2 files), yaml
-        let extensions: Vec<&str> = state.entries.iter()
+        let extensions: Vec<&str> = state
+            .entries
+            .iter()
             .map(|e| get_extension(&e.name))
             .collect();
 
         // txt files should be together
-        assert!(extensions.windows(2).any(|w| w[0] == "txt" && w[1] == "txt"));
+        assert!(extensions
+            .windows(2)
+            .any(|w| w[0] == "txt" && w[1] == "txt"));
     }
 
     #[test]
@@ -961,59 +1116,122 @@ mod tests {
 
     #[test]
     fn test_get_file_icon_text_files() {
-        assert_eq!(get_file_icon(&create_test_entry("readme.txt", false, 100)), "📄");
-        assert_eq!(get_file_icon(&create_test_entry("notes.md", false, 100)), "📄");
-        assert_eq!(get_file_icon(&create_test_entry("debug.log", false, 100)), "📄");
+        assert_eq!(
+            get_file_icon(&create_test_entry("readme.txt", false, 100)),
+            "📄"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("notes.md", false, 100)),
+            "📄"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("debug.log", false, 100)),
+            "📄"
+        );
     }
 
     #[test]
     fn test_get_file_icon_code_files() {
-        assert_eq!(get_file_icon(&create_test_entry("main.rs", false, 100)), "💻");
-        assert_eq!(get_file_icon(&create_test_entry("script.py", false, 100)), "💻");
-        assert_eq!(get_file_icon(&create_test_entry("app.js", false, 100)), "💻");
+        assert_eq!(
+            get_file_icon(&create_test_entry("main.rs", false, 100)),
+            "💻"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("script.py", false, 100)),
+            "💻"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("app.js", false, 100)),
+            "💻"
+        );
     }
 
     #[test]
     fn test_get_file_icon_config_files() {
-        assert_eq!(get_file_icon(&create_test_entry("config.json", false, 100)), "⚙️ ");
-        assert_eq!(get_file_icon(&create_test_entry("settings.yaml", false, 100)), "⚙️ ");
-        assert_eq!(get_file_icon(&create_test_entry("data.xml", false, 100)), "⚙️ ");
+        assert_eq!(
+            get_file_icon(&create_test_entry("config.json", false, 100)),
+            "⚙️ "
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("settings.yaml", false, 100)),
+            "⚙️ "
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("data.xml", false, 100)),
+            "⚙️ "
+        );
     }
 
     #[test]
     fn test_get_file_icon_images() {
-        assert_eq!(get_file_icon(&create_test_entry("photo.jpg", false, 100)), "🖼️ ");
-        assert_eq!(get_file_icon(&create_test_entry("icon.png", false, 100)), "🖼️ ");
-        assert_eq!(get_file_icon(&create_test_entry("logo.svg", false, 100)), "🖼️ ");
+        assert_eq!(
+            get_file_icon(&create_test_entry("photo.jpg", false, 100)),
+            "🖼️ "
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("icon.png", false, 100)),
+            "🖼️ "
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("logo.svg", false, 100)),
+            "🖼️ "
+        );
     }
 
     #[test]
     fn test_get_file_icon_pdf() {
-        assert_eq!(get_file_icon(&create_test_entry("document.pdf", false, 100)), "📕");
+        assert_eq!(
+            get_file_icon(&create_test_entry("document.pdf", false, 100)),
+            "📕"
+        );
     }
 
     #[test]
     fn test_get_file_icon_archives() {
-        assert_eq!(get_file_icon(&create_test_entry("archive.zip", false, 100)), "📦");
-        assert_eq!(get_file_icon(&create_test_entry("backup.tar", false, 100)), "📦");
-        assert_eq!(get_file_icon(&create_test_entry("data.gz", false, 100)), "📦");
+        assert_eq!(
+            get_file_icon(&create_test_entry("archive.zip", false, 100)),
+            "📦"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("backup.tar", false, 100)),
+            "📦"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("data.gz", false, 100)),
+            "📦"
+        );
     }
 
     #[test]
     fn test_get_file_icon_scripts() {
-        assert_eq!(get_file_icon(&create_test_entry("build.sh", false, 100)), "🔧");
-        assert_eq!(get_file_icon(&create_test_entry("deploy.bash", false, 100)), "🔧");
+        assert_eq!(
+            get_file_icon(&create_test_entry("build.sh", false, 100)),
+            "🔧"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("deploy.bash", false, 100)),
+            "🔧"
+        );
     }
 
     #[test]
     fn test_get_file_icon_config() {
-        assert_eq!(get_file_icon(&create_test_entry("app.conf", false, 100)), "🔐");
-        assert_eq!(get_file_icon(&create_test_entry("server.config", false, 100)), "🔐");
+        assert_eq!(
+            get_file_icon(&create_test_entry("app.conf", false, 100)),
+            "🔐"
+        );
+        assert_eq!(
+            get_file_icon(&create_test_entry("server.config", false, 100)),
+            "🔐"
+        );
     }
 
     #[test]
     fn test_get_file_icon_default() {
-        assert_eq!(get_file_icon(&create_test_entry("unknown.xyz", false, 100)), "📝");
+        assert_eq!(
+            get_file_icon(&create_test_entry("unknown.xyz", false, 100)),
+            "📝"
+        );
     }
 
     #[test]
@@ -1030,32 +1248,62 @@ mod tests {
 
     #[test]
     fn test_get_file_color_executables() {
-        assert_eq!(get_file_color(&create_test_entry("script.sh", false, 100)), colored::Color::Green);
-        assert_eq!(get_file_color(&create_test_entry("script.py", false, 100)), colored::Color::Green);
+        assert_eq!(
+            get_file_color(&create_test_entry("script.sh", false, 100)),
+            colored::Color::Green
+        );
+        assert_eq!(
+            get_file_color(&create_test_entry("script.py", false, 100)),
+            colored::Color::Green
+        );
     }
 
     #[test]
     fn test_get_file_color_source_code() {
-        assert_eq!(get_file_color(&create_test_entry("main.rs", false, 100)), colored::Color::Yellow);
-        assert_eq!(get_file_color(&create_test_entry("app.c", false, 100)), colored::Color::Yellow);
+        assert_eq!(
+            get_file_color(&create_test_entry("main.rs", false, 100)),
+            colored::Color::Yellow
+        );
+        assert_eq!(
+            get_file_color(&create_test_entry("app.c", false, 100)),
+            colored::Color::Yellow
+        );
     }
 
     #[test]
     fn test_get_file_color_text() {
-        assert_eq!(get_file_color(&create_test_entry("readme.txt", false, 100)), colored::Color::White);
-        assert_eq!(get_file_color(&create_test_entry("notes.md", false, 100)), colored::Color::White);
+        assert_eq!(
+            get_file_color(&create_test_entry("readme.txt", false, 100)),
+            colored::Color::White
+        );
+        assert_eq!(
+            get_file_color(&create_test_entry("notes.md", false, 100)),
+            colored::Color::White
+        );
     }
 
     #[test]
     fn test_get_file_color_config() {
-        assert_eq!(get_file_color(&create_test_entry("config.yaml", false, 100)), colored::Color::Cyan);
-        assert_eq!(get_file_color(&create_test_entry("data.json", false, 100)), colored::Color::Cyan);
+        assert_eq!(
+            get_file_color(&create_test_entry("config.yaml", false, 100)),
+            colored::Color::Cyan
+        );
+        assert_eq!(
+            get_file_color(&create_test_entry("data.json", false, 100)),
+            colored::Color::Cyan
+        );
     }
 
     #[test]
     fn test_get_file_color_archives() {
-        assert_eq!(get_file_color(&create_test_entry("archive.tar", false, 100)), colored::Color::Red);
-        assert_eq!(get_file_color(&create_test_entry("data.zip", false, 100)), colored::Color::Red);
+        assert_eq!(
+            get_file_color(&create_test_entry("archive.tar", false, 100)),
+            colored::Color::Red
+        );
+        assert_eq!(
+            get_file_color(&create_test_entry("data.zip", false, 100)),
+            colored::Color::Red
+        );
     }
 
     #[test]

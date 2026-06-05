@@ -4,9 +4,9 @@
 //! Run with: cargo bench
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::hint::black_box;
 use guestkit::Guestfs;
 use std::fs;
+use std::hint::black_box;
 
 fn setup_test_disk(path: &str, size_mb: u64) {
     let _ = fs::remove_file(path);

@@ -33,13 +33,18 @@ impl PlanPreview {
         println!("{}", "═".repeat(60).bright_black());
         println!();
         println!("{}: {}", "VM".bold(), plan.vm);
-        println!("{}: {} ({} risk)",
+        println!(
+            "{}: {} ({} risk)",
             "Profile".bold(),
             plan.profile,
             Self::colorize_risk(&plan.overall_risk)
         );
         println!("{}: {}", "Operations".bold(), plan.operations.len());
-        println!("{}: {}", "Estimated Duration".bold(), plan.estimated_duration);
+        println!(
+            "{}: {}",
+            "Estimated Duration".bold(),
+            plan.estimated_duration
+        );
         println!();
         println!("{}", "━".repeat(60).bright_black());
         println!();
@@ -47,8 +52,16 @@ impl PlanPreview {
 
     /// Print operations grouped by priority
     fn print_operations(plan: &FixPlan) {
-        for priority in &[Priority::Critical, Priority::High, Priority::Medium, Priority::Low, Priority::Info] {
-            let ops: Vec<&Operation> = plan.operations.iter()
+        for priority in &[
+            Priority::Critical,
+            Priority::High,
+            Priority::Medium,
+            Priority::Low,
+            Priority::Info,
+        ] {
+            let ops: Vec<&Operation> = plan
+                .operations
+                .iter()
                 .filter(|op| op.priority == *priority)
                 .collect();
 
@@ -56,7 +69,8 @@ impl PlanPreview {
                 continue;
             }
 
-            println!("{} {} Priority ({} operations)",
+            println!(
+                "{} {} Priority ({} operations)",
                 priority.emoji(),
                 priority.as_str().to_uppercase(),
                 ops.len()
@@ -78,7 +92,8 @@ impl PlanPreview {
                 println!("  File: {}", fe.file.bright_blue());
                 for change in &fe.changes {
                     if change.line > 0 {
-                        println!("  Line {}: {} → {}",
+                        println!(
+                            "  Line {}: {} → {}",
                             change.line,
                             change.before.red(),
                             change.after.green()
@@ -103,10 +118,7 @@ impl PlanPreview {
             }
             OperationType::SelinuxMode(sm) => {
                 println!("  File: {}", sm.file.bright_blue());
-                println!("  {} → {}",
-                    sm.current.red(),
-                    sm.target.green()
-                );
+                println!("  {} → {}", sm.current.red(), sm.target.green());
                 if let Some(warning) = &sm.warning {
                     println!("  ⚠️  {}", warning.yellow());
                 }
@@ -114,7 +126,8 @@ impl PlanPreview {
             OperationType::RegistryEdit(re) => {
                 println!("  Key: {}", re.key.bright_blue());
                 println!("  Value: {}", re.value);
-                println!("  {} → {}",
+                println!(
+                    "  {} → {}",
                     re.current_data.to_string().red(),
                     re.new_data.to_string().green()
                 );
@@ -123,7 +136,8 @@ impl PlanPreview {
                 println!("  Command: {}", ce.command.bright_cyan());
             }
             OperationType::FileCopy(fc) => {
-                println!("  {} → {}",
+                println!(
+                    "  {} → {}",
                     fc.source.bright_blue(),
                     fc.destination.bright_green()
                 );
@@ -140,9 +154,14 @@ impl PlanPreview {
             }
         }
 
-        println!("  Risk: {} | Reversible: {}",
+        println!(
+            "  Risk: {} | Reversible: {}",
             Self::colorize_risk(op.risk.as_str()),
-            if op.reversible { "Yes".green() } else { "No".red() }
+            if op.reversible {
+                "Yes".green()
+            } else {
+                "No".red()
+            }
         );
 
         if !op.depends_on.is_empty() {
@@ -184,7 +203,8 @@ impl PlanPreview {
                 println!("{}", "Dependencies:".bold());
                 for op in &plan.operations {
                     if !op.depends_on.is_empty() {
-                        println!("  {} → {}",
+                        println!(
+                            "  {} → {}",
                             op.depends_on.join(", ").yellow(),
                             op.id.yellow()
                         );
@@ -199,7 +219,10 @@ impl PlanPreview {
                 for action in &plan.post_apply {
                     match action {
                         PostApplyAction::ServiceRestart { services } => {
-                            println!("  • Restart services: {}", services.join(", ").bright_cyan());
+                            println!(
+                                "  • Restart services: {}",
+                                services.join(", ").bright_cyan()
+                            );
                         }
                         PostApplyAction::Validation { command, .. } => {
                             println!("  • Validate: {}", command.bright_blue());
@@ -217,7 +240,10 @@ impl PlanPreview {
         }
 
         println!("{}", "Backup: Will create automatic backup".bright_black());
-        println!("{}", "Rollback: Available for all operations".bright_black());
+        println!(
+            "{}",
+            "Rollback: Available for all operations".bright_black()
+        );
         println!();
     }
 

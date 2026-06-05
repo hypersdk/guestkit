@@ -3,7 +3,9 @@
 
 use crate::cli::profiles::RiskLevel;
 use crate::cli::tui::app::{App, IssueRiskFilter, LayoutMode};
-use crate::cli::tui::theme::{self, content_block, label_style, ACCENT, ERROR, SUCCESS, TEXT, WARNING};
+use crate::cli::tui::theme::{
+    self, content_block, label_style, ACCENT, ERROR, SUCCESS, TEXT, WARNING,
+};
 use crate::cli::tui::widgets::{self, list_line_spans};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -97,10 +99,7 @@ impl App {
 pub fn draw(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(14),
-            Constraint::Min(0),
-        ])
+        .constraints([Constraint::Length(14), Constraint::Min(0)])
         .split(area);
 
     draw_summary(f, chunks[0], app);
@@ -149,7 +148,12 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
     let summary_lines = vec![
         Line::from(vec![
             Span::styled("Status ", label_style()),
-            Span::styled(overall_status.0, Style::default().fg(overall_status.1).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                overall_status.0,
+                Style::default()
+                    .fg(overall_status.1)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  filter ", label_style()),
             Span::styled(filter_label, Style::default().fg(ACCENT)),
             Span::styled(" (f)", label_style()),
@@ -173,7 +177,11 @@ fn draw_summary(f: &mut Frame, area: Rect, app: &App) {
 
     let row = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(1, 3), Constraint::Ratio(1, 3)])
+        .constraints([
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+        ])
         .split(chunks[1]);
 
     let pct = |n: usize| -> u16 {
@@ -265,7 +273,10 @@ fn draw_issue_detail(f: &mut Frame, area: Rect, app: &App) {
         vec![
             Line::from(vec![
                 Span::styled("Item: ", label_style()),
-                Span::styled(&row.item, Style::default().fg(TEXT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &row.item,
+                    Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![

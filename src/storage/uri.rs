@@ -27,9 +27,7 @@ pub fn open_disk_source(uri: &str) -> Result<Box<dyn DiskSource>> {
             return Ok(Box::new(crate::storage::s3::S3DiskSource::open(uri)?));
         }
         #[cfg(not(feature = "cloud-s3"))]
-        anyhow::bail!(
-            "S3 support not enabled. Rebuild with --features cloud-s3"
-        );
+        anyhow::bail!("S3 support not enabled. Rebuild with --features cloud-s3");
     }
     if uri.starts_with("https://") && uri.contains(".blob.core.windows.net") {
         #[cfg(feature = "cloud-azure")]
@@ -37,9 +35,7 @@ pub fn open_disk_source(uri: &str) -> Result<Box<dyn DiskSource>> {
             return Ok(Box::new(crate::storage::azure::AzureDiskSource::open(uri)?));
         }
         #[cfg(not(feature = "cloud-azure"))]
-        anyhow::bail!(
-            "Azure support not enabled. Rebuild with --features cloud-azure"
-        );
+        anyhow::bail!("Azure support not enabled. Rebuild with --features cloud-azure");
     }
     if uri.starts_with("gs://") {
         #[cfg(feature = "cloud-gcs")]
@@ -47,9 +43,7 @@ pub fn open_disk_source(uri: &str) -> Result<Box<dyn DiskSource>> {
             return Ok(Box::new(crate::storage::gcs::GcsDiskSource::open(uri)?));
         }
         #[cfg(not(feature = "cloud-gcs"))]
-        anyhow::bail!(
-            "GCS support not enabled. Rebuild with --features cloud-gcs"
-        );
+        anyhow::bail!("GCS support not enabled. Rebuild with --features cloud-gcs");
     }
 
     let path = PathBuf::from(uri);
@@ -67,5 +61,8 @@ pub fn resolve_to_local_path(uri: &str) -> Result<PathBuf> {
     if let Some(path) = source.local_path() {
         return Ok(path.to_path_buf());
     }
-    anyhow::bail!("Cloud download requires feature-enabled backend for: {}", uri)
+    anyhow::bail!(
+        "Cloud download requires feature-enabled backend for: {}",
+        uri
+    )
 }

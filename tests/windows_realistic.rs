@@ -421,7 +421,10 @@ fn create_realistic_windows_image(
 
     // Step 8: Create Windows system files
     println!("\n[8/16] Creating Windows system files...");
-    g.write("/Windows/System32/drivers/etc/hosts", make_hosts_file().as_bytes())?;
+    g.write(
+        "/Windows/System32/drivers/etc/hosts",
+        make_hosts_file().as_bytes(),
+    )?;
     g.write(
         "/Windows/Panther/unattend.xml",
         make_unattend_xml(version_meta).as_bytes(),
@@ -433,7 +436,8 @@ fn create_realistic_windows_image(
         format!(
             "{}\nVersion {}\nBuild {}\n",
             version_meta.product_name, version_meta.version, version_meta.build
-        ).as_bytes(),
+        )
+        .as_bytes(),
     )?;
 
     println!("  ✓ Windows system files created");

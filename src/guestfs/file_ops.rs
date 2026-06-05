@@ -18,7 +18,13 @@ impl Guestfs {
     /// then falls back to the mountpoint with the shortest path (most likely root).
     pub(crate) fn find_root_mountpoint(&self) -> Result<&str> {
         // Try well-known root device names first
-        let well_known = ["/dev/sda1", "/dev/sda2", "/dev/vda1", "/dev/hda1", "/dev/xvda1"];
+        let well_known = [
+            "/dev/sda1",
+            "/dev/sda2",
+            "/dev/vda1",
+            "/dev/hda1",
+            "/dev/xvda1",
+        ];
         for dev in &well_known {
             if let Some(mp) = self.mounted.get(*dev) {
                 return Ok(mp.as_str());
@@ -295,9 +301,8 @@ impl Guestfs {
             .map_err(|e| Error::NotFound(format!("Failed to get size of {}: {}", file, e)))?;
 
         let len = metadata.len();
-        i64::try_from(len).map_err(|_| {
-            Error::InvalidOperation(format!("File size {} exceeds i64::MAX", len))
-        })
+        i64::try_from(len)
+            .map_err(|_| Error::InvalidOperation(format!("File size {} exceeds i64::MAX", len)))
     }
 
     /// Remove directory
@@ -349,7 +354,9 @@ impl Guestfs {
                 .open(&host_path)
                 .map_err(|e| Error::CommandFailed(format!("Failed to touch {}: {}", path, e)))?;
             file.set_modified(std::time::SystemTime::now())
-                .map_err(|e| Error::CommandFailed(format!("Failed to update mtime for {}: {}", path, e)))?;
+                .map_err(|e| {
+                    Error::CommandFailed(format!("Failed to update mtime for {}: {}", path, e))
+                })?;
         }
 
         Ok(())

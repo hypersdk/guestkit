@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use crate::{
     Worker, WorkerConfig, HandlerRegistry,
-    handlers::{EchoHandler, InspectHandler, ProfileHandler},
+    handlers::{AgentEvidenceHandler, AgentFixHandler, EchoHandler, InspectHandler, ProfileHandler},
     transport::file::{FileTransport, FileTransportConfig},
     transport::http::{HttpTransport, HttpTransportConfig},
     capabilities::Capabilities,
@@ -47,6 +47,8 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     // Register guestkit operation handlers
     registry.register(Arc::new(InspectHandler::new()));
     registry.register(Arc::new(ProfileHandler::new()));
+    registry.register(Arc::new(AgentEvidenceHandler));
+    registry.register(Arc::new(AgentFixHandler));
 
     log::info!("Registered {} operation handlers", registry.len());
     log::info!("Supported operations: {:?}", registry.operations());
@@ -57,6 +59,8 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
         .with_operation("test.echo")
         .with_operation("guestkit.inspect")
         .with_operation("guestkit.profile")
+        .with_operation("guestkit.agent.evidence")
+        .with_operation("guestkit.agent.fix")
         .with_feature("rust")
         .with_feature("lvm")
         .with_feature("nbd")

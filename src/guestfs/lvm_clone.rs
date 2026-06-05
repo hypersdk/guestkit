@@ -243,11 +243,7 @@ pub fn lvm_clone(config: &LvmCloneConfig, verbose: bool) -> Result<CloneResult> 
 
     // 5. Create snapshot
     let snap_name = format!("{}-clone-snap", config.source_lv);
-    let snap_size = config
-        .snapshot_size
-        .as_deref()
-        .unwrap_or("10G")
-        .to_string();
+    let snap_size = config.snapshot_size.as_deref().unwrap_or("10G").to_string();
     let snap_path = create_snapshot(
         &config.source_vg,
         &config.source_lv,
@@ -257,24 +253,36 @@ pub fn lvm_clone(config: &LvmCloneConfig, verbose: bool) -> Result<CloneResult> 
     )?;
 
     // 6. Create target LV
-    let target_path =
-        match create_target_lv(target_vg, &config.clone_lv_name, size_bytes, verbose) {
-            Ok(p) => p,
-            Err(e) => {
-                if let Err(cleanup_err) = remove_lv(&snap_path) {
-                    log::warn!("Failed to clean up snapshot LV {}: {}", snap_path, cleanup_err);
-                }
-                return Err(e);
+    let target_path = match create_target_lv(target_vg, &config.clone_lv_name, size_bytes, verbose)
+    {
+        Ok(p) => p,
+        Err(e) => {
+            if let Err(cleanup_err) = remove_lv(&snap_path) {
+                log::warn!(
+                    "Failed to clean up snapshot LV {}: {}",
+                    snap_path,
+                    cleanup_err
+                );
             }
-        };
+            return Err(e);
+        }
+    };
 
     // 7. dd snapshot -> target
     if let Err(e) = dd_copy(&snap_path, &target_path, verbose) {
         if let Err(cleanup_err) = remove_lv(&snap_path) {
-            log::warn!("Failed to clean up snapshot LV {}: {}", snap_path, cleanup_err);
+            log::warn!(
+                "Failed to clean up snapshot LV {}: {}",
+                snap_path,
+                cleanup_err
+            );
         }
         if let Err(cleanup_err) = remove_lv(&target_path) {
-            log::warn!("Failed to clean up target LV {}: {}", target_path, cleanup_err);
+            log::warn!(
+                "Failed to clean up target LV {}: {}",
+                target_path,
+                cleanup_err
+            );
         }
         return Err(e);
     }
@@ -528,11 +536,7 @@ pub fn lvm_clone_podman(config: &LvmCloneConfig, verbose: bool) -> Result<CloneR
 
     // 5. Create snapshot
     let snap_name = format!("{}-clone-snap", config.source_lv);
-    let snap_size = config
-        .snapshot_size
-        .as_deref()
-        .unwrap_or("10G")
-        .to_string();
+    let snap_size = config.snapshot_size.as_deref().unwrap_or("10G").to_string();
     let snap_path = create_snapshot_with(
         &cb,
         &config.source_vg,
@@ -548,7 +552,11 @@ pub fn lvm_clone_podman(config: &LvmCloneConfig, verbose: bool) -> Result<CloneR
             Ok(p) => p,
             Err(e) => {
                 if let Err(cleanup_err) = remove_lv_with(&cb, &snap_path) {
-                    log::warn!("Failed to clean up snapshot LV {}: {}", snap_path, cleanup_err);
+                    log::warn!(
+                        "Failed to clean up snapshot LV {}: {}",
+                        snap_path,
+                        cleanup_err
+                    );
                 }
                 return Err(e);
             }
@@ -557,10 +565,18 @@ pub fn lvm_clone_podman(config: &LvmCloneConfig, verbose: bool) -> Result<CloneR
     // 7. dd snapshot -> target
     if let Err(e) = dd_copy_with(&cb, &snap_path, &target_path, verbose) {
         if let Err(cleanup_err) = remove_lv_with(&cb, &snap_path) {
-            log::warn!("Failed to clean up snapshot LV {}: {}", snap_path, cleanup_err);
+            log::warn!(
+                "Failed to clean up snapshot LV {}: {}",
+                snap_path,
+                cleanup_err
+            );
         }
         if let Err(cleanup_err) = remove_lv_with(&cb, &target_path) {
-            log::warn!("Failed to clean up target LV {}: {}", target_path, cleanup_err);
+            log::warn!(
+                "Failed to clean up target LV {}: {}",
+                target_path,
+                cleanup_err
+            );
         }
         return Err(e);
     }
@@ -624,10 +640,7 @@ pub fn lvm_clone_podman(config: &LvmCloneConfig, verbose: bool) -> Result<CloneR
                     backup_files.extend(baks);
                 }
                 Err(e) if verbose => {
-                    eprintln!(
-                        "lvm_clone_podman: warning: bootloader update failed: {}",
-                        e
-                    );
+                    eprintln!("lvm_clone_podman: warning: bootloader update failed: {}", e);
                 }
                 _ => {}
             }
@@ -676,10 +689,7 @@ pub fn lvm_clone_podman(config: &LvmCloneConfig, verbose: bool) -> Result<CloneR
                     backup_files.extend(baks);
                 }
                 Err(e) if verbose => {
-                    eprintln!(
-                        "lvm_clone_podman: warning: GRUB regeneration failed: {}",
-                        e
-                    );
+                    eprintln!("lvm_clone_podman: warning: GRUB regeneration failed: {}", e);
                 }
                 _ => {}
             }
@@ -1232,13 +1242,10 @@ impl PodmanContainer {
             .arg(&self.image_tag);
 
         if let Some(base) = container_image {
-            cmd.arg("--build-arg")
-                .arg(format!("BASE_IMAGE={}", base));
+            cmd.arg("--build-arg").arg(format!("BASE_IMAGE={}", base));
         }
 
-        cmd.arg("-f")
-            .arg(&dockerfile)
-            .arg(project_dir);
+        cmd.arg("-f").arg(&dockerfile).arg(project_dir);
 
         let output = cmd
             .output()
@@ -1282,19 +1289,22 @@ impl PodmanContainer {
             .arg("--privileged")
             .arg("--pid=host")
             .arg("--network=host")
-            .arg("-v").arg("/dev:/dev")
-            .arg("-v").arg("/run/lvm:/run/lvm")
-            .arg("-v").arg("/run/udev:/run/udev")
-            .arg("-v").arg("/etc/lvm:/etc/lvm")
-            .arg("--name").arg(&self.name)
+            .arg("-v")
+            .arg("/dev:/dev")
+            .arg("-v")
+            .arg("/run/lvm:/run/lvm")
+            .arg("-v")
+            .arg("/run/udev:/run/udev")
+            .arg("-v")
+            .arg("/etc/lvm:/etc/lvm")
+            .arg("--name")
+            .arg(&self.name)
             .arg(&self.image_tag)
-            .arg("sleep").arg("infinity")
+            .arg("sleep")
+            .arg("infinity")
             .output()
             .map_err(|e| {
-                Error::CommandFailed(format!(
-                    "podman not found or failed to start: {}",
-                    e
-                ))
+                Error::CommandFailed(format!("podman not found or failed to start: {}", e))
             })?;
 
         if !output.status.success() {
@@ -1321,10 +1331,7 @@ impl PodmanContainer {
         if !self.started {
             return;
         }
-        let _ = Command::new("podman")
-            .arg("stop")
-            .arg(&self.name)
-            .output();
+        let _ = Command::new("podman").arg("stop").arg(&self.name).output();
         let _ = Command::new("podman")
             .arg("rm")
             .arg("-f")
@@ -1414,7 +1421,14 @@ fn create_snapshot(
     size: &str,
     verbose: bool,
 ) -> Result<String> {
-    create_snapshot_with(&CmdBuilder::Sudo, source_vg, source_lv, snapshot_name, size, verbose)
+    create_snapshot_with(
+        &CmdBuilder::Sudo,
+        source_vg,
+        source_lv,
+        snapshot_name,
+        size,
+        verbose,
+    )
 }
 
 /// Like [`create_snapshot`] but uses the given command builder.
@@ -1726,10 +1740,9 @@ fn verify_host_lvm_unchanged(
 
     // Check for unexpected new VGs
     for vg in current.keys() {
-        if !saved_state.contains_key(vg)
-            && verbose {
-                eprintln!("lvm_clone: new VG detected: {} (likely from clone)", vg);
-            }
+        if !saved_state.contains_key(vg) && verbose {
+            eprintln!("lvm_clone: new VG detected: {} (likely from clone)", vg);
+        }
     }
 
     if verbose {
@@ -1811,11 +1824,7 @@ fn detect_luks(device: &str, verbose: bool) -> Result<Option<LuksInfo>> {
 }
 
 /// Like [`detect_luks`] but uses the given command builder.
-fn detect_luks_with(
-    cb: &CmdBuilder,
-    device: &str,
-    verbose: bool,
-) -> Result<Option<LuksInfo>> {
+fn detect_luks_with(cb: &CmdBuilder, device: &str, verbose: bool) -> Result<Option<LuksInfo>> {
     let output = cb
         .build_command("cryptsetup")
         .arg("isLuks")
@@ -1890,11 +1899,7 @@ fn detect_luks_version_with(cb: &CmdBuilder, device: &str) -> Result<u32> {
 
 /// Change the LUKS UUID on `device` and return a UUID mapping.
 #[allow(dead_code)]
-fn change_luks_uuid(
-    device: &str,
-    luks_info: &LuksInfo,
-    verbose: bool,
-) -> Result<UuidMapping> {
+fn change_luks_uuid(device: &str, luks_info: &LuksInfo, verbose: bool) -> Result<UuidMapping> {
     change_luks_uuid_with(&CmdBuilder::Sudo, device, luks_info, verbose)
 }
 
@@ -2045,10 +2050,7 @@ fn mount_chroot_binds_with(cb: &CmdBuilder, root_mount: &Path) -> Result<()> {
             .arg(&target)
             .output()
             .map_err(|e| {
-                Error::CommandFailed(format!(
-                    "bind mount {} -> {} failed: {}",
-                    source, target, e
-                ))
+                Error::CommandFailed(format!("bind mount {} -> {} failed: {}", source, target, e))
             })?;
 
         if !output.status.success() {
@@ -2125,10 +2127,7 @@ fn run_in_chroot_with(
 /// UUIDs are regex-escaped before matching (bug #4 fix).
 ///
 /// Returns the path to the backup file, if one was created.
-fn update_clone_fstab(
-    root_mount: &Path,
-    uuid_mappings: &[UuidMapping],
-) -> Result<Option<String>> {
+fn update_clone_fstab(root_mount: &Path, uuid_mappings: &[UuidMapping]) -> Result<Option<String>> {
     let fstab_path = root_mount.join("etc/fstab");
     if !fstab_path.exists() {
         return Ok(None);
@@ -2338,11 +2337,7 @@ fn regenerate_initramfs(root_mount: &Path, verbose: bool) -> Result<()> {
 }
 
 /// Like [`regenerate_initramfs`] but uses the given command builder.
-fn regenerate_initramfs_with(
-    cb: &CmdBuilder,
-    root_mount: &Path,
-    verbose: bool,
-) -> Result<()> {
+fn regenerate_initramfs_with(cb: &CmdBuilder, root_mount: &Path, verbose: bool) -> Result<()> {
     if verbose {
         eprintln!("lvm_clone: regenerating initramfs via chroot");
     }
@@ -2363,7 +2358,11 @@ fn regenerate_initramfs_with(
         }
         if verbose {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            eprintln!("lvm_clone: {} failed ({}), trying next", tool[0], stderr.trim());
+            eprintln!(
+                "lvm_clone: {} failed ({}), trying next",
+                tool[0],
+                stderr.trim()
+            );
         }
     }
 
@@ -2428,7 +2427,11 @@ fn regenerate_grub_config_with(
         }
         if verbose {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            eprintln!("lvm_clone: {} failed ({}), trying next", tool, stderr.trim());
+            eprintln!(
+                "lvm_clone: {} failed ({}), trying next",
+                tool,
+                stderr.trim()
+            );
         }
     }
 
@@ -2769,9 +2772,7 @@ pub fn disk_image_prepare_for_lvm(
     }
 
     match method {
-        DiskImageAccessMethod::Nbd => {
-            image_prepare_nbd(image_path, format, read_only, verbose)
-        }
+        DiskImageAccessMethod::Nbd => image_prepare_nbd(image_path, format, read_only, verbose),
         DiskImageAccessMethod::ConvertToRaw => {
             image_prepare_convert(image_path, format, read_only, verbose)
         }
@@ -2878,8 +2879,7 @@ fn image_prepare_convert(
         );
     }
 
-    let raw_path =
-        std::env::temp_dir().join(format!("disk-lvm-{}.raw", Uuid::new_v4()));
+    let raw_path = std::env::temp_dir().join(format!("disk-lvm-{}.raw", Uuid::new_v4()));
 
     let converter = DiskConverter::new();
     let result = converter.convert(image_path, raw_path.as_path(), "raw", false, false)?;
@@ -3049,9 +3049,7 @@ pub fn clone_lv_to_disk_image(
         return Err(Error::CommandFailed(format!("dd failed: {}", stderr)));
     }
 
-    let raw_size = std::fs::metadata(&raw_path)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    let raw_size = std::fs::metadata(&raw_path).map(|m| m.len()).unwrap_or(0);
 
     // Step 2: convert to target format if not raw
     if fmt != DiskFormat::Raw {
@@ -3066,9 +3064,7 @@ pub fn clone_lv_to_disk_image(
         let conv = converter.convert(raw_path.as_path(), output_path, fmt_name, false, false)?;
         if !conv.success {
             let _ = std::fs::remove_file(&raw_path);
-            let msg = conv
-                .error
-                .unwrap_or_else(|| "conversion error".to_string());
+            let msg = conv.error.unwrap_or_else(|| "conversion error".to_string());
             return Err(Error::CommandFailed(format!(
                 "Raw to {} conversion failed: {}",
                 fmt_name, msg
@@ -3077,8 +3073,7 @@ pub fn clone_lv_to_disk_image(
 
         // Optionally keep raw copy
         let kept_raw = if keep_raw {
-            let kept = raw_path
-                .with_extension("raw");
+            let kept = raw_path.with_extension("raw");
             if kept != raw_path {
                 std::fs::rename(&raw_path, &kept)
                     .map_err(|e| Error::CommandFailed(format!("rename failed: {}", e)))?;
@@ -3089,9 +3084,7 @@ pub fn clone_lv_to_disk_image(
             None
         };
 
-        let image_size = std::fs::metadata(output_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let image_size = std::fs::metadata(output_path).map(|m| m.len()).unwrap_or(0);
 
         if verbose {
             eprintln!(
@@ -3154,8 +3147,7 @@ pub fn convert_disk_image(
     }
 
     let converter = crate::converters::disk_converter::DiskConverter::new();
-    let result =
-        converter.convert(source_path, output_path, output_format, false, false)?;
+    let result = converter.convert(source_path, output_path, output_format, false, false)?;
 
     if !result.success {
         let msg = result
@@ -3303,10 +3295,7 @@ mod tests {
         );
         assert_eq!(deserialized.backup_files.len(), 1);
         assert_eq!(deserialized.security_warnings.len(), 1);
-        assert_eq!(
-            deserialized.security_warnings[0].category,
-            "ssh_host_keys"
-        );
+        assert_eq!(deserialized.security_warnings[0].category, "ssh_host_keys");
     }
 
     #[test]
@@ -3526,8 +3515,7 @@ luks-bbbb-2222 UUID=bbbb-2222 none luks
             "\"Full\""
         );
 
-        let deserialized: IsolationLevel =
-            serde_json::from_str("\"Full\"").unwrap();
+        let deserialized: IsolationLevel = serde_json::from_str("\"Full\"").unwrap();
         assert_eq!(deserialized, IsolationLevel::Full);
     }
 

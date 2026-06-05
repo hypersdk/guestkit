@@ -109,22 +109,30 @@ pub fn parse_installed_software(hive_path: &Path) -> Result<Vec<WindowsApp>> {
         for kv in app_key_ref.values() {
             match kv.name() {
                 "DisplayName" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         name = data.clone();
                     }
                 }
                 "DisplayVersion" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         version = data.clone();
                     }
                 }
                 "Publisher" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         publisher = data.clone();
                     }
                 }
                 "InstallLocation" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         if !data.is_empty() {
                             install_location = Some(data.clone());
                         }
@@ -209,7 +217,9 @@ pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
         for kv in svc_key_ref.values() {
             match kv.name() {
                 "DisplayName" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         display_name = data.clone();
                     }
                 }
@@ -228,7 +238,9 @@ pub fn parse_windows_services(hive_path: &Path) -> Result<Vec<WindowsSvc>> {
                     }
                 }
                 "ImagePath" => {
-                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
                         image_path = data.clone();
                     }
                 }
@@ -618,7 +630,9 @@ pub fn detect_hotfixes_from_filesystem(windows_dir: &Path) -> Result<Vec<Windows
                 let name_str = name.to_string_lossy();
                 if let Some(kb_start) = name_str.find("KB") {
                     let kb_part = &name_str[kb_start..];
-                    let kb_end = kb_part.find(|c: char| !c.is_alphanumeric()).unwrap_or(kb_part.len());
+                    let kb_end = kb_part
+                        .find(|c: char| !c.is_alphanumeric())
+                        .unwrap_or(kb_part.len());
                     let kb_number = &kb_part[..kb_end];
                     hotfixes.push(WindowsUpdateInfo {
                         kb_number: kb_number.to_string(),
@@ -847,10 +861,16 @@ pub fn detect_hypervisor_remnants(
     if let Ok(drivers) = g.ls(drivers_path) {
         for d in &drivers {
             let lower = d.to_lowercase();
-            if vmware_drivers.iter().any(|v| lower.contains(v.trim_end_matches(".sys"))) {
+            if vmware_drivers
+                .iter()
+                .any(|v| lower.contains(v.trim_end_matches(".sys")))
+            {
                 remnants.push("vmware-drivers".to_string());
             }
-            if hyperv_drivers.iter().any(|v| lower.contains(v.trim_end_matches(".sys"))) {
+            if hyperv_drivers
+                .iter()
+                .any(|v| lower.contains(v.trim_end_matches(".sys")))
+            {
                 remnants.push("hyper-v-drivers".to_string());
             }
         }
@@ -884,9 +904,18 @@ pub fn detect_av_edr(
         for app in apps {
             let name = app.name.to_lowercase();
             for keyword in [
-                "defender", "crowdstrike", "sentinelone", "carbon black",
-                "symantec", "mcafee", "sophos", "kaspersky", "trend micro",
-                "cylance", "malwarebytes", "bitdefender",
+                "defender",
+                "crowdstrike",
+                "sentinelone",
+                "carbon black",
+                "symantec",
+                "mcafee",
+                "sophos",
+                "kaspersky",
+                "trend micro",
+                "cylance",
+                "malwarebytes",
+                "bitdefender",
             ] {
                 if name.contains(keyword) {
                     products.push(app.name.clone());
@@ -897,7 +926,10 @@ pub fn detect_av_edr(
 
     let paths = [
         format!("{}/System32/Windows Defender", systemroot),
-        format!("{}/Program Files/CrowdStrike", systemroot.trim_start_matches('/')),
+        format!(
+            "{}/Program Files/CrowdStrike",
+            systemroot.trim_start_matches('/')
+        ),
     ];
     for p in paths {
         if g.exists(&p).unwrap_or(false) {
@@ -929,9 +961,8 @@ pub fn parse_security_hive(hive_path: &Path) -> Result<SecurityHiveSummary> {
 
     let file = File::open(hive_path)
         .map_err(|e| Error::CommandFailed(format!("Failed to open SECURITY hive: {}", e)))?;
-    let _hive: Hive<File, CleanHive> =
-        Hive::new(file, HiveParseMode::NormalWithBaseBlock)
-            .map_err(|e| Error::CommandFailed(format!("Failed to parse SECURITY hive: {:?}", e)))?;
+    let _hive: Hive<File, CleanHive> = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse SECURITY hive: {:?}", e)))?;
 
     Ok(SecurityHiveSummary {
         lsa_present: true,

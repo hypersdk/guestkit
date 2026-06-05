@@ -6,8 +6,8 @@ pub mod plan;
 pub mod planner;
 pub mod reporter;
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -185,11 +185,14 @@ pub fn analyze_source<P: AsRef<Path>>(image_path: P, verbose: bool) -> Result<So
     let os_major = g.inspect_get_major_version(root)?;
     let os_minor = g.inspect_get_minor_version(root)?;
     let arch = g.inspect_get_arch(root)?;
-    let hostname = g.inspect_get_hostname(root).unwrap_or_else(|_| "unknown".to_string());
+    let hostname = g
+        .inspect_get_hostname(root)
+        .unwrap_or_else(|_| "unknown".to_string());
 
     // Get kernel version
     let kernel = if g.is_file("/proc/version").unwrap_or(false) {
-        g.cat("/proc/version").unwrap_or_else(|_| "unknown".to_string())
+        g.cat("/proc/version")
+            .unwrap_or_else(|_| "unknown".to_string())
             .lines()
             .next()
             .unwrap_or("unknown")
@@ -246,8 +249,16 @@ fn detect_services(g: &mut Guestfs, verbose: bool) -> Vec<Service> {
 
     // Common critical services
     for service_name in &[
-        "sshd", "nginx", "apache2", "httpd", "mysql", "mariadb",
-        "postgresql", "redis", "docker", "kubelet",
+        "sshd",
+        "nginx",
+        "apache2",
+        "httpd",
+        "mysql",
+        "mariadb",
+        "postgresql",
+        "redis",
+        "docker",
+        "kubelet",
     ] {
         let service_file = format!("/lib/systemd/system/{}.service", service_name);
         if g.is_file(&service_file).unwrap_or(false) {
@@ -302,12 +313,30 @@ mod tests {
 
     #[test]
     fn test_migration_target_from_str() {
-        assert_eq!(MigrationTarget::from_str("upgrade"), Some(MigrationTarget::OsUpgrade));
-        assert_eq!(MigrationTarget::from_str("os"), Some(MigrationTarget::OsUpgrade));
-        assert_eq!(MigrationTarget::from_str("cloud"), Some(MigrationTarget::CloudPlatform));
-        assert_eq!(MigrationTarget::from_str("aws"), Some(MigrationTarget::CloudPlatform));
-        assert_eq!(MigrationTarget::from_str("container"), Some(MigrationTarget::Containerization));
-        assert_eq!(MigrationTarget::from_str("docker"), Some(MigrationTarget::Containerization));
+        assert_eq!(
+            MigrationTarget::from_str("upgrade"),
+            Some(MigrationTarget::OsUpgrade)
+        );
+        assert_eq!(
+            MigrationTarget::from_str("os"),
+            Some(MigrationTarget::OsUpgrade)
+        );
+        assert_eq!(
+            MigrationTarget::from_str("cloud"),
+            Some(MigrationTarget::CloudPlatform)
+        );
+        assert_eq!(
+            MigrationTarget::from_str("aws"),
+            Some(MigrationTarget::CloudPlatform)
+        );
+        assert_eq!(
+            MigrationTarget::from_str("container"),
+            Some(MigrationTarget::Containerization)
+        );
+        assert_eq!(
+            MigrationTarget::from_str("docker"),
+            Some(MigrationTarget::Containerization)
+        );
         assert_eq!(MigrationTarget::from_str("invalid"), None);
     }
 
@@ -357,10 +386,10 @@ mod tests {
     fn test_plan_os_upgrade() {
         let source = create_test_source();
         let result = planner::plan_os_upgrade(&source, "Ubuntu", "22.04");
-        
+
         assert!(result.is_ok());
         let plan = result.unwrap();
-        
+
         assert_eq!(plan.target_os, "Ubuntu");
         assert_eq!(plan.target_version, "22.04");
         assert_eq!(plan.migration_type, "OS Upgrade");
@@ -372,10 +401,10 @@ mod tests {
     fn test_plan_cloud_migration() {
         let source = create_test_source();
         let result = planner::plan_cloud_migration(&source, "aws");
-        
+
         assert!(result.is_ok());
         let plan = result.unwrap();
-        
+
         assert_eq!(plan.target_os, "aws");
         assert_eq!(plan.migration_type, "Cloud Migration");
         assert!(!plan.required_changes.is_empty());
@@ -386,10 +415,10 @@ mod tests {
     fn test_plan_containerization() {
         let source = create_test_source();
         let result = planner::plan_containerization(&source);
-        
+
         assert!(result.is_ok());
         let plan = result.unwrap();
-        
+
         assert_eq!(plan.target_os, "Container");
         assert_eq!(plan.migration_type, "Containerization");
         assert!(!plan.required_changes.is_empty());
@@ -399,10 +428,10 @@ mod tests {
     fn test_migration_plan_has_steps() {
         let source = create_test_source();
         let result = planner::plan_os_upgrade(&source, "Ubuntu", "22.04");
-        
+
         assert!(result.is_ok());
         let plan = result.unwrap();
-        
+
         assert!(!plan.steps.is_empty());
         // Should have preparation, upgrade, and post-upgrade steps
         assert!(plan.steps.iter().any(|s| s.phase == "Preparation"));
@@ -412,10 +441,10 @@ mod tests {
     fn test_compatibility_score_range() {
         let source = create_test_source();
         let result = planner::plan_os_upgrade(&source, "Ubuntu", "22.04");
-        
+
         assert!(result.is_ok());
         let plan = result.unwrap();
-        
+
         assert!(plan.compatibility_score >= 0.0);
         assert!(plan.compatibility_score <= 100.0);
     }
@@ -448,7 +477,7 @@ mod tests {
     fn test_analyze_feasibility_high_score() {
         let plan = create_test_plan();
         let feasibility = analyzer::analyze_feasibility(&plan);
-        
+
         assert!(feasibility.is_feasible);
         assert_eq!(feasibility.confidence, "High");
         assert_eq!(feasibility.critical_blockers, 0);
@@ -465,9 +494,9 @@ mod tests {
             impact: "High impact".to_string(),
             remediation: "Fix it".to_string(),
         });
-        
+
         let feasibility = analyzer::analyze_feasibility(&plan);
-        
+
         assert!(!feasibility.is_feasible);
         assert_eq!(feasibility.critical_blockers, 1);
     }
@@ -476,7 +505,7 @@ mod tests {
     fn test_estimate_downtime() {
         let plan = create_test_plan();
         let downtime = analyzer::estimate_downtime(&plan);
-        
+
         assert!(downtime.minimum_minutes > 0);
         assert!(downtime.expected_minutes >= downtime.minimum_minutes);
         assert!(downtime.maximum_minutes >= downtime.expected_minutes);
@@ -487,7 +516,7 @@ mod tests {
     fn test_downtime_expected_hours() {
         let plan = create_test_plan();
         let downtime = analyzer::estimate_downtime(&plan);
-        
+
         let hours = downtime.expected_hours();
         assert!(hours > 0.0);
         assert_eq!(hours, downtime.expected_minutes as f64 / 60.0);
@@ -497,7 +526,7 @@ mod tests {
     fn test_format_report_contains_header() {
         let plan = create_test_plan();
         let report = reporter::format_report(&plan, false);
-        
+
         assert!(report.contains("Migration Plan Report"));
         assert!(report.contains("Source System"));
         assert!(report.contains("Target System"));
@@ -507,7 +536,7 @@ mod tests {
     fn test_format_report_contains_metrics() {
         let plan = create_test_plan();
         let report = reporter::format_report(&plan, false);
-        
+
         assert!(report.contains("Compatibility Score: 85.0%"));
         assert!(report.contains("Estimated Effort: 8 hours"));
         assert!(report.contains("Overall Risk: Medium"));

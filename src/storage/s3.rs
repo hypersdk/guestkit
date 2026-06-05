@@ -5,7 +5,6 @@ use super::local::LocalDiskSource;
 use super::uri::{DiskSource, DiskSourceMetadata};
 use anyhow::{Context, Result};
 use std::io::{Read, Seek, SeekFrom};
-use std::path::PathBuf;
 use std::process::Command;
 use tempfile::NamedTempFile;
 
@@ -22,7 +21,12 @@ impl S3DiskSource {
         tmp.close()?;
 
         let status = Command::new("aws")
-            .args(["s3", "cp", &format!("s3://{}", path), tmp_path.to_str().unwrap()])
+            .args([
+                "s3",
+                "cp",
+                &format!("s3://{}", path),
+                tmp_path.to_str().unwrap(),
+            ])
             .status()
             .context("Failed to run aws s3 cp — install AWS CLI and configure credentials")?;
 

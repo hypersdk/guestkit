@@ -186,7 +186,11 @@ impl Guestfs {
             // Strategy: Try loop device first (no kernel module needed), fall back to NBD
             let use_loop_device = LoopDevice::is_format_supported(&drive.path);
             if self.debug {
-                eprintln!("[DEBUG] File: {}, use_loop_device: {}", drive.path.display(), use_loop_device);
+                eprintln!(
+                    "[DEBUG] File: {}, use_loop_device: {}",
+                    drive.path.display(),
+                    use_loop_device
+                );
             }
 
             if use_loop_device {
@@ -198,7 +202,8 @@ impl Guestfs {
                 let mut loop_dev = LoopDevice::new()?;
                 loop_dev.connect(&drive.path, drive.readonly)?;
 
-                let device_path = loop_dev.device_path()
+                let device_path = loop_dev
+                    .device_path()
                     .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))?;
 
                 // Read partitions from the loop device (open once, reuse for partition parsing)
@@ -219,13 +224,19 @@ impl Guestfs {
                 }
                 let mut nbd = NbdDevice::new()?;
                 if self.debug {
-                    eprintln!("[DEBUG] NBD device created: {}", nbd.device_path().display());
+                    eprintln!(
+                        "[DEBUG] NBD device created: {}",
+                        nbd.device_path().display()
+                    );
                     eprintln!("[DEBUG] Connecting NBD to image: {}", drive.path.display());
                 }
                 nbd.connect(&drive.path, drive.readonly)?;
                 if self.debug {
                     eprintln!("[DEBUG] NBD connected successfully");
-                    eprintln!("[DEBUG] Opening DiskReader for NBD device: {}", nbd.device_path().display());
+                    eprintln!(
+                        "[DEBUG] Opening DiskReader for NBD device: {}",
+                        nbd.device_path().display()
+                    );
                 }
                 let mut reader = DiskReader::open(nbd.device_path())?;
                 if self.debug {
@@ -257,7 +268,6 @@ impl Guestfs {
             }
         }
     }
-
 
     /// Shutdown the guestfs handle
     pub fn shutdown(&mut self) -> Result<()> {
@@ -321,7 +331,10 @@ impl Guestfs {
                     }
                 }
                 Err(e) => {
-                    eprintln!("Warning: umount_all failed: {}. Attempting lazy unmount.", e);
+                    eprintln!(
+                        "Warning: umount_all failed: {}. Attempting lazy unmount.",
+                        e
+                    );
                     // Attempt lazy unmount as fallback to avoid leaving mounts behind
                     if let Some(ref mount_root) = self.mount_root {
                         let need_sudo = crate::guestfs::mount::need_sudo();
@@ -360,7 +373,10 @@ impl Guestfs {
                     if attempt < 10 {
                         // Still mounted - wait and retry
                         if self.trace {
-                            eprintln!("guestfs: waiting for unmount to complete (attempt {})", attempt);
+                            eprintln!(
+                                "guestfs: waiting for unmount to complete (attempt {})",
+                                attempt
+                            );
                         }
                         std::thread::sleep(std::time::Duration::from_millis(500));
                     } else {
@@ -381,19 +397,29 @@ impl Guestfs {
         // This must happen after unmount but before NBD/loop disconnect
         if !self.activated_vgs.is_empty() {
             if self.trace {
-                eprintln!("guestfs: deactivating {} LVM volume group(s)", self.activated_vgs.len());
+                eprintln!(
+                    "guestfs: deactivating {} LVM volume group(s)",
+                    self.activated_vgs.len()
+                );
             }
 
             // Build device filter for LVM cleanup (same as activation)
             // Escape all regex metacharacters, not just forward slashes
             let cleanup_filter = if let Some(ref nbd) = self.nbd_device {
                 let path = Self::escape_lvm_regex(&nbd.device_path().display().to_string());
-                format!(r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#, path)
+                format!(
+                    r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#,
+                    path
+                )
             } else if let Some(ref loop_dev) = self.loop_device {
-                let path = loop_dev.device_path()
+                let path = loop_dev
+                    .device_path()
                     .map(|p| Self::escape_lvm_regex(&p.display().to_string()))
                     .unwrap_or_else(|| r"\/dev\/loop".to_string());
-                format!(r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#, path)
+                format!(
+                    r#"devices {{ filter=["a|^{}|","r|.*|"] }} global {{ locking_type=0 }}"#,
+                    path
+                )
             } else {
                 String::new()
             };
@@ -470,12 +496,23 @@ impl Guestfs {
                 // This lets the kernel handle lazy unmount while providing a deterministic
                 // cleanup mechanism. Drop will attempt disconnect; if it fails because the
                 // device is still busy, the warning below tells the user how to clean up.
-                eprintln!("Warning: NBD device {} cleanup deferred due to lazy unmount.", device_path.display());
+                eprintln!(
+                    "Warning: NBD device {} cleanup deferred due to lazy unmount.",
+                    device_path.display()
+                );
                 eprintln!("The device will be freed automatically when the kernel releases all mount references.");
-                eprintln!("To check status: findmnt -R {} && lsblk {}",
-                    self.mount_root.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
-                    device_path.display());
-                eprintln!("To force cleanup after refs are gone: sudo qemu-nbd --disconnect {}", device_path.display());
+                eprintln!(
+                    "To check status: findmnt -R {} && lsblk {}",
+                    self.mount_root
+                        .as_ref()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_default(),
+                    device_path.display()
+                );
+                eprintln!(
+                    "To force cleanup after refs are gone: sudo qemu-nbd --disconnect {}",
+                    device_path.display()
+                );
                 // Allow Drop to run — it will attempt disconnect and log a warning if it fails.
                 // This is safer than mem::forget which permanently leaks the device.
                 drop(nbd);
@@ -497,7 +534,10 @@ impl Guestfs {
 
                 if let Ok(output) = findmnt_check {
                     if !output.stdout.is_empty() && output.status.success() {
-                        eprintln!("Warning: Device {} still has active mounts:", device_path.display());
+                        eprintln!(
+                            "Warning: Device {} still has active mounts:",
+                            device_path.display()
+                        );
                         eprintln!("{}", String::from_utf8_lossy(&output.stdout));
                         eprintln!("Skipping disconnect to avoid I/O errors.");
                         // Allow Drop to run — it will attempt disconnect and warn if it fails.
@@ -525,8 +565,14 @@ impl Guestfs {
             // If lazy unmount was used, skip directory cleanup - it will be cleaned up
             // automatically when the lazy unmount completes
             if self.lazy_unmount_used {
-                eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
-                eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
+                eprintln!(
+                    "Note: Lazy unmount was used. Directory {} will be cleaned up automatically.",
+                    mount_root.display()
+                );
+                eprintln!(
+                    "If you want to clean it up manually later, run: sudo rm -rf {}",
+                    mount_root.display()
+                );
                 self.state = GuestfsState::Closed;
                 return Ok(());
             }
@@ -550,12 +596,21 @@ impl Guestfs {
                 let still_mounted = mount_output.lines().any(|line| {
                     line.split_whitespace()
                         .nth(2) // The mount path is the 3rd field (index 2)
-                        .is_some_and(|field| field == mount_root_str.as_ref() || field.starts_with(&format!("{}/", mount_root_str)))
+                        .is_some_and(|field| {
+                            field == mount_root_str.as_ref()
+                                || field.starts_with(&format!("{}/", mount_root_str))
+                        })
                 });
                 if still_mounted {
-                    eprintln!("Warning: mount_root {} still has active mounts (likely from lazy unmount)", mount_root.display());
+                    eprintln!(
+                        "Warning: mount_root {} still has active mounts (likely from lazy unmount)",
+                        mount_root.display()
+                    );
                     eprintln!("Note: Lazy unmount was used. Directory {} will be cleaned up automatically.", mount_root.display());
-                    eprintln!("If you want to clean it up manually later, run: sudo rm -rf {}", mount_root.display());
+                    eprintln!(
+                        "If you want to clean it up manually later, run: sudo rm -rf {}",
+                        mount_root.display()
+                    );
                     return Ok(());
                 }
             }
@@ -582,11 +637,7 @@ impl Guestfs {
                         std::process::Command::new("rm")
                     };
 
-                    match cmd
-                        .arg("-rf")
-                        .arg(&mount_root)
-                        .output()
-                    {
+                    match cmd.arg("-rf").arg(&mount_root).output() {
                         Ok(output) if output.status.success() => {
                             if self.trace {
                                 eprintln!("guestfs: mount root removed with sudo");
@@ -725,8 +776,10 @@ impl Guestfs {
             Utf8Policy::Lossy => {
                 let result = String::from_utf8_lossy(bytes);
                 if result.contains('\u{FFFD}') {
-                    log::warn!("Invalid UTF-8 bytes replaced with U+FFFD replacement character. \
-                               Use set_utf8_policy(Utf8Policy::Strict) to treat this as an error.");
+                    log::warn!(
+                        "Invalid UTF-8 bytes replaced with U+FFFD replacement character. \
+                               Use set_utf8_policy(Utf8Policy::Strict) to treat this as an error."
+                    );
                 }
                 Ok(result.to_string())
             }
@@ -775,8 +828,8 @@ impl Guestfs {
         let mut escaped = String::with_capacity(path.len() * 2);
         for c in path.chars() {
             match c {
-                '/' | '.' | '[' | ']' | '*' | '+' | '?' | '^' | '$' | '|'
-                | '(' | ')' | '{' | '}' | '\\' => {
+                '/' | '.' | '[' | ']' | '*' | '+' | '?' | '^' | '$' | '|' | '(' | ')' | '{'
+                | '}' | '\\' => {
                     escaped.push('\\');
                     escaped.push(c);
                 }
@@ -811,7 +864,9 @@ impl Guestfs {
         }
 
         // Handle LVM logical volumes (/dev/mapper/*, /dev/vg_name/lv_name)
-        if device.starts_with("/dev/mapper/") || (device.contains('/') && device.matches('/').count() >= 3) {
+        if device.starts_with("/dev/mapper/")
+            || (device.contains('/') && device.matches('/').count() >= 3)
+        {
             // LVM devices don't have partition numbers - they are complete volumes
             return Ok(0);
         }
