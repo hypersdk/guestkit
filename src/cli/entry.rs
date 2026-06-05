@@ -1849,6 +1849,22 @@ enum Commands {
         #[arg(long, value_name = "ADDR")]
         listen: Option<String>,
     },
+
+    /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
+    #[command(name = "agent-call")]
+    AgentCall {
+        /// Libvirt channel unix socket path
+        #[arg(long, value_name = "PATH")]
+        socket: String,
+
+        /// JSON-RPC method (e.g. guestkit.getEvidence)
+        #[arg(long, value_name = "METHOD")]
+        method: String,
+
+        /// JSON params object
+        #[arg(long, value_name = "JSON", default_value = "{}")]
+        params: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3367,6 +3383,29 @@ pub fn run() -> anyhow::Result<()> {
             {
                 let _ = (socket, listen);
                 anyhow::bail!("guestkit agent-proxy requires rebuilding with --features agent");
+            }
+        }
+
+        Commands::AgentCall {
+            socket,
+            method,
+            params,
+        } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent_call, AgentCallArgs};
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent-call")?;
+                rt.block_on(run_agent_call(AgentCallArgs {
+                    socket,
+                    method,
+                    params: Some(params),
+                }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (socket, method, params);
+                anyhow::bail!("guestkit agent-call requires rebuilding with --features agent");
             }
         }
     }
