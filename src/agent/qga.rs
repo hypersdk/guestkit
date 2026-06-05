@@ -77,6 +77,12 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
         "guestkit-get-capabilities" => guestkit_get_capabilities(),
         "guestkit-get-version" => guestkit_get_version(),
         "guestkit-run-fix-plan" => guestkit_run_fix_plan(&args),
+        "guestkit-migrate-score" => guestkit_migrate_score(&args),
+        "guestkit-get-metrics" => guestkit_get_metrics(),
+        "guestkit-get-filesystem" => guestkit_get_filesystem(),
+        "guestkit-exec" => guestkit_exec(&args),
+        "guestkit-enable-rdp" => guestkit_enable_rdp(),
+        "guestkit-disable-rdp" => guestkit_disable_rdp(),
         "guest-suspend-disk" | "guest-suspend-ram" | "guest-suspend-hybrid" => {
             Ok(json!({}))
         }
@@ -149,7 +155,13 @@ fn guest_info() -> Value {
             "guestkit-doctor",
             "guestkit-get-capabilities",
             "guestkit-get-version",
-            "guestkit-run-fix-plan"
+            "guestkit-run-fix-plan",
+            "guestkit-migrate-score",
+            "guestkit-get-metrics",
+            "guestkit-get-filesystem",
+            "guestkit-exec",
+            "guestkit-enable-rdp",
+            "guestkit-disable-rdp"
         ],
         "supported_events": []
     })
@@ -220,19 +232,38 @@ fn guest_get_fsinfo() -> Result<Value, String> {
         if matches!(fstype, "proc" | "sysfs" | "devtmpfs" | "tmpfs" | "cgroup2" | "cgroup") {
             continue;
         }
-        let (total_bytes, used_bytes) = statvfs_usage(mountpoint);
+        let (total_bytes, used_bytes, avail_bytes, inodes_total, inodes_free) =
+            statvfs_usage(mountpoint);
+        let use_percent = if total_bytes > 0 {
+            (used_bytes as f64 / total_bytes as f64) * 100.0
+        } else {
+            0.0
+        };
+        let inode_use_percent = if inodes_total > 0 {
+            ((inodes_total - inodes_free) as f64 / inodes_total as f64) * 100.0
+        } else {
+            0.0
+        };
+        let disk_serial = disk_serial_for_device(parts[0]);
         mounts.push(json!({
             "name": parts[0],
             "mountpoint": mountpoint,
             "type": fstype,
             "total-bytes": total_bytes,
             "used-bytes": used_bytes,
+            "avail-bytes": avail_bytes,
+            "use-percent": use_percent,
+            "inodes-total": inodes_total,
+            "inodes-free": inodes_free,
+            "inode-use-percent": inode_use_percent,
+            "disk-serial": disk_serial,
             "disk": [{
                 "bus-type": "virtio",
-                "serial": "",
+                "serial": disk_serial,
                 "dev": parts[0],
                 "total-bytes": total_bytes,
-                "used-bytes": used_bytes
+                "used-bytes": used_bytes,
+                "avail-bytes": avail_bytes
             }]
         }));
     }
@@ -240,20 +271,85 @@ fn guest_get_fsinfo() -> Result<Value, String> {
 }
 
 #[cfg(target_os = "linux")]
-fn statvfs_usage(path: &str) -> (u64, u64) {
+fn statvfs_usage(path: &str) -> (u64, u64, u64, u64, u64) {
     use nix::sys::statvfs::statvfs;
     use std::path::Path;
     let Ok(st) = statvfs(Path::new(path)) else {
-        return (0, 0);
+        return (0, 0, 0, 0, 0);
     };
     let total = st.blocks() as u64 * st.fragment_size() as u64;
     let free = st.blocks_free() as u64 * st.fragment_size() as u64;
-    (total, total.saturating_sub(free))
+    let avail = st.blocks_available() as u64 * st.fragment_size() as u64;
+    let used = total.saturating_sub(free);
+    let inodes_total = st.files();
+    let inodes_free = st.files_free();
+    (total, used, avail, inodes_total, inodes_free)
 }
 
 #[cfg(not(target_os = "linux"))]
-fn statvfs_usage(_path: &str) -> (u64, u64) {
-    (0, 0)
+fn statvfs_usage(_path: &str) -> (u64, u64, u64, u64, u64) {
+    (0, 0, 0, 0, 0)
+}
+
+fn disk_serial_for_device(dev_path: &str) -> String {
+    let name = dev_path.trim_start_matches("/dev/");
+    let base = name
+        .trim_end_matches(char::is_numeric)
+        .trim_end_matches("p");
+    std::fs::read_to_string(format!("/sys/block/{base}/serial"))
+        .or_else(|_| std::fs::read_to_string(format!("/sys/block/{name}/serial")))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
+}
+
+/// Normalized filesystem mounts for VMRogue `/guest-filesystem`.
+pub fn filesystem_mounts_normalized() -> Result<Value, String> {
+    let raw = guest_get_fsinfo()?;
+    let mut mounts = Vec::new();
+    if let Some(arr) = raw.as_array() {
+        for entry in arr {
+            let mountpoint = entry
+                .get("mountpoint")
+                .and_then(|v| v.as_str())
+                .unwrap_or("/")
+                .to_string();
+            let total = entry
+                .get("total-bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let used = entry
+                .get("used-bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let avail = entry
+                .get("avail-bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(total.saturating_sub(used));
+            let use_percent = entry
+                .get("use-percent")
+                .and_then(|v| v.as_f64())
+                .unwrap_or_else(|| {
+                    if total > 0 {
+                        (used as f64 / total as f64) * 100.0
+                    } else {
+                        0.0
+                    }
+                });
+            mounts.push(json!({
+                "mount": mountpoint,
+                "filesystem": entry.get("name").and_then(|v| v.as_str()),
+                "fstype": entry.get("type").and_then(|v| v.as_str()),
+                "size_bytes": total,
+                "used_bytes": used,
+                "avail_bytes": avail,
+                "use_percent": use_percent,
+                "inodes_total": entry.get("inodes-total").and_then(|v| v.as_u64()).unwrap_or(0),
+                "inodes_free": entry.get("inodes-free").and_then(|v| v.as_u64()).unwrap_or(0),
+                "disk_serial": entry.get("disk-serial").and_then(|v| v.as_str()).unwrap_or(""),
+            }));
+        }
+    }
+    Ok(json!({ "mounts": mounts, "source": "guestkit-get-filesystem" }))
 }
 
 fn guest_get_users() -> Result<Value, String> {
@@ -621,6 +717,39 @@ fn guestkit_run_fix_plan(args: &Value) -> Result<Value, String> {
         "dry_run": dry_run,
         "result": result,
     }))
+}
+
+fn guestkit_migrate_score(args: &Value) -> Result<Value, String> {
+    let target = args
+        .get("target")
+        .and_then(|v| v.as_str())
+        .unwrap_or("kvm");
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let boot_target = crate::boot::BootTarget::parse(target);
+    let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
+    let report = crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
+    serde_json::to_value(report).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_metrics() -> Result<Value, String> {
+    let metrics = crate::metrics::collect_metrics_live();
+    serde_json::to_value(metrics).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_filesystem() -> Result<Value, String> {
+    filesystem_mounts_normalized()
+}
+
+fn guestkit_exec(args: &Value) -> Result<Value, String> {
+    crate::agent::exec::exec_sync_qga(args)
+}
+
+fn guestkit_enable_rdp() -> Result<Value, String> {
+    crate::agent::rdp::enable_rdp()
+}
+
+fn guestkit_disable_rdp() -> Result<Value, String> {
+    crate::agent::rdp::disable_rdp()
 }
 
 #[cfg(test)]
