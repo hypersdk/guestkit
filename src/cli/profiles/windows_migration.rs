@@ -2,9 +2,9 @@
 //! Windows migration readiness profile.
 
 use super::{Finding, FindingStatus, InspectionProfile, ProfileReport, ReportSection, RiskLevel};
-use anyhow::Result;
 use crate::guestfs::windows_registry;
 use crate::Guestfs;
+use anyhow::Result;
 use std::path::PathBuf;
 
 pub struct WindowsMigrationProfile;
@@ -28,7 +28,9 @@ impl InspectionProfile for WindowsMigrationProfile {
         ];
 
         let has_critical = sections.iter().any(|s| {
-            s.findings.iter().any(|f| f.risk_level == Some(RiskLevel::Critical))
+            s.findings
+                .iter()
+                .any(|f| f.risk_level == Some(RiskLevel::Critical))
         });
 
         Ok(ProfileReport {
@@ -106,7 +108,8 @@ impl WindowsMigrationProfile {
             findings.push(Finding {
                 item: "Hibernation".to_string(),
                 status: FindingStatus::Fail,
-                message: "Windows is hibernated — delete hiberfil.sys or fully shut down".to_string(),
+                message: "Windows is hibernated — delete hiberfil.sys or fully shut down"
+                    .to_string(),
                 risk_level: Some(RiskLevel::Critical),
             });
         }
@@ -195,11 +198,8 @@ impl WindowsMigrationProfile {
             });
         }
 
-        let av = windows_registry::detect_av_edr(
-            PathBuf::from(&software).as_path(),
-            g,
-            &systemroot,
-        );
+        let av =
+            windows_registry::detect_av_edr(PathBuf::from(&software).as_path(), g, &systemroot);
         for product in av {
             findings.push(Finding {
                 item: "AV/EDR".to_string(),

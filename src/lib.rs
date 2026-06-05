@@ -43,8 +43,8 @@
 //! - `fixers` - Guest OS repair operations
 //! - `cli` - Command-line interface
 
-pub mod cli;
 pub mod boot;
+pub mod cli;
 pub mod converters;
 pub mod core;
 pub mod disk;
@@ -62,18 +62,21 @@ pub mod detectors;
 #[cfg(feature = "python-bindings")]
 pub mod python;
 
+#[cfg(feature = "agent")]
+pub mod agent;
+
 // Re-exports for convenience
+pub use boot::BootabilityReport;
 pub use converters::DiskConverter;
 pub use core::types::*;
 pub use core::{Error, Result, RetryConfig};
 pub use disk::{DiskReader, FileSystem, PartitionTable};
+pub use evidence::EvidenceSnapshot;
 pub use export::{
-    create_variable_map, HtmlExporter, HtmlExportOptions, PaperSize, PdfExporter,
-    PdfExportOptions, TemplateEngine, TemplateFormat, TemplateLevel,
+    create_variable_map, HtmlExportOptions, HtmlExporter, PaperSize, PdfExportOptions, PdfExporter,
+    TemplateEngine, TemplateFormat, TemplateLevel,
 };
 pub use guestfs::Guestfs;
-pub use evidence::EvidenceSnapshot;
-pub use boot::BootabilityReport;
 
 #[cfg(feature = "guest-inspect")]
 pub use detectors::GuestDetector;

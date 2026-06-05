@@ -16,7 +16,8 @@ pub fn detect_circular_dependencies(
     // Build adjacency list
     let mut adj_list: HashMap<String, Vec<String>> = HashMap::new();
     for dep in dependencies {
-        adj_list.entry(dep.from.clone())
+        adj_list
+            .entry(dep.from.clone())
             .or_default()
             .push(dep.to.clone());
     }
@@ -85,17 +86,15 @@ fn has_cycle(
 }
 
 /// Detect dependency conflicts
-pub fn detect_conflicts(
-    packages: &[Package],
-    dependencies: &[Dependency],
-) -> Vec<Conflict> {
+pub fn detect_conflicts(packages: &[Package], dependencies: &[Dependency]) -> Vec<Conflict> {
     let mut conflicts = Vec::new();
 
     // Check for version conflicts
     let mut version_map: HashMap<String, Vec<String>> = HashMap::new();
     for pkg in packages {
         let base_name = pkg.name.split(':').next().unwrap_or(&pkg.name);
-        version_map.entry(base_name.to_string())
+        version_map
+            .entry(base_name.to_string())
             .or_default()
             .push(pkg.version.clone());
     }
@@ -151,7 +150,8 @@ pub fn find_critical_path(
     // Build reverse adjacency list (who depends on whom)
     let mut reverse_adj: HashMap<String, Vec<String>> = HashMap::new();
     for dep in dependencies {
-        reverse_adj.entry(dep.to.clone())
+        reverse_adj
+            .entry(dep.to.clone())
             .or_default()
             .push(dep.from.clone());
     }
@@ -192,7 +192,8 @@ pub fn calculate_importance(packages: &[Package]) -> HashMap<String, f64> {
 
 /// Find leaf packages (no dependencies)
 pub fn find_leaf_packages(packages: &[Package]) -> Vec<String> {
-    packages.iter()
+    packages
+        .iter()
         .filter(|p| p.is_leaf)
         .map(|p| p.name.clone())
         .collect()
@@ -200,7 +201,8 @@ pub fn find_leaf_packages(packages: &[Package]) -> Vec<String> {
 
 /// Find root packages (nothing depends on them)
 pub fn find_root_packages(packages: &[Package]) -> Vec<String> {
-    packages.iter()
+    packages
+        .iter()
         .filter(|p| p.is_root)
         .map(|p| p.name.clone())
         .collect()
@@ -208,7 +210,8 @@ pub fn find_root_packages(packages: &[Package]) -> Vec<String> {
 
 /// Find most depended-upon packages
 pub fn find_most_depended(packages: &[Package], limit: usize) -> Vec<(String, usize)> {
-    let mut pkg_deps: Vec<_> = packages.iter()
+    let mut pkg_deps: Vec<_> = packages
+        .iter()
         .map(|p| (p.name.clone(), p.required_by.len()))
         .collect();
 

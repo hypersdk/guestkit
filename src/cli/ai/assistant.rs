@@ -2,17 +2,13 @@
 //! AI assistant implementation using Rig
 
 use super::tools::DiagnosticTools;
+use crate::Guestfs;
 use anyhow::{Context, Result};
 use colored::Colorize;
-use crate::Guestfs;
 use std::path::Path;
 
 #[cfg(feature = "ai")]
-use rig::{
-    client::completion::CompletionClient,
-    completion::CompletionModel,
-    providers::openai,
-};
+use rig::{client::completion::CompletionClient, completion::CompletionModel, providers::openai};
 
 #[cfg(feature = "ai")]
 use reqwest;
@@ -60,9 +56,20 @@ pub fn run_ai_assistant(image_path: &Path, query: &str) -> Result<()> {
         );
     }
 
-    println!("\n{}", "╔═══════════════════════════════════════════════════╗".cyan());
-    println!("{}", "║     GuestKit AI Assistant - VM Diagnostics      ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════╝".cyan());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════╗".cyan()
+    );
+    println!(
+        "{}",
+        "║     GuestKit AI Assistant - VM Diagnostics      ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════╝".cyan()
+    );
     println!();
     println!("{} {}", "Query:".yellow().bold(), query);
     println!();
@@ -71,7 +78,13 @@ pub fn run_ai_assistant(image_path: &Path, query: &str) -> Result<()> {
     // Initialize guestfs
     let mut guestfs = Guestfs::new().context("Failed to create Guestfs handle")?;
     guestfs
-        .add_drive_opts(image_path.to_str().ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", image_path.display()))?, false, None)
+        .add_drive_opts(
+            image_path.to_str().ok_or_else(|| {
+                anyhow::anyhow!("Path contains invalid UTF-8: {}", image_path.display())
+            })?,
+            false,
+            None,
+        )
         .context("Failed to add drive")?;
     guestfs.launch().context("Failed to launch guestfs")?;
 
@@ -122,7 +135,10 @@ pub fn run_ai_assistant(image_path: &Path, query: &str) -> Result<()> {
     println!("{}", "═".repeat(70).cyan());
     println!();
 
-    println!("{} Review suggestions carefully before applying", "⚠".yellow().bold());
+    println!(
+        "{} Review suggestions carefully before applying",
+        "⚠".yellow().bold()
+    );
     println!("{} Test in a non-production environment first", "💡".cyan());
     println!();
 
@@ -154,7 +170,10 @@ fn gather_diagnostic_context(tools: &mut DiagnosticTools, query: &str) -> Result
         }
     }
 
-    if query_lower.contains("mount") || query_lower.contains("fstab") || query_lower.contains("filesystem") {
+    if query_lower.contains("mount")
+        || query_lower.contains("fstab")
+        || query_lower.contains("filesystem")
+    {
         context.push_str("\nCurrent Mounts:\n");
         if let Ok(mounts) = tools.get_mounts() {
             context.push_str(&mounts);
@@ -168,7 +187,10 @@ fn gather_diagnostic_context(tools: &mut DiagnosticTools, query: &str) -> Result
         }
     }
 
-    if query_lower.contains("boot") || query_lower.contains("kernel") || query_lower.contains("grub") {
+    if query_lower.contains("boot")
+        || query_lower.contains("kernel")
+        || query_lower.contains("grub")
+    {
         context.push_str("\nBoot Configuration Check:\n");
         if let Ok(boot) = tools.check_boot_config() {
             context.push_str(&boot);
@@ -182,7 +204,10 @@ fn gather_diagnostic_context(tools: &mut DiagnosticTools, query: &str) -> Result
         }
     }
 
-    if query_lower.contains("security") || query_lower.contains("selinux") || query_lower.contains("firewall") {
+    if query_lower.contains("security")
+        || query_lower.contains("selinux")
+        || query_lower.contains("firewall")
+    {
         context.push_str("\nSecurity Status:\n");
         if let Ok(sec) = tools.get_security_status() {
             context.push_str(&sec);
@@ -202,8 +227,8 @@ fn gather_diagnostic_context(tools: &mut DiagnosticTools, query: &str) -> Result
 
 fn call_openai_simple(query: &str, context: &str) -> Result<String> {
     // Get API key from environment
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .context("OPENAI_API_KEY environment variable not set")?;
+    let api_key =
+        std::env::var("OPENAI_API_KEY").context("OPENAI_API_KEY environment variable not set")?;
 
     // Use tokio runtime for async call
     let runtime = tokio::runtime::Runtime::new()?;

@@ -10,14 +10,23 @@ pub fn generate_summary(inventory: &Inventory) -> String {
     summary.push_str("📦 Software Bill of Materials (SBOM)\n");
     summary.push_str("=====================================\n\n");
     summary.push_str(&format!("Image: {}\n", inventory.image_path));
-    summary.push_str(&format!("OS: {} {}\n", inventory.os_name, inventory.os_version));
+    summary.push_str(&format!(
+        "OS: {} {}\n",
+        inventory.os_name, inventory.os_version
+    ));
     summary.push_str(&format!("Architecture: {}\n", inventory.architecture));
     summary.push_str(&format!("Scanned: {}\n\n", inventory.scanned_at));
 
     summary.push_str("📊 Statistics\n");
     summary.push_str("-------------\n");
-    summary.push_str(&format!("Total Packages: {}\n", inventory.statistics.total_packages));
-    summary.push_str(&format!("Total Size: {}\n\n", format_size(inventory.statistics.total_size)));
+    summary.push_str(&format!(
+        "Total Packages: {}\n",
+        inventory.statistics.total_packages
+    ));
+    summary.push_str(&format!(
+        "Total Size: {}\n\n",
+        format_size(inventory.statistics.total_size)
+    ));
 
     if !inventory.statistics.vulnerabilities.is_empty() {
         summary.push_str("⚠️  Vulnerabilities\n");

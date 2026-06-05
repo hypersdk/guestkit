@@ -3,8 +3,8 @@
 
 use super::errors::builders as errors;
 use super::invocation;
-use anyhow::{Context, Result};
 use crate::Guestfs;
+use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -239,8 +239,14 @@ impl Completer for GuestkitHelper {
 
                 // Common device paths in VMs
                 let devices = vec![
-                    "/dev/sda", "/dev/sda1", "/dev/sda2", "/dev/sda3",
-                    "/dev/vda", "/dev/vda1", "/dev/vda2", "/dev/vda3",
+                    "/dev/sda",
+                    "/dev/sda1",
+                    "/dev/sda2",
+                    "/dev/sda3",
+                    "/dev/vda",
+                    "/dev/vda1",
+                    "/dev/vda2",
+                    "/dev/vda3",
                     "/dev/mapper/",
                 ];
 
@@ -281,18 +287,18 @@ impl Completer for GuestkitHelper {
             }
 
             // Path completion for commands that expect paths
-            let path_commands = vec!["ls", "cat", "head", "stat", "find", "download", "dl", "umount", "unmount"];
+            let path_commands = vec![
+                "ls", "cat", "head", "stat", "find", "download", "dl", "umount", "unmount",
+            ];
 
             if path_commands.contains(&command) {
                 let prefix = parts.last().unwrap_or(&"");
 
                 // Common Linux paths
                 let common_paths = vec![
-                    "/", "/etc", "/etc/", "/var", "/var/", "/home", "/home/",
-                    "/usr", "/usr/", "/tmp", "/tmp/", "/opt", "/opt/",
-                    "/root", "/root/", "/boot", "/boot/", "/dev", "/dev/",
-                    "/proc", "/proc/", "/sys", "/sys/", "/run", "/run/",
-                    "/mnt", "/mnt/",
+                    "/", "/etc", "/etc/", "/var", "/var/", "/home", "/home/", "/usr", "/usr/",
+                    "/tmp", "/tmp/", "/opt", "/opt/", "/root", "/root/", "/boot", "/boot/", "/dev",
+                    "/dev/", "/proc", "/proc/", "/sys", "/sys/", "/run", "/run/", "/mnt", "/mnt/",
                 ];
 
                 let matches: Vec<Pair> = common_paths
@@ -358,7 +364,9 @@ impl InteractiveSession {
     pub fn new(disk_path: PathBuf) -> Result<Self> {
         println!(
             "{}",
-            "Initializing GuestKit Interactive Mode...".truecolor(222, 115, 86).bold()
+            "Initializing GuestKit Interactive Mode..."
+                .truecolor(222, 115, 86)
+                .bold()
         );
         println!();
 
@@ -366,9 +374,17 @@ impl InteractiveSession {
         let mut handle = Guestfs::new().context("Failed to create guestfs handle")?;
 
         // Add drive
-        println!("  {} Loading disk: {}", "→".truecolor(222, 115, 86), disk_path.display());
+        println!(
+            "  {} Loading disk: {}",
+            "→".truecolor(222, 115, 86),
+            disk_path.display()
+        );
         handle
-            .add_drive_ro(disk_path.to_str().ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?)
+            .add_drive_ro(
+                disk_path
+                    .to_str()
+                    .ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?,
+            )
             .context("Failed to add drive")?;
 
         // Launch
@@ -403,7 +419,10 @@ impl InteractiveSession {
 
         // Auto-mount filesystems
         if let Some(ref root) = current_root {
-            println!("  {} Auto-mounting filesystems...", "→".truecolor(222, 115, 86));
+            println!(
+                "  {} Auto-mounting filesystems...",
+                "→".truecolor(222, 115, 86)
+            );
             match handle.inspect_get_mountpoints(root) {
                 Ok(mountpoints) => {
                     // Sort by mountpoint length (mount / before /boot, etc.)
@@ -412,14 +431,29 @@ impl InteractiveSession {
 
                     for (mountpoint, device) in sorted_mounts {
                         if let Err(e) = handle.mount_ro(&device, &mountpoint) {
-                            println!("  {} Failed to mount {} at {}: {}", "⚠".yellow(), device, mountpoint, e);
+                            println!(
+                                "  {} Failed to mount {} at {}: {}",
+                                "⚠".yellow(),
+                                device,
+                                mountpoint,
+                                e
+                            );
                         } else {
-                            println!("  {} Mounted {} at {} (ro)", "✓".green(), device.bright_white(), mountpoint.truecolor(222, 115, 86));
+                            println!(
+                                "  {} Mounted {} at {} (ro)",
+                                "✓".green(),
+                                device.bright_white(),
+                                mountpoint.truecolor(222, 115, 86)
+                            );
                         }
                     }
                 }
                 Err(e) => {
-                    println!("  {} Warning: Could not get mountpoints: {}", "⚠".yellow(), e);
+                    println!(
+                        "  {} Warning: Could not get mountpoints: {}",
+                        "⚠".yellow(),
+                        e
+                    );
                 }
             }
         }
@@ -430,10 +464,9 @@ impl InteractiveSession {
 
         // Load command history if available
         if let Ok(history_file) = get_history_file(&disk_path) {
-            if history_file.exists()
-                && editor.load_history(&history_file).is_ok() {
-                    println!("  {} Loaded command history", "→".truecolor(222, 115, 86));
-                }
+            if history_file.exists() && editor.load_history(&history_file).is_ok() {
+                println!("  {} Loaded command history", "→".truecolor(222, 115, 86));
+            }
         }
 
         println!();
@@ -460,10 +493,7 @@ impl InteractiveSession {
     /// Run the interactive session
     pub fn run(&mut self) -> Result<()> {
         loop {
-            let prompt = format!(
-                "{}> ",
-                invocation::name().truecolor(222, 115, 86).bold()
-            );
+            let prompt = format!("{}> ", invocation::name().truecolor(222, 115, 86).bold());
 
             match self.editor.readline(&prompt) {
                 Ok(line) => {
@@ -676,11 +706,19 @@ impl InteractiveSession {
     /// Show help
     fn cmd_help(&self) -> Result<()> {
         println!();
-        println!("{}", "GuestKit Interactive Commands:".truecolor(222, 115, 86).bold());
+        println!(
+            "{}",
+            "GuestKit Interactive Commands:"
+                .truecolor(222, 115, 86)
+                .bold()
+        );
         println!();
 
         println!("{}", "  System Information:".bright_white().bold());
-        println!("    {}  - Show disk and OS information", "info".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Show disk and OS information",
+            "info".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Filesystem Operations:".bright_white().bold());
@@ -692,13 +730,25 @@ impl InteractiveSession {
             "    {}  - Mount a filesystem",
             "mount <device> <path>".truecolor(222, 115, 86)
         );
-        println!("    {}  - Unmount a filesystem", "umount <path>".truecolor(222, 115, 86));
-        println!("    {}  - Show mounted filesystems", "mounts".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Unmount a filesystem",
+            "umount <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show mounted filesystems",
+            "mounts".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  File Operations:".bright_white().bold());
-        println!("    {}  - List directory contents", "ls [path]".truecolor(222, 115, 86));
-        println!("    {}  - Display file contents", "cat <path>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - List directory contents",
+            "ls [path]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Display file contents",
+            "cat <path>".truecolor(222, 115, 86)
+        );
         println!(
             "    {}  - Display first lines of file",
             "head <path> [lines]".truecolor(222, 115, 86)
@@ -707,7 +757,10 @@ impl InteractiveSession {
             "    {}  - Find files by name pattern",
             "find <pattern>".truecolor(222, 115, 86)
         );
-        println!("    {}  - Show file information", "stat <path>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Show file information",
+            "stat <path>".truecolor(222, 115, 86)
+        );
         println!(
             "    {}  - Download file from disk",
             "download <src> <dest>".truecolor(222, 115, 86)
@@ -719,8 +772,14 @@ impl InteractiveSession {
             "    {}  - List installed packages",
             "packages, pkg [filter]".truecolor(222, 115, 86)
         );
-        println!("    {}  - List system services", "services, svc".truecolor(222, 115, 86));
-        println!("    {}  - List user accounts", "users".truecolor(222, 115, 86));
+        println!(
+            "    {}  - List system services",
+            "services, svc".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - List user accounts",
+            "users".truecolor(222, 115, 86)
+        );
         println!(
             "    {}  - Show network configuration",
             "network, net".truecolor(222, 115, 86)
@@ -728,11 +787,26 @@ impl InteractiveSession {
         println!();
 
         println!("{}", "  User Management:".bright_white().bold());
-        println!("    {}  - Create new user", "adduser <username>".truecolor(222, 115, 86));
-        println!("    {}  - Delete user", "deluser <username>".truecolor(222, 115, 86));
-        println!("    {}  - Change password", "passwd <username>".truecolor(222, 115, 86));
-        println!("    {}  - Add user to group", "usermod <user> <group>".truecolor(222, 115, 86));
-        println!("    {}  - Show user groups", "groups <username>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Create new user",
+            "adduser <username>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Delete user",
+            "deluser <username>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Change password",
+            "passwd <username>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Add user to group",
+            "usermod <user> <group>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show user groups",
+            "groups <username>".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  SSH Key Management:".bright_white().bold());
@@ -744,139 +818,358 @@ impl InteractiveSession {
             "    {}  - Remove SSH key",
             "ssh-removekey <user> <index>".truecolor(222, 115, 86)
         );
-        println!("    {}  - List authorized keys", "ssh-listkeys <user>".truecolor(222, 115, 86));
-        println!("    {}  - Enable SSH service", "ssh-enable".truecolor(222, 115, 86));
-        println!("    {}  - Show SSH config", "ssh-config".truecolor(222, 115, 86));
+        println!(
+            "    {}  - List authorized keys",
+            "ssh-listkeys <user>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Enable SSH service",
+            "ssh-enable".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show SSH config",
+            "ssh-config".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  File Management:".bright_white().bold());
-        println!("    {}  - Upload file to VM", "upload <local> <remote>".truecolor(222, 115, 86));
-        println!("    {}  - Edit file in VM", "edit <path>".truecolor(222, 115, 86));
-        println!("    {}  - Write content to file", "write <path> <content>".truecolor(222, 115, 86));
-        println!("    {}  - Copy file/directory", "copy <src> <dest>".truecolor(222, 115, 86));
-        println!("    {}  - Move/rename file", "move <src> <dest>".truecolor(222, 115, 86));
-        println!("    {}  - Delete file/directory", "delete <path>".truecolor(222, 115, 86));
-        println!("    {}  - Create directory", "mkdir <path>".truecolor(222, 115, 86));
-        println!("    {}  - Change permissions", "chmod <mode> <path>".truecolor(222, 115, 86));
-        println!("    {}  - Change owner", "chown <user:group> <path>".truecolor(222, 115, 86));
-        println!("    {}  - Create symlink", "symlink <target> <link>".truecolor(222, 115, 86));
-        println!("    {}  - Find large files", "large-files [path] [size]".truecolor(222, 115, 86));
-        println!("    {}  - Disk usage analysis", "disk-usage [path]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Upload file to VM",
+            "upload <local> <remote>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Edit file in VM",
+            "edit <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Write content to file",
+            "write <path> <content>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Copy file/directory",
+            "copy <src> <dest>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Move/rename file",
+            "move <src> <dest>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Delete file/directory",
+            "delete <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Create directory",
+            "mkdir <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Change permissions",
+            "chmod <mode> <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Change owner",
+            "chown <user:group> <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Create symlink",
+            "symlink <target> <link>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Find large files",
+            "large-files [path] [size]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Disk usage analysis",
+            "disk-usage [path]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Package Management:".bright_white().bold());
-        println!("    {}  - Install package", "install <package>".truecolor(222, 115, 86));
-        println!("    {}  - Remove package", "remove <package>".truecolor(222, 115, 86));
-        println!("    {}  - Update all packages", "update".truecolor(222, 115, 86));
-        println!("    {}  - Search packages", "search <keyword>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Install package",
+            "install <package>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Remove package",
+            "remove <package>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Update all packages",
+            "update".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Search packages",
+            "search <keyword>".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  System Configuration:".bright_white().bold());
-        println!("    {}  - Set hostname", "hostname <name>".truecolor(222, 115, 86));
-        println!("    {}  - Set timezone", "timezone <tz>".truecolor(222, 115, 86));
-        println!("    {}  - Set SELinux mode", "selinux <mode>".truecolor(222, 115, 86));
-        println!("    {}  - Set locale", "locale <locale>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Set hostname",
+            "hostname <name>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Set timezone",
+            "timezone <tz>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Set SELinux mode",
+            "selinux <mode>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Set locale",
+            "locale <locale>".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Service Management:".bright_white().bold());
-        println!("    {}  - Enable service", "enable <service>".truecolor(222, 115, 86));
-        println!("    {}  - Disable service", "disable <service>".truecolor(222, 115, 86));
-        println!("    {}  - Restart service", "restart <service>".truecolor(222, 115, 86));
-        println!("    {}  - View service logs", "logs <service> [lines]".truecolor(222, 115, 86));
-        println!("    {}  - Show failed services", "failed".truecolor(222, 115, 86));
-        println!("    {}  - Analyze boot time", "boot-time".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Enable service",
+            "enable <service>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Disable service",
+            "disable <service>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Restart service",
+            "restart <service>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - View service logs",
+            "logs <service> [lines]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show failed services",
+            "failed".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Analyze boot time",
+            "boot-time".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Firewall Management:".bright_white().bold());
-        println!("    {}  - Add firewall rule", "firewall-add <port/service>".truecolor(222, 115, 86));
-        println!("    {}  - Remove firewall rule", "firewall-remove <port/service>".truecolor(222, 115, 86));
-        println!("    {}  - List firewall rules", "firewall-list".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Add firewall rule",
+            "firewall-add <port/service>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Remove firewall rule",
+            "firewall-remove <port/service>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - List firewall rules",
+            "firewall-list".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Scheduled Tasks:".bright_white().bold());
-        println!("    {}  - Add cron job", "cron-add <user> <schedule> <cmd>".truecolor(222, 115, 86));
-        println!("    {}  - List cron jobs", "cron-list [user]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Add cron job",
+            "cron-add <user> <schedule> <cmd>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - List cron jobs",
+            "cron-list [user]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  System Cleanup:".bright_white().bold());
-        println!("    {}  - Clean old logs", "clean-logs".truecolor(222, 115, 86));
-        println!("    {}  - Clean package cache", "clean-cache".truecolor(222, 115, 86));
-        println!("    {}  - Clean temp files", "clean-temp".truecolor(222, 115, 86));
-        println!("    {}  - Remove old kernels", "clean-kernels".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Clean old logs",
+            "clean-logs".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Clean package cache",
+            "clean-cache".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Clean temp files",
+            "clean-temp".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Remove old kernels",
+            "clean-kernels".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Backup & Safety:".bright_white().bold());
-        println!("    {}  - Backup a file", "backup <path>".truecolor(222, 115, 86));
-        println!("    {}  - List backups", "backups [path]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Backup a file",
+            "backup <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - List backups",
+            "backups [path]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Boot Configuration:".bright_white().bold());
-        println!("    {}  - Show GRUB config", "grub show".truecolor(222, 115, 86));
-        println!("    {}  - Set kernel parameter", "grub set <param>".truecolor(222, 115, 86));
-        println!("    {}  - Update GRUB", "grub update".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Show GRUB config",
+            "grub show".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Set kernel parameter",
+            "grub set <param>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Update GRUB",
+            "grub update".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Network Configuration:".bright_white().bold());
-        println!("    {}  - Set static IP", "net-setip <iface> <ip> <mask>".truecolor(222, 115, 86));
-        println!("    {}  - Set DNS servers", "net-setdns <server1> [server2]".truecolor(222, 115, 86));
-        println!("    {}  - Add route", "net-route-add <dest> <gateway>".truecolor(222, 115, 86));
-        println!("    {}  - Enable DHCP", "net-dhcp <interface>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Set static IP",
+            "net-setip <iface> <ip> <mask>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Set DNS servers",
+            "net-setdns <server1> [server2]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Add route",
+            "net-route-add <dest> <gateway>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Enable DHCP",
+            "net-dhcp <interface>".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Process Management:".bright_white().bold());
-        println!("    {}  - List processes", "ps [filter]".truecolor(222, 115, 86));
-        println!("    {}  - Kill process", "kill <pid> [signal]".truecolor(222, 115, 86));
-        println!("    {}  - Show top processes", "top".truecolor(222, 115, 86));
+        println!(
+            "    {}  - List processes",
+            "ps [filter]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Kill process",
+            "kill <pid> [signal]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show top processes",
+            "top".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Security & Audit:".bright_white().bold());
-        println!("    {}  - Scan open ports", "scan-ports".truecolor(222, 115, 86));
-        println!("    {}  - Find world-writable files", "audit-perms".truecolor(222, 115, 86));
-        println!("    {}  - Find SUID/SGID files", "audit-suid".truecolor(222, 115, 86));
-        println!("    {}  - Check security updates", "check-updates".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Scan open ports",
+            "scan-ports".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Find world-writable files",
+            "audit-perms".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Find SUID/SGID files",
+            "audit-suid".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Check security updates",
+            "check-updates".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Database Operations:".bright_white().bold());
-        println!("    {}  - List databases", "db-list".truecolor(222, 115, 86));
-        println!("    {}  - Backup database", "db-backup <db> [type]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - List databases",
+            "db-list".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Backup database",
+            "db-backup <db> [type]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Advanced File Operations:".bright_white().bold());
-        println!("    {}  - Search & replace", "grep-replace <old> <new> <file>".truecolor(222, 115, 86));
-        println!("    {}  - Compare files", "diff <file1> <file2>".truecolor(222, 115, 86));
-        println!("    {}  - Directory tree", "tree [path] [depth]".truecolor(222, 115, 86));
-        println!("    {}  - Compress files", "compress <path> [output]".truecolor(222, 115, 86));
-        println!("    {}  - Extract archive", "extract <archive> [dest]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Search & replace",
+            "grep-replace <old> <new> <file>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Compare files",
+            "diff <file1> <file2>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Directory tree",
+            "tree [path] [depth]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Compress files",
+            "compress <path> [output]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Extract archive",
+            "extract <archive> [dest]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Git Operations:".bright_white().bold());
-        println!("    {}  - Clone repository", "git-clone <url> [path]".truecolor(222, 115, 86));
-        println!("    {}  - Update repository", "git-pull [path]".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Clone repository",
+            "git-clone <url> [path]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Update repository",
+            "git-pull [path]".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Performance Tuning:".bright_white().bold());
-        println!("    {}  - Set swap usage", "tune-swappiness <value>".truecolor(222, 115, 86));
-        println!("    {}  - Show tuning parameters", "tune-show".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Set swap usage",
+            "tune-swappiness <value>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show tuning parameters",
+            "tune-show".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Quick Setup Wizards:".bright_white().bold());
-        println!("    {}  - Setup Nginx", "setup-webserver".truecolor(222, 115, 86));
-        println!("    {}  - Setup database", "setup-database [mysql|postgres]".truecolor(222, 115, 86));
-        println!("    {}  - Setup Docker", "setup-docker".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Setup Nginx",
+            "setup-webserver".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Setup database",
+            "setup-database [mysql|postgres]".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Setup Docker",
+            "setup-docker".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Monitoring & Metrics:".bright_white().bold());
-        println!("    {}  - System metrics summary", "metrics".truecolor(222, 115, 86));
-        println!("    {}  - Network bandwidth stats", "bandwidth".truecolor(222, 115, 86));
+        println!(
+            "    {}  - System metrics summary",
+            "metrics".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Network bandwidth stats",
+            "bandwidth".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  SELinux Advanced:".bright_white().bold());
-        println!("    {}  - Show SELinux context", "selinux-context <path>".truecolor(222, 115, 86));
-        println!("    {}  - SELinux audit log", "selinux-audit".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Show SELinux context",
+            "selinux-context <path>".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - SELinux audit log",
+            "selinux-audit".truecolor(222, 115, 86)
+        );
         println!();
 
         println!("{}", "  Templates:".bright_white().bold());
-        println!("    {}  - Save config template", "template-save <name>".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Save config template",
+            "template-save <name>".truecolor(222, 115, 86)
+        );
         println!();
 
         #[cfg(feature = "ai")]
@@ -891,9 +1184,18 @@ impl InteractiveSession {
         }
 
         println!("{}", "  Other:".bright_white().bold());
-        println!("    {}  - Clear screen", "clear, cls".truecolor(222, 115, 86));
-        println!("    {}  - Show this help", "help, ?".truecolor(222, 115, 86));
-        println!("    {}  - Exit interactive mode", "exit, quit, q".truecolor(222, 115, 86));
+        println!(
+            "    {}  - Clear screen",
+            "clear, cls".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Show this help",
+            "help, ?".truecolor(222, 115, 86)
+        );
+        println!(
+            "    {}  - Exit interactive mode",
+            "exit, quit, q".truecolor(222, 115, 86)
+        );
         println!();
 
         Ok(())
@@ -951,7 +1253,10 @@ impl InteractiveSession {
             .context("Failed to list filesystems")?;
 
         println!();
-        println!("{}", "Available Filesystems:".truecolor(222, 115, 86).bold());
+        println!(
+            "{}",
+            "Available Filesystems:".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         for (device, fstype) in filesystems {
@@ -1076,8 +1381,16 @@ impl InteractiveSession {
                 // Check if it's a file (common mistake: ls on a file instead of cat)
                 if self.handle.is_file(path).unwrap_or(false) {
                     println!();
-                    println!("{} '{}' is a file, not a directory", "Error:".red().bold(), path);
-                    println!("{} Use 'cat {}' to view the file contents", "Hint:".yellow().bold(), path);
+                    println!(
+                        "{} '{}' is a file, not a directory",
+                        "Error:".red().bold(),
+                        path
+                    );
+                    println!(
+                        "{} Use 'cat {}' to view the file contents",
+                        "Hint:".yellow().bold(),
+                        path
+                    );
                     println!();
                     Ok(())
                 } else {
@@ -1122,7 +1435,11 @@ impl InteractiveSession {
             match args[1].parse::<usize>() {
                 Ok(n) => n,
                 Err(_) => {
-                    println!("{} Invalid line count '{}', using default 10", "Warning:".yellow().bold(), args[1]);
+                    println!(
+                        "{} Invalid line count '{}', using default 10",
+                        "Warning:".yellow().bold(),
+                        args[1]
+                    );
                     10
                 }
             }
@@ -1377,7 +1694,11 @@ impl InteractiveSession {
                     iface.mac_address.yellow()
                 );
                 for addr in &iface.ip_address {
-                    println!("    {} {}", "→".truecolor(222, 115, 86), addr.bright_white());
+                    println!(
+                        "    {} {}",
+                        "→".truecolor(222, 115, 86),
+                        addr.bright_white()
+                    );
                 }
                 if !iface.ip_address.is_empty() {
                     println!();
@@ -1446,7 +1767,10 @@ impl InteractiveSession {
             Some(r) => r,
             None => {
                 println!();
-                println!("{} No OS detected. Cannot run AI diagnostics.", "Error:".red().bold());
+                println!(
+                    "{} No OS detected. Cannot run AI diagnostics.",
+                    "Error:".red().bold()
+                );
                 println!();
                 return Ok(());
             }
@@ -1455,7 +1779,11 @@ impl InteractiveSession {
         let query = args.join(" ");
 
         println!();
-        println!("{} {}", "🤖".bold(), "Analyzing VM...".truecolor(222, 115, 86));
+        println!(
+            "{} {}",
+            "🤖".bold(),
+            "Analyzing VM...".truecolor(222, 115, 86)
+        );
         println!();
 
         // Gather diagnostic context
@@ -1480,7 +1808,10 @@ impl InteractiveSession {
         context.push('\n');
 
         // Conditional gathering based on query
-        if query_lower.contains("lvm") || query_lower.contains("volume") || query_lower.contains("vg") {
+        if query_lower.contains("lvm")
+            || query_lower.contains("volume")
+            || query_lower.contains("vg")
+        {
             context.push_str("\nLVM Information:\n");
             if let Ok(lvm) = self.handle.inspect_lvm(root) {
                 context.push_str(&serde_json::to_string_pretty(&lvm).unwrap_or_default());
@@ -1488,7 +1819,10 @@ impl InteractiveSession {
             }
         }
 
-        if query_lower.contains("mount") || query_lower.contains("fstab") || query_lower.contains("filesystem") {
+        if query_lower.contains("mount")
+            || query_lower.contains("fstab")
+            || query_lower.contains("filesystem")
+        {
             context.push_str("\nCurrent Mounts:\n");
             if let Ok(mounts) = self.handle.mounts() {
                 context.push_str(&mounts.join("\n"));
@@ -1502,14 +1836,20 @@ impl InteractiveSession {
             }
         }
 
-        if query_lower.contains("boot") || query_lower.contains("kernel") || query_lower.contains("grub") {
+        if query_lower.contains("boot")
+            || query_lower.contains("kernel")
+            || query_lower.contains("grub")
+        {
             context.push_str("\nBoot Configuration:\n");
             if self.handle.is_dir("/boot").unwrap_or(false) {
                 context.push_str("Boot directory accessible\n");
             }
         }
 
-        if query_lower.contains("security") || query_lower.contains("selinux") || query_lower.contains("firewall") {
+        if query_lower.contains("security")
+            || query_lower.contains("selinux")
+            || query_lower.contains("firewall")
+        {
             context.push_str("\nSecurity Status:\n");
             if let Ok(sec) = self.handle.inspect_security(root) {
                 context.push_str(&serde_json::to_string_pretty(&sec).unwrap_or_default());
@@ -1526,7 +1866,11 @@ impl InteractiveSession {
             }
         }
 
-        println!("{} {}", "→".truecolor(222, 115, 86), "Consulting AI...".bright_white());
+        println!(
+            "{} {}",
+            "→".truecolor(222, 115, 86),
+            "Consulting AI...".bright_white()
+        );
         println!();
 
         // Call OpenAI
@@ -1607,7 +1951,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_upload(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} upload <local-file> <remote-path>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} upload <local-file> <remote-path>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: upload ~/.ssh/id_rsa.pub /root/.ssh/authorized_keys");
             println!();
             return Ok(());
@@ -1617,7 +1964,12 @@ Always explain WHAT the command does and WHY it's needed.
         let remote_path = args[1];
 
         println!();
-        println!("  {} Uploading {} → {}", "→".truecolor(222, 115, 86), local_path, remote_path);
+        println!(
+            "  {} Uploading {} → {}",
+            "→".truecolor(222, 115, 86),
+            local_path,
+            remote_path
+        );
 
         // Read local file
         let content = std::fs::read(local_path)
@@ -1630,10 +1982,14 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         // Write to VM
-        self.handle.write(remote_path, &content)
+        self.handle
+            .write(remote_path, &content)
             .with_context(|| format!("Failed to write to VM: {}", remote_path))?;
 
-        println!("  {} File uploaded successfully", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} File uploaded successfully",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -1652,10 +2008,15 @@ Always explain WHAT the command does and WHY it's needed.
         let remote_path = args[0];
 
         println!();
-        println!("  {} Downloading file for editing...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Downloading file for editing...",
+            "→".truecolor(222, 115, 86)
+        );
 
         // Download file content
-        let content = self.handle.read_file(remote_path)
+        let content = self
+            .handle
+            .read_file(remote_path)
             .with_context(|| format!("Failed to read file: {}", remote_path))?;
 
         // Create temp file securely using tempfile crate to avoid symlink attacks
@@ -1672,10 +2033,19 @@ Always explain WHAT the command does and WHY it's needed.
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("vi");
-        if editor.contains(';') || editor.contains('&') || editor.contains('|') || editor.contains('$') {
+        if editor.contains(';')
+            || editor.contains('&')
+            || editor.contains('|')
+            || editor.contains('$')
+        {
             anyhow::bail!("EDITOR contains unsafe characters: {}", editor);
         }
-        println!("  {} Opening {} in {}...", "→".truecolor(222, 115, 86), remote_path, editor_name);
+        println!(
+            "  {} Opening {} in {}...",
+            "→".truecolor(222, 115, 86),
+            remote_path,
+            editor_name
+        );
 
         let status = std::process::Command::new(&editor)
             .arg(temp_file.path())
@@ -1685,10 +2055,14 @@ Always explain WHAT the command does and WHY it's needed.
         if status.success() {
             // Upload modified file
             let modified_content = std::fs::read(temp_file.path())?;
-            self.handle.write(remote_path, &modified_content)
+            self.handle
+                .write(remote_path, &modified_content)
                 .with_context(|| format!("Failed to write back to VM: {}", remote_path))?;
 
-            println!("  {} File updated in VM", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} File updated in VM",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             println!("  {} Edit cancelled", "⚠".truecolor(222, 115, 86));
         }
@@ -1703,7 +2077,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_write(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} write <path> <content...>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} write <path> <content...>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: write /etc/motd Welcome to my VM!");
             println!();
             return Ok(());
@@ -1713,7 +2090,11 @@ Always explain WHAT the command does and WHY it's needed.
         let content = args[1..].join(" ");
 
         println!();
-        println!("  {} Writing to {}...", "→".truecolor(222, 115, 86), remote_path);
+        println!(
+            "  {} Writing to {}...",
+            "→".truecolor(222, 115, 86),
+            remote_path
+        );
 
         // Ensure parent directory exists
         if let Some(parent) = std::path::Path::new(remote_path).parent() {
@@ -1721,10 +2102,14 @@ Always explain WHAT the command does and WHY it's needed.
             let _ = self.handle.mkdir_p(parent_str);
         }
 
-        self.handle.write(remote_path, content.as_bytes())
+        self.handle
+            .write(remote_path, content.as_bytes())
             .with_context(|| format!("Failed to write to {}", remote_path))?;
 
-        println!("  {} Content written successfully", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} Content written successfully",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -1736,7 +2121,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_adduser(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} adduser <username>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} adduser <username>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: adduser john");
             println!();
             return Ok(());
@@ -1749,14 +2137,27 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Creating user {}...", "→".truecolor(222, 115, 86), username.bright_white().bold());
+        println!(
+            "  {} Creating user {}...",
+            "→".truecolor(222, 115, 86),
+            username.bright_white().bold()
+        );
 
         // Create user using useradd command
-        self.handle.command(&["useradd", "-m", "-s", "/bin/bash", username])
+        self.handle
+            .command(&["useradd", "-m", "-s", "/bin/bash", username])
             .with_context(|| format!("Failed to create user: {}", username))?;
 
-        println!("  {} User {} created successfully", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
-        println!("  {} Run 'passwd {}' to set password", "→".truecolor(222, 115, 86), username);
+        println!(
+            "  {} User {} created successfully",
+            "✓".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
+        println!(
+            "  {} Run 'passwd {}' to set password",
+            "→".truecolor(222, 115, 86),
+            username
+        );
         println!();
 
         Ok(())
@@ -1766,7 +2167,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_deluser(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} deluser <username>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} deluser <username>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: deluser john");
             println!();
             return Ok(());
@@ -1779,13 +2183,22 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Deleting user {}...", "→".truecolor(222, 115, 86), username.bright_white().bold());
+        println!(
+            "  {} Deleting user {}...",
+            "→".truecolor(222, 115, 86),
+            username.bright_white().bold()
+        );
 
         // Delete user and their home directory
-        self.handle.command(&["userdel", "-r", username])
+        self.handle
+            .command(&["userdel", "-r", username])
             .with_context(|| format!("Failed to delete user: {}", username))?;
 
-        println!("  {} User {} deleted", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
+        println!(
+            "  {} User {} deleted",
+            "✓".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
         println!();
 
         Ok(())
@@ -1795,7 +2208,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_passwd(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} passwd <username>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} passwd <username>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: passwd john");
             println!();
             return Ok(());
@@ -1804,7 +2220,10 @@ Always explain WHAT the command does and WHY it's needed.
         let username = args[0];
 
         println!();
-        print!("Enter new password for {}: ", username.bright_white().bold());
+        print!(
+            "Enter new password for {}: ",
+            username.bright_white().bold()
+        );
         std::io::Write::flush(&mut std::io::stdout())?;
 
         let password = rpassword::read_password()?;
@@ -1820,11 +2239,17 @@ Always explain WHAT the command does and WHY it's needed.
         // Pipe password directly to chpasswd via echo to avoid plaintext temp files
         let passwd_input = format!("{}:{}", username, password);
         let escaped_input = passwd_input.replace('\'', "'\\''");
-        let result = self.handle.command(&["sh", "-c", &format!("echo '{}' | chpasswd", escaped_input)]);
+        let result =
+            self.handle
+                .command(&["sh", "-c", &format!("echo '{}' | chpasswd", escaped_input)]);
 
         result.with_context(|| format!("Failed to set password for {}", username))?;
 
-        println!("  {} Password set successfully for {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
+        println!(
+            "  {} Password set successfully for {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
         println!();
 
         Ok(())
@@ -1834,7 +2259,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_usermod(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} usermod <username> <group>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} usermod <username> <group>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: usermod john sudo");
             println!();
             return Ok(());
@@ -1848,12 +2276,23 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Adding {} to group {}...", "→".truecolor(222, 115, 86), username.bright_white(), group.bright_white());
+        println!(
+            "  {} Adding {} to group {}...",
+            "→".truecolor(222, 115, 86),
+            username.bright_white(),
+            group.bright_white()
+        );
 
-        self.handle.command(&["usermod", "-a", "-G", group, username])
+        self.handle
+            .command(&["usermod", "-a", "-G", group, username])
             .with_context(|| format!("Failed to add {} to group {}", username, group))?;
 
-        println!("  {} User {} added to group {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white(), group.bright_white());
+        println!(
+            "  {} User {} added to group {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            username.bright_white(),
+            group.bright_white()
+        );
         println!();
 
         Ok(())
@@ -1863,7 +2302,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_groups(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} groups <username>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} groups <username>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: groups john");
             println!();
             return Ok(());
@@ -1872,9 +2314,15 @@ Always explain WHAT the command does and WHY it's needed.
         let username = args[0];
 
         println!();
-        println!("{} Groups for {}:", "→".truecolor(222, 115, 86).bold(), username.bright_white());
+        println!(
+            "{} Groups for {}:",
+            "→".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
 
-        let output = self.handle.command(&["groups", username])
+        let output = self
+            .handle
+            .command(&["groups", username])
             .with_context(|| format!("Failed to get groups for {}", username))?;
 
         println!("  {}", output.trim().bright_white());
@@ -1889,7 +2337,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_ssh_addkey(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} ssh-addkey <username> <keyfile>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} ssh-addkey <username> <keyfile>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: ssh-addkey root ~/.ssh/id_rsa.pub");
             println!();
             return Ok(());
@@ -1903,7 +2354,11 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Adding SSH key for {}...", "→".truecolor(222, 115, 86), username.bright_white());
+        println!(
+            "  {} Adding SSH key for {}...",
+            "→".truecolor(222, 115, 86),
+            username.bright_white()
+        );
 
         // Read public key from host
         let key_content = std::fs::read_to_string(keyfile)
@@ -1930,11 +2385,16 @@ Always explain WHAT the command does and WHY it's needed.
         }
         existing_keys.push_str(&key_content);
 
-        self.handle.write(&authorized_keys, existing_keys.as_bytes())?;
+        self.handle
+            .write(&authorized_keys, existing_keys.as_bytes())?;
         self.handle.command(&["chmod", "600", &authorized_keys])?;
         self.handle.command(&["chown", "-R", username, &ssh_dir])?;
 
-        println!("  {} SSH key added for {}", "✓".truecolor(222, 115, 86).bold(), username.bright_white());
+        println!(
+            "  {} SSH key added for {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
         println!();
 
         Ok(())
@@ -1944,7 +2404,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_ssh_removekey(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} ssh-removekey <username> <key-index>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} ssh-removekey <username> <key-index>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: ssh-removekey root 0");
             println!("Tip: Use 'ssh-listkeys <user>' to see key indices");
             println!();
@@ -1952,8 +2415,7 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         let username = args[0];
-        let index: usize = args[1].parse()
-            .with_context(|| "Invalid key index")?;
+        let index: usize = args[1].parse().with_context(|| "Invalid key index")?;
 
         if !validate_username(username) {
             anyhow::bail!("Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'");
@@ -1964,10 +2426,17 @@ Always explain WHAT the command does and WHY it's needed.
         let authorized_keys = format!("{}/.ssh/authorized_keys", home_dir);
 
         println!();
-        println!("  {} Removing SSH key #{} for {}...", "→".truecolor(222, 115, 86), index, username.bright_white());
+        println!(
+            "  {} Removing SSH key #{} for {}...",
+            "→".truecolor(222, 115, 86),
+            index,
+            username.bright_white()
+        );
 
         // Read existing keys
-        let content = self.handle.read_file(&authorized_keys)
+        let content = self
+            .handle
+            .read_file(&authorized_keys)
             .with_context(|| format!("Failed to read authorized_keys for {}", username))?;
 
         let mut lines: Vec<String> = String::from_utf8_lossy(&content)
@@ -1977,7 +2446,11 @@ Always explain WHAT the command does and WHY it's needed.
             .collect();
 
         if index >= lines.len() {
-            println!("  {} Invalid key index (max: {})", "✗".red(), lines.len() - 1);
+            println!(
+                "  {} Invalid key index (max: {})",
+                "✗".red(),
+                lines.len() - 1
+            );
             println!();
             return Ok(());
         }
@@ -1986,7 +2459,8 @@ Always explain WHAT the command does and WHY it's needed.
 
         // Write back
         let new_content = lines.join("\n") + "\n";
-        self.handle.write(&authorized_keys, new_content.as_bytes())?;
+        self.handle
+            .write(&authorized_keys, new_content.as_bytes())?;
 
         println!("  {} SSH key removed", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -1998,7 +2472,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_ssh_listkeys(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} ssh-listkeys <username>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} ssh-listkeys <username>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: ssh-listkeys root");
             println!();
             return Ok(());
@@ -2015,7 +2492,11 @@ Always explain WHAT the command does and WHY it's needed.
         let authorized_keys = format!("{}/.ssh/authorized_keys", home_dir);
 
         println!();
-        println!("{} SSH keys for {}:", "→".truecolor(222, 115, 86).bold(), username.bright_white());
+        println!(
+            "{} SSH keys for {}:",
+            "→".truecolor(222, 115, 86).bold(),
+            username.bright_white()
+        );
         println!();
 
         match self.handle.read_file(&authorized_keys) {
@@ -2035,11 +2516,13 @@ Always explain WHAT the command does and WHY it's needed.
                         let key_preview = parts.get(1).map(|k| &k[..k.len().min(40)]).unwrap_or("");
                         let comment = parts.get(2).unwrap_or(&"");
 
-                        println!("  [{}] {} {}... {}",
+                        println!(
+                            "  [{}] {} {}... {}",
                             i.to_string().truecolor(222, 115, 86),
                             key_type.bright_white(),
                             key_preview,
-                            comment.bright_black());
+                            comment.bright_black()
+                        );
                     }
                 }
             }
@@ -2058,12 +2541,20 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Enabling SSH service...", "→".truecolor(222, 115, 86));
 
         // Try systemctl first, fall back to service command
-        let result = self.handle.sh_raw("systemctl enable sshd || systemctl enable ssh || chkconfig sshd on");
+        let result = self
+            .handle
+            .sh_raw("systemctl enable sshd || systemctl enable ssh || chkconfig sshd on");
 
         match result {
             Ok(_) => {
-                println!("  {} SSH service enabled", "✓".truecolor(222, 115, 86).bold());
-                println!("  {} Remember to start/restart the service", "→".truecolor(222, 115, 86));
+                println!(
+                    "  {} SSH service enabled",
+                    "✓".truecolor(222, 115, 86).bold()
+                );
+                println!(
+                    "  {} Remember to start/restart the service",
+                    "→".truecolor(222, 115, 86)
+                );
             }
             Err(e) => {
                 println!("  {} Failed to enable SSH: {}", "✗".red(), e);
@@ -2105,7 +2596,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_hostname(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} hostname <new-hostname>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} hostname <new-hostname>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: hostname webserver01");
             println!();
             return Ok(());
@@ -2114,16 +2608,25 @@ Always explain WHAT the command does and WHY it's needed.
         let new_hostname = args[0];
 
         println!();
-        println!("  {} Setting hostname to {}...", "→".truecolor(222, 115, 86), new_hostname.bright_white().bold());
+        println!(
+            "  {} Setting hostname to {}...",
+            "→".truecolor(222, 115, 86),
+            new_hostname.bright_white().bold()
+        );
 
         // Write to /etc/hostname
-        self.handle.write("/etc/hostname", new_hostname.as_bytes())?;
+        self.handle
+            .write("/etc/hostname", new_hostname.as_bytes())?;
 
         // Update /etc/hosts
         let hosts_content = format!("127.0.0.1 localhost\n127.0.1.1 {}\n", new_hostname);
         self.handle.write("/etc/hosts", hosts_content.as_bytes())?;
 
-        println!("  {} Hostname set to {}", "✓".truecolor(222, 115, 86).bold(), new_hostname.bright_white());
+        println!(
+            "  {} Hostname set to {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            new_hostname.bright_white()
+        );
         println!();
 
         Ok(())
@@ -2133,7 +2636,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_timezone(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} timezone <timezone>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} timezone <timezone>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: timezone America/New_York");
             println!("Example: timezone UTC");
             println!();
@@ -2143,14 +2649,22 @@ Always explain WHAT the command does and WHY it's needed.
         let timezone = args[0];
 
         println!();
-        println!("  {} Setting timezone to {}...", "→".truecolor(222, 115, 86), timezone.bright_white());
+        println!(
+            "  {} Setting timezone to {}...",
+            "→".truecolor(222, 115, 86),
+            timezone.bright_white()
+        );
 
         // Create symlink to timezone file
         let tz_path = format!("/usr/share/zoneinfo/{}", timezone);
         let _ = self.handle.rm("/etc/localtime");
         self.handle.ln_s(&tz_path, "/etc/localtime")?;
 
-        println!("  {} Timezone set to {}", "✓".truecolor(222, 115, 86).bold(), timezone.bright_white());
+        println!(
+            "  {} Timezone set to {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            timezone.bright_white()
+        );
         println!();
 
         Ok(())
@@ -2171,20 +2685,32 @@ Always explain WHAT the command does and WHY it's needed.
 
         if !["enforcing", "permissive", "disabled"].contains(&mode.as_str()) {
             println!();
-            println!("{} Invalid mode. Use: enforcing, permissive, or disabled", "Error:".red().bold());
+            println!(
+                "{} Invalid mode. Use: enforcing, permissive, or disabled",
+                "Error:".red().bold()
+            );
             println!();
             return Ok(());
         }
 
         println!();
-        println!("  {} Setting SELinux to {}...", "→".truecolor(222, 115, 86), mode.bright_white().bold());
+        println!(
+            "  {} Setting SELinux to {}...",
+            "→".truecolor(222, 115, 86),
+            mode.bright_white().bold()
+        );
 
         // Update /etc/selinux/config
         let config = format!("SELINUX={}\nSELINUXTYPE=targeted\n", mode);
         let _ = self.handle.mkdir_p("/etc/selinux");
-        self.handle.write("/etc/selinux/config", config.as_bytes())?;
+        self.handle
+            .write("/etc/selinux/config", config.as_bytes())?;
 
-        println!("  {} SELinux set to {} (will take effect on reboot)", "✓".truecolor(222, 115, 86).bold(), mode.bright_white());
+        println!(
+            "  {} SELinux set to {} (will take effect on reboot)",
+            "✓".truecolor(222, 115, 86).bold(),
+            mode.bright_white()
+        );
         println!();
 
         Ok(())
@@ -2196,7 +2722,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_enable(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} enable <service>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} enable <service>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: enable nginx");
             println!();
             return Ok(());
@@ -2205,14 +2734,26 @@ Always explain WHAT the command does and WHY it's needed.
         let service = args[0];
 
         println!();
-        println!("  {} Enabling {}...", "→".truecolor(222, 115, 86), service.bright_white());
+        println!(
+            "  {} Enabling {}...",
+            "→".truecolor(222, 115, 86),
+            service.bright_white()
+        );
 
         // Try systemctl first, then chkconfig
-        if self.handle.command(&["systemctl", "enable", service]).is_err() {
+        if self
+            .handle
+            .command(&["systemctl", "enable", service])
+            .is_err()
+        {
             let _ = self.handle.command(&["chkconfig", service, "on"]);
         }
 
-        println!("  {} Service {} enabled", "✓".truecolor(222, 115, 86).bold(), service.bright_white());
+        println!(
+            "  {} Service {} enabled",
+            "✓".truecolor(222, 115, 86).bold(),
+            service.bright_white()
+        );
         println!();
 
         Ok(())
@@ -2222,7 +2763,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_disable(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} disable <service>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} disable <service>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: disable nginx");
             println!();
             return Ok(());
@@ -2231,14 +2775,26 @@ Always explain WHAT the command does and WHY it's needed.
         let service = args[0];
 
         println!();
-        println!("  {} Disabling {}...", "→".truecolor(222, 115, 86), service.bright_white());
+        println!(
+            "  {} Disabling {}...",
+            "→".truecolor(222, 115, 86),
+            service.bright_white()
+        );
 
         // Try systemctl first, then chkconfig
-        if self.handle.command(&["systemctl", "disable", service]).is_err() {
+        if self
+            .handle
+            .command(&["systemctl", "disable", service])
+            .is_err()
+        {
             let _ = self.handle.command(&["chkconfig", service, "off"]);
         }
 
-        println!("  {} Service {} disabled", "✓".truecolor(222, 115, 86).bold(), service.bright_white());
+        println!(
+            "  {} Service {} disabled",
+            "✓".truecolor(222, 115, 86).bold(),
+            service.bright_white()
+        );
         println!();
 
         Ok(())
@@ -2248,7 +2804,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_restart(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} restart <service>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} restart <service>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: restart nginx");
             println!("Note: Service will be restarted when VM boots");
             println!();
@@ -2258,8 +2817,15 @@ Always explain WHAT the command does and WHY it's needed.
         let service = args[0];
 
         println!();
-        println!("  {} Marking {} for restart...", "→".truecolor(222, 115, 86), service.bright_white());
-        println!("  {} Service will restart when VM boots", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Marking {} for restart...",
+            "→".truecolor(222, 115, 86),
+            service.bright_white()
+        );
+        println!(
+            "  {} Service will restart when VM boots",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         Ok(())
@@ -2271,7 +2837,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_copy(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} copy <source> <destination>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} copy <source> <destination>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: copy /etc/hosts /etc/hosts.backup");
             println!();
             return Ok(());
@@ -2281,7 +2850,12 @@ Always explain WHAT the command does and WHY it's needed.
         let dest = args[1];
 
         println!();
-        println!("  {} Copying {} to {}...", "→".truecolor(222, 115, 86), source.bright_white(), dest.bright_white());
+        println!(
+            "  {} Copying {} to {}...",
+            "→".truecolor(222, 115, 86),
+            source.bright_white(),
+            dest.bright_white()
+        );
 
         self.handle.command(&["cp", "-r", source, dest])?;
 
@@ -2295,7 +2869,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_move(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} move <source> <destination>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} move <source> <destination>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: move /tmp/old.txt /tmp/new.txt");
             println!();
             return Ok(());
@@ -2305,7 +2882,12 @@ Always explain WHAT the command does and WHY it's needed.
         let dest = args[1];
 
         println!();
-        println!("  {} Moving {} to {}...", "→".truecolor(222, 115, 86), source.bright_white(), dest.bright_white());
+        println!(
+            "  {} Moving {} to {}...",
+            "→".truecolor(222, 115, 86),
+            source.bright_white(),
+            dest.bright_white()
+        );
 
         self.handle.command(&["mv", source, dest])?;
 
@@ -2321,7 +2903,10 @@ Always explain WHAT the command does and WHY it's needed.
             println!();
             println!("{} delete <path>", "Usage:".truecolor(222, 115, 86).bold());
             println!("Example: delete /tmp/unwanted.txt");
-            println!("{} This will permanently delete the file!", "Warning:".red().bold());
+            println!(
+                "{} This will permanently delete the file!",
+                "Warning:".red().bold()
+            );
             println!();
             return Ok(());
         }
@@ -2330,16 +2915,23 @@ Always explain WHAT the command does and WHY it's needed.
 
         // Block deletion of critical system paths
         let blocked_paths = [
-            "/", "/etc", "/usr", "/var", "/boot", "/home", "/root",
-            "/bin", "/sbin", "/lib", "/lib64", "/dev", "/proc", "/sys",
+            "/", "/etc", "/usr", "/var", "/boot", "/home", "/root", "/bin", "/sbin", "/lib",
+            "/lib64", "/dev", "/proc", "/sys",
         ];
         let normalized = path.trim_end_matches('/');
-        if blocked_paths.iter().any(|&bp| normalized == bp || path == bp) {
+        if blocked_paths
+            .iter()
+            .any(|&bp| normalized == bp || path == bp)
+        {
             anyhow::bail!("Refusing to delete protected system path: {}", path);
         }
 
         println!();
-        println!("{} Delete {}? This cannot be undone!", "⚠".red().bold(), path.bright_white());
+        println!(
+            "{} Delete {}? This cannot be undone!",
+            "⚠".red().bold(),
+            path.bright_white()
+        );
         print!("  Type 'yes' to confirm: ");
         std::io::Write::flush(&mut std::io::stdout())?;
 
@@ -2356,7 +2948,10 @@ Always explain WHAT the command does and WHY it's needed.
 
         self.handle.command(&["rm", "-rf", path])?;
 
-        println!("  {} Deleted successfully", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} Deleted successfully",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -2375,7 +2970,11 @@ Always explain WHAT the command does and WHY it's needed.
         let path = args[0];
 
         println!();
-        println!("  {} Creating directory {}...", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Creating directory {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
 
         self.handle.mkdir_p(path)?;
 
@@ -2389,7 +2988,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_chmod(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} chmod <mode> <path>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} chmod <mode> <path>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: chmod 755 /usr/local/bin/script.sh");
             println!();
             return Ok(());
@@ -2399,16 +3001,27 @@ Always explain WHAT the command does and WHY it's needed.
         let path = args[1];
 
         // Validate mode is a valid octal or symbolic mode
-        if !mode.chars().all(|c| c.is_ascii_digit() || "ugorwxXst+-=,".contains(c)) {
+        if !mode
+            .chars()
+            .all(|c| c.is_ascii_digit() || "ugorwxXst+-=,".contains(c))
+        {
             anyhow::bail!("Invalid chmod mode: {}", mode);
         }
 
         println!();
-        println!("  {} Setting permissions {} on {}...", "→".truecolor(222, 115, 86), mode.bright_white(), path.bright_white());
+        println!(
+            "  {} Setting permissions {} on {}...",
+            "→".truecolor(222, 115, 86),
+            mode.bright_white(),
+            path.bright_white()
+        );
 
         self.handle.command(&["chmod", mode, path])?;
 
-        println!("  {} Permissions updated", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} Permissions updated",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -2418,7 +3031,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_chown(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} chown <user[:group]> <path>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} chown <user[:group]> <path>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: chown alice:users /home/alice/file.txt");
             println!();
             return Ok(());
@@ -2428,12 +3044,20 @@ Always explain WHAT the command does and WHY it's needed.
         let path = args[1];
 
         // Validate owner format (user or user:group)
-        if !owner.chars().all(|c| c.is_alphanumeric() || c == ':' || c == '_' || c == '-' || c == '.') {
+        if !owner
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == ':' || c == '_' || c == '-' || c == '.')
+        {
             anyhow::bail!("Invalid owner format: {}", owner);
         }
 
         println!();
-        println!("  {} Changing owner of {} to {}...", "→".truecolor(222, 115, 86), path.bright_white(), owner.bright_white());
+        println!(
+            "  {} Changing owner of {} to {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white(),
+            owner.bright_white()
+        );
 
         self.handle.command(&["chown", "-R", owner, path])?;
 
@@ -2449,11 +3073,19 @@ Always explain WHAT the command does and WHY it's needed.
         let min_size = if args.len() > 1 { args[1] } else { "100M" };
 
         println!();
-        println!("  {} Finding files larger than {} in {}...", "→".truecolor(222, 115, 86), min_size.bright_white(), path.bright_white());
+        println!(
+            "  {} Finding files larger than {} in {}...",
+            "→".truecolor(222, 115, 86),
+            min_size.bright_white(),
+            path.bright_white()
+        );
         println!();
 
         // Validate min_size to prevent injection (should be digits optionally followed by b/k/M/G/T/P)
-        if !min_size.chars().all(|c| c.is_ascii_digit() || "bckMGTP".contains(c)) {
+        if !min_size
+            .chars()
+            .all(|c| c.is_ascii_digit() || "bckMGTP".contains(c))
+        {
             eprintln!("Error: Invalid size format: {}", min_size);
             return Ok(());
         }
@@ -2484,11 +3116,17 @@ Always explain WHAT the command does and WHY it's needed.
         let path = if args.is_empty() { "/" } else { args[0] };
 
         println!();
-        println!("  {} Analyzing disk usage for {}...", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Analyzing disk usage for {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
         println!();
 
-        let script = format!("du -h --max-depth=1 '{}' 2>/dev/null | sort -hr | head -20",
-            path.replace('\'', "'\\''"));
+        let script = format!(
+            "du -h --max-depth=1 '{}' 2>/dev/null | sort -hr | head -20",
+            path.replace('\'', "'\\''")
+        );
         match self.handle.sh_raw(&script) {
             Ok(output) => {
                 println!("{}", output);
@@ -2506,7 +3144,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_symlink(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} symlink <target> <link-name>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} symlink <target> <link-name>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: symlink /usr/bin/python3 /usr/bin/python");
             println!();
             return Ok(());
@@ -2516,7 +3157,12 @@ Always explain WHAT the command does and WHY it's needed.
         let link = args[1];
 
         println!();
-        println!("  {} Creating symlink {} -> {}...", "→".truecolor(222, 115, 86), link.bright_white(), target.bright_white());
+        println!(
+            "  {} Creating symlink {} -> {}...",
+            "→".truecolor(222, 115, 86),
+            link.bright_white(),
+            target.bright_white()
+        );
 
         self.handle.command(&["ln", "-sf", target, link])?;
 
@@ -2532,7 +3178,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_install(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} install <package-name>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} install <package-name>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: install nginx");
             println!();
             return Ok(());
@@ -2541,7 +3190,11 @@ Always explain WHAT the command does and WHY it's needed.
         let package = args[0];
 
         println!();
-        println!("  {} Installing package {}...", "→".truecolor(222, 115, 86), package.bright_white());
+        println!(
+            "  {} Installing package {}...",
+            "→".truecolor(222, 115, 86),
+            package.bright_white()
+        );
 
         // Detect package manager and use appropriate command
         let root = match self.current_root.as_ref() {
@@ -2553,19 +3206,23 @@ Always explain WHAT the command does and WHY it's needed.
         };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            self.handle.command(&["dnf", "install", "-y", package])
-        } else if distro.contains("debian") || distro.contains("ubuntu") {
-            // For apt-get, need to update first, then install
-            let _ = self.handle.command(&["apt-get", "update"]);
-            self.handle.command(&["apt-get", "install", "-y", package])
-        } else {
-            self.handle.command(&["yum", "install", "-y", package])
-        };
+        let result =
+            if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+                self.handle.command(&["dnf", "install", "-y", package])
+            } else if distro.contains("debian") || distro.contains("ubuntu") {
+                // For apt-get, need to update first, then install
+                let _ = self.handle.command(&["apt-get", "update"]);
+                self.handle.command(&["apt-get", "install", "-y", package])
+            } else {
+                self.handle.command(&["yum", "install", "-y", package])
+            };
 
         match result {
             Ok(_) => {
-                println!("  {} Package installed successfully", "✓".truecolor(222, 115, 86).bold());
+                println!(
+                    "  {} Package installed successfully",
+                    "✓".truecolor(222, 115, 86).bold()
+                );
             }
             Err(e) => {
                 println!("  {} Installation failed: {}", "✗".red(), e);
@@ -2580,7 +3237,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_remove(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} remove <package-name>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} remove <package-name>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: remove nginx");
             println!();
             return Ok(());
@@ -2589,7 +3249,11 @@ Always explain WHAT the command does and WHY it's needed.
         let package = args[0];
 
         println!();
-        println!("  {} Removing package {}...", "→".truecolor(222, 115, 86), package.bright_white());
+        println!(
+            "  {} Removing package {}...",
+            "→".truecolor(222, 115, 86),
+            package.bright_white()
+        );
 
         let root = match self.current_root.as_ref() {
             Some(r) => r,
@@ -2600,17 +3264,21 @@ Always explain WHAT the command does and WHY it's needed.
         };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            self.handle.command(&["dnf", "remove", "-y", package])
-        } else if distro.contains("debian") || distro.contains("ubuntu") {
-            self.handle.command(&["apt-get", "remove", "-y", package])
-        } else {
-            self.handle.command(&["yum", "remove", "-y", package])
-        };
+        let result =
+            if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+                self.handle.command(&["dnf", "remove", "-y", package])
+            } else if distro.contains("debian") || distro.contains("ubuntu") {
+                self.handle.command(&["apt-get", "remove", "-y", package])
+            } else {
+                self.handle.command(&["yum", "remove", "-y", package])
+            };
 
         match result {
             Ok(_) => {
-                println!("  {} Package removed successfully", "✓".truecolor(222, 115, 86).bold());
+                println!(
+                    "  {} Package removed successfully",
+                    "✓".truecolor(222, 115, 86).bold()
+                );
             }
             Err(e) => {
                 println!("  {} Removal failed: {}", "✗".red(), e);
@@ -2624,7 +3292,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Update packages
     fn cmd_update(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Updating package lists...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Updating package lists...",
+            "→".truecolor(222, 115, 86)
+        );
 
         let root = match self.current_root.as_ref() {
             Some(r) => r,
@@ -2635,17 +3306,21 @@ Always explain WHAT the command does and WHY it's needed.
         };
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
-        let cmd = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            "dnf update -y"
-        } else if distro.contains("debian") || distro.contains("ubuntu") {
-            "apt-get update && apt-get upgrade -y"
-        } else {
-            "yum update -y"
-        };
+        let cmd =
+            if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+                "dnf update -y"
+            } else if distro.contains("debian") || distro.contains("ubuntu") {
+                "apt-get update && apt-get upgrade -y"
+            } else {
+                "yum update -y"
+            };
 
         match self.handle.sh_raw(cmd) {
             Ok(_) => {
-                println!("  {} System updated successfully", "✓".truecolor(222, 115, 86).bold());
+                println!(
+                    "  {} System updated successfully",
+                    "✓".truecolor(222, 115, 86).bold()
+                );
             }
             Err(e) => {
                 println!("  {} Update failed: {}", "✗".red(), e);
@@ -2660,7 +3335,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_search(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} search <keyword>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} search <keyword>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: search nginx");
             println!();
             return Ok(());
@@ -2669,7 +3347,11 @@ Always explain WHAT the command does and WHY it's needed.
         let keyword = args[0];
 
         println!();
-        println!("  {} Searching for packages matching '{}'...", "→".truecolor(222, 115, 86), keyword.bright_white());
+        println!(
+            "  {} Searching for packages matching '{}'...",
+            "→".truecolor(222, 115, 86),
+            keyword.bright_white()
+        );
         println!();
 
         let root = match self.current_root.as_ref() {
@@ -2682,13 +3364,14 @@ Always explain WHAT the command does and WHY it's needed.
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         // Use command() with argv array to avoid shell injection
-        let result = if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            self.handle.command(&["dnf", "search", keyword])
-        } else if distro.contains("debian") || distro.contains("ubuntu") {
-            self.handle.command(&["apt-cache", "search", keyword])
-        } else {
-            self.handle.command(&["pacman", "-Ss", keyword])
-        };
+        let result =
+            if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
+                self.handle.command(&["dnf", "search", keyword])
+            } else if distro.contains("debian") || distro.contains("ubuntu") {
+                self.handle.command(&["apt-cache", "search", keyword])
+            } else {
+                self.handle.command(&["pacman", "-Ss", keyword])
+            };
 
         match result {
             Ok(output) => {
@@ -2709,7 +3392,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_firewall_add(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} firewall-add <port/service>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} firewall-add <port/service>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Examples:");
             println!("  firewall-add 8080/tcp");
             println!("  firewall-add http");
@@ -2721,20 +3407,38 @@ Always explain WHAT the command does and WHY it's needed.
         let rule = args[0];
 
         println!();
-        println!("  {} Adding firewall rule for {}...", "→".truecolor(222, 115, 86), rule.bright_white());
+        println!(
+            "  {} Adding firewall rule for {}...",
+            "→".truecolor(222, 115, 86),
+            rule.bright_white()
+        );
 
         // Try firewalld first, fall back to ufw
-        let port_result = self.handle.command(&["firewall-cmd", "--permanent", &format!("--add-port={}", rule)]);
+        let port_result = self.handle.command(&[
+            "firewall-cmd",
+            "--permanent",
+            &format!("--add-port={}", rule),
+        ]);
         let service_result = if port_result.is_err() {
-            self.handle.command(&["firewall-cmd", "--permanent", &format!("--add-service={}", rule)])
+            self.handle.command(&[
+                "firewall-cmd",
+                "--permanent",
+                &format!("--add-service={}", rule),
+            ])
         } else {
             port_result
         };
 
         if service_result.is_ok() && self.handle.command(&["firewall-cmd", "--reload"]).is_ok() {
-            println!("  {} Firewall rule added (firewalld)", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Firewall rule added (firewalld)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else if self.handle.command(&["ufw", "allow", rule]).is_ok() {
-            println!("  {} Firewall rule added (ufw)", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Firewall rule added (ufw)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             println!("  {} No firewall detected or rule add failed", "⚠".yellow());
         }
@@ -2747,7 +3451,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_firewall_remove(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} firewall-remove <port/service>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} firewall-remove <port/service>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: firewall-remove 8080/tcp");
             println!();
             return Ok(());
@@ -2756,21 +3463,46 @@ Always explain WHAT the command does and WHY it's needed.
         let rule = args[0];
 
         println!();
-        println!("  {} Removing firewall rule for {}...", "→".truecolor(222, 115, 86), rule.bright_white());
+        println!(
+            "  {} Removing firewall rule for {}...",
+            "→".truecolor(222, 115, 86),
+            rule.bright_white()
+        );
 
-        let port_result = self.handle.command(&["firewall-cmd", "--permanent", &format!("--remove-port={}", rule)]);
+        let port_result = self.handle.command(&[
+            "firewall-cmd",
+            "--permanent",
+            &format!("--remove-port={}", rule),
+        ]);
         let service_result = if port_result.is_err() {
-            self.handle.command(&["firewall-cmd", "--permanent", &format!("--remove-service={}", rule)])
+            self.handle.command(&[
+                "firewall-cmd",
+                "--permanent",
+                &format!("--remove-service={}", rule),
+            ])
         } else {
             port_result
         };
 
         if service_result.is_ok() && self.handle.command(&["firewall-cmd", "--reload"]).is_ok() {
-            println!("  {} Firewall rule removed (firewalld)", "✓".truecolor(222, 115, 86).bold());
-        } else if self.handle.command(&["ufw", "delete", "allow", rule]).is_ok() {
-            println!("  {} Firewall rule removed (ufw)", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Firewall rule removed (firewalld)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
+        } else if self
+            .handle
+            .command(&["ufw", "delete", "allow", rule])
+            .is_ok()
+        {
+            println!(
+                "  {} Firewall rule removed (ufw)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
-            println!("  {} No firewall detected or rule removal failed", "⚠".yellow());
+            println!(
+                "  {} No firewall detected or rule removal failed",
+                "⚠".yellow()
+            );
         }
 
         println!();
@@ -2780,7 +3512,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// List firewall rules
     fn cmd_firewall_list(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Listing firewall rules...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Listing firewall rules...",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         // Try firewalld
@@ -2808,7 +3543,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_cron_add(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} cron-add <user> <schedule> <command>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} cron-add <user> <schedule> <command>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: cron-add root \"0 2 * * *\" \"/usr/bin/backup.sh\"");
             println!("Schedule format: minute hour day month weekday");
             println!();
@@ -2823,12 +3561,19 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Adding cron job for {}...", "→".truecolor(222, 115, 86), user.bright_white());
+        println!(
+            "  {} Adding cron job for {}...",
+            "→".truecolor(222, 115, 86),
+            user.bright_white()
+        );
 
         // Read existing crontab, add new entry, write back
         let temp_cron = "/tmp/.guestkit_cron_tmp";
         // Use command array to avoid shell injection
-        let existing = self.handle.command(&["crontab", "-u", user, "-l"]).unwrap_or_default();
+        let existing = self
+            .handle
+            .command(&["crontab", "-u", user, "-l"])
+            .unwrap_or_default();
         let new_crontab = if existing.trim().is_empty() {
             format!("{}\n", schedule_and_cmd)
         } else {
@@ -2861,7 +3606,11 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         println!();
-        println!("  {} Cron jobs for {}:", "→".truecolor(222, 115, 86), user.bright_white());
+        println!(
+            "  {} Cron jobs for {}:",
+            "→".truecolor(222, 115, 86),
+            user.bright_white()
+        );
         println!();
 
         match self.handle.command(&["crontab", "-u", user, "-l"]) {
@@ -2889,11 +3638,17 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Cleaning old logs...", "→".truecolor(222, 115, 86));
 
         // Clear old journal logs
-        let _ = self.handle.sh_raw("journalctl --vacuum-time=7d 2>/dev/null");
+        let _ = self
+            .handle
+            .sh_raw("journalctl --vacuum-time=7d 2>/dev/null");
 
         // Clear old log files
-        let _ = self.handle.sh_raw("find /var/log -type f -name '*.log.*' -mtime +30 -delete 2>/dev/null");
-        let _ = self.handle.sh_raw("find /var/log -type f -name '*.gz' -mtime +30 -delete 2>/dev/null");
+        let _ = self
+            .handle
+            .sh_raw("find /var/log -type f -name '*.log.*' -mtime +30 -delete 2>/dev/null");
+        let _ = self
+            .handle
+            .sh_raw("find /var/log -type f -name '*.gz' -mtime +30 -delete 2>/dev/null");
 
         println!("  {} Logs cleaned", "✓".truecolor(222, 115, 86).bold());
         println!();
@@ -2904,7 +3659,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Clean package cache
     fn cmd_clean_cache(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Cleaning package cache...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Cleaning package cache...",
+            "→".truecolor(222, 115, 86)
+        );
 
         let root = match self.current_root.as_ref() {
             Some(r) => r,
@@ -2923,7 +3681,10 @@ Always explain WHAT the command does and WHY it's needed.
             let _ = self.handle.sh_raw("yum clean all 2>/dev/null");
         }
 
-        println!("  {} Package cache cleaned", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} Package cache cleaned",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -2932,12 +3693,18 @@ Always explain WHAT the command does and WHY it's needed.
     /// Clean temp files
     fn cmd_clean_temp(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Cleaning temporary files...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Cleaning temporary files...",
+            "→".truecolor(222, 115, 86)
+        );
 
         let _ = self.handle.sh_raw("rm -rf /tmp/* 2>/dev/null");
         let _ = self.handle.sh_raw("rm -rf /var/tmp/* 2>/dev/null");
 
-        println!("  {} Temporary files cleaned", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} Temporary files cleaned",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -2958,13 +3725,23 @@ Always explain WHAT the command does and WHY it's needed.
         let distro = self.handle.inspect_get_distro(root).unwrap_or_default();
 
         if distro.contains("fedora") || distro.contains("rhel") || distro.contains("centos") {
-            match self.handle.sh_raw("dnf remove -y $(dnf repoquery --installonly --latest-limit=-2 -q) 2>/dev/null") {
-                Ok(_) => println!("  {} Old kernels removed", "✓".truecolor(222, 115, 86).bold()),
+            match self.handle.sh_raw(
+                "dnf remove -y $(dnf repoquery --installonly --latest-limit=-2 -q) 2>/dev/null",
+            ) {
+                Ok(_) => println!(
+                    "  {} Old kernels removed",
+                    "✓".truecolor(222, 115, 86).bold()
+                ),
                 Err(_) => println!("  {} No old kernels to remove", "→".truecolor(222, 115, 86)),
             }
         } else if distro.contains("debian") || distro.contains("ubuntu") {
-            let _ = self.handle.sh_raw("apt-get autoremove --purge -y 2>/dev/null");
-            println!("  {} Old kernels removed", "✓".truecolor(222, 115, 86).bold());
+            let _ = self
+                .handle
+                .sh_raw("apt-get autoremove --purge -y 2>/dev/null");
+            println!(
+                "  {} Old kernels removed",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         }
 
         println!();
@@ -2977,7 +3754,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_logs(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} logs <service-name> [lines]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} logs <service-name> [lines]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: logs sshd 50");
             println!();
             return Ok(());
@@ -2987,12 +3767,18 @@ Always explain WHAT the command does and WHY it's needed.
         let lines = if args.len() > 1 { args[1] } else { "100" };
 
         println!();
-        println!("  {} Viewing logs for {}...", "→".truecolor(222, 115, 86), service.bright_white());
+        println!(
+            "  {} Viewing logs for {}...",
+            "→".truecolor(222, 115, 86),
+            service.bright_white()
+        );
         println!();
 
-        let script = format!("journalctl -u '{}' -n '{}' --no-pager 2>/dev/null",
+        let script = format!(
+            "journalctl -u '{}' -n '{}' --no-pager 2>/dev/null",
             service.replace('\'', "'\\''"),
-            lines.replace('\'', "'\\''"));
+            lines.replace('\'', "'\\''")
+        );
         match self.handle.sh_raw(&script) {
             Ok(output) => {
                 if output.trim().is_empty() {
@@ -3003,9 +3789,11 @@ Always explain WHAT the command does and WHY it's needed.
             }
             Err(_) => {
                 // Fallback to syslog
-                let fallback = format!("grep '{}' /var/log/syslog 2>/dev/null | tail -n '{}'",
+                let fallback = format!(
+                    "grep '{}' /var/log/syslog 2>/dev/null | tail -n '{}'",
                     service.replace('\'', "'\\''"),
-                    lines.replace('\'', "'\\''"));
+                    lines.replace('\'', "'\\''")
+                );
                 if let Ok(output) = self.handle.sh_raw(&fallback) {
                     println!("{}", output);
                 } else {
@@ -3021,10 +3809,16 @@ Always explain WHAT the command does and WHY it's needed.
     /// Show failed services
     fn cmd_failed(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Checking for failed services...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Checking for failed services...",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
-        match self.handle.sh_raw("systemctl list-units --failed --no-pager 2>/dev/null") {
+        match self
+            .handle
+            .sh_raw("systemctl list-units --failed --no-pager 2>/dev/null")
+        {
             Ok(output) => {
                 if output.contains("0 loaded units listed") {
                     println!("  {} No failed services", "✓".green().bold());
@@ -3053,7 +3847,10 @@ Always explain WHAT the command does and WHY it's needed.
                 println!();
 
                 // Show critical chain
-                if let Ok(chain) = self.handle.sh_raw("systemd-analyze critical-chain 2>/dev/null | head -20") {
+                if let Ok(chain) = self
+                    .handle
+                    .sh_raw("systemd-analyze critical-chain 2>/dev/null | head -20")
+                {
                     println!("{}", "Critical Chain:".bright_white().bold());
                     println!("{}", chain);
                 }
@@ -3073,7 +3870,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_locale(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} locale <locale-name>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} locale <locale-name>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: locale en_US.UTF-8");
             println!();
             return Ok(());
@@ -3082,7 +3882,11 @@ Always explain WHAT the command does and WHY it's needed.
         let locale = args[0];
 
         println!();
-        println!("  {} Setting locale to {}...", "→".truecolor(222, 115, 86), locale.bright_white());
+        println!(
+            "  {} Setting locale to {}...",
+            "→".truecolor(222, 115, 86),
+            locale.bright_white()
+        );
 
         let lang_arg = format!("LANG={}", locale);
         match self.handle.command(&["localectl", "set-locale", &lang_arg]) {
@@ -3107,7 +3911,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_backup(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} backup <file-path>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} backup <file-path>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: backup /etc/nginx/nginx.conf");
             println!("Creates: /etc/nginx/nginx.conf.backup.TIMESTAMP");
             println!();
@@ -3117,7 +3924,11 @@ Always explain WHAT the command does and WHY it's needed.
         let path = args[0];
 
         println!();
-        println!("  {} Backing up {}...", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Backing up {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
 
         use chrono::Local;
         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
@@ -3125,7 +3936,11 @@ Always explain WHAT the command does and WHY it's needed.
 
         self.handle.command(&["cp", "-p", path, &backup_path])?;
 
-        println!("  {} Backup created: {}", "✓".truecolor(222, 115, 86).bold(), backup_path.bright_white());
+        println!(
+            "  {} Backup created: {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            backup_path.bright_white()
+        );
         println!();
 
         Ok(())
@@ -3136,11 +3951,17 @@ Always explain WHAT the command does and WHY it's needed.
         let path = if args.is_empty() { "/" } else { args[0] };
 
         println!();
-        println!("  {} Finding backups in {}...", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Finding backups in {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
         println!();
 
-        let script = format!("find '{}' -name '*.backup.*' -o -name '*.bak' 2>/dev/null | sort",
-            path.replace('\'', "'\\''"));
+        let script = format!(
+            "find '{}' -name '*.backup.*' -o -name '*.bak' 2>/dev/null | sort",
+            path.replace('\'', "'\\''")
+        );
         match self.handle.sh_raw(&script) {
             Ok(output) => {
                 if output.trim().is_empty() {
@@ -3167,8 +3988,14 @@ Always explain WHAT the command does and WHY it's needed.
         if args.is_empty() {
             println!();
             println!("{}", "GRUB Management:".bright_white().bold());
-            println!("  {} - Show current config", "grub show".truecolor(222, 115, 86));
-            println!("  {} - Set kernel parameter", "grub set <param>".truecolor(222, 115, 86));
+            println!(
+                "  {} - Show current config",
+                "grub show".truecolor(222, 115, 86)
+            );
+            println!(
+                "  {} - Set kernel parameter",
+                "grub set <param>".truecolor(222, 115, 86)
+            );
             println!("  {} - Update GRUB", "grub update".truecolor(222, 115, 86));
             println!();
             println!("Examples:");
@@ -3196,7 +4023,11 @@ Always explain WHAT the command does and WHY it's needed.
 
                 let param = args[1..].join(" ");
                 println!();
-                println!("  {} Adding kernel parameter: {}", "→".truecolor(222, 115, 86), param.bright_white());
+                println!(
+                    "  {} Adding kernel parameter: {}",
+                    "→".truecolor(222, 115, 86),
+                    param.bright_white()
+                );
 
                 // Read current grub config
                 if let Ok(content) = self.handle.read_file("/etc/default/grub") {
@@ -3206,7 +4037,7 @@ Always explain WHAT the command does and WHY it's needed.
                     if config.contains("GRUB_CMDLINE_LINUX=") {
                         config = config.replace(
                             "GRUB_CMDLINE_LINUX=\"",
-                            &format!("GRUB_CMDLINE_LINUX=\"{} ", param)
+                            &format!("GRUB_CMDLINE_LINUX=\"{} ", param),
                         );
                     } else {
                         config.push_str(&format!("\nGRUB_CMDLINE_LINUX=\"{}\"\n", param));
@@ -3214,13 +4045,19 @@ Always explain WHAT the command does and WHY it's needed.
 
                     self.handle.write("/etc/default/grub", config.as_bytes())?;
                     println!("  {} Parameter added", "✓".truecolor(222, 115, 86).bold());
-                    println!("  {} Run 'grub update' to apply changes", "→".truecolor(222, 115, 86));
+                    println!(
+                        "  {} Run 'grub update' to apply changes",
+                        "→".truecolor(222, 115, 86)
+                    );
                 }
                 println!();
             }
             "update" => {
                 println!();
-                println!("  {} Updating GRUB configuration...", "→".truecolor(222, 115, 86));
+                println!(
+                    "  {} Updating GRUB configuration...",
+                    "→".truecolor(222, 115, 86)
+                );
 
                 // Try different GRUB update commands
                 let commands = vec![
@@ -3246,7 +4083,11 @@ Always explain WHAT the command does and WHY it's needed.
             }
             _ => {
                 println!();
-                println!("{} Unknown grub command: {}", "Error:".red().bold(), args[0]);
+                println!(
+                    "{} Unknown grub command: {}",
+                    "Error:".red().bold(),
+                    args[0]
+                );
                 println!();
             }
         }
@@ -3260,7 +4101,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_net_setip(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 3 {
             println!();
-            println!("{} net-setip <interface> <ip> <netmask>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} net-setip <interface> <ip> <netmask>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: net-setip eth0 192.168.1.100 255.255.255.0");
             println!();
             return Ok(());
@@ -3271,17 +4115,47 @@ Always explain WHAT the command does and WHY it's needed.
         let netmask = args[2];
 
         println!();
-        println!("  {} Configuring {} with IP {}...", "→".truecolor(222, 115, 86), iface.bright_white(), ip.bright_white());
+        println!(
+            "  {} Configuring {} with IP {}...",
+            "→".truecolor(222, 115, 86),
+            iface.bright_white(),
+            ip.bright_white()
+        );
 
         // Try NetworkManager first using command() to avoid injection
         let addr_spec = format!("{}/{}", ip, netmask);
-        if self.handle.command(&["nmcli", "con", "mod", iface, "ipv4.addresses", &addr_spec, "ipv4.method", "manual"]).is_ok() {
-            println!("  {} IP configured (NetworkManager)", "✓".truecolor(222, 115, 86).bold());
+        if self
+            .handle
+            .command(&[
+                "nmcli",
+                "con",
+                "mod",
+                iface,
+                "ipv4.addresses",
+                &addr_spec,
+                "ipv4.method",
+                "manual",
+            ])
+            .is_ok()
+        {
+            println!(
+                "  {} IP configured (NetworkManager)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             // Fallback to writing ifcfg file directly
-            let ifcfg_content = format!("DEVICE={}\nBOOTPROTO=static\nIPADDR={}\nNETMASK={}\nONBOOT=yes\n", iface, ip, netmask);
-            let _ = self.handle.write(&format!("/etc/sysconfig/network-scripts/ifcfg-{}", iface), ifcfg_content.as_bytes());
-            println!("  {} IP configured (ifcfg)", "✓".truecolor(222, 115, 86).bold());
+            let ifcfg_content = format!(
+                "DEVICE={}\nBOOTPROTO=static\nIPADDR={}\nNETMASK={}\nONBOOT=yes\n",
+                iface, ip, netmask
+            );
+            let _ = self.handle.write(
+                &format!("/etc/sysconfig/network-scripts/ifcfg-{}", iface),
+                ifcfg_content.as_bytes(),
+            );
+            println!(
+                "  {} IP configured (ifcfg)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         }
 
         println!();
@@ -3292,7 +4166,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_net_setdns(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} net-setdns <server1> [server2] [server3]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} net-setdns <server1> [server2] [server3]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: net-setdns 8.8.8.8 8.8.4.4");
             println!();
             return Ok(());
@@ -3306,9 +4183,13 @@ Always explain WHAT the command does and WHY it's needed.
             resolv_conf.push_str(&format!("nameserver {}\n", server));
         }
 
-        self.handle.write("/etc/resolv.conf", resolv_conf.as_bytes())?;
+        self.handle
+            .write("/etc/resolv.conf", resolv_conf.as_bytes())?;
 
-        println!("  {} DNS servers configured", "✓".truecolor(222, 115, 86).bold());
+        println!(
+            "  {} DNS servers configured",
+            "✓".truecolor(222, 115, 86).bold()
+        );
         println!();
 
         Ok(())
@@ -3318,7 +4199,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_net_route_add(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} net-route-add <destination> <gateway>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} net-route-add <destination> <gateway>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: net-route-add 10.0.0.0/8 192.168.1.1");
             println!();
             return Ok(());
@@ -3328,9 +4212,15 @@ Always explain WHAT the command does and WHY it's needed.
         let gateway = args[1];
 
         println!();
-        println!("  {} Adding route to {} via {}...", "→".truecolor(222, 115, 86), dest.bright_white(), gateway.bright_white());
+        println!(
+            "  {} Adding route to {} via {}...",
+            "→".truecolor(222, 115, 86),
+            dest.bright_white(),
+            gateway.bright_white()
+        );
 
-        self.handle.command(&["ip", "route", "add", dest, "via", gateway])?;
+        self.handle
+            .command(&["ip", "route", "add", dest, "via", gateway])?;
 
         // Make persistent by appending to route file using write API
         let route_content = format!("{} via {}\n", dest, gateway);
@@ -3353,7 +4243,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_net_dhcp(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} net-dhcp <interface>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} net-dhcp <interface>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: net-dhcp eth0");
             println!();
             return Ok(());
@@ -3362,14 +4255,31 @@ Always explain WHAT the command does and WHY it's needed.
         let iface = args[0];
 
         println!();
-        println!("  {} Enabling DHCP on {}...", "→".truecolor(222, 115, 86), iface.bright_white());
+        println!(
+            "  {} Enabling DHCP on {}...",
+            "→".truecolor(222, 115, 86),
+            iface.bright_white()
+        );
 
-        if self.handle.command(&["nmcli", "con", "mod", iface, "ipv4.method", "auto"]).is_ok() {
-            println!("  {} DHCP enabled (NetworkManager)", "✓".truecolor(222, 115, 86).bold());
+        if self
+            .handle
+            .command(&["nmcli", "con", "mod", iface, "ipv4.method", "auto"])
+            .is_ok()
+        {
+            println!(
+                "  {} DHCP enabled (NetworkManager)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             let ifcfg = format!("DEVICE={}\nBOOTPROTO=dhcp\nONBOOT=yes\n", iface);
-            let _ = self.handle.write(&format!("/etc/sysconfig/network-scripts/ifcfg-{}", iface), ifcfg.as_bytes());
-            println!("  {} DHCP enabled (ifcfg)", "✓".truecolor(222, 115, 86).bold());
+            let _ = self.handle.write(
+                &format!("/etc/sysconfig/network-scripts/ifcfg-{}", iface),
+                ifcfg.as_bytes(),
+            );
+            println!(
+                "  {} DHCP enabled (ifcfg)",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         }
 
         println!();
@@ -3391,7 +4301,8 @@ Always explain WHAT the command does and WHY it's needed.
             match self.handle.command(&["ps", "aux"]) {
                 Ok(output) => {
                     let filter = args[0].to_lowercase();
-                    let filtered: Vec<&str> = output.lines()
+                    let filtered: Vec<&str> = output
+                        .lines()
                         .filter(|line| line.to_lowercase().contains(&filter))
                         .collect();
                     println!("{}", filtered.join("\n"));
@@ -3419,7 +4330,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_kill(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} kill <pid> [signal]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} kill <pid> [signal]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: kill 1234");
             println!("Example: kill 1234 -9");
             println!();
@@ -3430,7 +4344,11 @@ Always explain WHAT the command does and WHY it's needed.
         let signal = if args.len() > 1 { args[1] } else { "" };
 
         println!();
-        println!("  {} Killing process {}...", "→".truecolor(222, 115, 86), pid.bright_white());
+        println!(
+            "  {} Killing process {}...",
+            "→".truecolor(222, 115, 86),
+            pid.bright_white()
+        );
 
         let result = if signal.is_empty() {
             self.handle.command(&["kill", pid])
@@ -3449,7 +4367,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Show top processes
     fn cmd_top(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Top processes by CPU and memory usage:", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Top processes by CPU and memory usage:",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         let cmd = "ps aux --sort=-%cpu | head -15";
@@ -3466,7 +4387,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Scan for open ports
     fn cmd_scan_ports(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Scanning for open ports...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Scanning for open ports...",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         let cmd = "ss -tulpn 2>/dev/null || netstat -tulpn 2>/dev/null";
@@ -3482,10 +4406,14 @@ Always explain WHAT the command does and WHY it's needed.
     /// Find world-writable files
     fn cmd_audit_perms(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Finding world-writable files...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Finding world-writable files...",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
-        let cmd = "find / -type f -perm -002 ! -path '/proc/*' ! -path '/sys/*' 2>/dev/null | head -50";
+        let cmd =
+            "find / -type f -perm -002 ! -path '/proc/*' ! -path '/sys/*' 2>/dev/null | head -50";
         match self.handle.sh_raw(cmd) {
             Ok(output) => {
                 if output.trim().is_empty() {
@@ -3504,7 +4432,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Find SUID/SGID files
     fn cmd_audit_suid(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Finding SUID/SGID files...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Finding SUID/SGID files...",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         let cmd = "find / -type f \\( -perm -4000 -o -perm -2000 \\) ! -path '/proc/*' ! -path '/sys/*' 2>/dev/null";
@@ -3520,7 +4451,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Check for security updates
     fn cmd_check_updates(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Checking for security updates...", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Checking for security updates...",
+            "→".truecolor(222, 115, 86)
+        );
 
         let root = match self.current_root.as_ref() {
             Some(r) => r,
@@ -3583,7 +4517,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_db_backup(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} db-backup <database> [type]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} db-backup <database> [type]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Types: mysql, postgres");
             println!("Example: db-backup mydb mysql");
             println!();
@@ -3598,13 +4535,20 @@ Always explain WHAT the command does and WHY it's needed.
         let backup_file = format!("/tmp/{}_backup_{}.sql", db, timestamp);
 
         println!();
-        println!("  {} Backing up database {}...", "→".truecolor(222, 115, 86), db.bright_white());
+        println!(
+            "  {} Backing up database {}...",
+            "→".truecolor(222, 115, 86),
+            db.bright_white()
+        );
 
         let result = match db_type {
-            "mysql" => self.handle.command(&["mysqldump", "--result-file", &backup_file, db]),
+            "mysql" => self
+                .handle
+                .command(&["mysqldump", "--result-file", &backup_file, db]),
             "postgres" => {
                 // For postgres, we need to use sudo -u postgres pg_dump
-                self.handle.command(&["sudo", "-u", "postgres", "pg_dump", "-f", &backup_file, db])
+                self.handle
+                    .command(&["sudo", "-u", "postgres", "pg_dump", "-f", &backup_file, db])
             }
             _ => {
                 println!("  {} Unknown database type", "✗".red());
@@ -3614,7 +4558,11 @@ Always explain WHAT the command does and WHY it's needed.
 
         match result {
             Ok(_) => {
-                println!("  {} Backup created: {}", "✓".truecolor(222, 115, 86).bold(), backup_file.bright_white());
+                println!(
+                    "  {} Backup created: {}",
+                    "✓".truecolor(222, 115, 86).bold(),
+                    backup_file.bright_white()
+                );
             }
             Err(e) => {
                 println!("  {} Backup failed: {}", "✗".red(), e);
@@ -3631,7 +4579,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_grep_replace(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 3 {
             println!();
-            println!("{} grep-replace <pattern> <replacement> <file>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} grep-replace <pattern> <replacement> <file>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: grep-replace 'old_value' 'new_value' /etc/config.conf");
             println!();
             return Ok(());
@@ -3642,11 +4593,13 @@ Always explain WHAT the command does and WHY it's needed.
         let file = args[2];
 
         println!();
-        println!("  {} Replacing '{}' with '{}' in {}...",
+        println!(
+            "  {} Replacing '{}' with '{}' in {}...",
             "→".truecolor(222, 115, 86),
             pattern.bright_white(),
             replacement.bright_white(),
-            file.bright_white());
+            file.bright_white()
+        );
 
         // Escape special sed characters in pattern and replacement
         let pattern_escaped = pattern
@@ -3662,7 +4615,10 @@ Always explain WHAT the command does and WHY it's needed.
         let sed_expr = format!("s/{}/{}/g", pattern_escaped, replacement_escaped);
 
         match self.handle.command(&["sed", "-i", &sed_expr, file]) {
-            Ok(_) => println!("  {} Replacement complete", "✓".truecolor(222, 115, 86).bold()),
+            Ok(_) => println!(
+                "  {} Replacement complete",
+                "✓".truecolor(222, 115, 86).bold()
+            ),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
 
@@ -3674,7 +4630,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_diff(&mut self, args: &[&str]) -> Result<()> {
         if args.len() < 2 {
             println!();
-            println!("{} diff <file1> <file2>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} diff <file1> <file2>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: diff /etc/hosts /etc/hosts.backup");
             println!();
             return Ok(());
@@ -3684,7 +4643,12 @@ Always explain WHAT the command does and WHY it's needed.
         let file2 = args[1];
 
         println!();
-        println!("  {} Comparing {} and {}...", "→".truecolor(222, 115, 86), file1.bright_white(), file2.bright_white());
+        println!(
+            "  {} Comparing {} and {}...",
+            "→".truecolor(222, 115, 86),
+            file1.bright_white(),
+            file2.bright_white()
+        );
         println!();
 
         // Use command() with argv array to avoid shell injection
@@ -3719,11 +4683,18 @@ Always explain WHAT the command does and WHY it's needed.
         let depth = if args.len() > 1 { args[1] } else { "3" };
 
         println!();
-        println!("  {} Directory tree for {}:", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Directory tree for {}:",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
         println!();
 
         // Try tree command first, fall back to find - use command() to avoid shell injection
-        if let Ok(output) = self.handle.sh_raw("command -v tree >/dev/null 2>&1 && echo yes || echo no") {
+        if let Ok(output) = self
+            .handle
+            .sh_raw("command -v tree >/dev/null 2>&1 && echo yes || echo no")
+        {
             if output.trim() == "yes" {
                 if let Ok(tree_output) = self.handle.command(&["tree", "-L", depth, path]) {
                     println!("{}", tree_output);
@@ -3740,9 +4711,11 @@ Always explain WHAT the command does and WHY it's needed.
             return Ok(());
         }
 
-        let script = format!("find '{}' -maxdepth {} -print 2>/dev/null | head -50",
+        let script = format!(
+            "find '{}' -maxdepth {} -print 2>/dev/null | head -50",
             path.replace('\'', "'\\''"),
-            depth.replace('\'', "'\\''"));
+            depth.replace('\'', "'\\''")
+        );
         if let Ok(output) = self.handle.sh_raw(&script) {
             println!("{}", output);
         } else {
@@ -3757,7 +4730,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_compress(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} compress <path> [output.tar.gz]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} compress <path> [output.tar.gz]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: compress /var/www/html backup.tar.gz");
             println!();
             return Ok(());
@@ -3767,14 +4743,29 @@ Always explain WHAT the command does and WHY it's needed.
         let output = if args.len() > 1 {
             args[1].to_string()
         } else {
-            format!("{}.tar.gz", path.trim_end_matches('/').split('/').next_back().unwrap_or("archive"))
+            format!(
+                "{}.tar.gz",
+                path.trim_end_matches('/')
+                    .split('/')
+                    .next_back()
+                    .unwrap_or("archive")
+            )
         };
 
         println!();
-        println!("  {} Compressing {} to {}...", "→".truecolor(222, 115, 86), path.bright_white(), output.bright_white());
+        println!(
+            "  {} Compressing {} to {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white(),
+            output.bright_white()
+        );
 
         match self.handle.command(&["tar", "czf", &output, path]) {
-            Ok(_) => println!("  {} Archive created: {}", "✓".truecolor(222, 115, 86).bold(), output.bright_white()),
+            Ok(_) => println!(
+                "  {} Archive created: {}",
+                "✓".truecolor(222, 115, 86).bold(),
+                output.bright_white()
+            ),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
 
@@ -3786,7 +4777,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_extract(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} extract <archive> [destination]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} extract <archive> [destination]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: extract backup.tar.gz /tmp/restored");
             println!();
             return Ok(());
@@ -3796,7 +4790,12 @@ Always explain WHAT the command does and WHY it's needed.
         let dest = if args.len() > 1 { args[1] } else { "." };
 
         println!();
-        println!("  {} Extracting {} to {}...", "→".truecolor(222, 115, 86), archive.bright_white(), dest.bright_white());
+        println!(
+            "  {} Extracting {} to {}...",
+            "→".truecolor(222, 115, 86),
+            archive.bright_white(),
+            dest.bright_white()
+        );
 
         let result = if archive.ends_with(".tar.gz") || archive.ends_with(".tgz") {
             self.handle.command(&["tar", "xzf", archive, "-C", dest])
@@ -3809,7 +4808,10 @@ Always explain WHAT the command does and WHY it's needed.
         };
 
         match result {
-            Ok(_) => println!("  {} Extraction complete", "✓".truecolor(222, 115, 86).bold()),
+            Ok(_) => println!(
+                "  {} Extraction complete",
+                "✓".truecolor(222, 115, 86).bold()
+            ),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
 
@@ -3823,7 +4825,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_git_clone(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} git-clone <url> [path]", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} git-clone <url> [path]",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: git-clone https://github.com/user/repo.git /opt/repo");
             println!();
             return Ok(());
@@ -3855,13 +4860,20 @@ Always explain WHAT the command does and WHY it's needed.
         let path = if args.is_empty() { "." } else { args[0] };
 
         println!();
-        println!("  {} Updating repository in {}...", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} Updating repository in {}...",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
 
         // Use git -C to change directory safely without using shell cd
         match self.handle.command(&["git", "-C", path, "pull"]) {
             Ok(output) => {
                 println!("{}", output);
-                println!("  {} Repository updated", "✓".truecolor(222, 115, 86).bold());
+                println!(
+                    "  {} Repository updated",
+                    "✓".truecolor(222, 115, 86).bold()
+                );
             }
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
@@ -3876,7 +4888,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_tune_swappiness(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} tune-swappiness <value>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} tune-swappiness <value>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Value: 0-100 (default: 60, recommended for servers: 10)");
             println!("Example: tune-swappiness 10");
             println!();
@@ -3888,28 +4903,44 @@ Always explain WHAT the command does and WHY it's needed.
         // Validate that value is numeric to prevent injection
         if value.parse::<u32>().is_err() {
             println!();
-            println!("  {} Invalid swappiness value: must be a number between 0-100", "✗".red());
+            println!(
+                "  {} Invalid swappiness value: must be a number between 0-100",
+                "✗".red()
+            );
             println!();
             return Ok(());
         }
 
         println!();
-        println!("  {} Setting swappiness to {}...", "→".truecolor(222, 115, 86), value.bright_white());
+        println!(
+            "  {} Setting swappiness to {}...",
+            "→".truecolor(222, 115, 86),
+            value.bright_white()
+        );
 
         let sysctl_arg = format!("vm.swappiness={}", value);
         let _ = self.handle.command(&["sysctl", &sysctl_arg]);
 
         // Append to sysctl.conf using write API instead of echo
         let content = format!("vm.swappiness={}\n", value);
-        let existing = self.handle.read_file("/etc/sysctl.conf").unwrap_or_default();
+        let existing = self
+            .handle
+            .read_file("/etc/sysctl.conf")
+            .unwrap_or_default();
         let mut new_content = String::from_utf8_lossy(&existing).to_string();
         if !new_content.ends_with('\n') && !new_content.is_empty() {
             new_content.push('\n');
         }
         new_content.push_str(&content);
-        let _ = self.handle.write("/etc/sysctl.conf", new_content.as_bytes());
+        let _ = self
+            .handle
+            .write("/etc/sysctl.conf", new_content.as_bytes());
 
-        println!("  {} Swappiness set to {}", "✓".truecolor(222, 115, 86).bold(), value.bright_white());
+        println!(
+            "  {} Swappiness set to {}",
+            "✓".truecolor(222, 115, 86).bold(),
+            value.bright_white()
+        );
         println!();
 
         Ok(())
@@ -3925,11 +4956,17 @@ Always explain WHAT the command does and WHY it's needed.
             println!("  {}", swappiness);
         }
 
-        if let Ok(cache_pressure) = self.handle.sh_raw("sysctl vm.vfs_cache_pressure 2>/dev/null") {
+        if let Ok(cache_pressure) = self
+            .handle
+            .sh_raw("sysctl vm.vfs_cache_pressure 2>/dev/null")
+        {
             println!("  {}", cache_pressure);
         }
 
-        if let Ok(scheduler) = self.handle.sh_raw("cat /sys/block/sda/queue/scheduler 2>/dev/null") {
+        if let Ok(scheduler) = self
+            .handle
+            .sh_raw("cat /sys/block/sda/queue/scheduler 2>/dev/null")
+        {
             println!("  I/O Scheduler: {}", scheduler.trim());
         }
 
@@ -3966,13 +5003,23 @@ Always explain WHAT the command does and WHY it's needed.
 
         if self.handle.sh_raw(install_cmd).is_ok() {
             let _ = self.handle.sh_raw("systemctl enable nginx");
-            println!("  {} Nginx installed and enabled", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Nginx installed and enabled",
+                "✓".truecolor(222, 115, 86).bold()
+            );
 
             // Open firewall
-            let _ = self.handle.sh_raw("firewall-cmd --permanent --add-service=http 2>/dev/null");
-            let _ = self.handle.sh_raw("firewall-cmd --permanent --add-service=https 2>/dev/null");
+            let _ = self
+                .handle
+                .sh_raw("firewall-cmd --permanent --add-service=http 2>/dev/null");
+            let _ = self
+                .handle
+                .sh_raw("firewall-cmd --permanent --add-service=https 2>/dev/null");
             let _ = self.handle.sh_raw("firewall-cmd --reload 2>/dev/null");
-            println!("  {} Firewall configured", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Firewall configured",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             println!("  {} Installation failed", "✗".red());
         }
@@ -3986,7 +5033,11 @@ Always explain WHAT the command does and WHY it's needed.
         let db_type = if args.is_empty() { "mysql" } else { args[0] };
 
         println!();
-        println!("{} Database Setup Wizard ({})", "→".truecolor(222, 115, 86).bold(), db_type.bright_white());
+        println!(
+            "{} Database Setup Wizard ({})",
+            "→".truecolor(222, 115, 86).bold(),
+            db_type.bright_white()
+        );
         println!();
 
         let root = match self.current_root.as_ref() {
@@ -4018,12 +5069,19 @@ Always explain WHAT the command does and WHY it's needed.
                 }
             }
             _ => {
-                println!("  {} Unknown database type. Use: mysql, mariadb, postgres", "✗".red());
+                println!(
+                    "  {} Unknown database type. Use: mysql, mariadb, postgres",
+                    "✗".red()
+                );
                 return Ok(());
             }
         };
 
-        println!("  {} Installing {}...", "→".truecolor(222, 115, 86), db_type.bright_white());
+        println!(
+            "  {} Installing {}...",
+            "→".truecolor(222, 115, 86),
+            db_type.bright_white()
+        );
 
         if self.handle.sh_raw(install_cmd).is_ok() {
             let service = if db_type.contains("mysql") || db_type.contains("mariadb") {
@@ -4033,11 +5091,17 @@ Always explain WHAT the command does and WHY it's needed.
             };
 
             if db_type.contains("postgres") {
-                let _ = self.handle.sh_raw("postgresql-setup --initdb 2>/dev/null || postgresql-setup initdb 2>/dev/null");
+                let _ = self.handle.sh_raw(
+                    "postgresql-setup --initdb 2>/dev/null || postgresql-setup initdb 2>/dev/null",
+                );
             }
 
             let _ = self.handle.command(&["systemctl", "enable", service]);
-            println!("  {} {} installed and enabled", "✓".truecolor(222, 115, 86).bold(), db_type.bright_white());
+            println!(
+                "  {} {} installed and enabled",
+                "✓".truecolor(222, 115, 86).bold(),
+                db_type.bright_white()
+            );
         } else {
             println!("  {} Installation failed", "✗".red());
         }
@@ -4073,7 +5137,10 @@ Always explain WHAT the command does and WHY it's needed.
 
         if self.handle.sh_raw(install_cmd).is_ok() {
             let _ = self.handle.sh_raw("systemctl enable docker");
-            println!("  {} Docker installed and enabled", "✓".truecolor(222, 115, 86).bold());
+            println!(
+                "  {} Docker installed and enabled",
+                "✓".truecolor(222, 115, 86).bold()
+            );
         } else {
             println!("  {} Installation failed", "✗".red());
         }
@@ -4101,7 +5168,10 @@ Always explain WHAT the command does and WHY it's needed.
         }
 
         // Load average
-        if let Ok(load) = self.handle.sh_raw("uptime | awk -F'load average:' '{print $2}'") {
+        if let Ok(load) = self
+            .handle
+            .sh_raw("uptime | awk -F'load average:' '{print $2}'")
+        {
             println!("{} {}", "Load Average:".bright_white().bold(), load.trim());
         }
 
@@ -4117,7 +5187,10 @@ Always explain WHAT the command does and WHY it's needed.
     /// Show network bandwidth usage
     fn cmd_bandwidth(&mut self, _args: &[&str]) -> Result<()> {
         println!();
-        println!("  {} Network interface statistics:", "→".truecolor(222, 115, 86));
+        println!(
+            "  {} Network interface statistics:",
+            "→".truecolor(222, 115, 86)
+        );
         println!();
 
         if let Ok(output) = self.handle.sh_raw("ip -s link 2>/dev/null") {
@@ -4136,7 +5209,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_selinux_context(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} selinux-context <path>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} selinux-context <path>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: selinux-context /var/www/html");
             println!();
             return Ok(());
@@ -4145,7 +5221,11 @@ Always explain WHAT the command does and WHY it's needed.
         let path = args[0];
 
         println!();
-        println!("  {} SELinux context for {}:", "→".truecolor(222, 115, 86), path.bright_white());
+        println!(
+            "  {} SELinux context for {}:",
+            "→".truecolor(222, 115, 86),
+            path.bright_white()
+        );
         println!();
 
         match self.handle.command(&["ls", "-Z", path]) {
@@ -4163,7 +5243,10 @@ Always explain WHAT the command does and WHY it's needed.
         println!("  {} Recent SELinux denials:", "→".truecolor(222, 115, 86));
         println!();
 
-        match self.handle.sh_raw("ausearch -m avc -ts recent 2>/dev/null | head -50") {
+        match self
+            .handle
+            .sh_raw("ausearch -m avc -ts recent 2>/dev/null | head -50")
+        {
             Ok(output) => {
                 if output.trim().is_empty() {
                     println!("  {} No recent denials", "✓".green().bold());
@@ -4173,7 +5256,10 @@ Always explain WHAT the command does and WHY it's needed.
             }
             Err(_) => {
                 // Try journalctl
-                if let Ok(output) = self.handle.sh_raw("journalctl -t setroubleshoot --since '1 hour ago' 2>/dev/null") {
+                if let Ok(output) = self
+                    .handle
+                    .sh_raw("journalctl -t setroubleshoot --since '1 hour ago' 2>/dev/null")
+                {
                     if output.trim().is_empty() {
                         println!("  {} No recent denials", "✓".green().bold());
                     } else {
@@ -4195,7 +5281,10 @@ Always explain WHAT the command does and WHY it's needed.
     fn cmd_template_save(&mut self, args: &[&str]) -> Result<()> {
         if args.is_empty() {
             println!();
-            println!("{} template-save <name>", "Usage:".truecolor(222, 115, 86).bold());
+            println!(
+                "{} template-save <name>",
+                "Usage:".truecolor(222, 115, 86).bold()
+            );
             println!("Example: template-save webserver_config");
             println!();
             return Ok(());
@@ -4205,15 +5294,21 @@ Always explain WHAT the command does and WHY it's needed.
         let template_dir = "/var/lib/guestkit/templates";
 
         println!();
-        println!("  {} Saving template '{}'...", "→".truecolor(222, 115, 86), name.bright_white());
+        println!(
+            "  {} Saving template '{}'...",
+            "→".truecolor(222, 115, 86),
+            name.bright_white()
+        );
 
         let _ = self.handle.mkdir_p(template_dir);
 
         // Save important configs
-        let configs = ["/etc/hostname",
+        let configs = [
+            "/etc/hostname",
             "/etc/hosts",
             "/etc/resolv.conf",
-            "/etc/sysconfig/network-scripts/ifcfg-*"];
+            "/etc/sysconfig/network-scripts/ifcfg-*",
+        ];
 
         use chrono::Local;
         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
@@ -4225,7 +5320,11 @@ Always explain WHAT the command does and WHY it's needed.
         tar_args.extend(config_vec);
 
         match self.handle.command(&tar_args) {
-            Ok(_) => println!("  {} Template saved: {}", "✓".truecolor(222, 115, 86).bold(), template_file.bright_white()),
+            Ok(_) => println!(
+                "  {} Template saved: {}",
+                "✓".truecolor(222, 115, 86).bold(),
+                template_file.bright_white()
+            ),
             Err(e) => println!("  {} {}", "Error:".red(), e),
         }
 

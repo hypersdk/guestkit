@@ -3,8 +3,8 @@
 
 use super::VulnerabilityInfo;
 use anyhow::Result;
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 /// A known CVE entry: (cve_id, severity, score)
 type CveEntry = (&'static str, &'static str, f64);
@@ -14,22 +14,19 @@ static KNOWN_CVES: Lazy<HashMap<&'static str, Vec<CveEntry>>> = Lazy::new(|| {
     let mut m: HashMap<&'static str, Vec<CveEntry>> = HashMap::new();
 
     // Example CVEs (package_name -> [(cve_id, severity, score)])
-    m.insert("openssl", vec![
-        ("CVE-2024-0727", "high", 7.5),
-        ("CVE-2023-6129", "medium", 5.3),
-    ]);
+    m.insert(
+        "openssl",
+        vec![
+            ("CVE-2024-0727", "high", 7.5),
+            ("CVE-2023-6129", "medium", 5.3),
+        ],
+    );
 
-    m.insert("nginx", vec![
-        ("CVE-2023-44487", "high", 7.5),
-    ]);
+    m.insert("nginx", vec![("CVE-2023-44487", "high", 7.5)]);
 
-    m.insert("curl", vec![
-        ("CVE-2023-46218", "medium", 6.5),
-    ]);
+    m.insert("curl", vec![("CVE-2023-46218", "medium", 6.5)]);
 
-    m.insert("python3", vec![
-        ("CVE-2023-40217", "medium", 5.3),
-    ]);
+    m.insert("python3", vec![("CVE-2023-40217", "medium", 5.3)]);
 
     m
 });
@@ -45,10 +42,7 @@ pub fn lookup_cves(package_name: &str, package_version: &str) -> Result<Vec<Vuln
                 cve: cve_id.to_string(),
                 severity: severity.to_string(),
                 score: Some(*score),
-                description: format!(
-                    "Vulnerability in {} {}",
-                    package_name, package_version
-                ),
+                description: format!("Vulnerability in {} {}", package_name, package_version),
                 fixed_version: None,
             });
         }
@@ -67,7 +61,10 @@ pub fn lookup_cves(package_name: &str, package_version: &str) -> Result<Vec<Vuln
 }
 
 /// Query OSV API with local file cache (~/.cache/guestkit/cve/)
-pub fn lookup_cves_osv(package_name: &str, package_version: &str) -> Result<Vec<VulnerabilityInfo>> {
+pub fn lookup_cves_osv(
+    package_name: &str,
+    package_version: &str,
+) -> Result<Vec<VulnerabilityInfo>> {
     let cache_key = format!("{}@{}", package_name, package_version);
     let cache_dir = osv_cache_dir()?;
     let cache_file = cache_dir.join(format!("{}.json", sanitize_cache_key(&cache_key)));
@@ -167,7 +164,10 @@ pub fn fleet_cve_heatmap(
 
 // Legacy static-only lookup kept for tests
 #[allow(dead_code)]
-fn lookup_cves_static_only(package_name: &str, package_version: &str) -> Result<Vec<VulnerabilityInfo>> {
+fn lookup_cves_static_only(
+    package_name: &str,
+    package_version: &str,
+) -> Result<Vec<VulnerabilityInfo>> {
     let mut vulnerabilities = Vec::new();
 
     // Check if we have known CVEs for this package
@@ -177,10 +177,7 @@ fn lookup_cves_static_only(package_name: &str, package_version: &str) -> Result<
                 cve: cve_id.to_string(),
                 severity: severity.to_string(),
                 score: Some(*score),
-                description: format!(
-                    "Vulnerability in {} {}",
-                    package_name, package_version
-                ),
+                description: format!("Vulnerability in {} {}", package_name, package_version),
                 fixed_version: None,
             });
         }
@@ -414,15 +411,13 @@ mod tests {
 
     #[test]
     fn test_filter_by_severity_all_filtered() {
-        let vulns = vec![
-            VulnerabilityInfo {
-                cve: "CVE-001".to_string(),
-                severity: "low".to_string(),
-                score: Some(2.0),
-                description: "Low vuln".to_string(),
-                fixed_version: None,
-            },
-        ];
+        let vulns = vec![VulnerabilityInfo {
+            cve: "CVE-001".to_string(),
+            severity: "low".to_string(),
+            score: Some(2.0),
+            description: "Low vuln".to_string(),
+            fixed_version: None,
+        }];
 
         let filtered = filter_by_severity(&vulns, "critical");
         assert_eq!(filtered.len(), 0);

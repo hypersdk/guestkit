@@ -45,7 +45,10 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         manifests.push_str("    - ReadWriteOnce\n");
         manifests.push_str("  resources:\n");
         manifests.push_str("    requests:\n");
-        manifests.push_str(&format!("      storage: {}Gi\n", volume.size_gb.ceil() as u64));
+        manifests.push_str(&format!(
+            "      storage: {}Gi\n",
+            volume.size_gb.ceil() as u64
+        ));
         manifests.push('\n');
     }
 
@@ -75,10 +78,13 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     if !analysis.ports.is_empty() {
         manifests.push_str("        ports:\n");
         for port in &analysis.ports {
-            if port.number != 22 {  // Skip SSH
+            if port.number != 22 {
+                // Skip SSH
                 manifests.push_str(&format!("        - containerPort: {}\n", port.number));
-                manifests.push_str(&format!("          protocol: {}\n",
-                    port.protocol.to_uppercase()));
+                manifests.push_str(&format!(
+                    "          protocol: {}\n",
+                    port.protocol.to_uppercase()
+                ));
             }
         }
     }
@@ -119,9 +125,7 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
     manifests.push('\n');
 
     // Service
-    let http_ports: Vec<_> = analysis.ports.iter()
-        .filter(|p| p.number != 22)
-        .collect();
+    let http_ports: Vec<_> = analysis.ports.iter().filter(|p| p.number != 22).collect();
 
     if !http_ports.is_empty() {
         manifests.push_str("---\n");
@@ -136,7 +140,8 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         manifests.push_str("  ports:\n");
 
         for port in http_ports {
-            manifests.push_str(&format!("  - name: {}\n",
+            manifests.push_str(&format!(
+                "  - name: {}\n",
                 match port.number {
                     80 => "http",
                     443 => "https",
@@ -144,7 +149,8 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
                     5432 => "postgresql",
                     6379 => "redis",
                     _ => "custom",
-                }));
+                }
+            ));
             manifests.push_str(&format!("    port: {}\n", port.number));
             manifests.push_str(&format!("    targetPort: {}\n", port.number));
             manifests.push_str(&format!("    protocol: {}\n", port.protocol.to_uppercase()));
@@ -154,7 +160,10 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
         manifests.push('\n');
 
         // Ingress for HTTP/HTTPS
-        let has_http = analysis.ports.iter().any(|p| p.number == 80 || p.number == 443);
+        let has_http = analysis
+            .ports
+            .iter()
+            .any(|p| p.number == 80 || p.number == 443);
         if has_http {
             manifests.push_str("---\n");
             manifests.push_str("apiVersion: networking.k8s.io/v1\n");
@@ -185,6 +194,12 @@ pub fn generate(analysis: &ImageAnalysis) -> Result<String> {
 fn sanitize_name(name: &str) -> String {
     name.to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect()
 }

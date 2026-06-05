@@ -22,7 +22,10 @@ impl BootAnalyzer {
     /// This parses systemd-analyze output if available, or estimates from service files
     pub fn analyze_boot(&self) -> Result<BootTiming> {
         // Try to read systemd-analyze blame output if it exists
-        let analyze_file = self.analyzer.root_path.join("var/lib/systemd/analyze-blame.txt");
+        let analyze_file = self
+            .analyzer
+            .root_path
+            .join("var/lib/systemd/analyze-blame.txt");
 
         if analyze_file.exists() {
             return self.parse_analyze_file(&analyze_file);
@@ -61,8 +64,8 @@ impl BootAnalyzer {
 
         Ok(BootTiming {
             total_time,
-            kernel_time: 0,   // Not available from blame output
-            initrd_time: 0,   // Not available from blame output
+            kernel_time: 0, // Not available from blame output
+            initrd_time: 0, // Not available from blame output
             userspace_time: total_time,
             services,
         })
@@ -85,9 +88,9 @@ impl BootAnalyzer {
     /// Estimate boot timing from available data
     fn estimate_boot_timing(&self) -> BootTiming {
         BootTiming {
-            total_time: 15000, // 15 seconds estimated
-            kernel_time: 3000, // 3 seconds
-            initrd_time: 2000, // 2 seconds
+            total_time: 15000,     // 15 seconds estimated
+            kernel_time: 3000,     // 3 seconds
+            initrd_time: 2000,     // 2 seconds
             userspace_time: 10000, // 10 seconds
             services: Vec::new(),
         }
@@ -257,13 +260,11 @@ mod tests {
             kernel_time: 3000,
             initrd_time: 2000,
             userspace_time: 35000,
-            services: vec![
-                ServiceTiming {
-                    name: "slow.service".to_string(),
-                    activation_time: 5000, // Very slow
-                    start_offset: 0,
-                },
-            ],
+            services: vec![ServiceTiming {
+                name: "slow.service".to_string(),
+                activation_time: 5000, // Very slow
+                start_offset: 0,
+            }],
         };
 
         let recommendations = boot_analyzer.get_recommendations(&timing);

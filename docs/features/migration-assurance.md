@@ -173,6 +173,7 @@ use guestkit::cli::migrate::plan::compute_migration_score;
 
 ## See also
 
+- [Guest agent](guest-agent.md) — live in-guest assurance via virtio-serial
 - [Zyvor GuestKit](https://zyvor.dev/guestkit) — platform overview
 - [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, hyper2kvm handoff
 - [Fix plans](fix-plans.md) — preview, export, apply

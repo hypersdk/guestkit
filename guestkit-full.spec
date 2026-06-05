@@ -1,13 +1,13 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.1
+Version:        0.3.6
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
 License:        LGPL-3.0-or-later
-URL:            https://github.com/ssahani/guestkit
-Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
+URL:            https://github.com/hypersdk/guestkit
+Source0:        %{name}-%{version}.tar.gz
 
 # Rust/Cargo requirements
 BuildRequires:  rust >= 1.70
@@ -18,6 +18,7 @@ BuildRequires:  make
 # System libraries
 BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
+BuildRequires:  openssl-devel
 
 # Python bindings (optional)
 %bcond_without python
@@ -165,6 +166,10 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Wed Jun 04 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.6-1
+- Add in-guest agent mode for live VM assurance over virtio-serial
+- Sync RPM spec version with Cargo.toml
+
 * Mon Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
 - Initial RPM package for Fedora/RHEL
 - Interactive TUI dashboard with fuzzy jump navigation (Ctrl+P)

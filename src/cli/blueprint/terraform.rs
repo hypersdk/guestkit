@@ -45,13 +45,22 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("variable \"instance_type\" {\n");
     tf.push_str("  description = \"EC2 instance type\"\n");
     tf.push_str("  type        = string\n");
-    tf.push_str(&format!("  default     = \"{}\"\n", suggest_instance_type(analysis)));
+    tf.push_str(&format!(
+        "  default     = \"{}\"\n",
+        suggest_instance_type(analysis)
+    ));
     tf.push_str("}\n\n");
 
     // Security group
     tf.push_str("resource \"aws_security_group\" \"main\" {\n");
-    tf.push_str(&format!("  name        = \"{}-sg\"\n", sanitize_name(&analysis.hostname)));
-    tf.push_str(&format!("  description = \"Security group for {}\"\n", analysis.hostname));
+    tf.push_str(&format!(
+        "  name        = \"{}-sg\"\n",
+        sanitize_name(&analysis.hostname)
+    ));
+    tf.push_str(&format!(
+        "  description = \"Security group for {}\"\n",
+        analysis.hostname
+    ));
     tf.push('\n');
 
     // Ingress rules based on detected ports
@@ -61,7 +70,8 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
         tf.push_str(&format!("    to_port     = {}\n", port.number));
         tf.push_str(&format!("    protocol    = \"{}\"\n", port.protocol));
         tf.push_str("    cidr_blocks = [\"0.0.0.0/0\"]\n");
-        tf.push_str(&format!("    description = \"Allow {} traffic\"\n",
+        tf.push_str(&format!(
+            "    description = \"Allow {} traffic\"\n",
             match port.number {
                 22 => "SSH",
                 80 => "HTTP",
@@ -70,7 +80,8 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
                 5432 => "PostgreSQL",
                 6379 => "Redis",
                 _ => "Custom",
-            }));
+            }
+        ));
         tf.push_str("  }\n\n");
     }
 
@@ -84,13 +95,23 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
 
     // EBS volumes for detected data volumes
     for (idx, volume) in analysis.volumes.iter().enumerate() {
-        tf.push_str(&format!("resource \"aws_ebs_volume\" \"data_{}\" {{\n", idx));
+        tf.push_str(&format!(
+            "resource \"aws_ebs_volume\" \"data_{}\" {{\n",
+            idx
+        ));
         tf.push_str("  availability_zone = data.aws_availability_zones.available.names[0]\n");
-        tf.push_str(&format!("  size              = {}\n", volume.size_gb.ceil() as u64));
+        tf.push_str(&format!(
+            "  size              = {}\n",
+            volume.size_gb.ceil() as u64
+        ));
         tf.push_str("  type              = \"gp3\"\n");
         tf.push('\n');
         tf.push_str("  tags = {\n");
-        tf.push_str(&format!("    Name = \"{}-data-{}\"\n", sanitize_name(&analysis.hostname), idx));
+        tf.push_str(&format!(
+            "    Name = \"{}-data-{}\"\n",
+            sanitize_name(&analysis.hostname),
+            idx
+        ));
         tf.push_str(&format!("    Path = \"{}\"\n", volume.path));
         tf.push_str("  }\n");
         tf.push_str("}\n\n");
@@ -104,14 +125,23 @@ fn generate_aws(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("  vpc_security_group_ids = [aws_security_group.main.id]\n");
     tf.push('\n');
     tf.push_str("  tags = {\n");
-    tf.push_str(&format!("    Name = \"{}\"\n", sanitize_name(&analysis.hostname)));
-    tf.push_str(&format!("    OS   = \"{} {}\"\n", analysis.os_name, analysis.os_version));
+    tf.push_str(&format!(
+        "    Name = \"{}\"\n",
+        sanitize_name(&analysis.hostname)
+    ));
+    tf.push_str(&format!(
+        "    OS   = \"{} {}\"\n",
+        analysis.os_name, analysis.os_version
+    ));
     tf.push_str("  }\n");
     tf.push_str("}\n\n");
 
     // Volume attachments
     for (idx, _volume) in analysis.volumes.iter().enumerate() {
-        tf.push_str(&format!("resource \"aws_volume_attachment\" \"data_{}\" {{\n", idx));
+        tf.push_str(&format!(
+            "resource \"aws_volume_attachment\" \"data_{}\" {{\n",
+            idx
+        ));
         let dev_letter = if idx < 20 {
             char::from_u32('f' as u32 + idx as u32).unwrap_or('z')
         } else {
@@ -157,12 +187,18 @@ fn generate_azure(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("}\n\n");
 
     tf.push_str("resource \"azurerm_resource_group\" \"main\" {\n");
-    tf.push_str(&format!("  name     = \"{}-rg\"\n", sanitize_name(&analysis.hostname)));
+    tf.push_str(&format!(
+        "  name     = \"{}-rg\"\n",
+        sanitize_name(&analysis.hostname)
+    ));
     tf.push_str("  location = var.location\n");
     tf.push_str("}\n\n");
 
     tf.push_str("resource \"azurerm_virtual_network\" \"main\" {\n");
-    tf.push_str(&format!("  name                = \"{}-vnet\"\n", sanitize_name(&analysis.hostname)));
+    tf.push_str(&format!(
+        "  name                = \"{}-vnet\"\n",
+        sanitize_name(&analysis.hostname)
+    ));
     tf.push_str("  address_space       = [\"10.0.0.0/16\"]\n");
     tf.push_str("  location            = azurerm_resource_group.main.location\n");
     tf.push_str("  resource_group_name = azurerm_resource_group.main.name\n");
@@ -190,7 +226,10 @@ fn generate_gcp(analysis: &ImageAnalysis) -> Result<String> {
     tf.push_str("}\n\n");
 
     tf.push_str("resource \"google_compute_instance\" \"main\" {\n");
-    tf.push_str(&format!("  name         = \"{}\"\n", sanitize_name(&analysis.hostname)));
+    tf.push_str(&format!(
+        "  name         = \"{}\"\n",
+        sanitize_name(&analysis.hostname)
+    ));
     tf.push_str("  machine_type = var.machine_type\n");
     tf.push_str("  zone         = var.zone\n");
     tf.push('\n');
@@ -206,24 +245,34 @@ fn generate_gcp(analysis: &ImageAnalysis) -> Result<String> {
 
 fn suggest_instance_type(analysis: &ImageAnalysis) -> &'static str {
     // Simple heuristic based on detected services
-    let has_database = analysis.services.iter()
+    let has_database = analysis
+        .services
+        .iter()
         .any(|s| s.name.contains("mysql") || s.name.contains("postgresql"));
 
-    let has_web = analysis.services.iter()
+    let has_web = analysis
+        .services
+        .iter()
         .any(|s| s.name.contains("nginx") || s.name.contains("apache") || s.name.contains("httpd"));
 
     if has_database {
-        "t3.medium"  // Database needs more resources
+        "t3.medium" // Database needs more resources
     } else if has_web {
-        "t3.small"   // Web server
+        "t3.small" // Web server
     } else {
-        "t3.micro"   // Default minimal
+        "t3.micro" // Default minimal
     }
 }
 
 fn sanitize_name(name: &str) -> String {
     name.to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect()
 }

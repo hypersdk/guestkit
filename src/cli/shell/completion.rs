@@ -43,12 +43,7 @@ impl ShellCompleter {
 impl Completer for ShellCompleter {
     type Candidate = Pair;
 
-    fn complete(
-        &self,
-        line: &str,
-        pos: usize,
-        _ctx: &Context<'_>,
-    ) -> Result<(usize, Vec<Pair>)> {
+    fn complete(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Result<(usize, Vec<Pair>)> {
         let mut candidates = Vec::new();
 
         // Get the word being completed

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! Policy-based validation module
 
-pub mod policy;
-pub mod rules;
 pub mod benchmarks;
 pub mod expr;
+pub mod policy;
+pub mod rules;
 
-use anyhow::Result;
 use crate::Guestfs;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-pub use policy::{Policy, PolicyRule, RuleType};
 pub use benchmarks::Benchmark;
+pub use policy::{Policy, PolicyRule, RuleType};
 
 /// Validation result for a single rule
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,11 +83,26 @@ pub struct ValidationSummary {
 impl ValidationSummary {
     pub fn new(results: &[ValidationResult]) -> Self {
         let total = results.len();
-        let passed = results.iter().filter(|r| r.status == ValidationStatus::Pass).count();
-        let failed = results.iter().filter(|r| r.status == ValidationStatus::Fail).count();
-        let warnings = results.iter().filter(|r| r.status == ValidationStatus::Warning).count();
-        let skipped = results.iter().filter(|r| r.status == ValidationStatus::Skip).count();
-        let errors = results.iter().filter(|r| r.status == ValidationStatus::Error).count();
+        let passed = results
+            .iter()
+            .filter(|r| r.status == ValidationStatus::Pass)
+            .count();
+        let failed = results
+            .iter()
+            .filter(|r| r.status == ValidationStatus::Fail)
+            .count();
+        let warnings = results
+            .iter()
+            .filter(|r| r.status == ValidationStatus::Warning)
+            .count();
+        let skipped = results
+            .iter()
+            .filter(|r| r.status == ValidationStatus::Skip)
+            .count();
+        let errors = results
+            .iter()
+            .filter(|r| r.status == ValidationStatus::Error)
+            .count();
 
         let compliance_score = if total > skipped {
             (passed as f64 / (total - skipped) as f64) * 100.0
@@ -141,10 +156,7 @@ pub fn validate_image<P: AsRef<Path>>(
 
     // Build evidence snapshot for expression rules
     let evidence = crate::evidence::build_evidence(&mut g, root, image_path.as_ref())?;
-    let boot_report = crate::boot::analyze_bootability(
-        &evidence,
-        crate::boot::BootTarget::Generic,
-    );
+    let boot_report = crate::boot::analyze_bootability(&evidence, crate::boot::BootTarget::Generic);
 
     // Run validation rules
     let mut results = Vec::new();
@@ -199,36 +211,16 @@ fn validate_rule(
     }
 
     let status = match &rule.rule_type {
-        RuleType::PackageInstalled { package } => {
-            check_package_installed(g, root, package)?
-        }
-        RuleType::PackageForbidden { package } => {
-            check_package_forbidden(g, root, package)?
-        }
-        RuleType::FileExists { path } => {
-            check_file_exists(g, path)?
-        }
-        RuleType::FileNotExists { path } => {
-            check_file_not_exists(g, path)?
-        }
-        RuleType::FileContains { path, pattern } => {
-            check_file_contains(g, path, pattern)?
-        }
-        RuleType::FilePermissions { path, mode } => {
-            check_file_permissions(g, path, mode)?
-        }
-        RuleType::ServiceEnabled { service } => {
-            check_service_enabled(g, service)?
-        }
-        RuleType::ServiceDisabled { service } => {
-            check_service_disabled(g, service)?
-        }
-        RuleType::UserExists { username } => {
-            check_user_exists(g, username)?
-        }
-        RuleType::UserNotExists { username } => {
-            check_user_not_exists(g, username)?
-        }
+        RuleType::PackageInstalled { package } => check_package_installed(g, root, package)?,
+        RuleType::PackageForbidden { package } => check_package_forbidden(g, root, package)?,
+        RuleType::FileExists { path } => check_file_exists(g, path)?,
+        RuleType::FileNotExists { path } => check_file_not_exists(g, path)?,
+        RuleType::FileContains { path, pattern } => check_file_contains(g, path, pattern)?,
+        RuleType::FilePermissions { path, mode } => check_file_permissions(g, path, mode)?,
+        RuleType::ServiceEnabled { service } => check_service_enabled(g, service)?,
+        RuleType::ServiceDisabled { service } => check_service_disabled(g, service)?,
+        RuleType::UserExists { username } => check_user_exists(g, username)?,
+        RuleType::UserNotExists { username } => check_user_not_exists(g, username)?,
         RuleType::PortClosed { port: _ } => {
             // Port checking requires more complex parsing
             ValidationStatus::Skip
@@ -267,23 +259,39 @@ fn validate_rule(
 fn check_package_installed(g: &mut Guestfs, root: &str, package: &str) -> Result<ValidationStatus> {
     let apps = g.inspect_list_applications2(root)?;
     let installed = apps.iter().any(|(name, _, _)| name == package);
-    Ok(if installed { ValidationStatus::Pass } else { ValidationStatus::Fail })
+    Ok(if installed {
+        ValidationStatus::Pass
+    } else {
+        ValidationStatus::Fail
+    })
 }
 
 fn check_package_forbidden(g: &mut Guestfs, root: &str, package: &str) -> Result<ValidationStatus> {
     let apps = g.inspect_list_applications2(root)?;
     let installed = apps.iter().any(|(name, _, _)| name == package);
-    Ok(if installed { ValidationStatus::Fail } else { ValidationStatus::Pass })
+    Ok(if installed {
+        ValidationStatus::Fail
+    } else {
+        ValidationStatus::Pass
+    })
 }
 
 fn check_file_exists(g: &mut Guestfs, path: &str) -> Result<ValidationStatus> {
     let exists = g.exists(path)?;
-    Ok(if exists { ValidationStatus::Pass } else { ValidationStatus::Fail })
+    Ok(if exists {
+        ValidationStatus::Pass
+    } else {
+        ValidationStatus::Fail
+    })
 }
 
 fn check_file_not_exists(g: &mut Guestfs, path: &str) -> Result<ValidationStatus> {
     let exists = g.exists(path)?;
-    Ok(if exists { ValidationStatus::Fail } else { ValidationStatus::Pass })
+    Ok(if exists {
+        ValidationStatus::Fail
+    } else {
+        ValidationStatus::Pass
+    })
 }
 
 fn check_file_contains(g: &mut Guestfs, path: &str, pattern: &str) -> Result<ValidationStatus> {
@@ -300,7 +308,11 @@ fn check_file_contains(g: &mut Guestfs, path: &str, pattern: &str) -> Result<Val
     })
 }
 
-fn check_file_permissions(g: &mut Guestfs, path: &str, expected_mode: &str) -> Result<ValidationStatus> {
+fn check_file_permissions(
+    g: &mut Guestfs,
+    path: &str,
+    expected_mode: &str,
+) -> Result<ValidationStatus> {
     if !g.exists(path)? {
         return Ok(ValidationStatus::Fail);
     }
@@ -317,17 +329,31 @@ fn check_file_permissions(g: &mut Guestfs, path: &str, expected_mode: &str) -> R
 
 fn check_service_enabled(g: &mut Guestfs, service: &str) -> Result<ValidationStatus> {
     // Check if systemd unit is enabled
-    let service_path = format!("/etc/systemd/system/multi-user.target.wants/{}.service", service);
+    let service_path = format!(
+        "/etc/systemd/system/multi-user.target.wants/{}.service",
+        service
+    );
     let enabled = g.exists(&service_path)?;
 
-    Ok(if enabled { ValidationStatus::Pass } else { ValidationStatus::Fail })
+    Ok(if enabled {
+        ValidationStatus::Pass
+    } else {
+        ValidationStatus::Fail
+    })
 }
 
 fn check_service_disabled(g: &mut Guestfs, service: &str) -> Result<ValidationStatus> {
-    let service_path = format!("/etc/systemd/system/multi-user.target.wants/{}.service", service);
+    let service_path = format!(
+        "/etc/systemd/system/multi-user.target.wants/{}.service",
+        service
+    );
     let enabled = g.exists(&service_path)?;
 
-    Ok(if enabled { ValidationStatus::Fail } else { ValidationStatus::Pass })
+    Ok(if enabled {
+        ValidationStatus::Fail
+    } else {
+        ValidationStatus::Pass
+    })
 }
 
 fn check_user_exists(g: &mut Guestfs, username: &str) -> Result<ValidationStatus> {
@@ -339,10 +365,17 @@ fn check_user_exists(g: &mut Guestfs, username: &str) -> Result<ValidationStatus
     let passwd_str = String::from_utf8_lossy(&passwd);
 
     let exists = passwd_str.lines().any(|line| {
-        line.split(':').next().map(|u| u == username).unwrap_or(false)
+        line.split(':')
+            .next()
+            .map(|u| u == username)
+            .unwrap_or(false)
     });
 
-    Ok(if exists { ValidationStatus::Pass } else { ValidationStatus::Fail })
+    Ok(if exists {
+        ValidationStatus::Pass
+    } else {
+        ValidationStatus::Fail
+    })
 }
 
 fn check_user_not_exists(g: &mut Guestfs, username: &str) -> Result<ValidationStatus> {
@@ -354,12 +387,18 @@ fn check_user_not_exists(g: &mut Guestfs, username: &str) -> Result<ValidationSt
     let passwd_str = String::from_utf8_lossy(&passwd);
 
     let exists = passwd_str.lines().any(|line| {
-        line.split(':').next().map(|u| u == username).unwrap_or(false)
+        line.split(':')
+            .next()
+            .map(|u| u == username)
+            .unwrap_or(false)
     });
 
-    Ok(if exists { ValidationStatus::Fail } else { ValidationStatus::Pass })
+    Ok(if exists {
+        ValidationStatus::Fail
+    } else {
+        ValidationStatus::Pass
+    })
 }
-
 
 /// Format validation report as text
 pub fn format_report(report: &ValidationReport) -> String {
@@ -378,14 +417,18 @@ pub fn format_report(report: &ValidationReport) -> String {
     output.push_str(&format!("❌ Failed: {}\n", report.summary.failed));
     output.push_str(&format!("⚠️  Warnings: {}\n", report.summary.warnings));
     output.push_str(&format!("⏭️  Skipped: {}\n", report.summary.skipped));
-    output.push_str(&format!("\n📈 Compliance Score: {:.1}%\n\n", report.summary.compliance_score));
+    output.push_str(&format!(
+        "\n📈 Compliance Score: {:.1}%\n\n",
+        report.summary.compliance_score
+    ));
 
     if report.summary.failed > 0 {
         output.push_str("❌ Failed Checks\n");
         output.push_str("---------------\n");
         for result in &report.results {
             if result.status == ValidationStatus::Fail {
-                output.push_str(&format!("  {} [{}] {}\n",
+                output.push_str(&format!(
+                    "  {} [{}] {}\n",
                     result.status.emoji(),
                     result.severity,
                     result.rule_name
@@ -403,7 +446,8 @@ pub fn format_report(report: &ValidationReport) -> String {
         output.push_str("-----------\n");
         for result in &report.results {
             if result.status == ValidationStatus::Warning {
-                output.push_str(&format!("  {} [{}] {}\n",
+                output.push_str(&format!(
+                    "  {} [{}] {}\n",
                     result.status.emoji(),
                     result.severity,
                     result.rule_name

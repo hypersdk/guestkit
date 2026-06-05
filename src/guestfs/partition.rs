@@ -33,7 +33,10 @@ impl Guestfs {
             parts.push(PartInfo {
                 part_num: partition.number as i32,
                 part_start: partition.start_lba.saturating_mul(512) as i64,
-                part_end: partition.start_lba.saturating_add(partition.size_sectors).saturating_mul(512) as i64,
+                part_end: partition
+                    .start_lba
+                    .saturating_add(partition.size_sectors)
+                    .saturating_mul(512) as i64,
                 part_size: partition.size_sectors.saturating_mul(512) as i64,
             });
         }

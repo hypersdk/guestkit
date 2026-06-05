@@ -20,7 +20,15 @@ impl AzureDiskSource {
         tmp.close()?;
 
         let status = Command::new("az")
-            .args(["storage", "blob", "download", "--blob-url", uri, "--file", tmp_path.to_str().unwrap()])
+            .args([
+                "storage",
+                "blob",
+                "download",
+                "--blob-url",
+                uri,
+                "--file",
+                tmp_path.to_str().unwrap(),
+            ])
             .status()
             .context("Failed to run az storage blob download — install Azure CLI")?;
 

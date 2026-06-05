@@ -2,9 +2,10 @@
 //! Build evidence snapshots from Guestfs inspection.
 
 use super::snapshot::*;
+use crate::evidence::collectors::{collect_systemd_guest, collect_windows_details};
+use crate::Guestfs;
 use anyhow::Result;
 use chrono::Utc;
-use crate::Guestfs;
 use std::path::Path;
 
 pub struct EvidenceBuilder;
@@ -23,6 +24,7 @@ impl EvidenceBuilder {
         let packages = Self::collect_packages(g, root);
         let security = Self::collect_security(g, root);
         let vm_tools = Self::collect_vm_tools(g, root);
+        let systemd = collect_systemd_guest(g, &os.init_system);
         let windows = if os.os_type.to_lowercase().contains("windows") {
             Some(Self::collect_windows(g, root))
         } else {
@@ -41,6 +43,7 @@ impl EvidenceBuilder {
             packages,
             security,
             vm_tools,
+            systemd,
             windows,
         })
     }
@@ -294,10 +297,7 @@ impl EvidenceBuilder {
 
     fn collect_security(g: &mut Guestfs, root: &str) -> SecurityEvidence {
         let sec = g.inspect_security(root).unwrap_or_default();
-        let firewall_enabled = g
-            .inspect_firewall(root)
-            .map(|f| f.enabled)
-            .unwrap_or(false);
+        let firewall_enabled = g.inspect_firewall(root).map(|f| f.enabled).unwrap_or(false);
 
         let ssh_root_login = g.inspect_ssh_config(root).ok().and_then(|cfg| {
             match cfg.get("PermitRootLogin").map(String::as_str) {
@@ -333,36 +333,47 @@ impl EvidenceBuilder {
         let software_hive = format!("{}/System32/config/SOFTWARE", systemroot);
         let system_hive = format!("{}/System32/config/SYSTEM", systemroot);
 
-        let installed_apps_count = windows_registry::parse_installed_software(PathBuf::from(&software_hive).as_path())
-            .map(|a| a.len())
-            .unwrap_or(0);
+        let installed_apps_count =
+            windows_registry::parse_installed_software(PathBuf::from(&software_hive).as_path())
+                .map(|a| a.len())
+                .unwrap_or(0);
 
-        let services_count = windows_registry::parse_windows_services(PathBuf::from(&system_hive).as_path())
-            .map(|s| s.len())
-            .unwrap_or(0);
+        let services_count =
+            windows_registry::parse_windows_services(PathBuf::from(&system_hive).as_path())
+                .map(|s| s.len())
+                .unwrap_or(0);
 
         let drivers_path = format!("{}/System32/drivers", systemroot);
         let drivers_count = g.ls(&drivers_path).map(|d| d.len()).unwrap_or(0);
 
-        let (product_name, version) = windows_registry::get_windows_version(
-            PathBuf::from(&software_hive).as_path(),
-        )
-        .map(|(n, v, _)| (n, v))
-        .unwrap_or_else(|_| (String::new(), String::new()));
+        let (product_name, version) =
+            windows_registry::get_windows_version(PathBuf::from(&software_hive).as_path())
+                .map(|(n, v, _)| (n, v))
+                .unwrap_or_else(|_| (String::new(), String::new()));
 
-        let domain_info = windows_registry::parse_domain_info(PathBuf::from(&system_hive).as_path());
-        let rdp_enabled = windows_registry::parse_rdp_enabled(PathBuf::from(&system_hive).as_path());
-        let pending_reboot = windows_registry::parse_pending_reboot(PathBuf::from(&system_hive).as_path());
+        let domain_info =
+            windows_registry::parse_domain_info(PathBuf::from(&system_hive).as_path());
+        let rdp_enabled =
+            windows_registry::parse_rdp_enabled(PathBuf::from(&system_hive).as_path());
+        let pending_reboot =
+            windows_registry::parse_pending_reboot(PathBuf::from(&system_hive).as_path());
         let bitlocker_detected = g.exists("/$BitLocker").unwrap_or(false)
-            || g.exists(&format!("{}/System32/drivers/fvevol.sys", systemroot)).unwrap_or(false);
+            || g.exists(&format!("{}/System32/drivers/fvevol.sys", systemroot))
+                .unwrap_or(false);
         let hypervisor_remnants = windows_registry::detect_hypervisor_remnants(
             PathBuf::from(&system_hive).as_path(),
             &drivers_path,
             g,
         );
-        let av_edr = windows_registry::detect_av_edr(PathBuf::from(&software_hive).as_path(), g, &systemroot);
+        let av_edr = windows_registry::detect_av_edr(
+            PathBuf::from(&software_hive).as_path(),
+            g,
+            &systemroot,
+        );
         let minidump_path = format!("{}/Minidump", systemroot);
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
+
+        let details = collect_windows_details(g, root);
 
         WindowsEvidence {
             systemroot,
@@ -379,6 +390,10 @@ impl EvidenceBuilder {
             hypervisor_remnants,
             av_edr,
             minidump_count,
+            services: details.services,
+            installed_apps: details.installed_apps,
+            persistence: details.persistence,
+            event_logs: details.event_logs,
         }
     }
 }

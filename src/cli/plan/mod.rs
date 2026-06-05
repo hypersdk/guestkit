@@ -10,28 +10,26 @@
 
 #![allow(unused_imports)]
 
-pub mod types;
+pub mod apply;
+pub mod command;
+pub mod export;
 pub mod generator;
 pub mod preview;
-pub mod apply;
-pub mod export;
-pub mod command;
+pub mod types;
+
+#[cfg(feature = "agent")]
+pub mod executor_live;
+pub mod topo_sort;
 
 pub use types::{
-    FixPlan,
-    Operation,
-    OperationType,
-    Priority,
-    FileEdit,
-    PackageInstall,
-    ServiceOperation,
-    SELinuxMode,
-    RegistryEdit,
-    PostApplyAction,
+    FileEdit, FixPlan, Operation, OperationType, PackageInstall, PostApplyAction, Priority,
+    RegistryEdit, SELinuxMode, ServiceOperation,
 };
 
+pub use apply::{ApplyResult, PlanApplicator};
+pub use command::PlanCommand;
+#[cfg(feature = "agent")]
+pub use executor_live::LivePlanExecutor;
+pub use export::PlanExporter;
 pub use generator::PlanGenerator;
 pub use preview::PlanPreview;
-pub use apply::PlanApplicator;
-pub use export::PlanExporter;
-pub use command::PlanCommand;

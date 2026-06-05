@@ -5,6 +5,8 @@
 
 pub mod inspect;
 pub mod profile;
+pub mod agent;
 
 pub use inspect::InspectHandler;
 pub use profile::ProfileHandler;
+pub use agent::{AgentEvidenceHandler, AgentFixHandler};

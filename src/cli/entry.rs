@@ -67,6 +67,13 @@ struct Cli {
     command: Option<Commands>,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum AgentChannelArg {
+    Virtio,
+    Vsock,
+    Stdio,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Inspect a disk image and display OS information
@@ -1257,6 +1264,18 @@ enum Commands {
         /// Backup before repair
         #[arg(short = 'b', long)]
         backup: bool,
+
+        /// Inject GuestKit agent binary and systemd unit into disk image
+        #[arg(long)]
+        inject_agent: bool,
+
+        /// Path to guestkit binary for agent injection
+        #[arg(long, value_name = "PATH")]
+        agent_binary: Option<PathBuf>,
+
+        /// Path to guestkit-agent.service unit file
+        #[arg(long, value_name = "PATH")]
+        agent_unit: Option<PathBuf>,
     },
 
     /// System hardening configuration
@@ -1772,6 +1791,18 @@ enum Commands {
         /// Export executable fix plan (YAML or JSON from file extension)
         #[arg(long, value_name = "FILE")]
         export: Option<PathBuf>,
+
+        /// Include GuestKit agent install ops in exported fix plan
+        #[arg(long)]
+        inject_agent: bool,
+
+        /// Path to guestkit binary for agent injection (export / repair)
+        #[arg(long, value_name = "PATH")]
+        agent_binary: Option<PathBuf>,
+
+        /// Path to guestkit-agent.service unit file
+        #[arg(long, value_name = "PATH")]
+        agent_unit: Option<PathBuf>,
     },
 
     /// Forensic diff with security drift scoring
@@ -1786,6 +1817,53 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+    },
+
+    /// Run GuestKit in-guest agent daemon (requires --features agent)
+    Agent {
+        /// Communication channel
+        #[arg(long, value_enum, default_value = "virtio")]
+        channel: AgentChannelArg,
+
+        /// Virtio device path override
+        #[arg(long, value_name = "PATH")]
+        device: Option<String>,
+
+        /// Reserved: vsock socket override
+        #[arg(long, value_name = "PATH")]
+        socket: Option<String>,
+
+        /// Reserved: drop privileges to user
+        #[arg(long, value_name = "USER")]
+        user: Option<String>,
+    },
+
+    /// Host-side proxy to guest agent unix socket (requires --features agent)
+    #[command(name = "agent-proxy")]
+    AgentProxy {
+        /// Libvirt channel unix socket path
+        #[arg(long, value_name = "PATH")]
+        socket: String,
+
+        /// Optional HTTP listen address (e.g. 127.0.0.1:8765)
+        #[arg(long, value_name = "ADDR")]
+        listen: Option<String>,
+    },
+
+    /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
+    #[command(name = "agent-call")]
+    AgentCall {
+        /// Libvirt channel unix socket path
+        #[arg(long, value_name = "PATH")]
+        socket: String,
+
+        /// JSON-RPC method (e.g. guestkit.getEvidence)
+        #[arg(long, value_name = "METHOD")]
+        method: String,
+
+        /// JSON params object
+        #[arg(long, value_name = "JSON", default_value = "{}")]
+        params: String,
     },
 }
 
@@ -1854,30 +1932,36 @@ enum SnapshotOperation {
 }
 
 /// Run standalone file explorer (direct from CLI)
-fn run_standalone_explorer(image_path: &Path, start_path: &str, verbose: bool) -> anyhow::Result<()> {
-    use crate::Guestfs;
+fn run_standalone_explorer(
+    image_path: &Path,
+    start_path: &str,
+    verbose: bool,
+) -> anyhow::Result<()> {
     use crate::cli::shell::commands::ShellContext;
     use crate::cli::shell::explore::run_explorer;
+    use crate::Guestfs;
 
     if verbose {
         println!("{} Loading VM image: {}", "→".cyan(), image_path.display());
     }
 
     // Initialize guestfs
-    let mut guestfs = Guestfs::new()
-        .context("Failed to create Guestfs handle")?;
+    let mut guestfs = Guestfs::new().context("Failed to create Guestfs handle")?;
 
-    guestfs.add_drive_opts(
-        image_path.to_str().ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?,
-        false,
-        None
-    ).context("Failed to add drive")?;
+    guestfs
+        .add_drive_opts(
+            image_path
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Disk image path contains invalid UTF-8"))?,
+            false,
+            None,
+        )
+        .context("Failed to add drive")?;
 
     guestfs.launch().context("Failed to launch guestfs")?;
 
     // Inspect and mount
-    let roots = guestfs.inspect_os()
-        .context("Failed to inspect OS")?;
+    let roots = guestfs.inspect_os().context("Failed to inspect OS")?;
 
     if roots.is_empty() {
         anyhow::bail!("No operating systems found in disk image");
@@ -1889,7 +1973,8 @@ fn run_standalone_explorer(image_path: &Path, start_path: &str, verbose: bool) -
         println!("{} Detected OS: {}", "→".cyan(), root.yellow());
     }
 
-    let mounts = guestfs.inspect_get_mountpoints(root)
+    let mounts = guestfs
+        .inspect_get_mountpoints(root)
         .context("Failed to get mountpoints")?;
 
     for (mountpoint, device) in mounts {
@@ -1903,7 +1988,8 @@ fn run_standalone_explorer(image_path: &Path, start_path: &str, verbose: bool) -
     }
 
     // Get OS information for context
-    let os_product = guestfs.inspect_get_product_name(root)
+    let os_product = guestfs
+        .inspect_get_product_name(root)
         .unwrap_or_else(|_| "Unknown OS".to_string());
 
     // Create shell context for explorer
@@ -1912,9 +1998,20 @@ fn run_standalone_explorer(image_path: &Path, start_path: &str, verbose: bool) -
     ctx.current_path = start_path.to_string();
 
     // Launch explorer
-    println!("\n{}", "╔═══════════════════════════════════════════════════════════╗".cyan());
-    println!("{}", "║          GuestKit File Explorer (TUI Mode)              ║".cyan().bold());
-    println!("{}", "╚═══════════════════════════════════════════════════════════╝".cyan());
+    println!(
+        "\n{}",
+        "╔═══════════════════════════════════════════════════════════╗".cyan()
+    );
+    println!(
+        "{}",
+        "║          GuestKit File Explorer (TUI Mode)              ║"
+            .cyan()
+            .bold()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════╝".cyan()
+    );
     println!();
     println!("{} Press 'h' for help, 'q' to quit", "ℹ".yellow());
     println!();
@@ -1942,7 +2039,12 @@ unsafe fn set_env_vars_before_threads(cli: &Cli) -> anyhow::Result<()> {
         std::env::set_var("GUESTKIT_READONLY", "1");
     }
     if let Some(ref cache_dir) = cli.cache_dir {
-        std::env::set_var("GUESTKIT_CACHE_DIR", cache_dir.to_str().ok_or_else(|| anyhow::anyhow!("Cache directory path contains invalid UTF-8"))?);
+        std::env::set_var(
+            "GUESTKIT_CACHE_DIR",
+            cache_dir
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Cache directory path contains invalid UTF-8"))?,
+        );
     }
     if cli.timeout > 0 {
         std::env::set_var("GUESTKIT_TIMEOUT", cli.timeout.to_string());
@@ -2026,7 +2128,7 @@ pub fn run() -> anyhow::Result<()> {
                 profile,
                 export,
                 export_output,
-                !no_cache,  // Cache enabled by default, disabled with --no-cache
+                !no_cache, // Cache enabled by default, disabled with --no-cache
                 cache_refresh,
             )?;
         }
@@ -2191,7 +2293,13 @@ pub fn run() -> anyhow::Result<()> {
                 .transpose()
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-            inspect_batch(&images, parallel as usize, cli.verbose, output_format, !no_cache)?;  // Cache enabled by default
+            inspect_batch(
+                &images,
+                parallel as usize,
+                cli.verbose,
+                output_format,
+                !no_cache,
+            )?; // Cache enabled by default
         }
 
         Commands::CacheClear => {
@@ -2306,7 +2414,15 @@ pub fn run() -> anyhow::Result<()> {
             report,
             check_cve,
         } => {
-            scan_command(&image, &scan_type, severity, output, report, check_cve, cli.verbose)?;
+            scan_command(
+                &image,
+                &scan_type,
+                severity,
+                output,
+                report,
+                check_cve,
+                cli.verbose,
+            )?;
         }
 
         Commands::Benchmark {
@@ -2316,7 +2432,14 @@ pub fn run() -> anyhow::Result<()> {
             duration,
             iterations,
         } => {
-            benchmark_command(&image, &test_type, block_size as usize, duration, iterations, cli.verbose)?;
+            benchmark_command(
+                &image,
+                &test_type,
+                block_size as usize,
+                duration,
+                iterations,
+                cli.verbose,
+            )?;
         }
 
         Commands::Snapshot {
@@ -2343,7 +2466,15 @@ pub fn run() -> anyhow::Result<()> {
             context,
             ignore_whitespace,
         } => {
-            diff_command(&image1, &image2, &path, unified, context, ignore_whitespace, cli.verbose)?;
+            diff_command(
+                &image1,
+                &image2,
+                &path,
+                unified,
+                context,
+                ignore_whitespace,
+                cli.verbose,
+            )?;
         }
 
         Commands::FindLarge {
@@ -2353,7 +2484,14 @@ pub fn run() -> anyhow::Result<()> {
             max_results,
             human_readable,
         } => {
-            find_large_command(&image, &path, min_size, max_results as usize, human_readable, cli.verbose)?;
+            find_large_command(
+                &image,
+                &path,
+                min_size,
+                max_results as usize,
+                human_readable,
+                cli.verbose,
+            )?;
         }
 
         Commands::Copy {
@@ -2364,7 +2502,15 @@ pub fn run() -> anyhow::Result<()> {
             preserve,
             force,
         } => {
-            copy_command(&source_image, &source_path, &dest_image, &dest_path, preserve, force, cli.verbose)?;
+            copy_command(
+                &source_image,
+                &source_path,
+                &dest_image,
+                &dest_path,
+                preserve,
+                force,
+                cli.verbose,
+            )?;
         }
 
         Commands::FindDuplicates {
@@ -2383,7 +2529,14 @@ pub fn run() -> anyhow::Result<()> {
             min_size,
             human_readable,
         } => {
-            disk_usage_command(&image, &path, max_depth, min_size, human_readable, cli.verbose)?;
+            disk_usage_command(
+                &image,
+                &path,
+                max_depth,
+                min_size,
+                human_readable,
+                cli.verbose,
+            )?;
         }
 
         Commands::Timeline {
@@ -2412,7 +2565,14 @@ pub fn run() -> anyhow::Result<()> {
             threshold,
             report,
         } => {
-            drift_command(&baseline, &current, ignore_paths, threshold, report, cli.verbose)?;
+            drift_command(
+                &baseline,
+                &current,
+                ignore_paths,
+                threshold,
+                report,
+                cli.verbose,
+            )?;
         }
 
         Commands::Analyze {
@@ -2432,7 +2592,15 @@ pub fn run() -> anyhow::Result<()> {
             show_content,
             export,
         } => {
-            secrets_command(&image, scan_paths, patterns, exclude, show_content, export, cli.verbose)?;
+            secrets_command(
+                &image,
+                scan_paths,
+                patterns,
+                exclude,
+                show_content,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Rescue {
@@ -2443,7 +2611,15 @@ pub fn run() -> anyhow::Result<()> {
             force,
             backup,
         } => {
-            rescue_command(&image, &operation, user, password, force, backup, cli.verbose)?;
+            rescue_command(
+                &image,
+                &operation,
+                user,
+                password,
+                force,
+                backup,
+                cli.verbose,
+            )?;
         }
 
         Commands::Optimize {
@@ -2462,7 +2638,14 @@ pub fn run() -> anyhow::Result<()> {
             show_dns,
             export_json,
         } => {
-            network_command(&image, show_routes, show_interfaces, show_dns, export_json, cli.verbose)?;
+            network_command(
+                &image,
+                show_routes,
+                show_interfaces,
+                show_dns,
+                export_json,
+                cli.verbose,
+            )?;
         }
 
         Commands::Compliance {
@@ -2482,7 +2665,14 @@ pub fn run() -> anyhow::Result<()> {
             yara_rules,
             quarantine,
         } => {
-            malware_command(&image, deep_scan, check_rootkits, yara_rules, quarantine, cli.verbose)?;
+            malware_command(
+                &image,
+                deep_scan,
+                check_rootkits,
+                yara_rules,
+                quarantine,
+                cli.verbose,
+            )?;
         }
 
         Commands::Health {
@@ -2539,9 +2729,19 @@ pub fn run() -> anyhow::Result<()> {
                     cli.verbose,
                 )?;
             } else {
-                let source = source.ok_or_else(|| anyhow::anyhow!("SOURCE is required for disk image clone"))?;
-                let dest = dest.ok_or_else(|| anyhow::anyhow!("DEST is required for disk image clone"))?;
-                clone_command(&source, &dest, sysprep, hostname, remove_keys, preserve_users, cli.verbose)?;
+                let source = source
+                    .ok_or_else(|| anyhow::anyhow!("SOURCE is required for disk image clone"))?;
+                let dest =
+                    dest.ok_or_else(|| anyhow::anyhow!("DEST is required for disk image clone"))?;
+                clone_command(
+                    &source,
+                    &dest,
+                    sysprep,
+                    hostname,
+                    remove_keys,
+                    preserve_users,
+                    cli.verbose,
+                )?;
             }
         }
 
@@ -2552,7 +2752,14 @@ pub fn run() -> anyhow::Result<()> {
             export,
             simulate_update,
         } => {
-            patch_command(&image, check_cves, severity, export, simulate_update, cli.verbose)?;
+            patch_command(
+                &image,
+                check_cves,
+                severity,
+                export,
+                simulate_update,
+                cli.verbose,
+            )?;
         }
 
         Commands::Inventory {
@@ -2705,7 +2912,14 @@ pub fn run() -> anyhow::Result<()> {
             export,
             fix_issues,
         } => {
-            audit_command(&image, categories, &output_format, export, fix_issues, cli.verbose)?;
+            audit_command(
+                &image,
+                categories,
+                &output_format,
+                export,
+                fix_issues,
+                cli.verbose,
+            )?;
         }
 
         Commands::Repair {
@@ -2715,9 +2929,27 @@ pub fn run() -> anyhow::Result<()> {
             dry_run,
             force,
             backup,
+            inject_agent,
+            agent_binary,
+            agent_unit,
         } => {
             if fix.as_deref() == Some("boot") {
-                repair_boot_command(&image, dry_run, cli.verbose)?;
+                #[cfg(feature = "agent")]
+                {
+                    repair_boot_command(
+                        &image,
+                        dry_run,
+                        cli.verbose,
+                        inject_agent,
+                        agent_binary.as_deref(),
+                        agent_unit.as_deref(),
+                    )?;
+                }
+                #[cfg(not(feature = "agent"))]
+                {
+                    let _ = (&agent_binary, &agent_unit);
+                    repair_boot_command(&image, dry_run, cli.verbose, inject_agent)?;
+                }
             } else if let Some(rt) = repair_type {
                 repair_command(&image, &rt, force, backup, cli.verbose)?;
             } else {
@@ -2741,7 +2973,14 @@ pub fn run() -> anyhow::Result<()> {
             categories,
             export,
         } => {
-            anomaly_command(&image, baseline, &sensitivity, categories, export, cli.verbose)?;
+            anomaly_command(
+                &image,
+                baseline,
+                &sensitivity,
+                categories,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Recommend {
@@ -2769,7 +3008,14 @@ pub fn run() -> anyhow::Result<()> {
             correlate,
             export,
         } => {
-            intelligence_command(&image, ioc_file, &threat_level, correlate, export, cli.verbose)?;
+            intelligence_command(
+                &image,
+                ioc_file,
+                &threat_level,
+                correlate,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Simulate {
@@ -2779,7 +3025,14 @@ pub fn run() -> anyhow::Result<()> {
             dry_run,
             risk_assessment,
         } => {
-            simulate_command(&image, &change_type, target, dry_run, risk_assessment, cli.verbose)?;
+            simulate_command(
+                &image,
+                &change_type,
+                target,
+                dry_run,
+                risk_assessment,
+                cli.verbose,
+            )?;
         }
 
         Commands::Score {
@@ -2810,7 +3063,15 @@ pub fn run() -> anyhow::Result<()> {
             depth,
             export,
         } => {
-            hunt_command(&image, hypothesis, &framework, techniques, &depth, export, cli.verbose)?;
+            hunt_command(
+                &image,
+                hypothesis,
+                &framework,
+                techniques,
+                &depth,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Reconstruct {
@@ -2821,7 +3082,15 @@ pub fn run() -> anyhow::Result<()> {
             visualize,
             export,
         } => {
-            reconstruct_command(&image, &incident_type, start_time, end_time, visualize, export, cli.verbose)?;
+            reconstruct_command(
+                &image,
+                &incident_type,
+                start_time,
+                end_time,
+                visualize,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Evolve {
@@ -2832,7 +3101,15 @@ pub fn run() -> anyhow::Result<()> {
             safety_checks,
             export_plan,
         } => {
-            evolve_command(&image, &target_state, &strategy, stages, safety_checks, export_plan, cli.verbose)?;
+            evolve_command(
+                &image,
+                &target_state,
+                &strategy,
+                stages,
+                safety_checks,
+                export_plan,
+                cli.verbose,
+            )?;
         }
 
         Commands::Verify {
@@ -2843,7 +3120,15 @@ pub fn run() -> anyhow::Result<()> {
             check_integrity,
             export,
         } => {
-            verify_command(&image, &verification_level, check_supply_chain, check_identity, check_integrity, export, cli.verbose)?;
+            verify_command(
+                &image,
+                &verification_level,
+                check_supply_chain,
+                check_identity,
+                check_integrity,
+                export,
+                cli.verbose,
+            )?;
         }
 
         Commands::Version => {
@@ -2926,7 +3211,11 @@ pub fn run() -> anyhow::Result<()> {
             systemd_boot_command(&image, timeline, recommendations, summary, top, cli.verbose)?;
         }
 
-        Commands::Tui { image, compare, fleet } => {
+        Commands::Tui {
+            image,
+            compare,
+            fleet,
+        } => {
             crate::cli::tui::run_tui(&image, compare.as_deref(), fleet.as_deref())?;
         }
 
@@ -2957,12 +3246,9 @@ pub fn run() -> anyhow::Result<()> {
                     CompletionShell::Fish => {
                         generate(shells::Fish, &mut cmd, bin_name, &mut io::stdout())
                     }
-                    CompletionShell::PowerShell => generate(
-                        shells::PowerShell,
-                        &mut cmd,
-                        bin_name,
-                        &mut io::stdout(),
-                    ),
+                    CompletionShell::PowerShell => {
+                        generate(shells::PowerShell, &mut cmd, bin_name, &mut io::stdout())
+                    }
                     CompletionShell::Elvish => {
                         generate(shells::Elvish, &mut cmd, bin_name, &mut io::stdout())
                     }
@@ -3018,19 +3304,109 @@ pub fn run() -> anyhow::Result<()> {
             explain,
             output,
             export,
+            inject_agent,
+            agent_binary,
+            agent_unit,
         } => {
-            migrate_plan_command(
-                &image,
-                &target,
-                explain,
-                &output,
-                export.as_deref(),
-                cli.verbose,
-            )?;
+            #[cfg(feature = "agent")]
+            {
+                migrate_plan_command(
+                    &image,
+                    &target,
+                    explain,
+                    &output,
+                    export.as_deref(),
+                    cli.verbose,
+                    inject_agent,
+                    agent_binary.as_deref(),
+                    agent_unit.as_deref(),
+                )?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (&agent_binary, &agent_unit);
+                migrate_plan_command(
+                    &image,
+                    &target,
+                    explain,
+                    &output,
+                    export.as_deref(),
+                    cli.verbose,
+                    inject_agent,
+                )?;
+            }
         }
 
         Commands::ForensicDiff { old, new, output } => {
             forensic_diff_command(&old, &new, &output, cli.verbose)?;
+        }
+
+        Commands::Agent {
+            channel,
+            device,
+            socket,
+            user,
+        } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent, AgentArgs, AgentChannel};
+                let channel = match channel {
+                    AgentChannelArg::Virtio => AgentChannel::Virtio,
+                    AgentChannelArg::Vsock => AgentChannel::Vsock,
+                    AgentChannelArg::Stdio => AgentChannel::Stdio,
+                };
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent")?;
+                rt.block_on(run_agent(AgentArgs {
+                    channel,
+                    device,
+                    socket,
+                    user,
+                }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (channel, device, socket, user);
+                anyhow::bail!("guestkit agent requires rebuilding with --features agent");
+            }
+        }
+
+        Commands::AgentProxy { socket, listen } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent_proxy, AgentProxyArgs};
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent-proxy")?;
+                rt.block_on(run_agent_proxy(AgentProxyArgs { socket, listen }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (socket, listen);
+                anyhow::bail!("guestkit agent-proxy requires rebuilding with --features agent");
+            }
+        }
+
+        Commands::AgentCall {
+            socket,
+            method,
+            params,
+        } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::cli::{run_agent_call, AgentCallArgs};
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for agent-call")?;
+                rt.block_on(run_agent_call(AgentCallArgs {
+                    socket,
+                    method,
+                    params: Some(params),
+                }))?;
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (socket, method, params);
+                anyhow::bail!("guestkit agent-call requires rebuilding with --features agent");
+            }
         }
     }
 

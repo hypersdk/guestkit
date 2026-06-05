@@ -16,11 +16,26 @@ pub fn format_report(report: &LicenseReport, show_details: bool) -> String {
     // Statistics
     output.push_str("📊 License Statistics\n");
     output.push_str("--------------------\n");
-    output.push_str(&format!("✅ Permissive: {}\n", report.statistics.permissive_licenses));
-    output.push_str(&format!("⚖️  Copyleft: {}\n", report.statistics.copyleft_licenses));
-    output.push_str(&format!("🔒 Strong Copyleft: {}\n", report.statistics.strong_copyleft_licenses));
-    output.push_str(&format!("💼 Proprietary: {}\n", report.statistics.proprietary_licenses));
-    output.push_str(&format!("❓ Unknown: {}\n\n", report.statistics.unknown_licenses));
+    output.push_str(&format!(
+        "✅ Permissive: {}\n",
+        report.statistics.permissive_licenses
+    ));
+    output.push_str(&format!(
+        "⚖️  Copyleft: {}\n",
+        report.statistics.copyleft_licenses
+    ));
+    output.push_str(&format!(
+        "🔒 Strong Copyleft: {}\n",
+        report.statistics.strong_copyleft_licenses
+    ));
+    output.push_str(&format!(
+        "💼 Proprietary: {}\n",
+        report.statistics.proprietary_licenses
+    ));
+    output.push_str(&format!(
+        "❓ Unknown: {}\n\n",
+        report.statistics.unknown_licenses
+    ));
 
     // Risk summary
     output.push_str("⚠️  Risk Summary\n");
@@ -28,7 +43,10 @@ pub fn format_report(report: &LicenseReport, show_details: bool) -> String {
     for (risk, count) in &report.risk_summary {
         output.push_str(&format!("{} {:?}: {}\n", risk.emoji(), risk, count));
     }
-    output.push_str(&format!("\n📈 Compliance Score: {:.1}%\n\n", report.statistics.compliance_score));
+    output.push_str(&format!(
+        "\n📈 Compliance Score: {:.1}%\n\n",
+        report.statistics.compliance_score
+    ));
 
     // Violations
     if !report.violations.is_empty() {
@@ -76,7 +94,10 @@ pub fn format_report(report: &LicenseReport, show_details: bool) -> String {
     if report.violations.is_empty() {
         output.push_str("✅ No license violations found!\n");
     } else {
-        output.push_str(&format!("❌ Found {} license violations - review required\n", report.violations.len()));
+        output.push_str(&format!(
+            "❌ Found {} license violations - review required\n",
+            report.violations.len()
+        ));
     }
 
     output
@@ -91,11 +112,7 @@ pub fn format_csv(report: &LicenseReport) -> String {
     for pkg in &report.packages {
         csv.push_str(&format!(
             "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{:?}\"\n",
-            pkg.package_name,
-            pkg.version,
-            pkg.license,
-            pkg.license_type,
-            pkg.risk_level
+            pkg.package_name, pkg.version, pkg.license, pkg.license_type, pkg.risk_level
         ));
     }
 
