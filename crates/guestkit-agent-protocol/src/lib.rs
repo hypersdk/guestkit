@@ -12,5 +12,5 @@ pub use capabilities::{
     AgentCapabilities, PROTOCOL_VERSION, VIRTIO_CHANNEL_NAME, VIRTIO_DEVICE_PATH,
 };
 pub use error::{AgentError, RpcErrorCode};
-pub use frame::{read_frame, write_frame};
+pub use frame::{read_frame, read_line, write_delimited_line, write_frame, write_line};
 pub use rpc::{JsonRpcRequest, JsonRpcResponse, RpcMethod};
