@@ -10,7 +10,22 @@ use std::path::{Path, PathBuf};
 
 pub const GUEST_BINARY_DEST: &str = "/usr/local/bin/guestkit";
 pub const GUEST_UNIT_DEST: &str = "/etc/systemd/system/guestkit-agent.service";
-pub const DEFAULT_UNIT: &str = include_str!("../../templates/agent/guestkit-agent.service");
+const DEFAULT_UNIT: &str = r#"[Unit]
+Description=GuestKit Agent (Zyvor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/bin/sh -c 'until [ -e /dev/virtio-ports/org.qemu.guest_agent.0 ]; do sleep 2; done; exec /usr/local/bin/guestkit agent --channel virtio'
+Restart=always
+RestartSec=5
+User=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+"#;
 
 const KUBEVIRT_CHANNEL_HINT: &str = r#"Add virtio-serial channel (QGA-compatible) to VMI/libvirt domain:
 spec:

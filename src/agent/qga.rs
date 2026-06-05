@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //! QEMU guest-agent protocol compatibility (`virsh qemu-agent-command` / libvirt).
 
-use crate::VERSION;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
@@ -12,6 +11,16 @@ static EXEC_JOBS: LazyLock<Mutex<HashMap<u64, ExecJob>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_PID: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(1000));
 static FS_FROZEN: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
+use std::cell::Cell;
+
+thread_local! {
+    static QGA_DELIMITED_RESPONSE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// True when the last QGA response must be prefixed with the 0xFF sync sentinel.
+pub fn take_delimited_response() -> bool {
+    QGA_DELIMITED_RESPONSE.replace(false)
+}
 
 #[derive(Debug)]
 struct ExecJob {
@@ -44,6 +53,8 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
 
     let result = match execute {
         "guest-ping" => Ok(json!({})),
+        "guest-sync" => guest_sync(&args),
+        "guest-sync-delimited" => guest_sync_delimited(&args),
         "guest-info" => Ok(guest_info()),
         "guest-get-osinfo" => guest_get_osinfo(),
         "guest-get-fsinfo" => guest_get_fsinfo(),
@@ -94,11 +105,24 @@ fn qga_error(id: Option<Value>, desc: &str) -> Vec<u8> {
     serde_json::to_vec(&out).unwrap_or_else(|_| br#"{"error":{"class":"GenericError","desc":"error"}}"#.to_vec())
 }
 
+fn guest_sync(args: &Value) -> Result<Value, String> {
+    Ok(json!(args.get("id").and_then(|v| v.as_i64()).unwrap_or(0)))
+}
+
+fn guest_sync_delimited(args: &Value) -> Result<Value, String> {
+    QGA_DELIMITED_RESPONSE.set(true);
+    Ok(json!(args.get("id").and_then(|v| v.as_i64()).unwrap_or(0)))
+}
+
 fn guest_info() -> Value {
+    // KubeVirt probes guest-info.version and rejects non-semver strings; report a current
+    // qemu-ga release while GuestKit identity lives in guest-get-osinfo / JSON-RPC metadata.
     json!({
-        "version": format!("guestkit-{VERSION}"),
+        "version": "6.2.0",
         "supported_commands": [
             "guest-ping",
+            "guest-sync",
+            "guest-sync-delimited",
             "guest-info",
             "guest-get-osinfo",
             "guest-get-fsinfo",
