@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Comprehensive Phase 3 API testing with a fake Fedora-like disk image
 //!
 //! This test creates a minimal Fedora-like disk image and exercises all

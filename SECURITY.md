@@ -290,9 +290,9 @@ We strive to:
 
 ### License Compatibility
 
-GuestKit is licensed under LGPL-3.0-or-later, ensuring:
+GuestKit is licensed under Apache-2.0 by ZyvorAI Labs Private Limited, ensuring:
 - Security fixes can be shared
-- Modifications must be disclosed
+- Modifications carry Apache 2.0 terms when redistributed
 - Commercial use is permitted
 
 ### Standards

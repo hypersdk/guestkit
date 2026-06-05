@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Issues view - Aggregated security findings and recommendations
 
 use crate::cli::profiles::RiskLevel;

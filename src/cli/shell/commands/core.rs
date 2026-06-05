@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Basic shell commands: ls, cat, cd, pwd, find, grep, info, mounts, help, tree
 
 use anyhow::Result;

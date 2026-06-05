@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! LVM cloning operations for host logical volumes
 //!
 //! This module provides LVM-based cloning of logical volumes on the **host**,

@@ -599,5 +599,5 @@ All formats supported via qemu-img wrapper
 ---
 
 **Version:** 0.1.0
-**License:** LGPL-3.0-or-later
-**Author:** ZyvorAI Labs Private Limited <ssahani@redhat.com>
+**License:** Apache-2.0  
+**Owner:** ZyvorAI Labs Private Limited <info@zyvor.dev>

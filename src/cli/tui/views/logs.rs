@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Interactive logs viewer with filtering
 
 use crate::cli::tui::app::App;

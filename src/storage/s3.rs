@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! S3 disk source (downloads to temp file via AWS CLI).
 
 use super::local::LocalDiskSource;

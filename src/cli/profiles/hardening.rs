@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! System Hardening Profile
 //!
 //! Provides actionable security hardening recommendations with remediation steps

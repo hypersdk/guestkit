@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Network and hostname operations for disk image manipulation
 //!
 //! This implementation provides network configuration access.

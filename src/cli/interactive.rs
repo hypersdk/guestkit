@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Interactive REPL mode for guestkit CLI
 
 use super::errors::builders as errors;

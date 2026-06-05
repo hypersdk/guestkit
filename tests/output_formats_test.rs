@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Tests for JSON/YAML/CSV output formats
 //!
 //! These tests verify output format functionality via the CLI interface

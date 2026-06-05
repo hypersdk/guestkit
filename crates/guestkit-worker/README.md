@@ -279,4 +279,4 @@ Worker emits structured logs:
 
 ## License
 
-LGPL-3.0-or-later
+Apache-2.0

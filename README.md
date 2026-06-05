@@ -8,7 +8,7 @@
   <a href="https://crates.io/crates/guestkit"><img src="https://img.shields.io/crates/v/guestkit.svg" alt="Crates.io"></a>
   <a href="https://pypi.org/project/hypersdk-guestkit/"><img src="https://img.shields.io/pypi/v/hypersdk-guestkit.svg" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/rust-1.70%2B-orange.svg" alt="Rust 1.70+">
-  <a href="https://www.gnu.org/licenses/lgpl-3.0"><img src="https://img.shields.io/badge/License-LGPL_v3-blue.svg" alt="LGPL-3.0"></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="Apache-2.0"></a>
 </p>
 
 <p align="center">
@@ -222,10 +222,11 @@ cargo test && cargo clippy && cargo fmt
 
 | Document | What it covers |
 |----------|----------------|
-| [LICENSE](LICENSE) | **LGPL-3.0-or-later** — GuestKit **source code** (use, modify, distribute under LGPL) |
+| [LICENSE](LICENSE) | **Apache-2.0** — GuestKit **source code** (copyright **ZyvorAI Labs Private Limited**) |
+| [NOTICE](NOTICE) | Copyright and attribution for Apache 2.0 distributions |
 | [ZYVOR-COMPANY-TERMS.md](ZYVOR-COMPANY-TERMS.md) | **Zyvor** brand, binaries, and zyvor.dev distribution — accept on deploy/install |
 
-**LGPL** allows commercial use; derivative works of GuestKit must remain open under LGPL.
+**Apache 2.0** is permissive with a patent grant. **ZyvorAI Labs Private Limited** owns GuestKit.
 
 **Zyvor company terms** apply when you use Zyvor-built customer bundles or `./scripts/deploy-remote.sh` / `./scripts/package-binary-remote.sh` (type `ACCEPT` or set `GUESTKIT_ZYVOR_ACCEPT=1`). Enterprise: [sales@zyvor.dev](mailto:sales@zyvor.dev) · General: [info@zyvor.dev](mailto:info@zyvor.dev).
 

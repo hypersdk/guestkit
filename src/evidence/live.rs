@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Live evidence collection from a running guest (no guestfs).
 
 use super::snapshot::*;

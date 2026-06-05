@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Performance validation framework for guestkit
 //!
 //! This module provides a framework for validating performance improvements

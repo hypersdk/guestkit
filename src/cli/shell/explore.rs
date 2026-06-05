@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Interactive explore command for visual filesystem navigation
 
 use anyhow::{Context, Result};

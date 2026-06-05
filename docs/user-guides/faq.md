@@ -551,24 +551,24 @@ sudo guestkit inspect vm.qcow2
 
 ### What license is guestkit under?
 
-**LGPL-3.0-or-later** (GNU Lesser General Public License v3.0 or later)
+**Apache-2.0** (Apache License, Version 2.0)  
+**Copyright owner:** ZyvorAI Labs Private Limited
 
 **What this means:**
 - ✅ Free to use commercially
-- ✅ Can link dynamically in proprietary software
+- ✅ Permissive use in proprietary software
 - ✅ Can modify for internal use
-- ⚠️ Must share modifications if distributing
-- ⚠️ Must preserve license notices
+- ⚠️ Must preserve license notices and NOTICE file in redistributions
+- ⚠️ Patent grant applies to contributions
 
 ### Can I use guestkit in commercial products?
 
-**Yes!** LGPL allows commercial use.
+**Yes!** Apache 2.0 allows commercial use.
 
 **Requirements:**
-- Include LGPL license text
-- Credit guestkit project
-- If you modify guestkit itself, share modifications
-- If you just use guestkit as library, no source sharing required
+- Include Apache 2.0 license text and NOTICE (if provided)
+- Credit GuestKit and ZyvorAI Labs Private Limited
+- Preserve copyright and license notices in redistributions
 
 ### Is there commercial support?
 

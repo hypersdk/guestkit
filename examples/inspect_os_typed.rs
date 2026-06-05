@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example: OS inspection with type-safe enums
 //!
 //! This example shows how to use the new type-safe OS detection enums

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Navigation and bookmarks: alias, unalias, bookmark, goto, stats, recent, history_enhanced
 
 use anyhow::Result;
