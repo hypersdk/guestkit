@@ -46,5 +46,6 @@ pub fn open(device_path: &str) -> Result<FramedTransport> {
             inner: file.try_clone()?,
         }),
         writer: Box::new(DeviceIo { inner: file }),
+        line_framing: false,
     })
 }
