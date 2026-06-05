@@ -4,7 +4,7 @@
 use anyhow::{Context, Result};
 use guestkit_agent_protocol::{read_line, write_line, JsonRpcResponse};
 use serde_json::Value;
-use std::io::{BufReader, Write};
+use std::io::BufReader;
 use std::os::unix::net::UnixStream;
 
 /// Invoke one GuestKit JSON-RPC method on the agent socket and return the parsed response.
