@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example: Using retry logic
 
 use guestkit::core::retry::{retry_with_backoff, RetryConfig};

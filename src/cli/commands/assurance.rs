@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Migration assurance CLI commands (doctor, policy, fleet, migrate-plan, forensic diff).
 
 use crate::boot::{analyze_bootability, BootTarget};

@@ -1,6 +1,6 @@
 # Zyvor company terms — GuestKit distribution
 
-**Supplemental agreement — does not replace [LICENSE](LICENSE) (LGPL-3.0-or-later).**
+**Supplemental agreement — does not replace [LICENSE](LICENSE) (Apache-2.0).**
 
 **Company:** ZyvorAI Labs Private Limited · [zyvor.dev](https://zyvor.dev)  
 **Product:** GuestKit (community edition)  
@@ -12,16 +12,16 @@
 
 | Layer | Governs |
 |-------|---------|
-| **[LICENSE](LICENSE)** | GuestKit **source code** — GNU LGPL v3.0 or later |
+| **[LICENSE](LICENSE)** | GuestKit **source code** — Apache License 2.0 (copyright ZyvorAI Labs Private Limited) |
 | **This document** | Use of **Zyvor-branded** builds, binaries, documentation, and distribution from zyvor.dev |
 
-You must comply with **both**. If they conflict on software freedom, **LGPL controls the GuestKit source code**. This document adds obligations for **brand, distribution, and commercial relationship** with Zyvor.
+You must comply with **both**. If they conflict on software freedom, **Apache 2.0 controls the GuestKit source code**. This document adds obligations for **brand, distribution, and commercial relationship** with Zyvor.
 
 ## 2. Acceptance
 
 By downloading, building, deploying, installing, or using GuestKit binaries or customer bundles from Zyvor (including `./scripts/deploy-remote.sh`, `./scripts/package-binary-remote.sh`, or `./install.sh`), you agree to these Company Terms.
 
-If you do not agree, do not use Zyvor-distributed builds. You may still use GuestKit source under LGPL subject to that license alone.
+If you do not agree, do not use Zyvor-distributed builds. You may still use GuestKit source under Apache 2.0 subject to that license alone.
 
 ## 3. Company identity
 
@@ -40,7 +40,7 @@ See [docs/legal/TRADEMARK-NOTICE.md](docs/legal/TRADEMARK-NOTICE.md).
 
 ## 5. Distribution and enterprise
 
-- **Crates.io / PyPI / GitHub** releases may be under LGPL; Zyvor-hosted **customer tarballs** and **enterprise** offerings may include additional terms on an Order Form.
+- **Crates.io / PyPI / GitHub** releases are under Apache 2.0; Zyvor-hosted **customer tarballs** and **enterprise** offerings may include additional terms on an Order Form.
 - Offering GuestKit as a **managed service** or **white-label product** to third parties requires written permission from Zyvor (legal@zyvor.dev).
 - **Enterprise** features and support are described in [docs/zyvor-enterprise.md](docs/zyvor-enterprise.md).
 

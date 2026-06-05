@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! CLI entry (`guestkit` / `guestctl`).
 
 use crate::cli::commands::*;
@@ -3136,7 +3136,8 @@ pub fn run() -> anyhow::Result<()> {
             println!("A modern VM disk inspection and manipulation toolkit");
             println!();
             println!("Project: https://github.com/ssahani/guestkit");
-            println!("License: LGPL-3.0-or-later");
+            println!("License: Apache-2.0");
+            println!("Copyright: ZyvorAI Labs Private Limited");
         }
 
         Commands::CommandCatalog => {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Windows Registry parsing using nt_hive2
 //!
 //! This module provides pure Rust parsing of Windows registry hive files.

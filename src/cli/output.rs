@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Output formatting utilities for CLI
 
 use owo_colors::OwoColorize;

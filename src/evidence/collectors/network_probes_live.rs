@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! DNS and reachability probes for KubeVirt / VMRogue bootstrap validation.
 
 use crate::evidence::snapshot::NetworkProbeEvidence;

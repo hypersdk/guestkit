@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Universal fstab/crypttab rewriter for VM migration
 //!
 //! This module provides deterministic rewriting of /etc/fstab and /etc/crypttab

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Industry benchmark policies (CIS, NIST, etc.)
 
 use super::policy::{Policy, PolicyRule, RuleType};

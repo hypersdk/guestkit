@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Tool functions that the AI can call to inspect VMs
 
 use crate::Guestfs;

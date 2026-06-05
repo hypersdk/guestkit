@@ -341,7 +341,7 @@ How has this been tested?
 1. **Create the module file**: `src/guestfs/newmodule.rs`
 
 ```rust
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Brief module description
 //!
 //! Detailed module documentation
@@ -449,4 +449,4 @@ Err(Error::InvalidInput(format!("Invalid device: {}", device)))
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the LGPL-3.0-or-later license.
+By contributing, you agree that your contributions will be licensed under the Apache-2.0 license and that ZyvorAI Labs Private Limited may include them in GuestKit.

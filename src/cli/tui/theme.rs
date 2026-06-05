@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Carbon control-plane palette with restrained orange accents (Zellij / k9s inspired).
 
 use super::app::App;

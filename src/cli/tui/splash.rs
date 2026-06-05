@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Splash screen — carbon surfaces, orange accent, Zyvor branding.
 
 use crate::cli::tui::config::UiConfig;

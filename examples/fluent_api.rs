@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example demonstrating the ergonomic, ergonomic GuestKit API
 //!
 //! This example shows how to use the new builder patterns, type-safe enums,

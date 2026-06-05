@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Fix plan generation and application module
 //!
 //! This module provides offline patch & fix preview capabilities:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example: Disk forensics and analysis
 //!
 //! This example demonstrates forensic analysis of a disk image:

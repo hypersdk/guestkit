@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! TUI Configuration system
 //!
 //! Loads and saves user preferences from ~/.config/guestkit/tui.toml

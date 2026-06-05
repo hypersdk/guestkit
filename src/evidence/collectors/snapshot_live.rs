@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Snapshot / backup quiesce readiness from a live guest.
 
 use crate::evidence::snapshot::SnapshotReadinessEvidence;

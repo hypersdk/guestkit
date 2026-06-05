@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! JSON-RPC request dispatch for the in-guest agent.
 
 use crate::VERSION;

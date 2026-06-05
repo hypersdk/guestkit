@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Normalized evidence snapshot — digital twin primitive for migration assurance.
 
 pub mod builder;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Mock VM disk generator for performance testing
 //!
 //! This module provides utilities to generate mock disk images with various

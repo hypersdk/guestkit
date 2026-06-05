@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example: Create a disk image using the ergonomic fluent API
 //!
 //! This example demonstrates the new type-safe, fluent API for creating

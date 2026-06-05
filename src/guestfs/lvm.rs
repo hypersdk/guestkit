@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! LVM (Logical Volume Manager) operations for disk image manipulation
 //!
 //! This implementation uses LVM command-line tools (lvm2 package).

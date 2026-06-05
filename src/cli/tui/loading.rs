@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Progressive inspection loading stages for the TUI.
 
 /// Stages executed one per tick so the UI can render between steps.

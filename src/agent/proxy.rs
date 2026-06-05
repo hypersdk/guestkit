@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Host-side proxy: libvirt unix socket ↔ optional HTTP bridge.
 
 use crate::agent::handler::RequestHandler;

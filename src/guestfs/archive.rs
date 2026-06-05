@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Archive operations (tar, tgz, cpio)
 //!
 //! This implementation uses system tar command with mounted filesystems.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! cloud-init first-boot status from a live guest.
 
 use crate::evidence::snapshot::CloudInitEvidence;

@@ -16,8 +16,8 @@ mkdir -p "${STAGE}/docs/legal" "${STAGE}/legal/templates"
 if [[ -f "${ROOT}/LICENSE" ]]; then
   cp "${ROOT}/LICENSE" "${STAGE}/LICENSE"
 fi
-if [[ -f "${ROOT}/LICENSE.txt" ]]; then
-  cp "${ROOT}/LICENSE.txt" "${STAGE}/LICENSE.txt"
+if [[ -f "${ROOT}/NOTICE" ]]; then
+  cp "${ROOT}/NOTICE" "${STAGE}/NOTICE"
 fi
 
 if [[ ! -f "${STAGE}/LICENSE" && ! -f "${STAGE}/LICENSE.txt" ]]; then
@@ -63,7 +63,7 @@ fi
   echo "https://zyvor.dev · sales@zyvor.dev · info@zyvor.dev · legal@zyvor.dev"
   echo ""
   echo "FILES:"
-  [[ -f "${STAGE}/LICENSE" ]] && echo "  LICENSE              — software license"
+  [[ -f "${STAGE}/NOTICE" ]] && echo "  NOTICE               — copyright attribution (Apache 2.0)"
   [[ -f "${STAGE}/LICENSE.txt" ]] && echo "  LICENSE.txt          — software license"
   [[ -f "${STAGE}/ZYVOR-COMPANY-TERMS.md" ]] && echo "  ZYVOR-COMPANY-TERMS.md — Zyvor distribution (accept before install)"
   echo "  legal/ docs/legal/   — company reference"

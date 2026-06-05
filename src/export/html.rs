@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! HTML export functionality with Chart.js visualizations
 //!
 //! This module generates interactive HTML reports with charts and graphs

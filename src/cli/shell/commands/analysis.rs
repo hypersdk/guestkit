@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Analysis and inspection commands: dashboard, summary, scan, compare, profile,
 //! recommend, discover, timeline, bench, inspect, context, insights, doctor,
 //! predict, chart, compliance, score, query, monitor, troubleshoot, depends,

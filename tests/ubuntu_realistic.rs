@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Realistic Ubuntu disk image testing
 //!
 //! This test creates production-quality Ubuntu disk images with:

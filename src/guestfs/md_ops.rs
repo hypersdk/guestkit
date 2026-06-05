@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! MD/RAID operations for disk image manipulation
 //!
 //! This implementation provides software RAID management functionality.

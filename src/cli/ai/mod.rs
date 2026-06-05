@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! AI-powered VM diagnostics and assistance
 //!
 //! This module is only available when the 'ai' feature is enabled.

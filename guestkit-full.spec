@@ -5,7 +5,7 @@ Version:        0.3.6
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
-License:        LGPL-3.0-or-later
+License:        Apache-2.0
 URL:            https://github.com/hypersdk/guestkit
 Source0:        %{name}-%{version}.tar.gz
 

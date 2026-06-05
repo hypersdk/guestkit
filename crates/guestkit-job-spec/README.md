@@ -136,4 +136,4 @@ See the [examples/jobs](../../examples/jobs/) directory for complete examples:
 
 ## License
 
-LGPL-3.0-or-later
+Apache-2.0

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Event handling module
 //!
 //! Note: Currently unused but available for future async event handling.

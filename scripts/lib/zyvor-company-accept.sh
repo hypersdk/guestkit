@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Require acceptance of ZYVOR-COMPANY-TERMS.md (GuestKit — does not replace LGPL LICENSE).
+# Require acceptance of ZYVOR-COMPANY-TERMS.md (GuestKit — does not replace Apache LICENSE).
 # shellcheck shell=bash
 
 zyvor_terms_file() {
@@ -60,7 +60,8 @@ with open(path, "w") as f:
         "acceptedAt": ts,
         "acceptedBy": actor,
         "product": "GuestKit",
-        "codeLicense": "LGPL-3.0-or-later",
+        "codeLicense": "Apache-2.0",
+        "copyrightOwner": "ZyvorAI Labs Private Limited",
         "company": "ZyvorAI Labs Private Limited",
         "brand": "zyvor.dev",
         "contact": "info@zyvor.dev",
@@ -80,14 +81,14 @@ zyvor_terms_show_summary() {
     echo "═══════════════════════════════════════════════════════════════"
     echo "  GuestKit — Zyvor company terms (zyvor.dev)"
     echo "═══════════════════════════════════════════════════════════════"
-    echo "  GuestKit SOURCE: LGPL-3.0-or-later — see LICENSE"
+    echo "  GuestKit SOURCE: Apache-2.0 — see LICENSE (ZyvorAI Labs Private Limited)"
     echo "  Zyvor DISTRIBUTION: ${terms_file}"
     echo ""
     sed -n '1,22p' "$terms_file" | sed 's/^/  /'
     echo "  ..."
     echo ""
     echo "  Type ACCEPT to agree to Zyvor company terms for this distribution."
-    echo "  (LGPL still applies to GuestKit source code.)"
+    echo "  (Apache 2.0 still applies to GuestKit source code.)"
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
 }
@@ -113,7 +114,7 @@ require_zyvor_company_accept() {
 
     if [ ! -t 0 ] || [ ! -t 1 ]; then
         echo "ERROR: Zyvor company terms not accepted." >&2
-        echo "  Read: ${terms_file} and LICENSE (LGPL)" >&2
+        echo "  Read: ${terms_file} and LICENSE (Apache 2.0)" >&2
         echo "  Then run interactively and type ACCEPT, or:" >&2
         echo "    export GUESTKIT_ZYVOR_ACCEPT=1" >&2
         exit 1

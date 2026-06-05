@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Basic integration tests for guestkit
 //!
 //! These tests create real disk images and perform operations on them.

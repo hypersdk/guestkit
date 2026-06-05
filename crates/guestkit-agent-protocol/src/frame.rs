@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Length-prefixed frame encoding/decoding.
 
 use crate::error::AgentError;

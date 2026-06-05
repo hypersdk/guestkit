@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Guest OS detection using pure Rust
 //!
 //! This module implements guest OS detection without external dependencies

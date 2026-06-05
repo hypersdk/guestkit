@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Example: Inspect a VM disk image
 //!
 //! This demonstrates OS detection and inspection capabilities.

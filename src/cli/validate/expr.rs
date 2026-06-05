@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Expression-based policy evaluation over evidence snapshots.
 
 use crate::evidence::EvidenceSnapshot;

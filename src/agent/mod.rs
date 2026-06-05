@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! In-guest agent daemon and host-side proxy.
 
 pub mod agent_call;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! Security and SELinux operations for disk image manipulation
 //!
 //! This implementation provides security context access.

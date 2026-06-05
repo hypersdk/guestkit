@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: Apache-2.0
 //! # guestkit
 //!
 //! A Guest VM toolkit for disk inspection and manipulation.
