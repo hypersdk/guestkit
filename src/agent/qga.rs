@@ -72,6 +72,11 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
         "guest-exec-status" => guest_exec_status(&args),
         "guest-shutdown" => guest_shutdown(&args),
         "guest-reboot" => guest_reboot(),
+        "guestkit-get-evidence" => guestkit_get_evidence(),
+        "guestkit-doctor" => guestkit_doctor(&args),
+        "guestkit-get-capabilities" => guestkit_get_capabilities(),
+        "guestkit-get-version" => guestkit_get_version(),
+        "guestkit-run-fix-plan" => guestkit_run_fix_plan(&args),
         "guest-suspend-disk" | "guest-suspend-ram" | "guest-suspend-hybrid" => {
             Ok(json!({}))
         }
@@ -139,7 +144,12 @@ fn guest_info() -> Value {
             "guest-exec",
             "guest-exec-status",
             "guest-shutdown",
-            "guest-reboot"
+            "guest-reboot",
+            "guestkit-get-evidence",
+            "guestkit-doctor",
+            "guestkit-get-capabilities",
+            "guestkit-get-version",
+            "guestkit-run-fix-plan"
         ],
         "supported_events": []
     })
@@ -560,6 +570,59 @@ fn guest_reboot() -> Result<Value, String> {
         .or_else(|_| Command::new("reboot").spawn())
         .map_err(|e| format!("reboot: {e}"))?;
     Ok(json!({}))
+}
+
+fn guestkit_get_evidence() -> Result<Value, String> {
+    crate::evidence::build_evidence_live()
+        .and_then(|evidence| {
+            serde_json::to_value(evidence).map_err(|e| format!("serialize evidence: {e}"))
+        })
+}
+
+fn guestkit_doctor(args: &Value) -> Result<Value, String> {
+    let target = args
+        .get("target")
+        .and_then(|v| v.as_str())
+        .unwrap_or("kvm");
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let boot_target = crate::boot::BootTarget::parse(target);
+    let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
+    Ok(json!({
+        "evidence": evidence,
+        "boot_report": boot_report,
+    }))
+}
+
+fn guestkit_get_capabilities() -> Result<Value, String> {
+    let caps = guestkit_agent_protocol::AgentCapabilities::standard(crate::VERSION);
+    serde_json::to_value(caps).map_err(|e| format!("serialize capabilities: {e}"))
+}
+
+fn guestkit_get_version() -> Result<Value, String> {
+    Ok(json!({
+        "version": crate::VERSION,
+        "protocol": guestkit_agent_protocol::PROTOCOL_VERSION,
+    }))
+}
+
+fn guestkit_run_fix_plan(args: &Value) -> Result<Value, String> {
+    let plan_value = args
+        .get("plan")
+        .cloned()
+        .ok_or_else(|| "missing required argument: plan".to_string())?;
+    let plan: crate::cli::plan::FixPlan =
+        serde_json::from_value(plan_value).map_err(|e| format!("invalid plan: {e}"))?;
+    let dry_run = args
+        .get("dry_run")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let executor = crate::cli::plan::LivePlanExecutor::new(dry_run);
+    let result = executor.apply(&plan).map_err(|e| e.to_string())?;
+    Ok(json!({
+        "plan_id": format!("{}-{}", plan.vm.replace('/', "_"), plan.generated.timestamp()),
+        "dry_run": dry_run,
+        "result": result,
+    }))
 }
 
 #[cfg(test)]
