@@ -2,11 +2,15 @@
 //! One-shot JSON-RPC call to a guest agent unix socket (host-side).
 
 use anyhow::{Context, Result};
-use guestkit_agent_protocol::{read_frame, write_frame, JsonRpcResponse};
+use guestkit_agent_protocol::{read_line, write_line, JsonRpcResponse};
 use serde_json::Value;
+use std::io::{BufReader, Write};
 use std::os::unix::net::UnixStream;
 
 /// Invoke one GuestKit JSON-RPC method on the agent socket and return the parsed response.
+///
+/// Libvirt/KubeVirt expose the guest agent channel as a unix socket with newline-delimited
+/// JSON frames (same as QGA over virtio-serial), not length-prefixed JSON-RPC.
 pub fn call_agent_socket(socket_path: &str, method: &str, params: Value) -> Result<Value> {
     let mut stream = UnixStream::connect(socket_path)
         .with_context(|| format!("connect to agent socket {socket_path}"))?;
@@ -19,8 +23,10 @@ pub fn call_agent_socket(socket_path: &str, method: &str, params: Value) -> Resu
         "params": params,
         "id": 1
     });
-    write_frame(&mut stream, &serde_json::to_vec(&req)?)?;
-    let frame = read_frame(&mut stream).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let payload = serde_json::to_vec(&req)?;
+    write_line(&mut stream, &payload).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let mut reader = BufReader::new(stream);
+    let frame = read_line(&mut reader).map_err(|e| anyhow::anyhow!("{e}"))?;
     let resp: JsonRpcResponse = serde_json::from_slice(&frame).context("parse agent response")?;
     if let Some(err) = resp.error {
         anyhow::bail!("agent RPC error {}: {}", err.code, err.message);
