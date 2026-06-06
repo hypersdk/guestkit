@@ -44,6 +44,12 @@ build_and_import() {
   (cd /tmp && "${BUILDER}" save "${name}:latest" -o "${tar}")
   echo "Importing ${name} into k3s..."
   sudo "${K3S_BIN}" ctr -n k8s.io images import "${tar}"
+  # k3s resolves unqualified image names to docker.io/library/<name>
+  local base="${name%%:*}"
+  local tag="${name##*:}"
+  sudo "${K3S_BIN}" ctr -n k8s.io images tag "localhost/${name}" "docker.io/library/${base}:${tag}" 2>/dev/null \
+    || sudo "${K3S_BIN}" ctr -n k8s.io images tag "${name}" "docker.io/library/${base}:${tag}" 2>/dev/null \
+    || true
   rm -f "${tar}"
 }
 
