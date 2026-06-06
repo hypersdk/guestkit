@@ -23,6 +23,8 @@ const state = {
   wizardChain: false,
   wizard: { step: 'ingest', completed: new Set() },
   vmCache: {},
+  lastBriefing: null,
+  lastJobId: null,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -550,11 +552,171 @@ function renderSummary(data, action) {
     setScore(null, 'failed');
   }
 
+  renderChecksHeatmap(boot?.checks);
+  renderCopilot(payload?.copilot, payload);
+
   if (!content.innerHTML) {
     ph.classList.remove('hidden');
     content.classList.add('hidden');
     ph.textContent = 'Run an action to see results.';
   }
+}
+
+function renderChecksHeatmap(checks) {
+  const el = $('#checksHeatmap');
+  if (!checks?.length) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  el.classList.remove('hidden');
+  el.innerHTML = '<p class="checks-label">Boot checks</p><div class="checks-grid">' + checks.map((c) => {
+    const cls = c.passed ? 'pass' : (c.severity === 'Blocker' || c.severity === 'blocker' ? 'fail' : 'warn');
+    return `<span class="check-cell ${cls}" title="${escapeHtml(c.message)}">${escapeHtml(c.id)}</span>`;
+  }).join('') + '</div>';
+}
+
+function readinessClass(r) {
+  return { ready: 'ok', caution: 'warn', blocked: 'err', high_risk: 'err' }[r] || '';
+}
+
+function renderCopilot(briefing, payload) {
+  const tab = $('#copilotTab');
+  const ph = $('#copilotPlaceholder');
+  const brief = $('#copilotBrief');
+  const chips = $('#copilotChips');
+  const mini = $('#copilotMini');
+
+  if (!briefing) {
+    tab.classList.add('hidden');
+    ph.classList.remove('hidden');
+    brief.classList.add('hidden');
+    chips.innerHTML = '';
+    mini.classList.add('hidden');
+    state.lastBriefing = null;
+    $('#copilotBanner').classList.add('hidden');
+    return;
+  }
+
+  state.lastBriefing = briefing;
+  tab.classList.remove('hidden');
+  ph.classList.add('hidden');
+  brief.classList.remove('hidden');
+
+  const digest = briefing.evidence_digest || payload?.evidence_digest;
+  brief.innerHTML = `
+    <div class="copilot-head row">
+      <span class="readiness-pill ${readinessClass(briefing.readiness)}">${escapeHtml(briefing.readiness)}</span>
+      <span class="copilot-score">${Math.round(briefing.boot_score)} boot${briefing.migration_score != null ? ` · ${Math.round(briefing.migration_score)} migrate` : ''}</span>
+    </div>
+    <h3 class="copilot-headline">${escapeHtml(briefing.headline)}</h3>
+    <p class="copilot-summary">${escapeHtml(briefing.summary)}</p>
+    ${digest ? `<p class="copilot-digest mono">${escapeHtml(digest.os)} · ${escapeHtml(digest.architecture)} · ${escapeHtml(digest.bootloader)}</p>` : ''}
+    ${(briefing.evidence_highlights || []).map((h) => `
+      <div class="evidence-highlight">
+        <span class="evidence-ref">${escapeHtml(h.ref)}</span>
+        <strong>${escapeHtml(h.label)}</strong>
+        <p>${escapeHtml(h.detail)}</p>
+      </div>
+    `).join('')}
+    ${(briefing.recommended_actions || []).slice(0, 3).map((a) => `
+      <button type="button" class="copilot-action" data-workflow="${escapeHtml(a.workflow)}">
+        <span class="copilot-action-pri">#${a.priority}</span>
+        <span><strong>${escapeHtml(a.title)}</strong><br>${escapeHtml(a.detail)}</span>
+      </button>
+    `).join('')}
+  `;
+
+  brief.querySelectorAll('.copilot-action').forEach((btn) => {
+    btn.addEventListener('click', () => runAction(btn.dataset.workflow));
+  });
+
+  chips.innerHTML = '';
+  (briefing.insights || []).forEach((ins) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'copilot-chip';
+    chip.textContent = ins.question;
+    chip.addEventListener('click', () => appendCopilotMessage(ins.question, ins.answer));
+    chips.appendChild(chip);
+  });
+
+  mini.classList.remove('hidden');
+  $('#copilotMiniHeadline').textContent = briefing.headline;
+  const pill = $('#copilotReadiness');
+  pill.textContent = briefing.readiness;
+  pill.className = `readiness-pill ${readinessClass(briefing.readiness)}`;
+
+  showCopilotBanner(briefing);
+}
+
+function showCopilotBanner(briefing) {
+  const banner = $('#copilotBanner');
+  const action = briefing.recommended_actions?.[0];
+  $('#copilotBannerTitle').textContent = briefing.headline;
+  $('#copilotBannerMsg').textContent = action
+    ? `${action.title} — ${action.detail}`
+    : briefing.summary;
+  const btn = $('#copilotBannerAction');
+  btn.textContent = workflowLabel(briefing.next_workflow);
+  btn.dataset.action = briefing.next_workflow;
+  banner.classList.remove('hidden');
+}
+
+function workflowLabel(wf) {
+  return { 'repair-plan': 'Run Repair', 'migration-plan': 'Run Migrate', provision: 'Generate YAML', doctor: 'Run Doctor' }[wf] || 'Next step';
+}
+
+function appendCopilotMessage(question, answer, fromUser = true) {
+  const chat = $('#copilotChat');
+  if (fromUser) {
+    const u = document.createElement('div');
+    u.className = 'copilot-msg user';
+    u.textContent = question;
+    chat.appendChild(u);
+  }
+  const a = document.createElement('div');
+  a.className = 'copilot-msg assistant';
+  a.innerHTML = escapeHtml(answer).replace(/\n/g, '<br>');
+  chat.appendChild(a);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function answerCopilotLocal(question) {
+  const b = state.lastBriefing;
+  if (!b?.insights?.length) return { answer: 'Run Doctor first to build a migration briefing.' };
+
+  const q = question.toLowerCase();
+  let id = 'boot_score';
+  if (q.includes('block') || q.includes('stop')) id = 'blockers';
+  else if (q.includes('fix') || q.includes('first')) id = 'fix_first';
+  else if (q.includes('ready') || q.includes('proceed')) id = 'ready';
+  else if (q.includes('evidence') || q.includes('proof')) id = 'evidence';
+  else if (q.includes('change') || q.includes('driver')) id = 'migration_changes';
+
+  const ins = b.insights.find((i) => i.id === id) || b.insights[0];
+  return { answer: ins.answer };
+}
+
+async function askCopilot(question) {
+  appendCopilotMessage(question, '', true);
+
+  if (state.lastJobId && state.selectedVm) {
+    try {
+      const data = await api(`/vms/${state.selectedVm.id}/copilot/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, job_id: state.lastJobId }),
+      });
+      appendCopilotMessage(question, data.data.insight.answer, false);
+      return;
+    } catch {
+      /* fall through to local */
+    }
+  }
+
+  const { answer } = answerCopilotLocal(question);
+  appendCopilotMessage(question, answer, false);
 }
 
 function tryParse(s) {
@@ -581,8 +743,13 @@ function showYaml(yaml) {
 function setActiveTab(name) {
   $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   $$('.tab-pane').forEach((p) => p.classList.remove('active'));
-  const pane = name === 'summary' ? '#pane-summary' : name === 'yaml' ? '#pane-yaml' : '#pane-raw';
-  document.querySelector(pane)?.classList.add('active');
+  const map = {
+    summary: '#pane-summary',
+    copilot: '#pane-copilot',
+    yaml: '#pane-yaml',
+    raw: '#pane-raw',
+  };
+  document.querySelector(map[name] || '#pane-raw')?.classList.add('active');
 }
 
 function onJobComplete(action, data) {
@@ -616,6 +783,11 @@ function onJobComplete(action, data) {
 
   updateVmCache(vm.id, patch);
   updateWizardFooter();
+
+  if (payload?.copilot && (action === 'doctor' || action === 'migration-plan')) {
+    setActiveTab('copilot');
+    feed('Migration <strong>Copilot</strong> briefing ready', 'ok');
+  }
 }
 
 function pollJob(jobId, action) {
@@ -714,6 +886,7 @@ async function runAction(action) {
 
     const jobId = data?.data?.job_id;
     if (jobId) {
+      state.lastJobId = jobId;
       showJobTracker(action, jobId);
       toast('Job queued', 'ok');
       return await pollJob(jobId, action);
@@ -753,6 +926,23 @@ async function runWizardChain() {
   } finally {
     state.wizardChain = false;
   }
+}
+
+function setupCopilot() {
+  $('#copilotForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('#copilotInput');
+    const q = input.value.trim();
+    if (!q) return;
+    input.value = '';
+    setActiveTab('copilot');
+    askCopilot(q);
+  });
+
+  $('#copilotBannerAction').addEventListener('click', (e) => {
+    const action = e.currentTarget.dataset.action;
+    if (action) runAction(action);
+  });
 }
 
 function setupWizard() {
@@ -841,6 +1031,7 @@ async function init() {
   setupDropzone();
   setupGlassToggle();
   setupWizard();
+  setupCopilot();
   setupActions();
   setDockEnabled(false);
   setWizardStep('ingest');
