@@ -23,10 +23,13 @@ RUN cargo build --release --manifest-path crates/guestkit-worker/Cargo.toml --bi
 # Runtime stage
 FROM debian:bookworm-slim
 
-# Install runtime dependencies
+# Install runtime dependencies (loop/NBD disk access for assurance ops)
 RUN apt-get update && apt-get install -y \
     qemu-utils \
     kmod \
+    util-linux \
+    parted \
+    e2fsprogs \
     libssl3 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -44,17 +47,13 @@ RUN mkdir -p /var/lib/guestkit/jobs \
 # Copy binary
 COPY --from=builder /build/crates/guestkit-worker/target/release/guestkit-worker /usr/local/bin/
 
-# Switch to worker user
-USER worker
-WORKDIR /home/worker
+# Run as root for privileged NBD/guestfs operations in Kubernetes
+WORKDIR /var/lib/guestkit
 
-# Expose directories as volumes
-VOLUME ["/var/lib/guestkit/jobs", "/var/lib/guestkit/results"]
+VOLUME ["/var/lib/guestkit/jobs", "/var/lib/guestkit/results", "/var/lib/zyvor/images"]
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD pgrep -f guestkit-worker || exit 1
 
-# Default command
 ENTRYPOINT ["/usr/local/bin/guestkit-worker"]
-CMD ["--jobs-dir", "/var/lib/guestkit/jobs", "--results-dir", "/var/lib/guestkit/results"]
+CMD ["daemon", "--transport", "redis", "--results-dir", "/var/lib/guestkit/results"]

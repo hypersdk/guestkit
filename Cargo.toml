@@ -1,3 +1,7 @@
+# Standalone workspace — avoids joining a parent Cargo workspace when deployed
+# under e.g. ~/.deployments/guestkit next to machina.
+[workspace]
+
 [package]
 name = "guestkit"
 version = "0.3.6"

@@ -2,6 +2,8 @@
 
 Deploy the guestkit distributed worker system to Kubernetes.
 
+> **Production:** Use the Helm chart at [`deploy/helm/zyvor/`](../deploy/helm/zyvor/) for the full Zyvor VM Services stack (API, UI, Redis, PostgreSQL, MinIO). This DaemonSet is intended for local development and file-based job submission.
+
 ## Prerequisites
 
 - Kubernetes cluster (k3d, minikube, or production cluster)

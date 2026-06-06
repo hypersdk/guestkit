@@ -43,6 +43,7 @@
 //! - `fixers` - Guest OS repair operations
 //! - `cli` - Command-line interface
 
+pub mod assurance;
 pub mod boot;
 pub mod cli;
 pub mod converters;
@@ -69,7 +70,11 @@ pub mod python;
 pub mod agent;
 
 // Re-exports for convenience
-pub use boot::BootabilityReport;
+pub use assurance::{
+    boot_target_from_str, collect_assurance_data, run_doctor, run_migrate_plan, run_repair_plan,
+    DoctorResult, MigratePlanOptions, MigrationPlanResult, RepairOptions, RepairPlanResult,
+};
+pub use boot::{BootTarget, BootabilityReport};
 pub use converters::DiskConverter;
 pub use core::types::*;
 pub use core::{Error, Result, RetryConfig};

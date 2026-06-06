@@ -4,4 +4,7 @@ pub mod echo;
 pub mod guestkit;
 
 pub use echo::EchoHandler;
-pub use guestkit::{AgentEvidenceHandler, AgentFixHandler, InspectHandler, ProfileHandler};
+pub use guestkit::{
+    AgentEvidenceHandler, AgentFixHandler, DoctorHandler, InspectHandler, MigratePlanHandler,
+    ProfileHandler, RepairHandler,
+};

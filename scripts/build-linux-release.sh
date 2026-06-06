@@ -36,7 +36,6 @@ build_in_tree() {
     fi
 }
 
-prepare_cargo_target
 if in_foreign_workspace; then
     echo "  Parent workspace detected — isolated build"
     ISOLATED="$(mktemp -d)"

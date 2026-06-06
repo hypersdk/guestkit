@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::config::Config;
+use redis::aio::ConnectionManager;
+use sqlx::PgPool;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: PgPool,
+    pub redis: ConnectionManager,
+    pub config: Config,
+}

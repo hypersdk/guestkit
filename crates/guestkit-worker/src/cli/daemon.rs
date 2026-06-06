@@ -4,9 +4,13 @@ use anyhow::Result;
 use std::sync::Arc;
 use crate::{
     Worker, WorkerConfig, HandlerRegistry,
-    handlers::{AgentEvidenceHandler, AgentFixHandler, EchoHandler, InspectHandler, ProfileHandler},
+    handlers::{
+        AgentEvidenceHandler, AgentFixHandler, DoctorHandler, EchoHandler, InspectHandler,
+        MigratePlanHandler, ProfileHandler, RepairHandler,
+    },
     transport::file::{FileTransport, FileTransportConfig},
     transport::http::{HttpTransport, HttpTransportConfig},
+    transport::redis::{RedisTransport, RedisTransportConfig},
     capabilities::Capabilities,
     metrics::MetricsRegistry,
     metrics_server::{MetricsServer, MetricsServerConfig},
@@ -47,6 +51,9 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     // Register guestkit operation handlers
     registry.register(Arc::new(InspectHandler::new()));
     registry.register(Arc::new(ProfileHandler::new()));
+    registry.register(Arc::new(DoctorHandler));
+    registry.register(Arc::new(MigratePlanHandler));
+    registry.register(Arc::new(RepairHandler));
     registry.register(Arc::new(AgentEvidenceHandler));
     registry.register(Arc::new(AgentFixHandler));
 
@@ -59,6 +66,9 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
         .with_operation("test.echo")
         .with_operation("guestkit.inspect")
         .with_operation("guestkit.profile")
+        .with_operation("guestkit.doctor")
+        .with_operation("guestkit.migrate-plan")
+        .with_operation("guestkit.repair")
         .with_operation("guestkit.agent.evidence")
         .with_operation("guestkit.agent.fix")
         .with_feature("rust")
@@ -95,6 +105,29 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
 
     // Setup transport and API server based on mode
     match args.transport.as_str() {
+        "redis" => {
+            log::info!("Using Redis Streams transport");
+
+            let redis_config = RedisTransportConfig {
+                redis_url: args.redis_url.clone(),
+                consumer_name: config.worker_id.clone(),
+                result_dir: args.results_dir.clone(),
+                block_ms: 2000,
+            };
+
+            let redis_transport = RedisTransport::new(redis_config).await?;
+
+            let mut worker = Worker::new(
+                config,
+                capabilities,
+                registry,
+                Box::new(redis_transport),
+            )?;
+
+            worker.with_metrics(metrics);
+            log::info!("Worker ready, waiting for jobs on Redis stream...");
+            worker.run().await?;
+        }
         "http" => {
             log::info!("Using HTTP transport with REST API");
 

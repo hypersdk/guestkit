@@ -1,0 +1,67 @@
+namespace: zyvor
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    ui: console.zyvor.local
+    api: api.zyvor.local
+
+networkPolicy:
+  enabled: true
+
+guestkitWorker:
+  image: guestkit-worker:latest
+  replicas: 2
+  transport: redis
+  privileged: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 8Gi
+
+zyvorApi:
+  image: zyvor-api:latest
+  replicas: 1
+  storageClass: longhorn
+  defaultNamespace: zyvor
+  privileged: false
+  service:
+    type: ClusterIP
+    nodePort: 30080
+
+zyvorUi:
+  image: zyvor-ui:latest
+  replicas: 1
+  service:
+    type: ClusterIP
+    nodePort: 30081
+
+postgresql:
+  image: postgres:16-alpine
+  user: zyvor
+  password: zyvor
+  database: zyvor
+
+redis:
+  image: redis:7-alpine
+
+minio:
+  enabled: true
+  image: minio/minio:latest
+  accessKey: zyvor
+  secretKey: zyvor-secret
+
+persistence:
+  vmImages:
+    size: 100Gi
+    storageClass: longhorn
+    accessMode: ReadWriteOnce
+    # Set hostPath on single-node k3s (shared API + worker image store)
+    hostPath: ""
+
+kubevirt:
+  enabled: false

@@ -9,6 +9,7 @@ use crate::evidence::EvidenceSnapshot;
 pub enum BootTarget {
     Generic,
     Kvm,
+    KubeVirt,
     Proxmox,
     HyperV,
     Cloud,
@@ -18,6 +19,7 @@ impl BootTarget {
     pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "kvm" | "qemu" => Self::Kvm,
+            "kubevirt" => Self::KubeVirt,
             "proxmox" => Self::Proxmox,
             "hyperv" | "hyper-v" => Self::HyperV,
             "cloud" | "aws" | "azure" | "gcp" => Self::Cloud,
@@ -28,9 +30,10 @@ impl BootTarget {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Generic => "generic",
-            Self::Kvm => "KVM",
-            Self::Proxmox => "Proxmox",
-            Self::HyperV => "Hyper-V",
+            Self::Kvm => "kvm",
+            Self::KubeVirt => "kubevirt",
+            Self::Proxmox => "proxmox",
+            Self::HyperV => "hyper-v",
             Self::Cloud => "cloud",
         }
     }
