@@ -224,7 +224,7 @@ impl BootCheck for VirtioReadinessCheck {
         15.0
     }
     fn run(&self, evidence: &EvidenceSnapshot, target: &str) -> CheckResult {
-        if !matches!(target, "kvm" | "proxmox" | "qemu") {
+        if !matches!(target, "kvm" | "proxmox" | "qemu" | "kubevirt") {
             return CheckResult {
                 id: self.id().to_string(),
                 name: self.name().to_string(),
@@ -281,7 +281,7 @@ impl BootCheck for NicRenameCheck {
         5.0
     }
     fn run(&self, evidence: &EvidenceSnapshot, target: &str) -> CheckResult {
-        if !matches!(target, "kvm" | "proxmox" | "cloud") {
+        if !matches!(target, "kvm" | "proxmox" | "cloud" | "kubevirt") {
             return CheckResult {
                 id: self.id().to_string(),
                 name: self.name().to_string(),
@@ -387,7 +387,7 @@ impl BootCheck for VmToolsRemnantsCheck {
         7.0
     }
     fn run(&self, evidence: &EvidenceSnapshot, target: &str) -> CheckResult {
-        if !matches!(target, "kvm" | "proxmox") {
+        if !matches!(target, "kvm" | "proxmox" | "kubevirt") {
             return CheckResult {
                 id: self.id().to_string(),
                 name: self.name().to_string(),

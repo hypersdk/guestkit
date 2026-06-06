@@ -6,9 +6,11 @@ use crate::error::WorkerResult;
 
 pub mod file;
 pub mod http;
+pub mod redis;
 
 pub use file::FileTransport;
 pub use http::HttpTransport;
+pub use redis::{enqueue_job, RedisTransport, RedisTransportConfig, CONSUMER_GROUP, JOBS_STREAM};
 
 /// Job transport trait - defines how jobs are received and acknowledged
 #[async_trait]

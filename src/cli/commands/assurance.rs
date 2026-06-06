@@ -1,40 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Migration assurance CLI commands (doctor, policy, fleet, migrate-plan, forensic diff).
 
-use crate::boot::{analyze_bootability, BootTarget};
-use crate::evidence::build_evidence;
+use crate::assurance::{
+    MigratePlanOptions, RepairOptions, run_doctor, run_migrate_plan, run_repair_plan,
+};
+use crate::boot::BootTarget;
 use crate::fleet::analyze_fleet;
-use crate::inference::infer_root_cause;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use std::path::{Path, PathBuf};
 
 use super::{init_guestfs_ro, mount_all_ro, validate_command};
 
-/// Shared helper: mount guestfs and collect evidence + boot report.
-pub fn collect_assurance_data(
-    image: &Path,
-    target: BootTarget,
-    verbose: bool,
-) -> Result<(
-    crate::evidence::EvidenceSnapshot,
-    crate::boot::BootabilityReport,
-)> {
-    let resolved = crate::storage::resolve_to_local_path(
-        image
-            .to_str()
-            .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
-    )
-    .unwrap_or_else(|_| image.to_path_buf());
-
-    let mut g = init_guestfs_ro(&resolved, verbose)?;
-    let root = mount_all_ro(&mut g).context("No operating system found in disk image")?;
-
-    let evidence = build_evidence(&mut g, &root, &resolved)?;
-    let boot_report = analyze_bootability(&evidence, target);
-    let _ = g.shutdown();
-    Ok((evidence, boot_report))
-}
+pub use crate::assurance::collect_assurance_data;
 
 /// Bootability prediction: `guestkit doctor`
 pub fn doctor_command(
@@ -47,26 +25,13 @@ pub fn doctor_command(
     use crate::core::ProgressReporter;
 
     let progress = ProgressReporter::spinner("Analyzing bootability...");
-    let boot_target = BootTarget::parse(target);
-    let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
-
-    // Cache evidence snapshot
-    if let Ok(cache) = crate::cli::cache::EvidenceCache::new() {
-        let _ = cache.store(image, &evidence);
-    }
-
+    let result = run_doctor(image, target, explain, verbose)?;
     progress.finish_and_clear();
 
+    let boot_report = &result.bootability;
+
     if output_format == "json" {
-        let mut out = serde_json::json!({
-            "bootability": boot_report,
-            "evidence_schema": evidence.schema_version,
-        });
-        if explain {
-            let root_cause = infer_root_cause(&evidence, &boot_report);
-            out["root_cause"] = serde_json::to_value(&root_cause)?;
-        }
-        println!("{}", serde_json::to_string_pretty(&out)?);
+        println!("{}", serde_json::to_string_pretty(&result)?);
         return Ok(());
     }
 
@@ -112,8 +77,7 @@ pub fn doctor_command(
         println!("  {} [{}] {}", icon, check.id, check.message);
     }
 
-    if explain {
-        let root_cause = infer_root_cause(&evidence, &boot_report);
+    if let Some(root_cause) = &result.root_cause {
         println!();
         println!("{}", "Root Cause Analysis".bold().cyan());
         println!("  {}", root_cause.summary.yellow());
@@ -302,46 +266,36 @@ fn migrate_plan_command_impl(
     #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
     #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
 ) -> Result<()> {
-    let boot_target = match target.to_lowercase().as_str() {
-        "proxmox" | "kvm" | "qemu" => BootTarget::Proxmox,
-        "hyperv" | "hyper-v" => BootTarget::HyperV,
-        "aws" | "azure" | "gcp" | "cloud" => BootTarget::Cloud,
-        _ => BootTarget::Kvm,
+    let mut options = MigratePlanOptions {
+        explain,
+        verbose,
+        export_fix_plan: export.is_some(),
+        inject_agent,
+        ..Default::default()
     };
+    #[cfg(feature = "agent")]
+    if let Some((agent_binary, agent_unit)) = agent_paths {
+        options.agent_binary = agent_binary.map(|p| p.to_path_buf());
+        options.agent_unit = agent_unit.map(|p| p.to_path_buf());
+    }
 
-    let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
-    let migration_score =
-        crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
+    let result = run_migrate_plan(image, target, &options)?;
+    let migration_score = &result.migration_score;
+    let boot_report = &result.bootability;
 
     if let Some(export_path) = export {
-        use crate::cli::plan::{PlanExporter, PlanGenerator};
+        use crate::cli::plan::PlanExporter;
         use std::fs;
 
-        let generator = PlanGenerator::new(image.display().to_string());
-        #[cfg(feature = "agent")]
-        let mut plan =
-            generator.from_migration_report(&migration_score, &boot_report, target, image)?;
-        #[cfg(not(feature = "agent"))]
-        let plan =
-            generator.from_migration_report(&migration_score, &boot_report, target, image)?;
-
-        #[cfg(feature = "agent")]
-        if inject_agent {
-            let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
-            let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
-            let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
-            crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
-        }
-
-        #[cfg(not(feature = "agent"))]
-        if inject_agent {
-            anyhow::bail!("--inject-agent requires rebuilding guestkit with --features agent");
-        }
+        let plan = result
+            .fix_plan
+            .as_ref()
+            .context("fix plan not generated")?;
 
         let content = if export_path.extension().is_some_and(|e| e == "json") {
-            PlanExporter::to_json(&plan)?
+            PlanExporter::to_json(plan)?
         } else {
-            PlanExporter::to_yaml(&plan)?
+            PlanExporter::to_yaml(plan)?
         };
         fs::write(export_path, content)
             .with_context(|| format!("Failed to write fix plan to {}", export_path.display()))?;
@@ -357,19 +311,7 @@ fn migrate_plan_command_impl(
     }
 
     if output_format == "json" {
-        let mut out = serde_json::json!({
-            "target": target,
-            "migration_score": migration_score.score,
-            "bootability": boot_report,
-            "driver_injections": migration_score.driver_injections,
-            "required_changes": migration_score.required_changes,
-            "licensing_warnings": migration_score.licensing_warnings,
-            "estimated_downtime_minutes": migration_score.estimated_downtime_minutes,
-        });
-        if explain {
-            out["root_cause"] = serde_json::to_value(infer_root_cause(&evidence, &boot_report))?;
-        }
-        println!("{}", serde_json::to_string_pretty(&out)?);
+        println!("{}", serde_json::to_string_pretty(&result)?);
         return Ok(());
     }
 
@@ -406,8 +348,7 @@ fn migrate_plan_command_impl(
         }
     }
 
-    if explain {
-        let rc = infer_root_cause(&evidence, &boot_report);
+    if let Some(rc) = &result.root_cause {
         println!();
         println!("  {}", rc.summary);
     }
@@ -507,90 +448,45 @@ fn repair_boot_command_impl(
     #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
     #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
 ) -> Result<()> {
-    use crate::cli::plan::{PlanApplicator, PlanGenerator};
+    let mut options = RepairOptions {
+        dry_run,
+        verbose,
+        inject_agent,
+        ..Default::default()
+    };
+    #[cfg(feature = "agent")]
+    if let Some((agent_binary, agent_unit)) = agent_paths {
+        options.agent_binary = agent_binary.map(|p| p.to_path_buf());
+        options.agent_unit = agent_unit.map(|p| p.to_path_buf());
+    }
 
-    let (_, boot_report) = collect_assurance_data(image, BootTarget::Kvm, verbose)?;
+    let result = run_repair_plan(image, &options)?;
 
-    let has_boot_issues = !boot_report.blockers.is_empty() || !boot_report.warnings.is_empty();
-
-    if !has_boot_issues && !inject_agent {
-        println!("{}", "No boot issues detected — nothing to repair.".green());
+    if !result.applied && result.fix_plan.operations.is_empty() {
+        println!("{}", result.message.green());
         return Ok(());
     }
 
-    if has_boot_issues {
+    if dry_run {
         println!("{}", "Boot Repair Plan".bold().cyan());
-        for b in boot_report
-            .blockers
-            .iter()
-            .chain(boot_report.warnings.iter())
-        {
-            println!("  • [{}] {}", b.check_id, b.title);
+        for op in &result.fix_plan.operations {
+            println!("  → {}: {}", op.id, op.description);
         }
+        println!();
+        println!("{}", result.message.yellow());
+        return Ok(());
+    }
 
-        let generator = PlanGenerator::new(image.display().to_string());
-        #[cfg(feature = "agent")]
-        let mut plan = generator.from_boot_report(&boot_report, image)?;
-        #[cfg(not(feature = "agent"))]
-        let plan = generator.from_boot_report(&boot_report, image)?;
-
-        #[cfg(feature = "agent")]
-        if inject_agent {
-            let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
-            let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
-            let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
-            crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
-        }
-
-        if dry_run {
-            println!();
-            println!("{}", "Dry run — no changes applied.".yellow());
-            for op in &plan.operations {
-                println!("  → {}: {}", op.id, op.description);
+    if result.applied {
+        println!("{}", result.message.green());
+        if let (before, Some(after)) = (result.before_score, result.after_score) {
+            if after < before {
+                println!(
+                    "{}",
+                    "Warning: boot score decreased after repair — review changes".yellow()
+                );
             }
-            return Ok(());
         }
-
-        let before_score = boot_report.score;
-        let applicator = PlanApplicator::new(image.to_str().unwrap().to_string(), false);
-        let result = applicator.apply(&plan)?;
-
-        if !result.success {
-            anyhow::bail!("Repair failed: {}", result.message);
-        }
-
-        let (_, after_report) = collect_assurance_data(image, BootTarget::Kvm, verbose)?;
-        println!(
-            "{}",
-            format!(
-                "Repair complete. Boot score: {:.0}% → {:.0}%",
-                before_score, after_report.score
-            )
-            .green()
-        );
-
-        if after_report.score < before_score {
-            println!(
-                "{}",
-                "Warning: boot score decreased after repair — review changes".yellow()
-            );
-        }
-    } else if dry_run {
-        println!("{}", "Dry run — would inject GuestKit agent only.".yellow());
-    }
-
-    #[cfg(feature = "agent")]
-    if inject_agent && !dry_run {
-        let (agent_binary, agent_unit) = agent_paths.unwrap_or((None, None));
-        let binary = crate::agent::inject::resolve_agent_binary(agent_binary)?;
-        let unit = crate::agent::inject::resolve_agent_unit(agent_unit)?;
-        crate::agent::inject::inject_agent_into_image(image, &binary, &unit, false, verbose)?;
-        println!("{}", "GuestKit agent injected.".green());
-    }
-
-    #[cfg(not(feature = "agent"))]
-    if inject_agent {
-        anyhow::bail!("--inject-agent requires rebuilding guestkit with --features agent");
     }
 
     Ok(())

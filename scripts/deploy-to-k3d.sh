@@ -67,6 +67,9 @@ if [ -n "$POD" ]; then
 fi
 
 echo
+echo "For full Zyvor stack (API, UI, Redis, Postgres), use:"
+echo "  ./deploy/scripts/kind-kubevirt-quickstart.sh"
+echo
 echo "✅ Deployment complete!"
 echo
 echo "To check logs:"

@@ -84,9 +84,13 @@ pub struct DaemonArgs {
     #[arg(long, default_value = "0.0.0.0:8080")]
     pub api_addr: String,
 
-    /// Transport mode: file or http
+    /// Transport mode: file, http, or redis
     #[arg(long, default_value = "file")]
     pub transport: String,
+
+    /// Redis URL (redis transport)
+    #[arg(long, env = "QUEUE_URL", default_value = "redis://127.0.0.1:6379")]
+    pub redis_url: String,
 }
 
 /// Submit command arguments

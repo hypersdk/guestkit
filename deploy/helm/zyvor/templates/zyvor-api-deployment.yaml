@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zyvor-api
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.zyvorApi.replicas }}
+  selector:
+    matchLabels:
+      app: zyvor-api
+  template:
+    metadata:
+      labels:
+        app: zyvor-api
+    spec:
+      containers:
+        - name: zyvor-api
+          image: {{ .Values.zyvorApi.image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: {{ .Values.zyvorApi.privileged }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: BIND_ADDR
+              value: "0.0.0.0:8080"
+            - name: DATABASE_URL
+              value: postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql:5432/{{ .Values.postgresql.database }}
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: STORAGE_PATH
+              value: /var/lib/zyvor/images
+            - name: STORAGE_PUBLIC_URL
+              value: http://minio:9000/vm-images
+            - name: STORAGE_CLASS
+              value: {{ .Values.zyvorApi.storageClass }}
+            - name: DEFAULT_NAMESPACE
+              value: {{ .Values.zyvorApi.defaultNamespace }}
+          volumeMounts:
+            {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "zyvor.vmVolume" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zyvor-api
+  namespace: {{ .Values.namespace }}
+spec:
+  type: {{ .Values.zyvorApi.service.type }}
+  selector:
+    app: zyvor-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      {{- if eq .Values.zyvorApi.service.type "NodePort" }}
+      nodePort: {{ .Values.zyvorApi.service.nodePort }}
+      {{- end }}
