@@ -3,6 +3,7 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml /build/
 COPY crates/guestkit-job-spec /build/crates/guestkit-job-spec
+COPY crates/guestkit-agent-protocol /build/crates/guestkit-agent-protocol
 COPY crates/zyvor-api /build/crates/zyvor-api
 COPY src /build/src
 RUN cargo build --release --manifest-path crates/zyvor-api/Cargo.toml
