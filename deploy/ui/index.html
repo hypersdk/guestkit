@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zyvor</title>
+  <title>Zyvor — VM Migration Control</title>
+  <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -18,8 +19,10 @@
   <!-- Transparent menu bar (macOS 26) -->
   <header class="menubar glass" role="banner">
     <div class="menubar-left">
-      <span class="menubar-logo" aria-hidden="true">◆</span>
-      <span class="menubar-title">Zyvor</span>
+      <a class="menubar-brand" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="Zyvor AI Labs">
+        <img class="menubar-logo" src="img/zavor-logo.webp" width="120" height="40" alt="Zyvor" />
+      </a>
+      <span class="menubar-title">Migration</span>
       <nav class="menubar-menu" aria-label="View">
         <button type="button" class="menubar-item" data-goto="ingest">File</button>
         <button type="button" class="menubar-item" data-goto="assure">Assure</button>
@@ -79,6 +82,14 @@
           <option value="proxmox">proxmox</option>
           <option value="generic">generic</option>
         </select>
+        <div class="brand-foot">
+          <p class="brand-copy">© ZyvorAI Labs</p>
+          <a class="brand-link" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">zyvor.dev</a>
+          <div class="brand-contacts">
+            <a href="mailto:sales@zyvor.dev">sales@zyvor.dev</a>
+            <a href="mailto:legal@zyvor.dev">legal@zyvor.dev</a>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -174,6 +185,7 @@
               <div class="output-pane glass">
                 <div class="output-tabs">
                   <button type="button" class="tab active" data-tab="summary">Summary</button>
+                  <button type="button" class="tab hidden" data-tab="copilot" id="copilotTab">Copilot</button>
                   <button type="button" class="tab" data-tab="raw">JSON</button>
                   <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">YAML</button>
                 </div>
@@ -181,6 +193,17 @@
                   <div class="tab-pane active" id="pane-summary">
                     <p class="placeholder" id="summaryPlaceholder">Run an action to see results.</p>
                     <div id="summaryContent" class="summary-content hidden"></div>
+                    <div id="checksHeatmap" class="checks-heatmap hidden"></div>
+                  </div>
+                  <div class="tab-pane" id="pane-copilot">
+                    <div class="copilot-brief glass-inset hidden" id="copilotBrief"></div>
+                    <p class="placeholder" id="copilotPlaceholder">Run Doctor with explain to unlock Migration Copilot.</p>
+                    <div class="copilot-chips" id="copilotChips"></div>
+                    <div class="copilot-chat" id="copilotChat"></div>
+                    <form class="copilot-input-row" id="copilotForm">
+                      <input type="text" id="copilotInput" placeholder="Ask about blockers, fixes, readiness…" autocomplete="off" />
+                      <button type="submit" class="btn primary sm">Ask</button>
+                    </form>
                   </div>
                   <pre class="tab-pane code" id="pane-raw"><code id="rawJson">{}</code></pre>
                   <pre class="tab-pane code hidden" id="pane-yaml"><code id="yamlContent"></code></pre>
@@ -188,6 +211,15 @@
               </div>
             </div>
           </section>
+        </div>
+
+        <div class="copilot-banner glass-inset hidden" id="copilotBanner">
+          <span class="copilot-banner-icon" aria-hidden="true">✦</span>
+          <div class="copilot-banner-text">
+            <strong id="copilotBannerTitle">Copilot insight</strong>
+            <p id="copilotBannerMsg"></p>
+          </div>
+          <button type="button" class="btn glass sm" id="copilotBannerAction">Next step</button>
         </div>
 
         <div class="wizard-footer glass-inset" id="wizardFooter">
@@ -215,6 +247,11 @@
         <div class="job-bar"><div class="job-bar-fill" id="jobBar"></div></div>
         <p class="job-id mono" id="jobIdDisplay"></p>
         <button type="button" class="btn glass sm hidden" id="jobRetryBtn">Retry</button>
+      </div>
+      <div class="copilot-mini glass-inset hidden" id="copilotMini">
+        <p class="sidebar-label">Copilot</p>
+        <p class="copilot-mini-headline" id="copilotMiniHeadline">—</p>
+        <span class="readiness-pill" id="copilotReadiness">—</span>
       </div>
       <ul class="activity-feed" id="activityFeed"></ul>
     </aside>
