@@ -372,6 +372,10 @@ pub struct JobResult {
     /// Observability metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub observability: Option<Observability>,
+
+    /// Handler result payload (doctor, migrate-plan, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
 }
 
 /// Job status

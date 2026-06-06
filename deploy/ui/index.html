@@ -22,7 +22,7 @@
       <span class="menubar-title">Zyvor</span>
       <nav class="menubar-menu" aria-label="View">
         <button type="button" class="menubar-item" data-goto="ingest">File</button>
-        <button type="button" class="menubar-item" data-goto="analyze">Assure</button>
+        <button type="button" class="menubar-item" data-goto="assure">Assure</button>
         <button type="button" class="menubar-item" data-goto="plan">Plan</button>
         <button type="button" class="menubar-item" data-goto="launch">Launch</button>
       </nav>
@@ -51,7 +51,7 @@
             </span>
             <span class="pipe-text"><span class="pipe-label">Ingest</span><span class="pipe-hint">Upload disk</span></span>
           </button>
-          <button type="button" class="pipe-step" data-step="analyze">
+          <button type="button" class="pipe-step" data-step="assure">
             <span class="pipe-icon" aria-hidden="true">
               <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm0 2a5 5 0 110 10A5 5 0 009 4zm-.5 2v5.4l4.2 2.4.8-1.4-3.5-2V6h-1.5z"/></svg>
             </span>
@@ -73,7 +73,12 @@
       </div>
       <div class="sidebar-section sidebar-foot">
         <p class="sidebar-label">Target</p>
-        <div class="target-chip">kubevirt</div>
+        <select class="target-select" id="targetSelect" aria-label="Migration target">
+          <option value="kubevirt" selected>kubevirt</option>
+          <option value="kvm">kvm</option>
+          <option value="proxmox">proxmox</option>
+          <option value="generic">generic</option>
+        </select>
       </div>
     </aside>
 
@@ -85,7 +90,12 @@
           <p class="window-subtitle">Assurance-first migration</p>
         </div>
 
-        <div class="panels">
+        <div class="wizard-bar glass-inset" id="wizardBar" aria-label="Migration wizard">
+          <div class="wizard-steps" id="wizardSteps"></div>
+          <p class="wizard-subtitle" id="wizardSubtitle">Step 1 of 4 — Upload disk</p>
+        </div>
+
+        <div class="panels" id="panels" data-wizard-step="ingest">
           <section class="panel glass-inset" id="panel-ingest" data-panel="ingest">
             <div class="panel-head">
               <h2>Ingest</h2>
@@ -108,7 +118,7 @@
             </div>
           </section>
 
-          <section class="panel glass-inset" id="panel-fleet" data-panel="analyze">
+          <section class="panel glass-inset" id="panel-fleet" data-panel="assure">
             <div class="panel-head row">
               <div><h2>Fleet</h2><p>Select a disk to run workflows.</p></div>
               <span class="badge" id="fleetCount">0 images</span>
@@ -121,7 +131,7 @@
             </div>
           </section>
 
-          <section class="panel glass-inset" id="panel-actions" data-panel="analyze plan launch">
+          <section class="panel glass-inset" id="panel-actions" data-panel="assure plan">
             <div class="panel-head">
               <h2 id="selectedVmTitle">Select a VM</h2>
               <p id="selectedVmMeta">Choose a fleet card to unlock actions.</p>
@@ -145,7 +155,7 @@
             </div>
           </section>
 
-          <section class="panel glass-inset wide" id="panel-results" data-panel="analyze plan launch">
+          <section class="panel glass-inset wide" id="panel-results" data-panel="assure plan launch">
             <div class="panel-head row">
               <div><h2>Output</h2><p>Live results & manifests.</p></div>
               <button type="button" class="btn glass sm hidden" id="copyYamlBtn">Copy YAML</button>
@@ -179,6 +189,15 @@
             </div>
           </section>
         </div>
+
+        <div class="wizard-footer glass-inset" id="wizardFooter">
+          <button type="button" class="btn glass sm" id="wizardBackBtn" disabled>Back</button>
+          <div class="wizard-footer-actions">
+            <button type="button" class="btn glass sm hidden" id="wizardActionBtn">Run Doctor</button>
+            <button type="button" class="btn glass sm accent hidden" id="wizardChainBtn">Full migration</button>
+            <button type="button" class="btn primary sm" id="wizardContinueBtn">Continue</button>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -195,6 +214,7 @@
         </div>
         <div class="job-bar"><div class="job-bar-fill" id="jobBar"></div></div>
         <p class="job-id mono" id="jobIdDisplay"></p>
+        <button type="button" class="btn glass sm hidden" id="jobRetryBtn">Retry</button>
       </div>
       <ul class="activity-feed" id="activityFeed"></ul>
     </aside>
@@ -206,6 +226,10 @@
       <span class="dock-icon">↓</span>
       <span class="dock-label">Ingest</span>
     </button>
+    <button type="button" class="dock-item" data-action="inspect" title="Inspect" disabled id="dockInspect">
+      <span class="dock-icon">⌕</span>
+      <span class="dock-label">Inspect</span>
+    </button>
     <button type="button" class="dock-item" data-action="doctor" title="Doctor" disabled id="dockDoctor">
       <span class="dock-icon">◉</span>
       <span class="dock-label">Doctor</span>
@@ -213,6 +237,10 @@
     <button type="button" class="dock-item" data-action="migration-plan" title="Plan" disabled id="dockPlan">
       <span class="dock-icon">◎</span>
       <span class="dock-label">Plan</span>
+    </button>
+    <button type="button" class="dock-item" data-action="repair-plan" title="Repair" disabled id="dockRepair">
+      <span class="dock-icon">⚙</span>
+      <span class="dock-label">Repair</span>
     </button>
     <button type="button" class="dock-item dock-launch" data-action="provision" title="Provision" disabled id="dockLaunch">
       <span class="dock-icon">✦</span>
