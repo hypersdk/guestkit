@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the entire workspace
 COPY crates/guestkit-job-spec /build/crates/guestkit-job-spec
+COPY crates/guestkit-agent-protocol /build/crates/guestkit-agent-protocol
 COPY crates/guestkit-worker /build/crates/guestkit-worker
 COPY src /build/src
 COPY benches /build/benches
