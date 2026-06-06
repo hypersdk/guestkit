@@ -7,6 +7,7 @@ COPY crates/guestkit-agent-protocol /build/crates/guestkit-agent-protocol
 COPY crates/zyvor-api /build/crates/zyvor-api
 COPY src /build/src
 COPY benches /build/benches
+COPY templates /build/templates
 RUN cargo build --release --manifest-path crates/zyvor-api/Cargo.toml
 
 FROM debian:bookworm-slim
