@@ -28,7 +28,6 @@ spec:
             - /var/lib/guestkit/results
             - --max-concurrent
             - "4"
-            - --no-api-enabled
           env:
             - name: QUEUE_URL
               value: redis://redis:6379
