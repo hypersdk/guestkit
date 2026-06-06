@@ -1,191 +1,194 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-glass="clear">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zyvor — Migration Observatory</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <title>Zyvor</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="aurora" aria-hidden="true"></div>
-  <div class="grid-bg" aria-hidden="true"></div>
+  <!-- Tahoe-style desktop wallpaper (shows through Liquid Glass) -->
+  <div class="wallpaper" aria-hidden="true">
+    <div class="wallpaper-blob b1"></div>
+    <div class="wallpaper-blob b2"></div>
+    <div class="wallpaper-blob b3"></div>
+    <div class="wallpaper-shine"></div>
+  </div>
 
-  <div class="app">
-    <aside class="rail" aria-label="Migration pipeline">
-      <div class="rail-brand">
-        <div class="logo-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" opacity=".35"/><path d="M8 20 L16 8 L24 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="3" fill="currentColor"/></svg>
-        </div>
-        <div>
-          <strong>Zyvor</strong>
-          <span>Observatory</span>
-        </div>
-      </div>
-      <nav class="pipeline" id="pipelineNav">
-        <button type="button" class="pipe-step active" data-step="ingest">
-          <span class="pipe-icon">01</span>
-          <span class="pipe-label">Ingest</span>
-          <span class="pipe-hint">Upload disk</span>
-        </button>
-        <button type="button" class="pipe-step" data-step="analyze">
-          <span class="pipe-icon">02</span>
-          <span class="pipe-label">Assure</span>
-          <span class="pipe-hint">Doctor & inspect</span>
-        </button>
-        <button type="button" class="pipe-step" data-step="plan">
-          <span class="pipe-icon">03</span>
-          <span class="pipe-label">Plan</span>
-          <span class="pipe-hint">Migration path</span>
-        </button>
-        <button type="button" class="pipe-step" data-step="launch">
-          <span class="pipe-icon">04</span>
-          <span class="pipe-label">Launch</span>
-          <span class="pipe-hint">KubeVirt YAML</span>
-        </button>
+  <!-- Transparent menu bar (macOS 26) -->
+  <header class="menubar glass" role="banner">
+    <div class="menubar-left">
+      <span class="menubar-logo" aria-hidden="true">◆</span>
+      <span class="menubar-title">Zyvor</span>
+      <nav class="menubar-menu" aria-label="View">
+        <button type="button" class="menubar-item" data-goto="ingest">File</button>
+        <button type="button" class="menubar-item" data-goto="analyze">Assure</button>
+        <button type="button" class="menubar-item" data-goto="plan">Plan</button>
+        <button type="button" class="menubar-item" data-goto="launch">Launch</button>
       </nav>
-      <div class="rail-footer">
-        <div class="target-pill">
-          <span class="pulse-dot" id="healthDot"></span>
-          <span id="healthLabel">Connecting…</span>
-        </div>
-        <p class="rail-tag">target · <strong>kubevirt</strong></p>
+    </div>
+    <div class="menubar-right">
+      <div class="segmented" role="group" aria-label="Glass appearance">
+        <button type="button" class="seg-btn active" data-glass-mode="clear" title="Clear glass">Clear</button>
+        <button type="button" class="seg-btn" data-glass-mode="tinted" title="Tinted glass">Tinted</button>
+      </div>
+      <button type="button" class="menubar-chip" id="refreshFleetBtn" title="Refresh fleet">
+        <span class="pulse-dot" id="healthDot"></span>
+        <span id="healthLabel">Connecting…</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="desktop">
+    <!-- Floating Liquid Glass sidebar -->
+    <aside class="sidebar glass floating" aria-label="Migration pipeline">
+      <div class="sidebar-section">
+        <p class="sidebar-label">Pipeline</p>
+        <nav class="pipeline" id="pipelineNav">
+          <button type="button" class="pipe-step active" data-step="ingest">
+            <span class="pipe-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 3l6 4v10H4V7l6-4zm0 2.2L6 8v8h8V8l-4-2.8z"/></svg>
+            </span>
+            <span class="pipe-text"><span class="pipe-label">Ingest</span><span class="pipe-hint">Upload disk</span></span>
+          </button>
+          <button type="button" class="pipe-step" data-step="analyze">
+            <span class="pipe-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm0 2a5 5 0 110 10A5 5 0 009 4zm-.5 2v5.4l4.2 2.4.8-1.4-3.5-2V6h-1.5z"/></svg>
+            </span>
+            <span class="pipe-text"><span class="pipe-label">Assure</span><span class="pipe-hint">Doctor & inspect</span></span>
+          </button>
+          <button type="button" class="pipe-step" data-step="plan">
+            <span class="pipe-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2H4V4zm0 5h8v2H4V9zm0 5h12v2H4v-2z"/></svg>
+            </span>
+            <span class="pipe-text"><span class="pipe-label">Plan</span><span class="pipe-hint">Migration path</span></span>
+          </button>
+          <button type="button" class="pipe-step" data-step="launch">
+            <span class="pipe-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l2.5 6H19l-5 4 2 6-6-4-6 4 2-6-5-4h6.5L10 2z"/></svg>
+            </span>
+            <span class="pipe-text"><span class="pipe-label">Launch</span><span class="pipe-hint">KubeVirt YAML</span></span>
+          </button>
+        </nav>
+      </div>
+      <div class="sidebar-section sidebar-foot">
+        <p class="sidebar-label">Target</p>
+        <div class="target-chip">kubevirt</div>
       </div>
     </aside>
 
-    <div class="workspace">
-      <header class="topbar">
-        <div>
-          <h1>Offline VM → KubeVirt</h1>
-          <p class="subtitle">Assurance-first migration control plane</p>
+    <main class="workspace">
+      <div class="window chrome glass floating">
+        <div class="window-toolbar">
+          <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h1 class="window-title">Offline VM → KubeVirt</h1>
+          <p class="window-subtitle">Assurance-first migration</p>
         </div>
-        <div class="topbar-actions">
-          <button type="button" class="btn ghost" id="refreshFleetBtn" title="Refresh fleet">↻ Fleet</button>
-        </div>
-      </header>
 
-      <main class="panels">
-        <!-- INGEST -->
-        <section class="panel active" id="panel-ingest" data-panel="ingest">
-          <div class="panel-head">
-            <h2>Ingest disk image</h2>
-            <p>Drop a qcow2, vmdk, or raw image — we stage it for offline intelligence.</p>
-          </div>
-          <div class="dropzone" id="dropzone">
-            <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
-            <div class="dropzone-inner">
-              <div class="drop-icon" aria-hidden="true">◎</div>
-              <p class="drop-title">Drop VM disk here</p>
-              <p class="drop-sub">or <button type="button" class="linkish" id="browseBtn">browse files</button></p>
-              <p class="drop-meta">Up to 50 GB · qcow2 · vmdk · raw</p>
+        <div class="panels">
+          <section class="panel glass-inset" id="panel-ingest" data-panel="ingest">
+            <div class="panel-head">
+              <h2>Ingest</h2>
+              <p>Drop a disk image — staged for offline intelligence.</p>
             </div>
-            <div class="drop-progress hidden" id="uploadProgress">
-              <div class="drop-progress-bar" id="uploadBar"></div>
-              <span id="uploadLabel">Uploading…</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- FLEET + ACTIONS -->
-        <section class="panel" id="panel-fleet" data-panel="analyze">
-          <div class="panel-head row">
-            <div>
-              <h2>VM fleet</h2>
-              <p>Select a disk to run assurance workflows.</p>
-            </div>
-            <span class="badge" id="fleetCount">0 images</span>
-          </div>
-          <div class="fleet-grid" id="fleetGrid">
-            <div class="fleet-empty" id="fleetEmpty">
-              <p>No disks ingested yet.</p>
-              <button type="button" class="btn primary sm" data-goto="ingest">Import first disk →</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel" id="panel-actions" data-panel="analyze plan launch">
-          <div class="panel-head">
-            <h2 id="selectedVmTitle">Select a VM</h2>
-            <p id="selectedVmMeta">Choose a fleet card to unlock assurance actions.</p>
-          </div>
-
-          <div class="action-deck" id="actionDeck">
-            <button type="button" class="action-card" data-action="inspect" disabled>
-              <span class="action-glyph">🔬</span>
-              <strong>Inspect</strong>
-              <span>OS, packages, services</span>
-            </button>
-            <button type="button" class="action-card accent" data-action="doctor" disabled>
-              <span class="action-glyph">🩺</span>
-              <strong>Doctor</strong>
-              <span>Bootability score</span>
-            </button>
-            <button type="button" class="action-card" data-action="migration-plan" disabled>
-              <span class="action-glyph">🗺️</span>
-              <strong>Migrate plan</strong>
-              <span>Driver & downtime</span>
-            </button>
-            <button type="button" class="action-card" data-action="repair-plan" disabled>
-              <span class="action-glyph">🔧</span>
-              <strong>Repair plan</strong>
-              <span>Dry-run fixes</span>
-            </button>
-            <button type="button" class="action-card launch" data-action="provision" disabled>
-              <span class="action-glyph">🚀</span>
-              <strong>Provision</strong>
-              <span>KubeVirt manifests</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- RESULTS -->
-        <section class="panel wide" id="panel-results" data-panel="analyze plan launch">
-          <div class="panel-head row">
-            <div>
-              <h2>Mission output</h2>
-              <p>Live job telemetry and structured results.</p>
-            </div>
-            <button type="button" class="btn ghost sm hidden" id="copyYamlBtn">Copy YAML</button>
-          </div>
-          <div class="results-layout">
-            <div class="score-ring-wrap hidden" id="scorePanel">
-              <svg class="score-ring" viewBox="0 0 120 120">
-                <circle class="ring-bg" cx="60" cy="60" r="52" />
-                <circle class="ring-fg" id="scoreRing" cx="60" cy="60" r="52" />
-              </svg>
-              <div class="score-center">
-                <span class="score-value" id="scoreValue">—</span>
-                <span class="score-label">boot score</span>
-              </div>
-            </div>
-            <div class="output-pane">
-              <div class="output-tabs">
-                <button type="button" class="tab active" data-tab="summary">Summary</button>
-                <button type="button" class="tab" data-tab="raw">Raw JSON</button>
-                <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">KubeVirt YAML</button>
-              </div>
-              <div class="output-body">
-                <div class="tab-pane active" id="pane-summary">
-                  <p class="placeholder" id="summaryPlaceholder">Run an action to see results here.</p>
-                  <div id="summaryContent" class="summary-content hidden"></div>
+            <div class="dropzone glass" id="dropzone">
+              <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
+              <div class="dropzone-inner">
+                <div class="drop-icon" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none"><path d="M24 8v20m0 0l-8-8m8 8l8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M12 36h24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
                 </div>
-                <pre class="tab-pane code" id="pane-raw"><code id="rawJson">{}</code></pre>
-                <pre class="tab-pane code hidden" id="pane-yaml"><code id="yamlContent"></code></pre>
+                <p class="drop-title">Drop VM disk here</p>
+                <p class="drop-sub">or <button type="button" class="linkish" id="browseBtn">choose file…</button></p>
+                <p class="drop-meta">qcow2 · vmdk · raw · up to 50 GB</p>
+              </div>
+              <div class="drop-progress hidden" id="uploadProgress">
+                <div class="drop-progress-bar" id="uploadBar"></div>
+                <span id="uploadLabel">Uploading…</span>
               </div>
             </div>
-          </div>
-        </section>
-      </main>
-    </div>
+          </section>
 
-    <aside class="telemetry" aria-label="Live activity">
-      <div class="telemetry-head">
-        <h3>Live feed</h3>
+          <section class="panel glass-inset" id="panel-fleet" data-panel="analyze">
+            <div class="panel-head row">
+              <div><h2>Fleet</h2><p>Select a disk to run workflows.</p></div>
+              <span class="badge" id="fleetCount">0 images</span>
+            </div>
+            <div class="fleet-grid" id="fleetGrid">
+              <div class="fleet-empty" id="fleetEmpty">
+                <p>No disks yet.</p>
+                <button type="button" class="btn primary sm" data-goto="ingest">Import disk</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel glass-inset" id="panel-actions" data-panel="analyze plan launch">
+            <div class="panel-head">
+              <h2 id="selectedVmTitle">Select a VM</h2>
+              <p id="selectedVmMeta">Choose a fleet card to unlock actions.</p>
+            </div>
+            <div class="action-deck" id="actionDeck">
+              <button type="button" class="action-card glass" data-action="inspect" disabled>
+                <strong>Inspect</strong><span>OS & services</span>
+              </button>
+              <button type="button" class="action-card glass accent" data-action="doctor" disabled>
+                <strong>Doctor</strong><span>Boot score</span>
+              </button>
+              <button type="button" class="action-card glass" data-action="migration-plan" disabled>
+                <strong>Migrate</strong><span>Plan & drivers</span>
+              </button>
+              <button type="button" class="action-card glass" data-action="repair-plan" disabled>
+                <strong>Repair</strong><span>Dry-run fixes</span>
+              </button>
+              <button type="button" class="action-card glass launch" data-action="provision" disabled>
+                <strong>Provision</strong><span>KubeVirt YAML</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="panel glass-inset wide" id="panel-results" data-panel="analyze plan launch">
+            <div class="panel-head row">
+              <div><h2>Output</h2><p>Live results & manifests.</p></div>
+              <button type="button" class="btn glass sm hidden" id="copyYamlBtn">Copy YAML</button>
+            </div>
+            <div class="results-layout">
+              <div class="score-ring-wrap glass hidden" id="scorePanel">
+                <svg class="score-ring" viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="52" />
+                  <circle class="ring-fg" id="scoreRing" cx="60" cy="60" r="52" />
+                </svg>
+                <div class="score-center">
+                  <span class="score-value" id="scoreValue">—</span>
+                  <span class="score-label">boot</span>
+                </div>
+              </div>
+              <div class="output-pane glass">
+                <div class="output-tabs">
+                  <button type="button" class="tab active" data-tab="summary">Summary</button>
+                  <button type="button" class="tab" data-tab="raw">JSON</button>
+                  <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">YAML</button>
+                </div>
+                <div class="output-body">
+                  <div class="tab-pane active" id="pane-summary">
+                    <p class="placeholder" id="summaryPlaceholder">Run an action to see results.</p>
+                    <div id="summaryContent" class="summary-content hidden"></div>
+                  </div>
+                  <pre class="tab-pane code" id="pane-raw"><code id="rawJson">{}</code></pre>
+                  <pre class="tab-pane code hidden" id="pane-yaml"><code id="yamlContent"></code></pre>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- Floating inspector (Liquid Glass sidebar) -->
+    <aside class="inspector glass floating" aria-label="Live activity">
+      <p class="sidebar-label">Live</p>
+      <div class="inspector-head">
         <span class="badge live" id="jobBadge">idle</span>
       </div>
-      <div class="job-tracker hidden" id="jobTracker">
+      <div class="job-tracker glass-inset hidden" id="jobTracker">
         <div class="job-meta">
           <span class="job-op" id="jobOp">—</span>
           <span class="job-status" id="jobStatus">pending</span>
@@ -197,8 +200,27 @@
     </aside>
   </div>
 
-  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <!-- macOS-style floating Dock -->
+  <nav class="dock glass" aria-label="Quick actions">
+    <button type="button" class="dock-item" data-goto="ingest" title="Ingest">
+      <span class="dock-icon">↓</span>
+      <span class="dock-label">Ingest</span>
+    </button>
+    <button type="button" class="dock-item" data-action="doctor" title="Doctor" disabled id="dockDoctor">
+      <span class="dock-icon">◉</span>
+      <span class="dock-label">Doctor</span>
+    </button>
+    <button type="button" class="dock-item" data-action="migration-plan" title="Plan" disabled id="dockPlan">
+      <span class="dock-icon">◎</span>
+      <span class="dock-label">Plan</span>
+    </button>
+    <button type="button" class="dock-item dock-launch" data-action="provision" title="Provision" disabled id="dockLaunch">
+      <span class="dock-icon">✦</span>
+      <span class="dock-label">Launch</span>
+    </button>
+  </nav>
 
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
