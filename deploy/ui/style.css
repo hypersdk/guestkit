@@ -318,6 +318,23 @@ html, body {
   border: 1px solid rgba(90, 200, 250, 0.25);
 }
 
+.target-select {
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.target-select:focus {
+  outline: none;
+  border-color: rgba(90, 200, 250, 0.45);
+}
+
 .pipeline {
   display: flex;
   flex-direction: column;
@@ -430,12 +447,104 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* ── Wizard bar ── */
+.wizard-bar {
+  margin: 0 1.15rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+}
+
+.wizard-steps {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wizard-step:hover:not(.locked) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.wizard-step.active {
+  background: rgba(90, 200, 250, 0.18);
+  border-color: rgba(90, 200, 250, 0.35);
+  color: var(--text);
+  box-shadow: 0 0 20px rgba(90, 200, 250, 0.15);
+}
+
+.wizard-step.done {
+  border-color: rgba(48, 209, 88, 0.35);
+  color: var(--success);
+}
+
+.wizard-step.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wizard-num {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.wizard-step.active .wizard-num { background: rgba(90, 200, 250, 0.3); }
+.wizard-step.done .wizard-num { background: rgba(48, 209, 88, 0.25); }
+
+.wizard-subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.wizard-footer {
+  margin: 0 1.15rem 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wizard-footer-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .panels {
   padding: 1rem 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
 }
+
+.panels[data-wizard-step="ingest"] .panel:not([data-panel~="ingest"]) { display: none; }
+.panels[data-wizard-step="assure"] .panel:not([data-panel~="assure"]) { display: none; }
+.panels[data-wizard-step="plan"] .panel:not([data-panel~="plan"]) { display: none; }
+.panels[data-wizard-step="launch"] .panel:not([data-panel~="launch"]) { display: none; }
 
 .panel {
   padding: 1.1rem 1.15rem;
@@ -620,6 +729,55 @@ html, body {
   border-radius: 5px;
   background: rgba(191, 90, 242, 0.2);
   color: #d8b4fe;
+}
+
+.vm-status {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.38rem;
+  border-radius: 5px;
+  margin-bottom: 0.35rem;
+}
+
+.vm-status.imported {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-tertiary);
+}
+
+.vm-status.analyzed {
+  background: rgba(90, 200, 250, 0.18);
+  color: var(--accent);
+}
+
+.vm-status.ready {
+  background: rgba(48, 209, 88, 0.18);
+  color: var(--success);
+}
+
+.vm-status.failed {
+  background: rgba(255, 69, 58, 0.18);
+  color: var(--danger);
+}
+
+.vm-score {
+  position: absolute;
+  bottom: 0.55rem;
+  right: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--accent);
+  background: rgba(90, 200, 250, 0.15);
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+}
+
+.finding .remediation {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 
 /* Action cards */
@@ -834,8 +992,14 @@ html, body {
 
 .job-bar-fill {
   height: 100%;
+  width: 8%;
   background: linear-gradient(90deg, var(--accent-system), var(--accent-2));
   animation: job-indeterminate 1.2s ease infinite;
+  transition: width 0.3s ease;
+}
+
+.job-bar-fill.progress {
+  animation: none;
 }
 
 @keyframes job-indeterminate {
@@ -848,6 +1012,9 @@ html, body {
 .job-bar-fill.fail { animation: none; width: 100% !important; margin-left: 0; background: var(--danger); }
 
 .job-id { margin: 0; font-size: 0.65rem; color: var(--text-tertiary); word-break: break-all; }
+
+#jobRetryBtn { margin-top: 0.5rem; width: 100%; }
+
 .mono { font-family: var(--mono); }
 
 .activity-feed {
@@ -965,6 +1132,14 @@ html, body {
 }
 
 .btn.primary:hover { filter: brightness(1.08); }
+
+.btn.accent {
+  background: rgba(191, 90, 242, 0.35);
+  color: #fff;
+  border: 1px solid rgba(191, 90, 242, 0.4);
+}
+
+.btn.accent:hover { background: rgba(191, 90, 242, 0.5); }
 
 .btn.glass {
   background: rgba(255, 255, 255, 0.1);
