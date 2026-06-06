@@ -9,7 +9,7 @@ set -euo pipefail
 
 ROOT="${ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 NAMESPACE="${NAMESPACE:-zyvor}"
-K3S_CTR="${K3S_CTR:-/usr/local/bin/k3s ctr}"
+K3S_BIN="${K3S_BIN:-/usr/local/bin/k3s}"
 BUILDER="${BUILDER:-podman}"
 
 cd "${ROOT}"
@@ -43,7 +43,7 @@ build_and_import() {
   rm -f "${tar}"
   (cd /tmp && "${BUILDER}" save "${name}:latest" -o "${tar}")
   echo "Importing ${name} into k3s..."
-  sudo "${K3S_CTR}" -n k8s.io images import "${tar}"
+  sudo "${K3S_BIN}" ctr -n k8s.io images import "${tar}"
   rm -f "${tar}"
 }
 
