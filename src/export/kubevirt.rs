@@ -438,6 +438,8 @@ mod tests {
             },
             root_cause: None,
             fix_plan: None,
+            evidence_digest: None,
+            copilot: None,
         }
     }
 

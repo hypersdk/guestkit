@@ -3,6 +3,13 @@
 //!
 //! Used by CLI, worker handlers, and zyvor-api. Does not write to stdout.
 
+mod copilot;
+
+pub use copilot::{
+    answer_copilot_question, build_evidence_digest, generate_briefing, CopilotAction,
+    CopilotInsight, EvidenceDigest, EvidenceHighlight, MigrationBriefing,
+};
+
 use crate::boot::{analyze_bootability, BootTarget, BootabilityReport};
 use crate::cli::migrate::plan::{compute_migration_score, MigrationScoreReport};
 use crate::cli::plan::{FixPlan, PlanGenerator};
@@ -56,6 +63,10 @@ pub struct DoctorResult {
     pub evidence_schema: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub root_cause: Option<RootCauseReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_digest: Option<EvidenceDigest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub copilot: Option<MigrationBriefing>,
 }
 
 /// Run bootability doctor on an offline disk image.
@@ -73,11 +84,27 @@ pub fn run_doctor(image: &Path, target: &str, explain: bool, verbose: bool) -> R
         None
     };
 
+    let (evidence_digest, copilot) = if explain {
+        let digest = build_evidence_digest(&evidence);
+        let briefing = generate_briefing(
+            target,
+            &boot_report,
+            None,
+            root_cause.as_ref(),
+            &evidence,
+        );
+        (Some(digest), Some(briefing))
+    } else {
+        (None, None)
+    };
+
     Ok(DoctorResult {
         target: target.to_string(),
         bootability: boot_report,
         evidence_schema: evidence.schema_version.to_string(),
         root_cause,
+        evidence_digest,
+        copilot,
     })
 }
 
@@ -91,6 +118,10 @@ pub struct MigrationPlanResult {
     pub root_cause: Option<RootCauseReport>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fix_plan: Option<FixPlan>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_digest: Option<EvidenceDigest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub copilot: Option<MigrationBriefing>,
 }
 
 /// Options for migration plan generation.
@@ -152,12 +183,28 @@ pub fn run_migrate_plan(
         None
     };
 
+    let (evidence_digest, copilot) = if options.explain {
+        let digest = build_evidence_digest(&evidence);
+        let briefing = generate_briefing(
+            target,
+            &boot_report,
+            Some(&migration_score),
+            root_cause.as_ref(),
+            &evidence,
+        );
+        (Some(digest), Some(briefing))
+    } else {
+        (None, None)
+    };
+
     Ok(MigrationPlanResult {
         target: target.to_string(),
         migration_score,
         bootability: boot_report,
         root_cause,
         fix_plan,
+        evidence_digest,
+        copilot,
     })
 }
 

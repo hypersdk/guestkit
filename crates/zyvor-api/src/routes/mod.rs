@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+mod copilot;
 mod health;
 mod jobs;
 mod vms;
@@ -19,4 +20,5 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/:id/repair-plan", post(vms::repair_plan_vm))
         .route("/api/v1/vms/:id/provision", post(vms::provision_vm))
         .route("/api/v1/jobs/:id", get(jobs::get_job))
+        .route("/api/v1/vms/:id/copilot/ask", post(copilot::ask_copilot))
 }
