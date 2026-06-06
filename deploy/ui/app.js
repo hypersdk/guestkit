@@ -105,12 +105,20 @@ function renderFleet() {
   });
 }
 
+function setDockEnabled(on) {
+  ['#dockDoctor', '#dockPlan', '#dockLaunch'].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.disabled = !on;
+  });
+}
+
 function selectVm(vm) {
   state.selectedVm = vm;
   renderFleet();
   $('#selectedVmTitle').textContent = vm.name || 'Unnamed disk';
   $('#selectedVmMeta').textContent = `${vm.format} · ${fmtBytes(vm.size_bytes)} · ${vm.id}`;
   $$('.action-card').forEach((b) => { b.disabled = false; });
+  setDockEnabled(true);
   setPipelineStep('analyze');
   feed(`Selected <strong>${vm.name}</strong>`, '');
 }
@@ -421,10 +429,28 @@ async function runAction(action) {
   }
 }
 
-function setupActions() {
-  $$('.action-card').forEach((btn) => {
-    btn.addEventListener('click', () => runAction(btn.dataset.action));
+function setupGlassToggle() {
+  $$('[data-glass-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.glassMode;
+      document.documentElement.dataset.glass = mode;
+      $$('[data-glass-mode]').forEach((b) => b.classList.toggle('active', b.dataset.glassMode === mode));
+      toast(mode === 'clear' ? 'Clear glass' : 'Tinted glass', 'ok');
+    });
   });
+}
+
+function setupActions() {
+  const bindAction = (el) => {
+    if (!el.dataset.action) return;
+    el.addEventListener('click', () => {
+      if (el.disabled) return;
+      runAction(el.dataset.action);
+    });
+  };
+
+  $$('.action-card').forEach(bindAction);
+  $$('.dock-item[data-action]').forEach(bindAction);
 
   $$('[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => scrollToPanel(btn.dataset.goto));
@@ -440,6 +466,7 @@ function setupActions() {
 
   $('#refreshFleetBtn').addEventListener('click', () => {
     loadFleet();
+    checkHealth();
     toast('Fleet refreshed', 'ok');
   });
 
@@ -456,11 +483,13 @@ function setupActions() {
 
 async function init() {
   setupDropzone();
+  setupGlassToggle();
   setupActions();
+  setDockEnabled(false);
   await checkHealth();
   await loadFleet();
   setInterval(checkHealth, 30000);
-  feed('Observatory online — ingest a disk to begin', 'ok');
+  feed('Ready — ingest a disk to begin', 'ok');
 }
 
 init();
