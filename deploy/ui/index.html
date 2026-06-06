@@ -3,43 +3,201 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zyvor VM Services</title>
+  <title>Zyvor — Migration Observatory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>Zyvor VM Services</h1>
-    <p>Offline VM intelligence → KubeVirt migration</p>
-  </header>
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="grid-bg" aria-hidden="true"></div>
 
-  <main>
-    <section class="card">
-      <h2>1. Import VM disk</h2>
-      <input type="file" id="file" accept=".qcow2,.vmdk,.raw,.ova,.img" />
-      <button id="uploadBtn">Upload</button>
-      <pre id="importResult"></pre>
-    </section>
-
-    <section class="card">
-      <h2>2. Run assurance workflow</h2>
-      <label>VM ID <input type="text" id="vmId" placeholder="uuid from import" /></label>
-      <div class="actions">
-        <button data-action="inspect">Inspect</button>
-        <button data-action="doctor">Doctor</button>
-        <button data-action="migration-plan">Migration Plan</button>
-        <button data-action="repair-plan">Repair Plan</button>
-        <button data-action="provision">Provision YAML</button>
+  <div class="app">
+    <aside class="rail" aria-label="Migration pipeline">
+      <div class="rail-brand">
+        <div class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" opacity=".35"/><path d="M8 20 L16 8 L24 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="3" fill="currentColor"/></svg>
+        </div>
+        <div>
+          <strong>Zyvor</strong>
+          <span>Observatory</span>
+        </div>
       </div>
-      <pre id="workflowResult"></pre>
-    </section>
+      <nav class="pipeline" id="pipelineNav">
+        <button type="button" class="pipe-step active" data-step="ingest">
+          <span class="pipe-icon">01</span>
+          <span class="pipe-label">Ingest</span>
+          <span class="pipe-hint">Upload disk</span>
+        </button>
+        <button type="button" class="pipe-step" data-step="analyze">
+          <span class="pipe-icon">02</span>
+          <span class="pipe-label">Assure</span>
+          <span class="pipe-hint">Doctor & inspect</span>
+        </button>
+        <button type="button" class="pipe-step" data-step="plan">
+          <span class="pipe-icon">03</span>
+          <span class="pipe-label">Plan</span>
+          <span class="pipe-hint">Migration path</span>
+        </button>
+        <button type="button" class="pipe-step" data-step="launch">
+          <span class="pipe-icon">04</span>
+          <span class="pipe-label">Launch</span>
+          <span class="pipe-hint">KubeVirt YAML</span>
+        </button>
+      </nav>
+      <div class="rail-footer">
+        <div class="target-pill">
+          <span class="pulse-dot" id="healthDot"></span>
+          <span id="healthLabel">Connecting…</span>
+        </div>
+        <p class="rail-tag">target · <strong>kubevirt</strong></p>
+      </div>
+    </aside>
 
-    <section class="card">
-      <h2>3. Job status</h2>
-      <label>Job ID <input type="text" id="jobId" /></label>
-      <button id="pollBtn">Poll Job</button>
-      <pre id="jobResult"></pre>
-    </section>
-  </main>
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <h1>Offline VM → KubeVirt</h1>
+          <p class="subtitle">Assurance-first migration control plane</p>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="btn ghost" id="refreshFleetBtn" title="Refresh fleet">↻ Fleet</button>
+        </div>
+      </header>
+
+      <main class="panels">
+        <!-- INGEST -->
+        <section class="panel active" id="panel-ingest" data-panel="ingest">
+          <div class="panel-head">
+            <h2>Ingest disk image</h2>
+            <p>Drop a qcow2, vmdk, or raw image — we stage it for offline intelligence.</p>
+          </div>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
+            <div class="dropzone-inner">
+              <div class="drop-icon" aria-hidden="true">◎</div>
+              <p class="drop-title">Drop VM disk here</p>
+              <p class="drop-sub">or <button type="button" class="linkish" id="browseBtn">browse files</button></p>
+              <p class="drop-meta">Up to 50 GB · qcow2 · vmdk · raw</p>
+            </div>
+            <div class="drop-progress hidden" id="uploadProgress">
+              <div class="drop-progress-bar" id="uploadBar"></div>
+              <span id="uploadLabel">Uploading…</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- FLEET + ACTIONS -->
+        <section class="panel" id="panel-fleet" data-panel="analyze">
+          <div class="panel-head row">
+            <div>
+              <h2>VM fleet</h2>
+              <p>Select a disk to run assurance workflows.</p>
+            </div>
+            <span class="badge" id="fleetCount">0 images</span>
+          </div>
+          <div class="fleet-grid" id="fleetGrid">
+            <div class="fleet-empty" id="fleetEmpty">
+              <p>No disks ingested yet.</p>
+              <button type="button" class="btn primary sm" data-goto="ingest">Import first disk →</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-actions" data-panel="analyze plan launch">
+          <div class="panel-head">
+            <h2 id="selectedVmTitle">Select a VM</h2>
+            <p id="selectedVmMeta">Choose a fleet card to unlock assurance actions.</p>
+          </div>
+
+          <div class="action-deck" id="actionDeck">
+            <button type="button" class="action-card" data-action="inspect" disabled>
+              <span class="action-glyph">🔬</span>
+              <strong>Inspect</strong>
+              <span>OS, packages, services</span>
+            </button>
+            <button type="button" class="action-card accent" data-action="doctor" disabled>
+              <span class="action-glyph">🩺</span>
+              <strong>Doctor</strong>
+              <span>Bootability score</span>
+            </button>
+            <button type="button" class="action-card" data-action="migration-plan" disabled>
+              <span class="action-glyph">🗺️</span>
+              <strong>Migrate plan</strong>
+              <span>Driver & downtime</span>
+            </button>
+            <button type="button" class="action-card" data-action="repair-plan" disabled>
+              <span class="action-glyph">🔧</span>
+              <strong>Repair plan</strong>
+              <span>Dry-run fixes</span>
+            </button>
+            <button type="button" class="action-card launch" data-action="provision" disabled>
+              <span class="action-glyph">🚀</span>
+              <strong>Provision</strong>
+              <span>KubeVirt manifests</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section class="panel wide" id="panel-results" data-panel="analyze plan launch">
+          <div class="panel-head row">
+            <div>
+              <h2>Mission output</h2>
+              <p>Live job telemetry and structured results.</p>
+            </div>
+            <button type="button" class="btn ghost sm hidden" id="copyYamlBtn">Copy YAML</button>
+          </div>
+          <div class="results-layout">
+            <div class="score-ring-wrap hidden" id="scorePanel">
+              <svg class="score-ring" viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="52" />
+                <circle class="ring-fg" id="scoreRing" cx="60" cy="60" r="52" />
+              </svg>
+              <div class="score-center">
+                <span class="score-value" id="scoreValue">—</span>
+                <span class="score-label">boot score</span>
+              </div>
+            </div>
+            <div class="output-pane">
+              <div class="output-tabs">
+                <button type="button" class="tab active" data-tab="summary">Summary</button>
+                <button type="button" class="tab" data-tab="raw">Raw JSON</button>
+                <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">KubeVirt YAML</button>
+              </div>
+              <div class="output-body">
+                <div class="tab-pane active" id="pane-summary">
+                  <p class="placeholder" id="summaryPlaceholder">Run an action to see results here.</p>
+                  <div id="summaryContent" class="summary-content hidden"></div>
+                </div>
+                <pre class="tab-pane code" id="pane-raw"><code id="rawJson">{}</code></pre>
+                <pre class="tab-pane code hidden" id="pane-yaml"><code id="yamlContent"></code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="telemetry" aria-label="Live activity">
+      <div class="telemetry-head">
+        <h3>Live feed</h3>
+        <span class="badge live" id="jobBadge">idle</span>
+      </div>
+      <div class="job-tracker hidden" id="jobTracker">
+        <div class="job-meta">
+          <span class="job-op" id="jobOp">—</span>
+          <span class="job-status" id="jobStatus">pending</span>
+        </div>
+        <div class="job-bar"><div class="job-bar-fill" id="jobBar"></div></div>
+        <p class="job-id mono" id="jobIdDisplay"></p>
+      </div>
+      <ul class="activity-feed" id="activityFeed"></ul>
+    </aside>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>
