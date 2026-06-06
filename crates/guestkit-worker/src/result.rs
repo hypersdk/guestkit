@@ -31,6 +31,7 @@ impl ResultWriter {
         idempotency_key: Option<String>,
         output_file: Option<String>,
         artifacts: Vec<String>,
+        data: Option<serde_json::Value>,
     ) -> WorkerResult<String> {
         let duration = (Utc::now() - started_at).num_seconds() as u64;
 
@@ -57,6 +58,7 @@ impl ResultWriter {
             metrics: None,
             error: None,
             observability: None,
+            data,
         };
 
         self.write_result(&result).await
@@ -99,6 +101,7 @@ impl ResultWriter {
                 retry_recommended: recoverable,
             }),
             observability: None,
+            data: None,
         };
 
         self.write_result(&result).await
@@ -160,6 +163,7 @@ mod tests {
                 Some("idempotency-key".to_string()),
                 Some("/output/result.json".to_string()),
                 vec!["/output/log.txt".to_string()],
+                None,
             )
             .await
             .unwrap();

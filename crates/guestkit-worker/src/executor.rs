@@ -145,6 +145,11 @@ impl JobExecutor {
                         job.execution.as_ref().and_then(|e| e.idempotency_key.clone()),
                         handler_result.output_file,
                         handler_result.artifacts,
+                        if handler_result.data.is_null() {
+                            None
+                        } else {
+                            Some(handler_result.data)
+                        },
                     )
                     .await?;
 
