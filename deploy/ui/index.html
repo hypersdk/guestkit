@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zyvor VM Services</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Zyvor VM Services</h1>
+    <p>Offline VM intelligence → KubeVirt migration</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Import VM disk</h2>
+      <input type="file" id="file" accept=".qcow2,.vmdk,.raw,.ova,.img" />
+      <button id="uploadBtn">Upload</button>
+      <pre id="importResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>2. Run assurance workflow</h2>
+      <label>VM ID <input type="text" id="vmId" placeholder="uuid from import" /></label>
+      <div class="actions">
+        <button data-action="inspect">Inspect</button>
+        <button data-action="doctor">Doctor</button>
+        <button data-action="migration-plan">Migration Plan</button>
+        <button data-action="repair-plan">Repair Plan</button>
+        <button data-action="provision">Provision YAML</button>
+      </div>
+      <pre id="workflowResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>3. Job status</h2>
+      <label>Job ID <input type="text" id="jobId" /></label>
+      <button id="pollBtn">Poll Job</button>
+      <pre id="jobResult"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -124,22 +124,22 @@ impl Worker {
             match self.transport.fetch_job().await {
                 Ok(Some(job)) => {
                     log::info!("Received job: {}", job.job_id);
-
-                    // Execute job (in background for now - TODO: semaphore for concurrency)
-                    let executor = self.executor.clone();
                     let job_id = job.job_id.clone();
-                    let mut transport = self.transport.as_mut();
 
-                    tokio::spawn(async move {
-                        match executor.execute(job).await {
-                            Ok(_) => {
-                                log::info!("Job {} completed", job_id);
-                            }
-                            Err(e) => {
-                                log::error!("Job {} failed: {}", job_id, e);
+                    match self.executor.execute(job).await {
+                        Ok(_) => {
+                            log::info!("Job {job_id} completed");
+                            if let Err(e) = self.transport.ack_job(&job_id).await {
+                                log::error!("Failed to ack job {job_id}: {e}");
                             }
                         }
-                    });
+                        Err(e) => {
+                            log::error!("Job {job_id} failed: {e}");
+                            if let Err(ack_err) = self.transport.nack_job(&job_id, &e.to_string()).await {
+                                log::error!("Failed to nack job {job_id}: {ack_err}");
+                            }
+                        }
+                    }
                 }
                 Ok(None) => {
                     // No jobs available, continue polling

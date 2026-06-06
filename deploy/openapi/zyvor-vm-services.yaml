@@ -1,0 +1,135 @@
+openapi: 3.0.3
+info:
+  title: Zyvor VM Services API
+  version: 0.1.0
+  description: Kubernetes-native VM import, inspection, migration planning, and KubeVirt provisioning.
+servers:
+  - url: http://api.zyvor.local/api/v1
+    description: Cluster ingress
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /vms/import:
+    post:
+      summary: Import VM disk image
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Image imported
+  /vms:
+    get:
+      summary: List imported VM images
+      responses:
+        '200':
+          description: VM list
+  /vms/{id}/inspect:
+    post:
+      summary: Enqueue offline inspect job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job enqueued
+  /vms/{id}/doctor:
+    post:
+      summary: Enqueue bootability doctor job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: target
+          schema:
+            type: string
+            default: kubevirt
+        - in: query
+          name: explain
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Job enqueued
+  /vms/{id}/migration-plan:
+    post:
+      summary: Enqueue migration plan job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: target
+          schema:
+            type: string
+            default: kubevirt
+      responses:
+        '200':
+          description: Job enqueued
+  /vms/{id}/repair-plan:
+    post:
+      summary: Enqueue repair plan job (dry-run default)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job enqueued
+  /vms/{id}/provision:
+    post:
+      summary: Generate KubeVirt VM + DataVolume YAML
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: apply
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: YAML manifests returned
+  /jobs/{id}:
+    get:
+      summary: Get job status and result
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details

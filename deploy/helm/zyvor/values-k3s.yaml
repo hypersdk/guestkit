@@ -1,0 +1,30 @@
+# k3s / single-node overlay (e.g. deploy-remote-k3s.sh)
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+guestkitWorker:
+  replicas: 1
+
+zyvorApi:
+  storageClass: local-path
+  privileged: true
+  service:
+    type: NodePort
+    nodePort: 30080
+
+zyvorUi:
+  service:
+    type: NodePort
+    nodePort: 30081
+
+persistence:
+  vmImages:
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    hostPath: /var/lib/zyvor/images
+
+minio:
+  enabled: true

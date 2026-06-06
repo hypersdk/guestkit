@@ -25,7 +25,10 @@ pub fn compute_migration_score(
     let mut licensing_warnings = Vec::new();
 
     let target_lower = target.to_lowercase();
-    if matches!(target_lower.as_str(), "kvm" | "proxmox" | "qemu") {
+    if matches!(
+        target_lower.as_str(),
+        "kvm" | "proxmox" | "qemu" | "kubevirt"
+    ) {
         if evidence
             .vm_tools
             .detected

@@ -32,6 +32,9 @@ pub mod operations {
     pub const GUESTKIT_COMPARE: &str = "guestkit.compare";
     pub const GUESTKIT_AGENT_EVIDENCE: &str = "guestkit.agent.evidence";
     pub const GUESTKIT_AGENT_FIX: &str = "guestkit.agent.fix";
+    pub const GUESTKIT_DOCTOR: &str = "guestkit.doctor";
+    pub const GUESTKIT_MIGRATE_PLAN: &str = "guestkit.migrate-plan";
+    pub const GUESTKIT_REPAIR: &str = "guestkit.repair";
 
     /// hyper2kvm operations (future)
     pub const HYPER2KVM_CONVERT: &str = "hyper2kvm.convert";
