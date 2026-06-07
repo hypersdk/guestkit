@@ -74,8 +74,8 @@ impl PartitionTable {
             return false;
         }
 
-        // Check for 0xEE partition type in first partition entry
-        mbr[450] == 0xEE
+        // Protective MBR: GPT marker 0xEE in any of the four primary entries
+        (0..4).any(|i| mbr[446 + i * 16 + 4] == 0xEE)
     }
 
     /// Check if disk has valid MBR
@@ -219,5 +219,16 @@ mod tests {
     fn test_partition_types() {
         assert_eq!(PartitionType::MBR, PartitionType::MBR);
         assert_eq!(PartitionType::GPT, PartitionType::GPT);
+    }
+
+    #[test]
+    fn test_is_gpt_protective_mbr_any_slot() {
+        let mut mbr = [0u8; 512];
+        mbr[510] = 0x55;
+        mbr[511] = 0xAA;
+        // 0xEE in third primary entry
+        mbr[446 + 2 * 16 + 4] = 0xEE;
+        assert!(PartitionTable::is_gpt(&mbr));
+        assert!(!PartitionTable::is_gpt(&[0u8; 512]));
     }
 }

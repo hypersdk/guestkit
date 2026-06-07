@@ -141,6 +141,32 @@ impl Guestfs {
             }
         }
 
+        // 1b) Initrd-contained roots (Cirros and similar boot-partition cloud images)
+        for p in &partitions {
+            let dev = build_partition_path(&disk_dev, p.number);
+            if roots.iter().any(|r| r == &dev) {
+                continue;
+            }
+
+            let reader = self
+                .reader
+                .as_mut()
+                .ok_or_else(|| Error::InvalidState("Reader not initialized".to_string()))?;
+
+            if let Ok(fs) = FileSystem::detect(reader, p) {
+                match fs.fs_type() {
+                    crate::disk::FileSystemType::Ext
+                    | crate::disk::FileSystemType::Xfs
+                    | crate::disk::FileSystemType::Btrfs
+                        if self.validate_initrd_boot_partition(&dev)? =>
+                    {
+                        roots.push(dev);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         // 2) LVM logical volume candidates (validated)
         if let Ok(lvs) = self.lvs() {
             // Prefer typical root LV names first (stable priority).
@@ -213,6 +239,108 @@ impl Guestfs {
         }
 
         Ok(is_linux || is_windows)
+    }
+
+    /// Boot partition with root filesystem inside initrd (e.g. Cirros cloud images).
+    fn validate_initrd_boot_partition(&mut self, dev: &str) -> Result<bool> {
+        use std::process::Command;
+
+        let was_mounted = self.mounted.contains_key(dev);
+        if !was_mounted && self.mount_ro(dev, "/").is_err() {
+            return Ok(false);
+        }
+
+        if looks_like_linux_root(self) || looks_like_windows_root(self) {
+            if !was_mounted {
+                let _ = self.umount(dev);
+            }
+            return Ok(false);
+        }
+
+        let Some(initrd_rel) = self.find_initrd_path() else {
+            if !was_mounted {
+                let _ = self.umount(dev);
+            }
+            return Ok(false);
+        };
+
+        let mount_point = match self.mounted.get(dev) {
+            Some(p) => p.clone(),
+            None => {
+                if !was_mounted {
+                    let _ = self.umount(dev);
+                }
+                return Ok(false);
+            }
+        };
+
+        let initrd_host =
+            std::path::PathBuf::from(&mount_point).join(initrd_rel.trim_start_matches('/'));
+        if !initrd_host.exists() {
+            if !was_mounted {
+                let _ = self.umount(dev);
+            }
+            return Ok(false);
+        }
+
+        let script = format!(
+            "zcat '{}' | cpio -t 2>/dev/null",
+            initrd_host.to_string_lossy()
+        );
+        let output = Command::new("sh").arg("-c").arg(&script).output();
+
+        let valid = match output {
+            Ok(out) if out.status.success() || !out.stdout.is_empty() => {
+                let listing = String::from_utf8_lossy(&out.stdout);
+                let has_os_release = listing.lines().any(|l| {
+                    let l = l.trim();
+                    l == "etc/os-release" || l.ends_with("/etc/os-release")
+                });
+                let has_shell = listing.lines().any(|l| {
+                    let l = l.trim();
+                    l == "bin/sh"
+                        || l.ends_with("/bin/sh")
+                        || l == "bin/busybox"
+                        || l.ends_with("/bin/busybox")
+                });
+                has_os_release && has_shell
+            }
+            _ => false,
+        };
+
+        if !was_mounted {
+            let _ = self.umount(dev);
+        }
+
+        if valid && (self.verbose || self.debug) {
+            eprintln!(
+                "guestfs: validate_initrd: found Linux root in initrd on {}",
+                dev
+            );
+        }
+
+        Ok(valid)
+    }
+
+    fn find_initrd_path(&mut self) -> Option<String> {
+        for candidate in ["/initrd.img", "/boot/initrd.img"] {
+            if self.exists(candidate).unwrap_or(false) {
+                return Some(candidate.to_string());
+            }
+        }
+
+        if self.exists("/boot").unwrap_or(false) {
+            if let Ok(entries) = self.ls("/boot") {
+                for name in entries {
+                    let lower = name.to_lowercase();
+                    if lower.contains("initrd") {
+                        return Some(format!("/boot/{name}"));
+                    }
+                }
+            }
+        }
+
+        None
     }
 
     /// Get the type of operating system (linux/windows/unknown).

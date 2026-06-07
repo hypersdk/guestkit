@@ -162,6 +162,23 @@ impl Guestfs {
         Ok(())
     }
 
+    /// Choose loop (raw) vs NBD (qcow2/vmdk/…) based on on-disk format, not extension.
+    fn should_use_loop_device(path: &Path) -> Result<bool> {
+        use crate::core::DiskFormat;
+
+        match DiskReader::detect_image_format(path) {
+            Ok(DiskFormat::Raw) => Ok(true),
+            Ok(
+                DiskFormat::Qcow2
+                | DiskFormat::Vmdk
+                | DiskFormat::Vhd
+                | DiskFormat::Vhdx
+                | DiskFormat::Vdi,
+            ) => Ok(false),
+            Ok(DiskFormat::Unknown) | Err(_) => Ok(LoopDevice::is_format_supported(path)),
+        }
+    }
+
     /// Launch the guestfs handle (prepare for operations)
     pub fn launch(&mut self) -> Result<()> {
         if self.state != GuestfsState::Config {
@@ -183,8 +200,9 @@ impl Guestfs {
 
         // Attempt to launch - if any error occurs, move to Error state
         let result: Result<()> = (|| {
-            // Strategy: Try loop device first (no kernel module needed), fall back to NBD
-            let use_loop_device = LoopDevice::is_format_supported(&drive.path);
+            // Strategy: loop for true raw images; NBD for qcow2/vmdk/etc.
+            // Extension alone is unreliable (.img is often qcow2, e.g. Cirros cloud images).
+            let use_loop_device = Self::should_use_loop_device(&drive.path)?;
             if self.debug {
                 eprintln!(
                     "[DEBUG] File: {}, use_loop_device: {}",

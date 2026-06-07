@@ -25,7 +25,19 @@ const state = {
   vmCache: {},
   lastBriefing: null,
   lastJobId: null,
+  inspectionMode: localStorage.getItem('zyvor.inspectMode') || 'offline',
+  agentProxyUrl: localStorage.getItem('zyvor.agentProxyUrl') || '',
+  agentReachable: false,
 };
+
+const AGENT_QUICK_RPC = [
+  { label: 'Ping', method: 'guestkit.ping', params: {} },
+  { label: 'Version', method: 'guestkit.getVersion', params: {} },
+  { label: 'Capabilities', method: 'guestkit.getCapabilities', params: {} },
+  { label: 'Metrics', method: 'guestkit.getMetrics', params: {} },
+  { label: 'Filesystem', method: 'guestkit.getFilesystem', params: {} },
+  { label: 'Whoami', method: 'guestkit.exec', params: { command: ['whoami'] } },
+];
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -48,6 +60,43 @@ function fmtBytes(n) {
   let v = n;
   while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
   return `${v.toFixed(i ? 1 : 0)} ${u[i]}`;
+}
+
+const SMOKE_MAX_BYTES = 512 * 1024;
+
+function isSmokeDisk(vm) {
+  if (!vm) return false;
+  const name = (vm.name || '').toLowerCase();
+  if (/smoke|placeholder|empty-disk|test-shell/.test(name)) return true;
+  return (vm.size_bytes || 0) > 0 && vm.size_bytes < SMOKE_MAX_BYTES;
+}
+
+function fleetRank(vm) {
+  const cache = getVmCache(vm.id);
+  if (isSmokeDisk(vm)) return 100;
+  if (cache.status === 'failed' && !cache.bootScore) return 85;
+  if (cache.status === 'ready') return 0;
+  if (cache.bootScore != null) return 10 + (100 - Math.min(cache.bootScore, 100));
+  if (cache.status === 'analyzed') return 20;
+  return 50;
+}
+
+function pickBestVm(vms) {
+  const candidates = (vms || []).filter((v) => !isSmokeDisk(v));
+  const pool = candidates.length ? candidates : vms;
+  return [...(pool || [])].sort((a, b) => fleetRank(a) - fleetRank(b))[0] || null;
+}
+
+function humanizeJobError(err, vm) {
+  if (!err) return err;
+  const lower = String(err).toLowerCase();
+  if (lower.includes('no operating system')) {
+    if (isSmokeDisk(vm)) {
+      return 'This disk is a tiny smoke/placeholder image with no guest OS. Select a real cloud image (Cirros or Ubuntu minimal) or upload one in Ingest.';
+    }
+    return 'No guest OS detected in this disk. Use a cloud image with a real root filesystem (e.g. Ubuntu cloud-img, Cirros).';
+  }
+  return String(err).replace(/^Execution error:\s*/i, '');
 }
 
 function fmtTime(d = new Date()) {
@@ -97,7 +146,8 @@ function updateVmCache(vmId, patch) {
   renderFleet();
 }
 
-function vmStatusLabel(cache) {
+function vmStatusLabel(cache, vm) {
+  if (isSmokeDisk(vm)) return 'smoke';
   if (cache.status === 'ready') return 'ready';
   if (cache.status === 'failed') return 'failed';
   if (cache.bootScore != null) return 'analyzed';
@@ -213,22 +263,26 @@ function renderFleet() {
   }
   empty.classList.add('hidden');
 
-  state.vms.forEach((vm) => {
+  [...state.vms].sort((a, b) => fleetRank(a) - fleetRank(b)).forEach((vm) => {
     const cache = getVmCache(vm.id);
-    const status = vmStatusLabel(cache);
+    const status = vmStatusLabel(cache, vm);
     const scoreChip = cache.bootScore != null
       ? `<span class="vm-score">${Math.round(cache.bootScore)}</span>`
       : '';
+    const smoke = isSmokeDisk(vm);
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'vm-card' + (state.selectedVm?.id === vm.id ? ' selected' : '');
+    card.className = 'vm-card'
+      + (state.selectedVm?.id === vm.id ? ' selected' : '')
+      + (smoke ? ' smoke' : '');
     card.innerHTML = `
       <span class="vm-format">${vm.format || 'disk'}</span>
       <span class="vm-status ${status}">${status}</span>
       ${scoreChip}
       <p class="vm-name">${escapeHtml(vm.name || 'unnamed')}</p>
       <p class="vm-meta">${fmtBytes(vm.size_bytes)} · ${vm.id.slice(0, 8)}…</p>
+      ${smoke ? '<p class="vm-hint">Not a bootable VM</p>' : ''}
     `;
     card.addEventListener('click', () => selectVm(vm));
     grid.appendChild(card);
@@ -245,26 +299,39 @@ function setDockEnabled(on) {
 function selectVm(vm) {
   state.selectedVm = vm;
   renderFleet();
+  setAgentDeckEnabled(!!vm);
   $('#selectedVmTitle').textContent = vm.name || 'Unnamed disk';
-  $('#selectedVmMeta').textContent = `${vm.format} · ${fmtBytes(vm.size_bytes)} · ${vm.id}`;
+  const meta = $('#selectedVmMeta');
+  const smoke = isSmokeDisk(vm);
+  meta.textContent = `${vm.format} · ${fmtBytes(vm.size_bytes)} · ${vm.id}`;
+  meta.classList.toggle('vm-warn', smoke);
+  if (smoke) {
+    meta.textContent += ' — placeholder disk; upload or select a real cloud image';
+  }
   $$('.action-card').forEach((b) => { b.disabled = false; });
   setDockEnabled(true);
   if (state.wizard.step === 'ingest' && state.wizard.completed.has('ingest')) {
     setWizardStep('assure');
   }
   updateWizardFooter();
-  feed(`Selected <strong>${escapeHtml(vm.name)}</strong>`, '');
+  feed(`Selected <strong>${escapeHtml(vm.name)}</strong>${smoke ? ' (smoke — not bootable)' : ''}`, smoke ? 'err' : '');
 }
 
 async function loadFleet() {
   try {
     const data = await api('/vms');
     state.vms = data.data || [];
-    renderFleet();
     if (state.selectedVm) {
       const fresh = state.vms.find((v) => v.id === state.selectedVm.id);
       if (fresh) state.selectedVm = fresh;
       else state.selectedVm = null;
+    }
+    if (!state.selectedVm || isSmokeDisk(state.selectedVm)) {
+      const best = pickBestVm(state.vms);
+      if (best && best.id !== state.selectedVm?.id) selectVm(best);
+      else renderFleet();
+    } else {
+      renderFleet();
     }
   } catch (e) {
     toast(`Fleet load failed: ${e.message}`, 'err');
@@ -437,14 +504,79 @@ function setScore(score, reason) {
   else ring.style.stroke = 'var(--danger)';
 }
 
+function normalizeAgentPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  if (payload.boot_report && !payload.bootability) {
+    return {
+      ...payload,
+      bootability: payload.boot_report,
+      mode: 'online',
+      summary: payload.boot_report?.summary || 'Live agent doctor',
+    };
+  }
+  if (payload.schema_version || payload.os || payload.collected_at) {
+    const os = payload.os || {};
+    return {
+      mode: 'online',
+      evidence: payload,
+      summary: `Live evidence — ${os.distribution || os.os_type || 'guest'} ${os.version || ''}`.trim(),
+    };
+  }
+  if (payload.methods || payload.fix_apply != null) {
+    return { mode: 'online', capabilities: payload, summary: 'Agent capabilities' };
+  }
+  return { ...payload, mode: payload.mode || 'online' };
+}
+
 function extractPayload(data) {
   const jobResult = data?.data?.result;
+  let payload;
   if (jobResult) {
-    if (jobResult.data) return jobResult.data;
-    return typeof jobResult === 'string' ? tryParse(jobResult) : jobResult;
+    payload = jobResult.data
+      ? jobResult.data
+      : (typeof jobResult === 'string' ? tryParse(jobResult) : jobResult);
+  } else {
+    const alt = data?.data?.live_status?.result || data?.result;
+    payload = typeof alt === 'string' ? tryParse(alt) : alt;
   }
-  const alt = data?.data?.live_status?.result || data?.result;
-  return typeof alt === 'string' ? tryParse(alt) : alt;
+  return normalizeAgentPayload(payload);
+}
+
+function isOnlineMode() {
+  return state.inspectionMode === 'online';
+}
+
+function getAgentProxyUrl() {
+  const input = $('#agentProxyUrl')?.value?.trim();
+  return input || state.agentProxyUrl || '';
+}
+
+function setAgentStatus(text, ok) {
+  const el = $('#agentStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'agent-status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+}
+
+function setInspectionMode(mode) {
+  state.inspectionMode = mode;
+  localStorage.setItem('zyvor.inspectMode', mode);
+  const offline = mode === 'offline';
+  $('#modeOfflineBtn')?.classList.toggle('active', offline);
+  $('#modeOnlineBtn')?.classList.toggle('active', !offline);
+  $('#agentProxyRow')?.classList.toggle('hidden', offline);
+  $('#actionDeck')?.classList.toggle('hidden', !offline);
+  $('#agentDeck')?.classList.toggle('hidden', offline);
+  $('#agentTab')?.classList.toggle('hidden', offline);
+  if (!offline) {
+    setActiveTab('agent');
+    renderAgentChips();
+  }
+  feed(`Inspection mode: <strong>${offline ? 'offline disk' : 'online agent'}</strong>`);
+}
+
+function setAgentDeckEnabled(on) {
+  $$('#agentDeck [data-agent-action]').forEach((b) => { b.disabled = !on; });
 }
 
 function renderFinding(item, kind) {
@@ -483,6 +615,19 @@ function renderSummary(data, action) {
   else if (migrate?.score != null) setScore(migrate.score);
   else if (payload?.before_score != null) setScore(payload.before_score);
   else setScore(null);
+
+  if (payload?.mode === 'online') {
+    content.innerHTML += `<p class="finding ok">🟢 <strong>Online agent</strong> — live inspection from running guest</p>`;
+  }
+
+  if (payload?.evidence?.os) {
+    const os = payload.evidence.os;
+    content.innerHTML += `<p class="finding ok"><strong>${escapeHtml(os.distribution || os.os_type || 'guest')}</strong> ${escapeHtml(os.version || '')} · ${escapeHtml(os.architecture || '')} · ${escapeHtml(os.hostname || '')}</p>`;
+  }
+
+  if (payload?.capabilities?.methods) {
+    content.innerHTML += `<p class="finding ok">Agent methods: ${payload.capabilities.methods.map((m) => escapeHtml(m)).join(', ')}</p>`;
+  }
 
   if (boot?.summary) {
     content.innerHTML += `<p class="finding ok">${escapeHtml(boot.summary)}</p>`;
@@ -548,7 +693,14 @@ function renderSummary(data, action) {
 
   const err = data?.data?.live_status?.error || data?.data?.result?.error?.message;
   if (err) {
-    content.innerHTML += `<p class="finding blocker">${escapeHtml(err)}</p>`;
+    const friendly = humanizeJobError(err, state.selectedVm);
+    content.innerHTML += `<p class="finding blocker">${escapeHtml(friendly)}</p>`;
+    if (isSmokeDisk(state.selectedVm)) {
+      const alt = pickBestVm(state.vms.filter((v) => v.id !== state.selectedVm?.id));
+      if (alt) {
+        content.innerHTML += `<p class="finding warn">Try <strong>${escapeHtml(alt.name)}</strong> (${fmtBytes(alt.size_bytes)}) — select it in Fleet and run Doctor.</p>`;
+      }
+    }
     setScore(null, 'failed');
   }
 
@@ -746,6 +898,7 @@ function setActiveTab(name) {
   const map = {
     summary: '#pane-summary',
     copilot: '#pane-copilot',
+    agent: '#pane-agent',
     yaml: '#pane-yaml',
     raw: '#pane-raw',
   };
@@ -763,10 +916,11 @@ function onJobComplete(action, data) {
 
   const patch = { lastOp: action, status: 'imported' };
 
-  if (action === 'doctor') {
+  if (action === 'doctor' || action === 'agent-doctor') {
     patch.bootScore = boot?.score;
     patch.blockers = blockers;
     patch.status = blockers.length ? 'failed' : 'analyzed';
+    if (action === 'agent-doctor') patch.agentOnline = true;
     markWizardComplete('assure');
     if (!state.wizardChain && !blockers.length) setWizardStep('plan');
   } else if (action === 'migration-plan') {
@@ -823,7 +977,8 @@ function pollJob(jobId, action) {
         } else if (status === 'failed') {
           clearInterval(state.pollTimer);
           hideJobTracker('failed');
-          const err = live.error || data?.data?.result?.error?.message || 'Job failed';
+          const rawErr = live.error || data?.data?.result?.error?.message || 'Job failed';
+          const err = humanizeJobError(rawErr, state.selectedVm);
           feed(`Job failed: ${escapeHtml(err)}`, 'err');
           toast(err, 'err');
           state.lastFailedAction = action;
@@ -844,10 +999,174 @@ function pollJob(jobId, action) {
   });
 }
 
+function appendAgentMessage(text, role = 'assistant') {
+  const chat = $('#agentChat');
+  const ph = $('#agentPlaceholder');
+  ph?.classList.add('hidden');
+  const el = document.createElement('div');
+  el.className = `agent-msg ${role}`;
+  el.innerHTML = role === 'assistant' ? escapeHtml(text).replace(/\n/g, '<br>') : escapeHtml(text);
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function renderAgentChips() {
+  const wrap = $('#agentChips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  AGENT_QUICK_RPC.forEach((item) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'agent-chip';
+    chip.textContent = item.label;
+    chip.addEventListener('click', () => agentTalk(item.method, item.params, item.label));
+    wrap.appendChild(chip);
+  });
+}
+
+async function pingAgent() {
+  const vm = state.selectedVm;
+  if (!vm) {
+    toast('Select a VM first', 'err');
+    return;
+  }
+  const proxyUrl = getAgentProxyUrl();
+  if (!proxyUrl) {
+    toast('Enter agent proxy URL', 'err');
+    return;
+  }
+  setAgentStatus('pinging…');
+  try {
+    const data = await api(`/vms/${vm.id}/agent/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proxy_url: proxyUrl }),
+    });
+    const r = data.data;
+    state.agentReachable = r.reachable;
+    state.agentProxyUrl = proxyUrl;
+    localStorage.setItem('zyvor.agentProxyUrl', proxyUrl);
+    setAgentStatus(r.reachable ? 'agent online' : 'agent unreachable', r.reachable);
+    appendAgentMessage(r.reachable ? 'Agent reachable via proxy.' : `Unreachable: ${r.error || 'unknown'}`, 'system');
+    if (r.agent) appendAgentMessage(JSON.stringify(r.agent, null, 2));
+    toast(r.reachable ? 'Agent online' : 'Agent unreachable', r.reachable ? 'ok' : 'err');
+  } catch (e) {
+    state.agentReachable = false;
+    setAgentStatus('ping failed', false);
+    toast(e.message, 'err');
+  }
+}
+
+async function runAgentAction(kind) {
+  const vm = state.selectedVm;
+  if (!vm) {
+    toast('Select a VM first', 'err');
+    return { ok: false };
+  }
+  const proxyUrl = getAgentProxyUrl();
+  if (!proxyUrl) {
+    toast('Enter agent proxy URL', 'err');
+    return { ok: false };
+  }
+
+  const target = getTarget();
+  let path;
+  let body = { proxy_url: proxyUrl, target };
+
+  if (kind === 'evidence') path = `/vms/${vm.id}/agent/evidence`;
+  else if (kind === 'doctor') path = `/vms/${vm.id}/agent/doctor?target=${encodeURIComponent(target)}`;
+  else if (kind === 'capabilities') {
+    return agentTalk('guestkit.getCapabilities', {}, 'Capabilities');
+  } else if (kind === 'metrics') {
+    return agentTalk('guestkit.getMetrics', {}, 'Metrics');
+  } else {
+    return { ok: false };
+  }
+
+  feed(`Enqueueing <strong>agent ${escapeHtml(kind)}</strong>…`);
+  setActiveTab('summary');
+  try {
+    const data = await api(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const jobId = data?.data?.job_id;
+    if (!jobId) return { ok: false };
+    state.lastJobId = jobId;
+    const action = kind === 'doctor' ? 'agent-doctor' : `agent-${kind}`;
+    showJobTracker(action, jobId);
+    return await pollJob(jobId, action);
+  } catch (e) {
+    toast(e.message, 'err');
+    return { ok: false, error: e.message };
+  }
+}
+
+async function agentTalk(method, params = {}, label = method) {
+  const vm = state.selectedVm;
+  if (!vm) {
+    toast('Select a VM first', 'err');
+    return { ok: false };
+  }
+  const proxyUrl = getAgentProxyUrl();
+  if (!proxyUrl) {
+    toast('Enter agent proxy URL', 'err');
+    return { ok: false };
+  }
+
+  appendAgentMessage(label || method, 'user');
+  setActiveTab('agent');
+
+  try {
+    const data = await api(`/vms/${vm.id}/agent/rpc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proxy_url: proxyUrl, method, params }),
+    });
+    const jobId = data?.data?.job_id;
+    if (!jobId) return { ok: false };
+    state.lastJobId = jobId;
+    showJobTracker('agent-rpc', jobId);
+    const result = await pollJob(jobId, 'agent-rpc');
+    if (result.ok) {
+      const payload = extractPayload(result.data);
+      const text = typeof payload === 'object'
+        ? JSON.stringify(payload, null, 2)
+        : String(payload);
+      appendAgentMessage(text);
+      showRaw(result.data);
+    }
+    return result;
+  } catch (e) {
+    appendAgentMessage(e.message, 'system');
+    toast(e.message, 'err');
+    return { ok: false };
+  }
+}
+
 async function runAction(action) {
   const vm = state.selectedVm;
   if (!vm) {
     toast('Select a VM from the fleet first', 'err');
+    return { ok: false };
+  }
+
+  if (isOnlineMode()) {
+    if (action === 'inspect') return runAgentAction('evidence');
+    if (action === 'doctor') return runAgentAction('doctor');
+    toast('Use offline mode for migrate/repair/provision disk workflows', 'err');
+    return { ok: false };
+  }
+
+  if (isSmokeDisk(vm) && action !== 'provision') {
+    const alt = pickBestVm(state.vms.filter((v) => v.id !== vm.id));
+    toast('Smoke disk has no OS — select a real cloud image in Fleet', 'err');
+    feed('Skipped workflow on placeholder disk — pick Cirros or Ubuntu minimal', 'err');
+    if (alt) {
+      selectVm(alt);
+      toast(`Switched to ${alt.name}`, 'ok');
+    }
     return { ok: false };
   }
 
@@ -926,6 +1245,45 @@ async function runWizardChain() {
   } finally {
     state.wizardChain = false;
   }
+}
+
+function setupInspectionMode() {
+  if ($('#agentProxyUrl') && state.agentProxyUrl) {
+    $('#agentProxyUrl').value = state.agentProxyUrl;
+  }
+  setInspectionMode(state.inspectionMode);
+  $('#modeOfflineBtn')?.addEventListener('click', () => setInspectionMode('offline'));
+  $('#modeOnlineBtn')?.addEventListener('click', () => setInspectionMode('online'));
+  $('#agentPingBtn')?.addEventListener('click', () => pingAgent());
+  $('#agentProxyUrl')?.addEventListener('change', (e) => {
+    state.agentProxyUrl = e.target.value.trim();
+    localStorage.setItem('zyvor.agentProxyUrl', state.agentProxyUrl);
+  });
+  $$('[data-agent-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!btn.disabled) runAgentAction(btn.dataset.agentAction);
+    });
+  });
+  $('#agentForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('#agentInput');
+    const raw = input.value.trim();
+    if (!raw) return;
+    input.value = '';
+    if (raw.startsWith('guestkit.') || raw.startsWith('guest-')) {
+      agentTalk(raw, {});
+    } else if (raw.startsWith('{')) {
+      try {
+        const body = JSON.parse(raw);
+        agentTalk(body.method || 'guestkit.exec', body.params || {});
+      } catch {
+        appendAgentMessage('Invalid JSON — use {"method":"guestkit.ping","params":{}}', 'system');
+      }
+    } else {
+      agentTalk('guestkit.exec', { command: raw.split(/\s+/) }, raw);
+    }
+  });
+  renderAgentChips();
 }
 
 function setupCopilot() {
@@ -1031,6 +1389,7 @@ async function init() {
   setupDropzone();
   setupGlassToggle();
   setupWizard();
+  setupInspectionMode();
   setupCopilot();
   setupActions();
   setDockEnabled(false);

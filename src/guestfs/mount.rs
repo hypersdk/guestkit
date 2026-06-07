@@ -21,6 +21,19 @@ pub(crate) fn need_sudo() -> bool {
 }
 
 impl Guestfs {
+    fn create_mount_root() -> Result<std::path::PathBuf> {
+        let pid = std::process::id();
+        for base in ["/run", "/tmp"] {
+            let mount_dir = std::path::PathBuf::from(base).join(format!("guestkit-{pid}"));
+            if fs::create_dir_all(&mount_dir).is_ok() {
+                return Ok(mount_dir);
+            }
+        }
+        Err(Error::CommandFailed(
+            "Failed to create mount root under /run or /tmp".to_string(),
+        ))
+    }
+
     /// Resolve the device path, create mount root and mountpoint directory.
     /// Shared setup for mount_ro(), mount(), and mount_options().
     fn prepare_mount(
@@ -70,12 +83,9 @@ impl Guestfs {
             }
         };
 
-        // Create mount root if needed
+        // Create mount root if needed (/run when root, else /tmp for unprivileged CLI use)
         if self.mount_root.is_none() {
-            let mount_dir =
-                std::path::PathBuf::from("/run").join(format!("guestkit-{}", std::process::id()));
-            fs::create_dir_all(&mount_dir)
-                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
+            let mount_dir = Self::create_mount_root()?;
             self.mount_root.get_or_insert(mount_dir);
         }
 
@@ -468,12 +478,9 @@ impl Guestfs {
             }
         };
 
-        // Create mount root if needed
+        // Create mount root if needed (/run when root, else /tmp for unprivileged CLI use)
         if self.mount_root.is_none() {
-            let mount_dir =
-                std::path::PathBuf::from("/run").join(format!("guestkit-{}", std::process::id()));
-            fs::create_dir_all(&mount_dir)
-                .map_err(|e| Error::CommandFailed(format!("Failed to create mount root: {}", e)))?;
+            let mount_dir = Self::create_mount_root()?;
             self.mount_root.get_or_insert(mount_dir);
         }
 
