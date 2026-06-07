@@ -26,6 +26,7 @@
       <nav class="menubar-menu" aria-label="View">
         <button type="button" class="menubar-item" data-goto="ingest">File</button>
         <button type="button" class="menubar-item" data-goto="assure">Assure</button>
+        <button type="button" class="menubar-item" id="menubarClusterBtn">Cluster VMs</button>
         <button type="button" class="menubar-item" data-goto="plan">Plan</button>
         <button type="button" class="menubar-item" data-goto="launch">Launch</button>
       </nav>
@@ -59,6 +60,12 @@
               <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm0 2a5 5 0 110 10A5 5 0 009 4zm-.5 2v5.4l4.2 2.4.8-1.4-3.5-2V6h-1.5z"/></svg>
             </span>
             <span class="pipe-text"><span class="pipe-label">Assure</span><span class="pipe-hint">Doctor & inspect</span></span>
+          </button>
+          <button type="button" class="pipe-step pipe-cluster" data-step="cluster" id="pipelineClusterBtn">
+            <span class="pipe-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h5v5H4V4zm7 0h5v5h-5V4zM4 11h5v5H4v-5zm7 0h5v5h-5v-5z"/></svg>
+            </span>
+            <span class="pipe-text"><span class="pipe-label">Cluster</span><span class="pipe-hint">Live KubeVirt VMs</span></span>
           </button>
           <button type="button" class="pipe-step" data-step="plan">
             <span class="pipe-icon" aria-hidden="true">
@@ -126,6 +133,10 @@
                 <div class="drop-progress-bar" id="uploadBar"></div>
                 <span id="uploadLabel">Uploading…</span>
               </div>
+            </div>
+            <div class="ingest-alt glass-inset">
+              <p><strong>Already on KubeVirt?</strong> Skip disk upload — browse running VMs and pull guest info from the cluster.</p>
+              <button type="button" class="btn primary sm" id="openClusterFleetBtn">Browse cluster VMs</button>
             </div>
           </section>
 

@@ -197,12 +197,15 @@ function markWizardComplete(stepId) {
 }
 
 function setPipelineStep(step) {
-  const mapped = step === 'assure' ? 'assure' : step;
+  const mapped = step === 'assure' || step === 'cluster' ? 'assure' : step;
   $$('.pipe-step').forEach((btn) => {
     const id = btn.dataset.step;
-    btn.classList.toggle('active', id === mapped);
-    // Hint when earlier wizard steps are incomplete; navigation still allowed.
-    btn.classList.toggle('locked', Boolean(id && !canReachStep(id)));
+    const active = id === step || (step === 'cluster' && id === 'cluster') || (step === 'assure' && id === 'assure' && state.fleetMode !== 'cluster');
+    btn.classList.toggle('active', active || (step === 'assure' && id === 'cluster' && state.fleetMode === 'cluster'));
+    if (id === 'cluster') {
+      btn.classList.toggle('active', state.fleetMode === 'cluster' && (step === 'assure' || step === 'cluster'));
+    }
+    btn.classList.toggle('locked', Boolean(id && id !== 'cluster' && !canReachStep(id === 'assure' ? 'assure' : id)));
   });
 }
 
@@ -254,6 +257,13 @@ function updateWizardFooter() {
 
 function scrollToPanel(step) {
   setWizardStep(step);
+}
+
+async function openClusterFleet() {
+  setFleetMode('cluster');
+  setWizardStep('assure');
+  await loadClusterFleet();
+  feed('Showing <strong>KubeVirt cluster</strong> VMs — select one for guest info', 'ok');
 }
 
 function zeusVmUrl(namespace, name) {
@@ -1542,12 +1552,19 @@ function setupActions() {
     btn.addEventListener('click', () => {
       const step = btn.dataset.step;
       if (!step) return;
+      if (step === 'cluster') {
+        openClusterFleet();
+        return;
+      }
       if (!canReachStep(step)) {
         toast('Complete earlier pipeline steps to unlock actions — showing preview');
       }
       scrollToPanel(step);
     });
   });
+
+  $('#openClusterFleetBtn')?.addEventListener('click', () => openClusterFleet());
+  $('#menubarClusterBtn')?.addEventListener('click', () => openClusterFleet());
 
   $$('.tab').forEach((tab) => {
     tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));

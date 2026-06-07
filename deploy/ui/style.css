@@ -434,6 +434,27 @@ html, body {
   opacity: 0.85;
 }
 
+.pipe-step.pipe-cluster .pipe-icon {
+  background: rgba(90, 200, 250, 0.15);
+}
+
+.ingest-alt {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ingest-alt p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 36rem;
+}
+
 .pipe-icon {
   width: 28px;
   height: 28px;
