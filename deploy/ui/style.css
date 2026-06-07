@@ -424,6 +424,16 @@ html, body {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
+.pipe-step.locked:not(.active) {
+  opacity: 0.72;
+}
+
+.pipe-step.locked:not(.active) .pipe-hint::after {
+  content: ' · preview';
+  font-size: 0.62rem;
+  opacity: 0.85;
+}
+
 .pipe-icon {
   width: 28px;
   height: 28px;
