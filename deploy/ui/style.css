@@ -465,6 +465,42 @@ html, body {
   color: var(--text-tertiary);
 }
 
+.fleet-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.fleet-tabs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fleet-tab {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fleet-tab.active {
+  background: rgba(90, 200, 250, 0.18);
+  color: var(--text);
+}
+
+.vm-card.cluster .vm-format {
+  background: rgba(90, 200, 250, 0.15);
+}
+
 /* ── Main window (app chrome) ── */
 .workspace {
   padding: 0 0.5rem 1rem;

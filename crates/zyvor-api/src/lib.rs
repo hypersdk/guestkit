@@ -32,10 +32,22 @@ pub async fn serve(config: Config) -> Result<()> {
 
     tokio::fs::create_dir_all(&config.storage_path).await?;
 
+    let kube = match kube::Client::try_default().await {
+        Ok(client) => {
+            tracing::info!("kubernetes client initialized for KubeVirt discovery");
+            Some(client)
+        }
+        Err(e) => {
+            tracing::warn!("kubernetes client unavailable: {e}");
+            None
+        }
+    };
+
     let state = AppState {
         pool,
         redis: redis_conn,
         config: config.clone(),
+        kube,
     };
 
     let max_upload = config.max_upload_bytes;

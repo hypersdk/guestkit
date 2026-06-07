@@ -13,6 +13,9 @@ spec:
       labels:
         app: zyvor-api
     spec:
+      {{- if .Values.kubevirt.enabled }}
+      serviceAccountName: zyvor-api
+      {{- end }}
       hostPID: true
       containers:
         - name: zyvor-api

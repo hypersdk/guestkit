@@ -28,6 +28,9 @@ const state = {
   inspectionMode: localStorage.getItem('zyvor.inspectMode') || 'offline',
   agentProxyUrl: localStorage.getItem('zyvor.agentProxyUrl') || '',
   agentReachable: false,
+  fleetMode: localStorage.getItem('zyvor.fleetMode') || 'disks',
+  clusterVms: [],
+  selectedClusterVm: null,
 };
 
 const AGENT_QUICK_RPC = [
@@ -253,7 +256,62 @@ function scrollToPanel(step) {
   setWizardStep(step);
 }
 
+function zeusVmUrl(namespace, name) {
+  const host = window.location.hostname || '127.0.0.1';
+  const q = new URLSearchParams({ namespace, vm: name });
+  return `http://${host}:30050/vms?${q.toString()}`;
+}
+
+function clusterVmKey(vm) {
+  return `${vm.namespace}/${vm.name}`;
+}
+
+function setFleetMode(mode) {
+  state.fleetMode = mode;
+  localStorage.setItem('zyvor.fleetMode', mode);
+  $$('.fleet-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.fleet === mode));
+  const subtitle = $('#fleetSubtitle');
+  if (subtitle) {
+    subtitle.textContent = mode === 'cluster'
+      ? 'Live KubeVirt VMs from the cluster — select one for guest agent info.'
+      : 'Imported disks staged for offline intelligence.';
+  }
+  updateFleetEmptyState();
+  renderFleet();
+  updateSelectionPanels();
+}
+
+function updateFleetEmptyState() {
+  const emptyText = $('#fleetEmptyText');
+  const importBtn = $('#fleetEmptyImport');
+  const refreshBtn = $('#fleetEmptyRefresh');
+  const isCluster = state.fleetMode === 'cluster';
+  if (emptyText) {
+    emptyText.textContent = isCluster ? 'No KubeVirt VMs found in this cluster.' : 'No disks yet.';
+  }
+  importBtn?.classList.toggle('hidden', isCluster);
+  refreshBtn?.classList.toggle('hidden', !isCluster);
+}
+
+function updateSelectionPanels() {
+  const clusterSelected = Boolean(state.selectedClusterVm);
+  const diskSelected = Boolean(state.selectedVm) && !clusterSelected;
+  $('#actionDeck')?.classList.toggle('hidden', !diskSelected || state.inspectionMode !== 'offline');
+  $('#clusterDeck')?.classList.toggle('hidden', !clusterSelected);
+  const online = state.inspectionMode === 'online';
+  $('#agentDeck')?.classList.toggle('hidden', !diskSelected || !online);
+  $('#agentProxyRow')?.classList.toggle('hidden', !online || clusterSelected);
+  if (clusterSelected) {
+    $$('#clusterDeck [data-cluster-action]').forEach((b) => { b.disabled = false; });
+  }
+}
+
 function renderFleet() {
+  if (state.fleetMode === 'cluster') {
+    renderClusterFleet();
+    return;
+  }
+
   const grid = $('#fleetGrid');
   const empty = $('#fleetEmpty');
   $('#fleetCount').textContent = `${state.vms.length} image${state.vms.length === 1 ? '' : 's'}`;
@@ -262,6 +320,7 @@ function renderFleet() {
 
   if (!state.vms.length) {
     empty.classList.remove('hidden');
+    updateFleetEmptyState();
     return;
   }
   empty.classList.add('hidden');
@@ -292,6 +351,121 @@ function renderFleet() {
   });
 }
 
+function renderClusterFleet() {
+  const grid = $('#fleetGrid');
+  const empty = $('#fleetEmpty');
+  const vms = state.clusterVms || [];
+  $('#fleetCount').textContent = `${vms.length} VM${vms.length === 1 ? '' : 's'}`;
+
+  grid.querySelectorAll('.vm-card').forEach((c) => c.remove());
+
+  if (!vms.length) {
+    empty.classList.remove('hidden');
+    updateFleetEmptyState();
+    return;
+  }
+  empty.classList.add('hidden');
+
+  vms.forEach((vm) => {
+    const key = clusterVmKey(vm);
+    const selected = state.selectedClusterVm && clusterVmKey(state.selectedClusterVm) === key;
+    const agent = vm.guest_agent_connected;
+    const agentLabel = agent === true ? 'agent on' : agent === false ? 'no agent' : 'unknown';
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'vm-card cluster' + (selected ? ' selected' : '');
+    card.innerHTML = `
+      <span class="vm-format">kubevirt</span>
+      <span class="vm-status ${vm.phase === 'Running' ? 'ready' : 'pending'}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
+      <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
+      <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}</p>
+    `;
+    card.addEventListener('click', () => selectClusterVm(vm));
+    grid.appendChild(card);
+  });
+}
+
+function selectClusterVm(vm) {
+  state.selectedClusterVm = vm;
+  state.selectedVm = null;
+  renderFleet();
+  setInspectionMode('online');
+  $('#selectedVmTitle').textContent = `${vm.namespace}/${vm.name}`;
+  const meta = $('#selectedVmMeta');
+  meta.classList.remove('vm-warn');
+  meta.textContent = `${vm.status || vm.phase || 'Unknown'} · ${vm.ip_address || 'no guest IP'} · ${vm.node || 'no node'}`;
+  $$('.action-card[data-action]').forEach((b) => { b.disabled = true; });
+  setDockEnabled(false);
+  updateSelectionPanels();
+  markWizardComplete('ingest');
+  if (state.wizard.step === 'ingest') setWizardStep('assure');
+  feed(`Selected cluster VM <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>`, 'ok');
+  fetchClusterGuestInfo(false);
+}
+
+async function loadClusterFleet() {
+  try {
+    const data = await api('/kubevirt/vms');
+    state.clusterVms = data.data || [];
+    if (state.selectedClusterVm) {
+      const key = clusterVmKey(state.selectedClusterVm);
+      const fresh = state.clusterVms.find((v) => clusterVmKey(v) === key);
+      state.selectedClusterVm = fresh || null;
+    }
+    renderFleet();
+    if (!state.clusterVms.length) {
+      toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
+    }
+  } catch (e) {
+    toast(`Cluster VM load failed: ${e.message}`, 'err');
+  }
+}
+
+async function fetchClusterGuestInfo(showToast = true) {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`Fetching guest info for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  setActiveTab('summary');
+  try {
+    const data = await api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent`);
+    const info = data.data;
+    renderClusterGuestSummary(info);
+    setAgentStatus(info.agent_connected ? 'agent connected' : info.health, info.agent_connected);
+    if (showToast) toast(info.agent_connected ? 'Guest agent connected' : 'Guest agent not connected', info.agent_connected ? 'ok' : 'err');
+    feed(info.message);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function renderClusterGuestSummary(info) {
+  const ph = $('#summaryPlaceholder');
+  const content = $('#summaryContent');
+  ph.classList.add('hidden');
+  content.classList.remove('hidden');
+  content.innerHTML = '';
+  const healthClass = info.agent_connected ? 'ok' : info.health === 'absent' ? 'warn' : 'warn';
+  content.innerHTML += `<p class="finding ${healthClass}"><strong>Guest agent:</strong> ${escapeHtml(info.health)} — ${escapeHtml(info.message)}</p>`;
+  if (info.os_name) {
+    content.innerHTML += `<p class="finding ok"><strong>OS</strong> ${escapeHtml(info.os_name)} ${escapeHtml(info.os_version || '')}</p>`;
+  }
+  if (info.hostname) {
+    content.innerHTML += `<p class="finding ok"><strong>Hostname</strong> ${escapeHtml(info.hostname)}</p>`;
+  }
+  if (info.interfaces?.length) {
+    const ips = info.interfaces.map((i) => i.ipAddress).filter(Boolean).join(', ');
+    if (ips) content.innerHTML += `<p class="finding ok"><strong>Interfaces</strong> ${escapeHtml(ips)}</p>`;
+  }
+  if (!info.agent_connected && info.vmi_running) {
+    content.innerHTML += `<p class="finding warn">Install GuestKit agent from Zeus OS → VM → Guest Tools, then restart the VM.</p>`;
+  }
+  setScore(null);
+  setRawJson({ mode: 'kubevirt-live', guest_agent: info });
+}
+
 function setDockEnabled(on) {
   ['#dockInspect', '#dockDoctor', '#dockPlan', '#dockRepair', '#dockLaunch'].forEach((sel) => {
     const el = $(sel);
@@ -301,6 +475,7 @@ function setDockEnabled(on) {
 
 function selectVm(vm) {
   state.selectedVm = vm;
+  state.selectedClusterVm = null;
   renderFleet();
   setAgentDeckEnabled(!!vm);
   $('#selectedVmTitle').textContent = vm.name || 'Unnamed disk';
@@ -317,6 +492,7 @@ function selectVm(vm) {
     setWizardStep('assure');
   }
   updateWizardFooter();
+  updateSelectionPanels();
   feed(`Selected <strong>${escapeHtml(vm.name)}</strong>${smoke ? ' (smoke — not bootable)' : ''}`, smoke ? 'err' : '');
 }
 
@@ -572,9 +748,10 @@ function setInspectionMode(mode) {
   $('#agentDeck')?.classList.toggle('hidden', offline);
   $('#agentTab')?.classList.toggle('hidden', offline);
   if (!offline) {
-    setActiveTab('agent');
+    setActiveTab(state.selectedClusterVm ? 'summary' : 'agent');
     renderAgentChips();
   }
+  updateSelectionPanels();
   feed(`Inspection mode: <strong>${offline ? 'offline disk' : 'online agent'}</strong>`);
 }
 
@@ -1377,9 +1554,36 @@ function setupActions() {
   });
 
   $('#refreshFleetBtn').addEventListener('click', () => {
-    loadFleet();
+    if (state.fleetMode === 'cluster') loadClusterFleet();
+    else loadFleet();
     checkHealth();
     toast('Fleet refreshed', 'ok');
+  });
+
+  $$('.fleet-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.fleet;
+      if (!mode || mode === state.fleetMode) return;
+      setFleetMode(mode);
+      if (mode === 'cluster') loadClusterFleet();
+      else loadFleet();
+    });
+  });
+
+  $('#fleetEmptyRefresh')?.addEventListener('click', () => loadClusterFleet());
+
+  $$('[data-cluster-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const vm = state.selectedClusterVm;
+      if (!vm) {
+        toast('Select a cluster VM first', 'err');
+        return;
+      }
+      if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
+      else if (btn.dataset.clusterAction === 'zeus-vm') {
+        window.open(zeusVmUrl(vm.namespace, vm.name), '_blank', 'noopener,noreferrer');
+      }
+    });
   });
 
   $('#copyYamlBtn').addEventListener('click', async () => {
@@ -1393,6 +1597,26 @@ function setupActions() {
   });
 }
 
+async function applyUrlContext() {
+  const params = new URLSearchParams(window.location.search);
+  const pathMatch = window.location.pathname.match(/\/embed\/vm\/([^/]+)\/([^/]+)/);
+  const namespace = params.get('namespace') || (pathMatch ? decodeURIComponent(pathMatch[1]) : null);
+  const vmName = params.get('vm') || (pathMatch ? decodeURIComponent(pathMatch[2]) : null);
+  const action = params.get('action');
+
+  if (namespace && vmName) {
+    setFleetMode('cluster');
+    await loadClusterFleet();
+    const vm = state.clusterVms.find((v) => v.namespace === namespace && v.name === vmName);
+    if (vm) {
+      selectClusterVm(vm);
+      if (action === 'inspect' || action === 'doctor') await fetchClusterGuestInfo(false);
+    } else {
+      toast(`VM ${namespace}/${vmName} not found in cluster`, 'err');
+    }
+  }
+}
+
 async function init() {
   setupDropzone();
   setupGlassToggle();
@@ -1401,11 +1625,14 @@ async function init() {
   setupCopilot();
   setupActions();
   setDockEnabled(false);
+  setFleetMode(state.fleetMode);
   setWizardStep('ingest');
   await checkHealth();
-  await loadFleet();
+  if (state.fleetMode === 'cluster') await loadClusterFleet();
+  else await loadFleet();
+  await applyUrlContext();
   setInterval(checkHealth, 30000);
-  feed('Ready — ingest a disk to begin', 'ok');
+  feed(state.fleetMode === 'cluster' ? 'KubeVirt cluster fleet ready' : 'Ready — ingest a disk or switch to KubeVirt cluster', 'ok');
 }
 
 init();
