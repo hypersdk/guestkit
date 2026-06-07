@@ -13,6 +13,7 @@ spec:
       labels:
         app: guestkit-worker
     spec:
+      hostPID: true
       containers:
         - name: guestkit-worker
           image: {{ .Values.guestkitWorker.image }}
@@ -41,10 +42,16 @@ spec:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             - name: results
               mountPath: /var/lib/guestkit/results
+            - name: dev
+              mountPath: /dev
+              mountPropagation: HostToContainer
       volumes:
         {{- include "zyvor.vmVolume" . | nindent 8 }}
         - name: results
           emptyDir: {}
+        - name: dev
+          hostPath:
+            path: /dev
 ---
 apiVersion: v1
 kind: Service

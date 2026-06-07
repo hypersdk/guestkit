@@ -10,7 +10,7 @@ pub mod migrate_plan;
 pub mod profile;
 pub mod repair;
 
-pub use agent::{AgentEvidenceHandler, AgentFixHandler};
+pub use agent::{AgentCallHandler, AgentDoctorHandler, AgentEvidenceHandler, AgentFixHandler};
 pub use doctor::DoctorHandler;
 pub use inspect::InspectHandler;
 pub use migrate_plan::MigratePlanHandler;

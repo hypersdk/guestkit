@@ -147,6 +147,19 @@
               <h2 id="selectedVmTitle">Select a VM</h2>
               <p id="selectedVmMeta">Choose a fleet card to unlock actions.</p>
             </div>
+            <div class="inspect-mode-row glass-inset">
+              <span class="inspect-mode-label">Inspection</span>
+              <div class="inspect-mode-toggle" role="group" aria-label="Inspection mode">
+                <button type="button" class="mode-btn active" data-mode="offline" id="modeOfflineBtn">Offline disk</button>
+                <button type="button" class="mode-btn" data-mode="online" id="modeOnlineBtn">Online agent</button>
+              </div>
+              <span class="agent-status" id="agentStatus">agent idle</span>
+            </div>
+            <div class="agent-proxy-row hidden" id="agentProxyRow">
+              <label for="agentProxyUrl">Agent proxy URL</label>
+              <input type="url" id="agentProxyUrl" placeholder="http://127.0.0.1:8765" spellcheck="false" />
+              <button type="button" class="btn glass sm" id="agentPingBtn">Ping agent</button>
+            </div>
             <div class="action-deck" id="actionDeck">
               <button type="button" class="action-card glass" data-action="inspect" disabled>
                 <strong>Inspect</strong><span>OS & services</span>
@@ -162,6 +175,20 @@
               </button>
               <button type="button" class="action-card glass launch" data-action="provision" disabled>
                 <strong>Provision</strong><span>KubeVirt YAML</span>
+              </button>
+            </div>
+            <div class="action-deck agent-deck hidden" id="agentDeck">
+              <button type="button" class="action-card glass" data-agent-action="evidence" disabled>
+                <strong>Live inspect</strong><span>Agent evidence</span>
+              </button>
+              <button type="button" class="action-card glass accent" data-agent-action="doctor" disabled>
+                <strong>Live doctor</strong><span>Boot score (running VM)</span>
+              </button>
+              <button type="button" class="action-card glass" data-agent-action="capabilities" disabled>
+                <strong>Capabilities</strong><span>Agent methods</span>
+              </button>
+              <button type="button" class="action-card glass" data-agent-action="metrics" disabled>
+                <strong>Metrics</strong><span>Live host stats</span>
               </button>
             </div>
           </section>
@@ -186,6 +213,7 @@
                 <div class="output-tabs">
                   <button type="button" class="tab active" data-tab="summary">Summary</button>
                   <button type="button" class="tab hidden" data-tab="copilot" id="copilotTab">Copilot</button>
+                  <button type="button" class="tab hidden" data-tab="agent" id="agentTab">Agent</button>
                   <button type="button" class="tab" data-tab="raw">JSON</button>
                   <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">YAML</button>
                 </div>
@@ -194,6 +222,15 @@
                     <p class="placeholder" id="summaryPlaceholder">Run an action to see results.</p>
                     <div id="summaryContent" class="summary-content hidden"></div>
                     <div id="checksHeatmap" class="checks-heatmap hidden"></div>
+                  </div>
+                  <div class="tab-pane" id="pane-agent">
+                    <p class="placeholder" id="agentPlaceholder">Switch to Online agent mode, ping the proxy, then inspect or talk to the in-guest agent.</p>
+                    <div class="agent-chat" id="agentChat"></div>
+                    <div class="agent-chips" id="agentChips"></div>
+                    <form class="copilot-input-row" id="agentForm">
+                      <input type="text" id="agentInput" placeholder="RPC method e.g. guestkit.exec or a question…" autocomplete="off" />
+                      <button type="submit" class="btn primary sm">Send</button>
+                    </form>
                   </div>
                   <div class="tab-pane" id="pane-copilot">
                     <div class="copilot-brief glass-inset hidden" id="copilotBrief"></div>
