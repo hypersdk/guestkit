@@ -47,7 +47,11 @@ build_push() {
   local context="$3"
   local image="${REGISTRY}/${name}:${TAG}"
   echo "=== Building ${image} ==="
-  "${BUILDER}" build --format docker -t "${image}" -f "${dockerfile}" "${context}"
+  local build_args=(-t "${image}" -f "${dockerfile}" "${context}")
+  if [[ "${BUILDER}" == "podman" ]]; then
+    build_args=(--format docker "${build_args[@]}")
+  fi
+  "${BUILDER}" build "${build_args[@]}"
   if [[ "${TAG}" != "latest" ]]; then
     "${BUILDER}" tag "${image}" "${REGISTRY}/${name}:latest"
   fi
