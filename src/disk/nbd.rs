@@ -5,7 +5,8 @@
 //! as block devices. This allows filesystem access without implementing
 //! full filesystem parsers.
 
-use crate::core::{Error, Result};
+use crate::core::{DiskFormat, Error, Result};
+use crate::disk::reader::DiskReader;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::thread;
@@ -122,56 +123,79 @@ impl NbdDevice {
         false
     }
 
-    /// Detect image format from extension, falling back to `qemu-img info`.
+    /// Detect qemu-nbd `-f` format from magic bytes, then qemu-img, then extension.
     ///
-    /// Handles non-standard extensions like `.vmdk1` by probing with qemu-img.
+    /// `.img` is not assumed raw — Cirros/Ubuntu cloud images are often qcow2.
     fn detect_image_format(path: &Path) -> String {
-        // Try extension first
-        let ext_format = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .and_then(|ext| match ext.to_lowercase().as_str() {
+        if let Ok(fmt) = DiskReader::detect_image_format(path) {
+            if let Some(nbd_fmt) = Self::disk_format_to_nbd(fmt) {
+                if is_debug_enabled() {
+                    eprintln!(
+                        "[DEBUG NBD] Detected format '{nbd_fmt}' via magic bytes for {}",
+                        path.display()
+                    );
+                }
+                return nbd_fmt;
+            }
+        }
+
+        if let Some(fmt) = Self::probe_qemu_img_format(path) {
+            return fmt;
+        }
+
+        // Extension hint for unambiguous types only (never .img → raw)
+        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+            if let Some(fmt) = match ext.to_lowercase().as_str() {
                 "qcow2" => Some("qcow2"),
                 "vmdk" => Some("vmdk"),
                 "vdi" => Some("vdi"),
                 "vhd" | "vpc" => Some("vpc"),
                 "vhdx" => Some("vhdx"),
-                "raw" | "img" | "iso" => Some("raw"),
-                _ => None, // unknown extension — need to probe
-            });
-
-        if let Some(fmt) = ext_format {
-            return fmt.to_string();
+                "raw" => Some("raw"),
+                _ => None,
+            } {
+                return fmt.to_string();
+            }
         }
 
-        // Extension didn't match — probe with qemu-img info
-        if let Ok(output) = Command::new("qemu-img")
+        "raw".to_string()
+    }
+
+    fn disk_format_to_nbd(fmt: DiskFormat) -> Option<String> {
+        Some(match fmt {
+            DiskFormat::Qcow2 => "qcow2",
+            DiskFormat::Vmdk => "vmdk",
+            DiskFormat::Vhd => "vpc",
+            DiskFormat::Vhdx => "vhdx",
+            DiskFormat::Vdi => "vdi",
+            DiskFormat::Raw => "raw",
+            DiskFormat::Unknown => return None,
+        }
+        .to_string())
+    }
+
+    fn probe_qemu_img_format(path: &Path) -> Option<String> {
+        let output = Command::new("qemu-img")
             .arg("info")
             .arg("--output=json")
             .arg(path)
             .output()
-        {
-            if output.status.success() {
-                // Parse the top-level "format" field from JSON
-                if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&output.stdout) {
-                    if let Some(fmt) = json.get("format").and_then(|v| v.as_str()) {
-                        if fmt != "file" && fmt != "raw" || path.extension().is_none() {
-                            if is_debug_enabled() {
-                                eprintln!(
-                                    "[DEBUG NBD] Detected format '{}' via qemu-img for {}",
-                                    fmt,
-                                    path.display()
-                                );
-                            }
-                            return fmt.to_string();
-                        }
-                    }
-                }
-            }
+            .ok()?;
+        if !output.status.success() {
+            return None;
         }
-
-        // Last resort — assume raw
-        "raw".to_string()
+        let json = serde_json::from_slice::<serde_json::Value>(&output.stdout).ok()?;
+        let fmt = json.get("format")?.as_str()?;
+        if fmt == "file" {
+            return None;
+        }
+        if is_debug_enabled() {
+            eprintln!(
+                "[DEBUG NBD] Detected format '{fmt}' via qemu-img for {}",
+                path.display()
+            );
+        }
+        Some(fmt.to_string())
     }
 
     /// Find an available NBD device

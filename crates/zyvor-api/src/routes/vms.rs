@@ -35,10 +35,15 @@ pub async fn import_vm(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> ApiResult<Json<ApiResponse<VmImportResponse>>> {
-    let mut filename = String::from("uploaded-image");
-    let mut bytes: Vec<u8> = Vec::new();
+    use tokio::io::AsyncWriteExt;
 
-    while let Some(field) = multipart
+    let mut filename = String::from("uploaded-image");
+    let mut size_bytes: u64 = 0;
+    let mut wrote_file = false;
+    let id = Uuid::new_v4();
+    let mut disk_path = state.config.storage_path.join("pending");
+
+    while let Some(mut field) = multipart
         .next_field()
         .await
         .map_err(|e| ApiError::bad_request(e.to_string()))?
@@ -47,29 +52,45 @@ pub async fn import_vm(
             if let Some(name) = field.file_name() {
                 filename = name.to_string();
             }
-            bytes = field
-                .bytes()
+            let format = PathBuf::from(&filename)
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("qcow2")
+                .to_lowercase();
+            let object_key = format!("{id}.{format}");
+            disk_path = state.config.storage_path.join(&object_key);
+            let mut out = tokio::fs::File::create(&disk_path)
+                .await
+                .map_err(|e| ApiError::internal(e.to_string()))?;
+
+            while let Some(chunk) = field
+                .chunk()
                 .await
                 .map_err(|e| ApiError::bad_request(e.to_string()))?
-                .to_vec();
+            {
+                out.write_all(&chunk)
+                    .await
+                    .map_err(|e| ApiError::internal(e.to_string()))?;
+                size_bytes += chunk.len() as u64;
+            }
+            out.flush()
+                .await
+                .map_err(|e| ApiError::internal(e.to_string()))?;
+            wrote_file = true;
         }
     }
 
-    if bytes.is_empty() {
+    if !wrote_file || size_bytes == 0 {
+        let _ = tokio::fs::remove_file(&disk_path).await;
         return Err(ApiError::bad_request("file field is required"));
     }
 
-    let id = Uuid::new_v4();
     let format = PathBuf::from(&filename)
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("qcow2")
         .to_lowercase();
     let object_key = format!("{id}.{format}");
-    let disk_path = state.config.storage_path.join(&object_key);
-    tokio::fs::write(&disk_path, &bytes)
-        .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
 
     sqlx::query(
         r#"INSERT INTO vm_images (id, tenant, name, object_key, format, size_bytes, status)
@@ -80,7 +101,7 @@ pub async fn import_vm(
     .bind(&filename)
     .bind(&object_key)
     .bind(&format)
-    .bind(bytes.len() as i64)
+    .bind(size_bytes as i64)
     .bind("imported")
     .execute(&state.pool)
     .await
@@ -90,7 +111,7 @@ pub async fn import_vm(
         id,
         name: filename,
         format,
-        size_bytes: bytes.len() as i64,
+        size_bytes: size_bytes as i64,
         path: disk_path.display().to_string(),
     })))
 }
@@ -107,7 +128,7 @@ pub async fn list_vms(
     Ok(Json(ApiResponse::ok(rows)))
 }
 
-async fn load_vm(state: &AppState, id: Uuid) -> ApiResult<VmImage> {
+pub(crate) async fn load_vm(state: &AppState, id: Uuid) -> ApiResult<VmImage> {
     sqlx::query_as::<_, VmImage>(
         "SELECT id, tenant, name, object_key, format, size_bytes, checksum, status, created_at FROM vm_images WHERE id = $1",
     )

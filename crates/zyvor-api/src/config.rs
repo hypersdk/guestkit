@@ -12,6 +12,10 @@ pub struct Config {
     pub storage_public_url: String,
     pub default_namespace: String,
     pub storage_class: String,
+    /// Maximum multipart upload size in bytes (default 2 GiB).
+    pub max_upload_bytes: usize,
+    /// Default guestkit agent-proxy URL for live (online) VM inspection.
+    pub agent_proxy_url: Option<String>,
 }
 
 impl Config {
@@ -32,6 +36,13 @@ impl Config {
                 .unwrap_or_else(|_| "zyvor".into()),
             storage_class: std::env::var("STORAGE_CLASS")
                 .unwrap_or_else(|_| "longhorn".into()),
+            max_upload_bytes: std::env::var("MAX_UPLOAD_BYTES")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(2 * 1024 * 1024 * 1024),
+            agent_proxy_url: std::env::var("AGENT_PROXY_URL")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
         })
     }
 }

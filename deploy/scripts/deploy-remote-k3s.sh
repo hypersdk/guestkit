@@ -5,12 +5,15 @@
 # Usage:
 #   bash deploy/scripts/deploy-remote-k3s.sh
 #   ROOT=/path/to/guestkit bash deploy/scripts/deploy-remote-k3s.sh
+#   PULL_REGISTRY=ghcr.io/hypersdk bash deploy/scripts/deploy-remote-k3s.sh
 set -euo pipefail
 
 ROOT="${ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 NAMESPACE="${NAMESPACE:-zyvor}"
 K3S_BIN="${K3S_BIN:-/usr/local/bin/k3s}"
 BUILDER="${BUILDER:-podman}"
+PULL_REGISTRY="${PULL_REGISTRY:-}"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 cd "${ROOT}"
 
@@ -53,17 +56,30 @@ build_and_import() {
   rm -f "${tar}"
 }
 
-build_and_import guestkit-worker "${ROOT}/crates/guestkit-worker/Dockerfile" "${ROOT}"
-build_and_import zyvor-api "${ROOT}/crates/zyvor-api/Dockerfile" "${ROOT}"
-build_and_import zyvor-ui "${ROOT}/deploy/ui/Dockerfile" "${ROOT}/deploy/ui"
+if [[ -n "${PULL_REGISTRY}" ]]; then
+  WORKER_IMAGE="${PULL_REGISTRY}/guestkit-worker:${IMAGE_TAG}"
+  API_IMAGE="${PULL_REGISTRY}/zyvor-api:${IMAGE_TAG}"
+  UI_IMAGE="${PULL_REGISTRY}/zyvor-ui:${IMAGE_TAG}"
+  echo "Pulling published images from ${PULL_REGISTRY}..."
+  for img in "${WORKER_IMAGE}" "${API_IMAGE}" "${UI_IMAGE}"; do
+    sudo "${K3S_BIN}" ctr -n k8s.io images pull "${img}"
+  done
+else
+  WORKER_IMAGE="guestkit-worker:latest"
+  API_IMAGE="zyvor-api:latest"
+  UI_IMAGE="zyvor-ui:latest"
+  build_and_import guestkit-worker "${ROOT}/crates/guestkit-worker/Dockerfile" "${ROOT}"
+  build_and_import zyvor-api "${ROOT}/crates/zyvor-api/Dockerfile" "${ROOT}"
+  build_and_import zyvor-ui "${ROOT}/deploy/ui/Dockerfile" "${ROOT}/deploy/ui"
+fi
 
 echo "Installing Helm chart..."
 helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   -n "${NAMESPACE}" --create-namespace \
   -f "${ROOT}/deploy/helm/zyvor/values-k3s.yaml" \
-  --set guestkitWorker.image=guestkit-worker:latest \
-  --set zyvorApi.image=zyvor-api:latest \
-  --set zyvorUi.image=zyvor-ui:latest
+  --set guestkitWorker.image="${WORKER_IMAGE}" \
+  --set zyvorApi.image="${API_IMAGE}" \
+  --set zyvorUi.image="${UI_IMAGE}"
 
 echo "Waiting for rollouts..."
 kubectl -n "${NAMESPACE}" rollout status deployment/postgresql --timeout=180s

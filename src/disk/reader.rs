@@ -79,6 +79,12 @@ impl DiskReader {
         false
     }
 
+    /// Detect on-disk image format from magic bytes (not file extension).
+    pub fn detect_image_format<P: AsRef<Path>>(path: P) -> Result<DiskFormat> {
+        let mut file = File::open(path).map_err(Error::Io)?;
+        Self::detect_format(&mut file)
+    }
+
     /// Detect disk image format from magic bytes
     fn detect_format(file: &mut File) -> Result<DiskFormat> {
         let mut magic = [0u8; 4];

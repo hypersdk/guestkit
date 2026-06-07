@@ -13,6 +13,7 @@ spec:
       labels:
         app: zyvor-api
     spec:
+      hostPID: true
       containers:
         - name: zyvor-api
           image: {{ .Values.zyvorApi.image }}
@@ -36,10 +37,20 @@ spec:
               value: {{ .Values.zyvorApi.storageClass }}
             - name: DEFAULT_NAMESPACE
               value: {{ .Values.zyvorApi.defaultNamespace }}
+            {{- if .Values.zyvorApi.agentProxyUrl }}
+            - name: AGENT_PROXY_URL
+              value: {{ .Values.zyvorApi.agentProxyUrl | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
+            - name: dev
+              mountPath: /dev
+              mountPropagation: HostToContainer
       volumes:
         {{- include "zyvor.vmVolume" . | nindent 8 }}
+        - name: dev
+          hostPath:
+            path: /dev
 ---
 apiVersion: v1
 kind: Service

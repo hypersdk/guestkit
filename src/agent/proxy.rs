@@ -88,31 +88,66 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
     let body_start = request.find("\r\n\r\n").map(|i| i + 4).unwrap_or(n);
     let body = &buf[body_start..n];
 
-    let rpc_method = match (method, path) {
+    let path_only = path.split('?').next().unwrap_or(path);
+    let query = path.split('?').nth(1).unwrap_or("");
+    let query_target = query
+        .split('&')
+        .find_map(|pair| {
+            let mut kv = pair.splitn(2, '=');
+            let k = kv.next()?;
+            let v = kv.next().unwrap_or("");
+            if k == "target" { Some(v) } else { None }
+        })
+        .unwrap_or("kvm");
+
+    let rpc_method = match (method, path_only) {
         ("GET", "/evidence") | ("GET", "/api/evidence") => "guestkit.getEvidence",
         ("GET", "/doctor") | ("GET", "/api/doctor") => "guestkit.doctor",
         ("GET", "/ping") | ("GET", "/api/ping") => "guestkit.ping",
         ("GET", "/capabilities") | ("GET", "/api/capabilities") => "guestkit.getCapabilities",
         ("POST", "/fix-plan") | ("POST", "/api/fix-plan") => "guestkit.runFixPlan",
+        ("POST", "/rpc") | ("POST", "/api/rpc") => "__passthrough__",
         _ => {
             return write_http_error(&mut stream, 404, "not found").await;
         }
     };
 
-    let params = if rpc_method == "guestkit.runFixPlan" {
-        serde_json::from_slice::<serde_json::Value>(body).unwrap_or_else(|_| serde_json::json!({}))
+    let (call_method, params) = if rpc_method == "__passthrough__" {
+        let body_json: serde_json::Value =
+            serde_json::from_slice(body).unwrap_or_else(|_| serde_json::json!({}));
+        let m = body_json
+            .get("method")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if m.is_empty() {
+            return write_http_error(&mut stream, 400, "method required").await;
+        }
+        let p = body_json
+            .get("params")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        (m, p)
+    } else if rpc_method == "guestkit.runFixPlan" {
+        (
+            rpc_method.to_string(),
+            serde_json::from_slice::<serde_json::Value>(body).unwrap_or_else(|_| serde_json::json!({})),
+        )
     } else if rpc_method == "guestkit.doctor" {
-        serde_json::json!({ "target": "kvm" })
+        (
+            rpc_method.to_string(),
+            serde_json::json!({ "target": query_target }),
+        )
     } else {
-        serde_json::json!({})
+        (rpc_method.to_string(), serde_json::json!({}))
     };
 
     let response = tokio::task::spawn_blocking({
         let socket_path = socket_path.to_string();
-        let rpc_method = rpc_method.to_string();
+        let call_method = call_method.clone();
         move || -> Result<serde_json::Value> {
             let mut client = AgentClient::connect(&socket_path)?;
-            client.call(&rpc_method, params)
+            client.call(&call_method, params)
         }
     })
     .await??;

@@ -5,7 +5,8 @@ use std::sync::Arc;
 use crate::{
     Worker, WorkerConfig, HandlerRegistry,
     handlers::{
-        AgentEvidenceHandler, AgentFixHandler, DoctorHandler, EchoHandler, InspectHandler,
+        AgentCallHandler, AgentDoctorHandler, AgentEvidenceHandler, AgentFixHandler, DoctorHandler,
+        EchoHandler, InspectHandler,
         MigratePlanHandler, ProfileHandler, RepairHandler,
     },
     transport::file::{FileTransport, FileTransportConfig},
@@ -55,6 +56,8 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     registry.register(Arc::new(MigratePlanHandler));
     registry.register(Arc::new(RepairHandler));
     registry.register(Arc::new(AgentEvidenceHandler));
+    registry.register(Arc::new(AgentDoctorHandler));
+    registry.register(Arc::new(AgentCallHandler));
     registry.register(Arc::new(AgentFixHandler));
 
     log::info!("Registered {} operation handlers", registry.len());
@@ -70,6 +73,8 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
         .with_operation("guestkit.migrate-plan")
         .with_operation("guestkit.repair")
         .with_operation("guestkit.agent.evidence")
+        .with_operation("guestkit.agent.doctor")
+        .with_operation("guestkit.agent.call")
         .with_operation("guestkit.agent.fix")
         .with_feature("rust")
         .with_feature("lvm")

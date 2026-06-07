@@ -31,6 +31,8 @@ pub mod operations {
     pub const GUESTKIT_CONVERT: &str = "guestkit.convert";
     pub const GUESTKIT_COMPARE: &str = "guestkit.compare";
     pub const GUESTKIT_AGENT_EVIDENCE: &str = "guestkit.agent.evidence";
+    pub const GUESTKIT_AGENT_DOCTOR: &str = "guestkit.agent.doctor";
+    pub const GUESTKIT_AGENT_CALL: &str = "guestkit.agent.call";
     pub const GUESTKIT_AGENT_FIX: &str = "guestkit.agent.fix";
     pub const GUESTKIT_DOCTOR: &str = "guestkit.doctor";
     pub const GUESTKIT_MIGRATE_PLAN: &str = "guestkit.migrate-plan";
