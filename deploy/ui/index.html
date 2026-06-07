@@ -131,13 +131,20 @@
 
           <section class="panel glass-inset" id="panel-fleet" data-panel="assure">
             <div class="panel-head row">
-              <div><h2>Fleet</h2><p>Select a disk to run workflows.</p></div>
-              <span class="badge" id="fleetCount">0 images</span>
+              <div><h2>Fleet</h2><p id="fleetSubtitle">Imported disks or live KubeVirt VMs.</p></div>
+              <div class="fleet-head-actions">
+                <div class="fleet-tabs" role="tablist" aria-label="Fleet source">
+                  <button type="button" class="fleet-tab active" data-fleet="disks" id="fleetTabDisks">Imported disks</button>
+                  <button type="button" class="fleet-tab" data-fleet="cluster" id="fleetTabCluster">KubeVirt cluster</button>
+                </div>
+                <span class="badge" id="fleetCount">0 images</span>
+              </div>
             </div>
             <div class="fleet-grid" id="fleetGrid">
               <div class="fleet-empty" id="fleetEmpty">
-                <p>No disks yet.</p>
-                <button type="button" class="btn primary sm" data-goto="ingest">Import disk</button>
+                <p id="fleetEmptyText">No disks yet.</p>
+                <button type="button" class="btn primary sm hidden" id="fleetEmptyImport" data-goto="ingest">Import disk</button>
+                <button type="button" class="btn primary sm hidden" id="fleetEmptyRefresh">Refresh cluster VMs</button>
               </div>
             </div>
           </section>
@@ -175,6 +182,14 @@
               </button>
               <button type="button" class="action-card glass launch" data-action="provision" disabled>
                 <strong>Provision</strong><span>KubeVirt YAML</span>
+              </button>
+            </div>
+            <div class="action-deck cluster-deck hidden" id="clusterDeck">
+              <button type="button" class="action-card glass accent" data-cluster-action="guest-info">
+                <strong>Guest info</strong><span>Agent status & OS</span>
+              </button>
+              <button type="button" class="action-card glass" data-cluster-action="zeus-vm">
+                <strong>Open in Zeus</strong><span>Console & Guest Tools</span>
               </button>
             </div>
             <div class="action-deck agent-deck hidden" id="agentDeck">

@@ -4,6 +4,7 @@ mod agent;
 mod copilot;
 mod health;
 mod jobs;
+mod kubevirt;
 mod vms;
 
 use axum::routing::{get, post};
@@ -27,4 +28,9 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/:id/agent/doctor", post(agent::agent_doctor))
         .route("/api/v1/vms/:id/agent/rpc", post(agent::agent_rpc))
         .route("/api/v1/vms/:id/agent/fix", post(agent::agent_fix))
+        .route("/api/v1/kubevirt/vms", get(kubevirt::list_kubevirt_vms))
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest-agent",
+            get(kubevirt::get_guest_agent_info),
+        )
 }
