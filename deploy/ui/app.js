@@ -196,7 +196,10 @@ function markWizardComplete(stepId) {
 function setPipelineStep(step) {
   const mapped = step === 'assure' ? 'assure' : step;
   $$('.pipe-step').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.step === mapped);
+    const id = btn.dataset.step;
+    btn.classList.toggle('active', id === mapped);
+    // Hint when earlier wizard steps are incomplete; navigation still allowed.
+    btn.classList.toggle('locked', Boolean(id && !canReachStep(id)));
   });
 }
 
@@ -1360,7 +1363,12 @@ function setupActions() {
 
   $$('.pipe-step').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (canReachStep(btn.dataset.step)) scrollToPanel(btn.dataset.step);
+      const step = btn.dataset.step;
+      if (!step) return;
+      if (!canReachStep(step)) {
+        toast('Complete earlier pipeline steps to unlock actions — showing preview');
+      }
+      scrollToPanel(step);
     });
   });
 
