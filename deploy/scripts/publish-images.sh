@@ -32,8 +32,13 @@ if [[ "${PUSH}" == "1" ]]; then
     echo "ERROR: set GITHUB_USER or install gh and login"
     exit 1
   fi
+  TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+  if [[ -z "${TOKEN}" ]]; then
+    echo "ERROR: set GITHUB_TOKEN or install gh and login"
+    exit 1
+  fi
   echo "Logging in to ${REGISTRY} as ${GITHUB_USER}..."
-  echo "$(gh auth token)" | "${BUILDER}" login "${REGISTRY}" -u "${GITHUB_USER}" --password-stdin
+  echo "${TOKEN}" | "${BUILDER}" login "${REGISTRY}" -u "${GITHUB_USER}" --password-stdin
 fi
 
 build_push() {
