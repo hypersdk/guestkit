@@ -14,20 +14,24 @@ guestkit is a pure Rust toolkit for VM disk inspection and manipulation without 
 - Python bindings for automation
 - 578 disk image manipulation functions
 
-### How does guestkit compare to libguestfs?
+### How is GuestKit different from libguestfs?
 
-| Feature | guestkit | libguestfs |
-|---------|----------|------------|
+**GuestKit does not use libguestfs.** It is a pure Rust alternative with its own disk, partition, and filesystem stack (`guestkit::guestfs`, loop/NBD, assurance APIs). You do not need `libguestfs-tools`, `guestfish`, or `virt-inspector` to run GuestKit.
+
+The table below compares products for migration planning — not a dependency list:
+
+| Feature | guestkit | libguestfs (legacy tooling) |
+|---------|----------|----------------------------|
 | **Language** | Pure Rust | C + bindings |
-| **Dependencies** | Minimal (qemu-img optional) | Many C libraries |
+| **Dependencies** | Minimal (qemu-img, nbd for some formats) | Many C libraries |
 | **Installation** | Single binary | Complex dependencies |
-| **Performance** | Fast (loop devices) | Good |
-| **API Coverage** | 97.4% (578 functions) | 100% (native) |
+| **Performance** | Fast (loop devices) | Appliance boot overhead |
+| **API Coverage** | GuestKit assurance + inspect APIs | Full virt-* ecosystem |
 | **Windows Support** | Registry parsing built-in | Requires Windows tools |
 | **Visual Output** | Beautiful emojis + colors | Plain text |
 | **Migration** | Built-in fstab/crypttab rewriter | Manual scripting |
 
-**Bottom Line:** guestkit is easier to install, faster for common formats (RAW/IMG/ISO), and has better UX. libguestfs has been around longer and has complete API coverage.
+**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `run_boot_inspect`, Zyvor HTTP routes). Do not install libguestfs expecting GuestKit to call it.
 
 ### Why does guestkit require sudo?
 
@@ -487,9 +491,9 @@ sudo usermod -a -G kvm $USER
 free -h
 # Need at least 1GB free
 
-# 4. Try without KVM (slower)
-export LIBGUESTFS_BACKEND=direct
-sudo guestkit inspect vm.qcow2
+# 4. Slow inspect on QCOW2 — ensure NBD module and privileges
+sudo modprobe nbd max_part=16
+sudo guestkit inspect vm.qcow2 --cache
 ```
 
 ### "No OS detected" error?

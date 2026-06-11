@@ -77,7 +77,7 @@ fi
 # ── System Dependencies ─────────────────────────────────────────────────────
 section "System Dependencies"
 
-# libguestfs (optional for GuestKit — pure Rust; useful for guestfish/virt tools on host)
+# Optional legacy libguestfs on host (GuestKit does NOT use it — pure Rust + qemu/nbd)
 LIBGUESTFS_FOUND=false
 shopt -s nullglob 2>/dev/null || true
 for path in /usr/lib64/libguestfs.so* /usr/lib/x86_64-linux-gnu/libguestfs.so* \
@@ -90,7 +90,7 @@ for path in /usr/lib64/libguestfs.so* /usr/lib/x86_64-linux-gnu/libguestfs.so* \
 done
 if command -v guestfish &>/dev/null; then
     LIBGUESTFS_FOUND=true
-    pass "guestfish found: $(command -v guestfish) (libguestfs-tools)"
+    pass "guestfish found: $(command -v guestfish) (optional — not used by GuestKit)"
 fi
 if ldconfig -p 2>/dev/null | grep -q libguestfs; then
     LIBGUESTFS_FOUND=true
@@ -98,9 +98,9 @@ if ldconfig -p 2>/dev/null | grep -q libguestfs; then
 fi
 if ! $LIBGUESTFS_FOUND; then
     if [ "${GUESTKIT_SELFTEST_STRICT:-0}" = "1" ]; then
-        fail "libguestfs not found (dnf install libguestfs libguestfs-tools)"
+        fail "GUESTKIT_SELFTEST_STRICT=1 requires libguestfs on host (optional; GuestKit itself does not use it)"
     else
-        warn "libguestfs C library/tools not detected (GuestKit uses pure Rust + qemu; optional on host)"
+        warn "libguestfs not on host (OK — GuestKit uses pure Rust + qemu/nbd)"
     fi
 fi
 

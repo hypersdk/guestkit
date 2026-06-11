@@ -16,7 +16,7 @@ make deploy-remote H=10.0.0.5 U=root
 
 | Profile | Flags | What it does |
 |---------|-------|----------------|
-| Full | *(default)* | rsync → libguestfs/qemu/nbd deps → rustup → `cargo build --release` → `/usr/local/bin` |
+| Full | *(default)* | rsync → qemu/nbd deps → rustup → `cargo build --release` → `/usr/local/bin` |
 | Quick | `--quick` | rsync → build on remote (skip dep install) |
 | Quick + local binary | `--quick --build-local` | build on Linux laptop, rsync binary only |
 | Preflight | `--preflight-only` | SSH, disk, sudo checks |
@@ -39,6 +39,8 @@ make deploy-remote-fleet FILE=hosts.txt
 **Local:** `ssh`, `rsync`, optional `sshpass` for password auth.
 
 **Remote:** Fedora/RHEL/CentOS (`dnf`/`yum`) or Debian/Ubuntu (`apt`). Non-root users need passwordless `sudo` for `modprobe` and `install`.
+
+**Runtime deps (not libguestfs):** `qemu-img`, NBD module, `lvm2`/`parted` for some guests. GuestKit reads disks via its own Rust stack.
 
 **Privileges:** Inspecting real VM disks usually requires root or membership in the `disk` group.
 
