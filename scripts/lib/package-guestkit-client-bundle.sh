@@ -99,7 +99,7 @@ FILES
   guestkit              Main CLI binary
   guestctl              Symlink to guestkit (same CLI)
   install.sh            Client install (deps + verify)
-  install-client-deps.sh  libguestfs, qemu-img, nbd
+  install-client-deps.sh  qemu-img, nbd (GuestKit pure Rust — not libguestfs)
   test-host.sh          Host prerequisite checks
   test-selftest.sh      Full GuestKit selftest
   test-package.sh       Quick smoke test
@@ -108,7 +108,7 @@ FILES
   PREREQUISITES.txt     Checklist
 
 REQUIREMENTS — see PREREQUISITES.txt
-  libguestfs-tools, qemu-img, nbd module, disk image file access
+  qemu-img, nbd module, disk image file access (libguestfs not required)
 
 ORDER: ./install.sh → ./test-host.sh → ./guestkit inspect <image>
 

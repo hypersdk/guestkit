@@ -9,7 +9,7 @@ guestkit-0.3.3-linux-amd64/
   guestkit              # CLI binary
   install.sh            # one-command install
   install-client-deps.sh
-  test-host.sh          # libguestfs / qemu / nbd checks
+  test-host.sh          # qemu / nbd / GuestKit binary checks
   test-selftest.sh      # full GuestKit selftest
   test-package.sh
   uninstall.sh
@@ -66,8 +66,12 @@ tar xzf guestkit-*-linux-amd64.tar.gz && cd guestkit-*-linux-amd64
 
 ## Host requirements (not Kubernetes)
 
-- libguestfs-tools, qemu-img, nbd kernel module
-- Disk image files (QCOW2, VMDK, RAW, …)
+GuestKit uses **pure Rust** disk access — **libguestfs is not required**.
+
+- `qemu-img` (and optionally `qemu-nbd` for QCOW2)
+- `nbd` kernel module (`modprobe nbd max_part=16`)
+- `lvm2`, `parted` (LVM/encrypted guests)
+- Read access to disk image files (QCOW2, VMDK, RAW, …)
 - See `HOST_SETUP.txt` in the tarball
 
 For full remote deploy from source, use `./scripts/deploy-remote.sh`.

@@ -19,7 +19,7 @@ Complete **Pure Rust** implementation for guest VM operations and migration.
 
 ## Key Design Principle
 
-**Zero External C Dependencies** - All disk and filesystem operations are implemented in pure Rust without  or other C libraries (except qemu-img for conversion).
+**Zero External C Dependencies** - All disk and filesystem operations are implemented in pure Rust without libguestfs or other C libraries (except qemu-img for conversion).
 
 ## Architecture Layers
 

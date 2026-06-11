@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. Features include:
+**guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. It does **not** use libguestfs — disk access is via GuestKit's own engine (loop/NBD, partition/filesystem parsers, assurance APIs). Features include:
 
 - 🩺 **Doctor / migrate-plan** - Boot probability and hypervisor-aware migration scoring before cutover
 - 🖥️ **TUI Assurance** - Same scoring in `guestctl tui` (Security group · `d`/`t`/`p`/`e` keys)
