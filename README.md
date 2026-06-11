@@ -29,7 +29,7 @@
 
 **GuestKit** answers the question every migration team asks too late: *will this VM actually boot on the target?*
 
-Inspect **QCOW2, VMDK, or RAW** images **without powering them on**. Score boot probability, generate hypervisor-aware migration plans, export executable fix plans, and explore disks from a carbon-themed TUI — all in **Rust**, with structured JSON/YAML/HTML/PDF for CI.
+Inspect **QCOW2, VMDK, or RAW** images **without powering them on** — using GuestKit's **pure Rust** disk engine (not libguestfs). Score boot probability, generate hypervisor-aware migration plans, export executable fix plans, and explore disks from a carbon-themed TUI — all in **Rust**, with structured JSON/YAML/HTML/PDF for CI.
 
 Part of the open-source stack on **[zyvor.dev](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)** · pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM pipelines.
 
@@ -50,8 +50,8 @@ guestctl tui vm.qcow2
 
 | Without GuestKit | With GuestKit |
 |------------------|---------------|
-| Boot every VM to “just check” | Inspect offline in place |
-| Shell scripts over `guestfish` | Evidence snapshots + structured export |
+| Boot every VM to “just check” | Inspect offline in place (pure Rust — no libguestfs appliance) |
+| Shell scripts over `guestfish` | GuestKit assurance APIs + structured export |
 | Migration surprises at power-on | **`doctor`** score before cutover |
 | Manual runbooks for fleet drift | **`fleet analyze`** · **`forensic-diff`** |
 

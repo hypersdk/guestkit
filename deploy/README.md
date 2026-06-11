@@ -6,7 +6,7 @@ Deploy GuestKit workers, zyvor-api, and supporting services for offline VM intel
 
 | Service | Description |
 |---------|-------------|
-| `zyvor-api` | REST gateway — import, inspect, doctor, migration-plan, provision |
+| `zyvor-api` | REST gateway — import, inspect, doctor, migration-plan, KubeVirt boot inspect, provision |
 | `guestkit-worker` | Redis Streams worker running GuestKit operations |
 | `postgresql` | VM inventory and job metadata |
 | `redis` | Job queue (`zyvor:jobs` stream) |
@@ -46,7 +46,15 @@ curl -X POST "$API/vms/{id}/migration-plan?target=kubevirt"
 
 # Provision KubeVirt YAML
 curl -X POST "$API/vms/{id}/provision"
+
+# Offline boot inspect (stopped KubeVirt VM — pure Rust GuestKit, not libguestfs)
+curl "$API/kubevirt/vms/default/my-vm/boot-inspect"
+curl -X POST "$API/kubevirt/boot-inspect" \
+  -H 'Content-Type: application/json' \
+  -d '{"namespace":"default","vm":"my-vm","mode":"boot-inspect","source":"zeus-os"}'
 ```
+
+See [docs/features/kubevirt-integration.md](../docs/features/kubevirt-integration.md) for Zeus OS Guest Intelligence integration.
 
 ## KubeVirt
 

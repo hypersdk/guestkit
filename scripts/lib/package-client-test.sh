@@ -13,7 +13,7 @@ export PKG_INSTALL_ROOT="${ROOT}"
 
 _PKG_SESSION_START=${SECONDS}
 pkg_counters_reset
-pkg_banner "GuestKit package test" "CLI · libguestfs · optional selftest"
+pkg_banner "GuestKit package test" "CLI · qemu/nbd · optional selftest"
 
 [[ -x ./guestkit ]] && { ./guestkit --version; pkg_ok "guestkit --version"; } || pkg_fail "guestkit"
 [[ -x ./test-host.sh ]] && { ./test-host.sh || pkg_warn "test-host.sh"; }

@@ -5,11 +5,12 @@ HOST (Linux inspector — not Kubernetes)
   [ ] Linux x86_64
   [ ] ./install.sh completed
   [ ] qemu-img installed
-  [ ] libguestfs-tools installed
   [ ] nbd module loaded (lsmod | grep nbd)
   [ ] ./test-host.sh passes
   [ ] ./test-selftest.sh passes (recommended)
   [ ] Disk image path readable (qcow2/vmdk/raw)
+
+NOT required: libguestfs-tools, guestfish, virt-inspector
 
 CLIENT BUNDLE (this directory)
   [ ] ./guestkit executable

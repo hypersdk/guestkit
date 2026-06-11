@@ -47,7 +47,7 @@ Usage:
   $0 --fleet hosts.txt
 
 Profiles:
-  🏗️  (default)     Full remote build + system deps (libguestfs, qemu, nbd)
+  🏗️  (default)     Full remote build + system deps (qemu, nbd — not libguestfs)
   ⚡  --quick       Rsync + cargo build on remote (skip dep install)
   ⚡  --quick --build-local   Install locally built target/release/guestkit (Linux only)
 
@@ -345,18 +345,13 @@ fi
 
 if [ "$PKG" = "apt-get" ]; then
     pkg_install apt-get install -y -qq \
-        libguestfs-tools qemu-utils nbd-client lvm2 parted e2fsprogs \
+        qemu-utils nbd-client lvm2 parted e2fsprogs \
         build-essential pkg-config curl git
 else
     # Core RPM packages (EL9: qemu-nbd is not a separate package — use qemu-img)
     pkg_install "$PKG" install -y \
         qemu-img nbd lvm2 parted e2fsprogs \
         gcc make openssl-devel pkg-config curl git
-
-    # libguestfs: runtime library + CLI tools (EL9: libguestfs-tools may not pull libguestfs.so)
-    pkg_install "$PKG" install -y libguestfs libguestfs-tools 2>/dev/null \
-        || pkg_install "$PKG" install -y libguestfs libguestfs-tools-c 2>/dev/null \
-        || pkg_install "$PKG" install -y libguestfs-tools
 
     # qemu-nbd binary: bundled in qemu-img on EL9+, or separate package on older releases
     if ! command -v qemu-nbd &>/dev/null; then

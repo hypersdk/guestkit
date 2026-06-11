@@ -23,6 +23,7 @@
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
 | [Python bindings](user-guides/python-bindings.md) | PyO3 API |
 | [VM migration](user-guides/vm-migration.md) | hyper2kvm integration |
+| [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not libguestfs) |
 
 ## Deployment
 

@@ -133,3 +133,94 @@ paths:
       responses:
         '200':
           description: Job details
+  /kubevirt/vms:
+    get:
+      summary: List KubeVirt VMs in cluster
+      responses:
+        '200':
+          description: VM summaries
+  /kubevirt/vms/{namespace}/{name}/boot-inspect:
+    get:
+      summary: Offline boot inspect (GuestKit run_boot_inspect — not libguestfs)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: BootInspectInfo
+    post:
+      summary: Offline boot inspect (optional PVC override in body)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootInspectRequest'
+      responses:
+        '200':
+          description: BootInspectInfo
+  /kubevirt/boot-inspect:
+    post:
+      summary: Offline boot inspect by namespace/vm body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BootInspectRequest'
+      responses:
+        '200':
+          description: BootInspectInfo
+components:
+  schemas:
+    BootInspectRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        vm:
+          type: string
+        pvc:
+          type: string
+        mode:
+          type: string
+          example: boot-inspect
+        source:
+          type: string
+          example: zeus-os
+    BootInspectInfo:
+      type: object
+      properties:
+        available:
+          type: boolean
+        source:
+          type: string
+          example: guestkit
+        os_release:
+          type: string
+        fstab_valid:
+          type: boolean
+        bootloader:
+          type: string
+        cloud_init_present:
+          type: boolean
+        message:
+          type: string

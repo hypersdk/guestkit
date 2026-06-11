@@ -31,6 +31,23 @@ Disk image (QCOW2/VMDK/…)
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
 
+> **Not libguestfs:** Assurance uses GuestKit's pure Rust disk stack. No `libguestfs-tools` or `guestfish` required.
+
+### `run_boot_inspect` / Zyvor HTTP API
+
+Rust API and Zyvor route for stopped KubeVirt VMs (Zeus OS Guest Intelligence):
+
+```rust
+use guestkit::run_boot_inspect;
+let summary = run_boot_inspect(path, "kubevirt", false)?;
+```
+
+```bash
+curl "$ZYVOR/api/v1/kubevirt/vms/default/my-vm/boot-inspect"
+```
+
+See [kubevirt-integration.md](kubevirt-integration.md).
+
 ### TUI parity
 
 The **Assurance** view in `guestctl tui` reuses the same evidence → boot → migration pipeline as `doctor` and `migrate-plan` (no second guest mount when the TUI already has guestfs open). Open it from the Security group, the command palette (`doctor`, `goto assurance`), or the dashboard boot line. Keys: `d` refresh doctor, `t` cycle target (`kvm` / `proxmox` / `aws`), `e` export fix plan YAML to the current directory. Configure `default_migration_target` and `assurance_on_startup` under `[behavior]` in `tui.toml`.

@@ -2,15 +2,17 @@ GuestKit — Host setup (offline VM disk inspection)
 =================================================
 
 GuestKit inspects QCOW2/VMDK/RAW images while VMs are powered off.
-It does NOT require Kubernetes — only Linux + libguestfs/qemu/nbd on this host.
+It does NOT require Kubernetes — only Linux + qemu/nbd on this host.
+
+GuestKit is pure Rust. It does NOT use or require libguestfs, guestfish, or virt-inspector.
 
 WHAT MUST EXIST FOR GUESTKIT TO WORK
 ------------------------------------
   1. Linux x86_64 (inspector host)
-  2. libguestfs-tools + qemu-img (see install-client-deps.sh)
+  2. qemu-img (+ qemu-nbd for QCOW2 when needed) — see install-client-deps.sh
   3. nbd kernel module (for QCOW2 via NBD): sudo modprobe nbd max_part=16
   4. Read access to disk image files (paths you pass to guestkit)
-  5. root or sufficient privileges for NBD mount operations
+  5. root or sufficient privileges for NBD / loop mount operations
 
 ORDER OF OPERATIONS
 -------------------
@@ -22,7 +24,7 @@ ORDER OF OPERATIONS
 
 STEP A — install.sh
 -------------------
-  Installs: libguestfs-tools, qemu-img, nbd client, lvm2, parted
+  Installs: qemu-img, nbd client, lvm2, parted (not libguestfs-tools)
   Loads nbd module when possible.
 
 SKIP FLAGS (install-client-deps / source deploy-remote)
@@ -32,7 +34,7 @@ SKIP FLAGS (install-client-deps / source deploy-remote)
 
 STEP B — Automated tests
 ------------------------
-  ./test-host.sh       Quick: binary + qemu + libguestfs + nbd
+  ./test-host.sh       Quick: binary + qemu + nbd
   ./test-package.sh    Runs test-host + guestkit --version
   ./test-selftest.sh   Full selftest from GuestKit (same as scripts/selftest.sh)
 
@@ -52,7 +54,7 @@ TROUBLESHOOTING
 ---------------
   qemu-nbd missing     → EL9: often bundled in qemu-img; install qemu-kvm-tools
   Permission denied    → run with sudo for NBD, or fix image file permissions
-  libguestfs errors    → dnf install libguestfs libguestfs-tools
+  QCOW2 open fails     → sudo modprobe nbd max_part=16; check qemu-img --version
   nbd module           → sudo modprobe nbd max_part=16
 
 Pairs with hyper2kvm for VMware → KVM migration pipelines.
