@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Live KubeVirt VM discovery (in-cluster Kubernetes API).
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 use chrono::{DateTime, Utc};
 use kube::api::{Api, ListParams};
 use kube::discovery::ApiResource;
 use kube::{Client};
+use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ pub struct KubeVirtVmSummary {
     pub os_name: Option<String>,
     pub os_version: Option<String>,
     pub hostname: Option<String>,
+    pub is_windows: bool,
     pub age: String,
 }
 
@@ -45,7 +47,7 @@ pub struct GuestAgentInfo {
     pub interfaces: Option<Vec<Value>>,
 }
 
-fn vm_resource() -> ApiResource {
+pub fn vm_resource() -> ApiResource {
     ApiResource {
         group: "kubevirt.io".into(),
         version: "v1".into(),
@@ -55,7 +57,7 @@ fn vm_resource() -> ApiResource {
     }
 }
 
-fn vmi_resource() -> ApiResource {
+pub fn vmi_resource() -> ApiResource {
     ApiResource {
         group: "kubevirt.io".into(),
         version: "v1".into(),
@@ -72,7 +74,7 @@ fn kube_client(state: &AppState) -> ApiResult<Client> {
         .ok_or_else(|| ApiError::bad_request("KubeVirt discovery requires in-cluster Kubernetes access"))
 }
 
-fn json_str(obj: &Value, path: &[&str]) -> Option<String> {
+pub(crate) fn json_str(obj: &Value, path: &[&str]) -> Option<String> {
     let mut cur = obj;
     for key in path {
         cur = cur.get(key)?;
@@ -146,19 +148,10 @@ fn guest_os(vmi: &Value) -> (Option<String>, Option<String>, Option<String>) {
     (os_name, os_version, hostname)
 }
 
-fn is_windows_os(os_name: Option<&str>) -> bool {
-    os_name
-        .map(|s| {
-            let lower = s.to_lowercase();
-            lower.contains("windows") || lower.starts_with("win")
-        })
-        .unwrap_or(false)
-}
-
-fn build_guest_info(vmi: Option<&Value>, vmi_running: bool) -> GuestAgentInfo {
+fn build_guest_info(vm: Option<&Value>, vmi: Option<&Value>, vmi_running: bool) -> GuestAgentInfo {
     let connected = vmi.map(agent_connected).unwrap_or(false);
     let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
-    let is_windows = is_windows_os(os_name.as_deref());
+    let is_windows = crate::kubevirt_guest_agent::vm_is_windows(vm, vmi);
     let health = if !vmi_running {
         "absent"
     } else if connected {
@@ -169,9 +162,15 @@ fn build_guest_info(vmi: Option<&Value>, vmi_running: bool) -> GuestAgentInfo {
     let message = if !vmi_running {
         "VM is not running — start it in Zeus OS or kubectl to reach the guest agent.".into()
     } else if connected {
-        "Guest agent connected — live inspect and exec are available.".into()
+        if is_windows {
+            "Guest agent connected (Windows). Live inspect and quiesced snapshots available.".into()
+        } else {
+            "Guest agent connected — live inspect and exec are available.".into()
+        }
+    } else if is_windows {
+        "Guest agent not connected — install QEMU Guest Agent from virtio-win guest tools via Zeus OS Guest Tools, then restart.".into()
     } else {
-        "Guest agent not connected — install GuestKit agent via Zeus OS Guest Tools tab, then restart the VM.".into()
+        "Guest agent not connected — use Install agent below or Zeus OS Guest Tools, then restart the VM.".into()
     };
     GuestAgentInfo {
         health: health.into(),
@@ -239,6 +238,7 @@ pub async fn list_kubevirt_vms(
         let vmi = vmi_map.get(&(namespace.clone(), name.clone()));
         let phase = vmi.and_then(|v| json_str(v, &["status", "phase"]));
         let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
+        let is_windows = crate::kubevirt_guest_agent::vm_is_windows(Some(&vm), vmi);
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -250,6 +250,7 @@ pub async fn list_kubevirt_vms(
             os_name,
             os_version,
             hostname,
+            is_windows,
             age: format_age(created.as_ref()),
         });
     }
@@ -263,6 +264,14 @@ pub async fn get_guest_agent_info(
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<GuestAgentInfo>>> {
     let client = kube_client(&state)?;
+    let vm_ar = vm_resource();
+    let vm_api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), &namespace, &vm_ar);
+    let vm = vm_api
+        .get(&name)
+        .await
+        .ok()
+        .and_then(|obj| serde_json::to_value(obj).ok());
+
     let ar = vmi_resource();
     let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client, &namespace, &ar);
     let vmi = api
@@ -275,6 +284,23 @@ pub async fn get_guest_agent_info(
         .and_then(|v| json_str(v, &["status", "phase"]))
         .as_deref()
         == Some("Running");
-    let info = build_guest_info(vmi.as_ref(), vmi_running);
+    let info = build_guest_info(vm.as_ref(), vmi.as_ref(), vmi_running);
     Ok(Json(ApiResponse::ok(info)))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct GuestAgentInstallQuery {
+    #[serde(default)]
+    pub restart: Option<bool>,
+}
+
+pub async fn install_guest_agent(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+    Query(query): Query<GuestAgentInstallQuery>,
+) -> ApiResult<Json<ApiResponse<crate::kubevirt_guest_agent::GuestAgentInstallResult>>> {
+    let client = kube_client(&state)?;
+    let restart = query.restart.unwrap_or(true);
+    let result = crate::kubevirt_guest_agent::install_guest_agent(client, &namespace, &name, restart).await?;
+    Ok(Json(ApiResponse::ok(result)))
 }

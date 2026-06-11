@@ -4,6 +4,8 @@
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod kubevirt_boot_inspect;
+pub mod kubevirt_guest_agent;
 pub mod jobs;
 pub mod models;
 pub mod routes;

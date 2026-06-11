@@ -11,6 +11,7 @@ guestkitWorker:
 zyvorApi:
   storageClass: local-path
   privileged: true
+  guestkitBinaryUrl: "http://212.8.252.194:30050/api/v1/engines/guestkit/binary"
   service:
     type: NodePort
     nodePort: 30080

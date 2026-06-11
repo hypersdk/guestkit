@@ -266,9 +266,10 @@ async function openClusterFleet() {
   feed('Showing <strong>KubeVirt cluster</strong> VMs — select one for guest info', 'ok');
 }
 
-function zeusVmUrl(namespace, name) {
+function zeusVmUrl(namespace, name, section) {
   const host = window.location.hostname || '127.0.0.1';
-  const q = new URLSearchParams({ namespace, vm: name });
+  const q = new URLSearchParams({ vm: `${namespace}/${name}` });
+  if (section) q.set('section', section);
   return `http://${host}:30050/vms?${q.toString()}`;
 }
 
@@ -381,6 +382,7 @@ function renderClusterFleet() {
     const selected = state.selectedClusterVm && clusterVmKey(state.selectedClusterVm) === key;
     const agent = vm.guest_agent_connected;
     const agentLabel = agent === true ? 'agent on' : agent === false ? 'no agent' : 'unknown';
+    const osHint = vm.is_windows ? 'windows' : (vm.os_name ? vm.os_name.split(/\s+/)[0].toLowerCase() : '');
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'vm-card cluster' + (selected ? ' selected' : '');
@@ -388,7 +390,7 @@ function renderClusterFleet() {
       <span class="vm-format">kubevirt</span>
       <span class="vm-status ${vm.phase === 'Running' ? 'ready' : 'pending'}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
       <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
-      <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}</p>
+      <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}</p>
     `;
     card.addEventListener('click', () => selectClusterVm(vm));
     grid.appendChild(card);
@@ -459,6 +461,9 @@ function renderClusterGuestSummary(info) {
   content.innerHTML = '';
   const healthClass = info.agent_connected ? 'ok' : info.health === 'absent' ? 'warn' : 'warn';
   content.innerHTML += `<p class="finding ${healthClass}"><strong>Guest agent:</strong> ${escapeHtml(info.health)} — ${escapeHtml(info.message)}</p>`;
+  if (info.is_windows) {
+    content.innerHTML += `<p class="finding warn"><strong>Windows VM</strong> — install QEMU Guest Agent from virtio-win guest tools (not Linux cloud-init).</p>`;
+  }
   if (info.os_name) {
     content.innerHTML += `<p class="finding ok"><strong>OS</strong> ${escapeHtml(info.os_name)} ${escapeHtml(info.os_version || '')}</p>`;
   }
@@ -470,10 +475,54 @@ function renderClusterGuestSummary(info) {
     if (ips) content.innerHTML += `<p class="finding ok"><strong>Interfaces</strong> ${escapeHtml(ips)}</p>`;
   }
   if (!info.agent_connected && info.vmi_running) {
-    content.innerHTML += `<p class="finding warn">Install GuestKit agent from Zeus OS → VM → Guest Tools, then restart the VM.</p>`;
+    const installBtn = $('#clusterInstallAgentBtn');
+    if (installBtn) {
+      installBtn.disabled = false;
+      installBtn.classList.toggle('hidden', false);
+      installBtn.querySelector('strong').textContent = info.is_windows ? 'Guest Tools' : 'Install agent';
+      installBtn.querySelector('span').textContent = info.is_windows
+        ? 'virtio-win in Zeus OS'
+        : 'GuestKit via cloud-init';
+    }
+    if (info.is_windows) {
+      content.innerHTML += `<p class="finding warn">Open <strong>Zeus OS → Guest Tools</strong>, attach virtio-win.iso, install QEMU Guest Agent, then restart.</p>`;
+    } else {
+      content.innerHTML += `<p class="finding warn">Click <strong>Install agent</strong> to merge GuestKit cloud-init, or use Zeus OS Guest Tools.</p>`;
+    }
+  } else {
+    const installBtn = $('#clusterInstallAgentBtn');
+    if (installBtn) installBtn.disabled = true;
   }
   setScore(null);
   setRawJson({ mode: 'kubevirt-live', guest_agent: info });
+}
+
+async function installClusterGuestAgent() {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  if (vm.is_windows) {
+    window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
+    return;
+  }
+  feed(`Installing GuestKit agent on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent/install?restart=true`,
+      { method: 'POST' },
+    );
+    const result = data.data;
+    toast(result.message, result.success ? 'ok' : 'err');
+    feed(result.next_steps?.join(' ') || result.message);
+    if (result.success) {
+      setTimeout(() => fetchClusterGuestInfo(false), 8000);
+      await loadClusterFleet();
+    }
+  } catch (e) {
+    toast(e.message, 'err');
+  }
 }
 
 function setDockEnabled(on) {
@@ -1597,8 +1646,9 @@ function setupActions() {
         return;
       }
       if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
+      else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent();
       else if (btn.dataset.clusterAction === 'zeus-vm') {
-        window.open(zeusVmUrl(vm.namespace, vm.name), '_blank', 'noopener,noreferrer');
+        window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
       }
     });
   });
