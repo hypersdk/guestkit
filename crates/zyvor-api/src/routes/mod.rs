@@ -4,7 +4,7 @@ mod agent;
 mod copilot;
 mod health;
 mod jobs;
-mod kubevirt;
+pub(crate) mod kubevirt;
 mod vms;
 
 use axum::routing::{get, post};
@@ -32,5 +32,23 @@ pub fn api_router() -> Router<AppState> {
         .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest-agent",
             get(kubevirt::get_guest_agent_info),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest-agent/install",
+            post(kubevirt::install_guest_agent),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/boot-inspect",
+            get(crate::kubevirt_boot_inspect::get_boot_inspect)
+                .post(crate::kubevirt_boot_inspect::post_boot_inspect_vm),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/inspect/boot",
+            get(crate::kubevirt_boot_inspect::get_boot_inspect)
+                .post(crate::kubevirt_boot_inspect::post_boot_inspect_vm),
+        )
+        .route(
+            "/api/v1/kubevirt/boot-inspect",
+            post(crate::kubevirt_boot_inspect::post_boot_inspect),
         )
 }

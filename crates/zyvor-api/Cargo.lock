@@ -5176,9 +5176,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64",
  "chrono",
  "guestkit",
  "guestkit-job-spec",
+ "http",
  "k8s-openapi",
  "kube",
  "redis",

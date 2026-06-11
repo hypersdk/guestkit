@@ -44,6 +44,10 @@ spec:
             - name: AGENT_PROXY_URL
               value: {{ .Values.zyvorApi.agentProxyUrl | quote }}
             {{- end }}
+            {{- if .Values.zyvorApi.guestkitBinaryUrl }}
+            - name: GUESTKIT_BINARY_URL
+              value: {{ .Values.zyvorApi.guestkitBinaryUrl | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             - name: dev
