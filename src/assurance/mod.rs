@@ -108,6 +108,55 @@ pub fn run_doctor(image: &Path, target: &str, explain: bool, verbose: bool) -> R
     })
 }
 
+/// Offline boot configuration summary for API consumers (e.g. Zeus OS Guest MRI).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BootInspectSummary {
+    pub os_release: String,
+    pub fstab_valid: bool,
+    pub bootloader: String,
+    pub cloud_init_present: bool,
+    pub message: String,
+}
+
+/// Inspect boot-related guest state from an offline disk image using GuestKit evidence + doctor checks.
+pub fn run_boot_inspect(image: &Path, target: &str, verbose: bool) -> Result<BootInspectSummary> {
+    let boot_target = boot_target_from_str(target);
+    let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
+
+    let fstab_valid = evidence
+        .storage
+        .fstab_entries
+        .iter()
+        .any(|e| e.mountpoint == "/")
+        && boot_report
+            .checks
+            .iter()
+            .find(|c| c.id == "BOOT-001")
+            .map(|c| c.passed)
+            .unwrap_or(true);
+
+    Ok(BootInspectSummary {
+        os_release: format_os_release(&evidence),
+        fstab_valid,
+        bootloader: evidence.boot.bootloader,
+        cloud_init_present: evidence.boot.cloud_init_present,
+        message: boot_report.summary,
+    })
+}
+
+fn format_os_release(evidence: &EvidenceSnapshot) -> String {
+    let os = &evidence.os;
+    if !os.distribution.is_empty() {
+        if os.version.is_empty() {
+            os.distribution.clone()
+        } else {
+            format!("{} {}", os.distribution, os.version)
+        }
+    } else {
+        String::new()
+    }
+}
+
 /// Result of `run_migrate_plan`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MigrationPlanResult {

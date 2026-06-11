@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Offline KubeVirt VM boot inspection via libguestfs (stopped VMs).
+//! Offline KubeVirt VM boot inspection via GuestKit assurance APIs (stopped VMs).
 
 use axum::extract::{Path, State};
 use axum::Json;
-use guestkit::{collect_assurance_data, BootTarget};
+use guestkit::run_boot_inspect;
 use kube::api::Api;
 use kube::discovery::ApiResource;
 use kube::Client;
@@ -122,12 +122,12 @@ async fn boot_inspect_for_vm(
         match tokio::task::spawn_blocking(move || inspect_disk_offline(&disk_path)).await {
             Ok(Ok(info)) => return Ok(info),
             Ok(Err(e)) => {
-                tracing::warn!("boot inspect libguestfs failed for {disk_display}: {e:#}");
+                tracing::warn!("GuestKit boot inspect failed for {disk_display}: {e:#}");
                 let mut fallback = heuristic_from_vm(&vm, Some(&pvc_name), false);
                 fallback.available = false;
                 fallback.source = "guestkit".into();
                 fallback.message = format!(
-                    "Disk resolved at {disk_display} but libguestfs inspect failed: {e}"
+                    "Disk resolved at {disk_display} but GuestKit boot inspect failed: {e}"
                 );
                 return Ok(fallback);
             }
@@ -354,44 +354,16 @@ async fn fetch_cluster_resource(client: &Client, ar: ApiResource, name: &str) ->
 }
 
 fn inspect_disk_offline(disk_path: &FsPath) -> anyhow::Result<BootInspectInfo> {
-    let (evidence, boot_report) =
-        collect_assurance_data(disk_path, BootTarget::KubeVirt, false)?;
-
-    let os_release = format_os_release(&evidence);
-    let fstab_valid = evidence
-        .storage
-        .fstab_entries
-        .iter()
-        .any(|e| e.mountpoint == "/")
-        && boot_report
-            .checks
-            .iter()
-            .find(|c| c.id == "BOOT-001")
-            .map(|c| c.passed)
-            .unwrap_or(true);
-
+    let summary = run_boot_inspect(disk_path, "kubevirt", false)?;
     Ok(BootInspectInfo {
         available: true,
         source: "guestkit".into(),
-        os_release,
-        fstab_valid,
-        bootloader: evidence.boot.bootloader,
-        cloud_init_present: evidence.boot.cloud_init_present,
-        message: boot_report.summary,
+        os_release: summary.os_release,
+        fstab_valid: summary.fstab_valid,
+        bootloader: summary.bootloader,
+        cloud_init_present: summary.cloud_init_present,
+        message: summary.message,
     })
-}
-
-fn format_os_release(evidence: &guestkit::EvidenceSnapshot) -> String {
-    let os = &evidence.os;
-    if !os.distribution.is_empty() {
-        if os.version.is_empty() {
-            os.distribution.clone()
-        } else {
-            format!("{} {}", os.distribution, os.version)
-        }
-    } else {
-        String::new()
-    }
 }
 
 fn heuristic_from_vm(vm: &Value, pvc: Option<&str>, vmi_running: bool) -> BootInspectInfo {
@@ -416,11 +388,11 @@ fn heuristic_from_vm(vm: &Value, pvc: Option<&str>, vmi_running: bool) -> BootIn
         .to_string();
 
     let message = if vmi_running {
-        "VM is running — live guest agent probes are authoritative; stop VM for libguestfs boot inspect"
+        "VM is running — live guest agent probes are authoritative; stop VM for GuestKit offline boot inspect"
             .into()
     } else if let Some(pvc) = pvc {
         format!(
-            "Offline hints from VM spec (root PVC {pvc}) — disk path resolution or libguestfs inspect pending"
+            "Offline hints from VM spec (root PVC {pvc}) — disk path resolution or GuestKit boot inspect pending"
         )
     } else {
         "Offline boot hints from VM spec".into()

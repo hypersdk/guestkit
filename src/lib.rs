@@ -71,8 +71,9 @@ pub mod agent;
 
 // Re-exports for convenience
 pub use assurance::{
-    boot_target_from_str, collect_assurance_data, run_doctor, run_migrate_plan, run_repair_plan,
-    DoctorResult, MigratePlanOptions, MigrationPlanResult, RepairOptions, RepairPlanResult,
+    boot_target_from_str, collect_assurance_data, run_boot_inspect, run_doctor, run_migrate_plan,
+    run_repair_plan, BootInspectSummary, DoctorResult, MigratePlanOptions, MigrationPlanResult,
+    RepairOptions, RepairPlanResult,
 };
 pub use boot::{BootTarget, BootabilityReport};
 pub use converters::DiskConverter;
