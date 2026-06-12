@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "hypersdk-guestkit"
-version = "0.3.3"
+dynamic = ["version"]
 description = "Pure Rust VM disk toolkit with beautiful output, Windows registry parsing, and VM migration support - Python bindings"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -43,6 +43,7 @@ Documentation = "https://github.com/hypersdk/guestkit/tree/main/docs"
 Changelog = "https://github.com/hypersdk/guestkit/releases"
 
 [tool.maturin]
+manifest-path = "Cargo.toml"
 features = ["python-bindings"]
 module-name = "guestkit"
 include = ["guestkit.pyi"]

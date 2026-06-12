@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-06-13
+
+### Fixed
+- `cargo fmt` formatting in security profile score calculation
+- Integration tests treat `unknown` OS distro as undetected and fall back to `/etc/debian_version`
+- RPM workflow installs binary package when optional Python RPM is absent; verify step uses `command -v`
+- Python wheel CI installs locally built artifacts instead of stale PyPI releases
+- PyPI publish uses wheel-only upload with version synced from `Cargo.toml`
+
 ## [0.3.8] - 2026-06-12
 
 ### Fixed
