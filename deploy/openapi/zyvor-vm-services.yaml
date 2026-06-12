@@ -185,10 +185,14 @@ paths:
           description: VMToolsPolicyView
   /vmtools/policy/reconcile:
     post:
-      summary: Reconcile fleet against policy (auto-install missing tools)
+      summary: Reconcile fleet against policy (auto-install / auto-upgrade)
       responses:
         '200':
           description: VMToolsReconcileResult
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VMToolsReconcileResult'
   /storage/roots:
     get:
       summary: Server disk browse roots
@@ -644,6 +648,44 @@ components:
           type: array
           items:
             type: object
+        errors:
+          type: array
+          items:
+            type: string
+    VMToolsCoverage:
+      type: object
+      properties:
+        total_vms:
+          type: integer
+        installed:
+          type: integer
+        connected:
+          type: integer
+        pending:
+          type: integer
+        missing:
+          type: integer
+        outdated:
+          type: integer
+        windows_virtio_win:
+          type: integer
+    VMToolsReconcileResult:
+      type: object
+      properties:
+        policy:
+          type: string
+        scanned:
+          type: integer
+        matched:
+          type: integer
+        installed:
+          type: integer
+        pending:
+          type: integer
+        upgraded:
+          type: integer
+        skipped:
+          type: integer
         errors:
           type: array
           items:

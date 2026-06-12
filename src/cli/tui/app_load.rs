@@ -37,6 +37,8 @@ impl View {
             View::Logs => "logs",
             View::Profiles => "profiles",
             View::Assurance => "assurance",
+            View::SystemdDeep => "systemd-deep",
+            View::AiInsights => "ai-insights",
             View::Files => "files",
         }
     }
@@ -61,6 +63,8 @@ impl View {
             "logs" => Some(View::Logs),
             "profiles" => Some(View::Profiles),
             "assurance" | "doctor" => Some(View::Assurance),
+            "systemd-deep" | "systemd_deep" | "systemd" => Some(View::SystemdDeep),
+            "ai-insights" | "ai_insights" | "ai" => Some(View::AiInsights),
             "files" => Some(View::Files),
             _ => None,
         }
@@ -83,7 +87,8 @@ impl View {
             | View::Logs
             | View::Storage
             | View::Files => "System",
-            View::Security | View::Issues | View::Profiles | View::Assurance => "Security",
+            View::Security | View::Issues | View::Profiles | View::Assurance
+            | View::SystemdDeep | View::AiInsights => "Security",
         }
     }
 
@@ -117,6 +122,8 @@ impl View {
                 View::Issues,
                 View::Profiles,
                 View::Assurance,
+                View::SystemdDeep,
+                View::AiInsights,
             ],
             _ => &[],
         }
@@ -705,6 +712,11 @@ impl App {
         self.refreshing = false;
         match result {
             Ok((evidence, boot_report, migration_report)) => {
+                self.intelligence = Some(crate::ai::build_intelligence(
+                    &evidence,
+                    Some(&boot_report),
+                    None,
+                ));
                 self.assurance_evidence = Some(evidence);
                 self.boot_report = Some(boot_report);
                 self.migration_report = Some(migration_report);
@@ -736,6 +748,7 @@ impl App {
         self.boot_report = None;
         self.migration_report = None;
         self.assurance_evidence = None;
+        self.intelligence = None;
         self.plan_preview = None;
         self.show_plan_preview = false;
         self.show_notification(format!("Target → {}", self.assurance_target));

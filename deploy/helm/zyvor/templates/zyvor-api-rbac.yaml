@@ -29,7 +29,7 @@ rules:
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "create"]
   - apiGroups: ["zeus.zyvor.dev"]
-    resources: ["vmguestagents", "vmguestagents/status", "vmtoolspolicies", "vmtoolspolicies/status"]
+    resources: ["vmguestagents", "vmguestagents/status", "vmtoolspolicies", "vmtoolspolicies/status", "vmtoolsbundles", "vmtoolsbundles/status"]
     verbs: ["get", "list", "create", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -38,6 +38,8 @@ pub struct GuestAgentInstallResult {
     pub channel_updated: bool,
     pub vm_restarted: bool,
     pub needs_restart: bool,
+    /// Install action started but zyvor-guest-agent is not connected yet.
+    pub pending: bool,
     pub message: String,
     pub next_steps: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -128,7 +130,7 @@ systemctl daemon-reload && systemctl enable --now zyvor-guest-agent"
     )
 }
 
-fn zyvor_tools_connected(vm: &Value, vmi: Option<&Value>) -> bool {
+pub fn zyvor_tools_connected(vm: &Value, vmi: Option<&Value>) -> bool {
     if vm
         .pointer("/metadata/labels/zeus.zyvor.dev/guest-tools")
         .and_then(|v| v.as_str())
@@ -398,6 +400,7 @@ pub async fn install_guest_agent(
             channel_updated: false,
             vm_restarted: false,
             needs_restart: false,
+            pending: false,
             message: "Windows VMs need QEMU Guest Agent from virtio-win guest tools.".into(),
             next_steps: vec![
                 "Open Zeus OS → VM → Guest Tools and attach virtio-win.iso.".into(),
@@ -444,6 +447,7 @@ pub async fn install_guest_agent(
             channel_updated,
             vm_restarted: false,
             needs_restart: false,
+            pending: true,
             message: "QEMU guest agent is connected — run the bootstrap script inside the guest (or via console).".into(),
             next_steps: vec![
                 "Paste bootstrap_script into the VM console as root, or wait for Zeus guest-exec.".into(),
@@ -465,6 +469,7 @@ pub async fn install_guest_agent(
             channel_updated: false,
             vm_restarted: false,
             needs_restart: false,
+            pending: false,
             message: "GuestKit agent bootstrap already present in VM spec.".into(),
             next_steps: if vmi_running {
                 vec!["Restart the VM if the agent is still not connected.".into()]
@@ -506,6 +511,7 @@ pub async fn install_guest_agent(
         channel_updated,
         vm_restarted,
         needs_restart: vmi_running && !vm_restarted,
+        pending: true,
         message: if cloud_init_updated || channel_updated {
             "Merged GuestKit agent bootstrap into VM spec.".into()
         } else {
@@ -597,6 +603,7 @@ pub async fn install_vmtools_iso(
             channel_updated: false,
             vm_restarted: false,
             needs_restart: false,
+            pending: false,
             message: "Windows VMs use virtio-win ISO via Zeus OS Guest Tools.".into(),
             next_steps: vec![
                 "Open Zeus OS → Guest Tools and attach virtio-win.iso.".into(),
@@ -662,6 +669,7 @@ pub async fn install_vmtools_iso(
         channel_updated: false,
         vm_restarted,
         needs_restart: vmi_running && !vm_restarted,
+        pending: true,
         message: if iso_attached {
             "Zeus VM Tools ISO attached as CD-ROM — import may take a minute.".into()
         } else {
@@ -680,15 +688,25 @@ async fn restart_vm(client: Client, namespace: &str, name: &str) -> ApiResult<()
     let url = format!(
         "/apis/subresources.kubevirt.io/v1/namespaces/{namespace}/virtualmachines/{name}/restart"
     );
+    kubevirt_subresource_put(&client, &url, b"{}").await
+}
+
+async fn kubevirt_subresource_put(client: &Client, url: &str, body: &[u8]) -> ApiResult<()> {
     let req = http::Request::builder()
         .method("PUT")
-        .uri(&url)
+        .uri(url)
         .header("Content-Type", "application/json")
-        .body(b"{}".to_vec())
-        .map_err(|e| ApiError::internal(format!("build restart request: {e}")))?;
-    client
-        .request::<Value>(req)
-        .await
-        .map_err(|e| ApiError::internal(format!("restart VM {namespace}/{name}: {e}")))?;
-    Ok(())
+        .body(body.to_vec())
+        .map_err(|e| ApiError::internal(format!("build subresource request: {e}")))?;
+    match client.request::<Value>(req).await {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("EOF while parsing") || msg.contains("error decoding response body") {
+                Ok(())
+            } else {
+                Err(ApiError::internal(format!("subresource PUT {url}: {msg}")))
+            }
+        }
+    }
 }

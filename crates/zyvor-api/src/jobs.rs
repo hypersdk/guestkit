@@ -7,6 +7,10 @@ use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use uuid::Uuid;
 
+use crate::error::{ApiError, ApiResult};
+use crate::models::JobEnqueueResponse;
+use crate::state::AppState;
+
 pub const JOBS_STREAM: &str = "zyvor:jobs";
 
 pub async fn enqueue_job(redis: &mut ConnectionManager, job: &JobDocument) -> Result<()> {
@@ -59,4 +63,50 @@ pub fn build_job(
         .timeout_seconds(7200)
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+pub async fn submit_disk_path_job(
+    state: &AppState,
+    vm_id: Uuid,
+    disk_path: &std::path::Path,
+    format: &str,
+    operation: &str,
+    payload_type: &str,
+    mut data: serde_json::Value,
+) -> ApiResult<JobEnqueueResponse> {
+    let job_id = Uuid::new_v4();
+    if let Some(obj) = data.as_object_mut() {
+        obj.insert(
+            "image".into(),
+            serde_json::json!({
+                "path": disk_path.display().to_string(),
+                "format": format,
+            }),
+        );
+    }
+
+    let job = build_job(job_id, operation, payload_type, data)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    let mut redis = state.redis.clone();
+    enqueue_job(&mut redis, &job)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    sqlx::query(
+        "INSERT INTO jobs (id, vm_id, operation, status) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(job_id)
+    .bind(vm_id)
+    .bind(operation)
+    .bind("pending")
+    .execute(&state.pool)
+    .await
+    .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok(JobEnqueueResponse {
+        job_id,
+        operation: operation.to_string(),
+        status: "pending".to_string(),
+    })
 }

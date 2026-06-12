@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use uuid::Uuid;
 use crate::error::{ApiError, ApiResult};
-use crate::jobs::{build_job, enqueue_job};
+use crate::jobs::{build_job, enqueue_job, submit_disk_path_job};
 use crate::models::{
     ApiResponse, JobEnqueueResponse, JobRecord, ProvisionResponse, VmImage, VmImportResponse,
 };
@@ -146,42 +146,17 @@ async fn submit_vm_job(
     payload_type: &str,
     mut data: serde_json::Value,
 ) -> ApiResult<JobEnqueueResponse> {
-    let job_id = Uuid::new_v4();
     let image_path = state.config.storage_path.join(&vm.object_key);
-    if let Some(obj) = data.as_object_mut() {
-        obj.insert(
-            "image".into(),
-            serde_json::json!({
-                "path": image_path.display().to_string(),
-                "format": vm.format,
-            }),
-        );
-    }
-
-    let job = build_job(job_id, operation, payload_type, data)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    let mut redis = state.redis.clone();
-    enqueue_job(&mut redis, &job)
-        .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    sqlx::query(
-        "INSERT INTO jobs (id, vm_id, operation, status) VALUES ($1, $2, $3, $4)",
+    submit_disk_path_job(
+        state,
+        vm.id,
+        &image_path,
+        &vm.format,
+        operation,
+        payload_type,
+        data,
     )
-    .bind(job_id)
-    .bind(vm.id)
-    .bind(operation)
-    .bind("pending")
-    .execute(&state.pool)
     .await
-    .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    Ok(JobEnqueueResponse {
-        job_id,
-        operation: operation.to_string(),
-        status: "pending".to_string(),
-    })
 }
 
 pub async fn inspect_vm(

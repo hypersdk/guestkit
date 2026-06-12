@@ -48,8 +48,45 @@ pub fn collect_windows_details(g: &mut Guestfs, root: &str) -> WindowsDetails {
         .inspect_get_windows_systemroot(root)
         .unwrap_or_else(|_| "/Windows".to_string());
     details.event_logs = summarize_event_logs(g, &systemroot);
+    details.persistence = collect_windows_persistence(g, root, &systemroot);
 
     details
+}
+
+fn collect_windows_persistence(
+    g: &mut Guestfs,
+    root: &str,
+    systemroot: &str,
+) -> crate::evidence::snapshot::WindowsPersistenceEvidence {
+    use crate::evidence::snapshot::{WindowsPersistenceEntry, WindowsPersistenceEvidence};
+    use std::path::PathBuf;
+
+    let mut persistence = WindowsPersistenceEvidence::default();
+
+    let software_hive = format!("{root}/Windows/System32/config/SOFTWARE");
+    if g.exists(&software_hive).unwrap_or(false) {
+        if let Ok(keys) =
+            crate::guestfs::windows_registry::parse_run_keys(PathBuf::from(&software_hive).as_path())
+        {
+            persistence.run_keys = keys
+                .into_iter()
+                .map(|k| WindowsPersistenceEntry {
+                    location: k.location,
+                    name: k.name,
+                    command: k.command,
+                })
+                .collect();
+        }
+    }
+
+    let tasks_dir = format!("{systemroot}/System32/Tasks");
+    if g.exists(&tasks_dir).unwrap_or(false) {
+        if let Ok(entries) = g.ls(&tasks_dir) {
+            persistence.scheduled_tasks = entries.into_iter().take(100).collect();
+        }
+    }
+
+    persistence
 }
 
 #[derive(Debug, Default)]
