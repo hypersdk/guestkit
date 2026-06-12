@@ -15,6 +15,18 @@ pub const VMTOOLS_VERSION: &str = "0.1.0";
 pub const DEFAULT_BUNDLE_NAME: &str = "cluster-default";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct VMToolsWindowsArtifacts {
+    #[serde(default)]
+    pub exe: String,
+    #[serde(default)]
+    pub msi: String,
+    #[serde(default)]
+    pub zip: String,
+    #[serde(default)]
+    pub install_ps1: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VMToolsBundleSpec {
     #[serde(default)]
@@ -23,6 +35,8 @@ pub struct VMToolsBundleSpec {
     pub channel: String,
     #[serde(default)]
     pub linux: VMToolsLinuxArtifacts,
+    #[serde(default)]
+    pub windows: VMToolsWindowsArtifacts,
     #[serde(default)]
     pub iso: String,
     #[serde(default)]
@@ -76,6 +90,12 @@ pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
             deb: format!("{base}/linux/zyvor-vm-tools_{version}_amd64.deb"),
             tar: format!("{base}/linux/zyvor-vm-tools-linux-amd64.tar.gz"),
         },
+        windows: VMToolsWindowsArtifacts {
+            exe: format!("{base}/windows/zyvor-guest-agent.exe"),
+            msi: format!("{base}/windows/zyvor-vm-tools-{version}.msi"),
+            zip: format!("{base}/windows/zyvor-vm-tools-windows-{version}.zip"),
+            install_ps1: format!("{base}/windows/install.ps1"),
+        },
         iso: format!("{base}/zyvor-vm-tools.iso"),
         agent_binary_url: agent,
     }
@@ -101,6 +121,7 @@ pub async fn fetch_bundle_spec_optional(client: &Client) -> Option<VMToolsBundle
 fn parse_bundle_spec(val: &Value) -> VMToolsBundleSpec {
     let spec = val.get("spec").cloned().unwrap_or(json!({}));
     let linux = spec.get("linux").cloned().unwrap_or(json!({}));
+    let windows = spec.get("windows").cloned().unwrap_or(json!({}));
     VMToolsBundleSpec {
         version: spec
             .get("version")
@@ -125,6 +146,29 @@ fn parse_bundle_spec(val: &Value) -> VMToolsBundleSpec {
                 .into(),
             tar: linux
                 .get("tar")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+        },
+        windows: VMToolsWindowsArtifacts {
+            exe: windows
+                .get("exe")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            msi: windows
+                .get("msi")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            zip: windows
+                .get("zip")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            install_ps1: windows
+                .get("installPs1")
+                .or_else(|| windows.get("install_ps1"))
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .into(),
@@ -162,6 +206,12 @@ pub async fn upsert_default_bundle(client: &Client, spec: &VMToolsBundleSpec) ->
                 "rpm": spec.linux.rpm,
                 "deb": spec.linux.deb,
                 "tar": spec.linux.tar,
+            },
+            "windows": {
+                "exe": spec.windows.exe,
+                "msi": spec.windows.msi,
+                "zip": spec.windows.zip,
+                "installPs1": spec.windows.install_ps1,
             },
             "iso": spec.iso,
             "agentBinaryUrl": spec.agent_binary_url,

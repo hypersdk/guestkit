@@ -1,6 +1,7 @@
 # Standalone workspace — avoids joining a parent Cargo workspace when deployed
 # under e.g. ~/.deployments/guestkit next to machina.
 [workspace]
+members = [".", "crates/guestkit-agent-protocol", "crates/zyvor-guest-agent"]
 
 [package]
 name = "guestkit"
@@ -80,8 +81,7 @@ libc = "0.2"
 nt_hive2 = "4.2"
 
 # Windows event log parsing (pure Rust)
-# evtx = { version = "0.8", default-features = false }
-# TODO: Add evtx crate when log feature conflicts are resolved
+evtx = { version = "0.8", default-features = false, optional = true }
 
 # Report generation and export
 printpdf = "0.7"
@@ -117,7 +117,7 @@ num_cpus = "1.16"
 
 [features]
 default = ["guest-inspect"]
-guest-inspect = []
+guest-inspect = ["evtx"]
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
 local-ai = ["ai"]

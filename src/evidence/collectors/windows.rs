@@ -2,8 +2,8 @@
 //! Windows registry and filesystem evidence enrichment.
 
 use crate::evidence::snapshot::{
-    WindowsAppEntry, WindowsEventLogSummary, WindowsPersistenceEvidence, WindowsServiceEntry,
-    WindowsServiceType, WindowsStartType,
+    WindowsAppEntry, WindowsEventLogSummary, WindowsForensicProfile, WindowsPersistenceEvidence,
+    WindowsServiceEntry, WindowsServiceType, WindowsStartType,
 };
 use crate::Guestfs;
 
@@ -109,8 +109,13 @@ fn parse_start_type(raw: &str) -> WindowsStartType {
 }
 
 fn summarize_event_logs(g: &mut Guestfs, systemroot: &str) -> WindowsEventLogSummary {
+    use crate::evidence::snapshot::WindowsForensicProfile;
+    use crate::guestfs::forensic::{build_forensic_profile, parse_evtx_forensic};
+    use std::io::Write;
+
     let log_dir = format!("{systemroot}/System32/winevt/Logs");
     let mut summary = WindowsEventLogSummary::default();
+    let mut forensic_entries = Vec::new();
 
     if !g.exists(&log_dir).unwrap_or(false) {
         return summary;
@@ -126,10 +131,50 @@ fn summarize_event_logs(g: &mut Guestfs, systemroot: &str) -> WindowsEventLogSum
             if let Ok(stat) = g.stat(&path) {
                 summary.total_bytes = summary.total_bytes.saturating_add(stat.size.max(0) as u64);
             }
+            if entry == "Security.evtx" || entry == "System.evtx" || entry == "Application.evtx" {
+                if let Ok(bytes) = g.read_file(&path) {
+                    if let Ok(mut tmp) = tempfile::NamedTempFile::new() {
+                        if tmp.write_all(&bytes).is_ok() {
+                            if let Some(profile) =
+                                parse_evtx_forensic(tmp.path(), 500)
+                            {
+                                merge_forensic(&mut summary, profile);
+                            }
+                            if let Ok(parsed) =
+                                crate::guestfs::windows_registry::parse_evtx_file(tmp.path(), 200)
+                            {
+                                forensic_entries.extend(parsed);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
+    if summary.forensic.is_none() && !forensic_entries.is_empty() {
+        summary.forensic = Some(build_forensic_profile(&forensic_entries));
+    }
     summary
+}
+
+fn merge_forensic(summary: &mut WindowsEventLogSummary, add: WindowsForensicProfile) {
+    let profile = summary.forensic.get_or_insert_with(WindowsForensicProfile::default);
+    profile.failed_logons += add.failed_logons;
+    profile.successful_logons += add.successful_logons;
+    profile.service_failures += add.service_failures;
+    profile.unexpected_shutdowns += add.unexpected_shutdowns;
+    profile.privilege_escalations += add.privilege_escalations;
+    for id in add.suspicious_event_ids {
+        if !profile.suspicious_event_ids.contains(&id) {
+            profile.suspicious_event_ids.push(id);
+        }
+    }
+    for evt in add.recent_critical {
+        if profile.recent_critical.len() < 25 {
+            profile.recent_critical.push(evt);
+        }
+    }
 }
 
 #[cfg(test)]

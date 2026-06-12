@@ -83,7 +83,7 @@ cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/de
 cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true
 
 cat > "${ISO_DIR}/manifest.json" <<EOF
-{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64"]}
+{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64","windows-amd64"]}
 EOF
 
 if command -v genisoimage >/dev/null; then
@@ -96,3 +96,8 @@ fi
 
 echo "Artifacts in ${DIST}/linux"
 ls -la "${DIST}/linux"
+
+echo "Building Windows artifacts..."
+bash "${ROOT}/packaging/vmtools/windows/build-msi.sh"
+mkdir -p "${DIST}/windows"
+cp -a "${ROOT}/dist/vmtools/windows/"* "${DIST}/windows/" 2>/dev/null || true

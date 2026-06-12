@@ -45,12 +45,16 @@ metadata:
   name: minio
   namespace: {{ .Values.namespace }}
 spec:
+  type: {{ .Values.minio.service.type | default "ClusterIP" }}
   selector:
     app: minio
   ports:
     - name: api
       port: 9000
       targetPort: 9000
+      {{- if and (eq (.Values.minio.service.type | default "ClusterIP") "NodePort") .Values.minio.service.nodePort }}
+      nodePort: {{ .Values.minio.service.nodePort }}
+      {{- end }}
     - name: console
       port: 9001
       targetPort: 9001

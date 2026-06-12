@@ -111,6 +111,12 @@ pub fn resolve_guestkit_binary_url() -> String {
             }
         }
     }
+    if let Ok(base) = std::env::var("VMTOOLS_BUNDLE_URL") {
+        let t = base.trim().trim_end_matches('/');
+        if !t.is_empty() {
+            return format!("{t}/linux/zyvor-guest-agent");
+        }
+    }
     if let Ok(url) = std::env::var("ZEUS_OS_PUBLIC_URL") {
         let t = url.trim().trim_end_matches('/');
         if !t.is_empty() {
@@ -118,6 +124,37 @@ pub fn resolve_guestkit_binary_url() -> String {
         }
     }
     "http://127.0.0.1:30050/api/v1/engines/guestkit/binary".into()
+}
+
+pub fn windows_install_script(agent_url: &str) -> String {
+    let url = agent_url.replace('\'', "''");
+    format!(
+        r#"$ErrorActionPreference='Stop'
+$InstallDir="$env:ProgramFiles\Zyvor\VM Tools"
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+$agentPath=Join-Path $InstallDir 'zyvor-guest-agent.exe'
+Invoke-WebRequest -Uri '{url}' -OutFile $agentPath -UseBasicParsing
+$svcName='ZyvorGuestAgent'
+if (Get-Service -Name $svcName -ErrorAction SilentlyContinue) {{ Stop-Service -Name $svcName -Force -ErrorAction SilentlyContinue; sc.exe delete $svcName | Out-Null; Start-Sleep -Seconds 2 }}
+New-Service -Name $svcName -BinaryPathName "`"$agentPath`" --service" -DisplayName 'Zeus VM Tools Guest Agent' -StartupType Automatic | Out-Null
+Start-Service -Name $svcName
+Write-Output 'ZyvorGuestAgent installed'"#
+    )
+}
+
+pub fn resolve_windows_agent_url(bundle_agent_url: Option<&str>) -> String {
+    if let Some(url) = bundle_agent_url.filter(|u| !u.is_empty()) {
+        return url.to_string();
+    }
+    if let Ok(url) = std::env::var("VMTOOLS_WINDOWS_AGENT_URL") {
+        let t = url.trim();
+        if !t.is_empty() {
+            return t.to_string();
+        }
+    }
+    let base = std::env::var("VMTOOLS_BUNDLE_URL")
+        .unwrap_or_else(|_| "http://minio:9000/vmtools".into());
+    format!("{}/windows/zyvor-guest-agent.exe", base.trim_end_matches('/'))
 }
 
 pub fn qga_bootstrap_script(binary_url: &str) -> String {
@@ -149,12 +186,40 @@ pub fn zyvor_tools_connected(vm: &Value, vmi: Option<&Value>) -> bool {
 
 fn guestkit_already_in_cloud_init(user_data: &str) -> bool {
     let lower = user_data.to_lowercase();
-    lower.contains("zyvor-guest-agent")
-        || lower.contains("guestkit-agent")
-        || lower.contains("/usr/bin/zyvor-guest-agent")
+    lower.contains("zyvor-guest-agent") || lower.contains("/usr/bin/zyvor-guest-agent")
+}
+
+fn legacy_guestkit_bootstrap(user_data: &str) -> bool {
+    let lower = user_data.to_lowercase();
+    lower.contains("guestkit-agent.service")
         || lower.contains("/usr/local/bin/guestkit")
-        || lower.contains("qemu-guest-agent")
-        || lower.contains("qemu-ga")
+        || lower.contains("guestkit agent --channel")
+}
+
+fn strip_legacy_guestkit_blocks(user_data: &str) -> String {
+    let mut lines: Vec<&str> = user_data.lines().collect();
+    let mut out = Vec::new();
+    let mut skip = false;
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        if line.contains("guestkit-agent.service")
+            || line.contains("/usr/local/bin/guestkit")
+            || line.contains("guestkit agent --channel")
+        {
+            skip = true;
+        }
+        if skip && line.trim().is_empty() {
+            skip = false;
+            i += 1;
+            continue;
+        }
+        if !skip {
+            out.push(line);
+        }
+        i += 1;
+    }
+    out.join("\n")
 }
 
 fn append_agent_unit_yaml(out: &mut String) {
@@ -182,8 +247,10 @@ fn append_agent_runcmd_yaml(out: &mut String, binary_url: &str) {
 
 fn linux_cloud_init_snippet(binary_url: &str) -> String {
     let mut out = String::from("#cloud-config\n");
+    out.push_str("packages:\n  - qemu-guest-agent\n");
     append_agent_unit_yaml(&mut out);
     append_agent_runcmd_yaml(&mut out, binary_url);
+    out.push_str("  - systemctl enable --now qemu-guest-agent || true\n");
     out
 }
 
@@ -192,13 +259,24 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
     if trimmed.is_empty() {
         return (linux_cloud_init_snippet(binary_url), true);
     }
-    if guestkit_already_in_cloud_init(trimmed) {
-        return (trimmed.to_string(), false);
+    let base = if legacy_guestkit_bootstrap(trimmed) {
+        strip_legacy_guestkit_blocks(trimmed)
+    } else {
+        trimmed.to_string()
+    };
+    if guestkit_already_in_cloud_init(&base) {
+        let changed = base != trimmed;
+        return (base, changed);
     }
 
-    let mut out = trimmed.to_string();
+    let mut out = base;
     if !out.ends_with('\n') {
         out.push('\n');
+    }
+    if !out.contains("packages:") {
+        out.push_str("packages:\n  - qemu-guest-agent\n");
+    } else if !out.contains("qemu-guest-agent") {
+        out.push_str("  - qemu-guest-agent\n");
     }
     if !out.contains("write_files:") {
         append_agent_unit_yaml(&mut out);
@@ -215,6 +293,9 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
         out.push_str("  - chmod 755 /usr/bin/zyvor-guest-agent\n");
         out.push_str("  - systemctl daemon-reload\n");
         out.push_str("  - systemctl enable --now zyvor-guest-agent\n");
+    }
+    if !out.contains("qemu-guest-agent") && out.contains("runcmd:") {
+        out.push_str("  - systemctl enable --now qemu-guest-agent || true\n");
     }
     (out, true)
 }
@@ -369,7 +450,9 @@ pub async fn install_guest_agent(
     namespace: &str,
     name: &str,
     restart: bool,
+    method: Option<&str>,
 ) -> ApiResult<GuestAgentInstallResult> {
+    let install_method = method.unwrap_or("auto").to_lowercase();
     let vm_ar = vm_resource();
     let api: Api<kube::api::DynamicObject> =
         Api::namespaced_with(client.clone(), namespace, &vm_ar);
@@ -391,26 +474,6 @@ pub async fn install_guest_agent(
         == Some("Running");
 
     let is_windows = vm_is_windows(Some(&vm), vmi.as_ref());
-    if is_windows {
-        return Ok(GuestAgentInstallResult {
-            success: false,
-            method: "manual".into(),
-            is_windows: true,
-            cloud_init_updated: false,
-            channel_updated: false,
-            vm_restarted: false,
-            needs_restart: false,
-            pending: false,
-            message: "Windows VMs need QEMU Guest Agent from virtio-win guest tools.".into(),
-            next_steps: vec![
-                "Open Zeus OS → VM → Guest Tools and attach virtio-win.iso.".into(),
-                "Install QEMU Guest Agent / virtio-win-guest-tools inside the VM.".into(),
-                "Restart the VM after installation.".into(),
-            ],
-            bootstrap_script: None,
-        });
-    }
-
     let agent_live = vmi
         .as_ref()
         .map(|v| {
@@ -426,9 +489,168 @@ pub async fn install_guest_agent(
         })
         .unwrap_or(false);
 
+    if is_windows {
+        let agent_url = resolve_windows_agent_url(None);
+        let ps_script = windows_install_script(&agent_url);
+        if vmi_running && agent_live && install_method != "cloud-init" {
+            match crate::kubevirt_qga::qga_exec_powershell(
+                &client,
+                namespace,
+                name,
+                &ps_script,
+                180,
+            )
+            .await
+            {
+                Ok(exec) if exec.exit_code == 0 => {
+                    return Ok(GuestAgentInstallResult {
+                        success: true,
+                        method: "qga-exec".into(),
+                        is_windows: true,
+                        cloud_init_updated: false,
+                        channel_updated: false,
+                        vm_restarted: false,
+                        needs_restart: false,
+                        pending: false,
+                        message: "Installed Zeus VM Tools via QGA guest-exec (PowerShell).".into(),
+                        next_steps: vec![
+                            "Refresh guest info — ZyvorGuestAgent service should be running.".into(),
+                            "virtio-win remains available for QEMU Guest Agent parity.".into(),
+                        ],
+                        bootstrap_script: None,
+                    });
+                }
+                Ok(exec) => {
+                    return Ok(GuestAgentInstallResult {
+                        success: false,
+                        method: "qga-exec".into(),
+                        is_windows: true,
+                        cloud_init_updated: false,
+                        channel_updated: false,
+                        vm_restarted: false,
+                        needs_restart: false,
+                        pending: true,
+                        message: format!(
+                            "QGA install failed (exit {}): {}",
+                            exec.exit_code,
+                            exec.stderr.trim()
+                        ),
+                        next_steps: vec![
+                            "Attach virtio-win.iso via Zeus OS Guest Tools.".into(),
+                            "Run install.ps1 manually inside the VM as Administrator.".into(),
+                        ],
+                        bootstrap_script: Some(ps_script),
+                    });
+                }
+                Err(e) => {
+                    return Ok(GuestAgentInstallResult {
+                        success: false,
+                        method: "qga-exec".into(),
+                        is_windows: true,
+                        cloud_init_updated: false,
+                        channel_updated: false,
+                        vm_restarted: false,
+                        needs_restart: false,
+                        pending: true,
+                        message: format!("QGA exec unavailable: {}", e.message),
+                        next_steps: vec![
+                            "Install QEMU Guest Agent from virtio-win ISO first.".into(),
+                            format!("Manual: $env:ZYVOR_AGENT_URL='{agent_url}'; .\\install.ps1"),
+                        ],
+                        bootstrap_script: Some(ps_script),
+                    });
+                }
+            }
+        }
+        return Ok(GuestAgentInstallResult {
+            success: false,
+            method: "virtio-win".into(),
+            is_windows: true,
+            cloud_init_updated: false,
+            channel_updated: false,
+            vm_restarted: false,
+            needs_restart: false,
+            pending: false,
+            message: "Windows: attach virtio-win ISO for QEMU Guest Agent, or use native Zeus agent install.ps1.".into(),
+            next_steps: vec![
+                "Open Zeus OS → VM → Guest Tools and attach virtio-win.iso.".into(),
+                "Install QEMU Guest Agent / virtio-win-guest-tools inside the VM.".into(),
+                format!("Native agent: $env:ZYVOR_AGENT_URL='{agent_url}'; .\\install.ps1"),
+            ],
+            bootstrap_script: Some(ps_script),
+        });
+    }
+
+    if install_method == "qga" && !agent_live {
+        return Err(crate::error::ApiError::bad_request(
+            "method=qga requires a connected QEMU guest agent",
+        ));
+    }
+
     let binary_url = resolve_guestkit_binary_url();
     if vmi_running && agent_live && !zyvor_tools_connected(&vm, vmi.as_ref()) {
         let script = qga_bootstrap_script(&binary_url);
+        if install_method == "qga" || install_method == "auto" {
+            match crate::kubevirt_qga::qga_exec_shell(&client, namespace, name, &script, 180).await {
+                Ok(exec) if exec.exit_code == 0 => {
+                    let channel_updated = merge_guest_agent_channel_into_vm(&mut vm);
+                    let cloud_init_updated = merge_guest_agent_cloud_init_in_vm(&mut vm, &binary_url);
+                    if channel_updated || cloud_init_updated {
+                        let patch = json!({
+                            "spec": vm.get("spec").cloned().unwrap_or(Value::Null)
+                        });
+                        api.patch(name, &PatchParams::default(), &Patch::Merge(&patch))
+                            .await
+                            .map_err(|e| ApiError::internal(format!("patch VM {namespace}/{name}: {e}")))?;
+                    }
+                    return Ok(GuestAgentInstallResult {
+                        success: true,
+                        method: "qga-exec".into(),
+                        is_windows: false,
+                        cloud_init_updated,
+                        channel_updated,
+                        vm_restarted: false,
+                        needs_restart: false,
+                        pending: false,
+                        message: "Installed zyvor-guest-agent via QGA guest-exec (hands-off).".into(),
+                        next_steps: vec![
+                            "Refresh guest info — agent should connect over virtio-serial.".into(),
+                        ],
+                        bootstrap_script: None,
+                    });
+                }
+                Ok(exec) => {
+                    return Ok(GuestAgentInstallResult {
+                        success: false,
+                        method: "qga-exec".into(),
+                        is_windows: false,
+                        cloud_init_updated: false,
+                        channel_updated: false,
+                        vm_restarted: false,
+                        needs_restart: false,
+                        pending: true,
+                        message: format!(
+                            "QGA bootstrap failed (exit {}): {}",
+                            exec.exit_code,
+                            exec.stderr.trim()
+                        ),
+                        next_steps: vec![
+                            "Paste bootstrap_script into the VM console as root.".into(),
+                        ],
+                        bootstrap_script: Some(script),
+                    });
+                }
+                Err(e) if install_method == "qga" => {
+                    return Err(crate::error::ApiError::internal(format!(
+                        "QGA exec failed: {}",
+                        e.message
+                    )));
+                }
+                Err(_) => {
+                    // auto: fall through to cloud-init merge below
+                }
+            }
+        }
         let channel_updated = merge_guest_agent_channel_into_vm(&mut vm);
         let cloud_init_updated = merge_guest_agent_cloud_init_in_vm(&mut vm, &binary_url);
         if channel_updated || cloud_init_updated {
@@ -448,13 +670,19 @@ pub async fn install_guest_agent(
             vm_restarted: false,
             needs_restart: false,
             pending: true,
-            message: "QEMU guest agent is connected — run the bootstrap script inside the guest (or via console).".into(),
+            message: "QEMU guest agent connected — bootstrap script ready (QGA exec unavailable).".into(),
             next_steps: vec![
-                "Paste bootstrap_script into the VM console as root, or wait for Zeus guest-exec.".into(),
+                "Paste bootstrap_script into the VM console as root.".into(),
                 "Refresh guest info after zyvor-guest-agent starts.".into(),
             ],
             bootstrap_script: Some(script),
         });
+    }
+
+    if install_method == "qga" {
+        return Err(crate::error::ApiError::bad_request(
+            "method=qga requires a running VM with connected QEMU guest agent",
+        ));
     }
 
     let channel_updated = merge_guest_agent_channel_into_vm(&mut vm);

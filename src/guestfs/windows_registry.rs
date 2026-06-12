@@ -5,10 +5,11 @@
 //! Note: This is an initial implementation that will be enhanced with full
 //! registry parsing in future versions.
 
+#[cfg(feature = "evtx")]
+use serde_json::Value;
+
 use crate::core::{Error, Result};
 use std::path::Path;
-
-/// Windows application information
 #[derive(Debug, Clone)]
 pub struct WindowsApp {
     pub name: String,
@@ -662,10 +663,7 @@ pub struct WindowsEventEntry {
 }
 
 /// Parse Windows Event Log (.evtx) file
-///
-/// Full EVTX parsing requires the evtx crate, which currently has log crate
-/// feature conflicts. Returns empty until evtx crate integration is resolved.
-pub fn parse_evtx_file(evtx_path: &Path, _limit: usize) -> Result<Vec<WindowsEventEntry>> {
+pub fn parse_evtx_file(evtx_path: &Path, limit: usize) -> Result<Vec<WindowsEventEntry>> {
     if !evtx_path.exists() {
         return Err(Error::NotFound(format!(
             "EVTX file not found: {}",
@@ -673,9 +671,91 @@ pub fn parse_evtx_file(evtx_path: &Path, _limit: usize) -> Result<Vec<WindowsEve
         )));
     }
 
-    // EVTX binary format parsing requires the evtx crate.
-    // Cannot extract events without it.
-    Ok(vec![])
+    #[cfg(feature = "evtx")]
+    {
+        return parse_evtx_with_crate(evtx_path, limit);
+    }
+
+    #[cfg(not(feature = "evtx"))]
+    {
+        let _ = limit;
+        Ok(vec![])
+    }
+}
+
+#[cfg(feature = "evtx")]
+fn parse_evtx_with_crate(evtx_path: &Path, limit: usize) -> Result<Vec<WindowsEventEntry>> {
+    use evtx::EvtxParser;
+    use serde_json::{json, Value};
+    use std::fs::File;
+
+    let file = File::open(evtx_path)?;
+    let mut parser = EvtxParser::from_read_seek(file)
+        .map_err(|e| Error::InvalidFormat(format!("evtx open: {e}")))?;
+    let mut events = Vec::new();
+    for record in parser.records() {
+        if events.len() >= limit {
+            break;
+        }
+        let record = record.map_err(|e| Error::InvalidFormat(format!("evtx record: {e}")))?;
+        let val: Value = serde_json::from_str(&record.data).unwrap_or(json!({}));
+        let system = val.pointer("/Event/System").or_else(|| val.get("System"));
+        let event_id = json_u32(system.and_then(|s| s.get("EventID")), 0);
+        let level = system
+            .and_then(|s| s.get("Level"))
+            .map(json_scalar_string)
+            .unwrap_or_else(|| "0".into());
+        let source = system
+            .and_then(|s| s.get("Provider"))
+            .and_then(|p| p.get("Name"))
+            .or_else(|| system.and_then(|s| s.get("Provider")))
+            .map(json_scalar_string)
+            .unwrap_or_else(|| "Unknown".into());
+        let channel = system
+            .and_then(|s| s.get("Channel"))
+            .map(json_scalar_string)
+            .unwrap_or_default();
+        let computer = system
+            .and_then(|s| s.get("Computer"))
+            .map(json_scalar_string)
+            .unwrap_or_default();
+        let message = val
+            .pointer("/Event/EventData")
+            .map(|d| d.to_string())
+            .unwrap_or_else(|| record.data.chars().take(512).collect());
+        events.push(WindowsEventEntry {
+            event_id,
+            level,
+            source,
+            message,
+            time_created: record.timestamp.to_rfc3339(),
+            computer,
+            channel,
+        });
+    }
+    Ok(events)
+}
+
+#[cfg(feature = "evtx")]
+fn json_u32(value: Option<&Value>, default: u32) -> u32 {
+    value
+        .and_then(|v| {
+            v.as_u64()
+                .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                .or_else(|| v.as_i64().map(|i| i as u64))
+        })
+        .map(|n| n as u32)
+        .unwrap_or(default)
+}
+
+#[cfg(feature = "evtx")]
+fn json_scalar_string(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        other => other.to_string(),
+    }
 }
 
 /// Parse System event log for boot times and errors

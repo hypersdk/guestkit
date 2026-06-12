@@ -4,7 +4,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use uuid::Uuid;
 use crate::error::{ApiError, ApiResult};
-use crate::jobs::{get_job_result, get_job_status};
+use crate::jobs::{get_job_result, get_job_status, hydrate_job_record};
 use crate::models::{ApiResponse, JobRecord};
 use crate::state::AppState;
 
@@ -12,7 +12,7 @@ pub async fn get_job(
     State(state): State<AppState>,
     Path(job_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<serde_json::Value>>> {
-    let record = sqlx::query_as::<_, JobRecord>(
+    let mut record = sqlx::query_as::<_, JobRecord>(
         "SELECT id, vm_id, operation, status, worker_id, submitted_at, completed_at FROM jobs WHERE id = $1",
     )
     .bind(job_id)
@@ -20,6 +20,8 @@ pub async fn get_job(
     .await
     .map_err(|e| ApiError::internal(e.to_string()))?
     .ok_or_else(|| ApiError::not_found(format!("Job {job_id} not found")))?;
+
+    hydrate_job_record(&state, &mut record, true).await;
 
     let mut redis = state.redis.clone();
     let redis_status = get_job_status(&mut redis, &job_id.to_string()).await;

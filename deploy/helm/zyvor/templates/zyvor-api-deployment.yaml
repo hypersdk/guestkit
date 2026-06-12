@@ -68,13 +68,40 @@ spec:
             - name: VMTOOLS_RECONCILE_ISO
               value: "true"
             {{- end }}
+            {{- if .Values.persistence.kubevirtLocalPath }}
+            - name: KUBEVIRT_DISK_ROOT
+              value: {{ .Values.persistence.kubevirtLocalPath | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
+            {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}
             - name: dev
               mountPath: /dev
               mountPropagation: HostToContainer
+        {{- if and .Values.kubevirt.enabled .Values.zyvorApi.agentProxy.enabled }}
+        - name: agent-proxy
+          image: {{ .Values.zyvorApi.image }}
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/guestkit"]
+          args:
+            - agent-proxy
+            - --vsock-port
+            - {{ .Values.zyvorApi.agentProxy.vsockPort | default 1234 | quote }}
+            - --listen
+            - {{ .Values.zyvorApi.agentProxy.listen | default "127.0.0.1:8765" | quote }}
+          securityContext:
+            privileged: {{ .Values.zyvorApi.privileged }}
+          env:
+            - name: RUST_LOG
+              value: info
+          volumeMounts:
+            - name: dev
+              mountPath: /dev
+              mountPropagation: HostToContainer
+        {{- end }}
       volumes:
         {{- include "zyvor.vmVolume" . | nindent 8 }}
+        {{- include "zyvor.kubevirtStorageVolume" . | nindent 8 }}
         - name: dev
           hostPath:
             path: /dev

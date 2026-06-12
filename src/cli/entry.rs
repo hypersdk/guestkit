@@ -1846,16 +1846,20 @@ enum Commands {
         user: Option<String>,
     },
 
-    /// Host-side proxy to guest agent unix socket (requires --features agent)
+    /// Host-side proxy to guest agent unix socket or vsock listener (requires --features agent)
     #[command(name = "agent-proxy")]
     AgentProxy {
-        /// Libvirt channel unix socket path
+        /// Libvirt channel unix socket path (optional when --vsock-port is set)
         #[arg(long, value_name = "PATH")]
-        socket: String,
+        socket: Option<String>,
 
         /// Optional HTTP listen address (e.g. 127.0.0.1:8765)
         #[arg(long, value_name = "ADDR")]
         listen: Option<String>,
+
+        /// Listen for guest vsock connections on this port (Linux host)
+        #[arg(long, value_name = "PORT")]
+        vsock_port: Option<u32>,
     },
 
     /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
@@ -3384,17 +3388,25 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
 
-        Commands::AgentProxy { socket, listen } => {
+        Commands::AgentProxy {
+            socket,
+            listen,
+            vsock_port,
+        } => {
             #[cfg(feature = "agent")]
             {
                 use crate::agent::cli::{run_agent_proxy, AgentProxyArgs};
                 let rt = tokio::runtime::Runtime::new()
                     .context("failed to start async runtime for agent-proxy")?;
-                rt.block_on(run_agent_proxy(AgentProxyArgs { socket, listen }))?;
+                rt.block_on(run_agent_proxy(AgentProxyArgs {
+                    socket,
+                    listen,
+                    vsock_port,
+                }))?;
             }
             #[cfg(not(feature = "agent"))]
             {
-                let _ = (socket, listen);
+                let _ = (socket, listen, vsock_port);
                 anyhow::bail!("guestkit agent-proxy requires rebuilding with --features agent");
             }
         }

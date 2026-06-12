@@ -32,6 +32,10 @@ pub struct VMToolsBundleInfo {
     pub linux_rpm_url: Option<String>,
     pub linux_deb_url: Option<String>,
     pub linux_tar_url: Option<String>,
+    pub windows_exe_url: Option<String>,
+    pub windows_msi_url: Option<String>,
+    pub windows_zip_url: Option<String>,
+    pub windows_install_ps1_url: Option<String>,
     pub iso_url: Option<String>,
     pub agent_binary_url: String,
 }
@@ -110,6 +114,10 @@ pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>)
         linux_rpm_url: non_empty(Some(spec.linux.rpm.clone())),
         linux_deb_url: non_empty(Some(spec.linux.deb.clone())),
         linux_tar_url: non_empty(Some(spec.linux.tar.clone())),
+        windows_exe_url: non_empty(Some(spec.windows.exe.clone())),
+        windows_msi_url: non_empty(Some(spec.windows.msi.clone())),
+        windows_zip_url: non_empty(Some(spec.windows.zip.clone())),
+        windows_install_ps1_url: non_empty(Some(spec.windows.install_ps1.clone())),
         iso_url: non_empty(Some(spec.iso.clone())),
         agent_binary_url: agent,
     }
@@ -243,8 +251,10 @@ pub async fn install_vm_vmtools(
             .iso_url
             .ok_or_else(|| ApiError::bad_request("VM Tools ISO URL is not configured"))?;
         install_vmtools_iso(client.clone(), &namespace, &name, &iso_url, restart).await?
+    } else if method == "qga" || method == "cloud-init" || method == "auto" {
+        install_guest_agent(client.clone(), &namespace, &name, restart, Some(&method)).await?
     } else {
-        install_guest_agent(client.clone(), &namespace, &name, restart).await?
+        install_guest_agent(client.clone(), &namespace, &name, restart, Some("auto")).await?
     };
     if result.success && !result.is_windows {
         let bundle = bundle_info_async(&state, &client).await;
@@ -914,7 +924,7 @@ async fn reconcile_install_vm(
     let agent_live = vmi.map(agent_connected).unwrap_or(false);
 
     let install = if running && agent_live {
-        install_guest_agent(client.clone(), namespace, name, false).await?
+        install_guest_agent(client.clone(), namespace, name, false, Some("auto")).await?
     } else if running && !agent_live && reconcile_prefer_iso(policy) {
         let iso_url = bundle
             .iso_url
@@ -922,7 +932,7 @@ async fn reconcile_install_vm(
             .ok_or_else(|| ApiError::bad_request("VM Tools ISO URL is not configured"))?;
         install_vmtools_iso(client.clone(), namespace, name, &iso_url, restart).await?
     } else {
-        install_guest_agent(client.clone(), namespace, name, restart).await?
+        install_guest_agent(client.clone(), namespace, name, restart, Some("auto")).await?
     };
 
     if !install.success {

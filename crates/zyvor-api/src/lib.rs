@@ -10,6 +10,7 @@ pub mod kubevirt_copilot;
 pub mod kubevirt_export;
 pub mod kubevirt_inspect;
 pub mod kubevirt_guest_agent;
+pub mod kubevirt_qga;
 pub mod kubevirt_lifecycle;
 pub mod kubevirt_vmtools_ops;
 pub mod vmtools_bundle;

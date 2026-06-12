@@ -89,6 +89,24 @@ pub fn evaluate_cis_profile(evidence: &EvidenceSnapshot, semantic: &SemanticAnal
             !windows.bitlocker_detected || windows.pending_reboot,
             "BitLocker detected — capture recovery keys",
         );
+        if let Some(forensic) = &windows.event_logs.forensic {
+            check(
+                &mut passed,
+                &mut failed,
+                "CIS-WIN-EVT",
+                "No recent failed logon burst",
+                forensic.failed_logons < 50,
+                format!("{} failed logons in Security.evtx sample", forensic.failed_logons),
+            );
+            check(
+                &mut passed,
+                &mut failed,
+                "CIS-WIN-SVC",
+                "No service crash storm",
+                forensic.service_failures < 20,
+                format!("{} service failure events in System.evtx", forensic.service_failures),
+            );
+        }
     }
 
     let total = passed.len() + failed.len();
