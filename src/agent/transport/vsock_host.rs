@@ -3,7 +3,7 @@
 
 use anyhow::{bail, Context, Result};
 use std::io::{Read, Write};
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
+use std::os::unix::io::{FromRawFd, RawFd};
 
 pub use super::vsock::DEFAULT_VSOCK_PORT;
 
