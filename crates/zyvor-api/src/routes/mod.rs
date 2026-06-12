@@ -111,6 +111,10 @@ pub fn api_router() -> Router<AppState> {
             put(crate::kubevirt_lifecycle::stop_vm_handler),
         )
         .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/inspect",
+            post(crate::kubevirt_inspect::post_inspect_vm),
+        )
+        .route(
             "/api/v1/kubevirt/vms/:namespace/:name/export-disk",
             post(crate::kubevirt_export::export_vm_disk),
         )

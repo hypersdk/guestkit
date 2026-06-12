@@ -79,6 +79,8 @@ pub enum View {
     Logs,
     Profiles,
     Assurance,
+    SystemdDeep,
+    AiInsights,
     Files,
 }
 
@@ -151,6 +153,8 @@ impl View {
             View::Logs => "Logs",
             View::Profiles => "Profiles",
             View::Assurance => "Assurance",
+            View::SystemdDeep => "SystemdDeep",
+            View::AiInsights => "AiInsights",
             View::Files => "Files",
         }
     }
@@ -175,6 +179,8 @@ impl View {
             View::Logs,
             View::Profiles,
             View::Assurance,
+            View::SystemdDeep,
+            View::AiInsights,
             View::Files,
         ]
     }
@@ -404,6 +410,7 @@ pub struct App {
     pub boot_report: Option<crate::boot::BootabilityReport>,
     pub migration_report: Option<crate::cli::migrate::plan::MigrationScoreReport>,
     pub assurance_evidence: Option<crate::evidence::EvidenceSnapshot>,
+    pub intelligence: Option<crate::ai::IntelligenceBundle>,
     pub assurance_target: String,
     /// True when live guest agent responds (GUESTKIT_AGENT_SOCKET)
     pub agent_live: bool,
@@ -580,6 +587,7 @@ impl App {
             boot_report: None,
             migration_report: None,
             assurance_evidence: None,
+            intelligence: None,
             assurance_target,
             agent_live: false,
             view_tab_scroll: 0,
@@ -1335,6 +1343,8 @@ impl App {
             View::Logs => "logs",
             View::Profiles => "profiles",
             View::Assurance => "assurance",
+            View::SystemdDeep => "systemd-deep",
+            View::AiInsights => "ai-insights",
             View::Files => "files",
         };
         self.export_filename = format!("guestkit-{}.{}", view_name, format.extension());
@@ -1666,6 +1676,14 @@ impl App {
                 "target": self.assurance_target,
                 "bootability": self.boot_report,
                 "migration_score": self.migration_report,
+            }),
+            View::SystemdDeep => json!({
+                "view": "systemd-deep",
+                "intelligence": self.intelligence,
+            }),
+            View::AiInsights => json!({
+                "view": "ai-insights",
+                "intelligence": self.intelligence,
             }),
         }
     }

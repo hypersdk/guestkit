@@ -46,10 +46,14 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | Aurora dark UI theme (default) | Shipped |
 | `VMToolsPolicy` GET/PUT/reconcile API | Shipped |
 | Cluster auto-install reconciliation | Shipped |
-| Fleet policy UI (auto-install + reconcile) | Shipped |
+| Reconcile CronJob when `autoInstall: true` | Shipped |
+| `VMToolsBundle` CR + bundle URL from MinIO/Zeus | Shipped |
+| Smarter reconcile (`pending` until agent connects) | Shipped |
+| `autoUpgrade` rolling policy | Shipped |
+| Fleet policy UI (auto-install + auto-upgrade + reconcile) | Shipped |
 | Helm default `VMToolsPolicy` + CRD apply on deploy | Shipped |
-| Windows MSI | Scaffold only (virtio-win path) |
-| Full standalone operator | Future |
+| Windows MSI + install.ps1 scaffold | Scaffold (WiX on Windows build host) |
+| Full standalone operator | CronJob reconcile (lightweight) |
 
 ## API routes
 
@@ -97,12 +101,35 @@ kubectl apply -f deploy/crd/zeus-vmtools.yaml
 ```yaml
 metadata:
   labels:
-    zeus.zyvor.dev/guest-tools: installed|connected|missing
+    zeus.zyvor.dev/guest-tools: connected|pending|missing
   annotations:
     zeus.zyvor.dev/tools-version: "0.1.0"
     zeus.zyvor.dev/last-heartbeat: "..."
 ```
 
 `VMGuestAgent` CR `{vm-name}-vmtools` is upserted in the VM namespace with live status.
+
+## Windows (separate track)
+
+Linux ships first via cloud-init, QGA bootstrap, or ISO. Windows VMs continue to use **virtio-win** for QEMU Guest Agent; native Zeus agent MSI is scaffolded:
+
+```bash
+./packaging/vmtools/windows/build-msi.sh
+```
+
+Inside the guest (Administrator PowerShell):
+
+```powershell
+$env:ZYVOR_AGENT_URL = "https://…/zyvor-guest-agent.exe"
+.\install.ps1
+```
+
+See [packaging/vmtools/windows/README.md](../../packaging/vmtools/windows/README.md).
+
+## Auto-reconcile
+
+When `VMToolsPolicy.spec.autoInstall` or `autoUpgrade` is true, Helm can install a CronJob (`vmtools-reconcile`) that POSTs to `/api/v1/vmtools/policy/reconcile` on a schedule. Manual reconcile is available from the fleet toolbar.
+
+QGA-bootstrap and ISO installs are labeled **pending** until `zyvor-guest-agent` connects; they are not counted as installed in fleet coverage.
 
 See also [guest-agent.md](guest-agent.md) and [kubevirt-integration.md](kubevirt-integration.md).

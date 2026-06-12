@@ -19,6 +19,7 @@ pub fn doctor_command(
     image: &Path,
     target: &str,
     explain: bool,
+    ai: bool,
     output_format: &str,
     verbose: bool,
 ) -> Result<()> {
@@ -84,6 +85,71 @@ pub fn doctor_command(
         for step in &root_cause.chain {
             println!("  {}. {}", step.step, step.description);
         }
+    }
+
+    if explain || ai {
+        print_guest_intelligence(image, target, verbose, ai, result.copilot.clone())?;
+    }
+
+    Ok(())
+}
+
+fn print_guest_intelligence(
+    image: &Path,
+    target: &str,
+    verbose: bool,
+    ai: bool,
+    copilot: Option<crate::assurance::MigrationBriefing>,
+) -> Result<()> {
+    use crate::ai::build_intelligence;
+    use crate::assurance::{boot_target_from_str, collect_assurance_data};
+    use colored::Colorize;
+
+    let (evidence, boot) = collect_assurance_data(image, boot_target_from_str(target), verbose)?;
+    let intel = build_intelligence(&evidence, Some(&boot), copilot);
+
+    println!();
+    println!("{}", "Guest Intelligence".bold().cyan());
+    println!("{}", intel.narrative.executive_summary);
+
+    if !intel.recommendations.is_empty() {
+        println!();
+        println!("{}", "Top recommendations:".bold());
+        for rec in intel.recommendations.iter().take(5) {
+            println!("  • [{}] {} — {}", format!("{:?}", rec.category), rec.title, rec.citation);
+        }
+    }
+
+    println!(
+        "  CIS-lite score: {}/100",
+        intel.security_profile.score
+    );
+
+    #[cfg(feature = "ai")]
+    if ai {
+        use crate::ai::{run_agent_on_evidence, AgentConfig};
+        let rt = tokio::runtime::Runtime::new()?;
+        let config = AgentConfig {
+            boot_target: target.to_string(),
+            ..Default::default()
+        };
+        match rt.block_on(run_agent_on_evidence(
+            &evidence,
+            "Summarize migration readiness, cite evidence, and list the top 3 actions.",
+            &config,
+        )) {
+            Ok(agent) => {
+                println!();
+                println!("{}", "AI analysis".bold().magenta());
+                println!("{}", agent.answer);
+            }
+            Err(e) => eprintln!("AI agent skipped: {e:#}"),
+        }
+    }
+
+    #[cfg(not(feature = "ai"))]
+    if ai {
+        eprintln!("AI requires rebuild with --features ai");
     }
 
     Ok(())
@@ -214,6 +280,7 @@ pub fn migrate_plan_command(
     image: &Path,
     target: &str,
     explain: bool,
+    ai: bool,
     output_format: &str,
     export: Option<&Path>,
     verbose: bool,
@@ -225,6 +292,7 @@ pub fn migrate_plan_command(
         image,
         target,
         explain,
+        ai,
         output_format,
         export,
         verbose,
@@ -238,6 +306,7 @@ pub fn migrate_plan_command(
     image: &Path,
     target: &str,
     explain: bool,
+    ai: bool,
     output_format: &str,
     export: Option<&Path>,
     verbose: bool,
@@ -247,6 +316,7 @@ pub fn migrate_plan_command(
         image,
         target,
         explain,
+        ai,
         output_format,
         export,
         verbose,
@@ -259,6 +329,7 @@ fn migrate_plan_command_impl(
     image: &Path,
     target: &str,
     explain: bool,
+    ai: bool,
     output_format: &str,
     export: Option<&Path>,
     verbose: bool,
@@ -348,6 +419,10 @@ fn migrate_plan_command_impl(
     if let Some(rc) = &result.root_cause {
         println!();
         println!("  {}", rc.summary);
+    }
+
+    if explain || ai {
+        print_guest_intelligence(image, target, verbose, ai, result.copilot.clone())?;
     }
 
     Ok(())

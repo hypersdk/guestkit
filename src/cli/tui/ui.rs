@@ -401,6 +401,8 @@ fn draw_content(f: &mut Frame, area: Rect, app: &App) {
         View::Network => views::network::draw(f, area, app),
         View::Packages => views::packages::draw(f, area, app),
         View::Services => views::services::draw(f, area, app),
+        View::SystemdDeep => views::systemd_deep::draw(f, area, app),
+        View::AiInsights => views::ai_insights::draw(f, area, app),
         View::Databases => views::databases::draw(f, area, app),
         View::WebServers => views::webservers::draw(f, area, app),
         View::Security => views::security::draw(f, area, app),
@@ -1298,6 +1300,12 @@ fn draw_detail_overlay(f: &mut Frame, app: &App) {
                 "Use 'v' to preview files and 'i' to view file information.",
             )]
         }
+        View::SystemdDeep => vec![Line::from(
+            "Systemd semantic analysis — load Assurance first to populate intelligence.",
+        )],
+        View::AiInsights => vec![Line::from(
+            "Guest Intelligence recommendations and CIS-lite profile from evidence snapshot.",
+        )],
     };
 
     let detail = Paragraph::new(detail_text)

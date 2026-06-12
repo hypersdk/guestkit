@@ -1753,6 +1753,10 @@ enum Commands {
         #[arg(long)]
         explain: bool,
 
+        /// LLM-powered Guest Intelligence summary (requires --features ai)
+        #[arg(long)]
+        ai: bool,
+
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
@@ -1783,6 +1787,10 @@ enum Commands {
         /// Include root-cause explanation
         #[arg(long)]
         explain: bool,
+
+        /// LLM-powered Guest Intelligence summary (requires --features ai)
+        #[arg(long)]
+        ai: bool,
 
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
@@ -3265,9 +3273,10 @@ pub fn run() -> anyhow::Result<()> {
             image,
             target,
             explain,
+            ai,
             output,
         } => {
-            doctor_command(&image, &target, explain, &output, cli.verbose)?;
+            doctor_command(&image, &target, explain, ai, &output, cli.verbose)?;
         }
 
         Commands::Policy { action } => match action {
@@ -3303,6 +3312,7 @@ pub fn run() -> anyhow::Result<()> {
             image,
             target,
             explain,
+            ai,
             output,
             export,
             inject_agent,
@@ -3315,6 +3325,7 @@ pub fn run() -> anyhow::Result<()> {
                     &image,
                     &target,
                     explain,
+                    ai,
                     &output,
                     export.as_deref(),
                     cli.verbose,
@@ -3330,6 +3341,7 @@ pub fn run() -> anyhow::Result<()> {
                     &image,
                     &target,
                     explain,
+                    ai,
                     &output,
                     export.as_deref(),
                     cli.verbose,
