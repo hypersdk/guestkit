@@ -89,10 +89,6 @@ pub struct InstallQuery {
     pub method: Option<String>,
 }
 
-pub fn bundle_info(state: &AppState) -> VMToolsBundleInfo {
-    bundle_info_with_spec(state, None)
-}
-
 pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>) -> VMToolsBundleInfo {
     let spec = spec.cloned().unwrap_or_else(|| vmtools_bundle::bundle_spec_from_env(state));
     let agent = if spec.agent_binary_url.is_empty() {
@@ -712,17 +708,16 @@ pub async fn reconcile_policy(
             continue;
         }
 
-        match reconcile_install_vm(
-            &state,
-            client.clone(),
+        match reconcile_install_vm(ReconcileInstallRequest {
+            client: client.clone(),
             namespace,
             name,
-            &vm,
+            vm: &vm,
             vmi,
-            &policy.spec,
-            &bundle,
-            needs_upgrade,
-        )
+            policy: &policy.spec,
+            bundle: &bundle,
+            is_upgrade: needs_upgrade,
+        })
         .await
         {
             Ok(outcome) => {
@@ -908,17 +903,28 @@ fn reconcile_prefer_iso(policy: &VMToolsPolicySpec) -> bool {
         || policy.channel.eq_ignore_ascii_case("iso")
 }
 
-async fn reconcile_install_vm(
-    _state: &AppState,
+struct ReconcileInstallRequest<'a> {
     client: Client,
-    namespace: &str,
-    name: &str,
-    vm: &Value,
-    vmi: Option<&Value>,
-    policy: &VMToolsPolicySpec,
-    bundle: &VMToolsBundleInfo,
+    namespace: &'a str,
+    name: &'a str,
+    vm: &'a Value,
+    vmi: Option<&'a Value>,
+    policy: &'a VMToolsPolicySpec,
+    bundle: &'a VMToolsBundleInfo,
     is_upgrade: bool,
-) -> ApiResult<ReconcileOutcome> {
+}
+
+async fn reconcile_install_vm(req: ReconcileInstallRequest<'_>) -> ApiResult<ReconcileOutcome> {
+    let ReconcileInstallRequest {
+        client,
+        namespace,
+        name,
+        vm,
+        vmi,
+        policy,
+        bundle,
+        is_upgrade,
+    } = req;
     let restart = policy.reboot_policy != "never";
     let running = vmi_phase_running(vmi);
     let agent_live = vmi.map(agent_connected).unwrap_or(false);
@@ -995,7 +1001,7 @@ fn version_outdated(installed: &str, target: &str) -> bool {
         return false;
     }
     fn parse_parts(v: &str) -> Vec<u64> {
-        v.split(|c| c == '.' || c == '-')
+        v.split(['.', '-'])
             .filter_map(|p| p.parse::<u64>().ok())
             .collect()
     }

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="ironwolf">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>GuestKit — Sign In</title>
+  <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
+  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260613auth" />
+  <link rel="stylesheet" href="ironwolf-shell.css?v=20260613auth" />
+  <link rel="stylesheet" href="ironwolf-components.css?v=20260613auth" />
+  <link rel="stylesheet" href="style.css?v=20260613auth" />
+  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260613auth" />
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      background: radial-gradient(circle at 20% 20%, rgba(94, 184, 201, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(149, 128, 212, 0.08), transparent 45%),
+        var(--bg-primary);
+    }
+    .login-card {
+      width: min(420px, 100%);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    }
+    .login-card h1 { margin: 0 0 0.35rem; font-size: 1.5rem; }
+    .login-card p { margin: 0 0 1.25rem; color: var(--text-secondary); }
+    .login-error {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      background: rgba(212, 90, 90, 0.12);
+      color: var(--accent-red);
+      font-size: 0.9rem;
+    }
+    .login-actions { display: grid; gap: 0.75rem; }
+    .login-foot { margin-top: 1.25rem; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <img src="img/zavor-logo.webp" width="120" height="40" alt="GuestKit" style="margin-bottom:1rem;" />
+      <h1>Sign in to GuestKit</h1>
+      <p>Authenticate to access the VM migration console.</p>
+      <div class="login-error hidden" id="loginError"></div>
+      <div class="login-actions">
+        <button type="button" class="btn primary" id="ssoLoginBtn" style="width:100%;">Sign in with SSO</button>
+        <button type="button" class="btn glass hidden" id="localBypassBtn" style="width:100%;">Continue without SSO</button>
+      </div>
+      <p class="login-foot">Powered by ZyvorAI Labs · OIDC &amp; SAML-ready identity</p>
+    </div>
+  </div>
+  <script src="guestkit-auth.js?v=20260613auth"></script>
+  <script>
+    (async function initLogin() {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      const token = params.get('token');
+      const errEl = document.getElementById('loginError');
+      const ssoBtn = document.getElementById('ssoLoginBtn');
+      const bypassBtn = document.getElementById('localBypassBtn');
+
+      if (err) {
+        errEl.textContent = err;
+        errEl.classList.remove('hidden');
+      }
+
+      if (token) {
+        GuestKitAuth.setAuthToken(token);
+        window.location.replace('index.html');
+        return;
+      }
+
+      try {
+        const existing = await GuestKitAuth.fetchAuthMe();
+        if (existing.authenticated) {
+          window.location.replace('index.html');
+          return;
+        }
+      } catch (_) {}
+
+      let cfg = { auth_enabled: false, oidc_enabled: false, allow_local_bypass: true, oidc_button_label: 'Sign in with SSO' };
+      try {
+        cfg = await GuestKitAuth.fetchAuthConfig();
+      } catch (e) {
+        errEl.textContent = e.message || String(e);
+        errEl.classList.remove('hidden');
+      }
+
+      ssoBtn.textContent = cfg.oidc_button_label || 'Sign in with SSO';
+      if (!cfg.auth_enabled || !cfg.oidc_enabled) {
+        ssoBtn.disabled = true;
+        ssoBtn.title = 'OIDC SSO is not configured';
+      }
+      ssoBtn.addEventListener('click', () => GuestKitAuth.startSsoLogin());
+
+      if (cfg.allow_local_bypass || !cfg.auth_enabled) {
+        bypassBtn.classList.remove('hidden');
+        bypassBtn.addEventListener('click', () => {
+          window.location.href = 'index.html';
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -90,7 +90,7 @@ async fn last_inspect_timestamp(state: &AppState) -> Option<String> {
 
     let mut latest: Option<DateTime<Utc>> = None;
     for mut row in rows {
-        hydrate_job_record(&state, &mut row, true).await;
+        hydrate_job_record(state, &mut row, true).await;
         if !matches!(row.status.as_str(), "completed" | "failed" | "running") {
             continue;
         }

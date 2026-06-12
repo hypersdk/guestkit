@@ -186,10 +186,7 @@ impl JobValidator {
     }
 
     /// Check if worker capabilities match job requirements
-    pub fn check_capabilities(
-        required: &[String],
-        available: &[String],
-    ) -> JobResult<()> {
+    pub fn check_capabilities(required: &[String], available: &[String]) -> JobResult<()> {
         let missing: Vec<String> = required
             .iter()
             .filter(|req| !available.contains(req))

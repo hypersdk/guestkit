@@ -1,7 +1,7 @@
 //! Fluent builder for creating job documents
 
-use crate::types::*;
 use crate::error::{JobError, JobResult};
+use crate::types::*;
 use crate::PROTOCOL_VERSION;
 use chrono::Utc;
 use std::collections::HashMap;
@@ -49,11 +49,7 @@ impl JobBuilder {
     }
 
     /// Set payload
-    pub fn payload(
-        mut self,
-        payload_type: impl Into<String>,
-        data: serde_json::Value,
-    ) -> Self {
+    pub fn payload(mut self, payload_type: impl Into<String>, data: serde_json::Value) -> Self {
         self.payload_type = Some(payload_type.into());
         self.payload_data = Some(data);
         self

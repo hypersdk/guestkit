@@ -1,8 +1,8 @@
 //! Core type definitions for the VM Operations Job Protocol v1
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 /// Top-level job document (envelope)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
