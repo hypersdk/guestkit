@@ -97,6 +97,11 @@ helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   --set zyvorApi.image="${API_IMAGE}" \
   --set zyvorUi.image="${UI_IMAGE}"
 
+if [[ -n "${NO_CACHE}" ]] || [[ -z "${PULL_REGISTRY}" ]]; then
+  echo "Restarting API and UI pods to pick up freshly built :latest images..."
+  kubectl -n "${NAMESPACE}" rollout restart deployment/zyvor-api deployment/zyvor-ui
+fi
+
 echo "Waiting for rollouts..."
 kubectl -n "${NAMESPACE}" rollout status deployment/postgresql --timeout=180s
 kubectl -n "${NAMESPACE}" rollout status deployment/redis --timeout=180s
