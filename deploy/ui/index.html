@@ -36,6 +36,7 @@
         <option value="generic">generic</option>
       </select>
       <button type="button" class="guestkit-menubar__chip" id="helpShortcutsBtn" title="Keyboard shortcuts (?)">?</button>
+      <button type="button" class="guestkit-menubar__chip" id="openSettingsBtn" title="Identity &amp; SSO settings">⚙</button>
       <div class="recent-disks-wrap">
         <button type="button" class="guestkit-menubar__chip" id="recentDisksToggle">Recent ▾</button>
         <div class="recent-disks-menu" id="recentDisksMenu"></div>
@@ -654,8 +655,78 @@
     </div>
   </div>
 
+  <div class="guestkit-modal-backdrop hidden" id="settingsModal">
+    <div class="guestkit-modal" style="max-width:720px;">
+      <h2>Settings</h2>
+      <div class="settings-tabs" style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+        <button type="button" class="btn glass sm active" data-settings-tab="identity">Identity</button>
+        <button type="button" class="btn glass sm" data-settings-tab="sso">SSO</button>
+      </div>
+      <div data-settings-panel="identity">
+        <label style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+          <input type="checkbox" id="identityAllowBypass" /> Allow local bypass when auth is enabled
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Default role
+          <input type="text" id="identityDefaultRole" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Session hours
+          <input type="number" id="identitySessionHours" min="1" max="720" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <button type="button" class="btn primary" id="saveIdentityBtn">Save Identity</button>
+      </div>
+      <div data-settings-panel="sso" class="hidden">
+        <h3 style="margin-top:0;">OIDC</h3>
+        <label style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+          <input type="checkbox" id="oidcEnabled" /> Enable OIDC login
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Issuer URL
+          <input type="url" id="oidcIssuerUrl" placeholder="https://idp.example.com/realms/guestkit" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Client ID
+          <input type="text" id="oidcClientId" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Client secret
+          <input type="password" id="oidcClientSecret" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Scopes
+          <input type="text" id="oidcScopes" placeholder="openid profile email" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:1rem;">Login button label
+          <input type="text" id="oidcButtonLabel" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <h3>SAML (config-only)</h3>
+        <label style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+          <input type="checkbox" id="samlEnabled" /> Enable SAML metadata
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Entity ID
+          <input type="text" id="samlEntityId" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">SSO URL
+          <input type="url" id="samlSsoUrl" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">IdP metadata URL
+          <input type="url" id="samlMetadataUrl" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">IdP certificate (PEM)
+          <textarea id="samlCertificatePem" rows="4" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:var(--iw-mono,monospace);"></textarea>
+        </label>
+        <label style="display:block;margin-bottom:1rem;">NameID format
+          <input type="text" id="samlNameIdFormat" placeholder="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <div style="display:flex;gap:0.5rem;">
+          <button type="button" class="btn primary" id="saveSsoBtn">Save SSO</button>
+          <button type="button" class="btn glass" id="copySamlMetadataBtn">Copy SP Metadata</button>
+        </div>
+      </div>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="settingsCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
   </div>
+  <script src="guestkit-auth.js?v=20260613auth"></script>
   <script src="guestkit-console.js?v=20260612iw3"></script>
   <script src="guestkit-ai.js?v=20260612iw3"></script>
   <script src="guestkit-features.js?v=20260612iw3"></script>

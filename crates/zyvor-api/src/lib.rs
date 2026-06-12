@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Zyvor VM Services API library
 
+pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
@@ -36,6 +37,10 @@ pub async fn serve(config: Config) -> Result<()> {
         .await?;
 
     db::migrate(&pool).await?;
+
+    if let Err(e) = auth::store::bootstrap_from_env(&pool, &config).await {
+        tracing::warn!("auth settings bootstrap skipped: {e}");
+    }
 
     let redis = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = redis::aio::ConnectionManager::new(redis).await?;

@@ -15,6 +15,7 @@ pub struct UiConfig {
     pub storage_class: String,
     pub storage_path: String,
     pub agent_proxy_url: Option<String>,
+    pub auth_enabled: bool,
 }
 
 pub async fn get_config(
@@ -27,5 +28,6 @@ pub async fn get_config(
         storage_class: state.config.storage_class.clone(),
         storage_path: state.config.storage_path.display().to_string(),
         agent_proxy_url: state.config.agent_proxy_url.clone(),
+        auth_enabled: state.config.auth_enabled,
     }))
 }

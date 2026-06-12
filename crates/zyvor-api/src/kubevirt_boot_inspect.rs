@@ -269,7 +269,7 @@ pub(crate) async fn resolve_disk_path(client: &Client, namespace: &str, pvc_name
         }
     }
 
-    find_longhorn_replica_image(&pvc_name, pvc.get("metadata")?)
+    find_longhorn_replica_image(pvc_name, pvc.get("metadata")?)
 }
 
 fn resolve_existing_disk(path: &FsPath) -> Option<PathBuf> {
@@ -285,10 +285,6 @@ fn resolve_existing_disk(path: &FsPath) -> Option<PathBuf> {
         }
     }
     None
-}
-
-fn path_exists(path: &FsPath) -> bool {
-    resolve_existing_disk(path).is_some()
 }
 
 fn find_longhorn_replica_image(pvc_name: &str, metadata: &Value) -> Option<PathBuf> {

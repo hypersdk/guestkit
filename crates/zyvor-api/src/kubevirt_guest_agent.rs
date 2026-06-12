@@ -197,7 +197,7 @@ fn legacy_guestkit_bootstrap(user_data: &str) -> bool {
 }
 
 fn strip_legacy_guestkit_blocks(user_data: &str) -> String {
-    let mut lines: Vec<&str> = user_data.lines().collect();
+    let lines: Vec<&str> = user_data.lines().collect();
     let mut out = Vec::new();
     let mut skip = false;
     let mut i = 0;
@@ -278,9 +278,9 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
     } else if !out.contains("qemu-guest-agent") {
         out.push_str("  - qemu-guest-agent\n");
     }
-    if !out.contains("write_files:") {
-        append_agent_unit_yaml(&mut out);
-    } else if !out.contains("zyvor-guest-agent.service") && !out.contains("guestkit-agent.service") {
+    if !out.contains("write_files:")
+        || (!out.contains("zyvor-guest-agent.service") && !out.contains("guestkit-agent.service"))
+    {
         append_agent_unit_yaml(&mut out);
     }
     if !out.contains("runcmd:") {

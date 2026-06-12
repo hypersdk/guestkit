@@ -1,7 +1,7 @@
 //! Example: Creating and validating job documents
 
-use guestkit_job_spec::builder::{JobBuilder, inspect_job};
-use guestkit_job_spec::{JobValidator};
+use guestkit_job_spec::builder::{inspect_job, JobBuilder};
+use guestkit_job_spec::JobValidator;
 
 fn main() -> anyhow::Result<()> {
     println!("=== Creating Job Documents ===\n");
@@ -11,12 +11,15 @@ fn main() -> anyhow::Result<()> {
     let minimal_job = JobBuilder::new()
         .generate_job_id()
         .operation("guestkit.inspect")
-        .payload("guestkit.inspect.v1", serde_json::json!({
-            "image": {
-                "path": "/vms/test.qcow2",
-                "format": "qcow2"
-            }
-        }))
+        .payload(
+            "guestkit.inspect.v1",
+            serde_json::json!({
+                "image": {
+                    "path": "/vms/test.qcow2",
+                    "format": "qcow2"
+                }
+            }),
+        )
         .build()?;
 
     println!("{}\n", serde_json::to_string_pretty(&minimal_job)?);

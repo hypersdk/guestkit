@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
 use crate::error::{ApiError, ApiResult};
-use crate::jobs::{build_job, enqueue_job, hydrate_job_record, submit_disk_path_job};
+use crate::jobs::{hydrate_job_record, submit_disk_path_job};
 use crate::models::{
     ApiResponse, JobEnqueueResponse, JobRecord, ProvisionResponse, VmImage, VmImportResponse,
 };
@@ -165,7 +165,7 @@ async fn submit_vm_job(
     vm: &VmImage,
     operation: &str,
     payload_type: &str,
-    mut data: serde_json::Value,
+    data: serde_json::Value,
 ) -> ApiResult<JobEnqueueResponse> {
     let image_path = state.config.storage_path.join(&vm.object_key);
     submit_disk_path_job(
@@ -278,7 +278,6 @@ pub async fn provision_vm(
             verbose: false,
             export_fix_plan: true,
             inject_agent: false,
-            ..Default::default()
         },
     )
     .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -686,6 +685,7 @@ pub async fn delete_vm(
 #[derive(Debug, Deserialize)]
 pub struct ImportNfsRequest {
     pub path: String,
+    #[allow(dead_code)]
     pub host: Option<String>,
 }
 

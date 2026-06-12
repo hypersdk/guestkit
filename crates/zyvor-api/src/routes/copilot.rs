@@ -68,6 +68,7 @@ pub struct FleetDiskSummary {
     #[serde(default)]
     pub blockers: Option<usize>,
     #[serde(default)]
+    #[allow(dead_code)]
     pub readiness: Option<String>,
 }
 

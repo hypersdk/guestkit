@@ -20,6 +20,13 @@ pub struct Config {
     pub cluster_name: Option<String>,
     /// Extra directories the UI may browse for on-server disks (comma-separated env).
     pub storage_browse_paths: Vec<PathBuf>,
+    pub auth_enabled: bool,
+    pub jwt_secret: String,
+    pub jwt_issuer: String,
+    pub jwt_expiry_hours: u32,
+    pub public_base_url: String,
+    pub ui_base_url: String,
+    pub default_role: String,
 }
 
 impl Config {
@@ -33,7 +40,39 @@ impl Config {
         roots
     }
 
+    pub fn jwt_expiry_secs(&self) -> usize {
+        (self.jwt_expiry_hours as usize) * 3600
+    }
+
+    pub fn default_role(&self) -> &str {
+        &self.default_role
+    }
+
+    pub fn oidc_redirect_uri(&self) -> String {
+        format!(
+            "{}/api/v1/auth/oidc/callback",
+            self.public_base_url.trim_end_matches('/')
+        )
+    }
+
     pub fn from_env() -> Result<Self> {
+        let public_base_url = std::env::var("PUBLIC_BASE_URL")
+            .or_else(|_| std::env::var("API_PUBLIC_URL"))
+            .unwrap_or_else(|_| "http://localhost:8080".into());
+        let ui_base_url = std::env::var("UI_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:30081".into());
+        let auth_enabled = std::env::var("AUTH_ENABLED")
+            .ok()
+            .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+        let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+            if auth_enabled {
+                "change-me-in-production".into()
+            } else {
+                "dev-local-auth-disabled".into()
+            }
+        });
+
         Ok(Self {
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
             database_url: std::env::var("DATABASE_URL")
@@ -73,6 +112,16 @@ impl Config {
                         .collect()
                 })
                 .unwrap_or_default(),
+            auth_enabled,
+            jwt_secret,
+            jwt_issuer: std::env::var("JWT_ISSUER").unwrap_or_else(|_| "guestkit".into()),
+            jwt_expiry_hours: std::env::var("JWT_EXPIRY_HOURS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(24),
+            public_base_url,
+            ui_base_url,
+            default_role: std::env::var("DEFAULT_ROLE").unwrap_or_else(|_| "operator".into()),
         })
     }
 }

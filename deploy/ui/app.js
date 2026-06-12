@@ -63,8 +63,13 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const headers = window.GuestKitAuth?.authHeaders(options.headers || {}) || (options.headers || {});
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && window.GuestKitAuth) {
+    window.GuestKitAuth.redirectToLogin();
+    throw new Error('Authentication required');
+  }
   if (!res.ok) throw new Error(data.message || data.error || res.statusText);
   return data;
 }
@@ -2956,6 +2961,11 @@ async function applyUrlContext() {
 
 async function init() {
   try {
+  window.GuestKitAuth?.captureTokenFromUrl?.();
+  const me = await window.GuestKitAuth?.requireAuthOrRedirect?.();
+  if (me === null) return;
+  window.GuestKitAuth?.initSettingsModal?.();
+
   window.state = state;
   window.api = api;
   window.getVmCache = getVmCache;

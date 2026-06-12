@@ -74,7 +74,7 @@ pub async fn cluster_ask(
 }
 
 #[derive(Default)]
-struct ClusterVmMeta {
+pub(crate) struct ClusterVmMeta {
     ip_address: Option<String>,
     root_pvc: Option<String>,
 }
@@ -103,7 +103,7 @@ async fn cluster_vm_meta(state: &AppState, namespace: &str, name: &str) -> Clust
     }
 }
 
-pub fn build_cluster_briefing(
+pub(crate) fn build_cluster_briefing(
     info: &GuestAgentInfo,
     name: &str,
     meta: &ClusterVmMeta,

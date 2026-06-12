@@ -35,6 +35,25 @@ zyvorApi:
     enabled: false
     vsockPort: 1234
     listen: "127.0.0.1:8765"
+  auth:
+    enabled: false
+    jwtSecret: ""          # set via secret when auth.enabled=true
+    jwtIssuer: guestkit
+    jwtExpiryHours: 24
+    defaultRole: operator
+    publicBaseUrl: "http://api.zyvor.local"
+    uiBaseUrl: "http://console.zyvor.local"
+    oidc:
+      issuerUrl: ""
+      clientId: ""
+      clientSecret: ""     # set via secret when provided
+      buttonLabel: "Sign in with SSO"
+    saml:
+      enabled: false
+      entityId: ""
+      ssoUrl: ""
+      metadataUrl: ""
+      certificatePem: ""
   service:
     type: ClusterIP
     nodePort: 30080

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod agent;
+mod auth;
 mod config;
 mod copilot;
 mod health;
 mod jobs;
 pub(crate) mod kubevirt;
+mod settings;
 mod storage;
 mod system;
 mod vmtools;
@@ -19,6 +21,17 @@ pub fn api_router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/health", get(health::health))
         .route("/api/v1/config", get(config::get_config))
+        .route("/api/v1/auth/config", get(auth::public_config))
+        .route("/api/v1/auth/me", get(auth::me))
+        .route("/api/v1/auth/logout", axum::routing::post(auth::logout))
+        .route("/api/v1/auth/oidc/login", get(auth::oidc_login))
+        .route("/api/v1/auth/oidc/callback", get(auth::oidc_callback))
+        .route("/api/v1/settings/identity", get(settings::get_identity).put(settings::put_identity))
+        .route("/api/v1/settings/sso", get(settings::get_sso).put(settings::put_sso))
+        .route(
+            "/api/v1/settings/sso/saml/metadata",
+            get(settings::saml_metadata),
+        )
         .route("/api/v1/system/status", get(system::get_system_status))
         .route("/api/v1/storage/roots", get(storage::list_storage_roots))
         .route("/api/v1/storage/browse", get(storage::browse_storage))
