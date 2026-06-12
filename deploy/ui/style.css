@@ -667,6 +667,39 @@ html[data-theme="liquid-zinc"] .wallpaper-blob.b3 {
   color: var(--warn);
 }
 
+.fleet-policy {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+}
+
+.fleet-policy.live {
+  color: var(--accent-2);
+}
+
+.fleet-vmtools-policy {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0 0;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.policy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.policy-toggle input {
+  accent-color: var(--accent-system);
+}
+
 .fleet-layout {
   display: grid;
   grid-template-columns: 1fr minmax(220px, 280px);

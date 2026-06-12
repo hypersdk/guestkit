@@ -44,6 +44,7 @@ const state = {
   clusterLastSync: null,
   clusterFleetLoading: false,
   vmtoolsCoverage: null,
+  vmtoolsPolicy: null,
   serverStorage: { rootId: 0, path: '', roots: [] },
 };
 
@@ -476,6 +477,8 @@ function updateFleetToolbar() {
   $('#fleetClusterFilters')?.classList.toggle('hidden', !isCluster);
   $('#fleetClusterSync')?.classList.toggle('hidden', !isCluster);
   $('#fleetVmtoolsCoverage')?.classList.toggle('hidden', !isCluster);
+  $('#fleetVmtoolsPolicy')?.classList.toggle('hidden', !isCluster);
+  $('#fleetVmtoolsPolicyBadge')?.classList.toggle('hidden', !isCluster);
   $('#clusterLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
   $('#clusterVmtoolsLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
   if (isCluster && state.clusterLastSync) {
@@ -489,6 +492,16 @@ function updateFleetToolbar() {
       el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing`;
       el.classList.toggle('warn', cov.missing > 0);
     }
+  }
+  if (isCluster && state.vmtoolsPolicy) {
+    const badge = $('#fleetVmtoolsPolicyBadge');
+    const auto = state.vmtoolsPolicy.spec?.autoInstall;
+    if (badge) {
+      badge.textContent = auto ? 'Auto-install on' : 'Policy off';
+      badge.classList.toggle('live', Boolean(auto));
+    }
+    const toggle = $('#vmtoolsAutoInstall');
+    if (toggle) toggle.checked = Boolean(auto);
   }
 }
 
@@ -736,6 +749,55 @@ async function loadVmtoolsCoverage() {
   }
 }
 
+async function loadVmtoolsPolicy() {
+  try {
+    const data = await api('/vmtools/policy');
+    state.vmtoolsPolicy = data.data;
+    updateFleetToolbar();
+  } catch {
+    /* optional */
+  }
+}
+
+async function saveVmtoolsPolicy(autoInstall) {
+  feed(autoInstall ? 'Enabling VM Tools auto-install policy…' : 'Disabling VM Tools auto-install…');
+  try {
+    const data = await api('/vmtools/policy', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        spec: {
+          selector: {},
+          autoInstall,
+          autoUpgrade: false,
+          channel: 'stable',
+          rebootPolicy: 'if-needed',
+        },
+      }),
+    });
+    state.vmtoolsPolicy = data.data;
+    updateFleetToolbar();
+    toast(autoInstall ? 'Auto-install enabled' : 'Auto-install disabled', 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function reconcileVmtoolsFleet() {
+  feed('Reconciling VM Tools policy across cluster fleet…');
+  try {
+    const data = await api('/vmtools/policy/reconcile', { method: 'POST' });
+    const r = data.data;
+    const summary = `Scanned ${r.scanned}, matched ${r.matched}, installed ${r.installed}, skipped ${r.skipped}`;
+    toast(r.installed ? `Installed on ${r.installed} VM(s)` : summary, r.installed ? 'ok' : 'err');
+    feed(`${summary}${r.errors?.length ? ` — ${r.errors.join('; ')}` : ''}`);
+    await loadClusterFleet();
+    await loadVmtoolsPolicy();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
 async function loadClusterFleet() {
   if (state.clusterFleetLoading) return;
   state.clusterFleetLoading = true;
@@ -753,6 +815,7 @@ async function loadClusterFleet() {
     renderFleet();
     updateFleetToolbar();
     await loadVmtoolsCoverage();
+    await loadVmtoolsPolicy();
     if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
     }
@@ -2481,6 +2544,8 @@ function setupActions() {
   $('#fleetUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
   $('#fleetBrowseClusterBtn')?.addEventListener('click', () => openClusterFleet());
   $('#fleetRefreshClusterBtn')?.addEventListener('click', () => loadClusterFleet());
+  $('#vmtoolsAutoInstall')?.addEventListener('change', (e) => saveVmtoolsPolicy(e.target.checked));
+  $('#vmtoolsReconcileBtn')?.addEventListener('click', () => reconcileVmtoolsFleet());
   $('#fleetEmptyBrowseCluster')?.addEventListener('click', () => openClusterFleet());
   $('#fleetEmptyImport')?.addEventListener('click', () => triggerDiskUpload());
 

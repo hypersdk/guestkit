@@ -46,6 +46,8 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | Aurora dark UI theme (default) | Shipped |
 | `VMToolsPolicy` GET/PUT/reconcile API | Shipped |
 | Cluster auto-install reconciliation | Shipped |
+| Fleet policy UI (auto-install + reconcile) | Shipped |
+| Helm default `VMToolsPolicy` + CRD apply on deploy | Shipped |
 | Windows MSI | Scaffold only (virtio-win path) |
 | Full standalone operator | Future |
 
@@ -55,6 +57,9 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 |--------|------|
 | GET | `/api/v1/vmtools/bundle` |
 | GET | `/api/v1/vmtools/coverage` |
+| GET | `/api/v1/vmtools/policy` |
+| PUT | `/api/v1/vmtools/policy` |
+| POST | `/api/v1/vmtools/policy/reconcile` |
 | GET | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/install` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/diagnostics` |
