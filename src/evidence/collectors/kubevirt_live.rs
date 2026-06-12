@@ -41,7 +41,10 @@ fn collect_virtio_disks() -> Vec<VirtioDiskEntry> {
     {
         if out.status.success() {
             if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&out.stdout) {
-                walk_lsblk_disks(json.get("blockdevices").and_then(|v| v.as_array()), &mut disks);
+                walk_lsblk_disks(
+                    json.get("blockdevices").and_then(|v| v.as_array()),
+                    &mut disks,
+                );
             }
         }
     }

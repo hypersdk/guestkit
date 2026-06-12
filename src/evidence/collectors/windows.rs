@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Windows registry and filesystem evidence enrichment.
 
-use crate::Guestfs;
 use crate::evidence::snapshot::{
     WindowsAppEntry, WindowsEventLogSummary, WindowsPersistenceEvidence, WindowsServiceEntry,
     WindowsServiceType, WindowsStartType,
 };
+use crate::Guestfs;
 
 /// Enrich Windows service/app/persistence details using guestfs-mounted hives.
 pub fn collect_windows_details(g: &mut Guestfs, root: &str) -> WindowsDetails {
@@ -105,6 +105,9 @@ mod tests {
             parse_start_type("Automatic"),
             WindowsStartType::Automatic
         ));
-        assert!(matches!(parse_start_type("Disabled"), WindowsStartType::Disabled));
+        assert!(matches!(
+            parse_start_type("Disabled"),
+            WindowsStartType::Disabled
+        ));
     }
 }

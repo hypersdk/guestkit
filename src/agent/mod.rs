@@ -13,7 +13,9 @@ pub mod rdp;
 pub mod transport;
 
 pub use agent_call::call_agent_socket;
-pub use cli::{run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentProxyArgs};
+pub use cli::{
+    run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentProxyArgs,
+};
 pub use daemon::AgentDaemon;
 
 /// Ping guest agent via libvirt channel unix socket.

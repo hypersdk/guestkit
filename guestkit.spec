@@ -61,8 +61,8 @@ install -Dm755 target/release/guestkit %{buildroot}%{_bindir}/guestkit
 
 # Install documentation
 install -Dm644 README.md %{buildroot}%{_docdir}/%{name}/README.md
-install -Dm644 CHANGELOG.md %{buildroot}%{_docdir}/%{name}/CHANGELOG.md
-install -Dm644 CONTRIBUTING.md %{buildroot}%{_docdir}/%{name}/CONTRIBUTING.md
+install -Dm644 docs/development/CHANGELOG.md %{buildroot}%{_docdir}/%{name}/CHANGELOG.md
+install -Dm644 docs/development/CONTRIBUTING.md %{buildroot}%{_docdir}/%{name}/CONTRIBUTING.md
 install -Dm644 SECURITY.md %{buildroot}%{_docdir}/%{name}/SECURITY.md
 
 # Install docs directory

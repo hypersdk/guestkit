@@ -49,9 +49,14 @@ build_and_import() {
   sudo "${K3S_BIN}" ctr -n k8s.io images import "${tar}"
   # k3s resolves unqualified image names to docker.io/library/<name>
   local base="${name%%:*}"
-  local tag="${name##*:}"
-  sudo "${K3S_BIN}" ctr -n k8s.io images tag "localhost/${name}" "docker.io/library/${base}:${tag}" 2>/dev/null \
-    || sudo "${K3S_BIN}" ctr -n k8s.io images tag "${name}" "docker.io/library/${base}:${tag}" 2>/dev/null \
+  local tag="${name#*:}"
+  if [[ "${base}" == "${tag}" ]]; then
+    tag="latest"
+  fi
+  local local_ref="localhost/${base}:${tag}"
+  local k8s_ref="docker.io/library/${base}:${tag}"
+  sudo "${K3S_BIN}" ctr -n k8s.io images tag "${local_ref}" "${k8s_ref}" 2>/dev/null \
+    || sudo "${K3S_BIN}" ctr -n k8s.io images tag "${base}:${tag}" "${k8s_ref}" 2>/dev/null \
     || true
   rm -f "${tar}"
 }

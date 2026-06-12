@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Offline and live systemd unit collection for evidence snapshots.
 
-use crate::Guestfs;
 use crate::evidence::snapshot::{
     SystemdInfo, SystemdProblemHint, SystemdProblemSeverity, SystemdUnit, SystemdUnitSection,
     SystemdUnitState,
 };
+use crate::Guestfs;
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -74,8 +74,7 @@ pub fn collect_systemd_guest(g: &mut Guestfs, init_system: &str) -> Option<Syste
 
 /// Collect systemd evidence from the live running host.
 pub fn collect_systemd_live() -> Option<SystemdInfo> {
-    if !Path::new("/usr/lib/systemd/system").exists()
-        && !Path::new("/lib/systemd/system").exists()
+    if !Path::new("/usr/lib/systemd/system").exists() && !Path::new("/lib/systemd/system").exists()
     {
         return None;
     }
@@ -205,10 +204,7 @@ fn parse_unit_file(
         on_calendar: timer_section.get("OnCalendar").cloned(),
         sections: sections
             .into_iter()
-            .map(|(k, v)| SystemdUnitSection {
-                name: k,
-                keys: v,
-            })
+            .map(|(k, v)| SystemdUnitSection { name: k, keys: v })
             .collect(),
     }
 }
@@ -350,26 +346,26 @@ fn analyze_systemd_problems(units: &[SystemdUnit]) -> Vec<SystemdProblemHint> {
             continue;
         }
 
-        if unit.service_type.as_deref() == Some("oneshot")
-            && unit.remain_after_exit != Some(true)
-        {
+        if unit.service_type.as_deref() == Some("oneshot") && unit.remain_after_exit != Some(true) {
             hints.push(SystemdProblemHint {
                 unit: unit.name.clone(),
                 code: "oneshot-no-remain".to_string(),
                 severity: SystemdProblemSeverity::Warning,
-                message: "Type=oneshot without RemainAfterExit=yes may cause ordering issues at boot"
-                    .to_string(),
+                message:
+                    "Type=oneshot without RemainAfterExit=yes may cause ordering issues at boot"
+                        .to_string(),
                 path: unit.path.clone(),
             });
         }
 
-        let runs_as_root = unit.user.as_deref().is_none_or(|u| u == "root" || u.is_empty());
+        let runs_as_root = unit
+            .user
+            .as_deref()
+            .is_none_or(|u| u == "root" || u.is_empty());
         let has_sandbox = unit.sections.iter().any(|section| {
             section.name == "Service"
                 && section.keys.keys().any(|k| {
-                    k.starts_with("Protect")
-                        || k.starts_with("Private")
-                        || k == "NoNewPrivileges"
+                    k.starts_with("Protect") || k.starts_with("Private") || k == "NoNewPrivileges"
                 })
         });
         if runs_as_root && !has_sandbox && unit.state == SystemdUnitState::Enabled {
@@ -396,8 +392,9 @@ fn analyze_systemd_problems(units: &[SystemdUnit]) -> Vec<SystemdProblemHint> {
                     unit: unit.name.clone(),
                     code: "missing-network-after".to_string(),
                     severity: SystemdProblemSeverity::Warning,
-                    message: "Network-related service lacks After=network-online.target (or similar)"
-                        .to_string(),
+                    message:
+                        "Network-related service lacks After=network-online.target (or similar)"
+                            .to_string(),
                     path: unit.path.clone(),
                 });
             }

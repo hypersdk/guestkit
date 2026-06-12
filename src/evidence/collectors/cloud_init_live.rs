@@ -44,7 +44,10 @@ pub fn collect_cloud_init_live() -> CloudInitEvidence {
         evidence.boot_finished = text.contains("done");
     }
 
-    if let Ok(out) = Command::new("cloud-init").args(["query", "datasource"]).output() {
+    if let Ok(out) = Command::new("cloud-init")
+        .args(["query", "datasource"])
+        .output()
+    {
         if out.status.success() {
             evidence.datasource = String::from_utf8_lossy(&out.stdout).trim().to_string();
         }

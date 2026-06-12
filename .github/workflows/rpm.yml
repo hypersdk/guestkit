@@ -335,7 +335,7 @@ jobs:
 
       - name: Install RPM
         run: |
-          dnf install -y ./rpms/RPMS/x86_64/guestkit-*.rpm
+          dnf install -y $(find ./rpms -name 'guestkit-[0-9]*.rpm' ! -name '*-devel*' | head -1)
 
       - name: Verify installation
         run: |
