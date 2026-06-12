@@ -1,35 +1,48 @@
-/* Liquid Zinc — macOS Tahoe 26 Guest Kit (Zinc Chrome Silver) */
+/* Aurora Dark — default theme (northern-lights on midnight) */
 :root,
-html[data-theme="liquid-zinc"] {
-  --zinc-silver: #C7CCD1;
-  --chrome-silver: #E4E7EA;
-  --dark-zinc: #70757D;
-  --graphite-edge: #4A4F56;
-  --frost-white: #F8FAFC;
-  --liquid-shadow: rgba(0, 0, 0, 0.18);
-  --wallpaper-base: #B8BEC4;
-  --glass-chrome: rgba(255, 255, 255, 0.12);
-  --glass-zinc: rgba(199, 204, 209, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.25);
-  --glass-highlight: rgba(255, 255, 255, 0.45);
-  --glass-blur: 30px;
-  --glass-saturate: 1.8;
-  --sidebar-bg: rgba(107, 113, 122, 0.88);
-  --sidebar-border: rgba(74, 79, 86, 0.45);
-  --text: #2C3138;
-  --text-secondary: #525862;
-  --text-tertiary: #70757D;
-  --text-on-dark: rgba(248, 250, 252, 0.94);
-  --text-secondary-on-dark: rgba(228, 231, 235, 0.78);
-  --accent: #0A84FF;
-  --accent-hover: #7EDFFF;
-  --accent-selection: #D9E3EA;
-  --accent-2: #7EDFFF;
-  --accent-system: #0A84FF;
-  --success: #30D158;
-  --warn: #FF9F0A;
-  --danger: #FF453A;
-  --stopped: #8E8E93;
+html[data-theme="aurora"] {
+  color-scheme: dark;
+  --aurora-void: #050810;
+  --aurora-deep: #0a0f1c;
+  --aurora-panel: #111827;
+  --aurora-mist: #1e293b;
+  --aurora-glow-cyan: #22d3ee;
+  --aurora-glow-green: #34d399;
+  --aurora-glow-violet: #a78bfa;
+  --aurora-glow-pink: #f472b6;
+  --zinc-silver: #64748b;
+  --chrome-silver: #334155;
+  --dark-zinc: #1e293b;
+  --graphite-edge: #0f172a;
+  --frost-white: #f1f5f9;
+  --liquid-shadow: rgba(0, 0, 0, 0.45);
+  --wallpaper-base: var(--aurora-void);
+  --glass-chrome: rgba(12, 18, 34, 0.68);
+  --glass-zinc: rgba(17, 24, 39, 0.82);
+  --glass-border: rgba(148, 163, 184, 0.14);
+  --glass-highlight: rgba(56, 189, 248, 0.12);
+  --glass-blur: 32px;
+  --glass-saturate: 1.65;
+  --glass-inset-bg: rgba(8, 12, 24, 0.58);
+  --glass-inset-border: rgba(148, 163, 184, 0.12);
+  --menubar-bg: rgba(6, 10, 20, 0.78);
+  --menubar-border: rgba(148, 163, 184, 0.1);
+  --sidebar-bg: rgba(8, 12, 24, 0.94);
+  --sidebar-border: rgba(56, 189, 248, 0.12);
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-on-dark: rgba(241, 245, 249, 0.96);
+  --text-secondary-on-dark: rgba(148, 163, 184, 0.88);
+  --accent: #38bdf8;
+  --accent-hover: #67e8f9;
+  --accent-selection: rgba(56, 189, 248, 0.14);
+  --accent-2: #34d399;
+  --accent-system: #22d3ee;
+  --success: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --stopped: #64748b;
   --radius-sm: 10px;
   --radius: 22px;
   --radius-lg: 24px;
@@ -39,13 +52,45 @@ html[data-theme="liquid-zinc"] {
   --menubar-h: 52px;
   --dock-h: 76px;
   --shadow-glass:
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    inset 0 1px rgba(255, 255, 255, 0.45);
-  --shadow-float: 0 24px 64px var(--liquid-shadow);
-  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.12);
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px rgba(148, 163, 184, 0.08);
+  --shadow-float: 0 24px 64px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.32);
   --glass-active: var(--glass-chrome);
-  --card-gradient: linear-gradient(180deg, #EEF1F4 0%, #D4D9DE 100%);
+  --card-gradient: linear-gradient(165deg, rgba(21, 29, 48, 0.92) 0%, rgba(10, 15, 28, 0.98) 100%);
+  --card-selected-bg: linear-gradient(165deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  --sheen-line: rgba(56, 189, 248, 0.35);
   --transition-spring: 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
+}
+
+/* Legacy light zinc (optional) */
+html[data-theme="liquid-zinc"] {
+  color-scheme: light;
+  --wallpaper-base: #B8BEC4;
+  --glass-chrome: rgba(255, 255, 255, 0.12);
+  --glass-zinc: rgba(199, 204, 209, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-highlight: rgba(255, 255, 255, 0.45);
+  --glass-inset-bg: rgba(255, 255, 255, 0.22);
+  --glass-inset-border: rgba(255, 255, 255, 0.35);
+  --menubar-bg: rgba(255, 255, 255, 0.14);
+  --menubar-border: rgba(255, 255, 255, 0.35);
+  --sidebar-bg: rgba(107, 113, 122, 0.88);
+  --sidebar-border: rgba(74, 79, 86, 0.45);
+  --text: #2C3138;
+  --text-secondary: #525862;
+  --text-tertiary: #70757D;
+  --accent: #0A84FF;
+  --accent-hover: #7EDFFF;
+  --accent-selection: #D9E3EA;
+  --accent-2: #7EDFFF;
+  --accent-system: #0A84FF;
+  --card-gradient: linear-gradient(180deg, #EEF1F4 0%, #D4D9DE 100%);
+  --card-selected-bg: linear-gradient(180deg, #F4F7FA 0%, var(--accent-selection) 100%);
+  --sheen-line: rgba(255, 255, 255, 0.85);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.45);
+  --shadow-float: 0 24px 64px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 html[data-glass="zinc"] { --glass-active: var(--glass-zinc); }
@@ -72,10 +117,18 @@ html, body {
   inset: 0;
   z-index: 0;
   background:
+    radial-gradient(ellipse 90% 55% at 15% 10%, rgba(52, 211, 153, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 20%, rgba(167, 139, 250, 0.22), transparent 52%),
+    radial-gradient(ellipse 60% 45% at 50% 95%, rgba(56, 189, 248, 0.14), transparent 58%),
+    linear-gradient(165deg, #070b14 0%, #0a1020 42%, #0d1528 100%);
+  overflow: hidden;
+}
+
+html[data-theme="liquid-zinc"] .wallpaper {
+  background:
     radial-gradient(ellipse 100% 70% at 50% -10%, rgba(248, 250, 252, 0.65), transparent 50%),
     radial-gradient(ellipse 80% 60% at 85% 90%, rgba(199, 204, 209, 0.45), transparent 55%),
     linear-gradient(165deg, #D8DCE1 0%, var(--zinc-silver) 38%, #AEB4BA 72%, #9BA1A8 100%);
-  overflow: hidden;
 }
 
 .wallpaper-blob {
@@ -91,7 +144,7 @@ html, body {
   height: 55vw;
   top: -15%;
   left: -12%;
-  background: radial-gradient(circle, rgba(126, 223, 255, 0.35) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.35) 0%, transparent 68%);
 }
 
 .wallpaper-blob.b2 {
@@ -99,7 +152,7 @@ html, body {
   height: 48vw;
   bottom: -10%;
   right: -8%;
-  background: radial-gradient(circle, rgba(217, 227, 234, 0.55) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.38) 0%, transparent 70%);
   animation-delay: -10s;
 }
 
@@ -108,9 +161,22 @@ html, body {
   height: 36vw;
   top: 38%;
   left: 40%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.28) 0%, transparent 65%);
+  opacity: 0.75;
+  animation-delay: -18s;
+}
+
+html[data-theme="liquid-zinc"] .wallpaper-blob.b1 {
+  background: radial-gradient(circle, rgba(126, 223, 255, 0.35) 0%, transparent 68%);
+}
+
+html[data-theme="liquid-zinc"] .wallpaper-blob.b2 {
+  background: radial-gradient(circle, rgba(217, 227, 234, 0.55) 0%, transparent 70%);
+}
+
+html[data-theme="liquid-zinc"] .wallpaper-blob.b3 {
   background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 65%);
   opacity: 0.65;
-  animation-delay: -18s;
 }
 
 .wallpaper-shine {
@@ -152,12 +218,12 @@ html, body {
 }
 
 .glass-inset {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--glass-inset-bg);
+  border: 1px solid var(--glass-inset-border);
   border-radius: var(--radius);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px rgba(148, 163, 184, 0.06);
 }
 
 .floating {
@@ -177,12 +243,12 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid var(--menubar-border);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--menubar-bg);
   backdrop-filter: blur(40px) saturate(1.8);
   -webkit-backdrop-filter: blur(40px) saturate(1.8);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 1px 0 rgba(56, 189, 248, 0.06);
 }
 
 .menubar::before { opacity: 0.35; border-radius: 0; }
@@ -1152,11 +1218,11 @@ html, body {
   position: relative;
   padding: 0.95rem 1.05rem;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--glass-border);
   background: var(--card-gradient);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: var(--shadow-card), inset 0 1px rgba(255, 255, 255, 0.65);
+  box-shadow: var(--shadow-card), inset 0 1px rgba(148, 163, 184, 0.06);
   cursor: pointer;
   transition: transform var(--transition-spring), box-shadow var(--transition-spring), border-color var(--transition-spring);
   text-align: left;
@@ -1172,7 +1238,7 @@ html, body {
   left: 8%;
   right: 8%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  background: linear-gradient(90deg, transparent, var(--sheen-line), transparent);
   pointer-events: none;
 }
 
@@ -1183,9 +1249,9 @@ html, body {
 }
 
 .vm-card.selected {
-  border-color: rgba(10, 132, 255, 0.45);
-  background: linear-gradient(180deg, #F4F7FA 0%, var(--accent-selection) 100%);
-  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.25), 0 18px 48px rgba(10, 132, 255, 0.12);
+  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--card-selected-bg);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.22), 0 18px 48px rgba(34, 211, 238, 0.12);
 }
 
 .vm-card .vm-name {

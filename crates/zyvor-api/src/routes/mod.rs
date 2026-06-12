@@ -23,6 +23,11 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/import-from-storage", post(storage::import_from_storage))
         .route("/api/v1/vmtools/bundle", get(vmtools::get_bundle))
         .route("/api/v1/vmtools/coverage", get(vmtools::get_coverage))
+        .route("/api/v1/vmtools/policy", get(vmtools::get_policy).put(vmtools::put_policy))
+        .route(
+            "/api/v1/vmtools/policy/reconcile",
+            post(vmtools::reconcile_policy),
+        )
         .route(
             "/api/v1/kubevirt/vms/:namespace/:name/vmtools",
             get(vmtools::get_vm_vmtools),
