@@ -1,0 +1,134 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vmtoolsbundles.zeus.zyvor.dev
+spec:
+  group: zeus.zyvor.dev
+  scope: Cluster
+  names:
+    kind: VMToolsBundle
+    plural: vmtoolsbundles
+    singular: vmtoolsbundle
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                version:
+                  type: string
+                channel:
+                  type: string
+                linux:
+                  type: object
+                  properties:
+                    rpm:
+                      type: string
+                    deb:
+                      type: string
+                    tar:
+                      type: string
+                iso:
+                  type: string
+                agentBinaryUrl:
+                  type: string
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vmguestagents.zeus.zyvor.dev
+spec:
+  group: zeus.zyvor.dev
+  scope: Namespaced
+  names:
+    kind: VMGuestAgent
+    plural: vmguestagents
+    singular: vmguestagent
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                vmRef:
+                  type: object
+                  properties:
+                    namespace:
+                      type: string
+                    name:
+                      type: string
+                desiredVersion:
+                  type: string
+            status:
+              type: object
+              properties:
+                installed:
+                  type: boolean
+                connected:
+                  type: boolean
+                version:
+                  type: string
+                os:
+                  type: string
+                ip:
+                  type: string
+                qgaReady:
+                  type: boolean
+                zyvorAgentReady:
+                  type: boolean
+                lastHeartbeat:
+                  type: string
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vmtoolspolicies.zeus.zyvor.dev
+spec:
+  group: zeus.zyvor.dev
+  scope: Cluster
+  names:
+    kind: VMToolsPolicy
+    plural: vmtoolspolicies
+    singular: vmtoolspolicy
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                selector:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                autoInstall:
+                  type: boolean
+                autoUpgrade:
+                  type: boolean
+                channel:
+                  type: string
+                rebootPolicy:
+                  type: string
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true

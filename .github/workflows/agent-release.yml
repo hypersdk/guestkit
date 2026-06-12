@@ -18,20 +18,20 @@ jobs:
           sudo apt-get install -y musl-tools
           rustup target add x86_64-unknown-linux-musl
 
-      - name: Build guestkit agent (musl)
+      - name: Build zyvor-guest-agent (musl)
         run: |
           cargo build --release --features agent --no-default-features \
-            --target x86_64-unknown-linux-musl -p guestkit
+            --target x86_64-unknown-linux-musl --bin zyvor-guest-agent
 
       - name: Package artifact
         run: |
           mkdir -p dist
-          cp target/x86_64-unknown-linux-musl/release/guestkit dist/guestkit-agent-linux-amd64
-          cp templates/agent/guestkit-agent.service dist/
-          tar czf guestkit-agent-linux-amd64.tar.gz -C dist .
+          cp target/x86_64-unknown-linux-musl/release/zyvor-guest-agent dist/zyvor-guest-agent-linux-amd64
+          cp templates/agent/zyvor-guest-agent.service dist/
+          tar czf zyvor-vm-tools-linux-amd64.tar.gz -C dist zyvor-guest-agent-linux-amd64 zyvor-guest-agent.service
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: guestkit-agent-linux-amd64
-          path: guestkit-agent-linux-amd64.tar.gz
+          name: zyvor-vm-tools-linux-amd64
+          path: zyvor-vm-tools-linux-amd64.tar.gz

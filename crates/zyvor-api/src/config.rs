@@ -16,9 +16,23 @@ pub struct Config {
     pub max_upload_bytes: usize,
     /// Default guestkit agent-proxy URL for live (online) VM inspection.
     pub agent_proxy_url: Option<String>,
+    pub zeus_public_url: Option<String>,
+    pub cluster_name: Option<String>,
+    /// Extra directories the UI may browse for on-server disks (comma-separated env).
+    pub storage_browse_paths: Vec<PathBuf>,
 }
 
 impl Config {
+    pub fn storage_browse_roots(&self) -> Vec<PathBuf> {
+        let mut roots = vec![self.storage_path.clone()];
+        for path in &self.storage_browse_paths {
+            if !roots.iter().any(|r| r == path) {
+                roots.push(path.clone());
+            }
+        }
+        roots
+    }
+
     pub fn from_env() -> Result<Self> {
         Ok(Self {
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
@@ -43,6 +57,22 @@ impl Config {
             agent_proxy_url: std::env::var("AGENT_PROXY_URL")
                 .ok()
                 .filter(|u| !u.trim().is_empty()),
+            zeus_public_url: std::env::var("ZEUS_PUBLIC_URL")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
+            cluster_name: std::env::var("CLUSTER_NAME")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
+            storage_browse_paths: std::env::var("STORAGE_BROWSE_PATHS")
+                .ok()
+                .map(|raw| {
+                    raw.split(',')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .map(PathBuf::from)
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
     }
 }

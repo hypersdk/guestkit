@@ -369,6 +369,111 @@ fn collect_vm_tools_live() -> VmToolsEvidence {
     VmToolsEvidence { detected }
 }
 
+/// Lightweight guest identity payload for Zeus VM Tools heartbeat.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AgentStatus {
+    pub hostname: String,
+    pub os_name: String,
+    pub os_version: String,
+    pub kernel: String,
+    pub architecture: String,
+    pub ips: Vec<String>,
+    pub boot_mode: String,
+    pub cloud_init_present: bool,
+    pub qga_ready: bool,
+    pub zyvor_agent_ready: bool,
+    pub virtio_modules_loaded: bool,
+    pub agent_version: String,
+    pub uptime_secs: u64,
+    pub last_heartbeat: String,
+}
+
+pub fn build_agent_status_live() -> Result<AgentStatus> {
+    let evidence = build_evidence_live()?;
+    let ips = collect_live_ips();
+    let kernel = evidence
+        .boot
+        .kernel_paths
+        .first()
+        .map(|p| p.rsplit('/').next().unwrap_or("unknown").to_string())
+        .unwrap_or_else(|| {
+            std::fs::read_to_string("/proc/version")
+                .unwrap_or_default()
+                .split_whitespace()
+                .nth(2)
+                .unwrap_or("unknown")
+                .to_string()
+        });
+    let qga_ready = Path::new("/dev/virtio-ports/org.qemu.guest_agent.0").exists()
+        && (Path::new("/usr/sbin/qemu-ga").exists()
+            || Command::new("systemctl")
+                .args(["is-active", "qemu-guest-agent"])
+                .output()
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "active")
+                .unwrap_or(false));
+    let virtio_modules_loaded = evidence
+        .boot
+        .loaded_modules
+        .iter()
+        .any(|m| m.contains("virtio"));
+    let boot_mode = if evidence.boot.efi_present {
+        "uefi"
+    } else {
+        "bios"
+    };
+    let os_name = if evidence.os.distribution.is_empty() {
+        evidence.os.os_type.clone()
+    } else {
+        evidence.os.distribution.clone()
+    };
+    Ok(AgentStatus {
+        hostname: evidence.os.hostname,
+        os_name,
+        os_version: evidence.os.version,
+        kernel,
+        architecture: evidence.os.architecture,
+        ips,
+        boot_mode: boot_mode.into(),
+        cloud_init_present: evidence.boot.cloud_init_present,
+        qga_ready,
+        zyvor_agent_ready: true,
+        virtio_modules_loaded,
+        agent_version: crate::VERSION.to_string(),
+        uptime_secs: read_uptime_secs(),
+        last_heartbeat: Utc::now().to_rfc3339(),
+    })
+}
+
+fn collect_live_ips() -> Vec<String> {
+    let mut ips = Vec::new();
+    if let Ok(out) = Command::new("ip").args(["-j", "addr"]).output() {
+        if let Ok(json) = serde_json::from_slice::<Vec<serde_json::Value>>(&out.stdout) {
+            for iface in json {
+                if let Some(addrs) = iface["addr_info"].as_array() {
+                    for addr in addrs {
+                        if addr["family"].as_str() == Some("inet") {
+                            if let Some(local) = addr["local"].as_str() {
+                                if local != "127.0.0.1" {
+                                    ips.push(local.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    ips
+}
+
+fn read_uptime_secs() -> u64 {
+    std::fs::read_to_string("/proc/uptime")
+        .ok()
+        .and_then(|s| s.split_whitespace().next().map(String::from))
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

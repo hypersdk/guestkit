@@ -10,7 +10,7 @@ pub mod live;
 
 pub use builder::{build_evidence, EvidenceBuilder};
 #[cfg(feature = "agent")]
-pub use live::build_evidence_live;
+pub use live::{build_agent_status_live, build_evidence_live, AgentStatus};
 pub use snapshot::{
     BootEvidence, CloudInitEvidence, EvidenceSnapshot, KubevirtEvidence, NetworkEvidence,
     NetworkProbeEvidence, OsEvidence, PackageEvidence, SecurityEvidence, SnapshotReadinessEvidence,

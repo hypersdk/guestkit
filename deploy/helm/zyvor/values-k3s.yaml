@@ -11,6 +11,8 @@ guestkitWorker:
 zyvorApi:
   storageClass: local-path
   privileged: true
+  zeusPublicUrl: "http://212.8.252.194:30050"
+  clusterName: "k3s-guestkit"
   guestkitBinaryUrl: "http://212.8.252.194:30050/api/v1/engines/guestkit/binary"
   service:
     type: NodePort

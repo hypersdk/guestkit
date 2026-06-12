@@ -10,14 +10,16 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
 
-const GUESTKIT_UNIT: &str = r#"[Unit]
-Description=GuestKit Agent (QGA-compatible virtio channel)
-After=network.target
+const ZYVOR_AGENT_UNIT: &str = r#"[Unit]
+Description=Zyvor VM Tools Guest Agent
+After=network-online.target
+Wants=network-online.target
 ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0
 
 [Service]
-ExecStart=/usr/local/bin/guestkit agent --channel virtio
-Restart=on-failure
+ExecStart=/usr/bin/zyvor-guest-agent
+Restart=always
+RestartSec=5
 User=root
 StandardOutput=journal
 StandardError=journal
@@ -38,6 +40,8 @@ pub struct GuestAgentInstallResult {
     pub needs_restart: bool,
     pub message: String,
     pub next_steps: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bootstrap_script: Option<String>,
 }
 
 pub fn guest_os_label(vm: &Value) -> Option<String> {
@@ -114,41 +118,70 @@ pub fn resolve_guestkit_binary_url() -> String {
     "http://127.0.0.1:30050/api/v1/engines/guestkit/binary".into()
 }
 
+pub fn qga_bootstrap_script(binary_url: &str) -> String {
+    format!(
+        "mkdir -p /usr/bin /etc/systemd/system && \
+curl -fsSL '{binary_url}' -o /usr/bin/zyvor-guest-agent && \
+chmod +x /usr/bin/zyvor-guest-agent && \
+cat > /etc/systemd/system/zyvor-guest-agent.service <<'UNIT'\n{ZYVOR_AGENT_UNIT}UNIT\n\
+systemctl daemon-reload && systemctl enable --now zyvor-guest-agent"
+    )
+}
+
+fn zyvor_tools_connected(vm: &Value, vmi: Option<&Value>) -> bool {
+    if vm
+        .pointer("/metadata/labels/zeus.zyvor.dev/guest-tools")
+        .and_then(|v| v.as_str())
+        == Some("connected")
+    {
+        return true;
+    }
+    vmi
+        .and_then(|v| json_str(v, &["status", "guestAgentVersion"]))
+        .map(|v| {
+            let lower = v.to_lowercase();
+            lower.contains("guestkit") || lower.contains("zyvor")
+        })
+        .unwrap_or(false)
+}
+
 fn guestkit_already_in_cloud_init(user_data: &str) -> bool {
     let lower = user_data.to_lowercase();
-    lower.contains("guestkit-agent")
+    lower.contains("zyvor-guest-agent")
+        || lower.contains("guestkit-agent")
+        || lower.contains("/usr/bin/zyvor-guest-agent")
         || lower.contains("/usr/local/bin/guestkit")
         || lower.contains("qemu-guest-agent")
         || lower.contains("qemu-ga")
 }
 
-fn append_guestkit_unit_yaml(out: &mut String) {
+fn append_agent_unit_yaml(out: &mut String) {
     out.push_str("write_files:\n");
-    out.push_str("  - path: /etc/systemd/system/guestkit-agent.service\n");
+    out.push_str("  - path: /etc/systemd/system/zyvor-guest-agent.service\n");
     out.push_str("    permissions: '0644'\n");
     out.push_str("    content: |\n");
-    for line in GUESTKIT_UNIT.lines() {
+    for line in ZYVOR_AGENT_UNIT.lines() {
         out.push_str("      ");
         out.push_str(line);
         out.push('\n');
     }
 }
 
-fn append_guestkit_runcmd_yaml(out: &mut String, binary_url: &str) {
+fn append_agent_runcmd_yaml(out: &mut String, binary_url: &str) {
     let url = binary_url.replace('\'', "'\"'\"'");
     out.push_str("runcmd:\n");
     out.push_str(&format!(
-        "  - curl -fsSL -o /usr/local/bin/guestkit '{url}' || true\n"
+        "  - curl -fsSL -o /usr/bin/zyvor-guest-agent '{url}' || true\n"
     ));
-    out.push_str("  - chmod 755 /usr/local/bin/guestkit\n");
+    out.push_str("  - chmod 755 /usr/bin/zyvor-guest-agent\n");
     out.push_str("  - systemctl daemon-reload\n");
-    out.push_str("  - systemctl enable --now guestkit-agent\n");
+    out.push_str("  - systemctl enable --now zyvor-guest-agent\n");
 }
 
 fn linux_cloud_init_snippet(binary_url: &str) -> String {
     let mut out = String::from("#cloud-config\n");
-    append_guestkit_unit_yaml(&mut out);
-    append_guestkit_runcmd_yaml(&mut out, binary_url);
+    append_agent_unit_yaml(&mut out);
+    append_agent_runcmd_yaml(&mut out, binary_url);
     out
 }
 
@@ -166,20 +199,20 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
         out.push('\n');
     }
     if !out.contains("write_files:") {
-        append_guestkit_unit_yaml(&mut out);
-    } else if !out.contains("guestkit-agent.service") {
-        append_guestkit_unit_yaml(&mut out);
+        append_agent_unit_yaml(&mut out);
+    } else if !out.contains("zyvor-guest-agent.service") && !out.contains("guestkit-agent.service") {
+        append_agent_unit_yaml(&mut out);
     }
     if !out.contains("runcmd:") {
-        append_guestkit_runcmd_yaml(&mut out, binary_url);
-    } else if !out.contains("/usr/local/bin/guestkit") {
+        append_agent_runcmd_yaml(&mut out, binary_url);
+    } else if !out.contains("/usr/bin/zyvor-guest-agent") && !out.contains("/usr/local/bin/guestkit") {
         let url = binary_url.replace('\'', "'\"'\"'");
         out.push_str(&format!(
-            "  - curl -fsSL -o /usr/local/bin/guestkit '{url}' || true\n"
+            "  - curl -fsSL -o /usr/bin/zyvor-guest-agent '{url}' || true\n"
         ));
-        out.push_str("  - chmod 755 /usr/local/bin/guestkit\n");
+        out.push_str("  - chmod 755 /usr/bin/zyvor-guest-agent\n");
         out.push_str("  - systemctl daemon-reload\n");
-        out.push_str("  - systemctl enable --now guestkit-agent\n");
+        out.push_str("  - systemctl enable --now zyvor-guest-agent\n");
     }
     (out, true)
 }
@@ -371,10 +404,55 @@ pub async fn install_guest_agent(
                 "Install QEMU Guest Agent / virtio-win-guest-tools inside the VM.".into(),
                 "Restart the VM after installation.".into(),
             ],
+            bootstrap_script: None,
         });
     }
 
+    let agent_live = vmi
+        .as_ref()
+        .map(|v| {
+            v.pointer("/status/conditions")
+                .and_then(|c| c.as_array())
+                .map(|conds| {
+                    conds.iter().any(|c| {
+                        c.get("type").and_then(|t| t.as_str()) == Some("AgentConnected")
+                            && c.get("status").and_then(|s| s.as_str()) == Some("True")
+                    })
+                })
+                .unwrap_or(false)
+        })
+        .unwrap_or(false);
+
     let binary_url = resolve_guestkit_binary_url();
+    if vmi_running && agent_live && !zyvor_tools_connected(&vm, vmi.as_ref()) {
+        let script = qga_bootstrap_script(&binary_url);
+        let channel_updated = merge_guest_agent_channel_into_vm(&mut vm);
+        let cloud_init_updated = merge_guest_agent_cloud_init_in_vm(&mut vm, &binary_url);
+        if channel_updated || cloud_init_updated {
+            let patch = json!({
+                "spec": vm.get("spec").cloned().unwrap_or(Value::Null)
+            });
+            api.patch(name, &PatchParams::default(), &Patch::Merge(&patch))
+                .await
+                .map_err(|e| ApiError::internal(format!("patch VM {namespace}/{name}: {e}")))?;
+        }
+        return Ok(GuestAgentInstallResult {
+            success: true,
+            method: "qga-bootstrap".into(),
+            is_windows: false,
+            cloud_init_updated,
+            channel_updated,
+            vm_restarted: false,
+            needs_restart: false,
+            message: "QEMU guest agent is connected — run the bootstrap script inside the guest (or via console).".into(),
+            next_steps: vec![
+                "Paste bootstrap_script into the VM console as root, or wait for Zeus guest-exec.".into(),
+                "Refresh guest info after zyvor-guest-agent starts.".into(),
+            ],
+            bootstrap_script: Some(script),
+        });
+    }
+
     let channel_updated = merge_guest_agent_channel_into_vm(&mut vm);
     let cloud_init_updated = merge_guest_agent_cloud_init_in_vm(&mut vm, &binary_url);
 
@@ -393,6 +471,7 @@ pub async fn install_guest_agent(
             } else {
                 vec!["Start the VM — cloud-init will install guestkit-agent on first boot.".into()]
             },
+            bootstrap_script: None,
         });
     }
 
@@ -433,6 +512,7 @@ pub async fn install_guest_agent(
             "GuestKit agent bootstrap already present.".into()
         },
         next_steps,
+        bootstrap_script: None,
     })
 }
 

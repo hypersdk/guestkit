@@ -14,6 +14,7 @@ K3S_BIN="${K3S_BIN:-/usr/local/bin/k3s}"
 BUILDER="${BUILDER:-podman}"
 PULL_REGISTRY="${PULL_REGISTRY:-}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
+NO_CACHE="${NO_CACHE:-}"
 
 cd "${ROOT}"
 
@@ -39,9 +40,14 @@ build_and_import() {
   local name="$1"
   local dockerfile="$2"
   local context="$3"
-  local tar="/tmp/zyvor-${name//:/-}.tar"
+  local tar="${HOME}/zyvor-${name//:/-}.tar"
   echo "Building ${name}..."
-  "${BUILDER}" build --format docker -t "${name}:latest" -f "${dockerfile}" "${context}"
+  local cache_flag=()
+  if [[ -n "${NO_CACHE}" && "${name}" == zyvor-api ]]; then
+    cache_flag=(--no-cache)
+    echo "  (no-cache rebuild for zyvor-api)"
+  fi
+  "${BUILDER}" build --format docker "${cache_flag[@]}" -t "${name}:latest" -f "${dockerfile}" "${context}"
   echo "Exporting ${name}..."
   rm -f "${tar}"
   (cd /tmp && "${BUILDER}" save "${name}:latest" -o "${tar}")

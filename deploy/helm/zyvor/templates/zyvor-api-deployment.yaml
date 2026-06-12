@@ -44,6 +44,14 @@ spec:
             - name: AGENT_PROXY_URL
               value: {{ .Values.zyvorApi.agentProxyUrl | quote }}
             {{- end }}
+            {{- if .Values.zyvorApi.zeusPublicUrl }}
+            - name: ZEUS_PUBLIC_URL
+              value: {{ .Values.zyvorApi.zeusPublicUrl | quote }}
+            {{- end }}
+            {{- if .Values.zyvorApi.clusterName }}
+            - name: CLUSTER_NAME
+              value: {{ .Values.zyvorApi.clusterName | quote }}
+            {{- end }}
             {{- if .Values.zyvorApi.guestkitBinaryUrl }}
             - name: GUESTKIT_BINARY_URL
               value: {{ .Values.zyvorApi.guestkitBinaryUrl | quote }}

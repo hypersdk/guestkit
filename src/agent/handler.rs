@@ -54,6 +54,7 @@ impl RequestHandler {
             RpcMethod::GetVersion => Self::get_version(req.id),
             RpcMethod::GetCapabilities => self.get_capabilities(req.id),
             RpcMethod::GetEvidence => self.get_evidence(req.id),
+            RpcMethod::GetStatus => self.get_status(req.id),
             RpcMethod::Doctor => self.doctor(req.id, &req.params),
             RpcMethod::MigrateScore => self.migrate_score(req.id, &req.params),
             RpcMethod::GetMetrics => self.get_metrics(req.id),
@@ -106,6 +107,24 @@ impl RequestHandler {
                 id,
                 RpcErrorCode::InternalError,
                 format!("collect evidence: {e}"),
+            ),
+        }
+    }
+
+    fn get_status(&self, id: Option<Value>) -> JsonRpcResponse {
+        match crate::evidence::build_agent_status_live() {
+            Ok(status) => match serde_json::to_value(status) {
+                Ok(v) => JsonRpcResponse::success(id, v),
+                Err(e) => JsonRpcResponse::error(
+                    id,
+                    RpcErrorCode::InternalError,
+                    format!("serialize status: {e}"),
+                ),
+            },
+            Err(e) => JsonRpcResponse::error(
+                id,
+                RpcErrorCode::InternalError,
+                format!("collect status: {e}"),
             ),
         }
     }

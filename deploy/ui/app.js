@@ -30,9 +30,21 @@ const state = {
   agentReachable: false,
   fleetMode: localStorage.getItem('zyvor.fleetMode') || 'disks',
   clusterVms: [],
+  clusterNamespaces: [],
   selectedClusterVm: null,
   lastClusterGuestInfo: null,
   lastClusterBootInspect: null,
+  lastClusterBriefing: null,
+  uiConfig: null,
+  fleetFilters: {
+    namespace: '',
+    search: '',
+    phase: '',
+  },
+  clusterLastSync: null,
+  clusterFleetLoading: false,
+  vmtoolsCoverage: null,
+  serverStorage: { rootId: 0, path: '', roots: [] },
 };
 
 const AGENT_QUICK_RPC = [
@@ -269,10 +281,154 @@ async function openClusterFleet() {
 }
 
 function zeusVmUrl(namespace, name, section) {
-  const host = window.location.hostname || '127.0.0.1';
+  const base = state.uiConfig?.zeus_url
+    || `http://${window.location.hostname || '127.0.0.1'}:30050`;
   const q = new URLSearchParams({ vm: `${namespace}/${name}` });
   if (section) q.set('section', section);
-  return `http://${host}:30050/vms?${q.toString()}`;
+  return `${base.replace(/\/$/, '')}/vms?${q.toString()}`;
+}
+
+async function loadUiConfig() {
+  try {
+    const data = await api('/config');
+    state.uiConfig = data.data || null;
+    const pathEl = $('#serverStoragePath');
+    if (pathEl && state.uiConfig?.storage_path) {
+      pathEl.textContent = `Primary storage: ${state.uiConfig.storage_path}`;
+    }
+  } catch {
+    state.uiConfig = null;
+  }
+}
+
+async function loadServerStorageRoots() {
+  try {
+    const data = await api('/storage/roots');
+    state.serverStorage.roots = data.data || [];
+    const select = $('#serverStorageRoot');
+    if (!select) return;
+    select.innerHTML = state.serverStorage.roots.map((r) =>
+      `<option value="${r.id}">${escapeHtml(r.label)} (${escapeHtml(r.path)})</option>`,
+    ).join('');
+    select.value = String(state.serverStorage.rootId);
+  } catch (e) {
+    toast(`Server storage unavailable: ${e.message}`, 'err');
+  }
+}
+
+async function browseServerStorage(path = '', rootId = state.serverStorage.rootId) {
+  state.serverStorage.path = path;
+  state.serverStorage.rootId = rootId;
+  const browser = $('#serverStorageBrowser');
+  if (browser) browser.innerHTML = '<p class="storage-browser-empty">Loading…</p>';
+  try {
+    const q = new URLSearchParams({ root: String(rootId) });
+    if (path) q.set('path', path);
+    const data = await api(`/storage/browse?${q.toString()}`);
+    renderServerStorageBrowser(data.data);
+  } catch (e) {
+    if (browser) browser.innerHTML = `<p class="storage-browser-empty">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderServerStorageBrowser(result) {
+  const browser = $('#serverStorageBrowser');
+  const crumb = $('#serverStorageBreadcrumb');
+  if (!browser || !result) return;
+
+  const parts = result.path ? result.path.split('/') : [];
+  let crumbHtml = `<button type="button" class="crumb-link" data-path="" data-root="${result.root_id}">${escapeHtml(result.root_label || 'root')}</button>`;
+  parts.forEach((part, i) => {
+    const sub = parts.slice(0, i + 1).join('/');
+    crumbHtml += ` <span class="crumb-sep">/</span> <button type="button" class="crumb-link" data-path="${escapeHtml(sub)}" data-root="${result.root_id}">${escapeHtml(part)}</button>`;
+  });
+  crumb.innerHTML = crumbHtml;
+  crumb.querySelectorAll('.crumb-link').forEach((btn) => {
+    btn.addEventListener('click', () => browseServerStorage(btn.dataset.path || '', Number(btn.dataset.root || 0)));
+  });
+
+  if (!result.entries?.length) {
+    browser.innerHTML = '<p class="storage-browser-empty">No disk images in this folder — upload one or pick a subdirectory.</p>';
+    return;
+  }
+
+  browser.innerHTML = result.entries.map((entry) => {
+    const isDir = entry.kind === 'directory';
+    const size = entry.size_bytes != null ? fmtBytes(entry.size_bytes) : '';
+    const badge = entry.registered ? '<span class="storage-badge registered">imported</span>' : '<span class="storage-badge">on server</span>';
+    return `
+      <div class="storage-row ${isDir ? 'dir' : 'file'}${entry.registered ? ' registered' : ''}" data-kind="${entry.kind}" data-path="${escapeHtml(entry.path)}" data-root="${result.root_id}">
+        <div class="storage-row-main">
+          <strong>${escapeHtml(entry.name)}</strong>
+          <span class="storage-row-meta">${isDir ? 'folder' : `${escapeHtml(entry.format || 'disk')}${size ? ` · ${size}` : ''}${entry.modified ? ` · ${escapeHtml(entry.modified)}` : ''}`}</span>
+        </div>
+        ${isDir ? '<span class="storage-row-action">Open →</span>' : `<div class="storage-row-actions">${badge}<button type="button" class="btn primary sm storage-import-btn">Import</button></div>`}
+      </div>
+    `;
+  }).join('');
+
+  browser.querySelectorAll('.storage-row.dir').forEach((row) => {
+    row.addEventListener('click', () => browseServerStorage(row.dataset.path, Number(row.dataset.root)));
+  });
+  browser.querySelectorAll('.storage-import-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = btn.closest('.storage-row');
+      if (row) importServerDisk(row.dataset.path, Number(row.dataset.root));
+    });
+  });
+}
+
+async function importServerDisk(path, rootId = state.serverStorage.rootId) {
+  if (!path) return;
+  feed(`Registering server disk <strong>${escapeHtml(path)}</strong>…`);
+  try {
+    const data = await api('/vms/import-from-storage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, root: rootId }),
+    });
+    const vm = data.data;
+    toast(`Imported ${vm.name}`, 'ok');
+    feed(`Server disk registered — <strong>${escapeHtml(vm.name)}</strong>`, 'ok');
+    markWizardComplete('ingest');
+    await loadFleet();
+    await browseServerStorage(state.serverStorage.path, state.serverStorage.rootId);
+    const imported = state.vms.find((v) => v.id === vm.id);
+    if (imported) {
+      selectVm(imported);
+      setFleetMode('disks');
+      setWizardStep('assure');
+    }
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function setupServerStorage() {
+  $('#serverStorageRefresh')?.addEventListener('click', () => {
+    browseServerStorage(state.serverStorage.path, state.serverStorage.rootId);
+  });
+  $('#serverStorageRoot')?.addEventListener('change', (e) => {
+    browseServerStorage('', Number(e.target.value));
+  });
+  $('#serverStorageUploadBtn')?.addEventListener('click', () => {
+    $('#serverFileInput')?.click();
+  });
+  $('#serverFileInput')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) uploadFile(file);
+  });
+}
+
+function clusterFleetQueryString() {
+  const q = new URLSearchParams();
+  if (state.fleetFilters.namespace) q.set('namespace', state.fleetFilters.namespace);
+  if (state.fleetFilters.search) q.set('search', state.fleetFilters.search);
+  if (state.fleetFilters.phase) q.set('phase', state.fleetFilters.phase);
+  const s = q.toString();
+  return s ? `?${s}` : '';
 }
 
 function clusterVmKey(vm) {
@@ -292,18 +448,64 @@ function setFleetMode(mode) {
   updateFleetEmptyState();
   renderFleet();
   updateSelectionPanels();
+  updateFleetToolbar();
 }
 
 function updateFleetEmptyState() {
   const emptyText = $('#fleetEmptyText');
   const importBtn = $('#fleetEmptyImport');
+  const browseBtn = $('#fleetEmptyBrowseCluster');
   const refreshBtn = $('#fleetEmptyRefresh');
   const isCluster = state.fleetMode === 'cluster';
   if (emptyText) {
-    emptyText.textContent = isCluster ? 'No KubeVirt VMs found in this cluster.' : 'No disks yet.';
+    emptyText.textContent = isCluster
+      ? 'No KubeVirt VMs found in this cluster.'
+      : 'No disks yet — upload an image or browse cluster VMs.';
   }
   importBtn?.classList.toggle('hidden', isCluster);
+  browseBtn?.classList.toggle('hidden', !isCluster);
   refreshBtn?.classList.toggle('hidden', !isCluster);
+  updateFleetToolbar();
+}
+
+function updateFleetToolbar() {
+  const isCluster = state.fleetMode === 'cluster';
+  $('#fleetUploadBtn')?.classList.toggle('hidden', false);
+  $('#fleetBrowseClusterBtn')?.classList.toggle('hidden', isCluster);
+  $('#fleetRefreshClusterBtn')?.classList.toggle('hidden', !isCluster);
+  $('#fleetClusterFilters')?.classList.toggle('hidden', !isCluster);
+  $('#fleetClusterSync')?.classList.toggle('hidden', !isCluster);
+  $('#fleetVmtoolsCoverage')?.classList.toggle('hidden', !isCluster);
+  $('#clusterLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
+  $('#clusterVmtoolsLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
+  if (isCluster && state.clusterLastSync) {
+    const el = $('#fleetClusterSync');
+    if (el) el.textContent = `Synced ${state.clusterLastSync.toLocaleTimeString()}`;
+  }
+  if (isCluster && state.vmtoolsCoverage) {
+    const cov = state.vmtoolsCoverage;
+    const el = $('#fleetVmtoolsCoverage');
+    if (el) {
+      el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing`;
+      el.classList.toggle('warn', cov.missing > 0);
+    }
+  }
+}
+
+function triggerDiskUpload() {
+  setWizardStep('ingest');
+  scrollToPanel('ingest');
+  const input = $('#fileInput');
+  if (input) input.click();
+}
+
+function clusterVmStatusClass(vm) {
+  const phase = String(vm.phase || vm.status || '').toLowerCase();
+  if (phase.includes('run')) return 'running';
+  if (phase.includes('pend') || phase.includes('provision') || phase.includes('start') || phase.includes('sched')) return 'pending';
+  if (phase.includes('fail') || phase.includes('error')) return 'failed';
+  if (phase.includes('stop') || phase.includes('halt')) return 'stopped';
+  return 'stopped';
 }
 
 function updateSelectionPanels() {
@@ -311,11 +513,18 @@ function updateSelectionPanels() {
   const diskSelected = Boolean(state.selectedVm) && !clusterSelected;
   $('#actionDeck')?.classList.toggle('hidden', !diskSelected || state.inspectionMode !== 'offline');
   $('#clusterDeck')?.classList.toggle('hidden', !clusterSelected);
+  $('#clusterLifecycle')?.classList.toggle('hidden', !clusterSelected);
+  $('#clusterVmtoolsLifecycle')?.classList.toggle('hidden', !clusterSelected);
   const online = state.inspectionMode === 'online';
   $('#agentDeck')?.classList.toggle('hidden', !diskSelected || !online);
   $('#agentProxyRow')?.classList.toggle('hidden', !online || clusterSelected);
   if (clusterSelected) {
     $$('#clusterDeck [data-cluster-action]').forEach((b) => { b.disabled = false; });
+    updateClusterLifecycleButtons(state.selectedClusterVm);
+    updateVmtoolsLifecycleButtons(state.selectedClusterVm, state.lastClusterGuestInfo);
+    renderClusterDetailDrawer(state.selectedClusterVm, state.lastClusterGuestInfo);
+  } else {
+    $('#clusterDetailDrawer')?.classList.add('hidden');
   }
 }
 
@@ -370,7 +579,7 @@ function renderClusterFleet() {
   const vms = state.clusterVms || [];
   $('#fleetCount').textContent = `${vms.length} VM${vms.length === 1 ? '' : 's'}`;
 
-  grid.querySelectorAll('.vm-card').forEach((c) => c.remove());
+  grid.querySelectorAll('.vm-card, .fleet-ns-header').forEach((c) => c.remove());
 
   if (!vms.length) {
     empty.classList.remove('hidden');
@@ -379,24 +588,107 @@ function renderClusterFleet() {
   }
   empty.classList.add('hidden');
 
-  vms.forEach((vm) => {
-    const key = clusterVmKey(vm);
-    const selected = state.selectedClusterVm && clusterVmKey(state.selectedClusterVm) === key;
-    const agent = vm.guest_agent_connected;
-    const agentLabel = agent === true ? 'agent on' : agent === false ? 'no agent' : 'unknown';
-    const osHint = vm.is_windows ? 'windows' : (vm.os_name ? vm.os_name.split(/\s+/)[0].toLowerCase() : '');
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'vm-card cluster' + (selected ? ' selected' : '');
-    card.innerHTML = `
-      <span class="vm-format">kubevirt</span>
-      <span class="vm-status ${vm.phase === 'Running' ? 'ready' : 'pending'}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
-      <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
-      <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}</p>
-    `;
-    card.addEventListener('click', () => selectClusterVm(vm));
-    grid.appendChild(card);
+  const namespaces = [...new Set(vms.map((v) => v.namespace))].sort();
+  const groupByNs = namespaces.length > 1;
+
+  namespaces.forEach((ns) => {
+    const group = vms.filter((v) => v.namespace === ns);
+    if (groupByNs) {
+      const header = document.createElement('div');
+      header.className = 'fleet-ns-header';
+      header.textContent = ns;
+      grid.appendChild(header);
+    }
+    group.forEach((vm) => {
+      const key = clusterVmKey(vm);
+      const selected = state.selectedClusterVm && clusterVmKey(state.selectedClusterVm) === key;
+      const agent = vm.guest_agent_connected;
+      const agentLabel = agent === true ? 'agent on' : agent === false ? 'no agent' : 'unknown';
+      const osHint = vm.is_windows ? 'windows' : (vm.os_name ? vm.os_name.split(/\s+/)[0].toLowerCase() : '');
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'vm-card cluster' + (selected ? ' selected' : '');
+      card.innerHTML = `
+        <span class="vm-format">kubevirt</span>
+        <span class="vm-status ${clusterVmStatusClass(vm)}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
+        <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
+        <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}</p>
+      `;
+      card.addEventListener('click', () => selectClusterVm(vm));
+      grid.appendChild(card);
+    });
   });
+}
+
+function renderClusterDetailDrawer(vm, info) {
+  const drawer = $('#clusterDetailDrawer');
+  if (!drawer || !vm) {
+    drawer?.classList.add('hidden');
+    return;
+  }
+  drawer.classList.remove('hidden');
+  $('#clusterDrawerTitle').textContent = `${vm.namespace}/${vm.name}`;
+  const rows = [
+    ['Namespace', vm.namespace],
+    ['Status', vm.status || vm.phase || 'Unknown'],
+    ['Node', vm.node || '—'],
+    ['Age', vm.age || '—'],
+    ['Root PVC', vm.root_pvc || '—'],
+    ['IP', vm.ip_address || '—'],
+    ['OS', info?.os_name ? `${info.os_name} ${info.os_version || ''}`.trim() : (vm.os_name || '—')],
+    ['Agent', info?.guest_agent_version ? `v${info.guest_agent_version}` : (info?.agent_connected ? 'connected' : '—')],
+  ];
+  const meta = $('#clusterDrawerMeta');
+  if (meta) {
+    meta.innerHTML = rows.map(([label, value]) => `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`).join('');
+  }
+  const links = $('#clusterDrawerLinks');
+  if (links) {
+    links.innerHTML = `
+      <a class="btn glass sm" href="${zeusVmUrl(vm.namespace, vm.name)}" target="_blank" rel="noopener noreferrer">Zeus console</a>
+      <a class="btn glass sm" href="${zeusVmUrl(vm.namespace, vm.name, 'guest')}" target="_blank" rel="noopener noreferrer">Guest tools</a>
+    `;
+  }
+  if (info?.interfaces?.length) {
+    const ifaceRows = info.interfaces.map((i) => {
+      const name = i.name || 'iface';
+      const ip = i.ipAddress || '—';
+      const mac = i.mac || '';
+      return `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(ip)}${mac ? ` · ${escapeHtml(mac)}` : ''}</dd>`;
+    }).join('');
+    meta.innerHTML += `<dt>Interfaces</dt>${ifaceRows}`;
+  }
+}
+
+function updateClusterLifecycleButtons(vm) {
+  if (!vm) return;
+  const phase = String(vm.phase || vm.status || '').toLowerCase();
+  const running = phase.includes('run');
+  const stopped = phase.includes('stop') || phase.includes('halt') || !vm.phase;
+  const startBtn = $('#clusterStartBtn');
+  const stopBtn = $('#clusterStopBtn');
+  const restartBtn = $('#clusterRestartBtn');
+  if (startBtn) startBtn.disabled = running;
+  if (stopBtn) stopBtn.disabled = !running;
+  if (restartBtn) restartBtn.disabled = !running;
+  if (startBtn && stopped && !running) startBtn.disabled = false;
+}
+
+function updateVmtoolsLifecycleButtons(vm, info) {
+  if (!vm) return;
+  const phase = String(vm.phase || vm.status || '').toLowerCase();
+  const running = phase.includes('run');
+  const agentOk = Boolean(info?.agent_connected);
+  const isWin = Boolean(info?.is_windows || vm.is_windows);
+  const quiesceBtn = $('#clusterQuiesceBtn');
+  const unquiesceBtn = $('#clusterUnquiesceBtn');
+  const rebootBtn = $('#clusterGuestRebootBtn');
+  const shutdownBtn = $('#clusterGuestShutdownBtn');
+  const toolsEnabled = running && agentOk && !isWin;
+  if (quiesceBtn) quiesceBtn.disabled = !toolsEnabled;
+  if (unquiesceBtn) unquiesceBtn.disabled = !toolsEnabled;
+  if (rebootBtn) rebootBtn.disabled = !toolsEnabled;
+  if (shutdownBtn) shutdownBtn.disabled = !running;
 }
 
 function selectClusterVm(vm) {
@@ -415,24 +707,59 @@ function selectClusterVm(vm) {
   markWizardComplete('ingest');
   if (state.wizard.step === 'ingest') setWizardStep('assure');
   feed(`Selected cluster VM <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>`, 'ok');
+  renderClusterDetailDrawer(vm, null);
+  updateClusterLifecycleButtons(vm);
   fetchClusterGuestInfo(false);
 }
 
-async function loadClusterFleet() {
+async function loadClusterNamespaces() {
   try {
-    const data = await api('/kubevirt/vms');
+    const data = await api('/kubevirt/namespaces');
+    state.clusterNamespaces = data.data || [];
+    const select = $('#fleetNamespaceFilter');
+    if (!select) return;
+    const current = state.fleetFilters.namespace;
+    select.innerHTML = '<option value="">All namespaces</option>'
+      + state.clusterNamespaces.map((ns) => `<option value="${escapeHtml(ns)}"${ns === current ? ' selected' : ''}>${escapeHtml(ns)}</option>`).join('');
+  } catch {
+    /* optional */
+  }
+}
+
+async function loadVmtoolsCoverage() {
+  try {
+    const data = await api('/vmtools/coverage');
+    state.vmtoolsCoverage = data.data;
+    updateFleetToolbar();
+  } catch {
+    /* optional */
+  }
+}
+
+async function loadClusterFleet() {
+  if (state.clusterFleetLoading) return;
+  state.clusterFleetLoading = true;
+  try {
+    await loadClusterNamespaces();
+    const data = await api(`/kubevirt/vms${clusterFleetQueryString()}`);
     state.clusterVms = data.data || [];
+    state.clusterLastSync = new Date();
     if (state.selectedClusterVm) {
       const key = clusterVmKey(state.selectedClusterVm);
       const fresh = state.clusterVms.find((v) => clusterVmKey(v) === key);
       state.selectedClusterVm = fresh || null;
+      if (fresh) updateClusterLifecycleButtons(fresh);
     }
     renderFleet();
-    if (!state.clusterVms.length) {
+    updateFleetToolbar();
+    await loadVmtoolsCoverage();
+    if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
     }
   } catch (e) {
     toast(`Cluster VM load failed: ${e.message}`, 'err');
+  } finally {
+    state.clusterFleetLoading = false;
   }
 }
 
@@ -513,12 +840,12 @@ function buildClusterCopilotBriefing(info, vm, bootInspect) {
     summary = 'Start the VM in Zeus OS before live guest agent inspection.';
     bootScore = 0;
     blockerCount = 1;
-    nextWorkflow = 'cluster-zeus';
+    nextWorkflow = 'cluster-start';
     recommendedActions.push({
       priority: 1,
-      title: 'Start VM in Zeus',
+      title: 'Start VM',
       detail: 'Boot the VM, then refresh guest info.',
-      workflow: 'cluster-zeus',
+      workflow: 'cluster-start',
     });
   } else if (!agentOk) {
     readiness = isWin ? 'caution' : 'blocked';
@@ -547,6 +874,12 @@ function buildClusterCopilotBriefing(info, vm, bootInspect) {
       detail: 'Collect offline boot hints from the root PVC when the VM is stopped.',
       workflow: 'cluster-boot-inspect',
     });
+    recommendedActions.push({
+      priority: 2,
+      title: 'Export root disk',
+      detail: 'Copy cluster root PVC into Zyvor ingest for Doctor, Migrate, and YAML.',
+      workflow: 'cluster-export-disk',
+    });
   }
 
   if (info.hostname) {
@@ -570,6 +903,17 @@ function buildClusterCopilotBriefing(info, vm, bootInspect) {
         .join(' · ') || bootInspect.message,
     });
     if (bootInspect.available && bootScore < 90) bootScore = 90;
+    if (bootInspect.source === 'vm_spec_heuristic' && !bootInspect.available) {
+      recommendedActions.unshift({
+        priority: 1,
+        title: 'Stop VM for boot inspect',
+        detail: 'Stop the VM, then re-run boot inspect on the root disk.',
+        workflow: 'cluster-stop-boot-inspect',
+      });
+    }
+  }
+  if (vm.root_pvc) {
+    evidenceHighlights.push({ ref: 'cluster.root_pvc', label: 'Root PVC', detail: vm.root_pvc });
   }
 
   const insights = [
@@ -645,8 +989,28 @@ function buildClusterCopilotBriefing(info, vm, bootInspect) {
   };
 }
 
-function renderClusterCopilot(info, vm, bootInspect) {
-  const briefing = buildClusterCopilotBriefing(info, vm, bootInspect);
+async function fetchClusterCopilotBriefing(info, vm, bootInspect) {
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/copilot/briefing`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guest_agent: info,
+          boot_inspect: bootInspect || null,
+        }),
+      },
+    );
+    return data.data;
+  } catch {
+    return buildClusterCopilotBriefing(info, vm, bootInspect);
+  }
+}
+
+async function renderClusterCopilot(info, vm, bootInspect) {
+  const briefing = await fetchClusterCopilotBriefing(info, vm, bootInspect);
+  state.lastClusterBriefing = briefing;
   renderCopilot(briefing, { mode: 'kubevirt-live', guest_agent: info, boot_inspect: bootInspect });
   if (briefing.boot_score != null) setScore(briefing.boot_score);
   markWizardComplete('assure');
@@ -674,6 +1038,12 @@ function runWorkflow(workflow) {
     if (workflow === 'cluster-install-agent') installClusterGuestAgent();
     else if (workflow === 'cluster-guest-info') fetchClusterGuestInfo(true);
     else if (workflow === 'cluster-boot-inspect') fetchClusterBootInspect(true);
+    else if (workflow === 'cluster-stop-boot-inspect') stopThenBootInspect();
+    else if (workflow === 'cluster-start') clusterLifecycle('start');
+    else if (workflow === 'cluster-stop') clusterLifecycle('stop');
+    else if (workflow === 'cluster-restart') clusterLifecycle('restart');
+    else if (workflow === 'cluster-export-disk') exportClusterDisk(false);
+    else if (workflow === 'cluster-apply-yaml') applyYamlToCluster();
     else if (workflow === 'cluster-zeus') {
       window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
     }
@@ -690,7 +1060,7 @@ function renderClusterGuestSummary(info, bootInspect) {
   content.innerHTML = '';
   const healthClass = info.agent_connected ? 'ok' : info.health === 'absent' ? 'warn' : 'warn';
   content.innerHTML += `<p class="finding ${healthClass}"><strong>Guest agent:</strong> ${escapeHtml(info.health)} — ${escapeHtml(info.message)}</p>`;
-  if (info.is_windows) {
+  if (info.is_windows && !info.agent_connected) {
     content.innerHTML += `<p class="finding warn"><strong>Windows VM</strong> — install QEMU Guest Agent from virtio-win guest tools (not Linux cloud-init).</p>`;
   }
   if (info.os_name) {
@@ -721,10 +1091,10 @@ function renderClusterGuestSummary(info, bootInspect) {
     if (installBtn) {
       installBtn.disabled = false;
       installBtn.classList.toggle('hidden', false);
-      installBtn.querySelector('strong').textContent = info.is_windows ? 'Guest Tools' : 'Install agent';
+      installBtn.querySelector('strong').textContent = info.is_windows ? 'Guest Tools' : 'Install VM Tools';
       installBtn.querySelector('span').textContent = info.is_windows
         ? 'virtio-win in Zeus OS'
-        : 'GuestKit via cloud-init';
+        : 'Zeus guest agent';
     }
     if (info.is_windows) {
       content.innerHTML += `<p class="finding warn">Open <strong>Zeus OS → Guest Tools</strong>, attach virtio-win.iso, install QEMU Guest Agent, then restart.</p>`;
@@ -737,7 +1107,186 @@ function renderClusterGuestSummary(info, bootInspect) {
   }
   showRaw({ mode: 'kubevirt-live', guest_agent: info, boot_inspect: bootInspect || null });
   const vm = state.selectedClusterVm;
-  if (vm) renderClusterCopilot(info, vm, bootInspect);
+  if (vm) {
+    renderClusterDetailDrawer(vm, info);
+    updateVmtoolsLifecycleButtons(vm, info);
+    renderClusterCopilot(info, vm, bootInspect).catch((e) => {
+      console.error('Cluster Copilot render failed:', e);
+      feed(`Copilot briefing failed: ${escapeHtml(e.message)}`, 'err');
+    });
+  }
+}
+
+async function clusterVmtoolsOp(action) {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  const labels = {
+    quiesce: 'Quiescing filesystem',
+    unquiesce: 'Thawing filesystem',
+    reboot: 'Guest soft reboot',
+    shutdown: 'Guest shutdown',
+  };
+  feed(`${labels[action] || action} on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const opts = action === 'shutdown'
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ grace_period_seconds: 60 }) }
+      : { method: 'POST' };
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/${action}`,
+      opts,
+    );
+    toast(data.data.message || `${action} complete`, 'ok');
+    feed(data.data.message || `${action} finished`, 'ok');
+    await loadClusterFleet();
+    if (action !== 'shutdown') await fetchClusterGuestInfo(false);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function clusterLifecycle(action) {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`${action} <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/${action}`,
+      { method: 'PUT' },
+    );
+    const result = data.data;
+    toast(result.message || `${action} requested`, 'ok');
+    feed(result.message || `${action} complete`, 'ok');
+    await loadClusterFleet();
+    if (state.selectedClusterVm) {
+      updateClusterLifecycleButtons(state.selectedClusterVm);
+      if (action !== 'stop') await fetchClusterGuestInfo(false);
+    }
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function stopThenBootInspect() {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`Stopping <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong> for boot inspect…`);
+  try {
+    await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/stop`,
+      { method: 'PUT' },
+    );
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      await loadClusterFleet();
+      const phase = String(state.selectedClusterVm?.phase || '').toLowerCase();
+      if (!phase.includes('run')) break;
+    }
+    await fetchClusterBootInspect(true);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function exportClusterDisk(forceStop = false) {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`Exporting root disk from <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const qs = forceStop ? '?force_stop=true' : '';
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/export-disk${qs}`,
+      { method: 'POST' },
+    );
+    const result = data.data;
+    toast(`Exported as ${result.name}`, 'ok');
+    feed(`Disk exported — <strong>${escapeHtml(result.name)}</strong> (${fmtBytes(result.size_bytes)})`, 'ok');
+    setFleetMode('disks');
+    await loadFleet();
+    const imported = state.vms.find((v) => v.id === result.vm_id);
+    if (imported) {
+      selectVm(imported);
+      setInspectionMode('offline');
+      feed('Continue with offline <strong>Doctor → Migrate → Provision</strong>', 'ok');
+    }
+  } catch (e) {
+    if (!forceStop && String(e.message).toLowerCase().includes('running')) {
+      if (window.confirm('VM is running. Stop it and export the root disk?')) {
+        await exportClusterDisk(true);
+      }
+      return;
+    }
+    toast(e.message, 'err');
+  }
+}
+
+async function applyYamlToCluster(yaml) {
+  const content = yaml || state.lastYaml;
+  if (!content) {
+    toast('Generate YAML first', 'err');
+    return;
+  }
+  const kinds = (content.match(/^kind:/gm) || []).length;
+  if (!window.confirm(`Apply ${kinds || 'multi-doc'} KubeVirt resource(s) to the cluster?`)) return;
+  feed('Applying manifests to cluster…');
+  try {
+    const data = await api('/kubevirt/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ yaml: content }),
+    });
+    const result = data.data;
+    const summary = (result.resources || []).map((r) => `${r.action} ${r.kind}/${r.name}`).join(', ');
+    toast(result.applied ? 'Manifests applied' : 'Apply completed with errors', result.applied ? 'ok' : 'err');
+    feed(summary || result.errors?.join('; ') || 'Apply finished', result.applied ? 'ok' : 'err');
+    if (result.resources?.length) {
+      const first = result.resources.find((r) => r.kind === 'VirtualMachine') || result.resources[0];
+      if (first?.namespace && first?.name) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('namespace', first.namespace);
+        url.searchParams.set('vm', first.name);
+        url.searchParams.set('action', 'inspect');
+        history.replaceState(null, '', url);
+        setFleetMode('cluster');
+        await loadClusterFleet();
+        const clusterVm = state.clusterVms.find((v) => v.namespace === first.namespace && v.name === first.name);
+        if (clusterVm) selectClusterVm(clusterVm);
+      }
+    }
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function runVmToolsDiagnostics() {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`Running VM Tools diagnostics on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/diagnostics`,
+      { method: 'POST' },
+    );
+    toast(data.data.message || 'Diagnostics complete', 'ok');
+    feed(data.data.message || 'VM Tools diagnostics finished');
+    await fetchClusterGuestInfo(false);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
 }
 
 async function installClusterGuestAgent() {
@@ -750,15 +1299,24 @@ async function installClusterGuestAgent() {
     window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
     return;
   }
-  feed(`Installing GuestKit agent on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  feed(`Installing <strong>Zeus VM Tools</strong> on ${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}…`);
   try {
     const data = await api(
-      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent/install?restart=true`,
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/install?restart=true`,
       { method: 'POST' },
     );
     const result = data.data;
     toast(result.message, result.success ? 'ok' : 'err');
     feed(result.next_steps?.join(' ') || result.message);
+    if (result.bootstrap_script) {
+      feed(`<pre class="raw-json">${escapeHtml(result.bootstrap_script)}</pre>`);
+      try {
+        await navigator.clipboard.writeText(result.bootstrap_script);
+        toast('Bootstrap script copied to clipboard', 'ok');
+      } catch {
+        /* clipboard optional */
+      }
+    }
     if (result.success) {
       setTimeout(() => fetchClusterGuestInfo(false), 8000);
       await loadClusterFleet();
@@ -1304,7 +1862,7 @@ function workflowLabel(wf) {
     'migration-plan': 'Run Migrate',
     provision: 'Generate YAML',
     doctor: 'Run Doctor',
-    'cluster-install-agent': 'Install agent',
+    'cluster-install-agent': 'Install VM Tools',
     'cluster-guest-info': 'Refresh guest info',
     'cluster-boot-inspect': 'Boot inspect',
     'cluster-zeus': 'Open in Zeus',
@@ -1328,7 +1886,7 @@ function appendCopilotMessage(question, answer, fromUser = true) {
 }
 
 function answerCopilotLocal(question) {
-  const b = state.lastBriefing;
+  const b = state.selectedClusterVm ? state.lastClusterBriefing : state.lastBriefing;
   if (!b?.insights?.length) {
     return {
       answer: state.selectedClusterVm
@@ -1352,6 +1910,24 @@ function answerCopilotLocal(question) {
 
 async function askCopilot(question) {
   appendCopilotMessage(question, '', true);
+
+  if (state.selectedClusterVm && state.lastClusterBriefing) {
+    try {
+      const vm = state.selectedClusterVm;
+      const data = await api(
+        `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/copilot/ask`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, briefing: state.lastClusterBriefing }),
+        },
+      );
+      appendCopilotMessage(question, data.data.answer || data.data.insight?.answer, false);
+      return;
+    } catch {
+      /* fall through to local */
+    }
+  }
 
   if (state.lastJobId && state.selectedVm) {
     try {
@@ -1385,11 +1961,17 @@ function showRaw(data) {
   $('#rawJson').textContent = JSON.stringify(data, null, 2);
 }
 
+/** @deprecated use showRaw — kept for cached older app.js callers */
+function setRawJson(data) {
+  showRaw(data);
+}
+
 function showYaml(yaml) {
   state.lastYaml = yaml;
   $('#yamlContent').textContent = yaml || '';
   $('#yamlTab').classList.toggle('hidden', !yaml);
   $('#copyYamlBtn').classList.toggle('hidden', !yaml);
+  $('#applyYamlBtn')?.classList.toggle('hidden', !yaml);
 }
 
 function setActiveTab(name) {
@@ -1832,12 +2414,20 @@ function setupWizard() {
 }
 
 function setupGlassToggle() {
+  const saved = localStorage.getItem('zyvor.glassMode');
+  if (saved && ['chrome', 'zinc', 'metal', 'clear', 'tinted'].includes(saved)) {
+    document.documentElement.dataset.glass = saved === 'metal' ? 'chrome' : saved;
+    $$('[data-glass-mode]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.glassMode === document.documentElement.dataset.glass);
+    });
+  }
   $$('[data-glass-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.glassMode;
       document.documentElement.dataset.glass = mode;
+      localStorage.setItem('zyvor.glassMode', mode);
       $$('[data-glass-mode]').forEach((b) => b.classList.toggle('active', b.dataset.glassMode === mode));
-      toast(mode === 'zinc' ? 'Matte zinc' : 'Brushed metal', 'ok');
+      toast(mode === 'zinc' ? 'Zinc silver surface' : 'Chrome glass panels', 'ok');
     });
   });
 }
@@ -1874,7 +2464,14 @@ function setupActions() {
   });
 
   $('#openClusterFleetBtn')?.addEventListener('click', () => openClusterFleet());
+  $('#ingestUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
   $('#menubarClusterBtn')?.addEventListener('click', () => openClusterFleet());
+
+  $('#fleetUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
+  $('#fleetBrowseClusterBtn')?.addEventListener('click', () => openClusterFleet());
+  $('#fleetRefreshClusterBtn')?.addEventListener('click', () => loadClusterFleet());
+  $('#fleetEmptyBrowseCluster')?.addEventListener('click', () => openClusterFleet());
+  $('#fleetEmptyImport')?.addEventListener('click', () => triggerDiskUpload());
 
   $$('.tab').forEach((tab) => {
     tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
@@ -1909,8 +2506,17 @@ function setupActions() {
       if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
       else if (btn.dataset.clusterAction === 'boot-inspect') fetchClusterBootInspect(true);
       else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent();
+      else if (btn.dataset.clusterAction === 'vmtools-diagnostics') runVmToolsDiagnostics();
+      else if (btn.dataset.clusterAction === 'vmtools-quiesce') clusterVmtoolsOp('quiesce');
+      else if (btn.dataset.clusterAction === 'vmtools-unquiesce') clusterVmtoolsOp('unquiesce');
+      else if (btn.dataset.clusterAction === 'vmtools-reboot') clusterVmtoolsOp('reboot');
+      else if (btn.dataset.clusterAction === 'vmtools-shutdown') clusterVmtoolsOp('shutdown');
       else if (btn.dataset.clusterAction === 'zeus-vm') {
         window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
+      } else if (btn.dataset.clusterAction === 'export-disk') {
+        exportClusterDisk(false);
+      } else if (btn.dataset.clusterAction === 'start' || btn.dataset.clusterAction === 'stop' || btn.dataset.clusterAction === 'restart') {
+        clusterLifecycle(btn.dataset.clusterAction);
       }
     });
   });
@@ -1923,6 +2529,34 @@ function setupActions() {
     } catch {
       toast('Copy failed', 'err');
     }
+  });
+
+  $('#applyYamlBtn')?.addEventListener('click', () => applyYamlToCluster());
+
+  $('#fleetNamespaceFilter')?.addEventListener('change', (e) => {
+    state.fleetFilters.namespace = e.target.value;
+    if (state.fleetMode === 'cluster') loadClusterFleet();
+  });
+
+  let fleetSearchTimer;
+  $('#fleetSearchFilter')?.addEventListener('input', (e) => {
+    clearTimeout(fleetSearchTimer);
+    fleetSearchTimer = setTimeout(() => {
+      state.fleetFilters.search = e.target.value.trim();
+      if (state.fleetMode === 'cluster') loadClusterFleet();
+    }, 300);
+  });
+
+  $$('.phase-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      $$('.phase-chip').forEach((c) => c.classList.toggle('active', c === chip));
+      state.fleetFilters.phase = chip.dataset.phase || '';
+      if (state.fleetMode === 'cluster') loadClusterFleet();
+    });
+  });
+
+  $('#clusterDrawerClose')?.addEventListener('click', () => {
+    $('#clusterDetailDrawer')?.classList.add('hidden');
   });
 }
 
@@ -1953,10 +2587,15 @@ async function init() {
   setupInspectionMode();
   setupCopilot();
   setupActions();
+  setupServerStorage();
   updateCopilotPlaceholder();
   setDockEnabled(false);
+  await loadUiConfig();
+  await loadServerStorageRoots();
+  await browseServerStorage('', state.serverStorage.rootId);
   setFleetMode(state.fleetMode);
   setWizardStep('ingest');
+  updateFleetToolbar();
   await checkHealth();
   if (state.fleetMode === 'cluster') await loadClusterFleet();
   else await loadFleet();

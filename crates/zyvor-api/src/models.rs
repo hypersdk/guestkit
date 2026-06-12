@@ -64,4 +64,8 @@ pub struct ProvisionResponse {
     pub vm_id: Uuid,
     pub yaml: String,
     pub applied: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resources: Option<Vec<crate::kubevirt_apply::AppliedResource>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apply_errors: Option<Vec<String>>,
 }
