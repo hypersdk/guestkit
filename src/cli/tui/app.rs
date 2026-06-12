@@ -2915,7 +2915,7 @@ mod tests {
     #[test]
     fn test_view_all() {
         let all_views = View::all();
-        assert_eq!(all_views.len(), 19);
+        assert_eq!(all_views.len(), 21);
         assert!(all_views.contains(&View::Dashboard));
         assert!(all_views.contains(&View::Analytics));
         assert!(all_views.contains(&View::Files));
@@ -2943,6 +2943,8 @@ mod tests {
         assert!(all_views.contains(&View::Logs));
         assert!(all_views.contains(&View::Profiles));
         assert!(all_views.contains(&View::Assurance));
+        assert!(all_views.contains(&View::SystemdDeep));
+        assert!(all_views.contains(&View::AiInsights));
         assert!(all_views.contains(&View::Files));
     }
 

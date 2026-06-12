@@ -65,9 +65,9 @@ fn collect_windows_persistence(
 
     let software_hive = format!("{root}/Windows/System32/config/SOFTWARE");
     if g.exists(&software_hive).unwrap_or(false) {
-        if let Ok(keys) =
-            crate::guestfs::windows_registry::parse_run_keys(PathBuf::from(&software_hive).as_path())
-        {
+        if let Ok(keys) = crate::guestfs::windows_registry::parse_run_keys(
+            PathBuf::from(&software_hive).as_path(),
+        ) {
             persistence.run_keys = keys
                 .into_iter()
                 .map(|k| WindowsPersistenceEntry {
@@ -135,9 +135,7 @@ fn summarize_event_logs(g: &mut Guestfs, systemroot: &str) -> WindowsEventLogSum
                 if let Ok(bytes) = g.read_file(&path) {
                     if let Ok(mut tmp) = tempfile::NamedTempFile::new() {
                         if tmp.write_all(&bytes).is_ok() {
-                            if let Some(profile) =
-                                parse_evtx_forensic(tmp.path(), 500)
-                            {
+                            if let Some(profile) = parse_evtx_forensic(tmp.path(), 500) {
                                 merge_forensic(&mut summary, profile);
                             }
                             if let Ok(parsed) =
@@ -159,7 +157,9 @@ fn summarize_event_logs(g: &mut Guestfs, systemroot: &str) -> WindowsEventLogSum
 }
 
 fn merge_forensic(summary: &mut WindowsEventLogSummary, add: WindowsForensicProfile) {
-    let profile = summary.forensic.get_or_insert_with(WindowsForensicProfile::default);
+    let profile = summary
+        .forensic
+        .get_or_insert_with(WindowsForensicProfile::default);
     profile.failed_logons += add.failed_logons;
     profile.successful_logons += add.successful_logons;
     profile.service_failures += add.service_failures;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! TUI view modules
 
+pub mod ai_insights;
 pub mod analytics;
 pub mod assurance;
 pub mod dashboard;
@@ -15,9 +16,8 @@ pub mod profiles;
 pub mod recommendations;
 pub mod security;
 pub mod services;
-pub mod systemd_deep;
-pub mod ai_insights;
 pub mod storage;
+pub mod systemd_deep;
 pub mod timeline;
 pub mod topology;
 pub mod users;

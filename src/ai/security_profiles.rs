@@ -21,7 +21,10 @@ pub struct ProfileCheck {
 }
 
 /// Evaluate a lightweight CIS-inspired profile against collected evidence.
-pub fn evaluate_cis_profile(evidence: &EvidenceSnapshot, semantic: &SemanticAnalysis) -> SecurityProfileReport {
+pub fn evaluate_cis_profile(
+    evidence: &EvidenceSnapshot,
+    semantic: &SemanticAnalysis,
+) -> SecurityProfileReport {
     let mut passed = Vec::new();
     let mut failed = Vec::new();
 
@@ -38,7 +41,8 @@ pub fn evaluate_cis_profile(evidence: &EvidenceSnapshot, semantic: &SemanticAnal
         &mut failed,
         "CIS-SEL-1",
         "SELinux not disabled unexpectedly",
-        evidence.security.selinux != "disabled" || evidence.os.os_type.to_lowercase().contains("windows"),
+        evidence.security.selinux != "disabled"
+            || evidence.os.os_type.to_lowercase().contains("windows"),
         format!("SELinux mode: {}", evidence.security.selinux),
     );
     check(
@@ -96,7 +100,10 @@ pub fn evaluate_cis_profile(evidence: &EvidenceSnapshot, semantic: &SemanticAnal
                 "CIS-WIN-EVT",
                 "No recent failed logon burst",
                 forensic.failed_logons < 50,
-                format!("{} failed logons in Security.evtx sample", forensic.failed_logons),
+                format!(
+                    "{} failed logons in Security.evtx sample",
+                    forensic.failed_logons
+                ),
             );
             check(
                 &mut passed,
@@ -104,7 +111,10 @@ pub fn evaluate_cis_profile(evidence: &EvidenceSnapshot, semantic: &SemanticAnal
                 "CIS-WIN-SVC",
                 "No service crash storm",
                 forensic.service_failures < 20,
-                format!("{} service failure events in System.evtx", forensic.service_failures),
+                format!(
+                    "{} service failure events in System.evtx",
+                    forensic.service_failures
+                ),
             );
         }
     }

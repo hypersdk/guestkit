@@ -30,7 +30,11 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Min(0), Constraint::Length(6)])
+        .constraints([
+            Constraint::Length(4),
+            Constraint::Min(0),
+            Constraint::Length(6),
+        ])
         .margin(1)
         .split(area);
 
@@ -54,7 +58,10 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
                     format!("[{:?}] ", r.category),
                     Style::default().fg(color).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(r.title.clone(), Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    r.title.clone(),
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(format!(" — {}", r.detail)),
             ]))
         })
