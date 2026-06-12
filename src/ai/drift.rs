@@ -15,7 +15,10 @@ pub struct FleetDriftReport {
 }
 
 /// Explain semantic drift between two evidence snapshots (golden vs current).
-pub fn explain_fleet_drift(baseline: &EvidenceSnapshot, current: &EvidenceSnapshot) -> FleetDriftReport {
+pub fn explain_fleet_drift(
+    baseline: &EvidenceSnapshot,
+    current: &EvidenceSnapshot,
+) -> FleetDriftReport {
     let base_sem = analyze_semantic(baseline);
     let cur_sem = analyze_semantic(current);
 
@@ -69,8 +72,11 @@ pub fn explain_fleet_drift(baseline: &EvidenceSnapshot, current: &EvidenceSnapsh
 fn diff_systemd(base: &SemanticAnalysis, current: &SemanticAnalysis) -> Vec<String> {
     let base_problems: std::collections::HashSet<_> =
         base.problem_units.iter().map(|u| u.name.clone()).collect();
-    let cur_problems: std::collections::HashSet<_> =
-        current.problem_units.iter().map(|u| u.name.clone()).collect();
+    let cur_problems: std::collections::HashSet<_> = current
+        .problem_units
+        .iter()
+        .map(|u| u.name.clone())
+        .collect();
 
     let mut drift = Vec::new();
     for u in cur_problems.difference(&base_problems) {

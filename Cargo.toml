@@ -5,7 +5,7 @@ members = [".", "crates/guestkit-agent-protocol", "crates/zyvor-guest-agent"]
 
 [package]
 name = "guestkit"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 authors = ["ZyvorAI Labs Private Limited <info@zyvor.dev>"]
 license = "Apache-2.0"

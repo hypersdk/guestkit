@@ -1108,7 +1108,9 @@ pub fn parse_run_keys(hive_path: &Path) -> Result<Vec<WindowsRunKeyEntry>> {
     if let Ok(Some(microsoft)) = root_key.subkey("Microsoft", &mut hive) {
         if let Ok(Some(windows)) = microsoft.borrow().subkey("Windows", &mut hive) {
             if let Ok(Some(current)) = windows.borrow().subkey("CurrentVersion", &mut hive) {
-                for (subkey, label) in [("Run", "HKLM\\...\\Run"), ("RunOnce", "HKLM\\...\\RunOnce")] {
+                for (subkey, label) in
+                    [("Run", "HKLM\\...\\Run"), ("RunOnce", "HKLM\\...\\RunOnce")]
+                {
                     if let Ok(Some(run_key)) = current.borrow().subkey(subkey, &mut hive) {
                         for kv in run_key.borrow().values() {
                             let name = kv.name().to_string();

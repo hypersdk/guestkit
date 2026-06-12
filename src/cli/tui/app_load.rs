@@ -87,8 +87,12 @@ impl View {
             | View::Logs
             | View::Storage
             | View::Files => "System",
-            View::Security | View::Issues | View::Profiles | View::Assurance
-            | View::SystemdDeep | View::AiInsights => "Security",
+            View::Security
+            | View::Issues
+            | View::Profiles
+            | View::Assurance
+            | View::SystemdDeep
+            | View::AiInsights => "Security",
         }
     }
 

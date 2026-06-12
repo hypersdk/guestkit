@@ -104,10 +104,7 @@ pub async fn run_agent_on_evidence_with_boot(
                 args: call.args.clone(),
                 result_preview: preview.clone(),
             });
-            transcript.push_str(&format!(
-                "\nTool `{}` returned:\n{preview}\n",
-                call.tool
-            ));
+            transcript.push_str(&format!("\nTool `{}` returned:\n{preview}\n", call.tool));
             continue;
         }
         answer = response;
@@ -143,10 +140,11 @@ struct ParsedToolCall {
 fn parse_tool_call(response: &str) -> Option<ParsedToolCall> {
     for line in response.lines() {
         let line = line.trim();
-        if !line.starts_with('{') {
+        let Some(json_start) = line.find('{') else {
             continue;
-        }
-        if let Ok(v) = serde_json::from_str::<Value>(line) {
+        };
+        let json_part = &line[json_start..];
+        if let Ok(v) = serde_json::from_str::<Value>(json_part) {
             if let (Some(tool), args) = (v.get("tool").and_then(|t| t.as_str()), v.get("args")) {
                 return Some(ParsedToolCall {
                     tool: tool.to_string(),
@@ -164,7 +162,8 @@ mod tests {
 
     #[test]
     fn parses_tool_json_line() {
-        let call = parse_tool_call(r#"Checking… {"tool":"list_systemd_units","args":{"type":"timer"}}"#);
+        let call =
+            parse_tool_call(r#"Checking… {"tool":"list_systemd_units","args":{"type":"timer"}}"#);
         assert!(call.is_some());
         assert_eq!(call.unwrap().tool, "list_systemd_units");
     }

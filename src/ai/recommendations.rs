@@ -63,7 +63,12 @@ pub fn generate_recommendations(
         });
     }
 
-    for score in semantic.sandbox_scores.iter().filter(|s| s.score < 25).take(8) {
+    for score in semantic
+        .sandbox_scores
+        .iter()
+        .filter(|s| s.score < 25)
+        .take(8)
+    {
         recs.push(Recommendation {
             category: RecommendationCategory::Security,
             title: format!("Harden {}", score.unit),
@@ -103,7 +108,12 @@ pub fn generate_recommendations(
         });
     }
 
-    if !evidence.boot.loaded_modules.iter().any(|m| m.contains("virtio")) {
+    if !evidence
+        .boot
+        .loaded_modules
+        .iter()
+        .any(|m| m.contains("virtio"))
+    {
         recs.push(Recommendation {
             category: RecommendationCategory::Performance,
             title: "Missing virtio modules in initramfs".into(),
@@ -117,7 +127,11 @@ pub fn generate_recommendations(
     recs.sort_by(|a, b| {
         category_rank(a.category)
             .cmp(&category_rank(b.category))
-            .then(b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal))
+            .then(
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
     });
     recs
 }

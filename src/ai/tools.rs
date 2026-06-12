@@ -24,7 +24,10 @@ impl<'a> SnapshotTools<'a> {
         }
     }
 
-    pub fn with_boot_target(_evidence: &'a EvidenceSnapshot, _target: crate::boot::BootTarget) -> Self {
+    pub fn with_boot_target(
+        _evidence: &'a EvidenceSnapshot,
+        _target: crate::boot::BootTarget,
+    ) -> Self {
         Self::new(_evidence, None)
     }
 

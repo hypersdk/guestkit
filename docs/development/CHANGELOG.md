@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-06-12
+
+### Added
+- **IronWolf web console** — GuestKit deploy UI with macOS Tahoe shell, local Inter fonts, and GuestKit-branded brain/dock/mission rail
+- **Console Copilot API** — briefing, ask, fleet overview, compare narrative, launch advice, and system status endpoints in `zyvor-api`
+- **`zyvor-guest-agent` crate** — in-guest agent daemon for Windows and Linux VM Tools
+- **Windows forensic depth** — EVTX parsing, persistence run keys, forensic profile merge in evidence collectors
+- **QGA helpers** — KubeVirt guest-agent transport improvements for live inspection
+
+### Changed
+- Renamed Nebula UI modules to `guestkit-console.js`, `guestkit-ai.js`, `guestkit-features.js`
+- Integration tests use `guestkit copy` (replacing removed `cp` alias)
+- TUI view registry includes Assurance, SystemdDeep, and AiInsights (21 views)
+
+### Fixed
+- AI agent tool-call parser accepts JSON embedded in prose lines
+- Failed-disk UX in web console (deduped job tracker, disk switch guidance)
+- RPM spec `%changelog` weekday dates for Fedora builds
+
+## [0.3.6] - 2026-05-27
+
 ### Added
 - **In-guest agent** — optional `agent` feature: `guestkit agent` (virtio-serial JSON-RPC daemon), `guestkit agent-proxy` (host HTTP bridge), live evidence + fix-plan execution inside running VMs
 - **`guestkit-agent-protocol`** — shared length-prefixed JSON-RPC types for agent and proxy
@@ -14,10 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Worker jobs** — `guestkit.agent.evidence` and `guestkit.agent.fix` via agent-proxy HTTP
 - **TUI LIVE badge** — assurance view when `GUESTKIT_AGENT_SOCKET` responds to ping
 - **CI** — `agent-release.yml` musl artifact workflow; integration tests behind `--features agent`
-
-## [0.3.6] - 2026-05-27
-
-### Added
 - **TUI fix-plan preview** — read-only modal of migration plan operations (`p` in Assurance, `: plan preview`)
 - **TUI Assurance shortcuts** — dashboard `a` opens Assurance; global search indexes boot blockers and migration items
 - **TUI Assurance view** — Security-group panel for `doctor` boot gate and `migrate-plan` scoring; `d`/`t`/`e` keys; palette commands `doctor`, `migrate-plan`, `export plan`

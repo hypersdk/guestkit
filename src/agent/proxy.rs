@@ -63,7 +63,11 @@ enum ProxyBackend {
     Vsock(Arc<Mutex<Option<FramedAgentClient>>>),
 }
 
-pub async fn run_proxy(socket_path: Option<&str>, listen: Option<&str>, vsock_port: Option<u32>) -> Result<()> {
+pub async fn run_proxy(
+    socket_path: Option<&str>,
+    listen: Option<&str>,
+    vsock_port: Option<u32>,
+) -> Result<()> {
     let backend = match (socket_path, vsock_port) {
         (Some(path), None) => ProxyBackend::Unix(path.to_string()),
         (None, Some(port)) => {
@@ -259,7 +263,8 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
         (rpc_method.to_string(), serde_json::json!({}))
     };
 
-    let response = tokio::task::spawn_blocking(move || backend.call(&call_method, params)).await??;
+    let response =
+        tokio::task::spawn_blocking(move || backend.call(&call_method, params)).await??;
 
     let status = if response.get("error").is_some() {
         500

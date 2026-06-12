@@ -62,7 +62,11 @@ pub fn rank_disable_candidates(
     for hint in semantic.problem_units.iter().take(limit * 2) {
         results.push(simulate_unit_disable(evidence, &hint.name, target));
     }
-    results.sort_by(|a, b| b.delta.partial_cmp(&a.delta).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_by(|a, b| {
+        b.delta
+            .partial_cmp(&a.delta)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     results.truncate(limit);
     results
 }

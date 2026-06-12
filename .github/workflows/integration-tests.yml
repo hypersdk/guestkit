@@ -200,7 +200,7 @@ jobs:
 
       - name: Test CLI - copy file
         run: |
-          sudo ./target/release/guestkit cp \
+          sudo ./target/release/guestkit copy \
             "test-images/${{ matrix.os }}.img:/etc/hostname" \
             ./copied-hostname.txt
 

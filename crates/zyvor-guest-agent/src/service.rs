@@ -42,8 +42,8 @@ fn run_service_impl() -> Result<()> {
         }
     };
 
-    let status_handle =
-        service_control_handler::register(SERVICE_NAME, event_handler).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     status_handle
         .set_service_status(ServiceStatus {

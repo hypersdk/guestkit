@@ -55,7 +55,8 @@ impl ProviderConfig {
         if std::env::var("XAI_API_KEY").is_ok() {
             return Ok(Self {
                 provider: Provider::XAi,
-                model: std::env::var("GUESTKIT_AI_MODEL").unwrap_or_else(|_| "grok-2-latest".into()),
+                model: std::env::var("GUESTKIT_AI_MODEL")
+                    .unwrap_or_else(|_| "grok-2-latest".into()),
                 api_key: std::env::var("XAI_API_KEY").ok(),
                 base_url: Some("https://api.x.ai/v1".into()),
             });

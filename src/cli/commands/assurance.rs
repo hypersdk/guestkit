@@ -116,14 +116,16 @@ fn print_guest_intelligence(
         println!();
         println!("{}", "Top recommendations:".bold());
         for rec in intel.recommendations.iter().take(5) {
-            println!("  • [{}] {} — {}", format!("{:?}", rec.category), rec.title, rec.citation);
+            println!(
+                "  • [{}] {} — {}",
+                format!("{:?}", rec.category),
+                rec.title,
+                rec.citation
+            );
         }
     }
 
-    println!(
-        "  CIS-lite score: {}/100",
-        intel.security_profile.score
-    );
+    println!("  CIS-lite score: {}/100", intel.security_profile.score);
 
     #[cfg(feature = "ai")]
     if ai {

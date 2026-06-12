@@ -76,7 +76,14 @@ pub fn build_report_narrative(
         let bullets: Vec<String> = recommendations
             .iter()
             .take(8)
-            .map(|r| format!("- [{}] {} ({})", category_label(r.category), r.title, r.citation))
+            .map(|r| {
+                format!(
+                    "- [{}] {} ({})",
+                    category_label(r.category),
+                    r.title,
+                    r.citation
+                )
+            })
             .collect();
         sections.push(NarrativeSection {
             heading: "Recommendations".into(),

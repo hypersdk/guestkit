@@ -43,8 +43,8 @@
 //! - `fixers` - Guest OS repair operations
 //! - `cli` - Command-line interface
 
-pub mod assurance;
 pub mod ai;
+pub mod assurance;
 pub mod boot;
 pub mod cli;
 pub mod converters;

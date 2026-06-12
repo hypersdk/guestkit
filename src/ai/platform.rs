@@ -106,7 +106,12 @@ fn build_policy_hints(
             rationale: "Disallow root SSH login before fleet migration".into(),
         });
     }
-    for score in semantic.sandbox_scores.iter().filter(|s| s.score < 15).take(5) {
+    for score in semantic
+        .sandbox_scores
+        .iter()
+        .filter(|s| s.score < 15)
+        .take(5)
+    {
         hints.push(PolicyHint {
             rule_id: format!("sandbox-{}", score.unit),
             expression: format!("systemd.unit('{}').sandbox_score >= 25", score.unit),
