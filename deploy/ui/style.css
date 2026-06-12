@@ -1317,6 +1317,20 @@ html[data-theme="liquid-zinc"] .wallpaper-blob.b3 {
   color: var(--accent);
 }
 
+.vm-tools-chip {
+  position: absolute;
+  top: 2.1rem;
+  right: 0.55rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-tertiary);
+}
+.vm-tools-chip.live { background: rgba(48, 209, 88, 0.15); color: var(--success); }
+.vm-tools-chip.warn { background: rgba(255, 159, 10, 0.15); color: var(--warn); }
+
 .vm-status {
   display: inline-block;
   font-size: 0.6rem;
