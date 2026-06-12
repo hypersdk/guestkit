@@ -56,6 +56,18 @@ spec:
             - name: GUESTKIT_BINARY_URL
               value: {{ .Values.zyvorApi.guestkitBinaryUrl | quote }}
             {{- end }}
+            {{- if .Values.vmtools.bundle.enabled }}
+            - name: VMTOOLS_BUNDLE_URL
+              value: {{ include "zyvor.vmtoolsBundleBaseUrl" . | quote }}
+            - name: VMTOOLS_VERSION
+              value: {{ .Values.vmtools.bundle.version | default "0.1.0" | quote }}
+            - name: VMTOOLS_CHANNEL
+              value: {{ .Values.vmtools.bundle.channel | default "stable" | quote }}
+            {{- end }}
+            {{- if .Values.vmtools.reconcile.preferIso }}
+            - name: VMTOOLS_RECONCILE_ISO
+              value: "true"
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             - name: dev

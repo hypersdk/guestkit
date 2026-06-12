@@ -59,6 +59,51 @@ struct OutputSpec {
     compression: Option<String>,
 }
 
+/// Trim heavy arrays for API/UI while keeping full data in output_file.
+fn summarize_inspection(full: &serde_json::Value) -> serde_json::Value {
+    let mut out = serde_json::json!({
+        "source": "guestkit.inspect",
+    });
+    if let Some(os) = full.get("operating_system") {
+        out["operating_system"] = os.clone();
+    }
+    if let Some(packages) = full.get("packages") {
+        let sample: Vec<serde_json::Value> = packages
+            .get("packages")
+            .and_then(|p| p.as_array())
+            .map(|arr| arr.iter().take(30).cloned().collect())
+            .unwrap_or_default();
+        out["packages"] = serde_json::json!({
+            "count": packages.get("count").cloned().unwrap_or(serde_json::json!(0)),
+            "manager": packages.get("manager").cloned().unwrap_or(serde_json::Value::Null),
+            "sample": sample,
+        });
+    }
+    if let Some(services) = full.get("services") {
+        let sample: Vec<serde_json::Value> = services
+            .get("enabled_services")
+            .and_then(|p| p.as_array())
+            .map(|arr| arr.iter().take(20).cloned().collect())
+            .unwrap_or_default();
+        out["services"] = serde_json::json!({
+            "count": services.get("count").cloned().unwrap_or(serde_json::json!(0)),
+            "sample": sample,
+        });
+    }
+    if let Some(network) = full.get("network") {
+        out["network"] = network.clone();
+    }
+    if let Some(security) = full.get("security") {
+        out["security"] = security.clone();
+    }
+    if let Some(mounts) = full.get("mountpoints").and_then(|m| m.as_array()) {
+        out["mountpoints"] = serde_json::json!({
+            "count": mounts.len(),
+        });
+    }
+    out
+}
+
 /// Guestkit inspect handler
 pub struct InspectHandler {
     /// Temporary directory for operations
@@ -197,7 +242,8 @@ impl InspectHandler {
                 "image": payload.image.path,
                 "format": payload.image.format,
                 "inspection_time": chrono::Utc::now().to_rfc3339(),
-            }
+            },
+            "inspect": summarize_inspection(&inspection_result),
         }))
     }
 

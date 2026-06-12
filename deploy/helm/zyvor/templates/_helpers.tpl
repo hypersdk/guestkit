@@ -15,3 +15,13 @@
 - name: vm-images
   mountPath: /var/lib/zyvor/images
 {{- end }}
+
+{{- define "zyvor.vmtoolsBundleBaseUrl" -}}
+{{- if .Values.vmtools.bundle.baseUrl -}}
+{{- trimSuffix "/" .Values.vmtools.bundle.baseUrl -}}
+{{- else if .Values.zyvorApi.zeusPublicUrl -}}
+{{- printf "%s/api/v1/vmtools/bundle" (trimSuffix "/" .Values.zyvorApi.zeusPublicUrl) -}}
+{{- else -}}
+http://minio:9000/vmtools
+{{- end -}}
+{{- end }}

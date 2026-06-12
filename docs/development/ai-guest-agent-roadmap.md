@@ -7,76 +7,98 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** �
 - **EvidenceSnapshot is the source of truth** — collectors populate typed structs; AI tools read the snapshot, not raw Guestfs.
 - **Graceful degradation** — malformed unit files, missing hives, or partial mounts never abort collection.
 - **Grounded output** — every AI finding should cite file paths, unit names, or registry keys from evidence.
-- **Air-gap friendly** — OpenAI today; xAI/Anthropic/local LLM in later phases.
+- **Air-gap friendly** — OpenAI today; xAI/Anthropic/Ollama via env configuration.
 
-## Phase 0 — Richer evidence (shipped in v0.3.7)
-
-**Goal:** Expand `EvidenceSnapshot` schema v2 with deeper systemd and Windows data.
+## Phase 0 — Richer evidence
 
 | Component | Status |
 |-----------|--------|
-| `SystemdInfo`, `SystemdUnit`, problem hints | Done |
-| `collect_systemd_guest` / `collect_systemd_live` | Done |
-| Windows services, apps, event log summary | Done |
-| `SystemdStaticCheck` in doctor | Done |
-| TUI "Systemd Deep Dive" view | Planned |
-| Windows persistence (Run keys, tasks) | Stub |
-
-### Schema highlights
-
-```text
-EvidenceSnapshot (schema_version = 2)
-├── systemd: Option<SystemdInfo>
-│   ├── units[] — parsed .service/.timer/.socket/…
-│   └── problem_hints[] — static boot/migration hints
-└── windows: Option<WindowsEvidence>
-    ├── services[] — start type, auto-start flags
-    ├── installed_apps[] — sample from Uninstall keys
-    └── event_logs — .evtx count and total size
-```
+| `SystemdInfo`, `SystemdUnit`, problem hints | Shipped |
+| `collect_systemd_guest` / `collect_systemd_live` | Shipped |
+| Windows services, apps, event log summary | Shipped |
+| `SystemdStaticCheck` in doctor | Shipped |
+| TUI **Systemd Deep Dive** view | Shipped |
+| Windows persistence (Run keys, tasks) | Shipped |
 
 ## Phase 1 — Semantic analysis
 
-- Dependency graph from unit `After`/`Before`/`Requires`/`Wants`
-- Sandboxing score per service (`Protect*`, `Private*`, `NoNewPrivileges`)
-- Windows service risk flags (LocalSystem + broad deps, disabled critical services)
-- Improved AI context injection from new fields
-- TUI views: Timers & Sockets, Failed/Problem Units, Windows Services
+| Component | Status |
+|-----------|--------|
+| Dependency graph from unit `After`/`Before`/`Requires`/`Wants` | Shipped (`src/ai/semantic.rs`) |
+| Sandboxing score per service | Shipped |
+| Windows service risk flags | Shipped |
+| Improved AI context injection | Shipped (`build_intelligence`) |
+| TUI timers/sockets/problems in Systemd Deep Dive | Shipped |
 
 ## Phase 2 — Agentic loop
 
-- Tool registry over snapshot: `list_systemd_units`, `get_unit_details`, `get_boot_blockers`, etc.
-- Multi-step reasoning in REPL `ai`, `doctor --explain`, `migrate-plan --ai`
-- xAI (Grok) provider; grounded citations with severity/confidence
-- TUI "AI Insights" panel
+| Component | Status |
+|-----------|--------|
+| Tool registry over snapshot | Shipped (`src/ai/tools.rs`) |
+| Multi-step agent loop | Shipped (`src/ai/agent.rs`) |
+| `doctor --explain --ai`, `migrate-plan --explain --ai` | Shipped |
+| Providers: OpenAI, xAI, Anthropic, Ollama | Shipped (`src/ai/providers.rs`) |
+| TUI **AI Insights** panel | Shipped |
 
 ## Phase 3 — Local AI & what-if
 
-- Ollama / llama.cpp integration (`--features local-ai`)
-- What-if simulator (disable unit X → projected boot score)
-- AI narrative sections in HTML/PDF reports
-- Proactive recommendations engine (Critical / Security / Migration / Performance)
-- Fleet semantic drift explanations
+| Component | Status |
+|-----------|--------|
+| Ollama integration (`OLLAMA_HOST`, `--features local-ai`) | Shipped |
+| What-if simulator (disable unit → boot score delta) | Shipped (`src/ai/whatif.rs`) |
+| AI narrative sections for reports | Shipped (`src/ai/reports.rs`) |
+| Proactive recommendations engine | Shipped (`src/ai/recommendations.rs`) |
+| Fleet semantic drift explanations | Shipped (`src/ai/drift.rs`) |
 
 ## Phase 4 — Platform integration
 
-- Machina dashboard consuming evidence + AI summaries
-- Policy DSL extensions with AI-assisted rules
-- Advanced security profiles (CIS-style) using sandboxing and Windows service data
-- Full `.evtx` parsing for forensic profiles
+| Component | Status |
+|-----------|--------|
+| Machina dashboard export type | Shipped (`src/ai/platform.rs`) |
+| Policy DSL hints from CIS-lite profile | Shipped |
+| CIS-style security profiles | Shipped (`src/ai/security_profiles.rs`) |
+| Full `.evtx` parsing for forensic profiles | Partial (summary + `parse_evtx_file`; deep forensic profiles future) |
 
-## Module layout (target)
+## Module layout
 
 ```text
-src/evidence/collectors/   — offline/live collection (Phase 0)
-src/ai/ or src/guest_agent/
-  agent.rs                 — tool loop + registry (Phase 2)
-  prompts.rs               — versioned system prompts
-  providers.rs             — OpenAI / xAI / Anthropic / local
+src/ai/
+  mod.rs              — public API
+  semantic.rs         — Phase 1 analysis
+  tools.rs            — Phase 2 snapshot tool registry (feature ai)
+  agent.rs            — Phase 2 agent loop (feature ai)
+  prompts.rs          — versioned system prompts
+  providers.rs        — OpenAI / xAI / Anthropic / Ollama (feature ai)
+  recommendations.rs  — Phase 3 proactive engine
+  whatif.rs           — Phase 3 boot score simulator
+  drift.rs            — Phase 3 fleet drift
+  reports.rs          — Phase 3 report narratives
+  security_profiles.rs— Phase 4 CIS-lite
+  platform.rs         — Phase 4 Machina export
+  intelligence.rs     — bundled output for doctor/TUI
+src/evidence/collectors/
+  systemd.rs, windows.rs — Phase 0 collectors
+```
+
+## CLI usage
+
+```bash
+# Deterministic intelligence (no LLM)
+guestkit doctor disk.qcow2 --explain
+guestkit migrate-plan disk.qcow2 --target kubevirt --explain
+
+# LLM agent (requires --features ai + API key or Ollama)
+cargo build --release --features ai
+export OPENAI_API_KEY=...
+guestkit doctor disk.qcow2 --explain --ai
+
+# Local Ollama
+export OLLAMA_HOST=http://127.0.0.1:11434
+export GUESTKIT_AI_PROVIDER=ollama
+guestkit migrate-plan disk.qcow2 --target kvm --ai
 ```
 
 ## Related docs
 
 - [roadmap.md](roadmap.md) — product-wide roadmap
 - [../features/guest-agent.md](../features/guest-agent.md) — live in-guest agent (virtio-serial RPC)
-- [CHANGELOG.md](CHANGELOG.md)

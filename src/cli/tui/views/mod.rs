@@ -15,6 +15,8 @@ pub mod profiles;
 pub mod recommendations;
 pub mod security;
 pub mod services;
+pub mod systemd_deep;
+pub mod ai_insights;
 pub mod storage;
 pub mod timeline;
 pub mod topology;

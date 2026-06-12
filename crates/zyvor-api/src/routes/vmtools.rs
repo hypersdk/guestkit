@@ -12,15 +12,18 @@ use std::collections::HashMap;
 
 use crate::error::{ApiError, ApiResult};
 use crate::kubevirt_guest_agent::{
-    install_guest_agent, install_vmtools_iso, vm_is_windows, GuestAgentInstallResult,
+    install_guest_agent, install_vmtools_iso, vm_is_windows, zyvor_tools_connected,
+    GuestAgentInstallResult,
 };
+use crate::vmtools_bundle::{self, fetch_bundle_spec_optional, VMToolsBundleSpec};
 use crate::models::ApiResponse;
 use crate::routes::kubevirt::{
-    fetch_vm, get_guest_agent_info, list_dynamic_all, vm_resource, vmi_resource, GuestAgentInfo,
+    fetch_vm, fetch_vmi, get_guest_agent_info, list_dynamic_all, vm_resource, vmi_resource,
+    GuestAgentInfo,
 };
 use crate::state::AppState;
 
-pub const VMTOOLS_VERSION: &str = "0.1.0";
+pub use crate::vmtools_bundle::VMTOOLS_VERSION;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct VMToolsBundleInfo {
@@ -38,6 +41,7 @@ pub struct VMToolsCoverage {
     pub total_vms: usize,
     pub installed: usize,
     pub connected: usize,
+    pub pending: usize,
     pub missing: usize,
     pub outdated: usize,
     pub windows_virtio_win: usize,
@@ -82,39 +86,57 @@ pub struct InstallQuery {
 }
 
 pub fn bundle_info(state: &AppState) -> VMToolsBundleInfo {
-    let base = std::env::var("VMTOOLS_BUNDLE_URL")
-        .ok()
-        .filter(|u| !u.trim().is_empty())
-        .or_else(|| {
-            state
-                .config
-                .zeus_public_url
-                .as_ref()
-                .map(|u| format!("{}/api/v1/engines/vmtools", u.trim_end_matches('/')))
-        })
-        .unwrap_or_else(|| "http://zyvor-api:8080/api/v1/vmtools/bundle".into());
-    let agent = crate::kubevirt_guest_agent::resolve_guestkit_binary_url();
+    bundle_info_with_spec(state, None)
+}
+
+pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>) -> VMToolsBundleInfo {
+    let spec = spec.cloned().unwrap_or_else(|| vmtools_bundle::bundle_spec_from_env(state));
+    let agent = if spec.agent_binary_url.is_empty() {
+        crate::kubevirt_guest_agent::resolve_guestkit_binary_url()
+    } else {
+        spec.agent_binary_url.clone()
+    };
     VMToolsBundleInfo {
-        version: VMTOOLS_VERSION.into(),
-        channel: std::env::var("VMTOOLS_CHANNEL").unwrap_or_else(|_| "stable".into()),
-        linux_rpm_url: Some(format!("{base}/linux/zyvor-vm-tools-{VMTOOLS_VERSION}.rpm")),
-        linux_deb_url: Some(format!("{base}/linux/zyvor-vm-tools_{VMTOOLS_VERSION}_amd64.deb")),
-        linux_tar_url: Some(format!("{base}/linux/zyvor-vm-tools-linux-amd64.tar.gz")),
-        iso_url: Some(format!("{base}/zyvor-vm-tools.iso")),
+        version: if spec.version.is_empty() {
+            VMTOOLS_VERSION.into()
+        } else {
+            spec.version.clone()
+        },
+        channel: if spec.channel.is_empty() {
+            std::env::var("VMTOOLS_CHANNEL").unwrap_or_else(|_| "stable".into())
+        } else {
+            spec.channel.clone()
+        },
+        linux_rpm_url: non_empty(Some(spec.linux.rpm.clone())),
+        linux_deb_url: non_empty(Some(spec.linux.deb.clone())),
+        linux_tar_url: non_empty(Some(spec.linux.tar.clone())),
+        iso_url: non_empty(Some(spec.iso.clone())),
         agent_binary_url: agent,
     }
 }
 
+fn non_empty(url: Option<String>) -> Option<String> {
+    url.filter(|u| !u.trim().is_empty())
+}
+
+pub async fn bundle_info_async(state: &AppState, client: &Client) -> VMToolsBundleInfo {
+    let spec = fetch_bundle_spec_optional(client).await;
+    bundle_info_with_spec(state, spec.as_ref())
+}
+
 pub async fn get_bundle(
     State(state): State<AppState>,
-) -> Json<ApiResponse<VMToolsBundleInfo>> {
-    Json(ApiResponse::ok(bundle_info(&state)))
+) -> ApiResult<Json<ApiResponse<VMToolsBundleInfo>>> {
+    let client = kube_client(&state)?;
+    Ok(Json(ApiResponse::ok(bundle_info_async(&state, &client).await)))
 }
 
 pub async fn get_coverage(
     State(state): State<AppState>,
 ) -> ApiResult<Json<ApiResponse<VMToolsCoverage>>> {
     let client = kube_client(&state)?;
+    let bundle = bundle_info_async(&state, &client).await;
+    let target_version = bundle.version.clone();
     let vms = list_dynamic_all(&client, &vm_resource()).await?;
     let vmis = list_dynamic_all(&client, &vmi_resource()).await?;
     let mut vmi_map: HashMap<(String, String), Value> = HashMap::new();
@@ -141,6 +163,7 @@ pub async fn get_coverage(
         total_vms: 0,
         installed: 0,
         connected: 0,
+        pending: 0,
         missing: 0,
         outdated: 0,
         windows_virtio_win: 0,
@@ -165,27 +188,25 @@ pub async fn get_coverage(
             .pointer("/metadata/labels/zeus.zyvor.dev/guest-tools")
             .and_then(|v| v.as_str())
             .unwrap_or("missing");
-        let agent_ok = vmi.map(agent_connected).unwrap_or(false);
-        let tools_installed = agent_ok
-            || matches!(label, "installed" | "connected");
-        if agent_ok {
+        let zyvor_ok = vmi
+            .map(|v| zyvor_tools_connected(&vm, Some(v)))
+            .unwrap_or(false);
+        if zyvor_ok {
             coverage.connected += 1;
-        }
-        if tools_installed {
             coverage.installed += 1;
+        } else if label == "pending" {
+            coverage.pending += 1;
         } else {
             coverage.missing += 1;
         }
         let version = vm
             .pointer("/metadata/annotations/zeus.zyvor.dev/tools-version")
             .and_then(|v| v.as_str());
-        if tools_installed {
+        if zyvor_ok {
             if let Some(ver) = version {
-                if ver != VMTOOLS_VERSION {
+                if version_outdated(ver, &target_version) {
                     coverage.outdated += 1;
                 }
-            } else if !agent_ok {
-                coverage.outdated += 1;
             }
         }
     }
@@ -217,7 +238,8 @@ pub async fn install_vm_vmtools(
     let restart = query.restart.unwrap_or(true);
     let method = query.method.as_deref().unwrap_or("auto").to_lowercase();
     let result = if method == "iso" {
-        let iso_url = bundle_info(&state)
+        let bundle = bundle_info_async(&state, &client).await;
+        let iso_url = bundle
             .iso_url
             .ok_or_else(|| ApiError::bad_request("VM Tools ISO URL is not configured"))?;
         install_vmtools_iso(client.clone(), &namespace, &name, &iso_url, restart).await?
@@ -225,7 +247,19 @@ pub async fn install_vm_vmtools(
         install_guest_agent(client.clone(), &namespace, &name, restart).await?
     };
     if result.success && !result.is_windows {
-        sync_vm_tools_labels(&client, &namespace, &name, "installed", VMTOOLS_VERSION, None).await;
+        let bundle = bundle_info_async(&state, &client).await;
+        let vm = fetch_vm(&client, &namespace, &name).await;
+        let vmi = fetch_vmi(&client, &namespace, &name).await;
+        apply_install_labels(
+            &client,
+            &namespace,
+            &name,
+            vm.as_ref(),
+            vmi.as_ref(),
+            &bundle.version,
+            &result,
+        )
+        .await;
     }
     Ok(Json(ApiResponse::ok(result)))
 }
@@ -302,8 +336,8 @@ async fn build_vm_vmtools_status(
         .and_then(|v| v.as_str())
         .map(String::from);
     let installed = guest.agent_connected
-        || installed_label == Some("installed")
-        || installed_label == Some("connected");
+        || installed_label == Some("connected")
+        || installed_label == Some("pending");
     let recommended_method = if is_win {
         "virtio-win".into()
     } else if guest.agent_connected {
@@ -518,6 +552,8 @@ pub struct VMToolsReconcileResult {
     pub scanned: usize,
     pub matched: usize,
     pub installed: usize,
+    pub pending: usize,
+    pub upgraded: usize,
     pub skipped: usize,
     pub errors: Vec<String>,
 }
@@ -564,16 +600,21 @@ pub async fn reconcile_policy(
 ) -> ApiResult<Json<ApiResponse<VMToolsReconcileResult>>> {
     let client = kube_client(&state)?;
     let policy = fetch_policy(&client, DEFAULT_POLICY_NAME).await?;
-    if !policy.spec.auto_install {
+    if !policy.spec.auto_install && !policy.spec.auto_upgrade {
         return Ok(Json(ApiResponse::ok(VMToolsReconcileResult {
             policy: policy.name,
             scanned: 0,
             matched: 0,
             installed: 0,
+            pending: 0,
+            upgraded: 0,
             skipped: 0,
-            errors: vec!["autoInstall is disabled on cluster policy".into()],
+            errors: vec!["autoInstall and autoUpgrade are disabled on cluster policy".into()],
         })));
     }
+
+    let bundle = bundle_info_async(&state, &client).await;
+    let target_version = bundle.version.clone();
 
     let vms = list_dynamic_all(&client, &vm_resource()).await?;
     let vmis = list_dynamic_all(&client, &vmi_resource()).await?;
@@ -602,6 +643,8 @@ pub async fn reconcile_policy(
         scanned: 0,
         matched: 0,
         installed: 0,
+        pending: 0,
+        upgraded: 0,
         skipped: 0,
         errors: Vec::new(),
     };
@@ -625,30 +668,45 @@ pub async fn reconcile_policy(
             result.skipped += 1;
             continue;
         }
-        let label = vm
-            .pointer("/metadata/labels/zeus.zyvor.dev/guest-tools")
-            .and_then(|v| v.as_str())
-            .unwrap_or("missing");
-        let agent_ok = vmi.map(agent_connected).unwrap_or(false);
-        if agent_ok || label == "connected" || label == "installed" {
+
+        let zyvor_ok = vmi
+            .map(|v| zyvor_tools_connected(&vm, Some(v)))
+            .unwrap_or(false);
+        let outdated = vm_tools_version(&vm)
+            .map(|v| version_outdated(&v, &target_version))
+            .unwrap_or(true);
+
+        if zyvor_ok && !outdated {
             result.skipped += 1;
             continue;
         }
-        let restart = policy.spec.reboot_policy != "never";
-        match install_guest_agent(client.clone(), namespace, name, restart).await {
-            Ok(install) if install.success => {
-                sync_vm_tools_labels(
-                    &client,
-                    namespace,
-                    name,
-                    "installed",
-                    VMTOOLS_VERSION,
-                    None,
-                )
-                .await;
-                result.installed += 1;
-            }
-            Ok(_) => result.skipped += 1,
+
+        let needs_install = policy.spec.auto_install && !zyvor_ok;
+        let needs_upgrade = policy.spec.auto_upgrade && zyvor_ok && outdated;
+        if !needs_install && !needs_upgrade {
+            result.skipped += 1;
+            continue;
+        }
+
+        match reconcile_install_vm(
+            &state,
+            client.clone(),
+            namespace,
+            name,
+            &vm,
+            vmi,
+            &policy.spec,
+            &bundle,
+            needs_upgrade,
+        )
+        .await
+        {
+            Ok(outcome) => match outcome {
+                ReconcileOutcome::Installed => result.installed += 1,
+                ReconcileOutcome::Pending => result.pending += 1,
+                ReconcileOutcome::Upgraded => result.upgraded += 1,
+                ReconcileOutcome::Skipped => result.skipped += 1,
+            },
             Err(e) => result.errors.push(format!("{namespace}/{name}: {}", e.message)),
         }
     }
@@ -784,4 +842,141 @@ fn agent_connected(vmi: &Value) -> bool {
             })
         })
         .unwrap_or(false)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReconcileOutcome {
+    Installed,
+    Pending,
+    Upgraded,
+    Skipped,
+}
+
+fn vm_tools_version(vm: &Value) -> Option<String> {
+    vm.pointer("/metadata/annotations/zeus.zyvor.dev/tools-version")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+}
+
+fn vmi_phase_running(vmi: Option<&Value>) -> bool {
+    vmi.and_then(|v| {
+        v.pointer("/status/phase")
+            .and_then(|p| p.as_str())
+            .map(|p| p == "Running")
+    })
+    .unwrap_or(false)
+}
+
+fn reconcile_prefer_iso(policy: &VMToolsPolicySpec) -> bool {
+    std::env::var("VMTOOLS_RECONCILE_ISO")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+        || policy.channel.eq_ignore_ascii_case("iso")
+}
+
+async fn reconcile_install_vm(
+    _state: &AppState,
+    client: Client,
+    namespace: &str,
+    name: &str,
+    vm: &Value,
+    vmi: Option<&Value>,
+    policy: &VMToolsPolicySpec,
+    bundle: &VMToolsBundleInfo,
+    is_upgrade: bool,
+) -> ApiResult<ReconcileOutcome> {
+    let restart = policy.reboot_policy != "never";
+    let running = vmi_phase_running(vmi);
+    let agent_live = vmi.map(agent_connected).unwrap_or(false);
+
+    let install = if running && agent_live {
+        install_guest_agent(client.clone(), namespace, name, false).await?
+    } else if running && !agent_live && reconcile_prefer_iso(policy) {
+        let iso_url = bundle
+            .iso_url
+            .clone()
+            .ok_or_else(|| ApiError::bad_request("VM Tools ISO URL is not configured"))?;
+        install_vmtools_iso(client.clone(), namespace, name, &iso_url, restart).await?
+    } else {
+        install_guest_agent(client.clone(), namespace, name, restart).await?
+    };
+
+    if !install.success {
+        return Ok(ReconcileOutcome::Skipped);
+    }
+
+    let fresh_vmi = fetch_vmi(&client, namespace, name).await;
+    let fresh_vm = fetch_vm(&client, namespace, name)
+        .await
+        .or_else(|| Some(vm.clone()));
+    let outcome = apply_install_labels(
+        &client,
+        namespace,
+        name,
+        fresh_vm.as_ref(),
+        fresh_vmi.as_ref(),
+        &bundle.version,
+        &install,
+    )
+    .await;
+
+    Ok(if is_upgrade && outcome == ReconcileOutcome::Installed {
+        ReconcileOutcome::Upgraded
+    } else {
+        outcome
+    })
+}
+
+async fn apply_install_labels(
+    client: &Client,
+    namespace: &str,
+    name: &str,
+    vm: Option<&Value>,
+    vmi: Option<&Value>,
+    version: &str,
+    install: &GuestAgentInstallResult,
+) -> ReconcileOutcome {
+    let zyvor_ok = vm
+        .map(|v| zyvor_tools_connected(v, vmi))
+        .unwrap_or(false);
+
+    if zyvor_ok {
+        sync_vm_tools_labels(client, namespace, name, "connected", version, None).await;
+        return ReconcileOutcome::Installed;
+    }
+
+    if install.pending || install.success {
+        sync_vm_tools_labels(client, namespace, name, "pending", version, None).await;
+        return ReconcileOutcome::Pending;
+    }
+
+    ReconcileOutcome::Skipped
+}
+
+fn version_outdated(installed: &str, target: &str) -> bool {
+    if installed.trim().is_empty() || target.trim().is_empty() {
+        return true;
+    }
+    if installed == target {
+        return false;
+    }
+    fn parse_parts(v: &str) -> Vec<u64> {
+        v.split(|c| c == '.' || c == '-')
+            .filter_map(|p| p.parse::<u64>().ok())
+            .collect()
+    }
+    let a = parse_parts(installed);
+    let b = parse_parts(target);
+    let n = a.len().max(b.len());
+    for i in 0..n {
+        let ai = a.get(i).copied().unwrap_or(0);
+        let bi = b.get(i).copied().unwrap_or(0);
+        if ai < bi {
+            return true;
+        }
+        if ai > bi {
+            return false;
+        }
+    }
+    false
 }

@@ -40,3 +40,13 @@ vmtools:
   defaultPolicy:
     enabled: true
     autoInstall: true
+    autoUpgrade: false
+  bundle:
+    enabled: true
+    version: "0.1.0"
+    channel: stable
+    baseUrl: "http://212.8.252.194:30050/api/v1/vmtools/bundle"
+  reconcile:
+    enabled: true
+    schedule: "*/10 * * * *"
+    preferIso: false

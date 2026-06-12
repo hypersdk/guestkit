@@ -24,6 +24,8 @@ pub fn view_icon(view: View, ascii: bool) -> &'static str {
             View::Logs => "[L] ",
             View::Profiles => "[F] ",
             View::Assurance => "[M] ",
+            View::SystemdDeep => "[U] ",
+            View::AiInsights => "[A] ",
             View::Files => "[>] ",
         }
     } else {
@@ -46,6 +48,8 @@ pub fn view_icon(view: View, ascii: bool) -> &'static str {
             View::Logs => "📋 ",
             View::Profiles => "🛡️ ",
             View::Assurance => "🩺 ",
+            View::SystemdDeep => "🧩 ",
+            View::AiInsights => "🤖 ",
             View::Files => "📂 ",
         }
     }
@@ -71,6 +75,8 @@ pub fn view_description(view: View) -> &'static str {
         View::Logs => "System Logs",
         View::Profiles => "Profile Reports",
         View::Assurance => "Boot & migration assurance",
+        View::SystemdDeep => "Systemd deep dive (timers, problems, sandbox)",
+        View::AiInsights => "Guest Intelligence recommendations",
         View::Files => "File Browser",
     }
 }

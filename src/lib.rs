@@ -44,6 +44,7 @@
 //! - `cli` - Command-line interface
 
 pub mod assurance;
+pub mod ai;
 pub mod boot;
 pub mod cli;
 pub mod converters;

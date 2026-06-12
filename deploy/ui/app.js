@@ -34,6 +34,7 @@ const state = {
   selectedClusterVm: null,
   lastClusterGuestInfo: null,
   lastClusterBootInspect: null,
+  lastClusterInspect: null,
   lastClusterBriefing: null,
   uiConfig: null,
   fleetFilters: {
@@ -489,19 +490,31 @@ function updateFleetToolbar() {
     const cov = state.vmtoolsCoverage;
     const el = $('#fleetVmtoolsCoverage');
     if (el) {
-      el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing`;
-      el.classList.toggle('warn', cov.missing > 0);
+      const pending = cov.pending ? ` · ${cov.pending} pending` : '';
+      el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing${pending}`;
+      el.classList.toggle('warn', cov.missing > 0 || cov.pending > 0);
     }
   }
   if (isCluster && state.vmtoolsPolicy) {
     const badge = $('#fleetVmtoolsPolicyBadge');
-    const auto = state.vmtoolsPolicy.spec?.autoInstall;
+    const autoInstall = state.vmtoolsPolicy.spec?.autoInstall;
+    const autoUpgrade = state.vmtoolsPolicy.spec?.autoUpgrade;
     if (badge) {
-      badge.textContent = auto ? 'Auto-install on' : 'Policy off';
-      badge.classList.toggle('live', Boolean(auto));
+      if (autoInstall && autoUpgrade) {
+        badge.textContent = 'Auto-install + upgrade';
+      } else if (autoInstall) {
+        badge.textContent = 'Auto-install on';
+      } else if (autoUpgrade) {
+        badge.textContent = 'Auto-upgrade on';
+      } else {
+        badge.textContent = 'Policy off';
+      }
+      badge.classList.toggle('live', Boolean(autoInstall || autoUpgrade));
     }
-    const toggle = $('#vmtoolsAutoInstall');
-    if (toggle) toggle.checked = Boolean(auto);
+    const installToggle = $('#vmtoolsAutoInstall');
+    if (installToggle) installToggle.checked = Boolean(autoInstall);
+    const upgradeToggle = $('#vmtoolsAutoUpgrade');
+    if (upgradeToggle) upgradeToggle.checked = Boolean(autoUpgrade);
   }
 }
 
@@ -714,7 +727,7 @@ function selectClusterVm(vm) {
   meta.classList.remove('vm-warn');
   meta.textContent = `${vm.status || vm.phase || 'Unknown'} · ${vm.ip_address || 'no guest IP'} · ${vm.node || 'no node'}`;
   $$('.action-card[data-action]').forEach((b) => { b.disabled = true; });
-  setDockEnabled(false);
+  setClusterDockEnabled(true);
   updateSelectionPanels();
   updateCopilotPlaceholder();
   markWizardComplete('ingest');
@@ -759,8 +772,12 @@ async function loadVmtoolsPolicy() {
   }
 }
 
-async function saveVmtoolsPolicy(autoInstall) {
-  feed(autoInstall ? 'Enabling VM Tools auto-install policy…' : 'Disabling VM Tools auto-install…');
+async function saveVmtoolsPolicy() {
+  const autoInstall = Boolean($('#vmtoolsAutoInstall')?.checked);
+  const autoUpgrade = Boolean($('#vmtoolsAutoUpgrade')?.checked);
+  feed(autoInstall || autoUpgrade
+    ? 'Updating VM Tools fleet policy…'
+    : 'Disabling VM Tools fleet policy…');
   try {
     const data = await api('/vmtools/policy', {
       method: 'PUT',
@@ -769,7 +786,7 @@ async function saveVmtoolsPolicy(autoInstall) {
         spec: {
           selector: {},
           autoInstall,
-          autoUpgrade: false,
+          autoUpgrade,
           channel: 'stable',
           rebootPolicy: 'if-needed',
         },
@@ -777,7 +794,7 @@ async function saveVmtoolsPolicy(autoInstall) {
     });
     state.vmtoolsPolicy = data.data;
     updateFleetToolbar();
-    toast(autoInstall ? 'Auto-install enabled' : 'Auto-install disabled', 'ok');
+    toast('VM Tools policy saved', 'ok');
   } catch (e) {
     toast(e.message, 'err');
   }
@@ -788,10 +805,20 @@ async function reconcileVmtoolsFleet() {
   try {
     const data = await api('/vmtools/policy/reconcile', { method: 'POST' });
     const r = data.data;
-    const summary = `Scanned ${r.scanned}, matched ${r.matched}, installed ${r.installed}, skipped ${r.skipped}`;
-    toast(r.installed ? `Installed on ${r.installed} VM(s)` : summary, r.installed ? 'ok' : 'err');
+    const parts = [
+      `scanned ${r.scanned}`,
+      `matched ${r.matched}`,
+      r.installed ? `installed ${r.installed}` : null,
+      r.pending ? `pending ${r.pending}` : null,
+      r.upgraded ? `upgraded ${r.upgraded}` : null,
+      `skipped ${r.skipped}`,
+    ].filter(Boolean);
+    const summary = parts.join(', ');
+    const ok = (r.installed + r.pending + r.upgraded) > 0 && !(r.errors?.length);
+    toast(summary, ok ? 'ok' : 'err');
     feed(`${summary}${r.errors?.length ? ` — ${r.errors.join('; ')}` : ''}`);
     await loadClusterFleet();
+    await loadVmtoolsCoverage();
     await loadVmtoolsPolicy();
   } catch (e) {
     toast(e.message, 'err');
@@ -861,7 +888,10 @@ async function fetchClusterBootInspect(showToast = true) {
   }
   feed(`Boot inspect for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
   try {
-    const data = await api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`);
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`,
+      { method: 'POST' },
+    );
     state.lastClusterBootInspect = data.data;
     if (state.lastClusterGuestInfo) {
       renderClusterGuestSummary(state.lastClusterGuestInfo, state.lastClusterBootInspect);
@@ -1148,6 +1178,12 @@ function renderClusterGuestSummary(info, bootInspect) {
     if (bootInspect.message) {
       content.innerHTML += `<p class="finding ${bootClass}">${escapeHtml(bootInspect.message)}</p>`;
     }
+    if (bootInspect.available && bootInspect.source === 'guestkit') {
+      content.innerHTML += `<p class="finding ok">GuestKit offline boot analysis completed on root disk.</p>`;
+    }
+  }
+  if (state.lastClusterInspect) {
+    renderGuestkitInspect(state.lastClusterInspect, content);
   }
   if (!info.agent_connected && info.vmi_running) {
     const installBtn = $('#clusterInstallAgentBtn');
@@ -1397,6 +1433,15 @@ function setDockEnabled(on) {
   });
 }
 
+function setClusterDockEnabled(on) {
+  $('#dockInspect')?.toggleAttribute('disabled', !on);
+  $('#dockDoctor')?.toggleAttribute('disabled', !on);
+  ['#dockPlan', '#dockRepair', '#dockLaunch'].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.disabled = true;
+  });
+}
+
 function selectVm(vm) {
   state.selectedVm = vm;
   state.selectedClusterVm = null;
@@ -1610,6 +1655,15 @@ function setScore(score, reason) {
 
 function normalizeAgentPayload(payload) {
   if (!payload || typeof payload !== 'object') return payload;
+  if (payload.inspect) {
+    return {
+      mode: 'offline',
+      inspect: payload.inspect,
+      summary: payload.summary?.image
+        ? `GuestKit inspect — ${payload.summary.image}`
+        : 'GuestKit disk inspect',
+    };
+  }
   if (payload.boot_report && !payload.bootability) {
     return {
       ...payload,
@@ -1698,6 +1752,50 @@ function renderFinding(item, kind) {
   return `<p class="finding ${kind}">${icon} ${title}${msg}${remed}</p>`;
 }
 
+function renderGuestkitInspect(inspect, contentEl) {
+  const content = contentEl || $('#summaryContent');
+  if (!inspect || !content) return;
+  const os = inspect.operating_system || {};
+  const osLine = [
+    os.distribution || os.product_name || os.type,
+    os.version,
+    os.arch,
+  ].filter(Boolean).join(' · ');
+  if (osLine) {
+    content.innerHTML += `<p class="finding ok"><strong>GuestKit inspect</strong> — ${escapeHtml(osLine)}${os.hostname ? ` · ${escapeHtml(os.hostname)}` : ''}</p>`;
+  } else {
+    content.innerHTML += `<p class="finding ok"><strong>GuestKit inspect</strong> — disk analysis complete</p>`;
+  }
+  if (inspect.packages?.count != null) {
+    const mgr = inspect.packages.manager ? ` (${inspect.packages.manager})` : '';
+    content.innerHTML += `<p class="finding ok"><strong>Packages</strong> ${inspect.packages.count}${escapeHtml(mgr)}</p>`;
+    (inspect.packages.sample || []).slice(0, 8).forEach((pkg) => {
+      const label = typeof pkg === 'string' ? pkg : (pkg.name || JSON.stringify(pkg));
+      content.innerHTML += `<p class="finding ok">→ ${escapeHtml(label)}</p>`;
+    });
+    if (inspect.packages.count > 8) {
+      content.innerHTML += `<p class="finding ok">…and ${inspect.packages.count - 8} more (see Raw tab)</p>`;
+    }
+  }
+  if (inspect.services?.count != null) {
+    content.innerHTML += `<p class="finding ok"><strong>Enabled services</strong> ${inspect.services.count}</p>`;
+    (inspect.services.sample || []).slice(0, 6).forEach((svc) => {
+      content.innerHTML += `<p class="finding ok">→ ${escapeHtml(String(svc))}</p>`;
+    });
+  }
+  if (inspect.network?.hostname) {
+    content.innerHTML += `<p class="finding ok"><strong>Network hostname</strong> ${escapeHtml(inspect.network.hostname)}</p>`;
+  }
+  if (inspect.security) {
+    const sel = inspect.security.selinux?.enabled ? 'SELinux on' : 'SELinux off';
+    const aa = inspect.security.apparmor?.enabled ? 'AppArmor on' : 'AppArmor off';
+    content.innerHTML += `<p class="finding ok"><strong>Security</strong> ${sel} · ${aa}</p>`;
+  }
+  if (inspect.mountpoints?.count != null) {
+    content.innerHTML += `<p class="finding ok"><strong>Mount points</strong> ${inspect.mountpoints.count}</p>`;
+  }
+}
+
 function renderSummary(data, action) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
@@ -1723,6 +1821,12 @@ function renderSummary(data, action) {
 
   if (payload?.mode === 'online') {
     content.innerHTML += `<p class="finding ok">🟢 <strong>Online agent</strong> — live inspection from running guest</p>`;
+  } else if (payload?.mode === 'offline' && payload?.inspect) {
+    content.innerHTML += `<p class="finding ok">💾 <strong>Offline GuestKit</strong> — disk inspect from image</p>`;
+  }
+
+  if (payload?.inspect) {
+    renderGuestkitInspect(payload.inspect, content);
   }
 
   if (payload?.evidence?.os) {
@@ -2069,6 +2173,10 @@ function onJobComplete(action, data) {
     if (action === 'agent-doctor') patch.agentOnline = true;
     markWizardComplete('assure');
     if (!state.wizardChain && !blockers.length) setWizardStep('plan');
+  } else if (action === 'inspect') {
+    patch.status = 'analyzed';
+    markWizardComplete('assure');
+    setActiveTab('summary');
   } else if (action === 'migration-plan') {
     patch.migrateScore = migrate?.score ?? boot?.score;
     patch.status = 'ready';
@@ -2291,7 +2399,81 @@ async function agentTalk(method, params = {}, label = method) {
   }
 }
 
+async function runClusterGuestkitInspect() {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return { ok: false };
+  }
+  feed(`GuestKit inspect on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  setActiveTab('summary');
+  setWizardStep('assure');
+  $('#summaryPlaceholder').textContent = 'Running GuestKit inspect…';
+  $('#summaryPlaceholder').classList.remove('hidden');
+  $('#summaryContent').classList.add('hidden');
+
+  const running = String(vm.phase || vm.status || '').toLowerCase().includes('run');
+  if (running) {
+    await fetchClusterGuestInfo(false);
+    if (state.lastClusterGuestInfo?.agent_connected) {
+      toast('Live guest agent connected — showing runtime guest info', 'ok');
+      return { ok: true };
+    }
+    toast('Stop the VM for offline GuestKit disk inspect', 'err');
+    await fetchClusterBootInspect(false);
+    return { ok: false };
+  }
+
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/inspect`,
+      { method: 'POST' },
+    );
+    const jobId = data?.data?.job_id;
+    if (!jobId) {
+      toast('Inspect job did not start', 'err');
+      return { ok: false };
+    }
+    state.lastJobId = jobId;
+    showJobTracker('inspect', jobId);
+    const result = await pollJob(jobId, 'inspect');
+    if (result.ok) {
+      const payload = extractPayload(result.data);
+      state.lastClusterInspect = payload?.inspect || null;
+      if (state.lastClusterGuestInfo) {
+        renderClusterGuestSummary(state.lastClusterGuestInfo, state.lastClusterBootInspect);
+      }
+    }
+    return result;
+  } catch (e) {
+    toast(e.message, 'err');
+    feed(`Inspect failed: ${escapeHtml(e.message)}`, 'err');
+    return { ok: false, error: e.message };
+  }
+}
+
+async function runClusterAction(action) {
+  if (action === 'inspect') return runClusterGuestkitInspect();
+  if (action === 'doctor') {
+    const vm = state.selectedClusterVm;
+    const running = String(vm?.phase || vm?.status || '').toLowerCase().includes('run');
+    if (running && state.lastClusterGuestInfo?.agent_connected) {
+      await fetchClusterGuestInfo(true);
+      return { ok: true };
+    }
+    if (!running) return runClusterGuestkitInspect();
+    toast('Stop VM for offline doctor, or install guest agent for live checks', 'err');
+    await fetchClusterBootInspect(true);
+    return { ok: false };
+  }
+  toast('Export root disk to run migrate/repair/provision offline workflows', 'err');
+  return { ok: false };
+}
+
 async function runAction(action) {
+  if (state.selectedClusterVm && !state.selectedVm) {
+    return runClusterAction(action);
+  }
   const vm = state.selectedVm;
   if (!vm) {
     toast('Select a VM from the fleet first', 'err');
@@ -2544,7 +2726,8 @@ function setupActions() {
   $('#fleetUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
   $('#fleetBrowseClusterBtn')?.addEventListener('click', () => openClusterFleet());
   $('#fleetRefreshClusterBtn')?.addEventListener('click', () => loadClusterFleet());
-  $('#vmtoolsAutoInstall')?.addEventListener('change', (e) => saveVmtoolsPolicy(e.target.checked));
+  $('#vmtoolsAutoInstall')?.addEventListener('change', () => saveVmtoolsPolicy());
+  $('#vmtoolsAutoUpgrade')?.addEventListener('change', () => saveVmtoolsPolicy());
   $('#vmtoolsReconcileBtn')?.addEventListener('click', () => reconcileVmtoolsFleet());
   $('#fleetEmptyBrowseCluster')?.addEventListener('click', () => openClusterFleet());
   $('#fleetEmptyImport')?.addEventListener('click', () => triggerDiskUpload());
@@ -2580,6 +2763,7 @@ function setupActions() {
         return;
       }
       if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
+      else if (btn.dataset.clusterAction === 'guestkit-inspect') runClusterGuestkitInspect();
       else if (btn.dataset.clusterAction === 'boot-inspect') fetchClusterBootInspect(true);
       else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent('auto');
       else if (btn.dataset.clusterAction === 'install-iso') installClusterGuestAgent('iso');
@@ -2650,7 +2834,9 @@ async function applyUrlContext() {
     const vm = state.clusterVms.find((v) => v.namespace === namespace && v.name === vmName);
     if (vm) {
       selectClusterVm(vm);
-      if (action === 'inspect' || action === 'doctor') await fetchClusterGuestInfo(false);
+      if (action === 'inspect') await runClusterGuestkitInspect();
+      else if (action === 'doctor') await runClusterAction('doctor');
+      else await fetchClusterGuestInfo(false);
     } else {
       toast(`VM ${namespace}/${vmName} not found in cluster`, 'err');
     }

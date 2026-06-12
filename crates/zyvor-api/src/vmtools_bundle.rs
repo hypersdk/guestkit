@@ -1,0 +1,186 @@
+// SPDX-License-Identifier: Apache-2.0
+//! VMToolsBundle CR — versioned artifact URLs (MinIO / registry).
+
+use kube::api::{Api, Patch, PatchParams, PostParams};
+use kube::discovery::ApiResource;
+use kube::Client;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+
+use crate::error::{ApiError, ApiResult};
+use crate::state::AppState;
+
+pub const VMTOOLS_VERSION: &str = "0.1.0";
+
+pub const DEFAULT_BUNDLE_NAME: &str = "cluster-default";
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VMToolsBundleSpec {
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub channel: String,
+    #[serde(default)]
+    pub linux: VMToolsLinuxArtifacts,
+    #[serde(default)]
+    pub iso: String,
+    #[serde(default)]
+    pub agent_binary_url: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct VMToolsLinuxArtifacts {
+    #[serde(default)]
+    pub rpm: String,
+    #[serde(default)]
+    pub deb: String,
+    #[serde(default)]
+    pub tar: String,
+}
+
+pub fn vmtoolsbundle_resource() -> ApiResource {
+    ApiResource {
+        group: "zeus.zyvor.dev".into(),
+        version: "v1alpha1".into(),
+        api_version: "zeus.zyvor.dev/v1alpha1".into(),
+        kind: "VMToolsBundle".into(),
+        plural: "vmtoolsbundles".into(),
+    }
+}
+
+pub fn default_bundle_base_url(state: &AppState) -> String {
+    std::env::var("VMTOOLS_BUNDLE_URL")
+        .ok()
+        .filter(|u| !u.trim().is_empty())
+        .or_else(|| {
+            state
+                .config
+                .zeus_public_url
+                .as_ref()
+                .map(|u| format!("{}/api/v1/engines/vmtools", u.trim_end_matches('/')))
+        })
+        .unwrap_or_else(|| "http://zyvor-api:8080/api/v1/vmtools/bundle".into())
+}
+
+pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
+    let base = default_bundle_base_url(state);
+    let version = std::env::var("VMTOOLS_VERSION").unwrap_or_else(|_| VMTOOLS_VERSION.into());
+    let channel = std::env::var("VMTOOLS_CHANNEL").unwrap_or_else(|_| "stable".into());
+    let agent = crate::kubevirt_guest_agent::resolve_guestkit_binary_url();
+    VMToolsBundleSpec {
+        version: version.clone(),
+        channel,
+        linux: VMToolsLinuxArtifacts {
+            rpm: format!("{base}/linux/zyvor-vm-tools-{version}.rpm"),
+            deb: format!("{base}/linux/zyvor-vm-tools_{version}_amd64.deb"),
+            tar: format!("{base}/linux/zyvor-vm-tools-linux-amd64.tar.gz"),
+        },
+        iso: format!("{base}/zyvor-vm-tools.iso"),
+        agent_binary_url: agent,
+    }
+}
+
+pub async fn fetch_bundle_spec(client: &Client) -> ApiResult<VMToolsBundleSpec> {
+    let api: Api<kube::api::DynamicObject> =
+        Api::all_with(client.clone(), &vmtoolsbundle_resource());
+    match api.get(DEFAULT_BUNDLE_NAME).await {
+        Ok(obj) => {
+            let val = serde_json::to_value(&obj)
+                .map_err(|e| ApiError::internal(format!("serialize VMToolsBundle: {e}")))?;
+            Ok(parse_bundle_spec(&val))
+        }
+        Err(_) => Err(ApiError::internal("VMToolsBundle not found")),
+    }
+}
+
+pub async fn fetch_bundle_spec_optional(client: &Client) -> Option<VMToolsBundleSpec> {
+    fetch_bundle_spec(client).await.ok()
+}
+
+fn parse_bundle_spec(val: &Value) -> VMToolsBundleSpec {
+    let spec = val.get("spec").cloned().unwrap_or(json!({}));
+    let linux = spec.get("linux").cloned().unwrap_or(json!({}));
+    VMToolsBundleSpec {
+        version: spec
+            .get("version")
+            .and_then(|v| v.as_str())
+            .unwrap_or(VMTOOLS_VERSION)
+            .into(),
+        channel: spec
+            .get("channel")
+            .and_then(|v| v.as_str())
+            .unwrap_or("stable")
+            .into(),
+        linux: VMToolsLinuxArtifacts {
+            rpm: linux
+                .get("rpm")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            deb: linux
+                .get("deb")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            tar: linux
+                .get("tar")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+        },
+        iso: spec
+            .get("iso")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .into(),
+        agent_binary_url: spec
+            .get("agentBinaryUrl")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .into(),
+    }
+}
+
+pub async fn upsert_default_bundle(client: &Client, spec: &VMToolsBundleSpec) -> ApiResult<()> {
+    let api: Api<kube::api::DynamicObject> =
+        Api::all_with(client.clone(), &vmtoolsbundle_resource());
+    let body = json!({
+        "apiVersion": "zeus.zyvor.dev/v1alpha1",
+        "kind": "VMToolsBundle",
+        "metadata": {
+            "name": DEFAULT_BUNDLE_NAME,
+            "labels": {
+                "app.kubernetes.io/name": "zyvor",
+                "app.kubernetes.io/component": "vmtools",
+            }
+        },
+        "spec": {
+            "version": spec.version,
+            "channel": spec.channel,
+            "linux": {
+                "rpm": spec.linux.rpm,
+                "deb": spec.linux.deb,
+                "tar": spec.linux.tar,
+            },
+            "iso": spec.iso,
+            "agentBinaryUrl": spec.agent_binary_url,
+        }
+    });
+    if api.get(DEFAULT_BUNDLE_NAME).await.is_ok() {
+        api.patch(
+            DEFAULT_BUNDLE_NAME,
+            &PatchParams::default(),
+            &Patch::Merge(&json!({ "spec": body.get("spec").cloned().unwrap_or(Value::Null) })),
+        )
+        .await
+        .map_err(|e| ApiError::internal(format!("patch VMToolsBundle: {e}")))?;
+    } else {
+        let obj: kube::api::DynamicObject = serde_json::from_value(body)
+            .map_err(|e| ApiError::internal(format!("build VMToolsBundle: {e}")))?;
+        api.create(&PostParams::default(), &obj)
+            .await
+            .map_err(|e| ApiError::internal(format!("create VMToolsBundle: {e}")))?;
+    }
+    Ok(())
+}

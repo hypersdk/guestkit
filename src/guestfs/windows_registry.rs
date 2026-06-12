@@ -998,3 +998,57 @@ pub fn parse_bitlocker_status(software_hive: &Path) -> bool {
         .and_then(|k| k.borrow().subkey("FVE", &mut hive).ok().flatten())
         .is_some()
 }
+
+/// Run / RunOnce registry value for persistence analysis.
+#[derive(Debug, Clone)]
+pub struct WindowsRunKeyEntry {
+    pub location: String,
+    pub name: String,
+    pub command: String,
+}
+
+/// Parse Run and RunOnce keys from SOFTWARE hive.
+pub fn parse_run_keys(hive_path: &Path) -> Result<Vec<WindowsRunKeyEntry>> {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    if !hive_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {e}")))?;
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {e:?}")))?;
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("root key: {e:?}")))?;
+
+    let mut out = Vec::new();
+    if let Ok(Some(microsoft)) = root_key.subkey("Microsoft", &mut hive) {
+        if let Ok(Some(windows)) = microsoft.borrow().subkey("Windows", &mut hive) {
+            if let Ok(Some(current)) = windows.borrow().subkey("CurrentVersion", &mut hive) {
+                for (subkey, label) in [("Run", "HKLM\\...\\Run"), ("RunOnce", "HKLM\\...\\RunOnce")] {
+                    if let Ok(Some(run_key)) = current.borrow().subkey(subkey, &mut hive) {
+                        for kv in run_key.borrow().values() {
+                            let name = kv.name().to_string();
+                            let command = match kv.value() {
+                                RegistryValue::RegSZ(s) | RegistryValue::RegExpandSZ(s) => {
+                                    s.clone()
+                                }
+                                RegistryValue::RegMultiSZ(v) => v.join(" "),
+                                _ => continue,
+                            };
+                            out.push(WindowsRunKeyEntry {
+                                location: label.into(),
+                                name,
+                                command,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(out)
+}

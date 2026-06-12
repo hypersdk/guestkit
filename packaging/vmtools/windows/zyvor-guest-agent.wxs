@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Zeus VM Tools"
+           Language="1033"
+           Version="0.1.0.0"
+           Manufacturer="ZyvorAI Labs"
+           UpgradeCode="7E5B9F2A-4C1D-4E8A-9B3F-2D6A8C1E4F90">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Zeus VM Tools is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="Zeus VM Tools" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLDIR" Name="Zyvor">
+          <Directory Id="VMTOOLSDIR" Name="VM Tools" />
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <ComponentGroup Id="ProductComponents" Directory="VMTOOLSDIR">
+      <Component Id="AgentBinary" Guid="*">
+        <File Id="AgentExe" Source="zyvor-guest-agent.exe" KeyPath="yes" />
+        <ServiceInstall Id="AgentServiceInstall"
+                        Type="ownProcess"
+                        Name="ZyvorGuestAgent"
+                        DisplayName="Zeus VM Tools Guest Agent"
+                        Description="In-guest agent for Zeus VM Tools on KubeVirt VMs"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Account="LocalSystem" />
+        <ServiceControl Id="AgentServiceControl"
+                        Name="ZyvorGuestAgent"
+                        Start="install"
+                        Stop="both"
+                        Remove="uninstall" />
+      </Component>
+    </ComponentGroup>
+  </Product>
+</Wix>

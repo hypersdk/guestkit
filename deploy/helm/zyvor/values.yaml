@@ -73,3 +73,14 @@ vmtools:
   defaultPolicy:
     enabled: true
     autoInstall: false
+    autoUpgrade: false
+  bundle:
+    enabled: true
+    version: "0.1.0"
+    channel: stable
+    baseUrl: ""
+  reconcile:
+    enabled: false
+    schedule: "*/15 * * * *"
+    image: curlimages/curl:8.5.0
+    preferIso: false
