@@ -1,139 +1,113 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="aurora" data-glass="chrome">
+<html lang="en" data-theme="ironwolf">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark" />
-  <title>Zyvor — VM Migration Control</title>
+  <title>GuestKit — Offline VM Intelligence</title>
   <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="style.css?v=20260612g" />
+  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260612iw2" />
+  <link rel="stylesheet" href="ironwolf-shell.css?v=20260612iw2" />
+  <link rel="stylesheet" href="ironwolf-components.css?v=20260612iw2" />
+  <link rel="stylesheet" href="style.css?v=20260612iw2" />
+  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260612iw2" />
 </head>
 <body>
-  <!-- Tahoe-style desktop wallpaper (shows through Liquid Glass) -->
-  <div class="wallpaper" aria-hidden="true">
-    <div class="wallpaper-blob b1"></div>
-    <div class="wallpaper-blob b2"></div>
-    <div class="wallpaper-blob b3"></div>
-    <div class="wallpaper-shine"></div>
-  </div>
+  <div class="mac-desktop-root" data-theme="tahoe" data-wallpaper="tahoe">
 
-  <!-- Transparent menu bar (macOS 26) -->
-  <header class="menubar glass" role="banner">
-    <div class="menubar-left">
-      <a class="menubar-brand" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="Zyvor AI Labs">
-        <img class="menubar-logo" src="img/zavor-logo.webp" width="120" height="40" alt="Zyvor" />
-      </a>
-      <span class="menubar-title">Migration</span>
-      <nav class="menubar-menu" aria-label="View">
-        <button type="button" class="menubar-item" data-goto="ingest">File</button>
-        <button type="button" class="menubar-item" data-goto="assure">Assure</button>
-        <button type="button" class="menubar-item" id="menubarClusterBtn">Cluster VMs</button>
-        <button type="button" class="menubar-item" data-goto="plan">Plan</button>
-        <button type="button" class="menubar-item" data-goto="launch">Launch</button>
-      </nav>
-    </div>
-    <div class="menubar-right">
-      <div class="segmented" role="group" aria-label="Glass finish">
-        <button type="button" class="seg-btn active" data-glass-mode="chrome" title="Aurora glass panels">Glass</button>
-        <button type="button" class="seg-btn" data-glass-mode="zinc" title="Deep panel surface">Deep</button>
+  <header class="mac-menubar guestkit-menubar" role="banner">
+    <div class="mac-menubar-inner">
+    <a class="guestkit-menubar__brand mac-menubar-title" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">
+      <img class="guestkit-menubar__logo" src="img/zavor-logo.webp" width="96" height="32" alt="GuestKit" />
+      <span class="guestkit-menubar__title">GuestKit</span>
+      <span class="guestkit-menubar__tagline">Offline VM Intelligence · Zero-Boot Inspection · KubeVirt Launch</span>
+    </a>
+    <nav class="guestkit-menubar__nav" aria-label="View">
+      <button type="button" class="guestkit-menubar__link" data-goto="ingest">Capture</button>
+      <button type="button" class="guestkit-menubar__link" data-goto="assure">Image Vault</button>
+      <button type="button" class="guestkit-menubar__link" id="menubarClusterBtn">Cluster</button>
+      <button type="button" class="guestkit-menubar__link" data-goto="launch">Launch</button>
+    </nav>
+    <div class="guestkit-menubar__actions">
+      <select class="target-select" id="targetSelect" aria-label="Migration target" style="font-size:0.72rem;padding:0.25rem 0.5rem;border-radius:6px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);">
+        <option value="kubevirt" selected>kubevirt</option>
+        <option value="kvm">kvm</option>
+        <option value="proxmox">proxmox</option>
+        <option value="generic">generic</option>
+      </select>
+      <button type="button" class="guestkit-menubar__chip" id="helpShortcutsBtn" title="Keyboard shortcuts (?)">?</button>
+      <div class="recent-disks-wrap">
+        <button type="button" class="guestkit-menubar__chip" id="recentDisksToggle">Recent ▾</button>
+        <div class="recent-disks-menu" id="recentDisksMenu"></div>
       </div>
-      <button type="button" class="menubar-chip" id="refreshFleetBtn" title="Refresh fleet">
+      <button type="button" class="guestkit-menubar__chip" id="refreshFleetBtn" title="Refresh fleet">
         <span class="pulse-dot" id="healthDot"></span>
         <span id="healthLabel">Connecting…</span>
       </button>
+      <span class="guestkit-menubar__chip mono" id="hudVmCount">0 assets</span>
+    </div>
     </div>
   </header>
 
-  <div class="desktop">
-    <!-- Floating Liquid Glass sidebar -->
-    <aside class="sidebar glass floating" aria-label="Migration pipeline">
-      <div class="sidebar-section">
-        <p class="sidebar-label">Pipeline</p>
-        <nav class="pipeline" id="pipelineNav">
-          <button type="button" class="pipe-step active" data-step="ingest">
-            <span class="pipe-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 3l6 4v10H4V7l6-4zm0 2.2L6 8v8h8V8l-4-2.8z"/></svg>
-            </span>
-            <span class="pipe-text"><span class="pipe-label">Ingest</span><span class="pipe-hint">Upload disk</span></span>
-          </button>
-          <button type="button" class="pipe-step" data-step="assure">
-            <span class="pipe-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a7 7 0 100 14A7 7 0 009 2zm0 2a5 5 0 110 10A5 5 0 009 4zm-.5 2v5.4l4.2 2.4.8-1.4-3.5-2V6h-1.5z"/></svg>
-            </span>
-            <span class="pipe-text"><span class="pipe-label">Assure</span><span class="pipe-hint">Doctor & inspect</span></span>
-          </button>
-          <button type="button" class="pipe-step pipe-cluster" data-step="cluster" id="pipelineClusterBtn">
-            <span class="pipe-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h5v5H4V4zm7 0h5v5h-5V4zM4 11h5v5H4v-5zm7 0h5v5h-5v-5z"/></svg>
-            </span>
-            <span class="pipe-text"><span class="pipe-label">Cluster</span><span class="pipe-hint">Live KubeVirt VMs</span></span>
-          </button>
-          <button type="button" class="pipe-step" data-step="plan">
-            <span class="pipe-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2H4V4zm0 5h8v2H4V9zm0 5h12v2H4v-2z"/></svg>
-            </span>
-            <span class="pipe-text"><span class="pipe-label">Plan</span><span class="pipe-hint">Migration path</span></span>
-          </button>
-          <button type="button" class="pipe-step" data-step="launch">
-            <span class="pipe-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l2.5 6H19l-5 4 2 6-6-4-6 4 2-6-5-4h6.5L10 2z"/></svg>
-            </span>
-            <span class="pipe-text"><span class="pipe-label">Launch</span><span class="pipe-hint">KubeVirt YAML</span></span>
-          </button>
-        </nav>
-      </div>
-      <div class="sidebar-section sidebar-foot">
-        <p class="sidebar-label">Target</p>
-        <select class="target-select" id="targetSelect" aria-label="Migration target">
-          <option value="kubevirt" selected>kubevirt</option>
-          <option value="kvm">kvm</option>
-          <option value="proxmox">proxmox</option>
-          <option value="generic">generic</option>
-        </select>
-        <div class="brand-foot">
-          <p class="brand-copy">© ZyvorAI Labs</p>
-          <a class="brand-link" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">zyvor.dev</a>
-          <div class="brand-contacts">
-            <a href="mailto:sales@zyvor.dev">sales@zyvor.dev</a>
-            <a href="mailto:legal@zyvor.dev">legal@zyvor.dev</a>
-          </div>
-        </div>
+  <div class="mac-desktop-body">
+    <aside class="ironwolf-sidebar tahoe-sidebar mission-rail" aria-label="Mission Rail">
+      <p class="mission-rail__label">Mission Rail</p>
+      <nav id="missionRailNav"></nav>
+      <div id="missionProgress" class="mission-progress-wrap"></div>
+      <div class="sidebar-foot" style="margin-top:auto;padding:0.5rem 0.35rem;font-size:0.62rem;color:var(--text-muted);">
+        <p style="margin:0;">© ZyvorAI Labs · <a href="https://zyvor.dev" style="color:var(--accent-cyan);">zyvor.dev</a></p>
       </div>
     </aside>
 
-    <main class="workspace">
-      <div class="window chrome glass floating">
-        <div class="window-toolbar">
-          <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
-          <h1 class="window-title">Offline VM → KubeVirt</h1>
-          <p class="window-subtitle">Assurance-first migration</p>
+    <main class="mac-desktop-main tahoe-page-root guestkit-workbench">
+      <div class="workbench-window">
+        <div class="status-strip" id="statusStrip" aria-label="Cluster status">
+          <span class="status-strip__item"><span class="status-strip__dot"></span> Agent <strong id="hudAgent">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot"></span> Cluster <strong id="hudCluster">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot"></span> Storage <strong id="hudStorage">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot"></span> KubeVirt <strong id="hudKubevirt">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot"></span> CDI <strong id="hudCdi">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot ai"></span> Last Scan <strong id="hudLastScan">—</strong></span>
+          <span class="status-strip__item"><span class="status-strip__dot"></span> Worker <strong id="hudWorker">—</strong></span>
+          <span class="status-strip__item"><strong id="hudDiskCount">—</strong></span>
         </div>
 
-        <div class="wizard-bar glass-inset" id="wizardBar" aria-label="Migration wizard">
+        <div class="workbench-hero">
+          <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+          <p class="workbench-hero__eyebrow">GuestKit Workbench</p>
+          <h1 class="workbench-hero__title">From dead disk to live KubeVirt VM</h1>
+          <p class="workbench-hero__subtitle">Inspected. Repaired. Converted. Launched.</p>
+        </div>
+
+        <div class="wizard-bar glass-inset hidden" id="wizardBar" aria-label="Migration wizard">
           <div class="wizard-steps" id="wizardSteps"></div>
           <p class="wizard-subtitle" id="wizardSubtitle">Step 1 of 4 — Upload disk</p>
         </div>
 
         <div class="panels" id="panels" data-wizard-step="ingest">
           <section class="panel glass-inset" id="panel-ingest" data-panel="ingest">
-            <div class="panel-head">
-              <h2>Ingest</h2>
-              <p>Drop a disk image — staged for offline intelligence.</p>
-            </div>
-            <div class="dropzone glass" id="dropzone">
-              <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
+            <div class="dropzone intake-portal" id="dropzone">
+              <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi,.vhdx,.iso" hidden />
               <div class="dropzone-inner">
-                <div class="drop-icon" aria-hidden="true">
-                  <svg viewBox="0 0 48 48" fill="none"><path d="M24 8v20m0 0l-8-8m8 8l8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M12 36h24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></svg>
+                <p class="intake-portal__title">VM Intake Portal</p>
+                <p class="intake-portal__sub">Drop a disk image — staged for offline intelligence — or <button type="button" class="linkish" id="browseBtn">choose file…</button></p>
+                <div class="intake-portal__formats">
+                  <span class="format-chip">qcow2</span><span class="format-chip">vmdk</span><span class="format-chip">vhdx</span>
+                  <span class="format-chip">raw</span><span class="format-chip">ova</span><span class="format-chip">iso</span>
                 </div>
-                <p class="drop-title">Drop VM disk here</p>
-                <p class="drop-sub">Upload from your laptop — or <button type="button" class="linkish" id="browseBtn">choose file…</button></p>
-                <p class="drop-meta">qcow2 · vmdk · raw · up to 50 GB</p>
               </div>
               <div class="drop-progress hidden" id="uploadProgress">
                 <div class="drop-progress-bar" id="uploadBar"></div>
                 <span id="uploadLabel">Uploading…</span>
               </div>
+            </div>
+            <div class="intake-actions">
+              <button type="button" class="btn primary" id="ingestUploadBtn2">Upload Local</button>
+              <button type="button" class="btn glass" id="serverStorageUploadBtn2">Browse Server Images</button>
+              <button type="button" class="btn glass" id="importUrlBtn">Import URL</button>
+              <button type="button" class="btn glass" id="importS3Btn">Import S3</button>
+              <button type="button" class="btn glass" id="importNfsBtn">Import NFS</button>
+              <button type="button" class="btn glass" id="openClusterFleetBtn2">Import OVA / Cluster</button>
             </div>
             <div class="ingest-remote glass-inset">
               <div class="ingest-remote-head row">
@@ -164,7 +138,7 @@
 
           <section class="panel glass-inset" id="panel-fleet" data-panel="assure">
             <div class="panel-head row">
-              <div><h2>Fleet</h2><p id="fleetSubtitle">Imported disks or live KubeVirt VMs.</p></div>
+              <div><h2>Image Vault</h2><p id="fleetSubtitle">Imported disks or live KubeVirt VMs.</p></div>
               <div class="fleet-head-actions">
                 <div class="fleet-tabs" role="tablist" aria-label="Fleet source">
                   <button type="button" class="fleet-tab active" data-fleet="disks" id="fleetTabDisks">Imported disks</button>
@@ -204,6 +178,17 @@
                 <button type="button" class="btn glass sm accent" id="vmtoolsReconcileBtn">Reconcile fleet</button>
               </div>
             </div>
+            <div class="fleet-vault-toolbar">
+              <input type="search" class="fleet-search" id="fleetDiskSearch" placeholder="Search disks… (/)" spellcheck="false" />
+              <select class="fleet-select" id="fleetDiskSort" aria-label="Sort disks">
+                <option value="rank">Best first</option>
+                <option value="name">Name</option>
+                <option value="size">Size</option>
+                <option value="score">Boot score</option>
+              </select>
+              <button type="button" class="btn sm glass" id="fleetAiOverviewBtn">AI fleet scan</button>
+              <button type="button" class="btn sm primary" id="fullMigrationBtn">Full migration</button>
+            </div>
             <div class="fleet-layout">
               <div class="fleet-grid" id="fleetGrid">
               <div class="fleet-empty" id="fleetEmpty">
@@ -224,6 +209,19 @@
                 <div class="drawer-links" id="clusterDrawerLinks"></div>
               </aside>
             </div>
+          </section>
+
+          <section class="panel glass-inset hidden" id="panel-compare" data-panel="assure">
+            <div class="panel-head row">
+              <div>
+                <h2>Compare split view</h2>
+                <p id="compareSplitSubtitle">Side-by-side disk intelligence before and after.</p>
+              </div>
+              <button type="button" class="btn glass sm" id="compareSplitClose">Dismiss</button>
+            </div>
+            <div class="compare-split" id="compareSplitView"></div>
+            <div id="compareWorkbenchResults"></div>
+            <div class="brain-section hidden" id="compareAiNarrative"></div>
           </section>
 
           <section class="panel glass-inset" id="panel-actions" data-panel="assure plan">
@@ -408,12 +406,83 @@
       </div>
     </main>
 
-    <!-- Floating inspector (Liquid Glass sidebar) -->
-    <aside class="inspector glass floating" aria-label="Live activity">
-      <p class="sidebar-label">Live</p>
-      <div class="inspector-head">
+    <aside class="ironwolf-inspector guestkit-brain" aria-label="GuestKit Brain">
+      <div class="brain-header">
+        <span class="brain-header__icon">🧠</span>
+        <h2 class="brain-header__title">GuestKit Brain</h2>
         <span class="badge live" id="jobBadge">idle</span>
       </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title">Disk DNA</h3>
+        <div id="brainDna"><p class="brain-rec">Select a disk to view fingerprint.</p></div>
+      </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title cyan">Boot Confidence</h3>
+        <div id="brainConfidence"><p class="brain-rec">Run Doctor for boot score.</p></div>
+      </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title purple">AI Recommendations</h3>
+        <div id="brainRecs"><p class="brain-rec">Copilot insights appear after Doctor.</p></div>
+      </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title">Quick Actions</h3>
+        <div class="brain-actions">
+          <button type="button" class="btn sm primary" id="brainQuickRepair">Auto Repair</button>
+          <button type="button" class="btn sm accent" id="quickScanBtn">Quick scan</button>
+          <button type="button" class="btn sm glass" id="brainQuickYaml">Generate VM YAML</button>
+          <button type="button" class="btn sm glass" id="applyYamlBrainBtn">Apply YAML</button>
+          <button type="button" class="btn sm accent" id="brainQuickExplain">Explain Risk</button>
+          <button type="button" class="btn sm glass" id="brainQuickPlan">Create Migration Plan</button>
+          <button type="button" class="btn sm glass" id="brainCompareBtn">Compare Mode</button>
+          <button type="button" class="btn sm glass" id="brainExportReport">Export Readiness Report</button>
+          <button type="button" class="btn sm glass" id="copyDiskIdBtn">Copy disk ID</button>
+          <button type="button" class="btn sm glass" id="copyJsonBtn">Copy JSON</button>
+          <button type="button" class="btn sm glass" id="exportTimelineBtn">Export timeline</button>
+          <button type="button" class="btn sm glass" id="openZeusBtn">Open Zeus</button>
+          <button type="button" class="btn sm glass" id="deleteDiskBtn">Remove disk</button>
+          <button type="button" class="btn sm glass" id="cleanupShadowsBtn">Clean shadow rows</button>
+        </div>
+      </div>
+      <div class="brain-section brain-prefs">
+        <label><input type="checkbox" id="prefsNotifications" /> Job notifications</label>
+        <label><input type="checkbox" id="prefsAutoRefresh" checked /> Auto-refresh fleet (60s)</label>
+        <label><input type="checkbox" id="prefsAutoExplain" /> Auto-summarize after Doctor</label>
+      </div>
+      <div class="brain-section hidden" id="brainAiNarrative"></div>
+      <div class="brain-section">
+        <h3 class="brain-section__title purple">AI Briefing Deck</h3>
+        <div class="brain-ai-toolbar">
+          <button type="button" class="btn sm glass" id="brainAiRefresh">Refresh briefing</button>
+          <button type="button" class="btn sm accent" id="brainAiLaunchAdvice">Launch advice</button>
+          <button type="button" class="btn sm glass" id="brainAiFleetBtn">Fleet AI overview</button>
+          <button type="button" class="btn sm glass" id="brainAiCommandBtn">⌘K Ask anything</button>
+        </div>
+        <div id="brainAiDeck"><p class="brain-rec">Run Doctor with explain to populate AI deck.</p></div>
+      </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title purple">Ask GuestKit</h3>
+        <div class="brain-prompt-chips" id="brainPromptChips"></div>
+        <div class="brain-ai-chat-toolbar">
+          <button type="button" class="btn sm glass" id="brainAiExportChat">Export chat</button>
+          <button type="button" class="btn sm glass" id="brainAiClearChat">Clear</button>
+        </div>
+        <div id="brainAskChat" class="brain-ask-chat"></div>
+        <div class="brain-followups" id="brainFollowUpChips"></div>
+        <form class="brain-ask-input" id="brainAskForm">
+          <input type="text" id="brainAskInput" placeholder="Ask about boot risks, migration… (A to focus)" autocomplete="off" />
+          <button type="submit" class="btn sm primary">Ask</button>
+        </form>
+      </div>
+      <div class="brain-section hidden" id="brainChecks"></div>
+      <div class="brain-section">
+        <h3 class="brain-section__title">Job history</h3>
+        <div id="brainJobHistory"><p class="brain-rec">Select a disk to view jobs.</p></div>
+      </div>
+      <div class="brain-section">
+        <h3 class="brain-section__title">Mission Timeline</h3>
+        <ul class="brain-timeline" id="brainTimeline"><li>Mission events appear here.</li></ul>
+      </div>
+      <div class="brain-section hidden" id="brainJobTracker"></div>
       <div class="job-tracker glass-inset hidden" id="jobTracker">
         <div class="job-meta">
           <span class="job-op" id="jobOp">—</span>
@@ -423,44 +492,173 @@
         <p class="job-id mono" id="jobIdDisplay"></p>
         <button type="button" class="btn glass sm hidden" id="jobRetryBtn">Retry</button>
       </div>
-      <div class="copilot-mini glass-inset hidden" id="copilotMini">
-        <p class="sidebar-label">Copilot</p>
+      <div class="copilot-mini glass-inset hidden" id="copilotMini" style="display:none;">
         <p class="copilot-mini-headline" id="copilotMiniHeadline">—</p>
         <span class="readiness-pill" id="copilotReadiness">—</span>
       </div>
-      <ul class="activity-feed" id="activityFeed"></ul>
+      <ul class="activity-feed hidden" id="activityFeed" style="display:none;"></ul>
     </aside>
   </div>
 
-  <!-- macOS-style floating Dock -->
-  <nav class="dock glass" aria-label="Quick actions">
-    <button type="button" class="dock-item" data-goto="ingest" title="Ingest">
-      <span class="dock-icon">↓</span>
-      <span class="dock-label">Ingest</span>
+  <div class="dock-controls">
+    <button type="button" class="dock-ctrl-btn" id="dockPinBtn" title="Pin dock">📌</button>
+    <button type="button" class="dock-ctrl-btn" id="dockCompactBtn" title="Compact">▣</button>
+    <button type="button" class="dock-ctrl-btn" id="dockAutoHideBtn" title="Auto-hide">◐</button>
+    <button type="button" class="dock-ctrl-btn" id="dockPosBtn" title="Position">⇄</button>
+  </div>
+
+  <nav class="mac-dock command-dock pos-bottom pinned" id="commandDock" aria-label="Command Dock">
+    <button type="button" class="dock-item" data-goto="ingest" title="Capture">
+      <span class="dock-icon">↓</span><span class="dock-label">Capture</span>
     </button>
-    <button type="button" class="dock-item" data-action="inspect" title="Inspect" disabled id="dockInspect">
-      <span class="dock-icon">⌕</span>
-      <span class="dock-label">Inspect</span>
+    <button type="button" class="dock-item" data-action="inspect" disabled id="dockInspect">
+      <span class="dock-icon">⌕</span><span class="dock-label">Inspect</span>
     </button>
-    <button type="button" class="dock-item" data-action="doctor" title="Doctor" disabled id="dockDoctor">
-      <span class="dock-icon">◉</span>
-      <span class="dock-label">Doctor</span>
+    <button type="button" class="dock-item" data-action="doctor" disabled id="dockDoctor">
+      <span class="dock-icon">◉</span><span class="dock-label">Doctor</span>
     </button>
-    <button type="button" class="dock-item" data-action="migration-plan" title="Plan" disabled id="dockPlan">
-      <span class="dock-icon">◎</span>
-      <span class="dock-label">Plan</span>
+    <button type="button" class="dock-item" data-action="repair-plan" disabled id="dockRepair">
+      <span class="dock-icon">⚙</span><span class="dock-label">Repair</span>
     </button>
-    <button type="button" class="dock-item" data-action="repair-plan" title="Repair" disabled id="dockRepair">
-      <span class="dock-icon">⚙</span>
-      <span class="dock-label">Repair</span>
+    <button type="button" class="dock-item" data-action="migration-plan" disabled id="dockPlan">
+      <span class="dock-icon">◎</span><span class="dock-label">Convert</span>
     </button>
-    <button type="button" class="dock-item dock-launch" data-action="provision" title="Provision" disabled id="dockLaunch">
-      <span class="dock-icon">✦</span>
-      <span class="dock-label">Launch</span>
+    <button type="button" class="dock-item dock-launch" data-action="provision" disabled id="dockLaunch">
+      <span class="dock-icon">✦</span><span class="dock-label">Launch</span>
+    </button>
+    <button type="button" class="dock-item" id="dockLogsBtn" title="Logs">
+      <span class="dock-icon">{ }</span><span class="dock-label">Logs</span>
+    </button>
+    <button type="button" class="dock-item" id="dockYamlBtn" title="YAML">
+      <span class="dock-icon">▤</span><span class="dock-label">YAML</span>
+    </button>
+    <button type="button" class="dock-item" id="dockAiBtn" title="AI">
+      <span class="dock-icon">✦</span><span class="dock-label">AI</span>
     </button>
   </nav>
 
+  <div class="guestkit-modal-backdrop hidden" id="launchPreviewModal">
+    <div class="guestkit-modal">
+      <h2>Launch Preview</h2>
+      <table class="launch-preview-table"><tbody id="launchPreviewBody"></tbody></table>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="launchPreviewCancel">Cancel</button>
+        <button type="button" class="btn glass" id="launchPreviewDryRun">Launch Dry Run</button>
+        <button type="button" class="btn primary" id="launchPreviewConfirm">Launch VM</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="convertStudioModal">
+    <div class="guestkit-modal">
+      <h2>Conversion Studio</h2>
+      <p>Source: <strong id="convertSourceFmt">—</strong> → Target: <select id="convertTargetFmt"><option value="qcow2">qcow2</option><option value="raw">raw</option><option value="vmdk">vmdk</option></select></p>
+      <label><input type="checkbox" id="convertCompression" /> Enable compression</label>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="convertCancel">Cancel</button>
+        <button type="button" class="btn primary" id="convertSubmit">Start Conversion</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="importUrlModal">
+    <div class="guestkit-modal">
+      <h2>Import from URL</h2>
+      <input type="url" id="importUrlInput" placeholder="https://…/image.qcow2" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="importUrlCancel">Cancel</button>
+        <button type="button" class="btn primary" id="importUrlSubmit">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="importS3Modal">
+    <div class="guestkit-modal">
+      <h2>Import from S3</h2>
+      <input type="text" id="importS3Bucket" placeholder="Bucket" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <input type="text" id="importS3Key" placeholder="Object key" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <input type="text" id="importS3Endpoint" placeholder="Endpoint (optional)" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="importS3Cancel">Cancel</button>
+        <button type="button" class="btn primary" id="importS3Submit">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="compareModal">
+    <div class="guestkit-modal" style="max-width:640px;">
+      <h2>Compare Mode</h2>
+      <p>Before: <select id="compareBeforeSelect"></select> After: <select id="compareAfterSelect"></select></p>
+      <div id="compareResults"></div>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="compareCancelBtn">Close</button>
+        <button type="button" class="btn primary" id="compareRunBtn">Compare</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="importNfsModal">
+    <div class="guestkit-modal">
+      <h2>Import from NFS</h2>
+      <p class="brain-rec">Path must be readable on the API host (NFS mounted).</p>
+      <input type="text" id="importNfsHost" placeholder="NFS server (optional label)" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <input type="text" id="importNfsPath" placeholder="/mnt/nfs/images/disk.qcow2" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="importNfsCancel">Cancel</button>
+        <button type="button" class="btn primary" id="importNfsSubmit">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="aiCommandModal">
+    <div class="guestkit-modal">
+      <h2>AI Command</h2>
+      <p class="brain-rec">Natural language or slash commands: /doctor /repair /launch /fleet</p>
+      <form id="aiCommandForm">
+        <input type="text" id="aiCommandInput" placeholder="Ask GuestKit anything…" style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" autocomplete="off" />
+      </form>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="aiCommandClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="fleetAiModal">
+    <div class="guestkit-modal" style="max-width:560px;">
+      <h2>Fleet AI Overview</h2>
+      <div id="fleetAiBody"><p class="brain-rec">Analyzing vault…</p></div>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="fleetAiClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="shortcutsModal">
+    <div class="guestkit-modal">
+      <h2>Keyboard shortcuts</h2>
+      <ul class="shortcuts-list">
+        <li><kbd>?</kbd> This help</li>
+        <li><kbd>1</kbd>–<kbd>6</kbd> Mission Rail steps</li>
+        <li><kbd>I</kbd> Inspect · <kbd>D</kbd> Doctor · <kbd>R</kbd> Repair</li>
+        <li><kbd>M</kbd> Migration plan · <kbd>L</kbd> Launch preview</li>
+        <li><kbd>U</kbd> Upload · <kbd>/</kbd> Search disks</li>
+        <li><kbd>Esc</kbd> Close modals</li>
+        <li><kbd>Q</kbd> Quick scan (inspect + doctor)</li>
+        <li><kbd>C</kbd> Compare mode</li>
+        <li><kbd>A</kbd> Focus AI chat</li>
+        <li><kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> AI command palette</li>
+      </ul>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn primary" id="shortcutsCloseBtn">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
-  <script src="app.js?v=20260612g"></script>
+  </div>
+  <script src="guestkit-console.js?v=20260612iw2"></script>
+  <script src="guestkit-ai.js?v=20260612iw2"></script>
+  <script src="guestkit-features.js?v=20260612iw2"></script>
+  <script src="app.js?v=20260612iw2"></script>
 </body>
 </html>

@@ -91,6 +91,17 @@ function isSmokeDisk(vm) {
   return (vm.size_bytes || 0) > 0 && vm.size_bytes < SMOKE_MAX_BYTES;
 }
 
+function isShadowDisk(vm) {
+  if (!vm) return false;
+  if ((vm.size_bytes || 0) === 0) return true;
+  const name = (vm.name || '').toLowerCase();
+  return /\(cluster (doctor|inspect)\)|cluster-shadow/.test(name);
+}
+
+function isFleetDisk(vm) {
+  return vm && !isSmokeDisk(vm) && !isShadowDisk(vm);
+}
+
 function fleetRank(vm) {
   const cache = getVmCache(vm.id);
   if (isSmokeDisk(vm)) return 100;
@@ -102,9 +113,9 @@ function fleetRank(vm) {
 }
 
 function pickBestVm(vms) {
-  const candidates = (vms || []).filter((v) => !isSmokeDisk(v));
-  const pool = candidates.length ? candidates : vms;
-  return [...(pool || [])].sort((a, b) => fleetRank(a) - fleetRank(b))[0] || null;
+  const candidates = (vms || []).filter(isFleetDisk);
+  const pool = candidates.length ? candidates : (vms || []).filter((v) => !isShadowDisk(v));
+  return [...pool].sort((a, b) => fleetRank(a) - fleetRank(b))[0] || null;
 }
 
 function humanizeJobError(err, vm) {
@@ -134,6 +145,7 @@ function toast(msg, type = 'ok') {
 
 function feed(msg, type = '') {
   const ul = $('#activityFeed');
+  if (!ul) return;
   const li = document.createElement('li');
   li.className = type;
   li.innerHTML = `${msg}<span class="time">${fmtTime()}</span>`;
@@ -232,6 +244,7 @@ function setWizardStep(step) {
   setPipelineStep(step);
   renderWizardBar();
   updateWizardFooter();
+  window.GuestKitConsole?.renderMissionRail?.();
 
   const scrollMap = {
     ingest: '#panel-ingest',
@@ -563,18 +576,20 @@ function renderFleet() {
 
   const grid = $('#fleetGrid');
   const empty = $('#fleetEmpty');
-  $('#fleetCount').textContent = `${state.vms.length} image${state.vms.length === 1 ? '' : 's'}`;
+  const displayVms = window.GuestKitFeatures?.filterFleetVms?.(state.vms)
+    || state.vms.filter(isFleetDisk);
+  $('#fleetCount').textContent = `${displayVms.length} image${displayVms.length === 1 ? '' : 's'}`;
 
   grid.querySelectorAll('.vm-card').forEach((c) => c.remove());
 
-  if (!state.vms.length) {
+  if (!displayVms.length) {
     empty.classList.remove('hidden');
     updateFleetEmptyState();
     return;
   }
   empty.classList.add('hidden');
 
-  [...state.vms].sort((a, b) => fleetRank(a) - fleetRank(b)).forEach((vm) => {
+  [...displayVms].sort((a, b) => fleetRank(a) - fleetRank(b)).forEach((vm) => {
     const cache = getVmCache(vm.id);
     const status = vmStatusLabel(cache, vm);
     const scoreChip = cache.bootScore != null
@@ -584,10 +599,14 @@ function renderFleet() {
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'vm-card'
+    card.className = 'disk-card vm-card'
       + (state.selectedVm?.id === vm.id ? ' selected' : '')
       + (smoke ? ' smoke' : '');
-    card.innerHTML = `
+    if (window.GuestKitConsole?.renderFleetDiskCard) {
+      card.innerHTML = window.GuestKitConsole.renderFleetDiskCard(vm, state.selectedVm?.id === vm.id, cache);
+      window.GuestKitConsole.bindDiskCardActions(card, vm);
+    } else {
+      card.innerHTML = `
       <span class="vm-format">${vm.format || 'disk'}</span>
       <span class="vm-status ${status}">${status}</span>
       ${scoreChip}
@@ -595,6 +614,7 @@ function renderFleet() {
       <p class="vm-meta">${fmtBytes(vm.size_bytes)} · ${vm.id.slice(0, 8)}…</p>
       ${smoke ? '<p class="vm-hint">Not a bootable VM</p>' : ''}
     `;
+    }
     card.addEventListener('click', () => selectVm(vm));
     grid.appendChild(card);
   });
@@ -602,6 +622,7 @@ function renderFleet() {
 
 function clusterToolsLabel(vm) {
   if (vm.is_windows) return 'virtio-win';
+  if (vm.tools_connected === true) return 'tools live';
   const stateLabel = vm.guest_tools || 'missing';
   const target = state.vmtoolsBundle?.version;
   const outdated = vm.tools_version && target && vm.tools_version !== target;
@@ -750,6 +771,7 @@ function selectClusterVm(vm) {
   renderClusterDetailDrawer(vm, null);
   updateClusterLifecycleButtons(vm);
   fetchClusterGuestInfo(false);
+  window.GuestKitConsole?.onSelectVmConsole?.();
 }
 
 async function loadClusterNamespaces() {
@@ -1470,6 +1492,7 @@ function setClusterDockEnabled(on) {
 function selectVm(vm) {
   state.selectedVm = vm;
   state.selectedClusterVm = null;
+  setInspectionMode('offline');
   renderFleet();
   setAgentDeckEnabled(!!vm);
   $('#selectedVmTitle').textContent = vm.name || 'Unnamed disk';
@@ -1488,6 +1511,8 @@ function selectVm(vm) {
   updateWizardFooter();
   updateSelectionPanels();
   updateCopilotPlaceholder();
+  window.GuestKitConsole?.onSelectVmConsole?.();
+  window.GuestKitFeatures?.loadJobHistory?.(vm.id);
   feed(`Selected <strong>${escapeHtml(vm.name)}</strong>${smoke ? ' (smoke — not bootable)' : ''}`, smoke ? 'err' : '');
 }
 
@@ -1507,6 +1532,7 @@ async function loadFleet() {
     } else {
       renderFleet();
     }
+    window.GuestKitConsole?.refreshHudStatus?.();
   } catch (e) {
     toast(`Fleet load failed: ${e.message}`, 'err');
   }
@@ -1562,6 +1588,7 @@ async function uploadFile(file) {
     markWizardComplete('ingest');
     await loadFleet();
     selectVm(vm);
+    window.GuestKitConsole?.appendTimelineEvent?.(vm.id, 'uploaded', vm.name);
     setWizardStep('assure');
     setTimeout(() => setUploadProgress(-1), 1200);
   } catch (e) {
@@ -1614,7 +1641,9 @@ function setupDropzone() {
 
 function showJobTracker(op, jobId) {
   state.activeJob = { id: jobId, op, start: Date.now() };
-  $('#jobTracker').classList.remove('hidden');
+  const tracker = $('#jobTracker');
+  tracker.classList.remove('hidden');
+  tracker.style.display = '';
   $('#jobOp').textContent = op.replace(/-/g, ' ');
   $('#jobIdDisplay').textContent = jobId;
   $('#jobStatus').textContent = 'pending';
@@ -1625,6 +1654,7 @@ function showJobTracker(op, jobId) {
   $('#jobBadge').textContent = 'running';
   $('#jobBadge').className = 'badge live running';
   $('#jobRetryBtn').classList.add('hidden');
+  window.GuestKitConsole?.syncBrainJobTracker?.();
 }
 
 function hideJobTracker(status) {
@@ -1636,6 +1666,7 @@ function hideJobTracker(status) {
   $('#jobBadge').textContent = status;
   $('#jobBadge').className = `badge live ${status === 'completed' ? 'done' : 'fail'}`;
   state.activeJob = null;
+  window.GuestKitConsole?.syncBrainJobTracker?.();
 }
 
 function setJobProgress(pct, message) {
@@ -1940,6 +1971,7 @@ function renderSummary(data, action) {
 
   renderChecksHeatmap(boot?.checks);
   renderCopilot(payload?.copilot, payload);
+  window.GuestKitConsole?.renderBrainPanel?.();
 
   if (!content.innerHTML) {
     ph.classList.remove('hidden');
@@ -1981,6 +2013,7 @@ function renderCopilot(briefing, payload) {
     mini.classList.add('hidden');
     state.lastBriefing = null;
     $('#copilotBanner').classList.add('hidden');
+    window.GuestKitConsole?.renderBrainPanel?.();
     return;
   }
 
@@ -2034,6 +2067,7 @@ function renderCopilot(briefing, payload) {
   pill.className = `readiness-pill ${readinessClass(briefing.readiness)}`;
 
   showCopilotBanner(briefing);
+  window.GuestKitConsole?.renderBrainPanel?.();
 }
 
 function showCopilotBanner(briefing) {
@@ -2194,21 +2228,32 @@ function onJobComplete(action, data) {
   if (action === 'doctor' || action === 'agent-doctor') {
     patch.bootScore = boot?.score;
     patch.blockers = blockers;
+    patch.checks = boot?.checks;
     patch.status = blockers.length ? 'failed' : 'analyzed';
+    if (payload?.copilot) {
+      patch.briefing = payload.copilot;
+      state.lastBriefing = payload.copilot;
+    }
     if (action === 'agent-doctor') patch.agentOnline = true;
     markWizardComplete('assure');
     if (!state.wizardChain && !blockers.length) setWizardStep('plan');
   } else if (action === 'inspect') {
     patch.status = 'analyzed';
+    patch.inspect = payload?.inspect || payload?.summary?.inspect
+      || (payload?.os ? { os: payload.os, boot: payload.boot, kernel: payload.kernel } : null);
     markWizardComplete('assure');
     setActiveTab('summary');
   } else if (action === 'migration-plan') {
     patch.migrateScore = migrate?.score ?? boot?.score;
+    patch.migrationPlan = payload;
     patch.status = 'ready';
     markWizardComplete('plan');
     if (!state.wizardChain) setWizardStep('launch');
   } else if (action === 'repair-plan') {
     patch.status = payload?.before_score != null ? 'analyzed' : patch.status;
+  } else if (action === 'convert') {
+    patch.lastOp = 'convert';
+    patch.status = 'ready';
   } else if (action === 'provision') {
     markWizardComplete('launch');
     setWizardStep('launch');
@@ -2221,6 +2266,8 @@ function onJobComplete(action, data) {
     setActiveTab('copilot');
     feed('Migration <strong>Copilot</strong> briefing ready', 'ok');
   }
+  window.GuestKitConsole?.onJobCompleteConsole?.(action, vm.id);
+  window.GuestKitConsole?.renderBrainPanel?.();
 }
 
 function pollJob(jobId, action) {
@@ -2240,6 +2287,7 @@ function pollJob(jobId, action) {
         const progress = live.progress ?? live.progress_percent;
         if (progress != null) setJobProgress(progress, live.message || status);
         else if (live.message) setJobProgress(null, live.message);
+        window.GuestKitConsole?.syncBrainJobTracker?.();
 
         if (status === 'completed') {
           clearInterval(state.pollTimer);
@@ -2522,6 +2570,13 @@ async function runClusterAction(action) {
 }
 
 async function runAction(action) {
+  if (action === 'provision') {
+    return window.GuestKitConsole?.showLaunchPreview?.(() => runActionInner('provision')) || runActionInner('provision');
+  }
+  return runActionInner(action);
+}
+
+async function runActionInner(action) {
   if (state.selectedClusterVm && !state.selectedVm) {
     return runClusterAction(action);
   }
@@ -2711,32 +2766,12 @@ function setupWizard() {
 }
 
 function setupTheme() {
-  const saved = localStorage.getItem('zyvor.theme');
-  if (saved && ['aurora', 'liquid-zinc'].includes(saved)) {
-    document.documentElement.dataset.theme = saved;
-  } else {
-    document.documentElement.dataset.theme = 'aurora';
-  }
+  document.documentElement.dataset.theme = 'ironwolf';
+  localStorage.setItem('zyvor.theme', 'ironwolf');
 }
 
 function setupGlassToggle() {
   setupTheme();
-  const saved = localStorage.getItem('zyvor.glassMode');
-  if (saved && ['chrome', 'zinc', 'metal', 'clear', 'tinted'].includes(saved)) {
-    document.documentElement.dataset.glass = saved === 'metal' ? 'chrome' : saved;
-    $$('[data-glass-mode]').forEach((b) => {
-      b.classList.toggle('active', b.dataset.glassMode === document.documentElement.dataset.glass);
-    });
-  }
-  $$('[data-glass-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.glassMode;
-      document.documentElement.dataset.glass = mode;
-      localStorage.setItem('zyvor.glassMode', mode);
-      $$('[data-glass-mode]').forEach((b) => b.classList.toggle('active', b.dataset.glassMode === mode));
-      toast(mode === 'zinc' ? 'Deep panel surface' : 'Aurora glass panels', 'ok');
-    });
-  });
 }
 
 function setupActions() {
@@ -2771,7 +2806,14 @@ function setupActions() {
   });
 
   $('#openClusterFleetBtn')?.addEventListener('click', () => openClusterFleet());
+  $('#openClusterFleetBtn2')?.addEventListener('click', () => openClusterFleet());
   $('#ingestUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
+  $('#ingestUploadBtn2')?.addEventListener('click', () => triggerDiskUpload());
+  $('#openClusterFleetBtn2')?.addEventListener('click', () => openClusterFleet());
+  $('#serverStorageUploadBtn2')?.addEventListener('click', () => {
+    scrollToPanel('ingest');
+    document.getElementById('serverStorageBrowser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('#menubarClusterBtn')?.addEventListener('click', () => openClusterFleet());
 
   $('#fleetUploadBtn')?.addEventListener('click', () => triggerDiskUpload());
@@ -2895,8 +2937,35 @@ async function applyUrlContext() {
 }
 
 async function init() {
+  try {
+  window.state = state;
+  window.api = api;
+  window.getVmCache = getVmCache;
+  window.renderFleet = renderFleet;
+  window.updateVmCache = updateVmCache;
+  window.escapeHtml = escapeHtml;
+  window.fmtBytes = fmtBytes;
+  window.isSmokeDisk = isSmokeDisk;
+  window.isFleetDisk = isFleetDisk;
+  window.vmStatusLabel = vmStatusLabel;
+  window.selectVm = selectVm;
+  window.runAction = runAction;
+  window.pollJob = pollJob;
+  window.showJobTracker = showJobTracker;
+  window.loadFleet = loadFleet;
+  window.scrollToPanel = scrollToPanel;
+  window.setActiveTab = setActiveTab;
+  window.toast = toast;
+  window.extractPayload = extractPayload;
+  window.API_BASE = API_BASE;
+  window.fetchClusterCopilotBriefing = fetchClusterCopilotBriefing;
+  window.answerCopilotLocal = answerCopilotLocal;
+  window.renderCopilot = renderCopilot;
+
   setupDropzone();
   setupGlassToggle();
+  window.GuestKitConsole?.initGuestKitConsole?.();
+  window.GuestKitFeatures?.initGuestKitFeatures?.();
   setupWizard();
   setupInspectionMode();
   setupCopilot();
@@ -2915,7 +2984,13 @@ async function init() {
   else await loadFleet();
   await applyUrlContext();
   setInterval(checkHealth, 30000);
+  window.GuestKitConsole?.refreshHudStatus?.();
   feed(state.fleetMode === 'cluster' ? 'KubeVirt cluster fleet ready' : 'Ready — ingest a disk or switch to KubeVirt cluster', 'ok');
+  } catch (e) {
+    console.error('GuestKit init failed:', e);
+    setHealth(false);
+    toast(`UI init failed: ${e.message}`, 'err');
+  }
 }
 
 init();
