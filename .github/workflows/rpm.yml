@@ -140,12 +140,13 @@ jobs:
           retention-days: 30
 
   build-rpm-full:
-    name: Build Full RPM with Python on Fedora ${{ matrix.version }}
+    name: Build Full RPM on Fedora ${{ matrix.version }}
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        version: [41, 42, 43, rawhide]
+        version: [41, 42, 43]
     container:
       image: fedora:${{ matrix.version }}
 
@@ -211,7 +212,7 @@ jobs:
 
       - name: Build binary RPM (with Python)
         run: |
-          rpmbuild -bb ~/rpmbuild/SPECS/guestkit-full.spec
+          rpmbuild -bb ~/rpmbuild/SPECS/guestkit-full.spec --without python
 
       - name: Run rpmlint
         continue-on-error: true

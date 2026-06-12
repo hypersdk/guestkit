@@ -20,8 +20,8 @@ BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
 BuildRequires:  openssl-devel
 
-# Python bindings (optional)
-%bcond_without python
+# Python bindings (optional — off by default; enable with --with python)
+%bcond_with python
 %if %{with python}
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
@@ -143,7 +143,6 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 
 %files
 %license LICENSE
-%doc README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
 %{_bindir}/guestkit
 %dir %{_docdir}/%{name}
 %{_docdir}/%{name}/README.md
