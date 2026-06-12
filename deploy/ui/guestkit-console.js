@@ -178,6 +178,14 @@ function renderBrainPanel() {
           else if (wf) window.runAction?.(wf.replace('guestkit.', '').replace('migrate-plan', 'migration-plan'));
         });
       });
+    } else if (cache?.status === 'failed' && cache?.lastError) {
+      const alt = window.pickBestVm?.((window.state?.vms || []).filter((v) => v.id !== vm?.id));
+      recEl.innerHTML = `
+        <p class="brain-rec brain-rec--err">${window.escapeHtml?.(cache.lastError) || cache.lastError}</p>
+        ${alt ? `<button type="button" class="btn sm accent" id="brainSwitchDiskBtn">Try ${window.escapeHtml?.(alt.name) || alt.name}</button>` : ''}
+        <button type="button" class="btn sm glass" id="brainRemoveDiskBtn">Remove this disk</button>`;
+      gk$('#brainSwitchDiskBtn')?.addEventListener('click', () => window.selectVm?.(alt));
+      gk$('#brainRemoveDiskBtn')?.addEventListener('click', () => document.getElementById('deleteDiskBtn')?.click());
     } else if (briefing?.headline || cache?.briefing?.headline) {
       const b = briefing || cache.briefing;
       recEl.innerHTML = `<p class="brain-rec"><strong>${window.escapeHtml?.(b.headline)}</strong><br>${window.escapeHtml?.(b.summary || '')}</p>`;
@@ -237,10 +245,20 @@ function syncBrainJobTracker() {
   if (!tracker || !legacy) return;
   const active = !legacy.classList.contains('hidden');
   tracker.classList.toggle('hidden', !active);
+  legacy.classList.toggle('job-tracker--mirrored', active);
   if (active) {
     tracker.className = 'brain-section';
     tracker.innerHTML = `<h3 class="brain-section__title cyan">Live Job</h3>${legacy.innerHTML}`;
+  } else {
+    tracker.innerHTML = '';
   }
+}
+
+function resetJobBadge() {
+  const badge = gk$('#jobBadge');
+  if (!badge || window.state?.activeJob) return;
+  badge.textContent = 'idle';
+  badge.className = 'badge live';
 }
 
 function mapTimelineEvent(action) {
@@ -770,4 +788,5 @@ window.GuestKitConsole = {
   showCompareMode,
   injectLaunchAdvice,
   appendTimelineEvent,
+  resetJobBadge,
 };

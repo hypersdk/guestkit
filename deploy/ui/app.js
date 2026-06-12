@@ -1495,14 +1495,21 @@ function selectVm(vm) {
   setInspectionMode('offline');
   renderFleet();
   setAgentDeckEnabled(!!vm);
+  const cache = getVmCache(vm.id);
+  const failed = cache.status === 'failed';
   $('#selectedVmTitle').textContent = vm.name || 'Unnamed disk';
   const meta = $('#selectedVmMeta');
   const smoke = isSmokeDisk(vm);
   meta.textContent = `${vm.format} · ${fmtBytes(vm.size_bytes)} · ${vm.id}`;
-  meta.classList.toggle('vm-warn', smoke);
+  meta.classList.toggle('vm-warn', smoke || failed);
   if (smoke) {
     meta.textContent += ' — placeholder disk; upload or select a real cloud image';
+  } else if (failed && cache.lastError) {
+    meta.textContent += ` — ${cache.lastError}`;
   }
+  $('#jobTracker')?.classList.add('hidden');
+  window.GuestKitConsole?.syncBrainJobTracker?.();
+  window.GuestKitConsole?.resetJobBadge?.();
   $$('.action-card').forEach((b) => { b.disabled = false; });
   setDockEnabled(true);
   if (state.wizard.step === 'ingest' && state.wizard.completed.has('ingest')) {
@@ -1640,6 +1647,7 @@ function setupDropzone() {
 }
 
 function showJobTracker(op, jobId) {
+  clearTimeout(state.jobTrackerHideTimer);
   state.activeJob = { id: jobId, op, start: Date.now() };
   const tracker = $('#jobTracker');
   tracker.classList.remove('hidden');
@@ -1667,6 +1675,13 @@ function hideJobTracker(status) {
   $('#jobBadge').className = `badge live ${status === 'completed' ? 'done' : 'fail'}`;
   state.activeJob = null;
   window.GuestKitConsole?.syncBrainJobTracker?.();
+  const hideMs = status === 'failed' ? 6000 : 3500;
+  clearTimeout(state.jobTrackerHideTimer);
+  state.jobTrackerHideTimer = setTimeout(() => {
+    $('#jobTracker')?.classList.add('hidden');
+    window.GuestKitConsole?.syncBrainJobTracker?.();
+    window.GuestKitConsole?.resetJobBadge?.();
+  }, hideMs);
 }
 
 function setJobProgress(pct, message) {
@@ -1960,11 +1975,10 @@ function renderSummary(data, action) {
   if (err) {
     const friendly = humanizeJobError(err, state.selectedVm);
     content.innerHTML += `<p class="finding blocker">${escapeHtml(friendly)}</p>`;
-    if (isSmokeDisk(state.selectedVm)) {
-      const alt = pickBestVm(state.vms.filter((v) => v.id !== state.selectedVm?.id));
-      if (alt) {
-        content.innerHTML += `<p class="finding warn">Try <strong>${escapeHtml(alt.name)}</strong> (${fmtBytes(alt.size_bytes)}) — select it in Fleet and run Doctor.</p>`;
-      }
+    const alt = pickBestVm(state.vms.filter((v) => v.id !== state.selectedVm?.id));
+    if (alt) {
+      content.innerHTML += `<p class="finding warn">Try <strong>${escapeHtml(alt.name)}</strong> (${fmtBytes(alt.size_bytes)}) — <button type="button" class="linkish" id="summarySwitchDiskBtn">switch disk</button> and run Inspect.</p>`;
+      content.querySelector('#summarySwitchDiskBtn')?.addEventListener('click', () => selectVm(alt));
     }
     setScore(null, 'failed');
   }
@@ -2311,7 +2325,11 @@ function pollJob(jobId, action) {
           state.lastFailedAction = action;
           $('#jobRetryBtn').classList.remove('hidden');
           if (state.selectedVm) {
-            updateVmCache(state.selectedVm.id, { status: 'failed', lastOp: action });
+            updateVmCache(state.selectedVm.id, {
+              status: 'failed',
+              lastOp: action,
+              lastError: err,
+            });
           }
           setScore(null, 'failed');
           resolve({ ok: false, error: err });
@@ -2947,6 +2965,7 @@ async function init() {
   window.fmtBytes = fmtBytes;
   window.isSmokeDisk = isSmokeDisk;
   window.isFleetDisk = isFleetDisk;
+  window.pickBestVm = pickBestVm;
   window.vmStatusLabel = vmStatusLabel;
   window.selectVm = selectVm;
   window.runAction = runAction;

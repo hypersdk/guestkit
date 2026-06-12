@@ -27,7 +27,15 @@
   .ironwolf-sidebar, .mission-rail { display: none; }
 }
 
-.guestkit-bg { display: none !important; }
+.job-tracker--mirrored {
+  display: none !important;
+}
+
+.brain-rec--err {
+  color: var(--accent-red);
+  border-left: 2px solid var(--accent-red);
+  padding-left: 0.5rem;
+}
 
 /* ── Mac menubar (GuestKit header) ── */
 .mac-menubar, .guestkit-menubar {
