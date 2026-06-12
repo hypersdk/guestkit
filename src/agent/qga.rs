@@ -474,10 +474,7 @@ fn guest_network_get_interfaces() -> Result<Value, String> {
         if out.status.success() {
             if let Ok(interfaces) = serde_json::from_slice::<Value>(&out.stdout) {
                 if let Some(arr) = interfaces.as_array() {
-                    let mapped: Vec<Value> = arr
-                        .iter()
-                        .filter_map(map_ip_json_interface)
-                        .collect();
+                    let mapped: Vec<Value> = arr.iter().filter_map(map_ip_json_interface).collect();
                     if !mapped.is_empty() {
                         return Ok(json!(mapped));
                     }
