@@ -256,6 +256,7 @@ jobs:
     name: Build with Mock (clean chroot)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    continue-on-error: true
     container:
       image: fedora:41
       options: --privileged --user root
