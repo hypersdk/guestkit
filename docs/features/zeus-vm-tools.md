@@ -37,8 +37,17 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | RPM + ISO in `build-artifacts.sh` | Shipped |
 | ISO attach install (`?method=iso`) | Shipped |
 | `VMGuestAgent` CR status sync | Shipped |
-| Windows MSI | Phase 4 |
-| Full `VMToolsPolicy` operator | Phase 4 |
+| Windows MSI | Phase 4 scaffold |
+
+## Phase 4 capabilities
+
+| Feature | Status |
+|---------|--------|
+| Aurora dark UI theme (default) | Shipped |
+| `VMToolsPolicy` GET/PUT/reconcile API | Shipped |
+| Cluster auto-install reconciliation | Shipped |
+| Windows MSI | Scaffold only (virtio-win path) |
+| Full standalone operator | Future |
 
 ## API routes
 

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="liquid-zinc" data-glass="chrome">
+<html lang="en" data-theme="aurora" data-glass="chrome">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>Zyvor — VM Migration Control</title>
   <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="style.css?v=20260612b" />
+  <link rel="stylesheet" href="style.css?v=20260612f" />
 </head>
 <body>
   <!-- Tahoe-style desktop wallpaper (shows through Liquid Glass) -->
@@ -33,8 +34,8 @@
     </div>
     <div class="menubar-right">
       <div class="segmented" role="group" aria-label="Glass finish">
-        <button type="button" class="seg-btn active" data-glass-mode="chrome" title="Chrome glass panels">Chrome</button>
-        <button type="button" class="seg-btn" data-glass-mode="zinc" title="Zinc silver surface">Zinc</button>
+        <button type="button" class="seg-btn active" data-glass-mode="chrome" title="Aurora glass panels">Glass</button>
+        <button type="button" class="seg-btn" data-glass-mode="zinc" title="Deep panel surface">Deep</button>
       </div>
       <button type="button" class="menubar-chip" id="refreshFleetBtn" title="Refresh fleet">
         <span class="pulse-dot" id="healthDot"></span>
@@ -445,6 +446,6 @@
   </nav>
 
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
-  <script src="app.js?v=20260612e"></script>
+  <script src="app.js?v=20260612f"></script>
 </body>
 </html>
