@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Build zyvor-vm-tools release artifacts and optional ISO.
+# Build zyvor-vm-tools release artifacts (tar.gz, deb, rpm, iso).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION="${VERSION:-0.1.0}"
 DIST="${ROOT}/dist/vmtools"
 ISO_DIR="${DIST}/iso-root"
+DEB_ROOT="${DIST}/deb-root"
 
 echo "Building zyvor-guest-agent (musl)..."
 cd "${ROOT}"
@@ -18,6 +19,45 @@ cp "target/x86_64-unknown-linux-musl/release/zyvor-guest-agent" "${DIST}/linux/z
 cp templates/agent/zyvor-guest-agent.service "${DIST}/linux/"
 tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
   -C "${DIST}/linux" zyvor-guest-agent zyvor-guest-agent.service
+
+echo "Building DEB..."
+rm -rf "${DEB_ROOT}"
+mkdir -p "${DEB_ROOT}/DEBIAN" "${DEB_ROOT}/usr/bin" "${DEB_ROOT}/lib/systemd/system"
+cp "${DIST}/linux/zyvor-guest-agent" "${DEB_ROOT}/usr/bin/"
+cp "${DIST}/linux/zyvor-guest-agent.service" "${DEB_ROOT}/lib/systemd/system/"
+cat > "${DEB_ROOT}/DEBIAN/control" <<EOF
+Package: zyvor-vm-tools
+Version: ${VERSION}
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: ZyvorAI Labs <info@zyvor.dev>
+Description: Zeus VM Tools — Zyvor in-guest agent for KubeVirt VMs
+Depends: systemd
+EOF
+cat > "${DEB_ROOT}/DEBIAN/postinst" <<'EOF'
+#!/bin/sh
+set -e
+systemctl daemon-reload || true
+systemctl enable zyvor-guest-agent.service || true
+EOF
+chmod 755 "${DEB_ROOT}/DEBIAN/postinst"
+dpkg-deb --build "${DEB_ROOT}" "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb"
+
+if command -v rpmbuild >/dev/null; then
+  echo "Building RPM..."
+  RPM_TOP="${DIST}/rpm"
+  mkdir -p "${RPM_TOP}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+  tar czf "${RPM_TOP}/SOURCES/zyvor-vm-tools-${VERSION}.tar.gz" \
+    -C "${ROOT}" \
+    --transform "s,^,guestkit-${VERSION}/," \
+    templates/agent/zyvor-guest-agent.service \
+    target/x86_64-unknown-linux-musl/release/zyvor-guest-agent
+  sed "s/^Version:.*/Version:        ${VERSION}/" "${ROOT}/packaging/vmtools/zyvor-vm-tools.spec" \
+    > "${RPM_TOP}/SPECS/zyvor-vm-tools.spec"
+  rpmbuild -bb --define "_topdir ${RPM_TOP}" "${RPM_TOP}/SPECS/zyvor-vm-tools.spec" || true
+  find "${RPM_TOP}/RPMS" -name '*.rpm' -exec cp {} "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" \; 2>/dev/null || true
+fi
 
 cat > "${ISO_DIR}/linux/install.sh" <<'EOF'
 #!/bin/sh
@@ -39,6 +79,8 @@ EOF
 chmod +x "${ISO_DIR}/linux/install.sh"
 cp "${DIST}/linux/zyvor-guest-agent" "${ISO_DIR}/linux/"
 cp "${DIST}/linux/zyvor-guest-agent.service" "${ISO_DIR}/linux/"
+cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/dev/null || true
+cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true
 
 cat > "${ISO_DIR}/manifest.json" <<EOF
 {"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64"]}
@@ -47,6 +89,10 @@ EOF
 if command -v genisoimage >/dev/null; then
   genisoimage -o "${DIST}/zyvor-vm-tools.iso" -V ZYVOR_VM_TOOLS -r "${ISO_DIR}"
   echo "ISO: ${DIST}/zyvor-vm-tools.iso"
+elif command -v mkisofs >/dev/null; then
+  mkisofs -o "${DIST}/zyvor-vm-tools.iso" -V ZYVOR_VM_TOOLS -r "${ISO_DIR}"
+  echo "ISO: ${DIST}/zyvor-vm-tools.iso"
 fi
 
 echo "Artifacts in ${DIST}/linux"
+ls -la "${DIST}/linux"

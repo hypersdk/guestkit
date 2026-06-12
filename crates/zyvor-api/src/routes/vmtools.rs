@@ -11,7 +11,9 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 
 use crate::error::{ApiError, ApiResult};
-use crate::kubevirt_guest_agent::{install_guest_agent, vm_is_windows, GuestAgentInstallResult};
+use crate::kubevirt_guest_agent::{
+    install_guest_agent, install_vmtools_iso, vm_is_windows, GuestAgentInstallResult,
+};
 use crate::models::ApiResponse;
 use crate::routes::kubevirt::{
     fetch_vm, get_guest_agent_info, list_dynamic_all, vm_resource, vmi_resource, GuestAgentInfo,
@@ -60,10 +62,23 @@ pub struct VMToolsVmStatus {
     pub guest_agent: GuestAgentInfo,
 }
 
+#[derive(Debug, Clone)]
+pub struct VMToolsCrSnapshot {
+    pub installed: bool,
+    pub connected: bool,
+    pub os_name: Option<String>,
+    pub ip_address: Option<String>,
+    pub qga_ready: bool,
+    pub zyvor_agent_ready: bool,
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct InstallQuery {
     #[serde(default)]
     pub restart: Option<bool>,
+    /// Install method: auto, cloud-init, qga, iso
+    #[serde(default)]
+    pub method: Option<String>,
 }
 
 pub fn bundle_info(state: &AppState) -> VMToolsBundleInfo {
@@ -200,9 +215,17 @@ pub async fn install_vm_vmtools(
 ) -> ApiResult<Json<ApiResponse<GuestAgentInstallResult>>> {
     let client = kube_client(&state)?;
     let restart = query.restart.unwrap_or(true);
-    let result = install_guest_agent(client.clone(), &namespace, &name, restart).await?;
+    let method = query.method.as_deref().unwrap_or("auto").to_lowercase();
+    let result = if method == "iso" {
+        let iso_url = bundle_info(&state)
+            .iso_url
+            .ok_or_else(|| ApiError::bad_request("VM Tools ISO URL is not configured"))?;
+        install_vmtools_iso(client.clone(), &namespace, &name, &iso_url, restart).await?
+    } else {
+        install_guest_agent(client.clone(), &namespace, &name, restart).await?
+    };
     if result.success && !result.is_windows {
-        sync_vm_tools_labels(&client, &namespace, &name, "installed", VMTOOLS_VERSION).await;
+        sync_vm_tools_labels(&client, &namespace, &name, "installed", VMTOOLS_VERSION, None).await;
     }
     Ok(Json(ApiResponse::ok(result)))
 }
@@ -229,6 +252,21 @@ pub async fn run_vm_diagnostics(
         &name,
         "connected",
         VMTOOLS_VERSION,
+        Some(VMToolsCrSnapshot {
+            installed: true,
+            connected: true,
+            os_name: guest.os_name.clone(),
+            ip_address: guest
+                .interfaces
+                .as_ref()
+                .and_then(|ifs| {
+                    ifs.iter()
+                        .find_map(|i| i.get("ipAddress").and_then(|v| v.as_str()))
+                })
+                .map(String::from),
+            qga_ready: true,
+            zyvor_agent_ready: true,
+        }),
     )
     .await;
     Ok(Json(ApiResponse::ok(json!({
@@ -273,7 +311,7 @@ async fn build_vm_vmtools_status(
     } else if guest.vmi_running {
         "cloud-init".into()
     } else {
-        "offline-inject".into()
+        "iso".into()
     };
     let message = if is_win {
         "Install QEMU Guest Agent from Zeus OS Guest Tools (virtio-win ISO).".into()
@@ -287,15 +325,37 @@ async fn build_vm_vmtools_status(
                 .unwrap_or_default()
         )
     } else if guest.vmi_running {
-        "Install Zeus VM Tools via cloud-init and restart the VM.".into()
+        "Install Zeus VM Tools via cloud-init, ISO attach, or restart the VM.".into()
     } else {
         "Start the VM or use offline GuestKit injection to bootstrap the agent.".into()
     };
 
     if guest.agent_connected {
         if let Some(c) = client {
-            sync_vm_tools_labels(c, namespace, name, "connected", version.as_deref().unwrap_or(VMTOOLS_VERSION))
-                .await;
+            let snap = VMToolsCrSnapshot {
+                installed: true,
+                connected: true,
+                os_name: guest.os_name.clone(),
+                ip_address: guest
+                    .interfaces
+                    .as_ref()
+                    .and_then(|ifs| {
+                        ifs.iter()
+                            .find_map(|i| i.get("ipAddress").and_then(|v| v.as_str()))
+                    })
+                    .map(String::from),
+                qga_ready: true,
+                zyvor_agent_ready: true,
+            };
+            sync_vm_tools_labels(
+                c,
+                namespace,
+                name,
+                "connected",
+                version.as_deref().unwrap_or(VMTOOLS_VERSION),
+                Some(snap),
+            )
+            .await;
         }
     }
 
@@ -331,6 +391,7 @@ pub async fn sync_vm_tools_labels(
     name: &str,
     tools_state: &str,
     version: &str,
+    cr_snapshot: Option<VMToolsCrSnapshot>,
 ) {
     let ar = vm_resource();
     let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), namespace, &ar);
@@ -347,6 +408,74 @@ pub async fn sync_vm_tools_labels(
     });
     let _ = api
         .patch(name, &PatchParams::default(), &Patch::Merge(&patch))
+        .await;
+    if let Some(snap) = cr_snapshot {
+        sync_vmguestagent_cr(client, namespace, name, version, &snap).await;
+    }
+}
+
+fn vmguestagent_resource() -> ApiResource {
+    ApiResource {
+        group: "zeus.zyvor.dev".into(),
+        version: "v1alpha1".into(),
+        api_version: "zeus.zyvor.dev/v1alpha1".into(),
+        kind: "VMGuestAgent".into(),
+        plural: "vmguestagents".into(),
+    }
+}
+
+async fn sync_vmguestagent_cr(
+    client: &Client,
+    namespace: &str,
+    vm_name: &str,
+    version: &str,
+    snap: &VMToolsCrSnapshot,
+) {
+    let cr_name = format!("{vm_name}-vmtools");
+    let ar = vmguestagent_resource();
+    let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), namespace, &ar);
+    let spec_obj = json!({
+        "apiVersion": "zeus.zyvor.dev/v1alpha1",
+        "kind": "VMGuestAgent",
+        "metadata": {
+            "name": cr_name,
+            "namespace": namespace,
+            "labels": {
+                "zeus.zyvor.dev/vm": vm_name,
+            }
+        },
+        "spec": {
+            "vmRef": { "namespace": namespace, "name": vm_name },
+            "desiredVersion": version,
+        }
+    });
+    if api.get(&cr_name).await.is_ok() {
+        let _ = api
+            .patch(
+                &cr_name,
+                &PatchParams::default(),
+                &Patch::Merge(&json!({
+                    "spec": spec_obj.get("spec").cloned().unwrap_or(Value::Null)
+                })),
+            )
+            .await;
+    } else if let Ok(obj) = serde_json::from_value::<kube::api::DynamicObject>(spec_obj) {
+        let _ = api.create(&kube::api::PostParams::default(), &obj).await;
+    }
+    let status = json!({
+        "status": {
+            "installed": snap.installed,
+            "connected": snap.connected,
+            "version": version,
+            "os": snap.os_name.clone().unwrap_or_default(),
+            "ip": snap.ip_address.clone().unwrap_or_default(),
+            "qgaReady": snap.qga_ready,
+            "zyvorAgentReady": snap.zyvor_agent_ready,
+            "lastHeartbeat": chrono::Utc::now().to_rfc3339(),
+        }
+    });
+    let _ = api
+        .patch_status(&cr_name, &PatchParams::default(), &Patch::Merge(&status))
         .await;
 }
 

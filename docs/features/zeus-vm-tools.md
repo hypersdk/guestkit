@@ -16,7 +16,7 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | Windows virtio-win path (Zeus deep link) | Shipped |
 | Fleet coverage API | Shipped |
 | CRDs (`VMToolsBundle`, `VMGuestAgent`, `VMToolsPolicy`) | Schema shipped |
-| Windows MSI | Phase 3 |
+| Windows MSI | Phase 4 |
 
 ## Phase 2 capabilities
 
@@ -28,6 +28,17 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | QGA bootstrap install script (live qemu-ga) | Shipped |
 | Fleet coverage UI chip | Shipped |
 | Guest exec via API | Blocked (KubeVirt has no guest-exec subresource) |
+
+## Phase 3 capabilities
+
+| Feature | Status |
+|---------|--------|
+| DEB package (`dpkg-deb`) | Shipped |
+| RPM + ISO in `build-artifacts.sh` | Shipped |
+| ISO attach install (`?method=iso`) | Shipped |
+| `VMGuestAgent` CR status sync | Shipped |
+| Windows MSI | Phase 4 |
+| Full `VMToolsPolicy` operator | Phase 4 |
 
 ## API routes
 
@@ -44,17 +55,27 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/shutdown` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/exec` |
 
+Install query params: `restart=true|false`, `method=auto|cloud-init|qga|iso`
+
 ## Install methods
 
-1. **Cloud-init** — Zeus/Zyvor UI **Install VM Tools** (Linux, VM stopped or after restart)
-2. **QGA bootstrap** — when qemu-ga is connected but Zyvor agent is missing, install returns `bootstrap_script` to run in the guest console
-3. **ISO attach** — build with `packaging/vmtools/build-artifacts.sh`
+1. **Cloud-init** — **Install VM Tools** (Linux; merges cloud-init + virtio channel)
+2. **QGA bootstrap** — when qemu-ga is connected, returns `bootstrap_script` for console install
+3. **ISO attach** — `?method=iso` creates CDI DataVolume, attaches CD-ROM, guest runs `/linux/install.sh`
 4. **Offline inject** — `guestkit repair --inject-agent` (GuestKit)
 
 ## Build packages
 
 ```bash
 ./packaging/vmtools/build-artifacts.sh
+```
+
+Produces `dist/vmtools/linux/` (tar.gz, deb, optional rpm) and `dist/vmtools/zyvor-vm-tools.iso`.
+
+Apply CRDs:
+
+```bash
+kubectl apply -f deploy/crd/zeus-vmtools.yaml
 ```
 
 ## VM labels (synced by zyvor-api)
@@ -67,5 +88,7 @@ metadata:
     zeus.zyvor.dev/tools-version: "0.1.0"
     zeus.zyvor.dev/last-heartbeat: "..."
 ```
+
+`VMGuestAgent` CR `{vm-name}-vmtools` is upserted in the VM namespace with live status.
 
 See also [guest-agent.md](guest-agent.md) and [kubevirt-integration.md](kubevirt-integration.md).

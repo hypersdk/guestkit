@@ -1289,7 +1289,7 @@ async function runVmToolsDiagnostics() {
   }
 }
 
-async function installClusterGuestAgent() {
+async function installClusterGuestAgent(method = 'auto') {
   const vm = state.selectedClusterVm;
   if (!vm) {
     toast('Select a cluster VM first', 'err');
@@ -1299,10 +1299,11 @@ async function installClusterGuestAgent() {
     window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
     return;
   }
-  feed(`Installing <strong>Zeus VM Tools</strong> on ${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}…`);
+  const label = method === 'iso' ? 'Attaching VM Tools ISO' : 'Installing Zeus VM Tools';
+  feed(`${label} on ${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}…`);
   try {
     const data = await api(
-      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/install?restart=true`,
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/install?restart=true&method=${encodeURIComponent(method)}`,
       { method: 'POST' },
     );
     const result = data.data;
@@ -2505,7 +2506,8 @@ function setupActions() {
       }
       if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
       else if (btn.dataset.clusterAction === 'boot-inspect') fetchClusterBootInspect(true);
-      else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent();
+      else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent('auto');
+      else if (btn.dataset.clusterAction === 'install-iso') installClusterGuestAgent('iso');
       else if (btn.dataset.clusterAction === 'vmtools-diagnostics') runVmToolsDiagnostics();
       else if (btn.dataset.clusterAction === 'vmtools-quiesce') clusterVmtoolsOp('quiesce');
       else if (btn.dataset.clusterAction === 'vmtools-unquiesce') clusterVmtoolsOp('unquiesce');

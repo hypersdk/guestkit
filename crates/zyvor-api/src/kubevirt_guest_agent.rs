@@ -2,7 +2,7 @@
 //! GuestKit agent bootstrap for live KubeVirt VMs (cloud-init + virtio channel).
 
 use base64::Engine;
-use kube::api::{Api, Patch, PatchParams};
+use kube::api::{Api, Patch, PatchParams, PostParams};
 use kube::discovery::ApiResource;
 use kube::Client;
 use serde::Serialize;
@@ -512,6 +512,166 @@ pub async fn install_guest_agent(
             "GuestKit agent bootstrap already present.".into()
         },
         next_steps,
+        bootstrap_script: None,
+    })
+}
+
+fn dv_resource() -> ApiResource {
+    ApiResource {
+        group: "cdi.kubevirt.io".into(),
+        version: "v1beta1".into(),
+        api_version: "cdi.kubevirt.io/v1beta1".into(),
+        kind: "DataVolume".into(),
+        plural: "datavolumes".into(),
+    }
+}
+
+fn merge_iso_cdrom_into_vm(vm: &mut Value, volume_name: &str, pvc_name: &str) -> bool {
+    let mut changed = false;
+    if let Some(volumes) = vm
+        .pointer_mut("/spec/template/spec/volumes")
+        .and_then(|v| v.as_array_mut())
+    {
+        let exists = volumes
+            .iter()
+            .any(|v| v.get("name").and_then(|n| n.as_str()) == Some(volume_name));
+        if !exists {
+            volumes.push(json!({
+                "name": volume_name,
+                "persistentVolumeClaim": { "claimName": pvc_name }
+            }));
+            changed = true;
+        }
+    }
+    if let Some(disks) = vm
+        .pointer_mut("/spec/template/spec/domain/devices/disks")
+        .and_then(|d| d.as_array_mut())
+    {
+        let exists = disks
+            .iter()
+            .any(|d| d.get("name").and_then(|n| n.as_str()) == Some(volume_name));
+        if !exists {
+            disks.push(json!({
+                "name": volume_name,
+                "cdrom": { "bus": "sata", "readonly": true }
+            }));
+            changed = true;
+        }
+    }
+    changed
+}
+
+pub async fn install_vmtools_iso(
+    client: Client,
+    namespace: &str,
+    name: &str,
+    iso_url: &str,
+    restart: bool,
+) -> ApiResult<GuestAgentInstallResult> {
+    let vm_ar = vm_resource();
+    let api: Api<kube::api::DynamicObject> =
+        Api::namespaced_with(client.clone(), namespace, &vm_ar);
+    let obj = api
+        .get(name)
+        .await
+        .map_err(|e| ApiError::internal(format!("get VM {namespace}/{name}: {e}")))?;
+    let mut vm = serde_json::to_value(&obj)
+        .map_err(|e| ApiError::internal(format!("serialize VM: {e}")))?;
+
+    let vmi_ar = vmi_resource();
+    let vmi_api: Api<kube::api::DynamicObject> =
+        Api::namespaced_with(client.clone(), namespace, &vmi_ar);
+    let vmi = vmi_api.get(name).await.ok().and_then(|o| serde_json::to_value(o).ok());
+    let vmi_running = vmi
+        .as_ref()
+        .and_then(|v| json_str(v, &["status", "phase"]))
+        .as_deref()
+        == Some("Running");
+
+    if vm_is_windows(Some(&vm), vmi.as_ref()) {
+        return Ok(GuestAgentInstallResult {
+            success: false,
+            method: "iso".into(),
+            is_windows: true,
+            cloud_init_updated: false,
+            channel_updated: false,
+            vm_restarted: false,
+            needs_restart: false,
+            message: "Windows VMs use virtio-win ISO via Zeus OS Guest Tools.".into(),
+            next_steps: vec![
+                "Open Zeus OS → Guest Tools and attach virtio-win.iso.".into(),
+            ],
+            bootstrap_script: None,
+        });
+    }
+
+    let dv_name = format!("{name}-vmtools-iso");
+    let dv_api: Api<kube::api::DynamicObject> =
+        Api::namespaced_with(client.clone(), namespace, &dv_resource());
+    if dv_api.get(&dv_name).await.is_err() {
+        let dv = json!({
+            "apiVersion": "cdi.kubevirt.io/v1beta1",
+            "kind": "DataVolume",
+            "metadata": {
+                "name": dv_name,
+                "namespace": namespace,
+                "labels": {
+                    "zeus.zyvor.dev/component": "vmtools-iso",
+                    "zeus.zyvor.dev/vm": name,
+                }
+            },
+            "spec": {
+                "source": {
+                    "http": { "url": iso_url }
+                },
+                "pvc": {
+                    "accessModes": ["ReadWriteOnce"],
+                    "resources": { "requests": { "storage": "128Mi" } }
+                }
+            }
+        });
+        let dv_obj: kube::api::DynamicObject = serde_json::from_value(dv)
+            .map_err(|e| ApiError::internal(format!("build DataVolume: {e}")))?;
+        dv_api
+            .create(&PostParams::default(), &dv_obj)
+            .await
+            .map_err(|e| ApiError::internal(format!("create DataVolume {dv_name}: {e}")))?;
+    }
+
+    let iso_attached = merge_iso_cdrom_into_vm(&mut vm, "vmtools-iso", &dv_name);
+    if iso_attached {
+        let patch = json!({
+            "spec": vm.get("spec").cloned().unwrap_or(Value::Null)
+        });
+        api.patch(name, &PatchParams::default(), &Patch::Merge(&patch))
+            .await
+            .map_err(|e| ApiError::internal(format!("patch VM {namespace}/{name}: {e}")))?;
+    }
+
+    let mut vm_restarted = false;
+    if restart && vmi_running {
+        restart_vm(client.clone(), namespace, name).await?;
+        vm_restarted = true;
+    }
+
+    Ok(GuestAgentInstallResult {
+        success: true,
+        method: "iso".into(),
+        is_windows: false,
+        cloud_init_updated: false,
+        channel_updated: false,
+        vm_restarted,
+        needs_restart: vmi_running && !vm_restarted,
+        message: if iso_attached {
+            "Zeus VM Tools ISO attached as CD-ROM — import may take a minute.".into()
+        } else {
+            "Zeus VM Tools ISO CD-ROM already present in VM spec.".into()
+        },
+        next_steps: vec![
+            format!("Wait for DataVolume {dv_name} to import from {iso_url}."),
+            "Mount the CD-ROM in the guest and run /linux/install.sh as root.".into(),
+            "Refresh guest info after zyvor-guest-agent is running.".into(),
+        ],
         bootstrap_script: None,
     })
 }
