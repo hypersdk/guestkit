@@ -58,7 +58,9 @@ pub fn draw(f: &mut Frame, area: Rect, app: &App) {
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!("{} ", u.name),
-                    Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(WARNING_COLOR)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(u.description.clone().unwrap_or_default()),
             ]))

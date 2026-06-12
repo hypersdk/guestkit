@@ -1,5 +1,5 @@
 Name:           guestkit
-Version:        0.3.6
+Version:        0.3.7
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -92,11 +92,17 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
-* Wed Jun 04 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.6-1
+* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.7-1
+- IronWolf web console theme for GuestKit deploy UI
+- Console Copilot API, system status, fleet overview endpoints
+- zyvor-guest-agent crate and QGA transport improvements
+- Windows forensic EVTX parsing and persistence collectors
+
+* Thu Jun 04 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.6-1
 - Add in-guest agent mode for live VM assurance over virtio-serial
 - Sync RPM spec version with Cargo.toml
 
-* Mon Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
+* Tue Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
 - Initial RPM package
 - Add interactive TUI dashboard with fuzzy jump navigation
 - Add security, compliance, hardening, performance profiles
@@ -107,19 +113,19 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Reorganize documentation structure
 - Fix compiler warnings
 
-* Sun Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.0-1
+* Mon Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.0-1
 - Add comprehensive TUI dashboard
 - Add security analysis profiles
 - Add enhanced inspection APIs
 - Improve documentation
 
-* Fri Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.2.0-1
+* Sat Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.2.0-1
 - Add Python bindings
 - Add batch processing support
 - Add caching system
 - Improve error handling
 
-* Thu Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.1.0-1
+* Fri Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.1.0-1
 - Initial release
 - Basic VM disk inspection
 - Support for multiple disk formats

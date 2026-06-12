@@ -62,17 +62,11 @@ impl VsockGuestStream {
             let dup = libc::dup(fd);
             if dup < 0 {
                 libc::close(fd);
-                return (
-                    Box::new(VsockIo { fd: -1 }),
-                    Box::new(VsockIo { fd: -1 }),
-                );
+                return (Box::new(VsockIo { fd: -1 }), Box::new(VsockIo { fd: -1 }));
             }
             dup
         };
-        (
-            reader,
-            Box::new(VsockIo { fd: writer_fd }),
-        )
+        (reader, Box::new(VsockIo { fd: writer_fd }))
     }
 
     pub fn into_raw_fd(self) -> RawFd {
@@ -163,7 +157,8 @@ pub fn listen(port: Option<u32>) -> Result<VsockListener> {
 
 impl VsockListener {
     pub fn accept(&self) -> Result<VsockGuestStream> {
-        let client_fd = unsafe { libc::accept(self.fd, std::ptr::null_mut(), std::ptr::null_mut()) };
+        let client_fd =
+            unsafe { libc::accept(self.fd, std::ptr::null_mut(), std::ptr::null_mut()) };
         if client_fd < 0 {
             bail!("vsock accept: {}", std::io::Error::last_os_error());
         }

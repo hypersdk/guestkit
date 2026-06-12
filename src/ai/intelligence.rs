@@ -29,12 +29,7 @@ pub fn build_intelligence(
 ) -> IntelligenceBundle {
     let semantic = analyze_semantic(evidence);
     let recommendations = generate_recommendations(evidence, boot, &semantic);
-    let narrative = build_report_narrative(
-        evidence,
-        &semantic,
-        &recommendations,
-        copilot.as_ref(),
-    );
+    let narrative = build_report_narrative(evidence, &semantic, &recommendations, copilot.as_ref());
     let security_profile = evaluate_cis_profile(evidence, &semantic);
     let machina_export = build_machina_export(
         evidence,
