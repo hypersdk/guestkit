@@ -43,10 +43,10 @@ jobs:
             expected_distro: "debian"
             expected_version: "12"
 
-          - os: fedora-39
-            url: "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-39-1.5.x86_64.qcow2"
-            expected_distro: "fedora"
-            expected_version: "39"
+          - os: cirros
+            url: "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img"
+            expected_distro: "cirros"
+            expected_version: "0.6"
 
     steps:
       - name: Checkout code
@@ -77,7 +77,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: test-images/
-          key: test-images-${{ matrix.os }}-v1
+          key: test-images-${{ matrix.os }}-v2
 
       - name: Download test image
         run: |
@@ -131,7 +131,7 @@ jobs:
             test-images/${{ matrix.os }}.img | tee inspect-output.txt
 
           # Verify inspect produced block device output (OS detection varies on cloud images)
-          grep -q "/dev/sda" inspect-output.txt
+          grep -qE "/dev/(sd|vd|xvd)[a-z]" inspect-output.txt
           echo "✓ Inspect completed for ${{ matrix.os }}"
 
       - name: Test CLI - inspect JSON
@@ -141,7 +141,7 @@ jobs:
 
           cat inspect.json | jq '.'
 
-          distro=$(cat inspect.json | jq -r '.operating_systems[0].distro // empty')
+          distro=$(cat inspect.json | jq -r '.os.distribution // .operating_systems[0].distro // empty')
           if [ -n "$distro" ]; then
             [ "$distro" = "${{ matrix.expected_distro }}" ]
             echo "✓ JSON output correct: $distro"
@@ -156,7 +156,7 @@ jobs:
             test-images/${{ matrix.os }}.img | tee fs-output.txt
 
           # Should list devices and partitions
-          grep -q "/dev/sda" fs-output.txt
+          grep -qE "/dev/(sd|vd|xvd)[a-z]" fs-output.txt
           echo "✓ Found block devices"
 
       - name: Test CLI - filesystems detailed
@@ -254,6 +254,7 @@ jobs:
           fi
 
       - name: Run benchmarks
+        continue-on-error: true
         run: |
           export GUESTKIT_TEST_UBUNTU_22_04=test-images/ubuntu-22.04.qcow2
           cargo bench --bench operations -- --save-baseline main

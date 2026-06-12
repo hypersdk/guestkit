@@ -79,8 +79,10 @@ pub fn collect_systemd_live() -> Option<SystemdInfo> {
         return None;
     }
 
-    let mut info = SystemdInfo::default();
-    info.version = read_systemd_version_live();
+    let mut info = SystemdInfo {
+        version: read_systemd_version_live(),
+        ..Default::default()
+    };
     let enabled = discover_enabled_units_live();
     let masked = discover_masked_units_live();
 
@@ -323,12 +325,10 @@ fn discover_masked_units_live() -> HashSet<String> {
         if let Ok(entries) = fs::read_dir(&path) {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if is_unit_file(&name) {
-                    if entry.path().is_symlink() {
-                        if let Ok(target) = fs::read_link(entry.path()) {
-                            if target.to_string_lossy().contains("/dev/null") {
-                                masked.insert(name);
-                            }
+                if is_unit_file(&name) && entry.path().is_symlink() {
+                    if let Ok(target) = fs::read_link(entry.path()) {
+                        if target.to_string_lossy().contains("/dev/null") {
+                            masked.insert(name);
                         }
                     }
                 }
