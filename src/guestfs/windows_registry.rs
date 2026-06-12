@@ -673,7 +673,7 @@ pub fn parse_evtx_file(evtx_path: &Path, limit: usize) -> Result<Vec<WindowsEven
 
     #[cfg(feature = "evtx")]
     {
-        return parse_evtx_with_crate(evtx_path, limit);
+        parse_evtx_with_crate(evtx_path, limit)
     }
 
     #[cfg(not(feature = "evtx"))]

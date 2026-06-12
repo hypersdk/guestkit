@@ -2,7 +2,7 @@
 //! Phase 3 — what-if boot score simulator.
 
 use crate::ai::semantic::SemanticAnalysis;
-use crate::boot::{analyze_bootability, BootTarget, BootabilityReport};
+use crate::boot::{analyze_bootability, BootTarget};
 use crate::evidence::snapshot::{EvidenceSnapshot, SystemdUnitState};
 use serde::{Deserialize, Serialize};
 

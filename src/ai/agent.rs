@@ -7,7 +7,7 @@ use crate::ai::tools::SnapshotTools;
 use crate::assurance::boot_target_from_str;
 use crate::boot::{analyze_bootability, BootabilityReport};
 use crate::evidence::snapshot::EvidenceSnapshot;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

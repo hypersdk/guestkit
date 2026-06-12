@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-06-12
+
+### Fixed
+- CI clippy warnings across agent, AI, guestfs, and assurance modules
+- Integration test uses disk-to-disk `guestkit copy` with four arguments
+- `Cargo.lock` synced for RPM `--locked` builds
+
 ## [0.3.7] - 2026-06-12
 
 ### Added

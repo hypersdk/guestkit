@@ -190,17 +190,17 @@ fn score_sandboxing(units: &[SystemdUnit]) -> Vec<SandboxScore> {
             }
             for (k, v) in &section.keys {
                 let key = k.as_str();
-                if key.starts_with("Protect")
+                if (key.starts_with("Protect")
                     || key.starts_with("Private")
                     || key == "NoNewPrivileges"
                     || key == "CapabilityBoundingSet"
                     || key == "SystemCallFilter"
-                    || key == "RestrictNamespaces"
+                    || key == "RestrictNamespaces")
+                    && v != "false"
+                    && !v.is_empty()
                 {
-                    if v != "false" && !v.is_empty() {
-                        flags.push(format!("{k}={v}"));
-                        points = points.saturating_add(8);
-                    }
+                    flags.push(format!("{k}={v}"));
+                    points = points.saturating_add(8);
                 }
             }
         }
@@ -218,7 +218,7 @@ fn score_sandboxing(units: &[SystemdUnit]) -> Vec<SandboxScore> {
             });
         }
     }
-    scores.sort_by(|a, b| a.score.cmp(&b.score));
+    scores.sort_by_key(|s| s.score);
     scores
 }
 

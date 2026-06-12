@@ -120,11 +120,12 @@ pub fn evaluate_cis_profile(
     }
 
     let total = passed.len() + failed.len();
-    let score = if total == 0 {
-        100
-    } else {
-        ((passed.len() * 100) / total) as u8
-    };
+    let pct = passed
+        .len()
+        .checked_mul(100)
+        .and_then(|v| if total == 0 { Some(100) } else { v.checked_div(total) })
+        .unwrap_or(100);
+    let score = u8::try_from(pct).unwrap_or(100);
 
     SecurityProfileReport {
         profile: "guestkit-cis-lite-v1".into(),

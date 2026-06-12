@@ -198,14 +198,18 @@ jobs:
           [ -s hostname.txt ]
           echo "✓ File reading works: $(cat hostname.txt)"
 
-      - name: Test CLI - copy file
+      - name: Test CLI - copy file between disk paths
         run: |
           sudo ./target/release/guestkit copy \
-            "test-images/${{ matrix.os }}.img:/etc/hostname" \
-            ./copied-hostname.txt
+            test-images/${{ matrix.os }}.img /etc/hostname \
+            test-images/${{ matrix.os }}.img /tmp/guestkit-copy-hostname \
+            -f
 
-          [ -f ./copied-hostname.txt ]
-          echo "✓ File copying works: $(cat ./copied-hostname.txt)"
+          sudo ./target/release/guestkit cat \
+            test-images/${{ matrix.os }}.img /tmp/guestkit-copy-hostname | tee copied-hostname.txt
+
+          [ -s copied-hostname.txt ]
+          echo "✓ File copying works: $(cat copied-hostname.txt)"
 
       - name: Upload test results
         if: always()

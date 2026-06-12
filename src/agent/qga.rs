@@ -279,9 +279,9 @@ fn statvfs_usage(path: &str) -> (u64, u64, u64, u64, u64) {
     let Ok(st) = statvfs(Path::new(path)) else {
         return (0, 0, 0, 0, 0);
     };
-    let total = st.blocks() as u64 * st.fragment_size() as u64;
-    let free = st.blocks_free() as u64 * st.fragment_size() as u64;
-    let avail = st.blocks_available() as u64 * st.fragment_size() as u64;
+    let total = st.blocks() * st.fragment_size();
+    let free = st.blocks_free() * st.fragment_size();
+    let avail = st.blocks_available() * st.fragment_size();
     let used = total.saturating_sub(free);
     let inodes_total = st.files();
     let inodes_free = st.files_free();
