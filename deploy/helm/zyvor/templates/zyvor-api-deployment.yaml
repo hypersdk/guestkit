@@ -28,6 +28,55 @@ spec:
           env:
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
+            {{- if .Values.zyvorApi.auth.enabled }}
+            - name: AUTH_ENABLED
+              value: "true"
+            - name: JWT_ISSUER
+              value: {{ .Values.zyvorApi.auth.jwtIssuer | default "guestkit" | quote }}
+            - name: JWT_EXPIRY_HOURS
+              value: {{ .Values.zyvorApi.auth.jwtExpiryHours | default 24 | quote }}
+            - name: DEFAULT_ROLE
+              value: {{ .Values.zyvorApi.auth.defaultRole | default "operator" | quote }}
+            - name: PUBLIC_BASE_URL
+              value: {{ .Values.zyvorApi.auth.publicBaseUrl | quote }}
+            - name: UI_BASE_URL
+              value: {{ .Values.zyvorApi.auth.uiBaseUrl | quote }}
+            - name: OIDC_ISSUER_URL
+              value: {{ .Values.zyvorApi.auth.oidc.issuerUrl | default "" | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ .Values.zyvorApi.auth.oidc.clientId | default "" | quote }}
+            - name: OIDC_BUTTON_LABEL
+              value: {{ .Values.zyvorApi.auth.oidc.buttonLabel | default "Sign in with SSO" | quote }}
+            - name: SAML_ENABLED
+              value: {{ ternary "true" "false" .Values.zyvorApi.auth.saml.enabled | quote }}
+            - name: SAML_ENTITY_ID
+              value: {{ .Values.zyvorApi.auth.saml.entityId | default "" | quote }}
+            - name: SAML_SSO_URL
+              value: {{ .Values.zyvorApi.auth.saml.ssoUrl | default "" | quote }}
+            - name: SAML_METADATA_URL
+              value: {{ .Values.zyvorApi.auth.saml.metadataUrl | default "" | quote }}
+            {{- if .Values.zyvorApi.auth.jwtSecret }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-api-auth
+                  key: JWT_SECRET
+            {{- end }}
+            {{- if .Values.zyvorApi.auth.oidc.clientSecret }}
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-api-auth
+                  key: OIDC_CLIENT_SECRET
+            {{- end }}
+            {{- if .Values.zyvorApi.auth.saml.certificatePem }}
+            - name: SAML_CERTIFICATE_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-api-auth
+                  key: SAML_CERTIFICATE_PEM
+            {{- end }}
+            {{- end }}
             - name: DATABASE_URL
               value: postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql:5432/{{ .Values.postgresql.database }}
             - name: REDIS_URL

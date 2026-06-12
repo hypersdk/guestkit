@@ -3,21 +3,20 @@
 //! This crate provides the type definitions for the VM Operations Job Protocol v1.
 //! It supports serialization/deserialization and validation of job specifications.
 
+pub mod builder;
 pub mod error;
 pub mod types;
 pub mod validation;
-pub mod builder;
 
 // Re-export main types
+pub use builder::JobBuilder;
 pub use error::{JobError, JobResult};
 pub use types::{
-    Job, JobDocument, JobMetadata, ExecutionPolicy, Constraints,
-    Routing, Observability, Audit, Payload, WorkerCapabilities,
-    JobResult as JobResultType, ProgressEvent, JobStatus,
-    ExecutionSummary, JobOutputs, JobExecutionError, ExecutionMetrics,
+    Audit, Constraints, ExecutionMetrics, ExecutionPolicy, ExecutionSummary, Job, JobDocument,
+    JobExecutionError, JobMetadata, JobOutputs, JobResult as JobResultType, JobStatus,
+    Observability, Payload, ProgressEvent, Routing, WorkerCapabilities,
 };
 pub use validation::JobValidator;
-pub use builder::JobBuilder;
 
 /// Protocol version
 pub const PROTOCOL_VERSION: &str = "1.0";

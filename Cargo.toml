@@ -1,7 +1,7 @@
 # Standalone workspace — avoids joining a parent Cargo workspace when deployed
 # under e.g. ~/.deployments/guestkit next to machina.
 [workspace]
-members = [".", "crates/guestkit-agent-protocol", "crates/zyvor-guest-agent"]
+members = [".", "crates/guestkit-agent-protocol", "crates/guestkit-job-spec", "crates/zyvor-guest-agent"]
 
 [package]
 name = "guestkit"

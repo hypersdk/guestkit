@@ -157,7 +157,7 @@ pub async fn import_from_storage(
 ) -> ApiResult<Json<ApiResponse<VmImportResponse>>> {
     let root_id = body.root.unwrap_or(0);
     let rel = normalize_rel_path(&body.path);
-    let (root, abs) = resolve_browse_path(&state, root_id, &rel)?;
+    let (_root, abs) = resolve_browse_path(&state, root_id, &rel)?;
     let meta = tokio::fs::metadata(&abs)
         .await
         .map_err(|e| ApiError::bad_request(format!("file not found: {e}")))?;
