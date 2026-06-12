@@ -54,6 +54,8 @@ if curl -sf "${API}/vmtools/bundle" >/dev/null 2>&1; then
   curl -sf "${API}/vmtools/bundle" | python3 -m json.tool | head -20
   echo "VM Tools coverage..."
   curl -sf "${API}/vmtools/coverage" | python3 -m json.tool
+  echo "VM Tools policy..."
+  curl -sf "${API}/vmtools/policy" | python3 -m json.tool
 fi
 
 if curl -sf "${API}/storage/roots" >/dev/null 2>&1; then
