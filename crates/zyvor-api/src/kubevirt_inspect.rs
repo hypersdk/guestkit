@@ -68,11 +68,20 @@ async fn resolve_stopped_vm_disk(
             ))
         })?;
 
-    let format = disk_path
+    let format = match disk_path
         .extension()
         .and_then(|e| e.to_str())
-        .unwrap_or("qcow2")
-        .to_lowercase();
+        .unwrap_or("")
+        .to_lowercase()
+        .as_str()
+    {
+        "qcow2" => "qcow2",
+        "raw" | "img" => "raw",
+        other if !other.is_empty() => other,
+        _ if disk_path.file_name().and_then(|n| n.to_str()) == Some("disk.img") => "raw",
+        _ => "qcow2",
+    }
+    .to_string();
 
     let shadow_id = Uuid::new_v4();
     let label = format!("{namespace}/{name}");

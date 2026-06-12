@@ -7,6 +7,7 @@ mod health;
 mod jobs;
 pub(crate) mod kubevirt;
 mod storage;
+mod system;
 mod vmtools;
 mod vms;
 
@@ -18,6 +19,7 @@ pub fn api_router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/health", get(health::health))
         .route("/api/v1/config", get(config::get_config))
+        .route("/api/v1/system/status", get(system::get_system_status))
         .route("/api/v1/storage/roots", get(storage::list_storage_roots))
         .route("/api/v1/storage/browse", get(storage::browse_storage))
         .route("/api/v1/vms/import-from-storage", post(storage::import_from_storage))
@@ -61,14 +63,28 @@ pub fn api_router() -> Router<AppState> {
             post(crate::kubevirt_vmtools_ops::exec_vm_handler),
         )
         .route("/api/v1/vms/import", post(vms::import_vm))
+        .route("/api/v1/vms/import-from-url", post(vms::import_from_url))
+        .route("/api/v1/vms/import-from-s3", post(vms::import_from_s3))
+        .route("/api/v1/vms/import-from-nfs", post(vms::import_from_nfs))
+        .route("/api/v1/vms/compare", post(vms::compare_vms))
+        .route("/api/v1/vms/cleanup-shadows", post(vms::cleanup_shadow_vms))
         .route("/api/v1/vms", get(vms::list_vms))
+        .route("/api/v1/vms/:id", axum::routing::delete(vms::delete_vm))
+        .route("/api/v1/vms/:id/jobs", get(vms::list_vm_jobs))
         .route("/api/v1/vms/:id/inspect", post(vms::inspect_vm))
         .route("/api/v1/vms/:id/doctor", post(vms::doctor_vm))
         .route("/api/v1/vms/:id/migration-plan", post(vms::migration_plan_vm))
         .route("/api/v1/vms/:id/repair-plan", post(vms::repair_plan_vm))
+        .route("/api/v1/vms/:id/convert", post(vms::convert_vm))
+        .route("/api/v1/vms/:id/readiness-report", post(vms::readiness_report))
         .route("/api/v1/vms/:id/provision", post(vms::provision_vm))
         .route("/api/v1/jobs/:id", get(jobs::get_job))
         .route("/api/v1/vms/:id/copilot/ask", post(copilot::ask_copilot))
+        .route("/api/v1/vms/:id/copilot/briefing", get(copilot::get_vm_briefing))
+        .route("/api/v1/vms/:id/copilot/launch-advice", post(copilot::launch_advice))
+        .route("/api/v1/vms/:id/copilot/explain-check", post(copilot::explain_check))
+        .route("/api/v1/vms/compare/copilot", post(copilot::compare_copilot))
+        .route("/api/v1/copilot/fleet-overview", post(copilot::fleet_overview))
         .route("/api/v1/vms/:id/agent/ping", post(agent::ping_agent))
         .route("/api/v1/vms/:id/agent/evidence", post(agent::agent_evidence))
         .route("/api/v1/vms/:id/agent/doctor", post(agent::agent_doctor))

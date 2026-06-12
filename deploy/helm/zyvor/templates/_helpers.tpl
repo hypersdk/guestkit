@@ -16,6 +16,23 @@
   mountPath: /var/lib/zyvor/images
 {{- end }}
 
+{{- define "zyvor.kubevirtStorageVolume" -}}
+{{- if .Values.persistence.kubevirtLocalPath }}
+- name: kubevirt-local-storage
+  hostPath:
+    path: {{ .Values.persistence.kubevirtLocalPath }}
+    type: Directory
+{{- end }}
+{{- end }}
+
+{{- define "zyvor.kubevirtStorageVolumeMount" -}}
+{{- if .Values.persistence.kubevirtLocalPath }}
+- name: kubevirt-local-storage
+  mountPath: {{ .Values.persistence.kubevirtLocalPath }}
+  readOnly: true
+{{- end }}
+{{- end }}
+
 {{- define "zyvor.vmtoolsBundleBaseUrl" -}}
 {{- if .Values.vmtools.bundle.baseUrl -}}
 {{- trimSuffix "/" .Values.vmtools.bundle.baseUrl -}}

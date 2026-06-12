@@ -264,16 +264,31 @@ pub(crate) async fn resolve_disk_path(client: &Client, namespace: &str, pvc_name
     }
 
     for path in candidates {
-        if path_exists(&path) {
-            return Some(path);
+        if let Some(resolved) = resolve_existing_disk(&path) {
+            return Some(resolved);
         }
     }
 
     find_longhorn_replica_image(&pvc_name, pvc.get("metadata")?)
 }
 
+fn resolve_existing_disk(path: &FsPath) -> Option<PathBuf> {
+    if path.is_file() {
+        return Some(path.to_path_buf());
+    }
+    if path.is_dir() {
+        for name in ["disk.img", "disk.qcow2", "disk.raw"] {
+            let candidate = path.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
 fn path_exists(path: &FsPath) -> bool {
-    std::fs::metadata(path).is_ok()
+    resolve_existing_disk(path).is_some()
 }
 
 fn find_longhorn_replica_image(pvc_name: &str, metadata: &Value) -> Option<PathBuf> {

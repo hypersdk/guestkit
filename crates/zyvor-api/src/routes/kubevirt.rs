@@ -35,6 +35,9 @@ pub struct KubeVirtVmSummary {
     pub guest_tools: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools_version: Option<String>,
+    /// True when zyvor-guest-agent is live (KubeVirt guestAgentVersion or connected label).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools_connected: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -76,6 +79,16 @@ pub fn vmi_resource() -> ApiResource {
         api_version: "kubevirt.io/v1".into(),
         kind: "VirtualMachineInstance".into(),
         plural: "virtualmachineinstances".into(),
+    }
+}
+
+pub fn cdi_dv_resource() -> ApiResource {
+    ApiResource {
+        group: "cdi.kubevirt.io".into(),
+        version: "v1beta1".into(),
+        api_version: "cdi.kubevirt.io/v1beta1".into(),
+        kind: "DataVolume".into(),
+        plural: "datavolumes".into(),
     }
 }
 
@@ -316,11 +329,17 @@ pub async fn list_kubevirt_vms(
         let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
         let is_windows = crate::kubevirt_guest_agent::vm_is_windows(Some(&vm), vmi);
         let root_pvc = crate::kubevirt_boot_inspect::root_pvc_from_vm(&vm);
-        let guest_tools = json_str(&vm, &["metadata", "labels", "zeus.zyvor.dev/guest-tools"]);
+        let guest_tools_label = json_str(&vm, &["metadata", "labels", "zeus.zyvor.dev/guest-tools"]);
         let tools_version = vm
             .pointer("/metadata/annotations/zeus.zyvor.dev/tools-version")
             .and_then(|v| v.as_str())
             .map(String::from);
+        let tools_connected = crate::kubevirt_guest_agent::zyvor_tools_connected(&vm, vmi);
+        let guest_tools = if tools_connected {
+            Some("connected".into())
+        } else {
+            guest_tools_label
+        };
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -337,6 +356,7 @@ pub async fn list_kubevirt_vms(
             age: format_age(created.as_ref()),
             guest_tools,
             tools_version,
+            tools_connected: Some(tools_connected),
         });
     }
 
@@ -379,6 +399,8 @@ pub async fn get_guest_agent_info(
 pub struct GuestAgentInstallQuery {
     #[serde(default)]
     pub restart: Option<bool>,
+    #[serde(default)]
+    pub method: Option<String>,
 }
 
 pub async fn install_guest_agent(
@@ -388,6 +410,9 @@ pub async fn install_guest_agent(
 ) -> ApiResult<Json<ApiResponse<crate::kubevirt_guest_agent::GuestAgentInstallResult>>> {
     let client = kube_client(&state)?;
     let restart = query.restart.unwrap_or(true);
-    let result = crate::kubevirt_guest_agent::install_guest_agent(client, &namespace, &name, restart).await?;
+    let method = query.method.as_deref();
+    let result =
+        crate::kubevirt_guest_agent::install_guest_agent(client, &namespace, &name, restart, method)
+            .await?;
     Ok(Json(ApiResponse::ok(result)))
 }

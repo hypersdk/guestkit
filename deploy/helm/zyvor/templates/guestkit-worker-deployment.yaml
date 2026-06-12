@@ -40,6 +40,7 @@ spec:
             {{- toYaml .Values.guestkitWorker.resources | nindent 12 }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
+            {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}
             - name: results
               mountPath: /var/lib/guestkit/results
             - name: dev
@@ -47,6 +48,7 @@ spec:
               mountPropagation: HostToContainer
       volumes:
         {{- include "zyvor.vmVolume" . | nindent 8 }}
+        {{- include "zyvor.kubevirtStorageVolume" . | nindent 8 }}
         - name: results
           emptyDir: {}
         - name: dev

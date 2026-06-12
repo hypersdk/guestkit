@@ -27,6 +27,7 @@ pub mod dosfs_ops;
 pub mod ext_ops;
 pub mod f2fs_ops;
 pub mod file_ops;
+pub mod forensic;
 pub mod filesystem;
 pub mod fstab;
 pub mod fstab_rewriter;

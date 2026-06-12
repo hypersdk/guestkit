@@ -13,7 +13,12 @@ zyvorApi:
   privileged: true
   zeusPublicUrl: "http://212.8.252.194:30050"
   clusterName: "k3s-guestkit"
-  guestkitBinaryUrl: "http://212.8.252.194:30050/api/v1/engines/guestkit/binary"
+  guestkitBinaryUrl: "http://212.8.252.194:30092/vmtools/linux/zyvor-guest-agent"
+  agentProxyUrl: "http://127.0.0.1:8765"
+  agentProxy:
+    enabled: true
+    vsockPort: 1234
+    listen: "127.0.0.1:8765"
   service:
     type: NodePort
     nodePort: 30080
@@ -28,9 +33,13 @@ persistence:
     storageClass: local-path
     accessMode: ReadWriteOnce
     hostPath: /var/lib/zyvor/images
+  kubevirtLocalPath: /var/lib/rancher/k3s/storage
 
 minio:
   enabled: true
+  service:
+    type: NodePort
+    nodePort: 30092
 
 kubevirt:
   enabled: true
@@ -46,7 +55,7 @@ vmtools:
     enabled: true
     version: "0.1.0"
     channel: stable
-    baseUrl: "http://212.8.252.194:30050/api/v1/vmtools/bundle"
+    baseUrl: "http://212.8.252.194:30092/vmtools"
   reconcile:
     enabled: true
     schedule: "*/10 * * * *"
