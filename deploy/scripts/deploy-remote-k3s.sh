@@ -98,8 +98,8 @@ helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   --set zyvorUi.image="${UI_IMAGE}"
 
 if [[ -n "${NO_CACHE}" ]] || [[ -z "${PULL_REGISTRY}" ]]; then
-  echo "Restarting API and UI pods to pick up freshly built :latest images..."
-  kubectl -n "${NAMESPACE}" rollout restart deployment/zyvor-api deployment/zyvor-ui
+  echo "Restarting API, UI, and worker pods to pick up freshly built :latest images..."
+  kubectl -n "${NAMESPACE}" rollout restart deployment/zyvor-api deployment/zyvor-ui deployment/guestkit-worker
 fi
 
 echo "Waiting for rollouts..."

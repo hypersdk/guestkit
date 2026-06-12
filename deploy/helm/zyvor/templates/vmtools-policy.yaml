@@ -12,4 +12,5 @@ spec:
   autoUpgrade: {{ .Values.vmtools.defaultPolicy.autoUpgrade }}
   channel: stable
   rebootPolicy: if-needed
+  maxConcurrent: {{ .Values.vmtools.defaultPolicy.maxConcurrent }}
 {{- end }}

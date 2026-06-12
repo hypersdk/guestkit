@@ -528,6 +528,12 @@ pub struct VMToolsPolicySpec {
     pub channel: String,
     #[serde(default = "default_reboot_policy")]
     pub reboot_policy: String,
+    #[serde(default = "default_max_concurrent")]
+    pub max_concurrent: u32,
+}
+
+fn default_max_concurrent() -> u32 {
+    3
 }
 
 fn default_channel() -> String {
@@ -589,6 +595,7 @@ pub async fn put_policy(
         auto_upgrade: false,
         channel: default_channel(),
         reboot_policy: default_reboot_policy(),
+        max_concurrent: default_max_concurrent(),
     });
     upsert_policy(&client, &name, &spec).await?;
     let view = fetch_policy(&client, &name).await?;
@@ -648,6 +655,8 @@ pub async fn reconcile_policy(
         skipped: 0,
         errors: Vec::new(),
     };
+    let max_actions = policy.spec.max_concurrent.max(1);
+    let mut actions_taken = 0u32;
 
     for vm in vms {
         let name = vm.pointer("/metadata/name").and_then(|v| v.as_str()).unwrap_or("");
@@ -688,6 +697,11 @@ pub async fn reconcile_policy(
             continue;
         }
 
+        if actions_taken >= max_actions {
+            result.skipped += 1;
+            continue;
+        }
+
         match reconcile_install_vm(
             &state,
             client.clone(),
@@ -701,12 +715,15 @@ pub async fn reconcile_policy(
         )
         .await
         {
-            Ok(outcome) => match outcome {
+            Ok(outcome) => {
+                actions_taken += 1;
+                match outcome {
                 ReconcileOutcome::Installed => result.installed += 1,
                 ReconcileOutcome::Pending => result.pending += 1,
                 ReconcileOutcome::Upgraded => result.upgraded += 1,
                 ReconcileOutcome::Skipped => result.skipped += 1,
-            },
+                }
+            }
             Err(e) => result.errors.push(format!("{namespace}/{name}: {}", e.message)),
         }
     }
@@ -744,6 +761,7 @@ async fn fetch_policy(client: &Client, name: &str) -> ApiResult<VMToolsPolicyVie
                 auto_upgrade: false,
                 channel: default_channel(),
                 reboot_policy: default_reboot_policy(),
+                max_concurrent: default_max_concurrent(),
             },
             status: None,
         }),
@@ -772,6 +790,11 @@ fn parse_policy_spec(val: &Value) -> VMToolsPolicySpec {
             .and_then(|v| v.as_str())
             .unwrap_or("if-needed")
             .into(),
+        max_concurrent: spec
+            .get("maxConcurrent")
+            .and_then(|v| v.as_u64())
+            .map(|n| n as u32)
+            .unwrap_or_else(default_max_concurrent),
     }
 }
 
@@ -787,6 +810,7 @@ async fn upsert_policy(client: &Client, name: &str, spec: &VMToolsPolicySpec) ->
             "autoUpgrade": spec.auto_upgrade,
             "channel": spec.channel,
             "rebootPolicy": spec.reboot_policy,
+            "maxConcurrent": spec.max_concurrent,
         }
     });
     if api.get(name).await.is_ok() {
