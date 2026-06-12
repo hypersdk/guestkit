@@ -12,26 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install musl toolchain
+      - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools genisoimage
           rustup target add x86_64-unknown-linux-musl
 
-      - name: Build zyvor-guest-agent (musl)
-        run: |
-          cargo build --release --features agent --no-default-features \
-            --target x86_64-unknown-linux-musl --bin zyvor-guest-agent
+      - name: Build Zeus VM Tools artifacts
+        run: bash packaging/vmtools/build-artifacts.sh
 
-      - name: Package artifact
-        run: |
-          mkdir -p dist
-          cp target/x86_64-unknown-linux-musl/release/zyvor-guest-agent dist/zyvor-guest-agent-linux-amd64
-          cp templates/agent/zyvor-guest-agent.service dist/
-          tar czf zyvor-vm-tools-linux-amd64.tar.gz -C dist zyvor-guest-agent-linux-amd64 zyvor-guest-agent.service
-
-      - name: Upload artifact
+      - name: Upload Linux tarball
         uses: actions/upload-artifact@v4
         with:
           name: zyvor-vm-tools-linux-amd64
-          path: zyvor-vm-tools-linux-amd64.tar.gz
+          path: dist/vmtools/linux/zyvor-vm-tools-linux-amd64.tar.gz
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: zyvor-vm-tools-deb
+          path: dist/vmtools/linux/zyvor-vm-tools_*_amd64.deb
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: zyvor-vm-tools-iso
+          path: dist/vmtools/zyvor-vm-tools.iso
+          if-no-files-found: ignore
