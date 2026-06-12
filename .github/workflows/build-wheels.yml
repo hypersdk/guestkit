@@ -118,7 +118,7 @@ jobs:
 
       - name: Install from wheel
         run: |
-          pip install --find-links dist hypersdk-guestkit
+          pip install --no-index --find-links dist hypersdk-guestkit
 
       - name: Test import
         run: |

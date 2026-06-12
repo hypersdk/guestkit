@@ -131,10 +131,7 @@ jobs:
       - name: Install maturin
         run: pip install --upgrade maturin
 
-      - name: Build wheel
-        run: maturin build --release --features python-bindings
-
-      - name: Publish to PyPI
+      - name: Build and publish wheel
         env:
           PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -142,4 +139,5 @@ jobs:
             echo "Skipping PyPI publish (PYPI_API_TOKEN not configured)"
             exit 0
           fi
-          maturin publish -u __token__ -p "${PYPI_API_TOKEN}"
+          maturin build --release --features python-bindings --out dist
+          maturin upload --username __token__ --password "${PYPI_API_TOKEN}" dist/*.whl --skip-existing
