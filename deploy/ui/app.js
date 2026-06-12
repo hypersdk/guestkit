@@ -31,6 +31,8 @@ const state = {
   fleetMode: localStorage.getItem('zyvor.fleetMode') || 'disks',
   clusterVms: [],
   selectedClusterVm: null,
+  lastClusterGuestInfo: null,
+  lastClusterBootInspect: null,
 };
 
 const AGENT_QUICK_RPC = [
@@ -409,6 +411,7 @@ function selectClusterVm(vm) {
   $$('.action-card[data-action]').forEach((b) => { b.disabled = true; });
   setDockEnabled(false);
   updateSelectionPanels();
+  updateCopilotPlaceholder();
   markWizardComplete('ingest');
   if (state.wizard.step === 'ingest') setWizardStep('assure');
   feed(`Selected cluster VM <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>`, 'ok');
@@ -442,18 +445,244 @@ async function fetchClusterGuestInfo(showToast = true) {
   feed(`Fetching guest info for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
   setActiveTab('summary');
   try {
-    const data = await api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent`);
-    const info = data.data;
-    renderClusterGuestSummary(info);
+    const [guestRes, bootRes] = await Promise.allSettled([
+      api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent`),
+      api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`),
+    ]);
+    if (guestRes.status === 'rejected') throw guestRes.reason;
+    const info = guestRes.value.data;
+    state.lastClusterGuestInfo = info;
+    state.lastClusterBootInspect = bootRes.status === 'fulfilled' ? bootRes.value.data : null;
+    renderClusterGuestSummary(info, state.lastClusterBootInspect);
     setAgentStatus(info.agent_connected ? 'agent connected' : info.health, info.agent_connected);
     if (showToast) toast(info.agent_connected ? 'Guest agent connected' : 'Guest agent not connected', info.agent_connected ? 'ok' : 'err');
     feed(info.message);
+    if (state.lastClusterBootInspect?.message) feed(state.lastClusterBootInspect.message);
   } catch (e) {
     toast(e.message, 'err');
   }
 }
 
-function renderClusterGuestSummary(info) {
+async function fetchClusterBootInspect(showToast = true) {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return;
+  }
+  feed(`Boot inspect for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const data = await api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`);
+    state.lastClusterBootInspect = data.data;
+    if (state.lastClusterGuestInfo) {
+      renderClusterGuestSummary(state.lastClusterGuestInfo, state.lastClusterBootInspect);
+    } else {
+      showRaw({ mode: 'kubevirt-boot-inspect', boot_inspect: state.lastClusterBootInspect });
+    }
+    if (showToast) {
+      toast(
+        state.lastClusterBootInspect.available ? 'Boot inspect complete' : 'Boot hints from VM spec',
+        state.lastClusterBootInspect.available ? 'ok' : 'err',
+      );
+    }
+    feed(state.lastClusterBootInspect.message || 'Boot inspect finished');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function buildClusterCopilotBriefing(info, vm, bootInspect) {
+  const agentOk = info.agent_connected;
+  const running = info.vmi_running;
+  const isWin = info.is_windows;
+  const os = info.os_name
+    ? `${info.os_name} ${info.os_version || ''}`.trim()
+    : (bootInspect?.os_release || (isWin ? 'Windows' : 'Unknown OS'));
+  const ips = (info.interfaces || []).map((i) => i.ipAddress).filter(Boolean).join(', ') || vm.ip_address || 'no IP';
+  const recommendedActions = [];
+  const evidenceHighlights = [];
+  let readiness;
+  let headline;
+  let summary;
+  let bootScore;
+  let blockerCount = 0;
+  let nextWorkflow = 'cluster-guest-info';
+
+  if (!running) {
+    readiness = 'blocked';
+    headline = 'VM is not running';
+    summary = 'Start the VM in Zeus OS before live guest agent inspection.';
+    bootScore = 0;
+    blockerCount = 1;
+    nextWorkflow = 'cluster-zeus';
+    recommendedActions.push({
+      priority: 1,
+      title: 'Start VM in Zeus',
+      detail: 'Boot the VM, then refresh guest info.',
+      workflow: 'cluster-zeus',
+    });
+  } else if (!agentOk) {
+    readiness = isWin ? 'caution' : 'blocked';
+    headline = isWin ? 'Guest agent missing — install virtio-win' : 'Guest agent not connected';
+    summary = info.message;
+    bootScore = isWin ? 45 : 30;
+    blockerCount = 1;
+    nextWorkflow = isWin ? 'cluster-zeus' : 'cluster-install-agent';
+    recommendedActions.push({
+      priority: 1,
+      title: isWin ? 'Install QEMU Guest Agent' : 'Install GuestKit agent',
+      detail: isWin
+        ? 'Open Zeus OS Guest Tools and attach virtio-win.iso.'
+        : 'Merge GuestKit cloud-init and restart the VM.',
+      workflow: isWin ? 'cluster-zeus' : 'cluster-install-agent',
+    });
+  } else {
+    readiness = 'ready';
+    headline = `Live guest healthy — ${os}`;
+    summary = `${info.hostname || vm.name} is reachable at ${ips}. Guest agent ${info.guest_agent_version ? `v${info.guest_agent_version}` : 'connected'}. Use offline ingest for full migration plan and YAML.`;
+    bootScore = 85;
+    nextWorkflow = 'cluster-boot-inspect';
+    recommendedActions.push({
+      priority: 1,
+      title: 'Run boot inspect',
+      detail: 'Collect offline boot hints from the root PVC when the VM is stopped.',
+      workflow: 'cluster-boot-inspect',
+    });
+  }
+
+  if (info.hostname) {
+    evidenceHighlights.push({ ref: 'guest.hostname', label: 'Hostname', detail: info.hostname });
+  }
+  if (os) {
+    evidenceHighlights.push({ ref: 'guest.os', label: 'Operating system', detail: os });
+  }
+  if (ips) {
+    evidenceHighlights.push({ ref: 'guest.network', label: 'Network', detail: ips });
+  }
+  if (info.guest_agent_version) {
+    evidenceHighlights.push({ ref: 'guest.agent', label: 'Guest agent', detail: `v${info.guest_agent_version}` });
+  }
+  if (bootInspect) {
+    evidenceHighlights.push({
+      ref: 'boot.inspect',
+      label: 'Boot inspect',
+      detail: [bootInspect.os_release, bootInspect.bootloader, bootInspect.cloud_init_present ? 'cloud-init' : null]
+        .filter(Boolean)
+        .join(' · ') || bootInspect.message,
+    });
+    if (bootInspect.available && bootScore < 90) bootScore = 90;
+  }
+
+  const insights = [
+    {
+      id: 'agent_status',
+      question: 'Is the guest agent connected?',
+      answer: agentOk
+        ? `Yes — ${info.health}. ${info.message}`
+        : `No — ${info.message}. ${isWin ? 'Use Zeus OS Guest Tools (virtio-win).' : 'Use Install agent to merge GuestKit cloud-init.'}`,
+    },
+    {
+      id: 'blockers',
+      question: 'What is blocking live inspection?',
+      answer: !running
+        ? 'VM is not in Running phase.'
+        : !agentOk
+          ? (isWin ? 'Windows needs QEMU Guest Agent from virtio-win ISO.' : 'Linux needs qemu-guest-agent or GuestKit agent.')
+          : 'No blockers — live inspection is available.',
+    },
+    {
+      id: 'fix_first',
+      question: 'What should I fix first?',
+      answer: recommendedActions[0]?.detail || 'Refresh guest info.',
+    },
+    {
+      id: 'ready',
+      question: 'Is this VM ready for migration tooling?',
+      answer: agentOk && running
+        ? 'Live agent is connected — import the root disk for full boot score, driver plan, and KubeVirt YAML export.'
+        : 'Resolve guest agent connectivity first, then import the disk for offline Doctor and Migrate workflows.',
+    },
+    {
+      id: 'evidence',
+      question: 'What do we know about this guest?',
+      answer: [
+        os,
+        info.hostname && `hostname ${info.hostname}`,
+        ips && `IP ${ips}`,
+        info.guest_agent_version && `agent ${info.guest_agent_version}`,
+        bootInspect?.bootloader && `${bootInspect.bootloader} bootloader`,
+      ].filter(Boolean).join('. '),
+    },
+    {
+      id: 'migration_changes',
+      question: 'What migration steps apply to a live KubeVirt VM?',
+      answer: 'Live cluster VMs use the guest agent for assurance. For boot score, driver injection, and YAML export, attach the root disk to Zyvor ingest and run offline Doctor → Migrate → Provision.',
+    },
+  ];
+
+  return {
+    readiness,
+    headline,
+    summary,
+    boot_score: bootScore,
+    migration_score: null,
+    blocker_count: blockerCount,
+    warning_count: agentOk ? 0 : 1,
+    evidence_digest: {
+      os,
+      architecture: '',
+      bootloader: bootInspect?.bootloader || (running ? 'live' : 'unknown'),
+      root_filesystem: '',
+      kernel_count: 0,
+      fstab_entries: bootInspect?.fstab_valid === false ? 0 : 1,
+      virtio_modules_loaded: agentOk,
+      vm_tools: agentOk ? ['qemu-guest-agent'] : [],
+      selinux: '',
+    },
+    evidence_highlights: evidenceHighlights,
+    recommended_actions: recommendedActions,
+    insights,
+    next_workflow: nextWorkflow,
+  };
+}
+
+function renderClusterCopilot(info, vm, bootInspect) {
+  const briefing = buildClusterCopilotBriefing(info, vm, bootInspect);
+  renderCopilot(briefing, { mode: 'kubevirt-live', guest_agent: info, boot_inspect: bootInspect });
+  if (briefing.boot_score != null) setScore(briefing.boot_score);
+  markWizardComplete('assure');
+  updateWizardFooter();
+  setActiveTab('copilot');
+  feed('Cluster <strong>Copilot</strong> briefing ready', 'ok');
+}
+
+function updateCopilotPlaceholder() {
+  const ph = $('#copilotPlaceholder');
+  if (!ph) return;
+  ph.textContent = state.selectedClusterVm
+    ? 'Fetch guest info on a cluster VM — Copilot briefs live agent status automatically.'
+    : 'Run Doctor with explain to unlock Migration Copilot.';
+}
+
+function runWorkflow(workflow) {
+  if (!workflow) return;
+  if (workflow.startsWith('cluster-')) {
+    const vm = state.selectedClusterVm;
+    if (!vm) {
+      toast('Select a cluster VM first', 'err');
+      return;
+    }
+    if (workflow === 'cluster-install-agent') installClusterGuestAgent();
+    else if (workflow === 'cluster-guest-info') fetchClusterGuestInfo(true);
+    else if (workflow === 'cluster-boot-inspect') fetchClusterBootInspect(true);
+    else if (workflow === 'cluster-zeus') {
+      window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
+    }
+    return;
+  }
+  runAction(workflow);
+}
+
+function renderClusterGuestSummary(info, bootInspect) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
   ph.classList.add('hidden');
@@ -474,6 +703,19 @@ function renderClusterGuestSummary(info) {
     const ips = info.interfaces.map((i) => i.ipAddress).filter(Boolean).join(', ');
     if (ips) content.innerHTML += `<p class="finding ok"><strong>Interfaces</strong> ${escapeHtml(ips)}</p>`;
   }
+  if (bootInspect) {
+    const bootClass = bootInspect.available ? 'ok' : 'warn';
+    const bootDetail = [
+      bootInspect.os_release,
+      bootInspect.bootloader,
+      bootInspect.cloud_init_present ? 'cloud-init' : null,
+      bootInspect.fstab_valid === false ? 'fstab issues' : null,
+    ].filter(Boolean).join(' · ');
+    content.innerHTML += `<p class="finding ${bootClass}"><strong>Boot inspect</strong> (${escapeHtml(bootInspect.source || 'spec')})${bootDetail ? ` — ${escapeHtml(bootDetail)}` : ''}</p>`;
+    if (bootInspect.message) {
+      content.innerHTML += `<p class="finding ${bootClass}">${escapeHtml(bootInspect.message)}</p>`;
+    }
+  }
   if (!info.agent_connected && info.vmi_running) {
     const installBtn = $('#clusterInstallAgentBtn');
     if (installBtn) {
@@ -493,8 +735,9 @@ function renderClusterGuestSummary(info) {
     const installBtn = $('#clusterInstallAgentBtn');
     if (installBtn) installBtn.disabled = true;
   }
-  setScore(null);
-  setRawJson({ mode: 'kubevirt-live', guest_agent: info });
+  showRaw({ mode: 'kubevirt-live', guest_agent: info, boot_inspect: bootInspect || null });
+  const vm = state.selectedClusterVm;
+  if (vm) renderClusterCopilot(info, vm, bootInspect);
 }
 
 async function installClusterGuestAgent() {
@@ -552,6 +795,7 @@ function selectVm(vm) {
   }
   updateWizardFooter();
   updateSelectionPanels();
+  updateCopilotPlaceholder();
   feed(`Selected <strong>${escapeHtml(vm.name)}</strong>${smoke ? ' (smoke — not bootable)' : ''}`, smoke ? 'err' : '');
 }
 
@@ -1019,7 +1263,7 @@ function renderCopilot(briefing, payload) {
   `;
 
   brief.querySelectorAll('.copilot-action').forEach((btn) => {
-    btn.addEventListener('click', () => runAction(btn.dataset.workflow));
+    btn.addEventListener('click', () => runWorkflow(btn.dataset.workflow));
   });
 
   chips.innerHTML = '';
@@ -1055,7 +1299,17 @@ function showCopilotBanner(briefing) {
 }
 
 function workflowLabel(wf) {
-  return { 'repair-plan': 'Run Repair', 'migration-plan': 'Run Migrate', provision: 'Generate YAML', doctor: 'Run Doctor' }[wf] || 'Next step';
+  const labels = {
+    'repair-plan': 'Run Repair',
+    'migration-plan': 'Run Migrate',
+    provision: 'Generate YAML',
+    doctor: 'Run Doctor',
+    'cluster-install-agent': 'Install agent',
+    'cluster-guest-info': 'Refresh guest info',
+    'cluster-boot-inspect': 'Boot inspect',
+    'cluster-zeus': 'Open in Zeus',
+  };
+  return labels[wf] || 'Next step';
 }
 
 function appendCopilotMessage(question, answer, fromUser = true) {
@@ -1075,11 +1329,18 @@ function appendCopilotMessage(question, answer, fromUser = true) {
 
 function answerCopilotLocal(question) {
   const b = state.lastBriefing;
-  if (!b?.insights?.length) return { answer: 'Run Doctor first to build a migration briefing.' };
+  if (!b?.insights?.length) {
+    return {
+      answer: state.selectedClusterVm
+        ? 'Fetch guest info on the selected cluster VM to build a live Copilot briefing.'
+        : 'Run Doctor first to build a migration briefing.',
+    };
+  }
 
   const q = question.toLowerCase();
   let id = 'boot_score';
-  if (q.includes('block') || q.includes('stop')) id = 'blockers';
+  if (q.includes('agent') || q.includes('connect')) id = 'agent_status';
+  else if (q.includes('block') || q.includes('stop')) id = 'blockers';
   else if (q.includes('fix') || q.includes('first')) id = 'fix_first';
   else if (q.includes('ready') || q.includes('proceed')) id = 'ready';
   else if (q.includes('evidence') || q.includes('proof')) id = 'evidence';
@@ -1538,7 +1799,7 @@ function setupCopilot() {
 
   $('#copilotBannerAction').addEventListener('click', (e) => {
     const action = e.currentTarget.dataset.action;
-    if (action) runAction(action);
+    if (action) runWorkflow(action);
   });
 }
 
@@ -1576,7 +1837,7 @@ function setupGlassToggle() {
       const mode = btn.dataset.glassMode;
       document.documentElement.dataset.glass = mode;
       $$('[data-glass-mode]').forEach((b) => b.classList.toggle('active', b.dataset.glassMode === mode));
-      toast(mode === 'clear' ? 'Clear glass' : 'Tinted glass', 'ok');
+      toast(mode === 'zinc' ? 'Matte zinc' : 'Brushed metal', 'ok');
     });
   });
 }
@@ -1646,6 +1907,7 @@ function setupActions() {
         return;
       }
       if (btn.dataset.clusterAction === 'guest-info') fetchClusterGuestInfo(true);
+      else if (btn.dataset.clusterAction === 'boot-inspect') fetchClusterBootInspect(true);
       else if (btn.dataset.clusterAction === 'install-agent') installClusterGuestAgent();
       else if (btn.dataset.clusterAction === 'zeus-vm') {
         window.open(zeusVmUrl(vm.namespace, vm.name, 'guest'), '_blank', 'noopener,noreferrer');
@@ -1691,6 +1953,7 @@ async function init() {
   setupInspectionMode();
   setupCopilot();
   setupActions();
+  updateCopilotPlaceholder();
   setDockEnabled(false);
   setFleetMode(state.fleetMode);
   setWizardStep('ingest');

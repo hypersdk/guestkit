@@ -83,9 +83,7 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
         "guestkit-exec" => guestkit_exec(&args),
         "guestkit-enable-rdp" => guestkit_enable_rdp(),
         "guestkit-disable-rdp" => guestkit_disable_rdp(),
-        "guest-suspend-disk" | "guest-suspend-ram" | "guest-suspend-hybrid" => {
-            Ok(json!({}))
-        }
+        "guest-suspend-disk" | "guest-suspend-ram" | "guest-suspend-hybrid" => Ok(json!({})),
         other => Err(format!("unsupported QGA command: {other}")),
     };
 
@@ -113,7 +111,8 @@ fn qga_error(id: Option<Value>, desc: &str) -> Vec<u8> {
     if let Some(i) = id {
         out["id"] = i;
     }
-    serde_json::to_vec(&out).unwrap_or_else(|_| br#"{"error":{"class":"GenericError","desc":"error"}}"#.to_vec())
+    serde_json::to_vec(&out)
+        .unwrap_or_else(|_| br#"{"error":{"class":"GenericError","desc":"error"}}"#.to_vec())
 }
 
 fn guest_sync(args: &Value) -> Result<Value, String> {
@@ -229,7 +228,10 @@ fn guest_get_fsinfo() -> Result<Value, String> {
             continue;
         }
         let fstype = parts[2];
-        if matches!(fstype, "proc" | "sysfs" | "devtmpfs" | "tmpfs" | "cgroup2" | "cgroup") {
+        if matches!(
+            fstype,
+            "proc" | "sysfs" | "devtmpfs" | "tmpfs" | "cgroup2" | "cgroup"
+        ) {
             continue;
         }
         let (total_bytes, used_bytes, avail_bytes, inodes_total, inodes_free) =
@@ -408,12 +410,11 @@ fn guest_set_time(args: &Value) -> Result<Value, String> {
         .get("time")
         .and_then(|v| v.as_u64())
         .ok_or_else(|| "missing time".to_string())?;
-    let nanos = args.get("nanoseconds").and_then(|v| v.as_u64()).unwrap_or(0);
-    let cmd = format!(
-        "date -u --set=@{}.{:09}",
-        secs,
-        nanos % 1_000_000_000
-    );
+    let nanos = args
+        .get("nanoseconds")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let cmd = format!("date -u --set=@{}.{:09}", secs, nanos % 1_000_000_000);
     let status = Command::new("sh").arg("-c").arg(&cmd).status();
     match status {
         Ok(s) if s.success() => Ok(json!({})),
@@ -603,7 +604,10 @@ fn guest_exec(args: &Value) -> Result<Value, String> {
             exited: true,
             exitcode: output.status.code().unwrap_or(1) as i64,
         };
-        EXEC_JOBS.lock().map_err(|e| e.to_string())?.insert(pid, job);
+        EXEC_JOBS
+            .lock()
+            .map_err(|e| e.to_string())?
+            .insert(pid, job);
     } else {
         cmd.spawn().map_err(|e| format!("spawn: {e}"))?;
         EXEC_JOBS.lock().map_err(|e| e.to_string())?.insert(
@@ -625,9 +629,7 @@ fn guest_exec_status(args: &Value) -> Result<Value, String> {
         .and_then(|v| v.as_u64())
         .ok_or_else(|| "missing pid".to_string())?;
     let jobs = EXEC_JOBS.lock().map_err(|e| e.to_string())?;
-    let job = jobs
-        .get(&pid)
-        .ok_or_else(|| format!("unknown pid {pid}"))?;
+    let job = jobs.get(&pid).ok_or_else(|| format!("unknown pid {pid}"))?;
     use base64::{engine::general_purpose::STANDARD, Engine};
     let mut ret = json!({
         "exited": job.exited,
@@ -674,10 +676,7 @@ fn guestkit_get_evidence() -> Result<Value, String> {
 }
 
 fn guestkit_doctor(args: &Value) -> Result<Value, String> {
-    let target = args
-        .get("target")
-        .and_then(|v| v.as_str())
-        .unwrap_or("kvm");
+    let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
     let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
     let boot_target = crate::boot::BootTarget::parse(target);
     let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
@@ -720,14 +719,12 @@ fn guestkit_run_fix_plan(args: &Value) -> Result<Value, String> {
 }
 
 fn guestkit_migrate_score(args: &Value) -> Result<Value, String> {
-    let target = args
-        .get("target")
-        .and_then(|v| v.as_str())
-        .unwrap_or("kvm");
+    let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
     let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
     let boot_target = crate::boot::BootTarget::parse(target);
     let boot_report = crate::boot::analyze_bootability(&evidence, boot_target);
-    let report = crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
+    let report =
+        crate::cli::migrate::plan::compute_migration_score(&evidence, &boot_report, target);
     serde_json::to_value(report).map_err(|e| e.to_string())
 }
 
@@ -766,6 +763,8 @@ mod tests {
     #[test]
     fn detects_qga_vs_jsonrpc() {
         assert!(is_qga_request(br#"{"execute":"guest-ping"}"#));
-        assert!(!is_qga_request(br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#));
+        assert!(!is_qga_request(
+            br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#
+        ));
     }
 }

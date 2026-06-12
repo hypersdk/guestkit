@@ -2,7 +2,7 @@
 //! Migration assurance CLI commands (doctor, policy, fleet, migrate-plan, forensic diff).
 
 use crate::assurance::{
-    MigratePlanOptions, RepairOptions, run_doctor, run_migrate_plan, run_repair_plan,
+    run_doctor, run_migrate_plan, run_repair_plan, MigratePlanOptions, RepairOptions,
 };
 use crate::boot::BootTarget;
 use crate::fleet::analyze_fleet;
@@ -287,10 +287,7 @@ fn migrate_plan_command_impl(
         use crate::cli::plan::PlanExporter;
         use std::fs;
 
-        let plan = result
-            .fix_plan
-            .as_ref()
-            .context("fix plan not generated")?;
+        let plan = result.fix_plan.as_ref().context("fix plan not generated")?;
 
         let content = if export_path.extension().is_some_and(|e| e == "json") {
             PlanExporter::to_json(plan)?

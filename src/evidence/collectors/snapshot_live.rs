@@ -6,10 +6,7 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn collect_snapshot_readiness_live() -> SnapshotReadinessEvidence {
-    let fs_frozen = Command::new("fsfreeze")
-        .arg("--help")
-        .output()
-        .is_ok()
+    let fs_frozen = Command::new("fsfreeze").arg("--help").output().is_ok()
         && std::fs::read_to_string("/proc/mounts")
             .map(|m| m.contains("fsfreeze"))
             .unwrap_or(false);
