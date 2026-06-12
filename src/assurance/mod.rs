@@ -70,7 +70,12 @@ pub struct DoctorResult {
 }
 
 /// Run bootability doctor on an offline disk image.
-pub fn run_doctor(image: &Path, target: &str, explain: bool, verbose: bool) -> Result<DoctorResult> {
+pub fn run_doctor(
+    image: &Path,
+    target: &str,
+    explain: bool,
+    verbose: bool,
+) -> Result<DoctorResult> {
     let boot_target = boot_target_from_str(target);
     let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
 
@@ -86,13 +91,8 @@ pub fn run_doctor(image: &Path, target: &str, explain: bool, verbose: bool) -> R
 
     let (evidence_digest, copilot) = if explain {
         let digest = build_evidence_digest(&evidence);
-        let briefing = generate_briefing(
-            target,
-            &boot_report,
-            None,
-            root_cause.as_ref(),
-            &evidence,
-        );
+        let briefing =
+            generate_briefing(target, &boot_report, None, root_cause.as_ref(), &evidence);
         (Some(digest), Some(briefing))
     } else {
         (None, None)
@@ -193,10 +193,8 @@ pub fn run_migrate_plan(
     options: &MigratePlanOptions,
 ) -> Result<MigrationPlanResult> {
     let boot_target = boot_target_from_str(target);
-    let (evidence, boot_report) =
-        collect_assurance_data(image, boot_target, options.verbose)?;
-    let migration_score =
-        compute_migration_score(&evidence, &boot_report, target);
+    let (evidence, boot_report) = collect_assurance_data(image, boot_target, options.verbose)?;
+    let migration_score = compute_migration_score(&evidence, &boot_report, target);
 
     let mut fix_plan = None;
     if options.export_fix_plan {
@@ -210,11 +208,9 @@ pub fn run_migrate_plan(
 
         #[cfg(feature = "agent")]
         if options.inject_agent {
-            let binary = crate::agent::inject::resolve_agent_binary(
-                options.agent_binary.as_deref(),
-            )?;
-            let unit =
-                crate::agent::inject::resolve_agent_unit(options.agent_unit.as_deref())?;
+            let binary =
+                crate::agent::inject::resolve_agent_binary(options.agent_binary.as_deref())?;
+            let unit = crate::agent::inject::resolve_agent_unit(options.agent_unit.as_deref())?;
             crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
         }
 
@@ -316,8 +312,7 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
 
     #[cfg(feature = "agent")]
     if options.inject_agent {
-        let binary =
-            crate::agent::inject::resolve_agent_binary(options.agent_binary.as_deref())?;
+        let binary = crate::agent::inject::resolve_agent_binary(options.agent_binary.as_deref())?;
         let unit = crate::agent::inject::resolve_agent_unit(options.agent_unit.as_deref())?;
         crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
     }
@@ -380,8 +375,7 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
 
     #[cfg(feature = "agent")]
     if options.inject_agent {
-        let binary =
-            crate::agent::inject::resolve_agent_binary(options.agent_binary.as_deref())?;
+        let binary = crate::agent::inject::resolve_agent_binary(options.agent_binary.as_deref())?;
         let unit = crate::agent::inject::resolve_agent_unit(options.agent_unit.as_deref())?;
         crate::agent::inject::inject_agent_into_image(
             image,

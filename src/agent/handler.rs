@@ -163,20 +163,13 @@ impl RequestHandler {
 
     fn get_metrics(&self, id: Option<Value>) -> JsonRpcResponse {
         let metrics = crate::metrics::collect_metrics_live();
-        JsonRpcResponse::success(
-            id,
-            serde_json::to_value(metrics).unwrap_or(json!({})),
-        )
+        JsonRpcResponse::success(id, serde_json::to_value(metrics).unwrap_or(json!({})))
     }
 
     fn get_filesystem(&self, id: Option<Value>) -> JsonRpcResponse {
         match crate::agent::qga::filesystem_mounts_normalized() {
             Ok(v) => JsonRpcResponse::success(id, v),
-            Err(e) => JsonRpcResponse::error(
-                id,
-                RpcErrorCode::InternalError,
-                e,
-            ),
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e),
         }
     }
 

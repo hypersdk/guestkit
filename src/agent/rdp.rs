@@ -39,7 +39,13 @@ Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' 
 #[cfg(target_os = "windows")]
 fn run_powershell(script: &str) -> Result<(), String> {
     let status = Command::new("powershell")
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        .args([
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            script,
+        ])
         .status()
         .map_err(|e| format!("powershell: {e}"))?;
     if status.success() {

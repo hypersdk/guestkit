@@ -44,16 +44,13 @@ pub fn collect_network_probes_live() -> NetworkProbeEvidence {
             .map(|o| o.status.success())
             .unwrap_or(false)
         {
-            probes
-                .probe_details
-                .push(format!("DNS resolves {host}"));
+            probes.probe_details.push(format!("DNS resolves {host}"));
             probes.api_service_reachable = true;
             break;
         }
     }
 
-    probes.internet_reachable =
-        tcp_probe("1.1.1.1", 443, 1500) || tcp_probe("8.8.8.8", 53, 1500);
+    probes.internet_reachable = tcp_probe("1.1.1.1", 443, 1500) || tcp_probe("8.8.8.8", 53, 1500);
 
     probes.probe_details.push(format!(
         "cluster_dns={cluster_dns} reachable={}",

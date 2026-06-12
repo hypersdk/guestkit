@@ -96,7 +96,11 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
             let mut kv = pair.splitn(2, '=');
             let k = kv.next()?;
             let v = kv.next().unwrap_or("");
-            if k == "target" { Some(v) } else { None }
+            if k == "target" {
+                Some(v)
+            } else {
+                None
+            }
         })
         .unwrap_or("kvm");
 
@@ -131,7 +135,8 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
     } else if rpc_method == "guestkit.runFixPlan" {
         (
             rpc_method.to_string(),
-            serde_json::from_slice::<serde_json::Value>(body).unwrap_or_else(|_| serde_json::json!({})),
+            serde_json::from_slice::<serde_json::Value>(body)
+                .unwrap_or_else(|_| serde_json::json!({})),
         )
     } else if rpc_method == "guestkit.doctor" {
         (
@@ -152,7 +157,11 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
     })
     .await??;
 
-    let status = if response.get("error").is_some() { 500 } else { 200 };
+    let status = if response.get("error").is_some() {
+        500
+    } else {
+        200
+    };
     let body = serde_json::to_string(&response)?;
     write_http_json(&mut stream, status, &body).await
 }

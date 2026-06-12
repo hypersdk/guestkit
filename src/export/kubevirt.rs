@@ -61,10 +61,7 @@ pub fn generate_kubevirt_manifests(
     let disk_claim = format!("{}-disk", disk.name);
 
     let mut dv_spec = serde_yaml::Mapping::new();
-    dv_spec.insert(
-        serde_yaml::Value::from("source"),
-        data_volume_source(disk),
-    );
+    dv_spec.insert(serde_yaml::Value::from("source"), data_volume_source(disk));
     let mut pvc = serde_yaml::Mapping::new();
     pvc.insert(
         serde_yaml::Value::from("accessModes"),
@@ -95,7 +92,10 @@ pub fn generate_kubevirt_manifests(
         serde_yaml::Value::from("storageClassName"),
         serde_yaml::Value::from(disk.storage_class.clone()),
     );
-    dv_spec.insert(serde_yaml::Value::from("pvc"), serde_yaml::Value::Mapping(pvc));
+    dv_spec.insert(
+        serde_yaml::Value::from("pvc"),
+        serde_yaml::Value::Mapping(pvc),
+    );
 
     let mut dv_labels = serde_yaml::Mapping::new();
     dv_labels.insert(
@@ -121,16 +121,25 @@ pub fn generate_kubevirt_manifests(
             serde_yaml::Value::from("metadata"),
             serde_yaml::Value::Mapping({
                 let mut meta = serde_yaml::Mapping::new();
-                meta.insert(serde_yaml::Value::from("name"), serde_yaml::Value::from(disk_claim.clone()));
+                meta.insert(
+                    serde_yaml::Value::from("name"),
+                    serde_yaml::Value::from(disk_claim.clone()),
+                );
                 meta.insert(
                     serde_yaml::Value::from("namespace"),
                     serde_yaml::Value::from(disk.namespace.clone()),
                 );
-                meta.insert(serde_yaml::Value::from("labels"), serde_yaml::Value::Mapping(dv_labels));
+                meta.insert(
+                    serde_yaml::Value::from("labels"),
+                    serde_yaml::Value::Mapping(dv_labels),
+                );
                 meta
             }),
         );
-        m.insert(serde_yaml::Value::from("spec"), serde_yaml::Value::Mapping(dv_spec));
+        m.insert(
+            serde_yaml::Value::from("spec"),
+            serde_yaml::Value::Mapping(dv_spec),
+        );
         m
     });
 
@@ -140,12 +149,18 @@ pub fn generate_kubevirt_manifests(
             serde_yaml::Value::from("apiVersion"),
             serde_yaml::Value::from("kubevirt.io/v1"),
         );
-        m.insert(serde_yaml::Value::from("kind"), serde_yaml::Value::from("VirtualMachine"));
+        m.insert(
+            serde_yaml::Value::from("kind"),
+            serde_yaml::Value::from("VirtualMachine"),
+        );
         m.insert(
             serde_yaml::Value::from("metadata"),
             serde_yaml::Value::Mapping({
                 let mut meta = serde_yaml::Mapping::new();
-                meta.insert(serde_yaml::Value::from("name"), serde_yaml::Value::from(disk.name.clone()));
+                meta.insert(
+                    serde_yaml::Value::from("name"),
+                    serde_yaml::Value::from(disk.name.clone()),
+                );
                 meta.insert(
                     serde_yaml::Value::from("namespace"),
                     serde_yaml::Value::from(disk.namespace.clone()),
@@ -154,7 +169,10 @@ pub fn generate_kubevirt_manifests(
                     serde_yaml::Value::from("labels"),
                     serde_yaml::Value::Mapping({
                         let mut labels = serde_yaml::Mapping::new();
-                        labels.insert(serde_yaml::Value::from("app"), serde_yaml::Value::from("zyvor"));
+                        labels.insert(
+                            serde_yaml::Value::from("app"),
+                            serde_yaml::Value::from("zyvor"),
+                        );
                         labels.insert(
                             serde_yaml::Value::from("guestkit.zyvor.dev/migration-score"),
                             serde_yaml::Value::from(format!("{:.0}", plan.migration_score.score)),
@@ -169,7 +187,10 @@ pub fn generate_kubevirt_manifests(
             serde_yaml::Value::from("spec"),
             serde_yaml::Value::Mapping({
                 let mut spec = serde_yaml::Mapping::new();
-                spec.insert(serde_yaml::Value::from("running"), serde_yaml::Value::from(false));
+                spec.insert(
+                    serde_yaml::Value::from("running"),
+                    serde_yaml::Value::from(false),
+                );
                 spec.insert(
                     serde_yaml::Value::from("template"),
                     serde_yaml::Value::Mapping({
@@ -221,7 +242,9 @@ pub fn generate_kubevirt_manifests(
                                                         let mut req = serde_yaml::Mapping::new();
                                                         req.insert(
                                                             serde_yaml::Value::from("memory"),
-                                                            serde_yaml::Value::from(format!("{memory_gi}Gi")),
+                                                            serde_yaml::Value::from(format!(
+                                                                "{memory_gi}Gi"
+                                                            )),
                                                         );
                                                         req
                                                     }),
@@ -235,44 +258,58 @@ pub fn generate_kubevirt_manifests(
                                                 let mut devices = serde_yaml::Mapping::new();
                                                 devices.insert(
                                                     serde_yaml::Value::from("disks"),
-                                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping({
-                                                        let mut d = serde_yaml::Mapping::new();
-                                                        d.insert(
-                                                            serde_yaml::Value::from("name"),
-                                                            serde_yaml::Value::from("rootdisk"),
-                                                        );
-                                                        d.insert(
-                                                            serde_yaml::Value::from("disk"),
-                                                            serde_yaml::Value::Mapping({
-                                                                let mut disk_map = serde_yaml::Mapping::new();
-                                                                disk_map.insert(
-                                                                    serde_yaml::Value::from("bus"),
-                                                                    serde_yaml::Value::from("virtio"),
-                                                                );
-                                                                disk_map
-                                                            }),
-                                                        );
-                                                        d
-                                                    })]),
+                                                    serde_yaml::Value::Sequence(vec![
+                                                        serde_yaml::Value::Mapping({
+                                                            let mut d = serde_yaml::Mapping::new();
+                                                            d.insert(
+                                                                serde_yaml::Value::from("name"),
+                                                                serde_yaml::Value::from("rootdisk"),
+                                                            );
+                                                            d.insert(
+                                                                serde_yaml::Value::from("disk"),
+                                                                serde_yaml::Value::Mapping({
+                                                                    let mut disk_map =
+                                                                        serde_yaml::Mapping::new();
+                                                                    disk_map.insert(
+                                                                        serde_yaml::Value::from(
+                                                                            "bus",
+                                                                        ),
+                                                                        serde_yaml::Value::from(
+                                                                            "virtio",
+                                                                        ),
+                                                                    );
+                                                                    disk_map
+                                                                }),
+                                                            );
+                                                            d
+                                                        }),
+                                                    ]),
                                                 );
                                                 devices.insert(
                                                     serde_yaml::Value::from("interfaces"),
-                                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping({
-                                                        let mut iface = serde_yaml::Mapping::new();
-                                                        iface.insert(
-                                                            serde_yaml::Value::from("name"),
-                                                            serde_yaml::Value::from("default"),
-                                                        );
-                                                        iface.insert(
-                                                            serde_yaml::Value::from("masquerade"),
-                                                            serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
-                                                        );
-                                                        iface.insert(
-                                                            serde_yaml::Value::from("ports"),
-                                                            serde_yaml::Value::Sequence(vec![]),
-                                                        );
-                                                        iface
-                                                    })]),
+                                                    serde_yaml::Value::Sequence(vec![
+                                                        serde_yaml::Value::Mapping({
+                                                            let mut iface =
+                                                                serde_yaml::Mapping::new();
+                                                            iface.insert(
+                                                                serde_yaml::Value::from("name"),
+                                                                serde_yaml::Value::from("default"),
+                                                            );
+                                                            iface.insert(
+                                                                serde_yaml::Value::from(
+                                                                    "masquerade",
+                                                                ),
+                                                                serde_yaml::Value::Mapping(
+                                                                    serde_yaml::Mapping::new(),
+                                                                ),
+                                                            );
+                                                            iface.insert(
+                                                                serde_yaml::Value::from("ports"),
+                                                                serde_yaml::Value::Sequence(vec![]),
+                                                            );
+                                                            iface
+                                                        }),
+                                                    ]),
                                                 );
                                                 devices
                                             }),
@@ -282,40 +319,46 @@ pub fn generate_kubevirt_manifests(
                                 );
                                 vm_spec.insert(
                                     serde_yaml::Value::from("networks"),
-                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping({
-                                        let mut net = serde_yaml::Mapping::new();
-                                        net.insert(
-                                            serde_yaml::Value::from("name"),
-                                            serde_yaml::Value::from("default"),
-                                        );
-                                        net.insert(
-                                            serde_yaml::Value::from("pod"),
-                                            serde_yaml::Value::Mapping(serde_yaml::Mapping::new()),
-                                        );
-                                        net
-                                    })]),
+                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping(
+                                        {
+                                            let mut net = serde_yaml::Mapping::new();
+                                            net.insert(
+                                                serde_yaml::Value::from("name"),
+                                                serde_yaml::Value::from("default"),
+                                            );
+                                            net.insert(
+                                                serde_yaml::Value::from("pod"),
+                                                serde_yaml::Value::Mapping(
+                                                    serde_yaml::Mapping::new(),
+                                                ),
+                                            );
+                                            net
+                                        },
+                                    )]),
                                 );
                                 vm_spec.insert(
                                     serde_yaml::Value::from("volumes"),
-                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping({
-                                        let mut vol = serde_yaml::Mapping::new();
-                                        vol.insert(
-                                            serde_yaml::Value::from("name"),
-                                            serde_yaml::Value::from("rootdisk"),
-                                        );
-                                        vol.insert(
-                                            serde_yaml::Value::from("persistentVolumeClaim"),
-                                            serde_yaml::Value::Mapping({
-                                                let mut pvc_ref = serde_yaml::Mapping::new();
-                                                pvc_ref.insert(
-                                                    serde_yaml::Value::from("claimName"),
-                                                    serde_yaml::Value::from(disk_claim),
-                                                );
-                                                pvc_ref
-                                            }),
-                                        );
-                                        vol
-                                    })]),
+                                    serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping(
+                                        {
+                                            let mut vol = serde_yaml::Mapping::new();
+                                            vol.insert(
+                                                serde_yaml::Value::from("name"),
+                                                serde_yaml::Value::from("rootdisk"),
+                                            );
+                                            vol.insert(
+                                                serde_yaml::Value::from("persistentVolumeClaim"),
+                                                serde_yaml::Value::Mapping({
+                                                    let mut pvc_ref = serde_yaml::Mapping::new();
+                                                    pvc_ref.insert(
+                                                        serde_yaml::Value::from("claimName"),
+                                                        serde_yaml::Value::from(disk_claim),
+                                                    );
+                                                    pvc_ref
+                                                }),
+                                            );
+                                            vol
+                                        },
+                                    )]),
                                 );
                                 vm_spec
                             }),
@@ -338,7 +381,8 @@ pub fn generate_kubevirt_manifests(
 /// Serialize manifests as multi-document YAML.
 pub fn manifests_to_yaml(manifests: &KubeVirtManifests) -> Result<String> {
     let dv = serde_yaml::to_string(&manifests.data_volume).context("serialize DataVolume")?;
-    let vm = serde_yaml::to_string(&manifests.virtual_machine).context("serialize VirtualMachine")?;
+    let vm =
+        serde_yaml::to_string(&manifests.virtual_machine).context("serialize VirtualMachine")?;
     Ok(format!("---\n{dv}---\n{vm}"))
 }
 
@@ -350,7 +394,10 @@ fn data_volume_source(disk: &DiskMetadata) -> serde_yaml::Value {
                 serde_yaml::Value::from("http"),
                 serde_yaml::Value::Mapping({
                     let mut http = serde_yaml::Mapping::new();
-                    http.insert(serde_yaml::Value::from("url"), serde_yaml::Value::from(url.clone()));
+                    http.insert(
+                        serde_yaml::Value::from("url"),
+                        serde_yaml::Value::from(url.clone()),
+                    );
                     http
                 }),
             );

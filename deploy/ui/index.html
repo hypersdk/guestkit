@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-glass="clear">
+<html lang="en" data-theme="metal-zinc" data-glass="metal">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -32,9 +32,9 @@
       </nav>
     </div>
     <div class="menubar-right">
-      <div class="segmented" role="group" aria-label="Glass appearance">
-        <button type="button" class="seg-btn active" data-glass-mode="clear" title="Clear glass">Clear</button>
-        <button type="button" class="seg-btn" data-glass-mode="tinted" title="Tinted glass">Tinted</button>
+      <div class="segmented" role="group" aria-label="Surface finish">
+        <button type="button" class="seg-btn active" data-glass-mode="metal" title="Brushed metal glass">Metal</button>
+        <button type="button" class="seg-btn" data-glass-mode="zinc" title="Matte zinc glass">Zinc</button>
       </div>
       <button type="button" class="menubar-chip" id="refreshFleetBtn" title="Refresh fleet">
         <span class="pulse-dot" id="healthDot"></span>
@@ -198,6 +198,9 @@
             <div class="action-deck cluster-deck hidden" id="clusterDeck">
               <button type="button" class="action-card glass accent" data-cluster-action="guest-info">
                 <strong>Guest info</strong><span>Agent status & OS</span>
+              </button>
+              <button type="button" class="action-card glass" data-cluster-action="boot-inspect">
+                <strong>Boot inspect</strong><span>Offline boot hints</span>
               </button>
               <button type="button" class="action-card glass accent hidden" id="clusterInstallAgentBtn" data-cluster-action="install-agent" disabled>
                 <strong>Install agent</strong><span>GuestKit via cloud-init</span>

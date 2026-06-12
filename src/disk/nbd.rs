@@ -162,16 +162,18 @@ impl NbdDevice {
     }
 
     fn disk_format_to_nbd(fmt: DiskFormat) -> Option<String> {
-        Some(match fmt {
-            DiskFormat::Qcow2 => "qcow2",
-            DiskFormat::Vmdk => "vmdk",
-            DiskFormat::Vhd => "vpc",
-            DiskFormat::Vhdx => "vhdx",
-            DiskFormat::Vdi => "vdi",
-            DiskFormat::Raw => "raw",
-            DiskFormat::Unknown => return None,
-        }
-        .to_string())
+        Some(
+            match fmt {
+                DiskFormat::Qcow2 => "qcow2",
+                DiskFormat::Vmdk => "vmdk",
+                DiskFormat::Vhd => "vpc",
+                DiskFormat::Vhdx => "vhdx",
+                DiskFormat::Vdi => "vdi",
+                DiskFormat::Raw => "raw",
+                DiskFormat::Unknown => return None,
+            }
+            .to_string(),
+        )
     }
 
     fn probe_qemu_img_format(path: &Path) -> Option<String> {

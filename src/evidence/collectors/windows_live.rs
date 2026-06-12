@@ -8,10 +8,7 @@ pub fn collect_windows_live() -> Option<WindowsEvidence> {
     use std::process::Command;
     let mut evidence = WindowsEvidence::default();
 
-    if let Ok(out) = Command::new("cmd")
-        .args(["/C", "ver"])
-        .output()
-    {
+    if let Ok(out) = Command::new("cmd").args(["/C", "ver"]).output() {
         evidence.version = String::from_utf8_lossy(&out.stdout).trim().to_string();
     }
     if let Ok(out) = Command::new("powershell")

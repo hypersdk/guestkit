@@ -68,12 +68,9 @@ pub fn build_evidence_digest(evidence: &EvidenceSnapshot) -> EvidenceDigest {
     let os = if evidence.os.distribution.is_empty() {
         evidence.os.os_type.clone()
     } else {
-        format!(
-            "{} {}",
-            evidence.os.distribution, evidence.os.version
-        )
-        .trim()
-        .to_string()
+        format!("{} {}", evidence.os.distribution, evidence.os.version)
+            .trim()
+            .to_string()
     };
 
     let virtio_modules_loaded = evidence
@@ -116,10 +113,7 @@ pub fn resolve_evidence_highlights(
             out.push(EvidenceHighlight {
                 r#ref: "storage.fstab_entries".into(),
                 label: "Root mount".into(),
-                detail: format!(
-                    "{} → {} ({})",
-                    first.device, first.mountpoint, first.fstype
-                ),
+                detail: format!("{} → {} ({})", first.device, first.mountpoint, first.fstype),
             });
         }
         if !evidence.boot.bootloader.is_empty() {
@@ -239,10 +233,7 @@ pub fn generate_briefing(
         actions.push(CopilotAction {
             priority: (i + 1) as u8,
             title: b.title.clone(),
-            detail: b
-                .remediation
-                .clone()
-                .unwrap_or_else(|| b.message.clone()),
+            detail: b.remediation.clone().unwrap_or_else(|| b.message.clone()),
             workflow: "repair-plan".into(),
         });
     }
@@ -251,10 +242,7 @@ pub fn generate_briefing(
             actions.push(CopilotAction {
                 priority: (i + 1) as u8,
                 title: w.title.clone(),
-                detail: w
-                    .remediation
-                    .clone()
-                    .unwrap_or_else(|| w.message.clone()),
+                detail: w.remediation.clone().unwrap_or_else(|| w.message.clone()),
                 workflow: "migration-plan".into(),
             });
         }

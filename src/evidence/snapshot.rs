@@ -365,10 +365,9 @@ impl EvidenceSnapshot {
             }
             ["boot", "bootloader"] => Some(self.boot.bootloader.clone()),
             ["packages", "count"] => Some(self.packages.count.to_string()),
-            ["systemd", "service_count"] => self
-                .systemd
-                .as_ref()
-                .map(|s| s.service_count.to_string()),
+            ["systemd", "service_count"] => {
+                self.systemd.as_ref().map(|s| s.service_count.to_string())
+            }
             ["systemd", "problem_count"] => self
                 .systemd
                 .as_ref()

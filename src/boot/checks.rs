@@ -499,10 +499,7 @@ impl BootCheck for SystemdStaticCheck {
                     .join(", ")
             )
         } else {
-            format!(
-                "No systemd static issues in {} units",
-                systemd.unit_count
-            )
+            format!("No systemd static issues in {} units", systemd.unit_count)
         };
 
         CheckResult {

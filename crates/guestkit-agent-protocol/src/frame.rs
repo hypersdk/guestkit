@@ -38,7 +38,9 @@ pub fn read_frame<R: Read>(reader: &mut R) -> Result<Vec<u8>, AgentError> {
 pub fn read_line<R: BufRead>(reader: &mut R) -> Result<Vec<u8>, AgentError> {
     loop {
         let mut line = Vec::new();
-        reader.read_until(b'\n', &mut line).map_err(AgentError::Io)?;
+        reader
+            .read_until(b'\n', &mut line)
+            .map_err(AgentError::Io)?;
         if line.is_empty() {
             return Err(AgentError::Io(std::io::Error::from(
                 std::io::ErrorKind::UnexpectedEof,
