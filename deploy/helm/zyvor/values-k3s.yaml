@@ -34,3 +34,9 @@ minio:
 
 kubevirt:
   enabled: true
+
+vmtools:
+  installCrds: true
+  defaultPolicy:
+    enabled: true
+    autoInstall: false

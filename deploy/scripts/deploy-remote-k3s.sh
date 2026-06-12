@@ -84,6 +84,11 @@ else
   build_and_import zyvor-ui "${ROOT}/deploy/ui/Dockerfile" "${ROOT}/deploy/ui"
 fi
 
+if [[ -f "${ROOT}/deploy/crd/zeus-vmtools.yaml" ]]; then
+  echo "Applying Zeus VM Tools CRDs..."
+  kubectl apply -f "${ROOT}/deploy/crd/zeus-vmtools.yaml"
+fi
+
 echo "Installing Helm chart..."
 helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   -n "${NAMESPACE}" --create-namespace \

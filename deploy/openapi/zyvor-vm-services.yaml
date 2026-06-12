@@ -151,6 +151,44 @@ paths:
       responses:
         '200':
           description: VMToolsCoverage
+  /vmtools/policy:
+    get:
+      summary: Cluster VM Tools policy (VMToolsPolicy CR)
+      responses:
+        '200':
+          description: VMToolsPolicyView
+    put:
+      summary: Upsert cluster VM Tools policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                spec:
+                  type: object
+                  properties:
+                    selector:
+                      type: object
+                    autoInstall:
+                      type: boolean
+                    autoUpgrade:
+                      type: boolean
+                    channel:
+                      type: string
+                    rebootPolicy:
+                      type: string
+      responses:
+        '200':
+          description: VMToolsPolicyView
+  /vmtools/policy/reconcile:
+    post:
+      summary: Reconcile fleet against policy (auto-install missing tools)
+      responses:
+        '200':
+          description: VMToolsReconcileResult
   /storage/roots:
     get:
       summary: Server disk browse roots

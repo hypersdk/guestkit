@@ -67,3 +67,9 @@ persistence:
 
 kubevirt:
   enabled: false
+
+vmtools:
+  installCrds: true
+  defaultPolicy:
+    enabled: true
+    autoInstall: false

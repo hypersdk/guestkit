@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark" />
   <title>Zyvor — VM Migration Control</title>
   <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="style.css?v=20260612f" />
+  <link rel="stylesheet" href="style.css?v=20260612g" />
 </head>
 <body>
   <!-- Tahoe-style desktop wallpaper (shows through Liquid Glass) -->
@@ -189,7 +189,15 @@
                 </div>
                 <span class="badge fleet-sync hidden" id="fleetClusterSync">—</span>
                 <span class="badge fleet-vmtools hidden" id="fleetVmtoolsCoverage" title="Zeus VM Tools fleet coverage">—</span>
+                <span class="badge fleet-policy hidden" id="fleetVmtoolsPolicyBadge">Policy off</span>
                 <span class="badge" id="fleetCount">0 images</span>
+              </div>
+              <div class="fleet-vmtools-policy hidden" id="fleetVmtoolsPolicy">
+                <label class="policy-toggle">
+                  <input type="checkbox" id="vmtoolsAutoInstall" />
+                  Auto-install VM Tools on missing Linux VMs
+                </label>
+                <button type="button" class="btn glass sm accent" id="vmtoolsReconcileBtn">Reconcile fleet</button>
               </div>
             </div>
             <div class="fleet-layout">
@@ -446,6 +454,6 @@
   </nav>
 
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
-  <script src="app.js?v=20260612f"></script>
+  <script src="app.js?v=20260612g"></script>
 </body>
 </html>
