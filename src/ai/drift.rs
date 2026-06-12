@@ -35,7 +35,7 @@ pub fn explain_fleet_drift(
         ));
     }
 
-    let mut systemd_drift = diff_systemd(&base_sem, &cur_sem);
+    let systemd_drift = diff_systemd(&base_sem, &cur_sem);
     let mut security_drift = Vec::new();
     if baseline.security.selinux != current.security.selinux {
         security_drift.push(format!(

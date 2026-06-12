@@ -3,7 +3,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use rig::client::completion::CompletionClient;
-use rig::completion::{AssistantContent, CompletionModel};
+use rig::completion::CompletionModel;
 use rig::providers::openai;
 use serde::{Deserialize, Serialize};
 

@@ -109,7 +109,6 @@ fn parse_start_type(raw: &str) -> WindowsStartType {
 }
 
 fn summarize_event_logs(g: &mut Guestfs, systemroot: &str) -> WindowsEventLogSummary {
-    use crate::evidence::snapshot::WindowsForensicProfile;
     use crate::guestfs::forensic::{build_forensic_profile, parse_evtx_forensic};
     use std::io::Write;
 

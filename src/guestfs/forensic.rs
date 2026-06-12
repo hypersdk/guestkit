@@ -21,17 +21,15 @@ pub fn build_forensic_profile(entries: &[WindowsEventEntry]) -> WindowsForensicP
             SECURITY_PRIV_USE => profile.privilege_escalations += 1,
             SYSTEM_SERVICE_FAIL => profile.service_failures += 1,
             SYSTEM_UNEXPECTED_SHUTDOWN => profile.unexpected_shutdowns += 1,
-            id if is_suspicious_event(id) => {
-                if !profile.suspicious_event_ids.contains(&id) {
-                    profile.suspicious_event_ids.push(id);
-                }
+            id if is_suspicious_event(id) && !profile.suspicious_event_ids.contains(&id) => {
+                profile.suspicious_event_ids.push(id);
             }
             _ => {}
         }
-        if is_critical_level(&entry.level) || is_suspicious_event(entry.event_id) {
-            if profile.recent_critical.len() < 25 {
-                profile.recent_critical.push(to_forensic_event(entry));
-            }
+        if (is_critical_level(&entry.level) || is_suspicious_event(entry.event_id))
+            && profile.recent_critical.len() < 25
+        {
+            profile.recent_critical.push(to_forensic_event(entry));
         }
     }
     profile

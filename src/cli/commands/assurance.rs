@@ -117,10 +117,10 @@ fn print_guest_intelligence(
         println!("{}", "Top recommendations:".bold());
         for rec in intel.recommendations.iter().take(5) {
             println!(
-                "  • [{}] {} — {}",
-                format!("{:?}", rec.category),
-                rec.title,
-                rec.citation
+                "  • [{category:?}] {title} — {citation}",
+                category = rec.category,
+                title = rec.title,
+                citation = rec.citation
             );
         }
     }

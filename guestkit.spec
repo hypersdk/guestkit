@@ -1,5 +1,5 @@
 Name:           guestkit
-Version:        0.3.7
+Version:        0.3.8
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -92,6 +92,9 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.8-1
+- Fix CI clippy and integration copy test; refresh Cargo.lock
+
 * Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.7-1
 - IronWolf web console theme for GuestKit deploy UI
 - Console Copilot API, system status, fleet overview endpoints
