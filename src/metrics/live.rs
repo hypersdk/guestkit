@@ -93,7 +93,7 @@ pub fn collect_metrics_live() -> GuestMetricsSnapshot {
     let networks = Networks::new_with_refreshed_list();
     let mut rx = 0u64;
     let mut tx = 0u64;
-    for (_name, data) in networks.list() {
+    for data in networks.values() {
         rx = rx.saturating_add(data.total_received());
         tx = tx.saturating_add(data.total_transmitted());
     }

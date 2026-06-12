@@ -476,7 +476,7 @@ fn guest_network_get_interfaces() -> Result<Value, String> {
                 if let Some(arr) = interfaces.as_array() {
                     let mapped: Vec<Value> = arr
                         .iter()
-                        .filter_map(|iface| map_ip_json_interface(iface))
+                        .filter_map(map_ip_json_interface)
                         .collect();
                     if !mapped.is_empty() {
                         return Ok(json!(mapped));
@@ -651,7 +651,7 @@ fn guest_shutdown(args: &Value) -> Result<Value, String> {
         .unwrap_or("powerdown");
     let cmd = match mode {
         "halt" => "systemctl halt",
-        "powerdown" | _ => "systemctl poweroff",
+        _ => "systemctl poweroff",
     };
     Command::new("sh")
         .arg("-c")

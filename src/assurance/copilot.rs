@@ -212,7 +212,7 @@ pub fn generate_briefing(
     let headline = match readiness {
         "ready" => format!("Ready to migrate to {target}"),
         "caution" => format!("Migratable with precautions on {target}"),
-        "blocked" => format!("Migration blocked — fix boot issues first"),
+        "blocked" => "Migration blocked — fix boot issues first".to_string(),
         _ => format!("High risk for first boot on {target}"),
     };
 
