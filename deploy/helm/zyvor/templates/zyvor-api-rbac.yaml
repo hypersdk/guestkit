@@ -12,7 +12,7 @@ metadata:
 rules:
   - apiGroups: ["kubevirt.io"]
     resources: ["virtualmachines", "virtualmachineinstances"]
-    verbs: ["get", "list", "watch", "patch", "update"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
   - apiGroups: ["subresources.kubevirt.io"]
     resources:
       - virtualmachines/restart
@@ -24,9 +24,15 @@ rules:
     verbs: ["update"]
   - apiGroups: ["cdi.kubevirt.io"]
     resources: ["datavolumes"]
-    verbs: ["get", "list", "create", "patch"]
+    verbs: ["get", "list", "create", "patch", "update"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
     verbs: ["get", "list", "create"]
   - apiGroups: ["zeus.zyvor.dev"]
     resources: ["vmguestagents", "vmguestagents/status", "vmtoolspolicies", "vmtoolspolicies/status", "vmtoolsbundles", "vmtoolsbundles/status"]

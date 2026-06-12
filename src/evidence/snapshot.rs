@@ -350,6 +350,31 @@ pub struct WindowsPersistenceEntry {
 pub struct WindowsEventLogSummary {
     pub log_count: usize,
     pub total_bytes: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forensic: Option<WindowsForensicProfile>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsForensicProfile {
+    pub failed_logons: u32,
+    pub successful_logons: u32,
+    pub service_failures: u32,
+    pub unexpected_shutdowns: u32,
+    pub privilege_escalations: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suspicious_event_ids: Vec<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recent_critical: Vec<WindowsForensicEvent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WindowsForensicEvent {
+    pub event_id: u32,
+    pub channel: String,
+    pub source: String,
+    pub level: String,
+    pub time_created: String,
+    pub summary: String,
 }
 
 impl EvidenceSnapshot {

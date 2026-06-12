@@ -1,30 +1,49 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Host-side proxy: libvirt unix socket ↔ optional HTTP bridge.
+//! Host-side proxy: libvirt unix socket or vsock listener ↔ optional HTTP bridge.
 
 use crate::agent::handler::RequestHandler;
-use anyhow::{Context, Result};
+use crate::agent::transport::vsock_host::{self, VsockGuestStream};
+use anyhow::{bail, Context, Result};
 use guestkit_agent_protocol::{read_frame, write_frame, JsonRpcResponse};
+use std::io::{Read, Write};
 use std::net::SocketAddr;
+use std::os::unix::io::RawFd;
 use std::os::unix::net::UnixStream;
+use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-struct AgentClient {
-    stream: UnixStream,
+struct FramedAgentClient {
+    reader: Box<dyn Read + Send>,
+    writer: Box<dyn Write + Send>,
 }
 
-impl AgentClient {
-    fn connect(socket_path: &str) -> Result<Self> {
+impl FramedAgentClient {
+    fn from_unix(socket_path: &str) -> Result<Self> {
         let stream = UnixStream::connect(socket_path)
             .with_context(|| format!("connect to agent socket {socket_path}"))?;
         stream.set_read_timeout(Some(std::time::Duration::from_secs(120)))?;
         stream.set_write_timeout(Some(std::time::Duration::from_secs(30)))?;
-        Ok(Self { stream })
+        let reader = stream.try_clone()?;
+        Ok(Self {
+            reader: Box::new(reader),
+            writer: Box::new(stream),
+        })
+    }
+
+    fn from_vsock_fd(fd: RawFd) -> Result<Self> {
+        use std::os::unix::io::FromRawFd;
+        let file = unsafe { std::fs::File::from_raw_fd(fd) };
+        let reader = file.try_clone()?;
+        Ok(Self {
+            reader: Box::new(reader),
+            writer: Box::new(file),
+        })
     }
 
     fn call_raw(&mut self, payload: Vec<u8>) -> Result<Vec<u8>> {
-        write_frame(&mut self.stream, &payload)?;
-        read_frame(&mut self.stream).map_err(|e| anyhow::anyhow!("{e}"))
+        write_frame(&mut self.writer, &payload)?;
+        read_frame(&mut self.reader).map_err(|e| anyhow::anyhow!("{e}"))
     }
 
     fn call(&mut self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
@@ -39,25 +58,49 @@ impl AgentClient {
     }
 }
 
-pub async fn run_proxy(socket_path: &str, listen: Option<&str>) -> Result<()> {
+enum ProxyBackend {
+    Unix(String),
+    Vsock(Arc<Mutex<Option<FramedAgentClient>>>),
+}
+
+pub async fn run_proxy(socket_path: Option<&str>, listen: Option<&str>, vsock_port: Option<u32>) -> Result<()> {
+    let backend = match (socket_path, vsock_port) {
+        (Some(path), None) => ProxyBackend::Unix(path.to_string()),
+        (None, Some(port)) => {
+            let slot = Arc::new(Mutex::new(None));
+            spawn_vsock_acceptor(port, Arc::clone(&slot));
+            ProxyBackend::Vsock(slot)
+        }
+        (Some(path), Some(port)) => {
+            log::info!("agent-proxy: vsock port {port} enabled alongside unix socket {path}");
+            let slot = Arc::new(Mutex::new(None));
+            spawn_vsock_acceptor(port, Arc::clone(&slot));
+            ProxyBackend::Unix(path.to_string())
+        }
+        (None, None) => bail!("agent-proxy requires --socket or --vsock-port"),
+    };
+
     if let Some(addr) = listen {
         let addr: SocketAddr = addr.parse().context("parse --listen address")?;
-        log::info!("GuestKit agent-proxy HTTP listening on {addr} (socket: {socket_path})");
+        log::info!("GuestKit agent-proxy HTTP listening on {addr}");
         let listener = TcpListener::bind(addr).await?;
-        let socket_path = socket_path.to_string();
         loop {
             let (stream, peer) = listener.accept().await?;
             log::debug!("HTTP connection from {peer}");
-            let path = socket_path.clone();
+            let backend = backend.clone_for_task();
             tokio::spawn(async move {
-                if let Err(e) = handle_http(stream, &path).await {
+                if let Err(e) = handle_http(stream, backend).await {
                     log::error!("HTTP handler error: {e}");
                 }
             });
         }
-    } else {
-        log::info!("GuestKit agent-proxy relay on {socket_path} (stdin/stdout frames)");
-        let path = socket_path.to_string();
+    } else if let ProxyBackend::Vsock(slot) = backend {
+        log::info!("GuestKit agent-proxy vsock relay (blocking RPC on accepted guests)");
+        let listener = vsock_host::listen(vsock_port)?;
+        listener.accept_blocking_loop(|stream| serve_vsock_rpc(stream, &slot))?;
+        Ok(())
+    } else if let ProxyBackend::Unix(path) = backend {
+        log::info!("GuestKit agent-proxy relay on {path} (stdin/stdout frames)");
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut agent = UnixStream::connect(&path)?;
             loop {
@@ -69,10 +112,79 @@ pub async fn run_proxy(socket_path: &str, listen: Option<&str>) -> Result<()> {
         })
         .await??;
         Ok(())
+    } else {
+        Ok(())
     }
 }
 
-async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
+impl ProxyBackend {
+    fn clone_for_task(&self) -> Self {
+        match self {
+            Self::Unix(path) => Self::Unix(path.clone()),
+            Self::Vsock(slot) => Self::Vsock(Arc::clone(slot)),
+        }
+    }
+
+    fn call(&self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+        match self {
+            Self::Unix(path) => {
+                let mut client = FramedAgentClient::from_unix(path)?;
+                client.call(method, params)
+            }
+            Self::Vsock(slot) => {
+                let mut guard = slot
+                    .lock()
+                    .map_err(|_| anyhow::anyhow!("vsock client lock poisoned"))?;
+                let client = guard
+                    .as_mut()
+                    .ok_or_else(|| anyhow::anyhow!("no guest connected on vsock yet"))?;
+                client.call(method, params)
+            }
+        }
+    }
+}
+
+fn spawn_vsock_acceptor(port: u32, slot: Arc<Mutex<Option<FramedAgentClient>>>) {
+    std::thread::spawn(move || {
+        let listener = match vsock_host::listen(Some(port)) {
+            Ok(l) => l,
+            Err(e) => {
+                log::error!("vsock listen failed: {e}");
+                return;
+            }
+        };
+        log::info!("GuestKit agent-proxy vsock listening on port {port}");
+        loop {
+            match listener.accept() {
+                Ok(stream) => register_vsock_guest(stream, &slot),
+                Err(e) => log::error!("vsock accept failed: {e}"),
+            }
+        }
+    });
+}
+
+fn register_vsock_guest(stream: VsockGuestStream, slot: &Arc<Mutex<Option<FramedAgentClient>>>) {
+    let cid = stream.guest_cid;
+    match FramedAgentClient::from_vsock_fd(stream.into_raw_fd()) {
+        Ok(client) => {
+            log::info!("vsock guest connected (cid={cid})");
+            if let Ok(mut guard) = slot.lock() {
+                *guard = Some(client);
+            }
+        }
+        Err(e) => log::error!("vsock client setup failed: {e}"),
+    }
+}
+
+fn serve_vsock_rpc(
+    stream: VsockGuestStream,
+    slot: &Arc<Mutex<Option<FramedAgentClient>>>,
+) -> Result<()> {
+    register_vsock_guest(stream, slot);
+    Ok(())
+}
+
+async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()> {
     let mut buf = vec![0u8; 8192];
     let n = stream.read(&mut buf).await?;
     let request = String::from_utf8_lossy(&buf[..n]);
@@ -147,15 +259,7 @@ async fn handle_http(mut stream: TcpStream, socket_path: &str) -> Result<()> {
         (rpc_method.to_string(), serde_json::json!({}))
     };
 
-    let response = tokio::task::spawn_blocking({
-        let socket_path = socket_path.to_string();
-        let call_method = call_method.clone();
-        move || -> Result<serde_json::Value> {
-            let mut client = AgentClient::connect(&socket_path)?;
-            client.call(&call_method, params)
-        }
-    })
-    .await??;
+    let response = tokio::task::spawn_blocking(move || backend.call(&call_method, params)).await??;
 
     let status = if response.get("error").is_some() {
         500

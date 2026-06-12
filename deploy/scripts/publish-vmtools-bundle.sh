@@ -18,6 +18,17 @@ if command -v mc >/dev/null 2>&1; then
   mc mb -p "zyvor/${BUCKET}" 2>/dev/null || true
   mc cp --recursive dist/vmtools/ "zyvor/${BUCKET}/${PREFIX}"
   echo "Published to ${MINIO_ENDPOINT}/${BUCKET}/${PREFIX}"
+elif [[ "${MINIO_VIA_KUBECTL:-}" == "1" ]] && command -v kubectl >/dev/null 2>&1; then
+  NS="${MINIO_NAMESPACE:-zyvor}"
+  kubectl -n "${NS}" exec deploy/minio -- mc mb "local/${BUCKET}" 2>/dev/null || true
+  while IFS= read -r -d '' file; do
+    rel="${file#dist/vmtools/}"
+    key="${PREFIX}${rel}"
+    echo "  upload ${key}..."
+    cat "${file}" | kubectl -n "${NS}" exec -i deploy/minio -- sh -c "cat > /tmp/upload && mc cp /tmp/upload local/${BUCKET}/${key} && rm -f /tmp/upload"
+  done < <(find dist/vmtools -type f -print0)
+  kubectl -n "${NS}" exec deploy/minio -- mc anonymous set download "local/${BUCKET}" 2>/dev/null || true
+  echo "Published via kubectl→minio to ${BUCKET}/${PREFIX}"
 elif command -v aws >/dev/null 2>&1; then
   export AWS_ACCESS_KEY_ID="${MINIO_ACCESS_KEY}"
   export AWS_SECRET_ACCESS_KEY="${MINIO_SECRET_KEY}"

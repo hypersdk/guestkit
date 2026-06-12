@@ -4,6 +4,7 @@
 pub mod stdio;
 pub mod virtio;
 pub mod vsock;
+pub mod vsock_host;
 
 use anyhow::Result;
 use guestkit_agent_protocol::{read_frame, read_line, write_frame, write_line};

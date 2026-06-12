@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     Worker, WorkerConfig, HandlerRegistry,
     handlers::{
-        AgentCallHandler, AgentDoctorHandler, AgentEvidenceHandler, AgentFixHandler, DoctorHandler,
+        AgentCallHandler, AgentDoctorHandler, AgentEvidenceHandler, AgentFixHandler, ConvertHandler, DoctorHandler,
         EchoHandler, InspectHandler,
         MigratePlanHandler, ProfileHandler, RepairHandler,
     },
@@ -43,6 +43,11 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     log::info!("Working directory: {}", config.work_dir.display());
     log::info!("Results directory: {}", config.result_dir.display());
 
+    std::fs::create_dir_all(&config.work_dir)
+        .map_err(|e| anyhow::anyhow!("create work_dir {}: {e}", config.work_dir.display()))?;
+    std::fs::create_dir_all(&config.result_dir)
+        .map_err(|e| anyhow::anyhow!("create result_dir {}: {e}", config.result_dir.display()))?;
+
     // Setup handler registry
     let mut registry = HandlerRegistry::new();
 
@@ -55,6 +60,7 @@ pub async fn run_daemon(args: DaemonArgs) -> Result<()> {
     registry.register(Arc::new(DoctorHandler));
     registry.register(Arc::new(MigratePlanHandler));
     registry.register(Arc::new(RepairHandler));
+    registry.register(Arc::new(ConvertHandler));
     registry.register(Arc::new(AgentEvidenceHandler));
     registry.register(Arc::new(AgentDoctorHandler));
     registry.register(Arc::new(AgentCallHandler));

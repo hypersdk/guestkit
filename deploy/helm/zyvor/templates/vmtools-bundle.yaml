@@ -15,6 +15,11 @@ spec:
     rpm: {{ printf "%s/linux/zyvor-vm-tools-%s.rpm" $base $version | quote }}
     deb: {{ printf "%s/linux/zyvor-vm-tools_%s_amd64.deb" $base $version | quote }}
     tar: {{ printf "%s/linux/zyvor-vm-tools-linux-amd64.tar.gz" $base | quote }}
+  windows:
+    exe: {{ printf "%s/windows/zyvor-guest-agent.exe" $base | quote }}
+    msi: {{ printf "%s/windows/zyvor-vm-tools-%s.msi" $base $version | quote }}
+    zip: {{ printf "%s/windows/zyvor-vm-tools-windows-%s.zip" $base $version | quote }}
+    installPs1: {{ printf "%s/windows/install.ps1" $base | quote }}
   iso: {{ printf "%s/zyvor-vm-tools.iso" $base | quote }}
-  agentBinaryUrl: {{ .Values.zyvorApi.guestkitBinaryUrl | default "" | quote }}
+  agentBinaryUrl: {{ .Values.zyvorApi.guestkitBinaryUrl | default (printf "%s/linux/zyvor-guest-agent" $base) | quote }}
 {{- end }}

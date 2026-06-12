@@ -27,7 +27,7 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | Graceful shutdown (`stop` with grace period) | Shipped |
 | QGA bootstrap install script (live qemu-ga) | Shipped |
 | Fleet coverage UI chip | Shipped |
-| Guest exec via API | Blocked (KubeVirt has no guest-exec subresource) |
+| Guest exec via API | **QGA guest-exec** via virt-launcher (`/vmtools/exec`, hands-off install) |
 
 ## Phase 3 capabilities
 
@@ -65,6 +65,7 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | PUT | `/api/v1/vmtools/policy` |
 | POST | `/api/v1/vmtools/policy/reconcile` |
 | GET | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/install` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/inspect` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/doctor` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/diagnostics` |

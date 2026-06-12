@@ -95,7 +95,8 @@ helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   -f "${ROOT}/deploy/helm/zyvor/values-k3s.yaml" \
   --set guestkitWorker.image="${WORKER_IMAGE}" \
   --set zyvorApi.image="${API_IMAGE}" \
-  --set zyvorUi.image="${UI_IMAGE}"
+  --set zyvorUi.image="${UI_IMAGE}" \
+  --set minio.service.nodePort=30092
 
 if [[ -n "${NO_CACHE}" ]] || [[ -z "${PULL_REGISTRY}" ]]; then
   echo "Restarting API, UI, and worker pods to pick up freshly built :latest images..."

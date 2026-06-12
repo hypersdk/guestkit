@@ -11,11 +11,14 @@ STAGING="${DIST}/staging"
 mkdir -p "${STAGING}"
 
 build_windows_agent() {
-  echo "Building zyvor-guest-agent for Windows (x86_64-pc-windows-gnu)..."
+  echo "Building zyvor-guest-agent for Windows (standalone crate)..."
   cd "${ROOT}"
   rustup target add x86_64-pc-windows-gnu 2>/dev/null || true
-  cargo build --release --features agent --no-default-features \
-    --target x86_64-pc-windows-gnu --bin zyvor-guest-agent
+  if command -v x86_64-w64-mingw32-gcc >/dev/null; then
+    export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
+  fi
+  cargo build --release -p zyvor-guest-agent \
+    --target x86_64-pc-windows-gnu
   cp "target/x86_64-pc-windows-gnu/release/zyvor-guest-agent.exe" "${STAGING}/"
 }
 
@@ -29,9 +32,12 @@ else
 fi
 
 cp "${ROOT}/packaging/vmtools/windows/install.ps1" "${STAGING}/"
+if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
+  cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/"
+  cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/../windows/" 2>/dev/null || true
+fi
 
 if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]] && command -v candle >/dev/null && command -v light >/dev/null; then
-  echo "Building MSI with WiX..."
   WIX_OBJ="${DIST}/zyvor-vm-tools.wixobj"
   sed "s/Version=\"0.1.0.0\"/Version=\"${VERSION}.0\"/" "${WXS}" > "${DIST}/zyvor-guest-agent.wxs"
   candle -out "${WIX_OBJ}" -dStaging="${STAGING}" "${DIST}/zyvor-guest-agent.wxs"

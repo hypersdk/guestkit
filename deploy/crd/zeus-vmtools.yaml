@@ -33,6 +33,17 @@ spec:
                       type: string
                     tar:
                       type: string
+                windows:
+                  type: object
+                  properties:
+                    exe:
+                      type: string
+                    msi:
+                      type: string
+                    zip:
+                      type: string
+                    installPs1:
+                      type: string
                 iso:
                   type: string
                 agentBinaryUrl:

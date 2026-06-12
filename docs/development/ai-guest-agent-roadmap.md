@@ -57,7 +57,7 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** â€
 | Machina dashboard export type | Shipped (`src/ai/platform.rs`) |
 | Policy DSL hints from CIS-lite profile | Shipped |
 | CIS-style security profiles | Shipped (`src/ai/security_profiles.rs`) |
-| Full `.evtx` parsing for forensic profiles | Partial (summary + `parse_evtx_file`; deep forensic profiles future) |
+| Full `.evtx` parsing for forensic profiles | Shipped (`evtx` crate + `WindowsForensicProfile`) |
 
 ## Module layout
 

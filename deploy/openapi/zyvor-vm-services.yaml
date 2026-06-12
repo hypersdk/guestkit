@@ -180,6 +180,9 @@ paths:
                       type: string
                     rebootPolicy:
                       type: string
+                    maxConcurrent:
+                      type: integer
+                      minimum: 1
       responses:
         '200':
           description: VMToolsPolicyView
@@ -669,6 +672,39 @@ components:
           type: integer
         windows_virtio_win:
           type: integer
+    VMToolsBundleInfo:
+      type: object
+      properties:
+        version:
+          type: string
+        channel:
+          type: string
+        linux_rpm_url:
+          type: string
+          nullable: true
+        linux_deb_url:
+          type: string
+          nullable: true
+        linux_tar_url:
+          type: string
+          nullable: true
+        windows_exe_url:
+          type: string
+          nullable: true
+        windows_msi_url:
+          type: string
+          nullable: true
+        windows_zip_url:
+          type: string
+          nullable: true
+        windows_install_ps1_url:
+          type: string
+          nullable: true
+        iso_url:
+          type: string
+          nullable: true
+        agent_binary_url:
+          type: string
     VMToolsReconcileResult:
       type: object
       properties:

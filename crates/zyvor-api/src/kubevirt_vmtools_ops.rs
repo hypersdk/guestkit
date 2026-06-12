@@ -220,12 +220,48 @@ pub async fn shutdown_vm_handler(
 }
 
 pub async fn exec_vm_handler(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
     Json(body): Json<ExecRequest>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let _ = (namespace, name, body);
-    Err(ApiError::bad_request(
-        "Guest exec is not exposed by KubeVirt subresources — use SSH/port-forward or offline GuestKit agent RPC",
-    ))
+    let client = kube_client(&state)?;
+    let vmi = require_running_vmi(&client, &namespace, &name).await?;
+    if !agent_connected(&vmi) {
+        return Err(ApiError::bad_request(
+            "Guest agent not connected — install qemu-guest-agent or Zeus VM Tools first",
+        ));
+    }
+
+    let (path, args) = if let Some(cmd) = body.command.as_deref().filter(|s| !s.is_empty()) {
+        if cmd.contains('\\') || cmd.to_ascii_lowercase().contains("powershell") {
+            (
+                "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe".to_string(),
+                vec![
+                    "-NoProfile".into(),
+                    "-NonInteractive".into(),
+                    "-ExecutionPolicy".into(),
+                    "Bypass".into(),
+                    "-Command".into(),
+                    cmd.to_string(),
+                ],
+            )
+        } else {
+            ("/bin/sh".into(), vec!["-c".into(), cmd.to_string()])
+        }
+    } else {
+        let path = body
+            .path
+            .filter(|p| !p.is_empty())
+            .ok_or_else(|| ApiError::bad_request("Provide command or path"))?;
+        (path, body.args)
+    };
+
+    let result = crate::kubevirt_qga::qga_exec(&client, &namespace, &name, &path, &args, 120).await?;
+    Ok(Json(ApiResponse::ok(json!({
+        "success": result.exit_code == 0,
+        "exitCode": result.exit_code,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "method": "qga-guest-exec",
+    }))))
 }

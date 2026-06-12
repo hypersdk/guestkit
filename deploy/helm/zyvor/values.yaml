@@ -31,6 +31,10 @@ zyvorApi:
   privileged: false
   # Optional default for live VM agent-proxy (e.g. http://127.0.0.1:8765)
   agentProxyUrl: ""
+  agentProxy:
+    enabled: false
+    vsockPort: 1234
+    listen: "127.0.0.1:8765"
   service:
     type: ClusterIP
     nodePort: 30080
@@ -56,6 +60,9 @@ minio:
   image: minio/minio:latest
   accessKey: zyvor
   secretKey: zyvor-secret
+  service:
+    type: ClusterIP
+    nodePort: 30090
 
 persistence:
   vmImages:
