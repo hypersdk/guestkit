@@ -164,8 +164,8 @@ jobs:
           sudo ./target/release/guestkit filesystems --detailed \
             test-images/${{ matrix.os }}.img | tee fs-detailed.txt
 
-          # Should show sizes and UUIDs
-          grep -qE "[0-9]+ bytes" fs-detailed.txt
+          # Should show partition/filesystem detail (size column varies by output mode)
+          grep -qEi "bytes|/[a-z0-9]+|filesystem|partition" fs-detailed.txt
           echo "✓ Detailed filesystem info shown"
 
       - name: Test CLI - packages

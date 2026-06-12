@@ -39,4 +39,26 @@ curl -sf -X POST "${API}/vms/${VM_ID}/migration-plan?target=kubevirt" | python3 
 echo "Provision YAML..."
 curl -sf -X POST "${API}/vms/${VM_ID}/provision" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['yaml'][:2000])"
 
+echo "Config endpoint..."
+curl -sf "${API}/config" | python3 -m json.tool | head -20
+
+if curl -sf "${API}/kubevirt/vms" >/dev/null 2>&1; then
+  echo "KubeVirt fleet..."
+  curl -sf "${API}/kubevirt/vms" | python3 -m json.tool | head -40
+  echo "KubeVirt namespaces..."
+  curl -sf "${API}/kubevirt/namespaces" | python3 -m json.tool
+fi
+
+if curl -sf "${API}/vmtools/bundle" >/dev/null 2>&1; then
+  echo "VM Tools bundle..."
+  curl -sf "${API}/vmtools/bundle" | python3 -m json.tool | head -20
+  echo "VM Tools coverage..."
+  curl -sf "${API}/vmtools/coverage" | python3 -m json.tool
+fi
+
+if curl -sf "${API}/storage/roots" >/dev/null 2>&1; then
+  echo "Storage roots..."
+  curl -sf "${API}/storage/roots" | python3 -m json.tool | head -20
+fi
+
 echo "Smoke test complete."

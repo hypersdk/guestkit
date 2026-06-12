@@ -302,13 +302,26 @@ pub async fn provision_vm(
         .map_err(|e| ApiError::internal(e.to_string()))?;
     let yaml = manifests_to_yaml(&manifests).map_err(|e| ApiError::internal(e.to_string()))?;
 
+    let mut applied = false;
+    let mut resources = None;
+    let mut apply_errors = None;
     if query.apply {
-        tracing::warn!("apply=true requested but cluster apply is not configured in MVP");
+        let client = state.kube.clone().ok_or_else(|| {
+            ApiError::bad_request("provision apply=true requires in-cluster Kubernetes access")
+        })?;
+        let result = crate::kubevirt_apply::apply_kubevirt_manifests(&client, &yaml).await?;
+        applied = result.applied;
+        resources = Some(result.resources);
+        if !result.errors.is_empty() {
+            apply_errors = Some(result.errors);
+        }
     }
 
     Ok(Json(ApiResponse::ok(ProvisionResponse {
         vm_id: id,
         yaml,
-        applied: false,
+        applied,
+        resources,
+        apply_errors,
     })))
 }

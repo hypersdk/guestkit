@@ -4,8 +4,13 @@
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod kubevirt_apply;
 pub mod kubevirt_boot_inspect;
+pub mod kubevirt_copilot;
+pub mod kubevirt_export;
 pub mod kubevirt_guest_agent;
+pub mod kubevirt_lifecycle;
+pub mod kubevirt_vmtools_ops;
 pub mod jobs;
 pub mod models;
 pub mod routes;

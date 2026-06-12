@@ -8,24 +8,9 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const GUEST_BINARY_DEST: &str = "/usr/local/bin/guestkit";
-pub const GUEST_UNIT_DEST: &str = "/etc/systemd/system/guestkit-agent.service";
-const DEFAULT_UNIT: &str = r#"[Unit]
-Description=GuestKit Agent (Zyvor)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-ExecStart=/bin/sh -c 'until [ -e /dev/virtio-ports/org.qemu.guest_agent.0 ]; do sleep 2; done; exec /usr/local/bin/guestkit agent --channel virtio'
-Restart=always
-RestartSec=5
-User=root
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-"#;
+pub const GUEST_BINARY_DEST: &str = "/usr/bin/zyvor-guest-agent";
+pub const GUEST_UNIT_DEST: &str = "/etc/systemd/system/zyvor-guest-agent.service";
+const DEFAULT_UNIT: &str = include_str!("../../templates/agent/zyvor-guest-agent.service");
 
 const KUBEVIRT_CHANNEL_HINT: &str = r#"Add virtio-serial channel (QGA-compatible) to VMI/libvirt domain:
 spec:

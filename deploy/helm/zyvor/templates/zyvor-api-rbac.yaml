@@ -14,11 +14,20 @@ rules:
     resources: ["virtualmachines", "virtualmachineinstances"]
     verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["subresources.kubevirt.io"]
-    resources: ["virtualmachines/restart"]
+    resources:
+      - virtualmachines/restart
+      - virtualmachines/start
+      - virtualmachines/stop
+      - virtualmachineinstances/freeze
+      - virtualmachineinstances/unfreeze
+      - virtualmachineinstances/softreboot
     verbs: ["update"]
+  - apiGroups: ["cdi.kubevirt.io"]
+    resources: ["datavolumes"]
+    verbs: ["get", "list", "create", "patch"]
   - apiGroups: [""]
-    resources: ["persistentvolumeclaims", "persistentvolumes"]
-    verbs: ["get", "list"]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

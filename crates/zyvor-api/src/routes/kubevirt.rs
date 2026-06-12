@@ -29,10 +29,18 @@ pub struct KubeVirtVmSummary {
     pub os_version: Option<String>,
     pub hostname: Option<String>,
     pub is_windows: bool,
+    pub root_pvc: Option<String>,
     pub age: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Deserialize, Default)]
+pub struct VmListQuery {
+    pub namespace: Option<String>,
+    pub search: Option<String>,
+    pub phase: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuestAgentInfo {
     pub health: String,
     pub agent_connected: bool,
@@ -190,7 +198,7 @@ fn build_guest_info(vm: Option<&Value>, vmi: Option<&Value>, vmi_running: bool) 
     }
 }
 
-async fn list_dynamic_all(client: &Client, ar: &ApiResource) -> ApiResult<Vec<Value>> {
+pub(crate) async fn list_dynamic_all(client: &Client, ar: &ApiResource) -> ApiResult<Vec<Value>> {
     let api: Api<kube::api::DynamicObject> = Api::all_with(client.clone(), ar);
     let listed = api
         .list(&ListParams::default())
@@ -204,8 +212,72 @@ async fn list_dynamic_all(client: &Client, ar: &ApiResource) -> ApiResult<Vec<Va
         .collect())
 }
 
+pub(crate) async fn fetch_vm(client: &Client, namespace: &str, name: &str) -> Option<Value> {
+    let api: Api<kube::api::DynamicObject> =
+        Api::namespaced_with(client.clone(), namespace, &vm_resource());
+    api.get(name)
+        .await
+        .ok()
+        .and_then(|obj| serde_json::to_value(obj).ok())
+}
+
+pub(crate) async fn fetch_vmi(client: &Client, namespace: &str, name: &str) -> Option<Value> {
+    let api: Api<kube::api::DynamicObject> =
+        Api::namespaced_with(client.clone(), namespace, &vmi_resource());
+    api.get(name)
+        .await
+        .ok()
+        .and_then(|obj| serde_json::to_value(obj).ok())
+}
+
+fn vm_matches_filters(vm: &KubeVirtVmSummary, query: &VmListQuery) -> bool {
+    if let Some(ns) = query.namespace.as_deref() {
+        if !ns.is_empty() && vm.namespace != ns {
+            return false;
+        }
+    }
+    if let Some(phase) = query.phase.as_deref() {
+        if !phase.is_empty() {
+            let p = vm.phase.as_deref().unwrap_or("").to_lowercase();
+            let s = vm.status.to_lowercase();
+            let want = phase.to_lowercase();
+            let matches = p.contains(&want)
+                || s.contains(&want)
+                || (want == "stopped" && (p.is_empty() || p == "succeeded" || s.contains("stop")));
+            if !matches {
+                return false;
+            }
+        }
+    }
+    if let Some(search) = query.search.as_deref() {
+        if !search.is_empty() {
+            let needle = search.to_lowercase();
+            let hay = format!("{}/{} {} {}", vm.namespace, vm.name, vm.status, vm.ip_address.as_deref().unwrap_or("")).to_lowercase();
+            if !hay.contains(&needle) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+pub async fn list_kubevirt_namespaces(
+    State(state): State<AppState>,
+) -> ApiResult<Json<ApiResponse<Vec<String>>>> {
+    let client = kube_client(&state)?;
+    let vms = list_dynamic_all(&client, &vm_resource()).await?;
+    let mut namespaces: Vec<String> = vms
+        .iter()
+        .filter_map(|vm| json_str(vm, &["metadata", "namespace"]))
+        .collect();
+    namespaces.sort();
+    namespaces.dedup();
+    Ok(Json(ApiResponse::ok(namespaces)))
+}
+
 pub async fn list_kubevirt_vms(
     State(state): State<AppState>,
+    Query(query): Query<VmListQuery>,
 ) -> ApiResult<Json<ApiResponse<Vec<KubeVirtVmSummary>>>> {
     let client = kube_client(&state)?;
     let vms = list_dynamic_all(&client, &vm_resource()).await?;
@@ -239,6 +311,7 @@ pub async fn list_kubevirt_vms(
         let phase = vmi.and_then(|v| json_str(v, &["status", "phase"]));
         let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
         let is_windows = crate::kubevirt_guest_agent::vm_is_windows(Some(&vm), vmi);
+        let root_pvc = crate::kubevirt_boot_inspect::root_pvc_from_vm(&vm);
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -251,9 +324,12 @@ pub async fn list_kubevirt_vms(
             os_version,
             hostname,
             is_windows,
+            root_pvc,
             age: format_age(created.as_ref()),
         });
     }
+
+    out.retain(|vm| vm_matches_filters(vm, &query));
 
     out.sort_by(|a, b| a.namespace.cmp(&b.namespace).then(a.name.cmp(&b.name)));
     Ok(Json(ApiResponse::ok(out)))

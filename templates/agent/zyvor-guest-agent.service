@@ -1,0 +1,19 @@
+[Unit]
+Description=Zyvor VM Tools Guest Agent
+Documentation=https://zyvor.dev/guestkit
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zyvor-guest-agent
+Restart=always
+RestartSec=5
+User=root
+StandardOutput=journal
+StandardError=journal
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
