@@ -133,12 +133,364 @@ paths:
       responses:
         '200':
           description: Job details
+  /config:
+    get:
+      summary: UI configuration (Zeus URL, cluster name, storage defaults)
+      responses:
+        '200':
+          description: UiConfig
+  /vmtools/bundle:
+    get:
+      summary: Zeus VM Tools artifact URLs and version
+      responses:
+        '200':
+          description: VMToolsBundleInfo
+  /vmtools/coverage:
+    get:
+      summary: Fleet-wide VM Tools install/connection coverage
+      responses:
+        '200':
+          description: VMToolsCoverage
+  /storage/roots:
+    get:
+      summary: Server disk browse roots
+      responses:
+        '200':
+          description: Storage roots
+  /storage/browse:
+    get:
+      summary: Browse directories and disk images on server storage
+      responses:
+        '200':
+          description: Storage browse listing
+  /vms/import-from-storage:
+    post:
+      summary: Register a disk from server storage into Zyvor ingest
+      responses:
+        '200':
+          description: Import result
+  /kubevirt/namespaces:
+    get:
+      summary: Distinct namespaces containing KubeVirt VMs
+      responses:
+        '200':
+          description: Namespace list
   /kubevirt/vms:
     get:
       summary: List KubeVirt VMs in cluster
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: phase
+          schema:
+            type: string
+            enum: [Running, Stopped, Pending]
       responses:
         '200':
           description: VM summaries
+  /kubevirt/vms/{namespace}/{name}/guest-agent:
+    get:
+      summary: Live guest agent status for a cluster VM
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: GuestAgentInfo
+  /kubevirt/vms/{namespace}/{name}/vmtools:
+    get:
+      summary: Zeus VM Tools status for a cluster VM
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VMToolsVmStatus
+  /kubevirt/vms/{namespace}/{name}/vmtools/install:
+    post:
+      summary: Install Zeus VM Tools (cloud-init or QGA bootstrap script)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: restart
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: GuestAgentInstallResult
+  /kubevirt/vms/{namespace}/{name}/vmtools/diagnostics:
+    post:
+      summary: Run VM Tools diagnostics and sync labels
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diagnostics result
+  /kubevirt/vms/{namespace}/{name}/vmtools/quiesce:
+    post:
+      summary: Quiesce guest filesystem for snapshot (KubeVirt freeze)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VMToolsOpResult
+  /kubevirt/vms/{namespace}/{name}/vmtools/unquiesce:
+    post:
+      summary: Thaw guest filesystem after snapshot (KubeVirt unfreeze)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VMToolsOpResult
+  /kubevirt/vms/{namespace}/{name}/vmtools/reboot:
+    post:
+      summary: Guest soft reboot via QEMU guest agent
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: VMToolsOpResult
+  /kubevirt/vms/{namespace}/{name}/vmtools/shutdown:
+    post:
+      summary: Graceful VM shutdown with configurable grace period
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grace_period_seconds:
+                  type: integer
+      responses:
+        '200':
+          description: VMToolsOpResult
+  /kubevirt/vms/{namespace}/{name}/vmtools/exec:
+    post:
+      summary: Guest command exec (not available via KubeVirt API)
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Not supported — use SSH or agent RPC
+  /kubevirt/vms/{namespace}/{name}/start:
+    put:
+      summary: Start a stopped KubeVirt VM
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: LifecycleResult
+  /kubevirt/vms/{namespace}/{name}/stop:
+    put:
+      summary: Gracefully stop a KubeVirt VM
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: LifecycleResult
+  /kubevirt/vms/{namespace}/{name}/restart:
+    put:
+      summary: Restart a KubeVirt VM
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: LifecycleResult
+  /kubevirt/vms/{namespace}/{name}/export-disk:
+    post:
+      summary: Export cluster VM root PVC into Zyvor ingest storage
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: force_stop
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ExportDiskResult
+        '409':
+          description: VM running — stop first
+  /kubevirt/vms/{namespace}/{name}/copilot/briefing:
+    post:
+      summary: Cluster Copilot briefing from guest-agent and boot-inspect evidence
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterCopilotInput'
+      responses:
+        '200':
+          description: MigrationBriefing
+  /kubevirt/vms/{namespace}/{name}/copilot/ask:
+    post:
+      summary: Ask Cluster Copilot a question against a briefing
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterAskBody'
+      responses:
+        '200':
+          description: CopilotInsight
+  /kubevirt/apply:
+    post:
+      summary: Apply raw KubeVirt YAML manifests to the cluster
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyYamlRequest'
+      responses:
+        '200':
+          description: ApplyYamlResult
   /kubevirt/vms/{namespace}/{name}/boot-inspect:
     get:
       summary: Offline boot inspect (GuestKit run_boot_inspect — not libguestfs)
@@ -224,3 +576,37 @@ components:
           type: boolean
         message:
           type: string
+    ClusterCopilotInput:
+      type: object
+      properties:
+        guest_agent:
+          type: object
+        boot_inspect:
+          $ref: '#/components/schemas/BootInspectInfo'
+    ClusterAskBody:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+        briefing:
+          type: object
+    ApplyYamlRequest:
+      type: object
+      required: [yaml]
+      properties:
+        yaml:
+          type: string
+    ApplyYamlResult:
+      type: object
+      properties:
+        applied:
+          type: boolean
+        resources:
+          type: array
+          items:
+            type: object
+        errors:
+          type: array
+          items:
+            type: string

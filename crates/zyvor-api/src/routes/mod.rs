@@ -1,19 +1,60 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod agent;
+mod config;
 mod copilot;
 mod health;
 mod jobs;
 pub(crate) mod kubevirt;
+mod storage;
+mod vmtools;
 mod vms;
 
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 use crate::state::AppState;
 
 pub fn api_router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/health", get(health::health))
+        .route("/api/v1/config", get(config::get_config))
+        .route("/api/v1/storage/roots", get(storage::list_storage_roots))
+        .route("/api/v1/storage/browse", get(storage::browse_storage))
+        .route("/api/v1/vms/import-from-storage", post(storage::import_from_storage))
+        .route("/api/v1/vmtools/bundle", get(vmtools::get_bundle))
+        .route("/api/v1/vmtools/coverage", get(vmtools::get_coverage))
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools",
+            get(vmtools::get_vm_vmtools),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/install",
+            post(vmtools::install_vm_vmtools),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/diagnostics",
+            post(vmtools::run_vm_diagnostics),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/quiesce",
+            post(crate::kubevirt_vmtools_ops::quiesce_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/unquiesce",
+            post(crate::kubevirt_vmtools_ops::unquiesce_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/reboot",
+            post(crate::kubevirt_vmtools_ops::reboot_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/shutdown",
+            post(crate::kubevirt_vmtools_ops::shutdown_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/vmtools/exec",
+            post(crate::kubevirt_vmtools_ops::exec_vm_handler),
+        )
         .route("/api/v1/vms/import", post(vms::import_vm))
         .route("/api/v1/vms", get(vms::list_vms))
         .route("/api/v1/vms/:id/inspect", post(vms::inspect_vm))
@@ -28,6 +69,7 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/:id/agent/doctor", post(agent::agent_doctor))
         .route("/api/v1/vms/:id/agent/rpc", post(agent::agent_rpc))
         .route("/api/v1/vms/:id/agent/fix", post(agent::agent_fix))
+        .route("/api/v1/kubevirt/namespaces", get(kubevirt::list_kubevirt_namespaces))
         .route("/api/v1/kubevirt/vms", get(kubevirt::list_kubevirt_vms))
         .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest-agent",
@@ -50,5 +92,33 @@ pub fn api_router() -> Router<AppState> {
         .route(
             "/api/v1/kubevirt/boot-inspect",
             post(crate::kubevirt_boot_inspect::post_boot_inspect),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/restart",
+            put(crate::kubevirt_lifecycle::restart_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/start",
+            put(crate::kubevirt_lifecycle::start_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/stop",
+            put(crate::kubevirt_lifecycle::stop_vm_handler),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/export-disk",
+            post(crate::kubevirt_export::export_vm_disk),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/copilot/briefing",
+            post(crate::kubevirt_copilot::cluster_briefing),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/copilot/ask",
+            post(crate::kubevirt_copilot::cluster_ask),
+        )
+        .route(
+            "/api/v1/kubevirt/apply",
+            post(crate::kubevirt_apply::apply_yaml_handler),
         )
 }

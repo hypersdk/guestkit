@@ -24,6 +24,7 @@ pub const METHOD_DOCTOR: &str = "guestkit.doctor";
 pub const METHOD_MIGRATE_SCORE: &str = "guestkit.migrateScore";
 pub const METHOD_RUN_FIX_PLAN: &str = "guestkit.runFixPlan";
 pub const METHOD_RUN_FIX_PLAN_ROLLBACK: &str = "guestkit.runFixPlanRollback";
+pub const METHOD_GET_STATUS: &str = "guestkit.getStatus";
 pub const METHOD_GET_METRICS: &str = "guestkit.getMetrics";
 pub const METHOD_GET_FILESYSTEM: &str = "guestkit.getFilesystem";
 pub const METHOD_EXEC: &str = "guestkit.exec";
@@ -52,6 +53,7 @@ impl AgentCapabilities {
                 METHOD_GET_VERSION.to_string(),
                 METHOD_GET_CAPABILITIES.to_string(),
                 METHOD_GET_EVIDENCE.to_string(),
+                METHOD_GET_STATUS.to_string(),
                 METHOD_DOCTOR.to_string(),
                 METHOD_MIGRATE_SCORE.to_string(),
                 METHOD_GET_METRICS.to_string(),

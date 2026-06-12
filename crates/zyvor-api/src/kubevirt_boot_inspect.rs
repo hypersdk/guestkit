@@ -80,7 +80,7 @@ pub async fn post_boot_inspect(
     Ok(Json(ApiResponse::ok(info)))
 }
 
-async fn boot_inspect_for_vm(
+pub(crate) async fn boot_inspect_for_vm(
     state: &AppState,
     namespace: &str,
     vm_name: &str,
@@ -163,7 +163,7 @@ async fn fetch_vmi(client: &Client, namespace: &str, name: &str) -> Option<Value
         .and_then(|obj| serde_json::to_value(obj).ok())
 }
 
-fn root_pvc_from_vm(vm: &Value) -> Option<String> {
+pub(crate) fn root_pvc_from_vm(vm: &Value) -> Option<String> {
     let disks = vm
         .pointer("/spec/template/spec/domain/devices/disks")
         .and_then(|v| v.as_array())?;
@@ -214,7 +214,7 @@ fn root_pvc_from_vm(vm: &Value) -> Option<String> {
     None
 }
 
-async fn resolve_disk_path(client: &Client, namespace: &str, pvc_name: &str) -> Option<PathBuf> {
+pub(crate) async fn resolve_disk_path(client: &Client, namespace: &str, pvc_name: &str) -> Option<PathBuf> {
     if let Ok(explicit) = std::env::var("KUBEVIRT_BOOT_INSPECT_DISK") {
         let path = explicit
             .replace("{namespace}", namespace)

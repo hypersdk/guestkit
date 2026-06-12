@@ -160,3 +160,8 @@ path = "src/main.rs"
 [[bin]]
 name = "guestctl"
 path = "src/bin/guestctl.rs"
+
+[[bin]]
+name = "zyvor-guest-agent"
+path = "src/bin/zyvor-guest-agent.rs"
+required-features = ["agent"]
