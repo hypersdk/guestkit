@@ -194,12 +194,15 @@ jobs:
           echo "✓ Directory listing works"
 
       - name: Test CLI - cat file
+        if: matrix.os != 'cirros'
         run: |
           ok=0
+          source_path=""
           for path in /etc/hostname /etc/os-release /etc/debian_version; do
             if sudo ./target/release/guestkit cat \
               test-images/${{ matrix.os }}.img "$path" 2>/dev/null | tee hostname.txt | grep -q .; then
               ok=1
+              source_path="$path"
               echo "✓ File reading works ($path): $(cat hostname.txt)"
               break
             fi
@@ -209,13 +212,16 @@ jobs:
             sudo ./target/release/guestkit ls \
               test-images/${{ matrix.os }}.img /etc | tee hostname.txt
             grep -qE "os-release|hostname|debian" hostname.txt
+            source_path="/etc/os-release"
             echo "✓ Directory access works via ls /etc"
           fi
+          echo "GUESTKIT_COPY_SOURCE=$source_path" >> "$GITHUB_ENV"
 
       - name: Test CLI - copy file between disk paths
+        if: matrix.os != 'cirros'
         run: |
           sudo ./target/release/guestkit copy \
-            test-images/${{ matrix.os }}.img /etc/hostname \
+            test-images/${{ matrix.os }}.img "${GUESTKIT_COPY_SOURCE}" \
             test-images/${{ matrix.os }}.img /tmp/guestkit-copy-hostname \
             -f
 

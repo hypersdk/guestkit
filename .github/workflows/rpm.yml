@@ -344,8 +344,8 @@ jobs:
 
       - name: Verify installation
         run: |
-          command -v guestkit
-          guestkit --version
+          rpm -ql guestkit | grep '/usr/bin/guestkit$'
+          /usr/bin/guestkit --version
 
       - name: Check package files
         run: |
