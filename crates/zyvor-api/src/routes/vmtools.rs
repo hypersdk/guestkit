@@ -479,6 +479,294 @@ async fn sync_vmguestagent_cr(
         .await;
 }
 
+pub const DEFAULT_POLICY_NAME: &str = "cluster-default";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VMToolsPolicySpec {
+    #[serde(default)]
+    pub selector: Value,
+    #[serde(default)]
+    pub auto_install: bool,
+    #[serde(default)]
+    pub auto_upgrade: bool,
+    #[serde(default = "default_channel")]
+    pub channel: String,
+    #[serde(default = "default_reboot_policy")]
+    pub reboot_policy: String,
+}
+
+fn default_channel() -> String {
+    "stable".into()
+}
+
+fn default_reboot_policy() -> String {
+    "if-needed".into()
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VMToolsPolicyView {
+    pub name: String,
+    pub spec: VMToolsPolicySpec,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VMToolsReconcileResult {
+    pub policy: String,
+    pub scanned: usize,
+    pub matched: usize,
+    pub installed: usize,
+    pub skipped: usize,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PutPolicyBody {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub spec: Option<VMToolsPolicySpec>,
+}
+
+pub async fn get_policy(
+    State(state): State<AppState>,
+) -> ApiResult<Json<ApiResponse<VMToolsPolicyView>>> {
+    let client = kube_client(&state)?;
+    let view = fetch_policy(&client, DEFAULT_POLICY_NAME).await?;
+    Ok(Json(ApiResponse::ok(view)))
+}
+
+pub async fn put_policy(
+    State(state): State<AppState>,
+    Json(body): Json<PutPolicyBody>,
+) -> ApiResult<Json<ApiResponse<VMToolsPolicyView>>> {
+    let client = kube_client(&state)?;
+    let name = body
+        .name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_POLICY_NAME.into());
+    let spec = body.spec.unwrap_or(VMToolsPolicySpec {
+        selector: json!({}),
+        auto_install: false,
+        auto_upgrade: false,
+        channel: default_channel(),
+        reboot_policy: default_reboot_policy(),
+    });
+    upsert_policy(&client, &name, &spec).await?;
+    let view = fetch_policy(&client, &name).await?;
+    Ok(Json(ApiResponse::ok(view)))
+}
+
+pub async fn reconcile_policy(
+    State(state): State<AppState>,
+) -> ApiResult<Json<ApiResponse<VMToolsReconcileResult>>> {
+    let client = kube_client(&state)?;
+    let policy = fetch_policy(&client, DEFAULT_POLICY_NAME).await?;
+    if !policy.spec.auto_install {
+        return Ok(Json(ApiResponse::ok(VMToolsReconcileResult {
+            policy: policy.name,
+            scanned: 0,
+            matched: 0,
+            installed: 0,
+            skipped: 0,
+            errors: vec!["autoInstall is disabled on cluster policy".into()],
+        })));
+    }
+
+    let vms = list_dynamic_all(&client, &vm_resource()).await?;
+    let vmis = list_dynamic_all(&client, &vmi_resource()).await?;
+    let mut vmi_map: HashMap<(String, String), Value> = HashMap::new();
+    for vmi in vmis {
+        let ns = vmi
+            .pointer("/metadata/namespace")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let name = vmi
+            .pointer("/metadata/labels/kubevirt.io/vm")
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .or_else(|| {
+                vmi.pointer("/metadata/name")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .unwrap_or_default();
+        vmi_map.insert((ns, name), vmi);
+    }
+
+    let mut result = VMToolsReconcileResult {
+        policy: policy.name.clone(),
+        scanned: 0,
+        matched: 0,
+        installed: 0,
+        skipped: 0,
+        errors: Vec::new(),
+    };
+
+    for vm in vms {
+        let name = vm.pointer("/metadata/name").and_then(|v| v.as_str()).unwrap_or("");
+        let namespace = vm
+            .pointer("/metadata/namespace")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if name.is_empty() || namespace.is_empty() {
+            continue;
+        }
+        result.scanned += 1;
+        if !matches_policy_selector(&vm, &policy.spec.selector) {
+            continue;
+        }
+        result.matched += 1;
+        let vmi = vmi_map.get(&(namespace.to_string(), name.to_string()));
+        if vm_is_windows(Some(&vm), vmi) {
+            result.skipped += 1;
+            continue;
+        }
+        let label = vm
+            .pointer("/metadata/labels/zeus.zyvor.dev/guest-tools")
+            .and_then(|v| v.as_str())
+            .unwrap_or("missing");
+        let agent_ok = vmi.map(agent_connected).unwrap_or(false);
+        if agent_ok || label == "connected" || label == "installed" {
+            result.skipped += 1;
+            continue;
+        }
+        let restart = policy.spec.reboot_policy != "never";
+        match install_guest_agent(client.clone(), namespace, name, restart).await {
+            Ok(install) if install.success => {
+                sync_vm_tools_labels(
+                    &client,
+                    namespace,
+                    name,
+                    "installed",
+                    VMTOOLS_VERSION,
+                    None,
+                )
+                .await;
+                result.installed += 1;
+            }
+            Ok(_) => result.skipped += 1,
+            Err(e) => result.errors.push(format!("{namespace}/{name}: {}", e.message)),
+        }
+    }
+
+    Ok(Json(ApiResponse::ok(result)))
+}
+
+fn vmtoolspolicy_resource() -> ApiResource {
+    ApiResource {
+        group: "zeus.zyvor.dev".into(),
+        version: "v1alpha1".into(),
+        api_version: "zeus.zyvor.dev/v1alpha1".into(),
+        kind: "VMToolsPolicy".into(),
+        plural: "vmtoolspolicies".into(),
+    }
+}
+
+async fn fetch_policy(client: &Client, name: &str) -> ApiResult<VMToolsPolicyView> {
+    let api: Api<kube::api::DynamicObject> = Api::all_with(client.clone(), &vmtoolspolicy_resource());
+    match api.get(name).await {
+        Ok(obj) => {
+            let val = serde_json::to_value(&obj)
+                .map_err(|e| ApiError::internal(format!("serialize policy: {e}")))?;
+            Ok(VMToolsPolicyView {
+                name: name.into(),
+                spec: parse_policy_spec(&val),
+                status: val.get("status").cloned(),
+            })
+        }
+        Err(_) => Ok(VMToolsPolicyView {
+            name: name.into(),
+            spec: VMToolsPolicySpec {
+                selector: json!({}),
+                auto_install: false,
+                auto_upgrade: false,
+                channel: default_channel(),
+                reboot_policy: default_reboot_policy(),
+            },
+            status: None,
+        }),
+    }
+}
+
+fn parse_policy_spec(val: &Value) -> VMToolsPolicySpec {
+    let spec = val.get("spec").cloned().unwrap_or(json!({}));
+    VMToolsPolicySpec {
+        selector: spec.get("selector").cloned().unwrap_or(json!({})),
+        auto_install: spec
+            .get("autoInstall")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        auto_upgrade: spec
+            .get("autoUpgrade")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        channel: spec
+            .get("channel")
+            .and_then(|v| v.as_str())
+            .unwrap_or("stable")
+            .into(),
+        reboot_policy: spec
+            .get("rebootPolicy")
+            .and_then(|v| v.as_str())
+            .unwrap_or("if-needed")
+            .into(),
+    }
+}
+
+async fn upsert_policy(client: &Client, name: &str, spec: &VMToolsPolicySpec) -> ApiResult<()> {
+    let api: Api<kube::api::DynamicObject> = Api::all_with(client.clone(), &vmtoolspolicy_resource());
+    let body = json!({
+        "apiVersion": "zeus.zyvor.dev/v1alpha1",
+        "kind": "VMToolsPolicy",
+        "metadata": { "name": name },
+        "spec": {
+            "selector": spec.selector,
+            "autoInstall": spec.auto_install,
+            "autoUpgrade": spec.auto_upgrade,
+            "channel": spec.channel,
+            "rebootPolicy": spec.reboot_policy,
+        }
+    });
+    if api.get(name).await.is_ok() {
+        api.patch(
+            name,
+            &PatchParams::default(),
+            &Patch::Merge(&json!({ "spec": body.get("spec").cloned().unwrap_or(Value::Null) })),
+        )
+        .await
+        .map_err(|e| ApiError::internal(format!("patch VMToolsPolicy: {e}")))?;
+    } else {
+        let obj: kube::api::DynamicObject = serde_json::from_value(body)
+            .map_err(|e| ApiError::internal(format!("build VMToolsPolicy: {e}")))?;
+        api.create(&kube::api::PostParams::default(), &obj)
+            .await
+            .map_err(|e| ApiError::internal(format!("create VMToolsPolicy: {e}")))?;
+    }
+    Ok(())
+}
+
+fn matches_policy_selector(vm: &Value, selector: &Value) -> bool {
+    let Some(match_labels) = selector.get("matchLabels").and_then(|v| v.as_object()) else {
+        return true;
+    };
+    if match_labels.is_empty() {
+        return true;
+    }
+    let labels = vm
+        .pointer("/metadata/labels")
+        .and_then(|v| v.as_object());
+    match_labels.iter().all(|(k, want)| {
+        labels
+            .and_then(|l| l.get(k))
+            .map(|got| got == want)
+            .unwrap_or(false)
+    })
+}
+
 fn kube_client(state: &AppState) -> ApiResult<Client> {
     state
         .kube

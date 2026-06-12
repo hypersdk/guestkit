@@ -2414,7 +2414,17 @@ function setupWizard() {
   });
 }
 
+function setupTheme() {
+  const saved = localStorage.getItem('zyvor.theme');
+  if (saved && ['aurora', 'liquid-zinc'].includes(saved)) {
+    document.documentElement.dataset.theme = saved;
+  } else {
+    document.documentElement.dataset.theme = 'aurora';
+  }
+}
+
 function setupGlassToggle() {
+  setupTheme();
   const saved = localStorage.getItem('zyvor.glassMode');
   if (saved && ['chrome', 'zinc', 'metal', 'clear', 'tinted'].includes(saved)) {
     document.documentElement.dataset.glass = saved === 'metal' ? 'chrome' : saved;
@@ -2428,7 +2438,7 @@ function setupGlassToggle() {
       document.documentElement.dataset.glass = mode;
       localStorage.setItem('zyvor.glassMode', mode);
       $$('[data-glass-mode]').forEach((b) => b.classList.toggle('active', b.dataset.glassMode === mode));
-      toast(mode === 'zinc' ? 'Zinc silver surface' : 'Chrome glass panels', 'ok');
+      toast(mode === 'zinc' ? 'Deep panel surface' : 'Aurora glass panels', 'ok');
     });
   });
 }
