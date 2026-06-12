@@ -39,4 +39,4 @@ vmtools:
   installCrds: true
   defaultPolicy:
     enabled: true
-    autoInstall: false
+    autoInstall: true
