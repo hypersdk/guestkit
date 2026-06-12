@@ -65,7 +65,8 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | PUT | `/api/v1/vmtools/policy` |
 | POST | `/api/v1/vmtools/policy/reconcile` |
 | GET | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools` |
-| POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/install` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/inspect` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/doctor` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/diagnostics` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/quiesce` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/unquiesce` |
@@ -89,6 +90,12 @@ Install query params: `restart=true|false`, `method=auto|cloud-init|qga|iso`
 ```
 
 Produces `dist/vmtools/linux/` (tar.gz, deb, optional rpm) and `dist/vmtools/zyvor-vm-tools.iso`.
+
+Publish to MinIO:
+
+```bash
+MINIO_ENDPOINT=http://minio:9000 ./deploy/scripts/publish-vmtools-bundle.sh
+```
 
 Apply CRDs:
 

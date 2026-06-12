@@ -74,6 +74,7 @@ vmtools:
     enabled: true
     autoInstall: false
     autoUpgrade: false
+    maxConcurrent: 3
   bundle:
     enabled: true
     version: "0.1.0"

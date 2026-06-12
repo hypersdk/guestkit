@@ -31,6 +31,10 @@ pub struct KubeVirtVmSummary {
     pub is_windows: bool,
     pub root_pvc: Option<String>,
     pub age: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_tools: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools_version: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -312,6 +316,11 @@ pub async fn list_kubevirt_vms(
         let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
         let is_windows = crate::kubevirt_guest_agent::vm_is_windows(Some(&vm), vmi);
         let root_pvc = crate::kubevirt_boot_inspect::root_pvc_from_vm(&vm);
+        let guest_tools = json_str(&vm, &["metadata", "labels", "zeus.zyvor.dev/guest-tools"]);
+        let tools_version = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/tools-version")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -326,6 +335,8 @@ pub async fn list_kubevirt_vms(
             is_windows,
             root_pvc,
             age: format_age(created.as_ref()),
+            guest_tools,
+            tools_version,
         });
     }
 

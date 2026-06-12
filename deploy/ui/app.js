@@ -46,6 +46,7 @@ const state = {
   clusterFleetLoading: false,
   vmtoolsCoverage: null,
   vmtoolsPolicy: null,
+  vmtoolsBundle: null,
   serverStorage: { rootId: 0, path: '', roots: [] },
 };
 
@@ -599,6 +600,16 @@ function renderFleet() {
   });
 }
 
+function clusterToolsLabel(vm) {
+  if (vm.is_windows) return 'virtio-win';
+  const stateLabel = vm.guest_tools || 'missing';
+  const target = state.vmtoolsBundle?.version;
+  const outdated = vm.tools_version && target && vm.tools_version !== target;
+  if (stateLabel === 'connected') return outdated ? 'tools outdated' : 'tools live';
+  if (stateLabel === 'pending') return 'tools pending';
+  return 'no tools';
+}
+
 function renderClusterFleet() {
   const grid = $('#fleetGrid');
   const empty = $('#fleetEmpty');
@@ -631,14 +642,17 @@ function renderClusterFleet() {
       const agent = vm.guest_agent_connected;
       const agentLabel = agent === true ? 'agent on' : agent === false ? 'no agent' : 'unknown';
       const osHint = vm.is_windows ? 'windows' : (vm.os_name ? vm.os_name.split(/\s+/)[0].toLowerCase() : '');
+      const toolsLabel = clusterToolsLabel(vm);
+      const toolsClass = toolsLabel.includes('live') ? 'live' : toolsLabel.includes('pending') ? 'warn' : 'muted';
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'vm-card cluster' + (selected ? ' selected' : '');
       card.innerHTML = `
         <span class="vm-format">kubevirt</span>
         <span class="vm-status ${clusterVmStatusClass(vm)}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
+        <span class="vm-tools-chip ${toolsClass}">${escapeHtml(toolsLabel)}</span>
         <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
-        <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}</p>
+        <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}${vm.tools_version ? ` · v${escapeHtml(vm.tools_version)}` : ''}</p>
       `;
       card.addEventListener('click', () => selectClusterVm(vm));
       grid.appendChild(card);
@@ -762,6 +776,15 @@ async function loadVmtoolsCoverage() {
   }
 }
 
+async function loadVmtoolsBundle() {
+  try {
+    const data = await api('/vmtools/bundle');
+    state.vmtoolsBundle = data.data;
+  } catch {
+    /* optional */
+  }
+}
+
 async function loadVmtoolsPolicy() {
   try {
     const data = await api('/vmtools/policy');
@@ -789,6 +812,7 @@ async function saveVmtoolsPolicy() {
           autoUpgrade,
           channel: 'stable',
           rebootPolicy: 'if-needed',
+          maxConcurrent: 3,
         },
       }),
     });
@@ -843,6 +867,7 @@ async function loadClusterFleet() {
     updateFleetToolbar();
     await loadVmtoolsCoverage();
     await loadVmtoolsPolicy();
+    await loadVmtoolsBundle();
     if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
     }
@@ -2452,6 +2477,32 @@ async function runClusterGuestkitInspect() {
   }
 }
 
+async function runClusterGuestkitDoctor() {
+  const vm = state.selectedClusterVm;
+  if (!vm) {
+    toast('Select a cluster VM first', 'err');
+    return { ok: false };
+  }
+  feed(`GuestKit doctor on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  setActiveTab('summary');
+  setWizardStep('assure');
+  const target = getTarget();
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/doctor?target=${encodeURIComponent(target)}&explain=true`,
+      { method: 'POST' },
+    );
+    const jobId = data?.data?.job_id;
+    if (!jobId) return { ok: false };
+    state.lastJobId = jobId;
+    showJobTracker('doctor', jobId);
+    return await pollJob(jobId, 'doctor');
+  } catch (e) {
+    toast(e.message, 'err');
+    return { ok: false, error: e.message };
+  }
+}
+
 async function runClusterAction(action) {
   if (action === 'inspect') return runClusterGuestkitInspect();
   if (action === 'doctor') {
@@ -2461,7 +2512,7 @@ async function runClusterAction(action) {
       await fetchClusterGuestInfo(true);
       return { ok: true };
     }
-    if (!running) return runClusterGuestkitInspect();
+    if (!running) return runClusterGuestkitDoctor();
     toast('Stop VM for offline doctor, or install guest agent for live checks', 'err');
     await fetchClusterBootInspect(true);
     return { ok: false };
