@@ -36,8 +36,6 @@ pub fn call_agent_socket(socket_path: &str, method: &str, params: Value) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn builds_request_payload() {
         let params = serde_json::json!({ "target": "kvm" });
