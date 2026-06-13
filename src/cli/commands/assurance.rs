@@ -339,18 +339,22 @@ fn migrate_plan_command_impl(
     #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
     #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
 ) -> Result<()> {
-    let mut options = MigratePlanOptions {
-        explain,
-        verbose,
-        export_fix_plan: export.is_some(),
-        inject_agent,
-        ..Default::default()
+    let options = {
+        #[cfg(feature = "agent")]
+        let (agent_binary, agent_unit) = agent_paths
+            .map(|(b, u)| (b.map(|p| p.to_path_buf()), u.map(|p| p.to_path_buf())))
+            .unwrap_or((None, None));
+        MigratePlanOptions {
+            explain,
+            verbose,
+            export_fix_plan: export.is_some(),
+            inject_agent,
+            #[cfg(feature = "agent")]
+            agent_binary,
+            #[cfg(feature = "agent")]
+            agent_unit,
+        }
     };
-    #[cfg(feature = "agent")]
-    if let Some((agent_binary, agent_unit)) = agent_paths {
-        options.agent_binary = agent_binary.map(|p| p.to_path_buf());
-        options.agent_unit = agent_unit.map(|p| p.to_path_buf());
-    }
 
     let result = run_migrate_plan(image, target, &options)?;
     let migration_score = &result.migration_score;
@@ -522,17 +526,21 @@ fn repair_boot_command_impl(
     #[cfg(feature = "agent")] agent_paths: Option<(Option<&Path>, Option<&Path>)>,
     #[cfg(not(feature = "agent"))] _agent_paths: Option<()>,
 ) -> Result<()> {
-    let mut options = RepairOptions {
-        dry_run,
-        verbose,
-        inject_agent,
-        ..Default::default()
+    let options = {
+        #[cfg(feature = "agent")]
+        let (agent_binary, agent_unit) = agent_paths
+            .map(|(b, u)| (b.map(|p| p.to_path_buf()), u.map(|p| p.to_path_buf())))
+            .unwrap_or((None, None));
+        RepairOptions {
+            dry_run,
+            verbose,
+            inject_agent,
+            #[cfg(feature = "agent")]
+            agent_binary,
+            #[cfg(feature = "agent")]
+            agent_unit,
+        }
     };
-    #[cfg(feature = "agent")]
-    if let Some((agent_binary, agent_unit)) = agent_paths {
-        options.agent_binary = agent_binary.map(|p| p.to_path_buf());
-        options.agent_unit = agent_unit.map(|p| p.to_path_buf());
-    }
 
     let result = run_repair_plan(image, &options)?;
 

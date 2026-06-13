@@ -36,6 +36,8 @@
         <option value="generic">generic</option>
       </select>
       <button type="button" class="guestkit-menubar__chip" id="helpShortcutsBtn" title="Keyboard shortcuts (?)">?</button>
+      <span class="guestkit-menubar__chip hidden" id="authUserChip" title="Signed-in user"></span>
+      <button type="button" class="guestkit-menubar__chip hidden" id="authSignOutBtn" title="Sign out">Sign out</button>
       <button type="button" class="guestkit-menubar__chip" id="openSettingsBtn" title="Identity &amp; SSO settings">⚙</button>
       <div class="recent-disks-wrap">
         <button type="button" class="guestkit-menubar__chip" id="recentDisksToggle">Recent ▾</button>
@@ -601,8 +603,8 @@
   <div class="guestkit-modal-backdrop hidden" id="importNfsModal">
     <div class="guestkit-modal">
       <h2>Import from NFS</h2>
-      <p class="brain-rec">Path must be readable on the API host (NFS mounted).</p>
-      <input type="text" id="importNfsHost" placeholder="NFS server (optional label)" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+      <p class="brain-rec">Path on the API host. Optional server label maps to {{NFS_MOUNT_ROOT}}/server/path.</p>
+      <input type="text" id="importNfsHost" placeholder="NFS server label (optional)" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
       <input type="text" id="importNfsPath" placeholder="/mnt/nfs/images/disk.qcow2" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
       <div class="guestkit-modal__actions">
         <button type="button" class="btn glass" id="importNfsCancel">Cancel</button>
@@ -672,6 +674,15 @@
         <label style="display:block;margin-bottom:0.75rem;">Session hours
           <input type="number" id="identitySessionHours" min="1" max="720" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
         </label>
+        <label style="display:block;margin-bottom:0.75rem;">Role claim (OIDC/SAML groups field)
+          <input type="text" id="identityRoleClaim" placeholder="groups" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Admin roles (comma-separated)
+          <input type="text" id="identityAdminRoles" placeholder="admin, guestkit-admin" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:0.75rem;">Admin emails (comma-separated)
+          <input type="text" id="identityAdminEmails" placeholder="admin@example.com" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
         <button type="button" class="btn primary" id="saveIdentityBtn">Save Identity</button>
       </div>
       <div data-settings-panel="sso" class="hidden">
@@ -694,9 +705,9 @@
         <label style="display:block;margin-bottom:1rem;">Login button label
           <input type="text" id="oidcButtonLabel" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
         </label>
-        <h3>SAML (config-only)</h3>
+        <h3>SAML</h3>
         <label style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
-          <input type="checkbox" id="samlEnabled" /> Enable SAML metadata
+          <input type="checkbox" id="samlEnabled" /> Enable SAML login
         </label>
         <label style="display:block;margin-bottom:0.75rem;">Entity ID
           <input type="text" id="samlEntityId" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
@@ -712,6 +723,9 @@
         </label>
         <label style="display:block;margin-bottom:1rem;">NameID format
           <input type="text" id="samlNameIdFormat" placeholder="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
+        </label>
+        <label style="display:block;margin-bottom:1rem;">Login button label
+          <input type="text" id="samlButtonLabel" placeholder="Sign in with SAML" style="width:100%;margin-top:0.25rem;padding:0.5rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);" />
         </label>
         <div style="display:flex;gap:0.5rem;">
           <button type="button" class="btn primary" id="saveSsoBtn">Save SSO</button>

@@ -27,6 +27,7 @@ pub struct Config {
     pub public_base_url: String,
     pub ui_base_url: String,
     pub default_role: String,
+    pub nfs_mount_root: PathBuf,
 }
 
 impl Config {
@@ -122,6 +123,9 @@ impl Config {
             public_base_url,
             ui_base_url,
             default_role: std::env::var("DEFAULT_ROLE").unwrap_or_else(|_| "operator".into()),
+            nfs_mount_root: PathBuf::from(
+                std::env::var("NFS_MOUNT_ROOT").unwrap_or_else(|_| "/mnt/nfs".into()),
+            ),
         })
     }
 }

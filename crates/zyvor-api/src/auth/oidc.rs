@@ -2,13 +2,15 @@
 
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use rand::RngCore;
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use url::Url;
 
-use super::types::{AuthUserClaims, OidcDiscovery, OidcSettings};
+use super::rbac::{groups_from_json, resolve_role};
+use super::types::{AuthUserClaims, IdentitySettings, OidcDiscovery, OidcSettings};
 use crate::config::Config;
 
 #[derive(Debug, Deserialize)]
@@ -33,15 +35,33 @@ struct TokenResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct UserInfo {
+struct JwksResponse {
+    keys: Vec<JwkKey>,
+}
+
+#[derive(Debug, Deserialize)]
+struct JwkKey {
+    kid: Option<String>,
+    kty: String,
     #[serde(default)]
-    sub: Option<String>,
+    n: Option<String>,
+    #[serde(default)]
+    e: Option<String>,
+    #[serde(default)]
+    x5c: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct IdTokenClaims {
+    sub: String,
     #[serde(default)]
     email: Option<String>,
     #[serde(default)]
     name: Option<String>,
     #[serde(default)]
     preferred_username: Option<String>,
+    #[serde(flatten)]
+    extra: serde_json::Map<String, serde_json::Value>,
 }
 
 pub struct OidcLoginRequest {
@@ -113,6 +133,7 @@ pub async fn exchange_code(
     config: &Config,
     oidc: &OidcSettings,
     discovery: &OidcDiscovery,
+    identity: &IdentitySettings,
     code: &str,
     code_verifier: &str,
 ) -> Result<AuthUserClaims> {
@@ -142,7 +163,7 @@ pub async fn exchange_code(
         .context("OIDC token JSON parse failed")?;
 
     if let Some(endpoint) = &discovery.userinfo_endpoint {
-        let info: UserInfo = client
+        let info: serde_json::Value = client
             .get(endpoint)
             .bearer_auth(&token.access_token)
             .send()
@@ -155,19 +176,159 @@ pub async fn exchange_code(
             .context("OIDC userinfo JSON parse failed")?;
 
         let sub = info
-            .sub
-            .or(info.preferred_username.clone())
+            .get("sub")
+            .or_else(|| info.get("preferred_username"))
+            .and_then(|v| v.as_str())
+            .map(String::from)
             .ok_or_else(|| anyhow!("OIDC userinfo missing sub"))?;
+        let email = info
+            .get("email")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let name = info
+            .get("name")
+            .or_else(|| info.get("preferred_username"))
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let groups = groups_from_json(&info, &identity.role_claim);
+        let role = resolve_role(identity, email.as_deref(), name.as_deref(), &groups);
         return Ok(AuthUserClaims {
             sub,
-            email: info.email,
-            name: info.name.or(info.preferred_username),
-            role: config.default_role().to_string(),
+            email,
+            name,
+            role,
             provider: "oidc".into(),
+            jti: None,
         });
     }
 
+    if let Some(id_token) = token.id_token {
+        return claims_from_id_token(client, discovery, identity, &id_token).await;
+    }
+
     Err(anyhow!(
-        "OIDC provider did not expose userinfo_endpoint; configure an IdP with userinfo"
+        "OIDC provider did not expose userinfo_endpoint or id_token"
     ))
+}
+
+async fn claims_from_id_token(
+    client: &Client,
+    discovery: &OidcDiscovery,
+    identity: &IdentitySettings,
+    id_token: &str,
+) -> Result<AuthUserClaims> {
+    let header = decode_header(id_token).context("invalid id_token header")?;
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_issuer(&[discovery.issuer.as_str()]);
+    validation.validate_aud = false;
+
+    let decoding_key = if let Some(jwks_uri) = &discovery.jwks_uri {
+        jwks_decoding_key(client, jwks_uri, header.kid.as_deref()).await?
+    } else {
+        return decode_id_token_unverified(identity, id_token);
+    };
+
+    let claims = match decode::<IdTokenClaims>(id_token, &decoding_key, &validation) {
+        Ok(data) => data.claims,
+        Err(_) => {
+            return decode_id_token_unverified(identity, id_token);
+        }
+    };
+
+    let email = claims.email.clone();
+    let name = claims
+        .name
+        .clone()
+        .or(claims.preferred_username.clone());
+    let groups = groups_from_json(
+        &serde_json::Value::Object(claims.extra),
+        &identity.role_claim,
+    );
+    let role = resolve_role(
+        identity,
+        email.as_deref(),
+        name.as_deref(),
+        &groups,
+    );
+    Ok(AuthUserClaims {
+        sub: claims.sub,
+        email,
+        name,
+        role,
+        provider: "oidc".into(),
+        jti: None,
+    })
+}
+
+fn decode_id_token_unverified(identity: &IdentitySettings, id_token: &str) -> Result<AuthUserClaims> {
+    let parts: Vec<&str> = id_token.split('.').collect();
+    if parts.len() != 3 {
+        return Err(anyhow!("malformed id_token"));
+    }
+    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[1])
+        .or_else(|_| base64::engine::general_purpose::STANDARD.decode(parts[1]))
+        .context("id_token payload base64")?;
+    let claims: IdTokenClaims =
+        serde_json::from_slice(&payload).context("id_token payload JSON")?;
+    let email = claims.email.clone();
+    let name = claims
+        .name
+        .clone()
+        .or(claims.preferred_username.clone());
+    let groups = groups_from_json(
+        &serde_json::Value::Object(claims.extra),
+        &identity.role_claim,
+    );
+    let role = resolve_role(
+        identity,
+        email.as_deref(),
+        name.as_deref(),
+        &groups,
+    );
+    Ok(AuthUserClaims {
+        sub: claims.sub,
+        email,
+        name,
+        role,
+        provider: "oidc".into(),
+        jti: None,
+    })
+}
+
+async fn jwks_decoding_key(
+    client: &Client,
+    jwks_uri: &str,
+    kid: Option<&str>,
+) -> Result<DecodingKey> {
+    let jwks: JwksResponse = client
+        .get(jwks_uri)
+        .send()
+        .await
+        .context("JWKS fetch failed")?
+        .error_for_status()
+        .context("JWKS error status")?
+        .json()
+        .await
+        .context("JWKS JSON parse failed")?;
+
+    let key = jwks
+        .keys
+        .into_iter()
+        .find(|k| kid.map(|id| k.kid.as_deref() == Some(id)).unwrap_or(true))
+        .ok_or_else(|| anyhow!("matching JWKS key not found"))?;
+
+    if let Some(chain) = key.x5c.and_then(|c| c.into_iter().next()) {
+        let der = base64::engine::general_purpose::STANDARD
+            .decode(chain)
+            .context("x5c decode")?;
+        return Ok(DecodingKey::from_rsa_der(&der));
+    }
+
+    let n = key.n.ok_or_else(|| anyhow!("JWKS key missing n"))?;
+    let e = key.e.ok_or_else(|| anyhow!("JWKS key missing e"))?;
+    if key.kty != "RSA" {
+        return Err(anyhow!("unsupported JWK kty {}", key.kty));
+    }
+    DecodingKey::from_rsa_components(&n, &e).context("JWKS RSA components")
 }

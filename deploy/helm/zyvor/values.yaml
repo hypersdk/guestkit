@@ -43,6 +43,7 @@ zyvorApi:
     defaultRole: operator
     publicBaseUrl: "http://api.zyvor.local"
     uiBaseUrl: "http://console.zyvor.local"
+    nfsMountRoot: "/mnt/nfs"
     oidc:
       issuerUrl: ""
       clientId: ""
@@ -54,6 +55,7 @@ zyvorApi:
       ssoUrl: ""
       metadataUrl: ""
       certificatePem: ""
+      buttonLabel: "Sign in with SAML"
   service:
     type: ClusterIP
     nodePort: 30080

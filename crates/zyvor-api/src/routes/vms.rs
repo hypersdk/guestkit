@@ -697,7 +697,15 @@ pub async fn import_from_nfs(
     if path.is_empty() {
         return Err(ApiError::bad_request("path is required"));
     }
-    let abs = std::path::PathBuf::from(path);
+    let abs = if let Some(host) = body.host.as_deref().map(str::trim).filter(|h| !h.is_empty()) {
+        if path.starts_with('/') {
+            state.config.nfs_mount_root.join(host).join(path.trim_start_matches('/'))
+        } else {
+            state.config.nfs_mount_root.join(host).join(path)
+        }
+    } else {
+        std::path::PathBuf::from(path)
+    };
     let meta = tokio::fs::metadata(&abs)
         .await
         .map_err(|e| ApiError::bad_request(format!("NFS path not readable: {e}")))?;

@@ -22,6 +22,19 @@ function clearAuth() {
   localStorage.removeItem(AUTH_USER_KEY);
 }
 
+function getAuthUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isAdmin(user) {
+  return (user?.role || '').toLowerCase() === 'admin';
+}
+
 function authHeaders(extra = {}) {
   const token = getAuthToken();
   const headers = { ...extra };
@@ -37,15 +50,35 @@ async function fetchAuthConfig() {
 }
 
 async function fetchAuthMe() {
-  const token = getAuthToken();
-  const url = token
-    ? `${authApiBase()}/auth/me`
-    : `${authApiBase()}/auth/me`;
-  const res = await fetch(url, { headers: authHeaders() });
+  const res = await fetch(`${authApiBase()}/auth/me`, { headers: authHeaders() });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Auth check failed');
   if (data.data?.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data.user));
   return data.data;
+}
+
+async function localBypassLogin() {
+  const res = await fetch(`${authApiBase()}/auth/local`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Local login failed');
+  if (data.data?.token) setAuthToken(data.data.token);
+  if (data.data?.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data.user));
+  return data.data;
+}
+
+async function logout() {
+  try {
+    await fetch(`${authApiBase()}/auth/logout`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+  } catch (e) {
+    console.warn('logout request failed', e);
+  }
+  clearAuth();
 }
 
 function captureTokenFromUrl() {
@@ -79,8 +112,12 @@ async function requireAuthOrRedirect() {
   return null;
 }
 
-function startSsoLogin() {
+function startOidcLogin() {
   window.location.href = `${authApiBase()}/auth/oidc/login`;
+}
+
+function startSamlLogin() {
+  window.location.href = `${authApiBase()}/auth/saml/login`;
 }
 
 async function loadIdentitySettings() {
@@ -104,7 +141,7 @@ async function saveIdentitySettings(body) {
 async function loadSsoSettings() {
   const res = await fetch(`${authApiBase()}/settings/sso`, { headers: authHeaders() });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to load SSO settings');
+  if (!res.ok) throw new Error(data.message || 'Failed to save SSO settings');
   return data.data;
 }
 
@@ -117,6 +154,29 @@ async function saveSsoSettings(body) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to save SSO settings');
   return data.data;
+}
+
+function initUserMenu() {
+  const userChip = document.getElementById('authUserChip');
+  const signOutBtn = document.getElementById('authSignOutBtn');
+  const settingsBtn = document.getElementById('openSettingsBtn');
+  const user = getAuthUser();
+  if (userChip && user) {
+    const label = user.name || user.email || user.sub || 'Signed in';
+    userChip.textContent = label;
+    userChip.title = `${label} (${user.role || 'operator'})`;
+    userChip.classList.remove('hidden');
+  }
+  if (signOutBtn && user) {
+    signOutBtn.classList.remove('hidden');
+  }
+  if (settingsBtn && user && !isAdmin(user)) {
+    settingsBtn.classList.add('hidden');
+  }
+  signOutBtn?.addEventListener('click', async () => {
+    await logout();
+    redirectToLogin();
+  });
 }
 
 function initSettingsModal() {
@@ -144,6 +204,9 @@ function initSettingsModal() {
       document.getElementById('identityAllowBypass').checked = identity.allow_local_bypass;
       document.getElementById('identityDefaultRole').value = identity.default_role;
       document.getElementById('identitySessionHours').value = identity.session_hours;
+      document.getElementById('identityRoleClaim').value = identity.role_claim || 'groups';
+      document.getElementById('identityAdminRoles').value = (identity.admin_roles || []).join(', ');
+      document.getElementById('identityAdminEmails').value = (identity.admin_emails || []).join(', ');
       document.getElementById('oidcEnabled').checked = sso.oidc.enabled;
       document.getElementById('oidcIssuerUrl').value = sso.oidc.issuer_url;
       document.getElementById('oidcClientId').value = sso.oidc.client_id;
@@ -159,6 +222,7 @@ function initSettingsModal() {
       document.getElementById('samlMetadataUrl').value = sso.saml.metadata_url;
       document.getElementById('samlCertificatePem').value = sso.saml.certificate_pem;
       document.getElementById('samlNameIdFormat').value = sso.saml.name_id_format;
+      document.getElementById('samlButtonLabel').value = sso.saml.button_label || 'Sign in with SAML';
     } catch (e) {
       alert(e.message || String(e));
     }
@@ -179,6 +243,9 @@ function initSettingsModal() {
         allow_local_bypass: document.getElementById('identityAllowBypass').checked,
         default_role: document.getElementById('identityDefaultRole').value.trim(),
         session_hours: Number(document.getElementById('identitySessionHours').value) || 24,
+        role_claim: document.getElementById('identityRoleClaim').value.trim() || 'groups',
+        admin_roles: document.getElementById('identityAdminRoles').value.split(',').map((s) => s.trim()).filter(Boolean),
+        admin_emails: document.getElementById('identityAdminEmails').value.split(',').map((s) => s.trim()).filter(Boolean),
       });
       alert('Identity settings saved');
     } catch (e) {
@@ -204,6 +271,7 @@ function initSettingsModal() {
           metadata_url: document.getElementById('samlMetadataUrl').value.trim(),
           certificate_pem: document.getElementById('samlCertificatePem').value.trim(),
           name_id_format: document.getElementById('samlNameIdFormat').value.trim(),
+          button_label: document.getElementById('samlButtonLabel').value.trim(),
         },
       });
       alert('SSO settings saved');
@@ -229,12 +297,18 @@ window.GuestKitAuth = {
   getAuthToken,
   setAuthToken,
   clearAuth,
+  getAuthUser,
+  isAdmin,
   authHeaders,
   fetchAuthConfig,
   fetchAuthMe,
+  localBypassLogin,
+  logout,
   captureTokenFromUrl,
   redirectToLogin,
   requireAuthOrRedirect,
-  startSsoLogin,
+  startOidcLogin,
+  startSamlLogin,
   initSettingsModal,
+  initUserMenu,
 };

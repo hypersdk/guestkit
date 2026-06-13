@@ -89,6 +89,8 @@ spec:
               value: {{ .Values.zyvorApi.storageClass }}
             - name: DEFAULT_NAMESPACE
               value: {{ .Values.zyvorApi.defaultNamespace }}
+            - name: NFS_MOUNT_ROOT
+              value: {{ .Values.zyvorApi.auth.nfsMountRoot | default "/mnt/nfs" | quote }}
             {{- if .Values.zyvorApi.agentProxyUrl }}
             - name: AGENT_PROXY_URL
               value: {{ .Values.zyvorApi.agentProxyUrl | quote }}

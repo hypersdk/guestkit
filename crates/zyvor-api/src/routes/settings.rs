@@ -3,12 +3,14 @@
 use axum::extract::State;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::Extension;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
+use crate::auth::middleware::require_admin;
 use crate::auth::saml::sp_metadata_xml;
 use crate::auth::store::{load_settings, save_settings};
-use crate::auth::types::{IdentitySettings, OidcSettings, SamlSettings};
+use crate::auth::types::{AuthUserClaims, IdentitySettings, OidcSettings, SamlSettings};
 use crate::error::ApiError;
 use crate::models::ApiResponse;
 use crate::state::AppState;
@@ -18,6 +20,9 @@ pub struct IdentitySettingsView {
     pub allow_local_bypass: bool,
     pub default_role: String,
     pub session_hours: u32,
+    pub role_claim: String,
+    pub admin_roles: Vec<String>,
+    pub admin_emails: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +43,7 @@ pub struct SamlSettingsView {
     pub metadata_url: String,
     pub certificate_pem: String,
     pub name_id_format: String,
+    pub button_label: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,6 +57,9 @@ pub struct PutIdentityRequest {
     pub allow_local_bypass: bool,
     pub default_role: String,
     pub session_hours: u32,
+    pub role_claim: String,
+    pub admin_roles: Vec<String>,
+    pub admin_emails: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,13 +86,14 @@ pub struct SamlSettingsInput {
     pub metadata_url: String,
     pub certificate_pem: String,
     pub name_id_format: String,
+    pub button_label: String,
 }
 
 pub async fn get_identity(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> Result<Json<ApiResponse<IdentitySettingsView>>, ApiError> {
-    require_settings_access(&state, extract_bearer(&headers))?;
+    ensure_settings_admin(&state, user.as_ref().map(|Extension(u)| u))?;
     let settings = load_settings(&state.pool)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -92,10 +102,10 @@ pub async fn get_identity(
 
 pub async fn put_identity(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    user: Option<Extension<AuthUserClaims>>,
     Json(body): Json<PutIdentityRequest>,
 ) -> Result<Json<ApiResponse<IdentitySettingsView>>, ApiError> {
-    require_settings_access(&state, extract_bearer(&headers))?;
+    ensure_settings_admin(&state, user.as_ref().map(|Extension(u)| u))?;
     let mut settings = load_settings(&state.pool)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -103,6 +113,13 @@ pub async fn put_identity(
         allow_local_bypass: body.allow_local_bypass,
         default_role: body.default_role,
         session_hours: body.session_hours.max(1),
+        role_claim: if body.role_claim.trim().is_empty() {
+            "groups".into()
+        } else {
+            body.role_claim
+        },
+        admin_roles: body.admin_roles,
+        admin_emails: body.admin_emails,
     };
     save_settings(&state.pool, &settings)
         .await
@@ -112,9 +129,9 @@ pub async fn put_identity(
 
 pub async fn get_sso(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> Result<Json<ApiResponse<SsoSettingsResponse>>, ApiError> {
-    require_settings_access(&state, extract_bearer(&headers))?;
+    ensure_settings_admin(&state, user.as_ref().map(|Extension(u)| u))?;
     let settings = load_settings(&state.pool)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -126,10 +143,10 @@ pub async fn get_sso(
 
 pub async fn put_sso(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    user: Option<Extension<AuthUserClaims>>,
     Json(body): Json<PutSsoRequest>,
 ) -> Result<Json<ApiResponse<SsoSettingsResponse>>, ApiError> {
-    require_settings_access(&state, extract_bearer(&headers))?;
+    ensure_settings_admin(&state, user.as_ref().map(|Extension(u)| u))?;
     let mut settings = load_settings(&state.pool)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
@@ -152,6 +169,7 @@ pub async fn put_sso(
         metadata_url: body.saml.metadata_url,
         certificate_pem: body.saml.certificate_pem,
         name_id_format: body.saml.name_id_format,
+        button_label: body.saml.button_label,
     };
     save_settings(&state.pool, &settings)
         .await
@@ -179,6 +197,9 @@ fn to_identity_view(v: &IdentitySettings) -> IdentitySettingsView {
         allow_local_bypass: v.allow_local_bypass,
         default_role: v.default_role.clone(),
         session_hours: v.session_hours,
+        role_claim: v.role_claim.clone(),
+        admin_roles: v.admin_roles.clone(),
+        admin_emails: v.admin_emails.clone(),
     }
 }
 
@@ -204,6 +225,7 @@ fn to_saml_view(v: &SamlSettings) -> SamlSettingsView {
         metadata_url: v.metadata_url.clone(),
         certificate_pem: v.certificate_pem.clone(),
         name_id_format: v.name_id_format.clone(),
+        button_label: v.button_label.clone(),
     }
 }
 
@@ -215,30 +237,17 @@ fn merge_secret(incoming: Option<String>, existing: Option<String>) -> Option<St
     }
 }
 
-fn require_settings_access(state: &AppState, token: Option<String>) -> Result<(), ApiError> {
+fn ensure_settings_admin(
+    state: &AppState,
+    user: Option<&AuthUserClaims>,
+) -> Result<(), ApiError> {
     if !state.config.auth_enabled {
         return Ok(());
     }
-    let Some(token) = token else {
-        return Err(ApiError {
-            status: StatusCode::UNAUTHORIZED,
-            error: "UNAUTHORIZED".into(),
-            message: "Bearer token required".into(),
-        });
-    };
-    crate::auth::jwt::verify_token(&state.config, &token)
-        .map_err(|_| ApiError {
-            status: StatusCode::UNAUTHORIZED,
-            error: "UNAUTHORIZED".into(),
-            message: "invalid token".into(),
-        })?;
-    Ok(())
-}
-
-fn extract_bearer(headers: &axum::http::HeaderMap) -> Option<String> {
-    headers
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .map(str::to_string)
+    let user = user.ok_or_else(|| ApiError {
+        status: StatusCode::UNAUTHORIZED,
+        error: "UNAUTHORIZED".into(),
+        message: "Bearer token required".into(),
+    })?;
+    require_admin(user)
 }

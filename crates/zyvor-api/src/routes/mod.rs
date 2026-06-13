@@ -24,8 +24,11 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/auth/config", get(auth::public_config))
         .route("/api/v1/auth/me", get(auth::me))
         .route("/api/v1/auth/logout", axum::routing::post(auth::logout))
+        .route("/api/v1/auth/local", axum::routing::post(auth::local_login))
         .route("/api/v1/auth/oidc/login", get(auth::oidc_login))
         .route("/api/v1/auth/oidc/callback", get(auth::oidc_callback))
+        .route("/api/v1/auth/saml/login", get(auth::saml_login))
+        .route("/api/v1/auth/saml/acs", axum::routing::post(auth::saml_acs))
         .route("/api/v1/settings/identity", get(settings::get_identity).put(settings::put_identity))
         .route("/api/v1/settings/sso", get(settings::get_sso).put(settings::put_sso))
         .route(

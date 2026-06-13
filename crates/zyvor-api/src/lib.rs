@@ -22,7 +22,8 @@ pub mod state;
 
 use anyhow::Result;
 use axum::extract::DefaultBodyLimit;
-use axum::Router;
+use axum::middleware::from_fn_with_state;
+use auth::middleware::require_auth;
 use config::Config;
 use sqlx::postgres::PgPoolOptions;
 use state::AppState;
@@ -67,8 +68,8 @@ pub async fn serve(config: Config) -> Result<()> {
 
     let max_upload = config.max_upload_bytes;
 
-    let app = Router::new()
-        .merge(routes::api_router())
+    let app = routes::api_router()
+        .layer(from_fn_with_state(state.clone(), require_auth))
         .layer(DefaultBodyLimit::max(max_upload))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

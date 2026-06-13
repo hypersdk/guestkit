@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="dark" />
   <title>GuestKit — Sign In</title>
   <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260613auth" />
-  <link rel="stylesheet" href="ironwolf-shell.css?v=20260613auth" />
-  <link rel="stylesheet" href="ironwolf-components.css?v=20260613auth" />
-  <link rel="stylesheet" href="style.css?v=20260613auth" />
-  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260613auth" />
+  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260613auth2" />
+  <link rel="stylesheet" href="ironwolf-shell.css?v=20260613auth2" />
+  <link rel="stylesheet" href="ironwolf-components.css?v=20260613auth2" />
+  <link rel="stylesheet" href="style.css?v=20260613auth2" />
+  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260613auth2" />
   <style>
     .login-page {
       min-height: 100vh;
@@ -52,12 +52,13 @@
       <div class="login-error hidden" id="loginError"></div>
       <div class="login-actions">
         <button type="button" class="btn primary" id="ssoLoginBtn" style="width:100%;">Sign in with SSO</button>
+        <button type="button" class="btn glass hidden" id="samlLoginBtn" style="width:100%;">Sign in with SAML</button>
         <button type="button" class="btn glass hidden" id="localBypassBtn" style="width:100%;">Continue without SSO</button>
       </div>
-      <p class="login-foot">Powered by ZyvorAI Labs · OIDC &amp; SAML-ready identity</p>
+      <p class="login-foot">Powered by ZyvorAI Labs · OIDC &amp; SAML identity</p>
     </div>
   </div>
-  <script src="guestkit-auth.js?v=20260613auth"></script>
+  <script src="guestkit-auth.js?v=20260613auth2"></script>
   <script>
     (async function initLogin() {
       const params = new URLSearchParams(window.location.search);
@@ -65,6 +66,7 @@
       const token = params.get('token');
       const errEl = document.getElementById('loginError');
       const ssoBtn = document.getElementById('ssoLoginBtn');
+      const samlBtn = document.getElementById('samlLoginBtn');
       const bypassBtn = document.getElementById('localBypassBtn');
 
       if (err) {
@@ -74,6 +76,9 @@
 
       if (token) {
         GuestKitAuth.setAuthToken(token);
+        try {
+          await GuestKitAuth.fetchAuthMe();
+        } catch (_) {}
         window.location.replace('index.html');
         return;
       }
@@ -86,7 +91,7 @@
         }
       } catch (_) {}
 
-      let cfg = { auth_enabled: false, oidc_enabled: false, allow_local_bypass: true, oidc_button_label: 'Sign in with SSO' };
+      let cfg = { auth_enabled: false, oidc_enabled: false, saml_enabled: false, allow_local_bypass: true, oidc_button_label: 'Sign in with SSO', saml_button_label: 'Sign in with SAML' };
       try {
         cfg = await GuestKitAuth.fetchAuthConfig();
       } catch (e) {
@@ -98,13 +103,29 @@
       if (!cfg.auth_enabled || !cfg.oidc_enabled) {
         ssoBtn.disabled = true;
         ssoBtn.title = 'OIDC SSO is not configured';
+      } else {
+        ssoBtn.addEventListener('click', () => GuestKitAuth.startOidcLogin());
       }
-      ssoBtn.addEventListener('click', () => GuestKitAuth.startSsoLogin());
+
+      samlBtn.textContent = cfg.saml_button_label || 'Sign in with SAML';
+      if (cfg.auth_enabled && cfg.saml_enabled) {
+        samlBtn.classList.remove('hidden');
+        samlBtn.addEventListener('click', () => GuestKitAuth.startSamlLogin());
+      }
 
       if (cfg.allow_local_bypass || !cfg.auth_enabled) {
         bypassBtn.classList.remove('hidden');
-        bypassBtn.addEventListener('click', () => {
-          window.location.href = 'index.html';
+        bypassBtn.addEventListener('click', async () => {
+          try {
+            if (cfg.auth_enabled) {
+              const data = await GuestKitAuth.localBypassLogin();
+              if (data?.token) GuestKitAuth.setAuthToken(data.token);
+            }
+            window.location.href = 'index.html';
+          } catch (e) {
+            errEl.textContent = e.message || String(e);
+            errEl.classList.remove('hidden');
+          }
         });
       }
     })();
