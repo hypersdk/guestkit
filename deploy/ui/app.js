@@ -2965,6 +2965,7 @@ async function init() {
   const me = await window.GuestKitAuth?.requireAuthOrRedirect?.();
   if (me === null) return;
   window.GuestKitAuth?.initSettingsModal?.();
+  window.GuestKitAuth?.initUserMenu?.();
 
   window.state = state;
   window.api = api;
