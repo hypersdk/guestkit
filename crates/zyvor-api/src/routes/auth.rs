@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use axum::extract::{Query, State};
-use axum::http::{header, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
+use axum::Form;
 use axum::Json;
 use redis::AsyncCommands;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
+use uuid::Uuid;
 
-use crate::auth::jwt::{issue_token, verify_token};
+use crate::auth::jwt::{issue_token, token_remaining_secs, verify_token};
+use crate::auth::middleware::extract_bearer;
 use crate::auth::oidc::{build_login_request, exchange_code, fetch_discovery};
+use crate::auth::revoke::revoke_jti;
+use crate::auth::saml::{build_login_request as build_saml_login, process_acs_response};
 use crate::auth::store::load_settings;
-use crate::auth::types::{AuthMeResponse, AuthUserClaims, PublicAuthConfig};
+use crate::auth::types::{AuthMeResponse, AuthUserClaims, PublicAuthConfig, ROLE_OPERATOR};
 use crate::error::ApiError;
 use crate::models::ApiResponse;
 use crate::state::AppState;
@@ -32,16 +37,29 @@ pub struct TokenQuery {
     token: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SamlAcsForm {
+    #[serde(rename = "SAMLResponse")]
+    saml_response: String,
+    #[serde(default, rename = "RelayState")]
+    _relay_state: Option<String>,
+}
+
 pub async fn public_config(State(state): State<AppState>) -> Json<ApiResponse<PublicAuthConfig>> {
     let settings = load_settings(&state.pool).await.unwrap_or_default();
     Json(ApiResponse::ok(PublicAuthConfig {
         auth_enabled: state.config.auth_enabled,
         oidc_enabled: settings.oidc.enabled && !settings.oidc.issuer_url.is_empty(),
-        saml_enabled: settings.saml.enabled,
+        saml_enabled: settings.saml.enabled && !settings.saml.sso_url.is_empty(),
         oidc_button_label: if settings.oidc.button_label.is_empty() {
             "Sign in with SSO".into()
         } else {
             settings.oidc.button_label.clone()
+        },
+        saml_button_label: if settings.saml.button_label.is_empty() {
+            "Sign in with SAML".into()
+        } else {
+            settings.saml.button_label.clone()
         },
         allow_local_bypass: settings.identity.allow_local_bypass || !state.config.auth_enabled,
     }))
@@ -62,6 +80,7 @@ pub async fn me(
                 name: Some("Local Operator".into()),
                 role: state.config.default_role().into(),
                 provider: "local".into(),
+                jti: None,
             }),
         })));
     }
@@ -76,8 +95,48 @@ pub async fn me(
             authenticated: true,
             user: Some(user),
         }))),
-        Err(_) => Err(ApiError::bad_request("invalid or expired token")),
+        Err(_) => Err(ApiError::unauthorized("invalid or expired token")),
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct LocalLoginResponse {
+    pub authenticated: bool,
+    pub token: String,
+    pub user: AuthUserClaims,
+}
+
+pub async fn local_login(
+    State(state): State<AppState>,
+) -> Result<Json<ApiResponse<LocalLoginResponse>>, ApiError> {
+    if !state.config.auth_enabled {
+        return Err(ApiError::bad_request("authentication is disabled"));
+    }
+    let settings = load_settings(&state.pool)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    if !settings.identity.allow_local_bypass {
+        return Err(ApiError::forbidden("local bypass is disabled"));
+    }
+    let user = AuthUserClaims {
+        sub: "local".into(),
+        email: Some("local@guestkit".into()),
+        name: Some("Local Operator".into()),
+        role: if settings.identity.default_role.is_empty() {
+            ROLE_OPERATOR.into()
+        } else {
+            settings.identity.default_role.clone()
+        },
+        provider: "local".into(),
+        jti: Some(Uuid::new_v4().to_string()),
+    };
+    let jwt = issue_token(&state.config, &user, settings.session_secs())
+        .map_err(|e| ApiError::internal(format!("JWT issuance failed: {e}")))?;
+    Ok(Json(ApiResponse::ok(LocalLoginResponse {
+        authenticated: true,
+        token: jwt,
+        user,
+    })))
 }
 
 pub async fn oidc_login(State(state): State<AppState>) -> Result<Response, ApiError> {
@@ -171,16 +230,15 @@ pub async fn oidc_callback(
         &state.config,
         &settings.oidc,
         &discovery,
+        &settings.identity,
         &code,
         &code_verifier,
     )
     .await
     .map_err(|e| ApiError::internal(format!("OIDC token exchange failed: {e}")))?;
-    if user.role.is_empty() {
-        user.role = settings.identity.default_role.clone();
-    }
+    user.jti = Some(Uuid::new_v4().to_string());
 
-    let jwt = issue_token(&state.config, &user)
+    let jwt = issue_token(&state.config, &user, settings.session_secs())
         .map_err(|e| ApiError::internal(format!("JWT issuance failed: {e}")))?;
     let redirect = format!(
         "{}/login.html?token={}",
@@ -190,16 +248,66 @@ pub async fn oidc_callback(
     Ok(Redirect::temporary(&redirect).into_response())
 }
 
-pub async fn logout() -> StatusCode {
-    StatusCode::NO_CONTENT
+pub async fn saml_login(State(state): State<AppState>) -> Result<Response, ApiError> {
+    if !state.config.auth_enabled {
+        return Err(ApiError::bad_request("authentication is disabled"));
+    }
+    let settings = load_settings(&state.pool)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    if !settings.saml.enabled {
+        return Err(ApiError::bad_request("SAML is not enabled"));
+    }
+    let login = build_saml_login(&state.config, &settings.saml)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Redirect::temporary(&login.redirect_url).into_response())
 }
 
-fn extract_bearer(headers: &axum::http::HeaderMap) -> Option<String> {
-    headers
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .map(str::to_string)
+pub async fn saml_acs(
+    State(state): State<AppState>,
+    Form(form): Form<SamlAcsForm>,
+) -> Result<Response, ApiError> {
+    let settings = load_settings(&state.pool)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let mut user = process_acs_response(
+        &state.config,
+        &settings.saml,
+        &settings.identity,
+        &form.saml_response,
+    )
+    .map_err(|e| ApiError::bad_request(format!("SAML ACS failed: {e}")))?;
+    user.jti = Some(Uuid::new_v4().to_string());
+    let jwt = issue_token(&state.config, &user, settings.session_secs())
+        .map_err(|e| ApiError::internal(format!("JWT issuance failed: {e}")))?;
+    let redirect = format!(
+        "{}/login.html?token={}",
+        state.config.ui_base_url.trim_end_matches('/'),
+        urlencoding::encode(&jwt)
+    );
+    Ok(Redirect::temporary(&redirect).into_response())
+}
+
+pub async fn logout(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    if !state.config.auth_enabled {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    let Some(token) = extract_bearer(&headers) else {
+        return Ok(StatusCode::NO_CONTENT);
+    };
+    if let Ok(user) = verify_token(&state.config, &token) {
+        if let Some(jti) = user.jti {
+            let ttl = token_remaining_secs(&state.config, &token).unwrap_or(3600);
+            let mut redis = state.redis.clone();
+            revoke_jti(&mut redis, &jti, ttl)
+                .await
+                .map_err(|e| ApiError::internal(e.to_string()))?;
+        }
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 impl AppState {

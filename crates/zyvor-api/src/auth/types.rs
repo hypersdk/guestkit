@@ -2,24 +2,40 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_OPERATOR: &str = "operator";
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IdentitySettings {
     #[serde(default = "default_true")]
     pub allow_local_bypass: bool,
     pub default_role: String,
     pub session_hours: u32,
+    #[serde(default = "default_role_claim")]
+    pub role_claim: String,
+    #[serde(default)]
+    pub admin_roles: Vec<String>,
+    #[serde(default)]
+    pub admin_emails: Vec<String>,
 }
 
 fn default_true() -> bool {
     true
 }
 
+fn default_role_claim() -> String {
+    "groups".into()
+}
+
 impl IdentitySettings {
     pub fn defaults() -> Self {
         Self {
             allow_local_bypass: false,
-            default_role: "operator".into(),
+            default_role: ROLE_OPERATOR.into(),
             session_hours: 24,
+            role_claim: default_role_claim(),
+            admin_roles: vec!["admin".into(), "guestkit-admin".into()],
+            admin_emails: Vec::new(),
         }
     }
 }
@@ -38,11 +54,7 @@ pub struct OidcSettings {
 }
 
 fn default_oidc_scopes() -> Vec<String> {
-    vec![
-        "openid".into(),
-        "profile".into(),
-        "email".into(),
-    ]
+    vec!["openid".into(), "profile".into(), "email".into()]
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -54,6 +66,12 @@ pub struct SamlSettings {
     pub certificate_pem: String,
     #[serde(default)]
     pub name_id_format: String,
+    #[serde(default = "default_saml_button_label")]
+    pub button_label: String,
+}
+
+fn default_saml_button_label() -> String {
+    "Sign in with SAML".into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -74,6 +92,10 @@ impl AuthSettings {
             saml: SamlSettings::default(),
         }
     }
+
+    pub fn session_secs(&self) -> usize {
+        (self.identity.session_hours.max(1) as usize) * 3600
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,6 +104,7 @@ pub struct PublicAuthConfig {
     pub oidc_enabled: bool,
     pub saml_enabled: bool,
     pub oidc_button_label: String,
+    pub saml_button_label: String,
     pub allow_local_bypass: bool,
 }
 
@@ -92,6 +115,8 @@ pub struct AuthUserClaims {
     pub name: Option<String>,
     pub role: String,
     pub provider: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jti: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
