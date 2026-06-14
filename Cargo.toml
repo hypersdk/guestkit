@@ -48,7 +48,7 @@ rpassword = "7.3"
 
 # AI Assistant (optional feature)
 rig-core = { version = "0.29", optional = true }
-reqwest = { version = "0.12", optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
 
 # TUI
 ratatui = "0.28"
@@ -104,6 +104,10 @@ pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
 guestkit-agent-protocol = { version = "0.1.0", path = "crates/guestkit-agent-protocol", optional = true }
 sysinfo = { version = "0.33", optional = true }
 nix = { version = "0.29", features = ["user", "fs"], optional = true }
+zbus = { version = "5", default-features = false, features = ["tokio"], optional = true }
+futures-util = { version = "0.3", optional = true }
+tar = { version = "0.4", optional = true }
+zstd = { version = "0.13", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -125,7 +129,7 @@ cloud-s3 = []
 cloud-azure = []
 cloud-gcs = []
 cloud = ["cloud-s3", "cloud-azure", "cloud-gcs"]
-agent = ["guestkit-agent-protocol", "sysinfo", "nix"]
+agent = ["guestkit-agent-protocol", "sysinfo", "nix", "zbus", "futures-util", "reqwest", "tar", "zstd"]
 # nix fs for QGA guest-get-fsinfo statvfs
 
 # Python module (optional)

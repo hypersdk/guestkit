@@ -5,16 +5,23 @@ pub mod agent_call;
 pub mod cli;
 pub mod daemon;
 pub mod exec;
+pub mod executor;
+pub mod executor_ipc;
 pub mod handler;
 pub mod inject;
+pub mod local_client;
+pub mod policy;
 pub mod proxy;
 pub mod qga;
 pub mod rdp;
+pub mod snapshot_hooks;
+pub mod support_bundle;
 pub mod transport;
 
 pub use agent_call::call_agent_socket;
 pub use cli::{
-    run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentProxyArgs,
+    run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentChannel,
+    AgentProxyArgs,
 };
 pub use daemon::AgentDaemon;
 

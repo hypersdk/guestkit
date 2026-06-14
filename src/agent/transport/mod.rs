@@ -2,9 +2,11 @@
 //! Agent I/O transports.
 
 pub mod stdio;
+pub mod unix_listen;
 pub mod virtio;
 pub mod vsock;
 pub mod vsock_host;
+pub mod zeus_push;
 
 use anyhow::Result;
 use guestkit_agent_protocol::{read_frame, read_line, write_frame, write_line};

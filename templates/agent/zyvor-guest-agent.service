@@ -14,6 +14,8 @@ User=root
 StandardOutput=journal
 StandardError=journal
 Environment=RUST_LOG=info
+RuntimeDirectory=zyvor
+RuntimeDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target
