@@ -194,3 +194,27 @@ pub struct IssuedClientCert {
     pub ca_pem: String,
     pub expires_at: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn ensure_ca_and_issue_client_cert() {
+        let dir = TempDir::new().expect("tempdir");
+        let ca = AgentCa::from_config(dir.path().to_path_buf());
+        assert!(!ca.is_ready());
+
+        let issued = ca
+            .issue_client_cert("test-vm.example")
+            .map_err(|e| e.message)
+            .expect("issue");
+        assert!(issued.cert_pem.contains("BEGIN CERTIFICATE"));
+        assert!(issued.key_pem.contains("BEGIN PRIVATE KEY"));
+        assert!(ca.is_ready());
+        ca.ensure_server_tls().map_err(|e| e.message).expect("server tls");
+        assert!(ca.server_cert_path().exists());
+        assert!(ca.server_key_path().exists());
+    }
+}

@@ -131,6 +131,10 @@ spec:
               value: {{ .Values.zyvorApi.agentMtls.bindAddr | quote }}
             - name: AGENT_MTLS_SERVER_SANS
               value: {{ .Values.zyvorApi.agentMtls.serverSans | quote }}
+            {{- if .Values.ingress.hosts.agentMtls }}
+            - name: AGENT_MTLS_PUBLIC_URL
+              value: https://{{ .Values.ingress.hosts.agentMtls }}
+            {{- end }}
             {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::types::{AuthUserClaims, IdentitySettings, ROLE_ADMIN};
+use super::types::{AuthUserClaims, IdentitySettings, ROLE_ADMIN, ROLE_OPERATOR};
 
 pub fn is_admin(user: &AuthUserClaims) -> bool {
     user.role.eq_ignore_ascii_case(ROLE_ADMIN)
+}
+
+pub fn can_approve_guest_actions(user: &AuthUserClaims) -> bool {
+    is_admin(user) || user.role.eq_ignore_ascii_case(ROLE_OPERATOR)
 }
 
 pub fn resolve_role(

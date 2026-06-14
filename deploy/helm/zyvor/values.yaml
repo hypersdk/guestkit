@@ -6,6 +6,7 @@ ingress:
   hosts:
     ui: console.zyvor.local
     api: api.zyvor.local
+    agentMtls: agent-api.zyvor.local
 
 networkPolicy:
   enabled: true
@@ -38,7 +39,7 @@ zyvorApi:
   agentMtls:
     enabled: true
     bindAddr: "0.0.0.0:8443"
-    serverSans: "localhost,zyvor-api,api.zyvor.local"
+    serverSans: "localhost,zyvor-api,api.zyvor.local,agent-api.zyvor.local"
   auth:
     enabled: false
     jwtSecret: ""          # set via secret when auth.enabled=true

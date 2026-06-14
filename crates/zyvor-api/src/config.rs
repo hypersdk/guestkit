@@ -33,6 +33,8 @@ pub struct Config {
     pub agent_ca_dir: PathBuf,
     /// Optional dedicated mTLS listener for guest-agent push (e.g. 0.0.0.0:8443).
     pub agent_mtls_bind_addr: Option<String>,
+    /// Public URL agents use for mTLS push (e.g. https://agent-api.zyvor.local).
+    pub agent_mtls_public_url: Option<String>,
 }
 
 impl Config {
@@ -140,6 +142,9 @@ impl Config {
             agent_mtls_bind_addr: std::env::var("AGENT_MTLS_BIND_ADDR")
                 .ok()
                 .filter(|a| !a.trim().is_empty()),
+            agent_mtls_public_url: std::env::var("AGENT_MTLS_PUBLIC_URL")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
         })
     }
 }

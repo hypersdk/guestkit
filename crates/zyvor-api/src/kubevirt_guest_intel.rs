@@ -3,9 +3,11 @@
 
 use axum::extract::{Path, State};
 use axum::Json;
+use axum::Extension;
 use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
+use crate::auth::types::AuthUserClaims;
 use crate::models::ApiResponse;
 use crate::routes::guest_agent::fetch_vm_guest_report;
 use crate::kubevirt_guest_pull::{pull_for_vm, pull_for_vm_api, rpc_result};
@@ -106,6 +108,7 @@ pub async fn get_guest_systemd(
 pub async fn post_restart_unit(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
+    user: Option<Extension<AuthUserClaims>>,
     Json(body): Json<Value>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
     let unit = body
@@ -117,11 +120,18 @@ pub async fn post_restart_unit(
 
     if crate::guest_actions::policy_requires_approval(state.kube.as_ref()).await {
         let mut redis = state.redis.clone();
+        let requested_by = user.as_ref().map(|Extension(u)| {
+            u.email
+                .clone()
+                .or_else(|| u.name.clone())
+                .unwrap_or_else(|| u.sub.clone())
+        });
         let action_id = crate::guest_actions::enqueue_restart_unit(
             &mut redis,
             &namespace,
             &name,
             unit,
+            requested_by.as_deref(),
         )
         .await?;
         return Ok(Json(ApiResponse::ok(json!({
@@ -173,15 +183,23 @@ pub async fn get_guest_logs(
 pub async fn post_collect_support_bundle(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
     crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref(), true).await?;
 
     if crate::guest_actions::policy_requires_approval(state.kube.as_ref()).await {
         let mut redis = state.redis.clone();
+        let requested_by = user.as_ref().map(|Extension(u)| {
+            u.email
+                .clone()
+                .or_else(|| u.name.clone())
+                .unwrap_or_else(|| u.sub.clone())
+        });
         let action_id = crate::guest_actions::enqueue_support_bundle(
             &mut redis,
             &namespace,
             &name,
+            requested_by.as_deref(),
         )
         .await?;
         return Ok(Json(ApiResponse::ok(json!({

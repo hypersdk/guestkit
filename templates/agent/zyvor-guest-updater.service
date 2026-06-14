@@ -5,7 +5,8 @@ Documentation=https://zyvor.dev/guestkit
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/zyvor-guest-agent --check-update
-User=root
+User=zyvor-agent
+Group=zyvor-agent
 
 [Install]
 WantedBy=multi-user.target
