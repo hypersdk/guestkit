@@ -10,7 +10,6 @@ use serde_json::{json, Value};
 use crate::error::{ApiError, ApiResult};
 use crate::guest_action_policy::{enforce_restart_unit, fetch_guest_action_policy};
 use crate::models::ApiResponse;
-use crate::routes::guest_agent::pull_guest_rpc;
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,12 +120,6 @@ async fn save_pending(
 }
 
 async fn execute_pending(state: &AppState, action: &PendingGuestAction) -> ApiResult<Value> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
     match action.action.as_str() {
         "restart_unit" => {
             let unit = action
@@ -134,9 +127,14 @@ async fn execute_pending(state: &AppState, action: &PendingGuestAction) -> ApiRe
                 .as_deref()
                 .ok_or_else(|| ApiError::bad_request("unit missing on pending action"))?;
             enforce_restart_unit(state.kube.as_ref(), unit, true).await?;
-            let resp = pull_guest_rpc(proxy, "guestkit.restartUnit", json!({ "unit": unit }))
-                .await
-                .map_err(|e| ApiError::bad_request(e))?;
+            let resp = crate::kubevirt_guest_pull::pull_for_vm_api(
+                state,
+                &action.namespace,
+                &action.vm_name,
+                "guestkit.restartUnit",
+                json!({ "unit": unit }),
+            )
+            .await?;
             Ok(json!({
                 "namespace": action.namespace,
                 "name": action.vm_name,
@@ -146,13 +144,18 @@ async fn execute_pending(state: &AppState, action: &PendingGuestAction) -> ApiRe
         }
         "collect_support_bundle" => {
             crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref(), true).await?;
-            let resp = pull_guest_rpc(proxy, "guestkit.collectSupportBundle", json!({}))
-                .await
-                .map_err(|e| ApiError::bad_request(e))?;
+            let resp = crate::kubevirt_guest_pull::pull_for_vm_api(
+                state,
+                &action.namespace,
+                &action.vm_name,
+                "guestkit.collectSupportBundle",
+                json!({}),
+            )
+            .await?;
             Ok(json!({
                 "namespace": action.namespace,
                 "name": action.vm_name,
-                "bundle": resp.get("result").cloned().unwrap_or(json!({})),
+                "bundle": crate::kubevirt_guest_pull::rpc_result(resp),
             }))
         }
         other => Err(ApiError::bad_request(format!("unsupported action: {other}"))),

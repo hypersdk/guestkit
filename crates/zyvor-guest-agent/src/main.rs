@@ -12,6 +12,16 @@ async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args: Vec<String> = env::args().collect();
 
+    if args.iter().any(|a| a == "rpc" || a == "--rpc") {
+        #[cfg(unix)]
+        {
+            let socket = parse_flag(&args, "--socket");
+            return guestkit::agent::local_client::run_rpc_stdio(socket.as_deref());
+        }
+        #[cfg(not(unix))]
+        bail!("rpc requires Unix local socket");
+    }
+
     if args.iter().any(|a| a == "status") {
         #[cfg(unix)]
         {

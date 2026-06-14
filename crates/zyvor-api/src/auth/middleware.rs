@@ -15,6 +15,10 @@ use crate::state::AppState;
 pub const AUTH_USER_EXTENSION: &str = "guestkit.auth_user";
 
 pub fn is_public_route(method: &str, path: &str) -> bool {
+    if is_guest_agent_public(method, path) {
+        return true;
+    }
+
     matches!(
         (method, path),
         ("GET", "/api/v1/health")
@@ -27,6 +31,19 @@ pub fn is_public_route(method: &str, path: &str) -> bool {
             | ("POST", "/api/v1/auth/local")
             | ("GET", "/api/v1/settings/sso/saml/metadata")
     )
+}
+
+fn is_guest_agent_public(method: &str, path: &str) -> bool {
+    if !path.starts_with("/api/v1/guest-agents") {
+        return false;
+    }
+    matches!(
+        (method, path),
+        ("POST", "/api/v1/guest-agents/register")
+            | ("GET", "/api/v1/guest-agents/bootstrap-info")
+            | ("POST", "/api/v1/guest-agents/bootstrap")
+    ) || (method == "POST" && path.ends_with("/heartbeat"))
+        || path.ends_with("/report")
 }
 
 pub fn extract_bearer(headers: &axum::http::HeaderMap) -> Option<String> {

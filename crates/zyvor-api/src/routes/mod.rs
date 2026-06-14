@@ -18,6 +18,44 @@ use axum::routing::{get, post, put};
 use axum::Router;
 use crate::state::AppState;
 
+/// Guest-agent push endpoints (also served on the optional mTLS listener).
+pub fn guest_agent_router() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/v1/guest-agents/register",
+            post(guest_agent::register_guest_agent),
+        )
+        .route(
+            "/api/v1/guest-agents/bootstrap-info",
+            get(guest_agent::guest_agent_bootstrap_info),
+        )
+        .route(
+            "/api/v1/guest-agents/bootstrap",
+            post(guest_agent::guest_agent_bootstrap_cert),
+        )
+        .route(
+            "/api/v1/guest-agents/:agent_id/heartbeat",
+            post(guest_agent::guest_agent_heartbeat),
+        )
+        .route(
+            "/api/v1/guest-agents/:agent_id/report",
+            post(guest_agent::guest_agent_report).get(guest_agent::get_guest_agent_report),
+        )
+}
+
+/// mTLS-only push routes (heartbeat + report); registration/bootstrap stay on the main API port.
+pub fn guest_agent_mtls_router() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/v1/guest-agents/:agent_id/heartbeat",
+            post(guest_agent::guest_agent_heartbeat),
+        )
+        .route(
+            "/api/v1/guest-agents/:agent_id/report",
+            post(guest_agent::guest_agent_report),
+        )
+}
+
 pub fn api_router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/health", get(health::health))
@@ -107,18 +145,7 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/:id/agent/doctor", post(agent::agent_doctor))
         .route("/api/v1/vms/:id/agent/rpc", post(agent::agent_rpc))
         .route("/api/v1/vms/:id/agent/fix", post(agent::agent_fix))
-        .route(
-            "/api/v1/guest-agents/register",
-            post(guest_agent::register_guest_agent),
-        )
-        .route(
-            "/api/v1/guest-agents/bootstrap-info",
-            get(guest_agent::guest_agent_bootstrap_info),
-        )
-        .route(
-            "/api/v1/guest-agents/bootstrap",
-            post(guest_agent::guest_agent_bootstrap_cert),
-        )
+        .merge(guest_agent_router())
         .route(
             "/api/v1/guest-actions/pending",
             get(crate::guest_actions::list_pending_guest_actions),
@@ -130,14 +157,6 @@ pub fn api_router() -> Router<AppState> {
         .route(
             "/api/v1/guest-actions/:id/reject",
             post(crate::guest_actions::reject_guest_action),
-        )
-        .route(
-            "/api/v1/guest-agents/:agent_id/heartbeat",
-            post(guest_agent::guest_agent_heartbeat),
-        )
-        .route(
-            "/api/v1/guest-agents/:agent_id/report",
-            post(guest_agent::guest_agent_report).get(guest_agent::get_guest_agent_report),
         )
         .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest/info",
