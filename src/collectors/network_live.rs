@@ -94,6 +94,29 @@ fn collect_ip_json(network: &mut NetworkEvidence) {
             }
         }
     }
+
+    if let Ok(out) = Command::new("ip").args(["-j", "link"]).output() {
+        if let Ok(json) = serde_json::from_slice::<Vec<serde_json::Value>>(&out.stdout) {
+            for link in json {
+                let name = link.get("ifname").and_then(|v| v.as_str()).unwrap_or("");
+                if name.is_empty() || name == "lo" {
+                    continue;
+                }
+                let stats = link.get("stats64").or_else(|| link.get("stats"));
+                if let Some(stats) = stats {
+                    let rx = stats.get("rx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let tx = stats.get("tx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
+                    for live in &mut network.live_interfaces {
+                        if live.name == name {
+                            live.addresses.push(format!("rx_bytes={rx}"));
+                            live.addresses.push(format!("tx_bytes={tx}"));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn read_default_gateway_proc() -> Option<String> {

@@ -23,6 +23,8 @@ pub mod kubevirt_guest_intel;
 pub mod kubevirt_qga;
 pub mod kubevirt_lifecycle;
 pub mod kubevirt_vmtools_ops;
+pub mod packetwolf_correlate;
+pub mod packetwolf_fleet;
 pub mod vmtools_bundle;
 pub mod jobs;
 pub mod models;
@@ -92,6 +94,12 @@ pub async fn serve(config: Config) -> Result<()> {
             }
         });
     }
+
+    packetwolf_fleet::spawn_fleet_worker(
+        config.clone(),
+        state.kube.clone(),
+        state.redis.clone(),
+    );
 
     let addr: SocketAddr = config.bind_addr.parse()?;
     tracing::info!("zyvor-api listening on {addr}");

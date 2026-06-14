@@ -17,6 +17,14 @@ struct CursorStore {
 }
 
 pub fn collect_journal_slice(unit: &str, limit: usize, boot: BootSelector) -> JournalSlice {
+    #[cfg(target_os = "linux")]
+    if let Some(slice) = crate::journal::sd_journal_native::try_collect_journal_slice(unit, limit, boot) {
+        return slice;
+    }
+    collect_journal_slice_journalctl(unit, limit, boot)
+}
+
+fn collect_journal_slice_journalctl(unit: &str, limit: usize, boot: BootSelector) -> JournalSlice {
     let boot_id = read_boot_id();
     let cursor_key = format!("{}:{}", unit, boot.as_str());
     let mut store = load_cursors();
@@ -101,7 +109,7 @@ impl BootSelector {
         }
     }
 
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             BootSelector::Current => "current",
             BootSelector::Previous => "previous",

@@ -61,7 +61,7 @@ Priority: optional
 Architecture: amd64
 Maintainer: ZyvorAI Labs <info@zyvor.dev>
 Description: Zeus VM Tools — Zyvor in-guest agent for KubeVirt VMs
-Depends: systemd
+Depends: systemd, libsystemd0
 EOF
 cat > "${DEB_ROOT}/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
@@ -144,7 +144,7 @@ cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/de
 cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true
 
 cat > "${ISO_DIR}/manifest.json" <<EOF
-{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64","windows-amd64"],"linuxTarSha256":"${LINUX_TAR_SHA256}"}
+{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64","windows-amd64"],"linuxTarSha256":"${LINUX_TAR_SHA256}","linuxTarSignature":"${LINUX_TAR_SIGNATURE}"}
 EOF
 
 if command -v genisoimage >/dev/null; then
