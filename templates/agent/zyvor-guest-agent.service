@@ -10,12 +10,26 @@ Type=simple
 ExecStart=/usr/bin/zyvor-guest-agent
 Restart=always
 RestartSec=5
-User=root
+User=zyvor-agent
+Group=zyvor-agent
+SupplementaryGroups=systemd-journal
 StandardOutput=journal
 StandardError=journal
 Environment=RUST_LOG=info
 RuntimeDirectory=zyvor
-RuntimeDirectoryMode=0755
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ReadWritePaths=/var/lib/zyvor
+ReadOnlyPaths=/etc/hostname /etc/os-release /etc/zyvor
 
 [Install]
 WantedBy=multi-user.target

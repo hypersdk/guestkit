@@ -7,7 +7,8 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
 use crate::models::ApiResponse;
-use crate::routes::guest_agent::{fetch_vm_guest_report, pull_guest_rpc};
+use crate::routes::guest_agent::fetch_vm_guest_report;
+use crate::kubevirt_guest_pull::{pull_for_vm, pull_for_vm_api, rpc_result};
 use crate::routes::kubevirt::{build_guest_info, fetch_vm, fetch_vmi};
 use crate::state::AppState;
 
@@ -28,36 +29,37 @@ pub async fn get_guest_info(
     let mut redis = state.redis.clone();
     let cached = fetch_vm_guest_report(&mut redis, &namespace, &name).await;
 
-    let pulled = if let Some(proxy) = state.config.agent_proxy_url.as_ref() {
-        pull_guest_rpc(proxy, "guestkit.getGuestHealth", json!({}))
-            .await
-            .ok()
-    } else {
-        None
-    };
+    let pulled = pull_for_vm(&state, &namespace, &name, "guestkit.getGuestHealth", json!({}))
+        .await
+        .ok();
 
-    let boot_analysis = if let Some(proxy) = state.config.agent_proxy_url.as_ref() {
-        pull_guest_rpc(proxy, "guestkit.getBootAnalysis", json!({}))
-            .await
-            .ok()
-            .and_then(|r| r.get("result").cloned())
-    } else {
-        None
-    };
+    let boot_analysis = pull_for_vm(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getBootAnalysis",
+        json!({}),
+    )
+        .await
+        .ok()
+        .map(|v| rpc_result(v));
 
     let guest_health = pulled
         .as_ref()
-        .and_then(|r| r.get("result").cloned())
+        .map(|v| rpc_result(v.clone()))
         .or_else(|| cached.as_ref().and_then(|c| c.get("guest_health").cloned()));
     let metrics = cached.as_ref().and_then(|c| c.get("metrics").cloned());
-    let pulled_events = if let Some(proxy) = state.config.agent_proxy_url.as_ref() {
-        pull_guest_rpc(proxy, "guestkit.getSystemdEvents", json!({ "limit": 50 }))
-            .await
-            .ok()
-            .and_then(|r| r.get("result").and_then(|v| v.get("events").cloned()))
-    } else {
-        None
-    };
+    let pulled_events = pull_for_vm(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getSystemdEvents",
+        json!({ "limit": 50 }),
+    )
+        .await
+        .ok()
+        .map(|v| rpc_result(v))
+        .and_then(|v| v.get("events").cloned());
     let recent_events = pulled_events
         .or_else(|| cached.as_ref().and_then(|c| c.get("recent_events").cloned()));
     let report_source = if pulled.is_some() {
@@ -84,17 +86,16 @@ pub async fn get_guest_systemd(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required for live systemd pull"))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getSystemdUnits",
+        json!({}),
+    )
+    .await?;
 
-    let resp = pull_guest_rpc(proxy, "guestkit.getSystemdUnits", json!({}))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
-
-    let units = resp.get("result").cloned().unwrap_or(json!([]));
+    let units = rpc_result(resp);
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
@@ -132,19 +133,14 @@ pub async fn post_restart_unit(
         }))));
     }
 
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(
-        proxy,
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
         "guestkit.restartUnit",
         json!({ "unit": unit }),
     )
-    .await
-    .map_err(|e| ApiError::bad_request(e))?;
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
@@ -158,24 +154,19 @@ pub async fn get_guest_logs(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required for guest logs"))?;
-
-    let resp = pull_guest_rpc(
-        proxy,
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
         "guestkit.getJournalSlice",
         json!({ "unit": "", "limit": 200 }),
     )
-    .await
-    .map_err(|e| ApiError::bad_request(e))?;
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
-        "journal": resp.get("result").cloned().unwrap_or(json!({})),
+        "journal": rpc_result(resp),
     }))))
 }
 
@@ -201,20 +192,19 @@ pub async fn post_collect_support_bundle(
         }))));
     }
 
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(proxy, "guestkit.collectSupportBundle", json!({}))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.collectSupportBundle",
+        json!({}),
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
-        "bundle": resp.get("result").cloned().unwrap_or(json!({})),
+        "bundle": rpc_result(resp),
     }))))
 }
 
@@ -222,15 +212,14 @@ pub async fn post_pre_snapshot_freeze(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(proxy, "guestkit.freezeFilesystem", json!({}))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.freezeFilesystem",
+        json!({}),
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
@@ -244,15 +233,14 @@ pub async fn post_post_snapshot_thaw(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(proxy, "guestkit.thawFilesystem", json!({}))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.thawFilesystem",
+        json!({}),
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
@@ -269,15 +257,21 @@ pub async fn get_guest_health(
     let mut redis = state.redis.clone();
     let cached = fetch_vm_guest_report(&mut redis, &namespace, &name).await;
 
-    if let Some(proxy) = state.config.agent_proxy_url.as_ref() {
-        if let Ok(resp) = pull_guest_rpc(proxy, "guestkit.getGuestHealth", json!({})).await {
-            return Ok(Json(ApiResponse::ok(json!({
-                "namespace": namespace,
-                "name": name,
-                "guest_health": resp.get("result").cloned().unwrap_or(resp),
-                "source": "pull",
-            }))));
-        }
+    if let Ok(resp) = pull_for_vm(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getGuestHealth",
+        json!({}),
+    )
+    .await
+    {
+        return Ok(Json(ApiResponse::ok(json!({
+            "namespace": namespace,
+            "name": name,
+            "guest_health": rpc_result(resp),
+            "source": "pull",
+        }))));
     }
 
     let guest_health = cached.as_ref().and_then(|c| c.get("guest_health").cloned());
@@ -294,12 +288,6 @@ pub async fn get_guest_journal(
     Path((namespace, name)): Path<(String, String)>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
     let unit = query.get("unit").cloned().unwrap_or_default();
     let boot = query.get("boot").cloned().unwrap_or_else(|| "current".into());
     let limit = query
@@ -307,18 +295,19 @@ pub async fn get_guest_journal(
         .and_then(|v| v.parse().ok())
         .unwrap_or(200);
 
-    let resp = pull_guest_rpc(
-        proxy,
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
         "guestkit.getJournalSlice",
         json!({ "unit": unit, "boot": boot, "limit": limit }),
     )
-    .await
-    .map_err(|e| ApiError::bad_request(e))?;
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
-        "journal": resp.get("result").cloned().unwrap_or(resp),
+        "journal": rpc_result(resp),
     }))))
 }
 
@@ -326,20 +315,19 @@ pub async fn get_guest_processes(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(proxy, "guestkit.getProcesses", json!({}))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getProcesses",
+        json!({}),
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
-        "processes": resp.get("result").cloned().unwrap_or(resp),
+        "processes": rpc_result(resp),
     }))))
 }
 
@@ -347,25 +335,20 @@ pub async fn get_guest_systemd_unit(
     State(state): State<AppState>,
     Path((namespace, name, unit)): Path<(String, String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required"))?;
-
-    let resp = pull_guest_rpc(
-        proxy,
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
         "guestkit.getSystemdUnit",
         json!({ "unit": unit }),
     )
-    .await
-    .map_err(|e| ApiError::bad_request(e))?;
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
         "unit": unit,
-        "detail": resp.get("result").cloned().unwrap_or(resp),
+        "detail": rpc_result(resp),
     }))))
 }
 
@@ -384,20 +367,19 @@ pub async fn get_guest_systemd_events(
         }))));
     }
 
-    let proxy = state
-        .config
-        .agent_proxy_url
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("agent_proxy_url required for live events"))?;
-
-    let resp = pull_guest_rpc(proxy, "guestkit.getSystemdEvents", json!({ "limit": 100 }))
-        .await
-        .map_err(|e| ApiError::bad_request(e))?;
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getSystemdEvents",
+        json!({ "limit": 100 }),
+    )
+    .await?;
 
     Ok(Json(ApiResponse::ok(json!({
         "namespace": namespace,
         "name": name,
-        "events": resp.get("result").cloned().unwrap_or(resp),
+        "events": rpc_result(resp),
         "source": "pull",
     }))))
 }

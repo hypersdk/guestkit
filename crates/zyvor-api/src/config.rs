@@ -30,6 +30,9 @@ pub struct Config {
     pub nfs_mount_root: PathBuf,
     /// When set, guest agent registration must present this bootstrap token.
     pub agent_bootstrap_token: Option<String>,
+    pub agent_ca_dir: PathBuf,
+    /// Optional dedicated mTLS listener for guest-agent push (e.g. 0.0.0.0:8443).
+    pub agent_mtls_bind_addr: Option<String>,
 }
 
 impl Config {
@@ -131,6 +134,12 @@ impl Config {
             agent_bootstrap_token: std::env::var("AGENT_BOOTSTRAP_TOKEN")
                 .ok()
                 .filter(|t| !t.trim().is_empty()),
+            agent_ca_dir: PathBuf::from(
+                std::env::var("AGENT_CA_DIR").unwrap_or_else(|_| "/var/lib/zyvor/agent-ca".into()),
+            ),
+            agent_mtls_bind_addr: std::env::var("AGENT_MTLS_BIND_ADDR")
+                .ok()
+                .filter(|a| !a.trim().is_empty()),
         })
     }
 }

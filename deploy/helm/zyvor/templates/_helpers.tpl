@@ -33,6 +33,12 @@
 {{- end }}
 {{- end }}
 
+{{- define "zyvor.agentCaVolumeMount" -}}
+- name: vm-images
+  mountPath: /var/lib/zyvor/agent-ca
+  subPath: agent-ca
+{{- end }}
+
 {{- define "zyvor.vmtoolsBundleBaseUrl" -}}
 {{- if .Values.vmtools.bundle.baseUrl -}}
 {{- trimSuffix "/" .Values.vmtools.bundle.baseUrl -}}

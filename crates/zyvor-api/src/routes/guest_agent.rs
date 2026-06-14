@@ -54,13 +54,51 @@ fn heartbeat_key(agent_id: &str) -> String {
 pub async fn guest_agent_bootstrap_info(
     State(state): State<AppState>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    let ca = crate::guest_agent_ca::AgentCa::from_config(state.config.agent_ca_dir.clone());
+  let mtls_push_url = mtls_push_url_for_config(&state.config);
     Ok(Json(ApiResponse::ok(json!({
         "token_required": state.config.agent_bootstrap_token.is_some(),
-        "mtls_ready": false,
+        "mtls_ready": ca.is_ready(),
+        "mtls_push_url": mtls_push_url,
         "register_path": "/api/v1/guest-agents/register",
         "bootstrap_path": "/api/v1/guest-agents/bootstrap",
         "protocol_version": "1.2",
     }))))
+}
+
+fn mtls_push_url_for_config(config: &crate::config::Config) -> Option<String> {
+    if config.agent_mtls_bind_addr.is_none() {
+        return None;
+    }
+    let port = config
+        .agent_mtls_bind_addr
+        .as_ref()
+        .and_then(|addr| addr.rsplit(':').next())
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(8443);
+    let public = config
+        .zeus_public_url
+        .as_deref()
+        .unwrap_or(config.public_base_url.as_str());
+    url::Url::parse(public)
+        .ok()
+        .and_then(|mut u| {
+            u.set_port(Some(port)).ok();
+            Some(u.to_string().trim_end_matches('/').to_string())
+        })
+}
+
+fn cert_sha256_fingerprint(pem: &str) -> Option<String> {
+    use openssl::hash::MessageDigest;
+    use openssl::x509::X509;
+    let cert = X509::from_pem(pem.as_bytes()).ok()?;
+    let digest = cert.digest(MessageDigest::sha256()).ok()?;
+    Some(
+        digest
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>(),
+    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,14 +121,30 @@ pub async fn guest_agent_bootstrap_cert(
         }
     }
 
+    let ca = crate::guest_agent_ca::AgentCa::from_config(state.config.agent_ca_dir.clone());
+    let issued = ca.issue_client_cert(&body.hostname)?;
+
+    if let Some(fp) = cert_sha256_fingerprint(&issued.cert_pem) {
+        let mut redis = state.redis.clone();
+        let _ = redis
+            .set::<_, _, ()>(
+                format!("guest-agent:certfp:{}", body.hostname),
+                fp,
+            )
+            .await;
+    }
+
     Ok(Json(ApiResponse::ok(json!({
-        "status": "stub",
-        "message": "Zeus guest-agent CA is not configured; use bootstrap_token + HTTPS push until mTLS issuance ships",
+        "status": "issued",
         "hostname": body.hostname,
-        "csr_received": body.csr_pem.is_some(),
-        "cert_path_hint": "/etc/zyvor/agent.crt",
-        "key_path_hint": "/etc/zyvor/agent.key",
-        "ca_path_hint": "/etc/zyvor/ca.crt",
+        "cert_pem": issued.cert_pem,
+        "key_pem": issued.key_pem,
+        "ca_pem": issued.ca_pem,
+        "expires_at": issued.expires_at,
+        "cert_path_hint": "/var/lib/zyvor/agent.crt",
+        "key_path_hint": "/var/lib/zyvor/agent.key",
+        "ca_path_hint": "/var/lib/zyvor/ca.crt",
+        "mtls_ready": true,
     }))))
 }
 

@@ -5,8 +5,12 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod guest_agent_ca;
+pub mod guest_agent_mtls;
+pub mod guest_agent_vm;
 pub mod guest_actions;
 pub mod guest_action_policy;
+pub mod kubevirt_guest_pull;
 pub mod kubevirt_apply;
 pub mod kubevirt_boot_inspect;
 pub mod kubevirt_copilot;
@@ -77,7 +81,16 @@ pub async fn serve(config: Config) -> Result<()> {
         .layer(DefaultBodyLimit::max(max_upload))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .with_state(state.clone());
+
+    if let Some(mtls_bind) = config.agent_mtls_bind_addr.clone() {
+        let mtls_state = state.clone();
+        tokio::spawn(async move {
+            if let Err(e) = guest_agent_mtls::serve(&mtls_bind, mtls_state).await {
+                tracing::error!("guest-agent mTLS listener stopped: {e}");
+            }
+        });
+    }
 
     let addr: SocketAddr = config.bind_addr.parse()?;
     tracing::info!("zyvor-api listening on {addr}");

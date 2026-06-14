@@ -59,6 +59,16 @@ EOF
 cat > "${DEB_ROOT}/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
+if ! getent group zyvor-agent >/dev/null 2>&1; then
+  addgroup --system zyvor-agent 2>/dev/null || groupadd -r zyvor-agent 2>/dev/null || true
+fi
+if ! getent passwd zyvor-agent >/dev/null 2>&1; then
+  adduser --system --ingroup zyvor-agent --home /var/lib/zyvor --shell /usr/sbin/nologin zyvor-agent 2>/dev/null || \
+    useradd -r -g zyvor-agent -d /var/lib/zyvor -s /sbin/nologin zyvor-agent 2>/dev/null || true
+fi
+mkdir -p /var/lib/zyvor /etc/zyvor
+chown zyvor-agent:zyvor-agent /var/lib/zyvor 2>/dev/null || true
+chmod 750 /var/lib/zyvor 2>/dev/null || true
 systemctl daemon-reload || true
 systemctl enable zyvor-guest-agent.service || true
 systemctl enable zyvor-guest-agent-exec.service || true
@@ -104,6 +114,16 @@ install -Dm644 linux/agent-policy.yaml /etc/zyvor/agent-policy.yaml
 install -Dm644 linux/guest-agent.toml /etc/zyvor/guest-agent.toml
 mkdir -p /etc/zyvor/hooks/pre-snapshot
 install -m755 linux/hooks/pre-snapshot/*.sh /etc/zyvor/hooks/pre-snapshot/ 2>/dev/null || true
+if ! getent group zyvor-agent >/dev/null 2>&1; then
+  addgroup --system zyvor-agent 2>/dev/null || groupadd -r zyvor-agent 2>/dev/null || true
+fi
+if ! getent passwd zyvor-agent >/dev/null 2>&1; then
+  adduser --system --ingroup zyvor-agent --home /var/lib/zyvor --shell /usr/sbin/nologin zyvor-agent 2>/dev/null || \
+    useradd -r -g zyvor-agent -d /var/lib/zyvor -s /sbin/nologin zyvor-agent 2>/dev/null || true
+fi
+mkdir -p /var/lib/zyvor
+chown zyvor-agent:zyvor-agent /var/lib/zyvor 2>/dev/null || true
+chmod 750 /var/lib/zyvor 2>/dev/null || true
 systemctl daemon-reload
 systemctl enable --now zyvor-guest-agent-exec
 systemctl enable --now zyvor-guest-agent

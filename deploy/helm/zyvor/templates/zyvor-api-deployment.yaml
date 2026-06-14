@@ -25,6 +25,7 @@ spec:
             privileged: {{ .Values.zyvorApi.privileged }}
           ports:
             - containerPort: 8080
+            - containerPort: 8443
           env:
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
@@ -123,9 +124,18 @@ spec:
             - name: KUBEVIRT_DISK_ROOT
               value: {{ .Values.persistence.kubevirtLocalPath | quote }}
             {{- end }}
+            - name: AGENT_CA_DIR
+              value: /var/lib/zyvor/agent-ca
+            {{- if .Values.zyvorApi.agentMtls.enabled }}
+            - name: AGENT_MTLS_BIND_ADDR
+              value: {{ .Values.zyvorApi.agentMtls.bindAddr | quote }}
+            - name: AGENT_MTLS_SERVER_SANS
+              value: {{ .Values.zyvorApi.agentMtls.serverSans | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}
+            {{- include "zyvor.agentCaVolumeMount" . | nindent 12 }}
             - name: dev
               mountPath: /dev
               mountPropagation: HostToContainer
@@ -172,3 +182,8 @@ spec:
       {{- if eq .Values.zyvorApi.service.type "NodePort" }}
       nodePort: {{ .Values.zyvorApi.service.nodePort }}
       {{- end }}
+    {{- if .Values.zyvorApi.agentMtls.enabled }}
+    - port: 8443
+      targetPort: 8443
+      name: agent-mtls
+    {{- end }}

@@ -3,11 +3,16 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 const DEFAULT_CONFIG: &str = "/etc/zyvor/guest-agent.toml";
 const AGENT_STATE_PATH: &str = "/var/lib/zyvor/agent-state.json";
+const DEFAULT_CERT_DIR: &str = "/var/lib/zyvor";
+const DEFAULT_CERT_PATH: &str = "/var/lib/zyvor/agent.crt";
+const DEFAULT_KEY_PATH: &str = "/var/lib/zyvor/agent.key";
+const DEFAULT_CA_PATH: &str = "/var/lib/zyvor/ca.crt";
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 struct AgentStateFile {
@@ -56,8 +61,20 @@ struct RegisterRequest {
 }
 
 #[derive(Debug, Deserialize)]
+struct ApiEnvelope<T> {
+    data: T,
+}
+
+#[derive(Debug, Deserialize)]
 struct RegisterResponse {
     agent_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BootstrapCertData {
+    cert_pem: String,
+    key_pem: String,
+    ca_pem: String,
 }
 
 pub async fn run_push_worker() -> Result<()> {
@@ -75,10 +92,16 @@ pub async fn run_push_worker() -> Result<()> {
     }
 
     let base = zeus_url.unwrap().trim_end_matches('/').to_string();
-    let client = build_client(&config)?;
+    let api_base = base.clone();
+    let mut push_base = base.clone();
+    let hostname = std::fs::read_to_string("/etc/hostname")
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let mut client = build_client(&config)?;
 
     if let Ok(info) = client
-        .get(format!("{base}/api/v1/guest-agents/bootstrap-info"))
+        .get(format!("{api_base}/api/v1/guest-agents/bootstrap-info"))
         .send()
         .await
     {
@@ -91,18 +114,21 @@ pub async fn run_push_worker() -> Result<()> {
             {
                 log::warn!("Zeus requires AGENT_BOOTSTRAP_TOKEN but guest-agent.toml has no bootstrap_token");
             }
+            if let Some(url) = body
+                .pointer("/data/mtls_push_url")
+                .and_then(|v| v.as_str())
+                .filter(|u| !u.is_empty())
+            {
+                push_base = url.trim_end_matches('/').to_string();
+            }
         }
     }
 
     let mut agent_id = config.agent_id.clone().or_else(load_persisted_agent_id);
 
     if agent_id.is_none() {
-        let hostname = std::fs::read_to_string("/etc/hostname")
-            .unwrap_or_default()
-            .trim()
-            .to_string();
         let body = RegisterRequest {
-            hostname,
+            hostname: hostname.clone(),
             agent_version: crate::VERSION.to_string(),
             bootstrap_token: config.bootstrap_token.clone(),
             namespace: config
@@ -114,24 +140,45 @@ pub async fn run_push_worker() -> Result<()> {
                 .clone()
                 .or_else(|| std::env::var("ZYVOR_VM_NAME").ok()),
         };
-        let url = format!("{base}/api/v1/guest-agents/register");
+        let url = format!("{api_base}/api/v1/guest-agents/register");
         if let Ok(resp) = client.post(&url).json(&body).send().await {
-            if let Ok(reg) = resp.json::<RegisterResponse>().await {
-                log::info!("registered with Zeus as agent {}", reg.agent_id);
-                agent_id = Some(reg.agent_id.clone());
-                persist_agent_id(&reg.agent_id);
+            if let Ok(reg) = resp.json::<ApiEnvelope<RegisterResponse>>().await {
+                log::info!("registered with Zeus as agent {}", reg.data.agent_id);
+                agent_id = Some(reg.data.agent_id.clone());
+                persist_agent_id(&reg.data.agent_id);
             }
+        }
+    }
+
+    if let Err(e) = try_bootstrap_mtls(
+        &client,
+        &api_base,
+        &hostname,
+        config.bootstrap_token.as_ref(),
+    )
+    .await
+    {
+        log::warn!("mTLS bootstrap skipped: {e}");
+    } else if mtls_material_present() {
+        client = build_client(&config)?;
+        if push_base != api_base {
+            log::info!("using Zeus mTLS push endpoint {push_base}");
         }
     }
 
     let agent_id = agent_id.unwrap_or_else(|| "local".into());
     let interval = Duration::from_secs(config.interval_secs.max(15));
+    let push_base = if mtls_material_present() && push_base != api_base {
+        push_base
+    } else {
+        api_base
+    };
 
     loop {
-        if let Err(e) = push_heartbeat(&client, &base, &agent_id).await {
+        if let Err(e) = push_heartbeat(&client, &push_base, &agent_id).await {
             log::warn!("heartbeat push failed: {e}");
         }
-        if let Err(e) = push_report(&client, &base, &agent_id).await {
+        if let Err(e) = push_report(&client, &push_base, &agent_id).await {
             log::warn!("report push failed: {e}");
         }
         tokio::time::sleep(interval).await;
@@ -193,25 +240,108 @@ async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Re
 
 fn build_client(config: &ZeusPushConfig) -> Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(30));
+    let (cert_path, key_path, ca_path) = resolve_tls_paths(config);
 
-    if let (Some(cert), Some(key)) = (&config.cert_path, &config.key_path) {
+    if let (Some(cert), Some(key)) = (cert_path, key_path) {
         let identity = reqwest::Identity::from_pem(
             &[
-                std::fs::read(cert).context("read cert")?,
-                std::fs::read(key).context("read key")?,
+                std::fs::read(&cert).context("read cert")?,
+                std::fs::read(&key).context("read key")?,
             ]
             .concat(),
         )?;
         builder = builder.identity(identity);
     }
 
-    if let Some(ca) = &config.ca_path {
-        let pem = std::fs::read(ca).context("read ca")?;
+    if let Some(ca) = ca_path {
+        let pem = std::fs::read(&ca).context("read ca")?;
         let cert = reqwest::Certificate::from_pem(&pem).context("parse ca pem")?;
         builder = builder.tls_built_in_root_certs(false).add_root_certificate(cert);
     }
 
     builder.build().context("build reqwest client")
+}
+
+fn resolve_tls_paths(config: &ZeusPushConfig) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
+    let cert = config
+        .cert_path
+        .as_ref()
+        .map(PathBuf::from)
+        .or_else(|| path_if_exists(DEFAULT_CERT_PATH));
+    let key = config
+        .key_path
+        .as_ref()
+        .map(PathBuf::from)
+        .or_else(|| path_if_exists(DEFAULT_KEY_PATH));
+    let ca = config
+        .ca_path
+        .as_ref()
+        .map(PathBuf::from)
+        .or_else(|| path_if_exists(DEFAULT_CA_PATH));
+    (cert, key, ca)
+}
+
+fn path_if_exists(path: &str) -> Option<PathBuf> {
+    if Path::new(path).exists() {
+        Some(PathBuf::from(path))
+    } else {
+        None
+    }
+}
+
+fn mtls_material_present() -> bool {
+    Path::new(DEFAULT_CERT_PATH).exists() && Path::new(DEFAULT_KEY_PATH).exists()
+}
+
+async fn try_bootstrap_mtls(
+    client: &reqwest::Client,
+    base: &str,
+    hostname: &str,
+    bootstrap_token: Option<&String>,
+) -> Result<()> {
+    if mtls_material_present() {
+        return Ok(());
+    }
+
+    let body = serde_json::json!({
+        "hostname": hostname,
+        "bootstrap_token": bootstrap_token,
+    });
+    let url = format!("{base}/api/v1/guest-agents/bootstrap");
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .context("bootstrap POST")?;
+    if !resp.status().is_success() {
+        return Err(anyhow::anyhow!("bootstrap HTTP {}", resp.status()));
+    }
+
+    let envelope = resp
+        .json::<ApiEnvelope<BootstrapCertData>>()
+        .await
+        .context("parse bootstrap response")?;
+    install_mtls_material(&envelope.data)?;
+    Ok(())
+}
+
+fn install_mtls_material(data: &BootstrapCertData) -> Result<()> {
+    fs::create_dir_all(DEFAULT_CERT_DIR).context("create cert dir")?;
+    write_secret_file(Path::new(DEFAULT_CERT_PATH), &data.cert_pem)?;
+    write_secret_file(Path::new(DEFAULT_KEY_PATH), &data.key_pem)?;
+    write_secret_file(Path::new(DEFAULT_CA_PATH), &data.ca_pem)?;
+    log::info!("installed mTLS credentials under {DEFAULT_CERT_DIR}");
+    Ok(())
+}
+
+fn write_secret_file(path: &Path, contents: &str) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::write(path, contents).with_context(|| format!("write {}", path.display()))?;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .with_context(|| format!("chmod {}", path.display()))?;
+    Ok(())
 }
 
 fn load_persisted_agent_id() -> Option<String> {

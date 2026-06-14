@@ -38,6 +38,7 @@ pub fn spawn_executor_server() -> Result<()> {
     fs::create_dir_all(parent).ok();
 
     let listener = UnixListener::bind(&path).with_context(|| format!("bind executor socket {path}"))?;
+    secure_executor_socket(&path);
     log::info!("Zyvor guest agent executor listening on {path}");
 
     thread::spawn(move || {
@@ -52,6 +53,24 @@ pub fn spawn_executor_server() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(unix)]
+fn secure_executor_socket(path: &str) {
+    use nix::unistd::{chown, Group, Uid};
+    use std::os::unix::fs::PermissionsExt;
+
+    if let Ok(Some(group)) = Group::from_name("zyvor-agent") {
+        let _ = chown(path, Some(Uid::from_raw(0)), Some(group.gid));
+        if let Ok(meta) = fs::metadata(path) {
+            let mut perms = meta.permissions();
+            perms.set_mode(0o660);
+            let _ = fs::set_permissions(path, perms);
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn secure_executor_socket(_path: &str) {}
 
 fn serve_connection(stream: UnixStream) -> Result<()> {
     let mut reader = stream.try_clone()?;
