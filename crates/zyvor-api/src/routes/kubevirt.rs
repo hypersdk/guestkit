@@ -38,6 +38,12 @@ pub struct KubeVirtVmSummary {
     /// True when zyvor-guest-agent is live (KubeVirt guestAgentVersion or connected label).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools_connected: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_health: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub health_score: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failed_units: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -340,6 +346,18 @@ pub async fn list_kubevirt_vms(
         } else {
             guest_tools_label
         };
+        let guest_health = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/guest-health")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let health_score = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/health-score")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse().ok());
+        let failed_units = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/failed-units")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse().ok());
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -357,6 +375,9 @@ pub async fn list_kubevirt_vms(
             guest_tools,
             tools_version,
             tools_connected: Some(tools_connected),
+            guest_health,
+            health_score,
+            failed_units,
         });
     }
 

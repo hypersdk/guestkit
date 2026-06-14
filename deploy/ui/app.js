@@ -515,7 +515,11 @@ function updateFleetToolbar() {
     const el = $('#fleetVmtoolsCoverage');
     if (el) {
       const pending = cov.pending ? ` · ${cov.pending} pending` : '';
-      el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing${pending}`;
+      const healthWarn = (cov.health_degraded || 0) + (cov.health_unhealthy || 0);
+      const healthPart = healthWarn
+        ? ` · ${healthWarn} guest issue${healthWarn === 1 ? '' : 's'}`
+        : (cov.health_healthy ? ` · ${cov.health_healthy} healthy` : '');
+      el.textContent = `VM Tools ${cov.connected}/${cov.total_vms} live · ${cov.missing} missing${pending}${healthPart}`;
       el.classList.toggle('warn', cov.missing > 0 || cov.pending > 0);
     }
   }
@@ -675,6 +679,10 @@ function renderClusterFleet() {
       const osHint = vm.is_windows ? 'windows' : (vm.os_name ? vm.os_name.split(/\s+/)[0].toLowerCase() : '');
       const toolsLabel = clusterToolsLabel(vm);
       const toolsClass = toolsLabel.includes('live') ? 'live' : toolsLabel.includes('pending') ? 'warn' : 'muted';
+      const healthLabel = vm.guest_health && vm.guest_health !== 'healthy'
+        ? vm.guest_health
+        : (vm.health_score != null && vm.health_score < 80 ? 'degraded' : null);
+      const healthClass = healthLabel === 'unhealthy' ? 'err' : healthLabel ? 'warn' : '';
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'vm-card cluster' + (selected ? ' selected' : '');
@@ -682,6 +690,7 @@ function renderClusterFleet() {
         <span class="vm-format">kubevirt</span>
         <span class="vm-status ${clusterVmStatusClass(vm)}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
         <span class="vm-tools-chip ${toolsClass}">${escapeHtml(toolsLabel)}</span>
+        ${healthLabel ? `<span class="vm-tools-chip ${healthClass}">${escapeHtml(healthLabel)}${vm.health_score != null ? ` ${vm.health_score}` : ''}</span>` : ''}
         <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
         <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}${vm.tools_version ? ` · v${escapeHtml(vm.tools_version)}` : ''}</p>
       `;

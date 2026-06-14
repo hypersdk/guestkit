@@ -55,6 +55,13 @@ pub async fn register_guest_agent(
     State(state): State<AppState>,
     Json(body): Json<RegisterGuestAgentRequest>,
 ) -> ApiResult<Json<ApiResponse<RegisterGuestAgentResponse>>> {
+    if let Some(expected) = &state.config.agent_bootstrap_token {
+        let token = body.bootstrap_token.as_deref().unwrap_or("");
+        if token != expected {
+            return Err(ApiError::unauthorized("invalid or missing bootstrap token"));
+        }
+    }
+
     let agent_id = if body.hostname.is_empty() {
         uuid::Uuid::new_v4().to_string()
     } else {

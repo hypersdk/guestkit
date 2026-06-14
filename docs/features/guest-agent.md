@@ -174,6 +174,7 @@ Configure push identity:
 zeus_url = "https://zeus.example.com"
 namespace = "default"
 vm_name = "my-vm"
+bootstrap_token = "..."  # required when Zeus sets AGENT_BOOTSTRAP_TOKEN
 ```
 
 **Guest remediation (Zeus UI):** restart failed units, collect a support bundle (`tar.zst` with evidence, health, semantic analysis, journal excerpts), and view per-unit journal slices from the Guest Intelligence card when a VM is selected.
