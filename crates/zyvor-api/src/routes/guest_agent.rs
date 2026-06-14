@@ -51,6 +51,17 @@ fn heartbeat_key(agent_id: &str) -> String {
     format!("guest-agent:heartbeat:{agent_id}")
 }
 
+pub async fn guest_agent_bootstrap_info(
+    State(state): State<AppState>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    Ok(Json(ApiResponse::ok(json!({
+        "token_required": state.config.agent_bootstrap_token.is_some(),
+        "mtls_ready": false,
+        "register_path": "/api/v1/guest-agents/register",
+        "protocol_version": "1.2",
+    }))))
+}
+
 pub async fn register_guest_agent(
     State(state): State<AppState>,
     Json(body): Json<RegisterGuestAgentRequest>,
