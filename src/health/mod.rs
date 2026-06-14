@@ -2,8 +2,10 @@
 //! GuestHealth builder from evidence + live runtime collectors.
 
 mod guest_info;
+mod platform;
 
 pub use guest_info::{build_guest_info, build_service_health};
+pub use platform::build_guest_health_live;
 
 use crate::ai::semantic::analyze_semantic;
 use crate::collectors::dbus::{collect_dns_health_safe, collect_timedate_health_safe};

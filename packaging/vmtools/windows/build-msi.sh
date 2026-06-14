@@ -7,6 +7,7 @@ VERSION="${VERSION:-0.1.0}"
 DIST="${ROOT}/dist/vmtools/windows"
 WXS="${ROOT}/packaging/vmtools/windows/zyvor-guest-agent.wxs"
 STAGING="${DIST}/staging"
+TEMPLATES="${ROOT}/templates/agent"
 
 mkdir -p "${STAGING}"
 
@@ -32,20 +33,38 @@ else
 fi
 
 cp "${ROOT}/packaging/vmtools/windows/install.ps1" "${STAGING}/"
+cp "${TEMPLATES}/guest-agent-windows.toml" "${STAGING}/guest-agent.toml"
+cp "${TEMPLATES}/agent-policy.yaml" "${STAGING}/agent-policy.yaml"
+
 if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
   cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/"
   cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/../windows/" 2>/dev/null || true
 fi
 
+ZIP_PATH="${DIST}/zyvor-vm-tools-windows-${VERSION}.zip"
+if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
+  (cd "${STAGING}" && zip -r "${ZIP_PATH}" .)
+  WINDOWS_ZIP_SHA256="$(sha256sum "${ZIP_PATH}" | awk '{print $1}')"
+  echo "${WINDOWS_ZIP_SHA256}" > "${DIST}/zyvor-vm-tools-windows-${VERSION}.sha256"
+  MANIFEST_JSON=$(printf '{"version":"%s","channel":"stable","windows_zip_sha256":"%s"}' "$VERSION" "$WINDOWS_ZIP_SHA256")
+  WINDOWS_ZIP_SIGNATURE=$(cargo run -q -p zyvor-guest-agent -- sign-manifest "${MANIFEST_JSON}" 2>/dev/null || true)
+  if [ -n "${WINDOWS_ZIP_SIGNATURE}" ]; then
+    echo "${WINDOWS_ZIP_SIGNATURE}" > "${DIST}/zyvor-vm-tools-windows-${VERSION}.sig"
+  fi
+fi
+
 if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]] && command -v candle >/dev/null && command -v light >/dev/null; then
   WIX_OBJ="${DIST}/zyvor-vm-tools.wixobj"
+  cp -a "${STAGING}/"* "${DIST}/"
   sed "s/Version=\"0.1.0.0\"/Version=\"${VERSION}.0\"/" "${WXS}" > "${DIST}/zyvor-guest-agent.wxs"
-  candle -out "${WIX_OBJ}" -dStaging="${STAGING}" "${DIST}/zyvor-guest-agent.wxs"
+  candle -out "${WIX_OBJ}" "${DIST}/zyvor-guest-agent.wxs"
   light -out "${DIST}/zyvor-vm-tools-${VERSION}.msi" "${WIX_OBJ}"
   echo "MSI: ${DIST}/zyvor-vm-tools-${VERSION}.msi"
 else
   echo "WiX not available or agent binary missing — publishing zip scaffold."
-  (cd "${STAGING}" && zip -r "${DIST}/zyvor-vm-tools-windows-${VERSION}.zip" .)
-  echo "Zip: ${DIST}/zyvor-vm-tools-windows-${VERSION}.zip"
+  if [[ ! -f "${ZIP_PATH}" ]]; then
+    (cd "${STAGING}" && zip -r "${ZIP_PATH}" .)
+  fi
+  echo "Zip: ${ZIP_PATH}"
   echo "For MSI: install WiX Toolset, ensure zyvor-guest-agent.exe is in staging, re-run."
 fi

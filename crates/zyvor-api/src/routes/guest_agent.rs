@@ -44,7 +44,11 @@ fn report_key(agent_id: &str) -> String {
 }
 
 fn vm_report_key(namespace: &str, name: &str) -> String {
-    format!("guest-agent:vm:{namespace}:{name}")
+    format!("guest-agent:vm-report:{namespace}:{name}")
+}
+
+fn vm_agent_id_key(namespace: &str, name: &str) -> String {
+    format!("guest-agent:vm-agent:{namespace}:{name}")
 }
 
 fn heartbeat_key(agent_id: &str) -> String {
@@ -194,7 +198,7 @@ pub async fn register_guest_agent(
 
     if let (Some(ns), Some(vm)) = (&body.namespace, &body.vm_name) {
         redis
-            .set::<_, _, ()>(vm_report_key(ns, vm), &agent_id)
+            .set::<_, _, ()>(vm_agent_id_key(ns, vm), &agent_id)
             .await
             .map_err(|e| ApiError::internal(e.to_string()))?;
     }
@@ -288,6 +292,16 @@ pub async fn guest_agent_report(
                         version,
                     )
                     .await;
+                    crate::packetwolf_correlate::emit_guest_report_correlation(
+                        &state.config,
+                        Some(&client),
+                        ns,
+                        vm,
+                        &body.guest_health,
+                        &body.metrics,
+                        &body.recent_events,
+                        version,
+                    );
                 }
             }
         }

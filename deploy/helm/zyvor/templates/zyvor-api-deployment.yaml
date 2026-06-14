@@ -144,6 +144,10 @@ spec:
               value: https://{{ .Values.ingress.hosts.agentMtls }}
             {{- end }}
             {{- end }}
+            {{- if .Values.zyvorApi.packetwolf.correlationUrl }}
+            - name: PACKETWOLF_CORRELATION_URL
+              value: {{ .Values.zyvorApi.packetwolf.correlationUrl | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}

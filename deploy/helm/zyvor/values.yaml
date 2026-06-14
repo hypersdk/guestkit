@@ -40,6 +40,8 @@ zyvorApi:
     enabled: true
     bindAddr: "0.0.0.0:8443"
     serverSans: "localhost,zyvor-api,api.zyvor.local,agent-api.zyvor.local"
+  packetwolf:
+    correlationUrl: ""   # e.g. http://packetwolf-api.packetwolf.svc:8080/api/v1/correlate/guest-health
   auth:
     enabled: false
     jwtSecret: ""          # set via secret when auth.enabled=true

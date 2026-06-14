@@ -12,6 +12,7 @@
 
     <Feature Id="ProductFeature" Title="Zeus VM Tools" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="ConfigComponents" />
     </Feature>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -19,6 +20,9 @@
         <Directory Id="INSTALLDIR" Name="Zyvor">
           <Directory Id="VMTOOLSDIR" Name="VM Tools" />
         </Directory>
+      </Directory>
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="ZYVORCONFIGDIR" Name="zyvor" />
       </Directory>
     </Directory>
 
@@ -38,6 +42,15 @@
                         Start="install"
                         Stop="both"
                         Remove="uninstall" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="ConfigComponents" Directory="ZYVORCONFIGDIR">
+      <Component Id="AgentConfig" Guid="*">
+        <File Id="GuestAgentToml" Source="guest-agent.toml" KeyPath="yes" />
+      </Component>
+      <Component Id="AgentPolicy" Guid="*">
+        <File Id="AgentPolicyYaml" Source="agent-policy.yaml" />
       </Component>
     </ComponentGroup>
   </Product>

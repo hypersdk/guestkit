@@ -452,7 +452,7 @@ pub fn build_agent_status_live() -> Result<AgentStatus> {
     })
 }
 
-fn collect_live_ips() -> Vec<String> {
+pub fn collect_live_ips() -> Vec<String> {
     let mut ips = Vec::new();
     if let Ok(out) = Command::new("ip").args(["-j", "addr"]).output() {
         if let Ok(json) = serde_json::from_slice::<Vec<serde_json::Value>>(&out.stdout) {

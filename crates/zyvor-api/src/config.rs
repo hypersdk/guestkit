@@ -35,6 +35,12 @@ pub struct Config {
     pub agent_mtls_bind_addr: Option<String>,
     /// Public URL agents use for mTLS push (e.g. https://agent-api.zyvor.local).
     pub agent_mtls_public_url: Option<String>,
+    /// Optional PacketWolf correlation ingest URL for guest health events.
+    pub packetwolf_correlation_url: Option<String>,
+    /// Optional PacketWolf fleet batch correlation URL (defaults to correlation URL + /fleet).
+    pub packetwolf_fleet_correlate_url: Option<String>,
+    /// Interval between fleet correlation sweeps in seconds.
+    pub packetwolf_fleet_interval_secs: u64,
 }
 
 impl Config {
@@ -145,6 +151,16 @@ impl Config {
             agent_mtls_public_url: std::env::var("AGENT_MTLS_PUBLIC_URL")
                 .ok()
                 .filter(|u| !u.trim().is_empty()),
+            packetwolf_correlation_url: std::env::var("PACKETWOLF_CORRELATION_URL")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
+            packetwolf_fleet_correlate_url: std::env::var("PACKETWOLF_FLEET_CORRELATE_URL")
+                .ok()
+                .filter(|u| !u.trim().is_empty()),
+            packetwolf_fleet_interval_secs: std::env::var("PACKETWOLF_FLEET_INTERVAL_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(300),
         })
     }
 }

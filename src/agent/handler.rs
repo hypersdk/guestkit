@@ -337,11 +337,8 @@ impl RequestHandler {
     }
 
     fn get_guest_health(&self, id: Option<Value>) -> JsonRpcResponse {
-        match crate::evidence::build_evidence_live() {
-            Ok(evidence) => {
-                let health = crate::health::build_guest_health(&evidence);
-                JsonRpcResponse::success(id, serde_json::to_value(health).unwrap_or(json!({})))
-            }
+        match crate::health::build_guest_health_live() {
+            Ok(health) => JsonRpcResponse::success(id, serde_json::to_value(health).unwrap_or(json!({}))),
             Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),
         }
     }

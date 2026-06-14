@@ -40,6 +40,8 @@ pub struct VMToolsBundleInfo {
     pub agent_binary_url: String,
     pub linux_tar_sha256: Option<String>,
     pub linux_tar_signature: Option<String>,
+    pub windows_zip_sha256: Option<String>,
+    pub windows_zip_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -140,6 +142,32 @@ pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>)
                 .filter(|s| !s.is_empty())
                 .or_else(|| {
                     let sig = spec.linux.tar_signature.clone();
+                    if sig.is_empty() {
+                        None
+                    } else {
+                        Some(sig)
+                    }
+                }),
+        ),
+        windows_zip_sha256: non_empty(
+            std::env::var("VMTOOLS_WINDOWS_ZIP_SHA256")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let sha = spec.windows.zip_sha256.clone();
+                    if sha.is_empty() {
+                        None
+                    } else {
+                        Some(sha)
+                    }
+                }),
+        ),
+        windows_zip_signature: non_empty(
+            std::env::var("VMTOOLS_WINDOWS_ZIP_SIGNATURE")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let sig = spec.windows.zip_signature.clone();
                     if sig.is_empty() {
                         None
                     } else {

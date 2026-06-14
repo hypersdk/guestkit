@@ -24,6 +24,10 @@ pub struct VMToolsWindowsArtifacts {
     pub zip: String,
     #[serde(default)]
     pub install_ps1: String,
+    #[serde(default)]
+    pub zip_sha256: String,
+    #[serde(default)]
+    pub zip_signature: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -88,6 +92,8 @@ pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
     let agent = crate::kubevirt_guest_agent::resolve_guestkit_binary_url();
     let tar_sha256 = std::env::var("VMTOOLS_LINUX_TAR_SHA256").unwrap_or_default();
     let tar_signature = std::env::var("VMTOOLS_LINUX_TAR_SIGNATURE").unwrap_or_default();
+    let windows_zip_sha256 = std::env::var("VMTOOLS_WINDOWS_ZIP_SHA256").unwrap_or_default();
+    let windows_zip_signature = std::env::var("VMTOOLS_WINDOWS_ZIP_SIGNATURE").unwrap_or_default();
     VMToolsBundleSpec {
         version: version.clone(),
         channel,
@@ -103,6 +109,8 @@ pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
             msi: format!("{base}/windows/zyvor-vm-tools-{version}.msi"),
             zip: format!("{base}/windows/zyvor-vm-tools-windows-{version}.zip"),
             install_ps1: format!("{base}/windows/install.ps1"),
+            zip_sha256: windows_zip_sha256,
+            zip_signature: windows_zip_signature,
         },
         iso: format!("{base}/zyvor-vm-tools.iso"),
         agent_binary_url: agent,
@@ -192,6 +200,18 @@ fn parse_bundle_spec(val: &Value) -> VMToolsBundleSpec {
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .into(),
+            zip_sha256: windows
+                .get("zipSha256")
+                .or_else(|| windows.get("zip_sha256"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            zip_signature: windows
+                .get("zipSignature")
+                .or_else(|| windows.get("zip_signature"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
         },
         iso: spec
             .get("iso")
@@ -232,6 +252,8 @@ pub async fn upsert_default_bundle(client: &Client, spec: &VMToolsBundleSpec) ->
                 "msi": spec.windows.msi,
                 "zip": spec.windows.zip,
                 "installPs1": spec.windows.install_ps1,
+                "zipSha256": spec.windows.zip_sha256,
+                "zipSignature": spec.windows.zip_signature,
             },
             "iso": spec.iso,
             "agentBinaryUrl": spec.agent_binary_url,
