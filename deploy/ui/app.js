@@ -1360,7 +1360,7 @@ function renderGuestIntelligenceCard(container, intel) {
     if (pending.length) {
       html += '<p class="finding warn"><strong>Pending approvals</strong></p><ul class="guest-intel-recs">';
       pending.forEach((a) => {
-        html += `<li>${escapeHtml(a.action)} ${escapeHtml(a.unit || '')} <button type="button" class="btn glass sm" data-guest-approve="${escapeHtml(a.id)}">Approve</button></li>`;
+        html += `<li>${escapeHtml(a.action)} ${escapeHtml(a.unit || '')}${a.requested_by ? ` <span class="muted">by ${escapeHtml(a.requested_by)}</span>` : ''} <button type="button" class="btn glass sm" data-guest-approve="${escapeHtml(a.id)}">Approve</button></li>`;
       });
       html += '</ul>';
     }
