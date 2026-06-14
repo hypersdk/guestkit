@@ -22,6 +22,9 @@ pub struct SystemStatus {
     pub disk_count: i64,
     pub cluster_vm_count: Option<i64>,
     pub worker: String,
+    pub guest_agent_mtls: bool,
+    pub packetwolf_correlation: bool,
+    pub packetwolf_fleet: bool,
 }
 
 pub async fn get_system_status(
@@ -52,6 +55,22 @@ pub async fn get_system_status(
         disk_count,
         cluster_vm_count,
         worker,
+        guest_agent_mtls: state.config.agent_mtls_bind_addr.is_some(),
+        packetwolf_correlation: state
+            .config
+            .packetwolf_correlation_url
+            .as_ref()
+            .is_some_and(|u| !u.trim().is_empty()),
+        packetwolf_fleet: state
+            .config
+            .packetwolf_fleet_correlate_url
+            .as_ref()
+            .is_some_and(|u| !u.trim().is_empty())
+            || state
+                .config
+                .packetwolf_correlation_url
+                .as_ref()
+                .is_some_and(|u| !u.trim().is_empty()),
     })))
 }
 

@@ -94,12 +94,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sign_and_verify_round_trip() {
+    fn sign_and_verify_linux_manifest() {
         let manifest = UpdateManifest {
             version: "0.2.0".into(),
             channel: "stable".into(),
             linux_tar_sha256: "abc123".into(),
             windows_zip_sha256: String::new(),
+        };
+        let sig = sign_manifest(&manifest).expect("sign");
+        verify_manifest(&manifest, &sig).expect("verify");
+    }
+
+    #[test]
+    fn sign_and_verify_windows_manifest() {
+        let manifest = UpdateManifest {
+            version: "0.2.0".into(),
+            channel: "stable".into(),
+            linux_tar_sha256: String::new(),
+            windows_zip_sha256: "def456".into(),
         };
         let sig = sign_manifest(&manifest).expect("sign");
         verify_manifest(&manifest, &sig).expect("verify");

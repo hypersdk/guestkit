@@ -289,6 +289,14 @@
   color: var(--accent-2);
 }
 
+.fleet-packetwolf {
+  margin-left: 0.25rem;
+}
+
+.fleet-packetwolf.ok {
+  color: var(--ok);
+}
+
 .fleet-vmtools-policy {
   display: flex;
   align-items: center;

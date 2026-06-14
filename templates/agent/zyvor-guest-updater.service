@@ -1,10 +1,10 @@
 [Unit]
-Description=Zyvor GuestAgent update check (stub)
+Description=Zyvor GuestAgent signed update check
 Documentation=https://zyvor.dev/guestkit
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/zyvor-guest-agent --check-update
+ExecStart=/usr/bin/zyvor-guest-agent --scheduled-update
 User=zyvor-agent
 Group=zyvor-agent
 
