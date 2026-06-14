@@ -700,6 +700,18 @@ components:
         windows_install_ps1_url:
           type: string
           nullable: true
+        linux_tar_sha256:
+          type: string
+          nullable: true
+        linux_tar_signature:
+          type: string
+          nullable: true
+        windows_zip_sha256:
+          type: string
+          nullable: true
+        windows_zip_signature:
+          type: string
+          nullable: true
         iso_url:
           type: string
           nullable: true

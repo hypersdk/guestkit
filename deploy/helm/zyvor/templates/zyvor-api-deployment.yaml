@@ -148,6 +148,14 @@ spec:
             - name: PACKETWOLF_CORRELATION_URL
               value: {{ .Values.zyvorApi.packetwolf.correlationUrl | quote }}
             {{- end }}
+            {{- if .Values.zyvorApi.packetwolf.fleetCorrelateUrl }}
+            - name: PACKETWOLF_FLEET_CORRELATE_URL
+              value: {{ .Values.zyvorApi.packetwolf.fleetCorrelateUrl | quote }}
+            {{- end }}
+            {{- if .Values.zyvorApi.packetwolf.fleetIntervalSecs }}
+            - name: PACKETWOLF_FLEET_INTERVAL_SECS
+              value: {{ .Values.zyvorApi.packetwolf.fleetIntervalSecs | quote }}
+            {{- end }}
           volumeMounts:
             {{- include "zyvor.vmVolumeMount" . | nindent 12 }}
             {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}

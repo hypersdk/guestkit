@@ -73,6 +73,8 @@ pub async fn get_guest_info(
     };
     let received_at = cached.as_ref().and_then(|c| c.get("received_at").cloned());
 
+    let packetwolf = vm.as_ref().map(packetwolf_from_vm).unwrap_or(json!({}));
+
     Ok(Json(ApiResponse::ok(json!({
         "guest": guest,
         "guest_health": guest_health,
@@ -81,7 +83,19 @@ pub async fn get_guest_info(
         "recent_events": recent_events,
         "report_source": report_source,
         "received_at": received_at,
+        "packetwolf": packetwolf,
     }))))
+}
+
+fn packetwolf_from_vm(vm: &serde_json::Value) -> serde_json::Value {
+    let ann = vm.pointer("/metadata/annotations").cloned().unwrap_or(json!({}));
+    json!({
+        "correlation": ann.get("zeus.zyvor.dev/packetwolf-correlation").and_then(|v| v.as_str()),
+        "correlation_at": ann.get("zeus.zyvor.dev/packetwolf-correlation-at").and_then(|v| v.as_str()),
+        "fleet_correlation": ann.get("zeus.zyvor.dev/packetwolf-fleet-correlation").and_then(|v| v.as_str()),
+        "fleet_at": ann.get("zeus.zyvor.dev/packetwolf-fleet-at").and_then(|v| v.as_str()),
+        "fleet_count": ann.get("zeus.zyvor.dev/packetwolf-fleet-count").and_then(|v| v.as_str()),
+    })
 }
 
 pub async fn get_guest_systemd(

@@ -699,6 +699,7 @@ function renderClusterFleet() {
         <span class="vm-status ${clusterVmStatusClass(vm)}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
         <span class="vm-tools-chip ${toolsClass}">${escapeHtml(toolsLabel)}</span>
         ${healthLabel ? `<span class="vm-tools-chip ${healthClass}">${escapeHtml(healthLabel)}${vm.health_score != null ? ` ${vm.health_score}` : ''}</span>` : ''}
+        ${vm.packetwolf_correlation ? `<span class="vm-tools-chip ok" title="PacketWolf correlated">PW</span>` : ''}
         <p class="vm-name">${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</p>
         <p class="vm-meta">${escapeHtml(vm.ip_address || 'no IP')} · ${escapeHtml(vm.node || 'unscheduled')} · ${agentLabel}${osHint ? ` · ${escapeHtml(osHint)}` : ''}${vm.tools_version ? ` · v${escapeHtml(vm.tools_version)}` : ''}</p>
       `;
@@ -1330,6 +1331,22 @@ function renderGuestIntelligenceCard(container, intel) {
   }
   if (intel.report_source) {
     html += `<p class="finding ok"><strong>Report source</strong> ${escapeHtml(intel.report_source)}</p>`;
+  }
+
+  if (intel.packetwolf) {
+    const pw = intel.packetwolf;
+    const parts = [];
+    if (pw.correlation) parts.push(`VM ${escapeHtml(pw.correlation)}`);
+    if (pw.correlation_at) parts.push(`at ${escapeHtml(pw.correlation_at)}`);
+    if (pw.fleet_correlation) parts.push(`fleet ${escapeHtml(pw.fleet_correlation)}`);
+    if (pw.fleet_count) parts.push(`${escapeHtml(pw.fleet_count)} VMs`);
+    if (parts.length) {
+      html += `<p class="finding ok"><strong>PacketWolf</strong> ${parts.join(' · ')}</p>`;
+    }
+  }
+
+  if (intel.metrics?.ips?.length) {
+    html += `<p class="finding ok"><strong>Guest IPs</strong> ${escapeHtml(intel.metrics.ips.join(', '))}</p>`;
   }
 
   if (intel.recent_events?.length) {

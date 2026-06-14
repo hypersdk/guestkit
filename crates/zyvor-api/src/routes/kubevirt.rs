@@ -44,6 +44,10 @@ pub struct KubeVirtVmSummary {
     pub health_score: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub failed_units: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub packetwolf_correlation: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub packetwolf_fleet: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -358,6 +362,14 @@ pub async fn list_kubevirt_vms(
             .pointer("/metadata/annotations/zeus.zyvor.dev/failed-units")
             .and_then(|v| v.as_str())
             .and_then(|s| s.parse().ok());
+        let packetwolf_correlation = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/packetwolf-correlation")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let packetwolf_fleet = vm
+            .pointer("/metadata/annotations/zeus.zyvor.dev/packetwolf-fleet-correlation")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         out.push(KubeVirtVmSummary {
             name: name.clone(),
             namespace: namespace.clone(),
@@ -378,6 +390,8 @@ pub async fn list_kubevirt_vms(
             guest_health,
             health_score,
             failed_units,
+            packetwolf_correlation,
+            packetwolf_fleet,
         });
     }
 
