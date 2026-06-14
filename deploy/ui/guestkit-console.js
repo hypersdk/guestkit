@@ -336,14 +336,50 @@ function applyDockPrefs() {
   if (prefs.compact) dock.classList.add('compact');
   if (prefs.autoHide) dock.classList.add('auto-hide');
   if (prefs.pinned) dock.classList.add('pinned');
-  const offset = prefs.position === 'left' || prefs.position === 'right' ? '24px' : `${(prefs.compact ? 56 : 72) + 16}px`;
+  const offset = prefs.position === 'left' || prefs.position === 'right' ? '24px' : '92px';
   document.documentElement.style.setProperty('--iw-dock-offset', offset);
+}
+
+function setupDockMagnification() {
+  const dock = gk$('#commandDock');
+  const inner = dock?.querySelector('.mac-dock-inner');
+  if (!inner) return;
+
+  const items = () => [...inner.querySelectorAll('.mac-dock-item, .dock-item')];
+  const RANGE = 110;
+  const MAX_BOOST = 0.55;
+
+  function resetScales() {
+    items().forEach((item) => item.style.setProperty('--dock-scale', '1'));
+  }
+
+  function onPointerMove(e) {
+    const pointer = dock?.classList.contains('pos-left') || dock?.classList.contains('pos-right')
+      ? e.clientY
+      : e.clientX;
+
+    items().forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const center = dock?.classList.contains('pos-left') || dock?.classList.contains('pos-right')
+        ? rect.top + rect.height / 2
+        : rect.left + rect.width / 2;
+      const dist = Math.abs(pointer - center);
+      const t = Math.max(0, 1 - dist / RANGE);
+      const eased = t * t;
+      const scale = 1 + eased * MAX_BOOST;
+      item.style.setProperty('--dock-scale', scale.toFixed(3));
+    });
+  }
+
+  inner.addEventListener('mousemove', onPointerMove);
+  inner.addEventListener('mouseleave', resetScales);
 }
 
 function setupCommandDock() {
   const dock = gk$('#commandDock');
   if (!dock) return;
   applyDockPrefs();
+  setupDockMagnification();
 
   gk$('#dockPinBtn')?.addEventListener('click', () => {
     const prefs = getDockPrefs();

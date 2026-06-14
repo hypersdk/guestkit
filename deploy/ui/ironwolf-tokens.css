@@ -45,7 +45,7 @@ html[data-theme="ironwolf"] {
   --iw-menubar-h: 2.75rem;
   --iw-sidebar-w: 248px;
   --iw-inspector-w: 300px;
-  --iw-dock-offset: 5.5rem;
+  --iw-dock-offset: 5.75rem;
 
   --iw-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
   --iw-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

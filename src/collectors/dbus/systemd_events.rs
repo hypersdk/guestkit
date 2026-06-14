@@ -135,7 +135,7 @@ async fn run_subscriber_async() -> anyhow::Result<()> {
     }
 
     let conn = zbus::Connection::system().await?;
-    let proxy = ManagerProxy::new(&conn)?;
+    let proxy = ManagerProxy::new(&conn).await?;
     let mut unit_new = proxy.receive_unit_new().await?;
     let mut unit_removed = proxy.receive_unit_removed().await?;
     let mut job_new = proxy.receive_job_new().await?;

@@ -201,7 +201,8 @@ spec:
   selector:
     app: zyvor-api
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080
       {{- if eq .Values.zyvorApi.service.type "NodePort" }}
       nodePort: {{ .Values.zyvorApi.service.nodePort }}

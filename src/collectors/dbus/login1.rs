@@ -6,6 +6,14 @@ use guestkit_agent_protocol::{LoggedInUser, LoginState, ShutdownInhibitor};
 use zbus::blocking::Connection;
 use zbus::zvariant::OwnedValue;
 
+fn field_string(fields: &[zbus::zvariant::Value<'_>], idx: usize) -> String {
+    fields
+        .get(idx)
+        .and_then(|v| v.downcast_ref::<String>().ok())
+        .map(|s| s.clone())
+        .unwrap_or_default()
+}
+
 pub fn collect_login_state() -> Result<LoginState> {
     let conn = Connection::system().context("connect to system dbus")?;
     let manager = zbus::blocking::Proxy::new(
@@ -15,10 +23,7 @@ pub fn collect_login_state() -> Result<LoginState> {
         "org.freedesktop.login1.Manager",
     )?;
 
-    let idle_hint: bool = manager
-        .get_property("IdleHint")
-        .unwrap_or(Ok(false))
-        .unwrap_or(false);
+    let idle_hint: bool = manager.get_property("IdleHint").unwrap_or(false);
 
     let sessions_raw: Vec<OwnedValue> = manager.call("ListSessions", &()).unwrap_or_default();
     let mut logged_in_users = Vec::new();
@@ -28,19 +33,9 @@ pub fn collect_login_state() -> Result<LoginState> {
             if fields.len() < 4 {
                 continue;
             }
-            let user_name = fields
-                .get(2)
-                .and_then(|v| v.downcast_ref::<String>())
-                .map(|s| s.clone())
-                .unwrap_or_default();
-            let seat = fields
-                .get(3)
-                .and_then(|v| v.downcast_ref::<String>())
-                .map(|s| s.clone())
-                .unwrap_or_default();
             logged_in_users.push(LoggedInUser {
-                name: user_name,
-                seat,
+                name: field_string(fields, 2),
+                seat: field_string(fields, 3),
                 session_type: "unknown".into(),
                 active: true,
             });
@@ -56,26 +51,10 @@ pub fn collect_login_state() -> Result<LoginState> {
                 continue;
             }
             inhibitors.push(ShutdownInhibitor {
-                what: fields
-                    .get(2)
-                    .and_then(|v| v.downcast_ref::<String>())
-                    .map(|s| s.clone())
-                    .unwrap_or_default(),
-                who: fields
-                    .get(3)
-                    .and_then(|v| v.downcast_ref::<String>())
-                    .map(|s| s.clone())
-                    .unwrap_or_default(),
-                why: fields
-                    .get(4)
-                    .and_then(|v| v.downcast_ref::<String>())
-                    .map(|s| s.clone())
-                    .unwrap_or_default(),
-                mode: fields
-                    .get(5)
-                    .and_then(|v| v.downcast_ref::<String>())
-                    .map(|s| s.clone())
-                    .unwrap_or_default(),
+                what: field_string(fields, 2),
+                who: field_string(fields, 3),
+                why: field_string(fields, 4),
+                mode: field_string(fields, 5),
             });
         }
     }

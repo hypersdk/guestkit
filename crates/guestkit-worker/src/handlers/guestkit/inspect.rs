@@ -224,7 +224,7 @@ impl InspectHandler {
             context.report_progress("export", Some(90), "Writing output file").await?;
             self.write_output(&inspection_result, output).await?
         } else {
-            // Write to temp directory
+            tokio::fs::create_dir_all(&context.work_dir).await?;
             let temp_file = context.work_dir.join(format!("{}-result.json", context.job_id));
             tokio::fs::write(
                 &temp_file,
