@@ -1417,6 +1417,7 @@ dependencies = [
  "dirs",
  "env_logger",
  "evtx",
+ "flate2",
  "futures-util",
  "glob",
  "guestkit-agent-protocol",

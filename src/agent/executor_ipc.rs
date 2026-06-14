@@ -142,6 +142,18 @@ fn dispatch(executor: &crate::agent::executor::Executor, req: &ExecRequest) -> E
                 error: Some(e.to_string()),
             },
         },
+        "apply_staged_update" => match crate::agent::updater::apply_staged_update_privileged() {
+            Ok(msg) => ExecResponse {
+                ok: true,
+                result: Some(serde_json::json!({ "message": msg })),
+                error: None,
+            },
+            Err(e) => ExecResponse {
+                ok: false,
+                result: None,
+                error: Some(e.to_string()),
+            },
+        },
         other => ExecResponse {
             ok: false,
             result: None,

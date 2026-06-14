@@ -17,6 +17,7 @@ pub mod rdp;
 pub mod snapshot_hooks;
 pub mod support_bundle;
 pub mod transport;
+pub mod updater;
 
 pub use agent_call::call_agent_socket;
 pub use cli::{

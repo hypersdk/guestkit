@@ -31,6 +31,8 @@ tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
   zyvor-guest-agent.service zyvor-guest-agent-exec.service \
   zyvor-guest-updater.service zyvor-guest-updater.timer \
   agent-policy.yaml guest-agent.toml hooks
+LINUX_TAR_SHA256="$(sha256sum "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" | awk '{print $1}')"
+echo "${LINUX_TAR_SHA256}" > "${DIST}/linux/zyvor-vm-tools-linux-amd64.sha256"
 
 echo "Building DEB..."
 rm -rf "${DEB_ROOT}"
@@ -137,7 +139,7 @@ cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/de
 cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true
 
 cat > "${ISO_DIR}/manifest.json" <<EOF
-{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64","windows-amd64"]}
+{"version":"${VERSION}","product":"Zeus VM Tools","platforms":["linux-amd64","windows-amd64"],"linuxTarSha256":"${LINUX_TAR_SHA256}"}
 EOF
 
 if command -v genisoimage >/dev/null; then
