@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Standalone Zeus VM Tools guest agent entry (Linux + Windows).
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::env;
 
 #[cfg(windows)]
@@ -59,6 +59,24 @@ async fn main() -> Result<()> {
     if args.iter().any(|a| a == "--apply-update") {
         let msg = guestkit::agent::updater::stage_update(true).await?;
         println!("{msg}");
+        return Ok(());
+    }
+
+    if args.iter().any(|a| a == "--scheduled-update") {
+        let msg = guestkit::agent::updater::run_scheduled_update().await?;
+        println!("{msg}");
+        return Ok(());
+    }
+
+    if args.iter().any(|a| a == "sign-manifest") {
+        let json = args
+            .iter()
+            .position(|a| a == "sign-manifest")
+            .and_then(|i| args.get(i + 1))
+            .map(String::as_str)
+            .context("usage: zyvor-guest-agent sign-manifest '<json>'")?;
+        let sig = guestkit::agent::updater::sign_manifest_cli(json)?;
+        println!("{sig}");
         return Ok(());
     }
 
