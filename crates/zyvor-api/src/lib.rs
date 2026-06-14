@@ -8,6 +8,7 @@ pub mod error;
 pub mod guest_agent_ca;
 pub mod guest_agent_mtls;
 pub mod guest_agent_vm;
+pub mod guest_remediation_auth;
 pub mod guest_actions;
 pub mod guest_action_policy;
 pub mod kubevirt_guest_pull;

@@ -38,6 +38,7 @@ pub struct VMToolsBundleInfo {
     pub windows_install_ps1_url: Option<String>,
     pub iso_url: Option<String>,
     pub agent_binary_url: String,
+    pub linux_tar_sha256: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -119,6 +120,19 @@ pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>)
         windows_install_ps1_url: non_empty(Some(spec.windows.install_ps1.clone())),
         iso_url: non_empty(Some(spec.iso.clone())),
         agent_binary_url: agent,
+        linux_tar_sha256: non_empty(
+            std::env::var("VMTOOLS_LINUX_TAR_SHA256")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let sha = spec.linux.tar_sha256.clone();
+                    if sha.is_empty() {
+                        None
+                    } else {
+                        Some(sha)
+                    }
+                }),
+        ),
     }
 }
 

@@ -33,11 +33,32 @@ async fn main() -> Result<()> {
     }
 
     if args.iter().any(|a| a == "--check-update") {
-        log::info!(
-            "Zyvor GuestAgent update check (stub) — current version {}",
-            guestkit::VERSION
-        );
-        println!("zyvor-guest-agent {} (update channel: stable, no signed updater yet)", guestkit::VERSION);
+        let check = guestkit::agent::updater::check_update().await?;
+        if check.update_available {
+            println!(
+                "update available: {} -> {} (channel {})",
+                check.current_version,
+                check.remote_version.unwrap_or_default(),
+                check.channel
+            );
+            if let Some(url) = &check.artifact_url {
+                println!("artifact: {url}");
+            }
+            if let Some(sha) = &check.artifact_sha256 {
+                println!("sha256: {sha}");
+            }
+        } else {
+            println!(
+                "zyvor-guest-agent {} is current (channel {})",
+                check.current_version, check.channel
+            );
+        }
+        return Ok(());
+    }
+
+    if args.iter().any(|a| a == "--apply-update") {
+        let msg = guestkit::agent::updater::stage_update(true).await?;
+        println!("{msg}");
         return Ok(());
     }
 
