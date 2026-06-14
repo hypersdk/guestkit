@@ -111,6 +111,10 @@ pub async fn post_restart_unit(
     user: Option<Extension<AuthUserClaims>>,
     Json(body): Json<Value>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    crate::guest_remediation_auth::require_guest_remediation_requester(
+        &state,
+        user.as_deref(),
+    )?;
     let unit = body
         .get("unit")
         .and_then(|v| v.as_str())
@@ -185,6 +189,10 @@ pub async fn post_collect_support_bundle(
     Path((namespace, name)): Path<(String, String)>,
     user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    crate::guest_remediation_auth::require_guest_remediation_requester(
+        &state,
+        user.as_deref(),
+    )?;
     crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref(), true).await?;
 
     if crate::guest_actions::policy_requires_approval(state.kube.as_ref()).await {
@@ -229,7 +237,12 @@ pub async fn post_collect_support_bundle(
 pub async fn post_pre_snapshot_freeze(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    crate::guest_remediation_auth::require_guest_remediation_requester(
+        &state,
+        user.as_deref(),
+    )?;
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -250,7 +263,12 @@ pub async fn post_pre_snapshot_freeze(
 pub async fn post_post_snapshot_thaw(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    crate::guest_remediation_auth::require_guest_remediation_requester(
+        &state,
+        user.as_deref(),
+    )?;
     let resp = pull_for_vm_api(
         &state,
         &namespace,

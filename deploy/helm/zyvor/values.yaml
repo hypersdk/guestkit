@@ -113,6 +113,7 @@ vmtools:
     version: "0.1.0"
     channel: stable
     baseUrl: ""
+    linuxTarSha256: ""
   reconcile:
     enabled: false
     schedule: "*/15 * * * *"

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub const ROLE_ADMIN: &str = "admin";
 pub const ROLE_OPERATOR: &str = "operator";
+pub const ROLE_VIEWER: &str = "viewer";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IdentitySettings {

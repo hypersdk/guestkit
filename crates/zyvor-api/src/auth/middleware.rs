@@ -30,6 +30,7 @@ pub fn is_public_route(method: &str, path: &str) -> bool {
             | ("POST", "/api/v1/auth/saml/acs")
             | ("POST", "/api/v1/auth/local")
             | ("GET", "/api/v1/settings/sso/saml/metadata")
+            | ("GET", "/api/v1/vmtools/bundle")
     )
 }
 

@@ -115,6 +115,10 @@ spec:
               value: {{ .Values.vmtools.bundle.version | default "0.1.0" | quote }}
             - name: VMTOOLS_CHANNEL
               value: {{ .Values.vmtools.bundle.channel | default "stable" | quote }}
+            {{- if .Values.vmtools.bundle.linuxTarSha256 }}
+            - name: VMTOOLS_LINUX_TAR_SHA256
+              value: {{ .Values.vmtools.bundle.linuxTarSha256 | quote }}
+            {{- end }}
             {{- end }}
             {{- if .Values.vmtools.reconcile.preferIso }}
             - name: VMTOOLS_RECONCILE_ISO
