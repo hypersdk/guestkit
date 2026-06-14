@@ -173,7 +173,7 @@ fn guest_os(vmi: &Value) -> (Option<String>, Option<String>, Option<String>) {
     (os_name, os_version, hostname)
 }
 
-fn build_guest_info(vm: Option<&Value>, vmi: Option<&Value>, vmi_running: bool) -> GuestAgentInfo {
+pub(crate) fn build_guest_info(vm: Option<&Value>, vmi: Option<&Value>, vmi_running: bool) -> GuestAgentInfo {
     let connected = vmi.map(agent_connected).unwrap_or(false);
     let (os_name, os_version, hostname) = vmi.map(guest_os).unwrap_or((None, None, None));
     let is_windows = crate::kubevirt_guest_agent::vm_is_windows(vm, vmi);

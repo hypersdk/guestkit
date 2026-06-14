@@ -197,6 +197,8 @@ fn from_migration_report_unit_pipeline() {
         cloud_init: None,
         network_probes: None,
         snapshot_readiness: None,
+        process: None,
+        hardware: None,
     };
     let boot = BootabilityReport {
         score: 70.0,

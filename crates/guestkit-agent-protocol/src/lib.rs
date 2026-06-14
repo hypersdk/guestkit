@@ -6,6 +6,8 @@
 pub mod capabilities;
 pub mod error;
 pub mod frame;
+pub mod guest_info;
+pub mod health;
 pub mod rpc;
 
 pub use capabilities::{
@@ -13,4 +15,14 @@ pub use capabilities::{
 };
 pub use error::{AgentError, RpcErrorCode};
 pub use frame::{read_frame, read_line, write_delimited_line, write_frame, write_line};
+pub use guest_info::{
+    GuestHealthComponents, GuestIdentity, GuestInfo, GuestOsInfo, GuestVirtualizationInfo,
+    ServiceHealth, SystemdEvent,
+};
+pub use health::{
+    BootAnalysis, BootUnitTiming, CriticalService, DnsHealth, GuestHealth, HealthLevel,
+    HookResult, JournalEntrySummary, JournalSlice, LoginState, LoggedInUser, NetworkHealth,
+    Recommendation, RemediationActionResult, RemediationResult, SecurityHealthSummary,
+    ShutdownInhibitor, SnapshotReadinessReport, StorageHealth, TimedateHealth,
+};
 pub use rpc::{JsonRpcRequest, JsonRpcResponse, RpcMethod};

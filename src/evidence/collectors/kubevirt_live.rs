@@ -14,10 +14,15 @@ pub fn collect_kubevirt_live() -> KubevirtEvidence {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "localhost".into());
     let agent_service_active = Command::new("systemctl")
-        .args(["is-active", "guestkit-agent"])
+        .args(["is-active", "zyvor-guest-agent"])
         .output()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "active")
-        .unwrap_or(false);
+        .unwrap_or(false)
+        || Command::new("systemctl")
+            .args(["is-active", "guestkit-agent"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "active")
+            .unwrap_or(false);
     KubevirtEvidence {
         hostname,
         virtio_channel_present,

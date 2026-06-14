@@ -74,6 +74,16 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/reboot` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/shutdown` |
 | POST | `/api/v1/kubevirt/vms/{ns}/{name}/vmtools/exec` |
+| GET | `/api/v1/kubevirt/vms/{ns}/{name}/guest/info` |
+| GET | `/api/v1/kubevirt/vms/{ns}/{name}/guest/systemd` |
+| GET | `/api/v1/kubevirt/vms/{ns}/{name}/guest/logs` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/guest/actions/restart-unit` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/guest/actions/collect-support-bundle` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/guest/actions/pre-snapshot-freeze` |
+| POST | `/api/v1/kubevirt/vms/{ns}/{name}/guest/actions/post-snapshot-thaw` |
+| POST | `/api/v1/guest-agents/register` |
+| POST | `/api/v1/guest-agents/{id}/heartbeat` |
+| POST | `/api/v1/guest-agents/{id}/report` |
 
 Install query params: `restart=true|false`, `method=auto|cloud-init|qga|iso`
 

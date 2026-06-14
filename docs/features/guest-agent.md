@@ -97,11 +97,46 @@ GuestKit implements common QGA commands including `guest-ping`, `guest-exec`, `g
 - `guestkit.ping`
 - `guestkit.getVersion`
 - `guestkit.getCapabilities`
-- `guestkit.getEvidence`
+- `guestkit.getEvidence` (includes embedded `guest_health`)
+- `guestkit.getStatus`
+- `guestkit.getGuestHealth`
+- `guestkit.getGuestInfo`
+- `guestkit.getSystemdUnits`
+- `guestkit.getSystemdUnit`
+- `guestkit.getSystemdEvents`
+- `guestkit.getProcesses`
+- `guestkit.getFailedUnits`
+- `guestkit.getBootAnalysis`
+- `guestkit.getJournalSlice`
+- `guestkit.getLoginState`
+- `guestkit.getDnsState`
+- `guestkit.getTimedateState`
+- `guestkit.getSnapshotReadiness`
 - `guestkit.doctor`
 - `guestkit.migrateScore`
+- `guestkit.getMetrics`
+- `guestkit.freezeFilesystem` / `guestkit.thawFilesystem`
+- `guestkit.restartUnit` (policy-gated; optional executor sidecar)
+- `guestkit.executeRemediationPlan`
+- `guestkit.collectSupportBundle`
 - `guestkit.runFixPlan`
 - `guestkit.runFixPlanRollback`
+
+- QGA `execute` aliases include `guestkit-get-guest-health`, `guestkit-get-guest-info`, `guestkit-get-systemd-events`, `guestkit-get-processes`, and related commands.
+
+## Local API
+
+Read-only and policy-gated methods are available on `/var/run/zyvor/guest-agent.sock` (JSON-RPC framing).
+
+Privileged remediation runs on `/var/run/zyvor/guest-agent-exec.sock` when `zyvor-guest-agent-exec.service` is enabled.
+
+## Outbound Zeus push
+
+Configure `/etc/zyvor/guest-agent.toml` with `zeus_url`, optional mTLS cert paths, and `interval_secs`. The agent registers and pushes `GuestHealth` + metrics to:
+
+- `POST /api/v1/guest-agents/register`
+- `POST /api/v1/guest-agents/{id}/heartbeat`
+- `POST /api/v1/guest-agents/{id}/report`
 
 ## Worker jobs
 
@@ -109,6 +144,39 @@ When `guestkit-worker` runs with a live VM:
 
 - `guestkit.agent.evidence` — fetch via agent-proxy HTTP
 - `guestkit.agent.fix` — apply fix plan via agent-proxy
+
+## Deep Linux intelligence (v1.2)
+
+Collectors use **systemd D-Bus** (`org.freedesktop.systemd1.Manager` boot timestamps, full unit/service properties, live job/unit signals), **journald** via `journalctl` with cursor tracking and error pattern summaries, **process/cgroup** data from `/proc` (top CPU/memory, listening ports, PID→unit mapping), and **PSI pressure** from `/proc/pressure/*`.
+
+`GuestHealth` now includes component scores (`boot`, `systemd`, `network`, `dns`, `storage`, `security`, `agent`), numeric `score`, `reasons`, and per-failed-unit `last_failure` text from journal correlation.
+
+In-guest status (read-only):
+
+```bash
+zyvor-guest-agent status
+# optional: --socket /var/run/zyvor/guest-agent.sock
+```
+
+Zeus API routes (via `zyvor-api`):
+
+- `GET .../guest/health`
+- `GET .../guest/journal?unit=&boot=current|previous`
+- `GET .../guest/processes`
+- `GET .../guest/systemd/units/{unit}`
+- `GET .../guest/systemd/events`
+
+Heartbeat/report push includes `recent_events` from the systemd D-Bus black-box recorder (stored in Redis).
+
+**Guest remediation (Zeus UI):** restart failed units, collect a support bundle (`tar.zst` with evidence, health, semantic analysis, journal excerpts), and view per-unit journal slices from the Guest Intelligence card when a VM is selected.
+
+**Update channel (stub):** `zyvor-guest-updater.timer` runs `zyvor-guest-agent --check-update` daily (logs current version; signed auto-update deferred).
+
+```bash
+zyvor-guest-agent --check-update
+```
+
+**Hardening:** the agent still runs as root for privileged remediation; non-root `zyvor-agent` user + syscall sandbox is deferred until executor permissions are fully audited.
 
 ## Security
 

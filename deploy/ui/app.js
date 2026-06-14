@@ -33,6 +33,7 @@ const state = {
   clusterNamespaces: [],
   selectedClusterVm: null,
   lastClusterGuestInfo: null,
+  lastClusterGuestIntel: null,
   lastClusterBootInspect: null,
   lastClusterInspect: null,
   lastClusterBriefing: null,
@@ -54,6 +55,10 @@ const AGENT_QUICK_RPC = [
   { label: 'Ping', method: 'guestkit.ping', params: {} },
   { label: 'Version', method: 'guestkit.getVersion', params: {} },
   { label: 'Capabilities', method: 'guestkit.getCapabilities', params: {} },
+  { label: 'Guest health', method: 'guestkit.getGuestHealth', params: {} },
+  { label: 'Guest info', method: 'guestkit.getGuestInfo', params: {} },
+  { label: 'Processes', method: 'guestkit.getProcesses', params: {} },
+  { label: 'Boot analysis', method: 'guestkit.getBootAnalysis', params: {} },
   { label: 'Metrics', method: 'guestkit.getMetrics', params: {} },
   { label: 'Filesystem', method: 'guestkit.getFilesystem', params: {} },
   { label: 'Whoami', method: 'guestkit.exec', params: { command: ['whoami'] } },
@@ -567,7 +572,7 @@ function updateSelectionPanels() {
     $$('#clusterDeck [data-cluster-action]').forEach((b) => { b.disabled = false; });
     updateClusterLifecycleButtons(state.selectedClusterVm);
     updateVmtoolsLifecycleButtons(state.selectedClusterVm, state.lastClusterGuestInfo);
-    renderClusterDetailDrawer(state.selectedClusterVm, state.lastClusterGuestInfo);
+    renderClusterDetailDrawer(state.selectedClusterVm, state.lastClusterGuestInfo, state.lastClusterGuestIntel);
   } else {
     $('#clusterDetailDrawer')?.classList.add('hidden');
   }
@@ -686,7 +691,7 @@ function renderClusterFleet() {
   });
 }
 
-function renderClusterDetailDrawer(vm, info) {
+function renderClusterDetailDrawer(vm, info, intel) {
   const drawer = $('#clusterDetailDrawer');
   if (!drawer || !vm) {
     drawer?.classList.add('hidden');
@@ -723,6 +728,13 @@ function renderClusterDetailDrawer(vm, info) {
       return `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(ip)}${mac ? ` · ${escapeHtml(mac)}` : ''}</dd>`;
     }).join('');
     meta.innerHTML += `<dt>Interfaces</dt>${ifaceRows}`;
+  }
+  const drawerLinks = $('#clusterDrawerLinks');
+  if (drawerLinks && intel?.guest_health) {
+    const healthEl = document.createElement('div');
+    healthEl.className = 'guest-intel-drawer';
+    renderGuestIntelligenceCard(healthEl, intel);
+    drawerLinks.appendChild(healthEl);
   }
 }
 
@@ -773,7 +785,7 @@ function selectClusterVm(vm) {
   markWizardComplete('ingest');
   if (state.wizard.step === 'ingest') setWizardStep('assure');
   feed(`Selected cluster VM <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>`, 'ok');
-  renderClusterDetailDrawer(vm, null);
+  renderClusterDetailDrawer(vm, null, null);
   updateClusterLifecycleButtons(vm);
   fetchClusterGuestInfo(false);
   window.GuestKitConsole?.onSelectVmConsole?.();
@@ -914,13 +926,15 @@ async function fetchClusterGuestInfo(showToast = true) {
   feed(`Fetching guest info for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
   setActiveTab('summary');
   try {
-    const [guestRes, bootRes] = await Promise.allSettled([
+    const [guestRes, intelRes, bootRes] = await Promise.allSettled([
       api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent`),
+      api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/info`),
       api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`),
     ]);
     if (guestRes.status === 'rejected') throw guestRes.reason;
     const info = guestRes.value.data;
     state.lastClusterGuestInfo = info;
+    state.lastClusterGuestIntel = intelRes.status === 'fulfilled' ? intelRes.value.data : null;
     state.lastClusterBootInspect = bootRes.status === 'fulfilled' ? bootRes.value.data : null;
     renderClusterGuestSummary(info, state.lastClusterBootInspect);
     setAgentStatus(info.agent_connected ? 'agent connected' : info.health, info.agent_connected);
@@ -1197,6 +1211,179 @@ function runWorkflow(workflow) {
   runAction(workflow);
 }
 
+function renderGuestIntelligenceCard(container, intel) {
+  if (!intel) return;
+  const health = intel.guest_health;
+  if (!health) return;
+  const level = health.guest_health || 'unknown';
+  const levelClass = level === 'healthy' ? 'ok' : level === 'degraded' ? 'warn' : 'err';
+  let html = `<div class="guest-intel-card glass-inset"><h3>Guest Intelligence</h3>`;
+  html += `<p class="finding ${levelClass}"><strong>Health</strong> ${escapeHtml(level)}`;
+  if (health.score) html += ` · score ${health.score}`;
+  html += ` · systemd ${escapeHtml(health.systemd_state || '—')} · ${health.failed_units || 0} failed unit(s)</p>`;
+
+  if (health.components) {
+    html += '<div class="guest-intel-chips">';
+    const chipLabels = {
+      boot: 'Boot',
+      systemd: 'Services',
+      network: 'Network',
+      dns: 'DNS',
+      storage: 'Storage',
+      security: 'Security',
+      agent: 'Agent',
+    };
+    Object.entries(chipLabels).forEach(([key, label]) => {
+      const compLevel = health.components[key] || 'unknown';
+      const chipClass = compLevel === 'healthy' ? 'ok' : compLevel === 'degraded' ? 'warn' : compLevel === 'unhealthy' ? 'err' : '';
+      html += `<span class="guest-intel-chip ${chipClass}">${escapeHtml(label)}: ${escapeHtml(compLevel)}</span>`;
+    });
+    html += '</div>';
+  }
+
+  if (health.reasons?.length) {
+    html += `<p class="finding warn"><strong>Reasons</strong> ${escapeHtml(health.reasons.join(', '))}</p>`;
+  }
+
+  if (health.journal_hints?.length) {
+    html += '<p class="finding warn"><strong>Journal hints</strong></p><ul class="guest-intel-recs">';
+    health.journal_hints.slice(0, 5).forEach((hint) => {
+      html += `<li>${escapeHtml(hint)}</li>`;
+    });
+    html += '</ul>';
+  }
+
+  if (health.network) {
+    const dnsOk = health.network.dns_working;
+    html += `<p class="finding ${dnsOk ? 'ok' : 'warn'}"><strong>Network</strong> DNS ${dnsOk ? 'ok' : 'broken'} · default route ${health.network.default_route ? 'yes' : 'no'}</p>`;
+  }
+  if (health.storage) {
+    html += `<p class="finding ${health.storage.root_usage_percent >= 90 ? 'warn' : 'ok'}"><strong>Storage</strong> root ${health.storage.root_usage_percent || 0}% · inodes ${health.storage.inode_usage_percent || 0}%</p>`;
+  }
+
+  const bootAnalysis = intel.boot_analysis;
+  if (bootAnalysis?.slow_units?.length) {
+    html += '<p class="finding ok"><strong>Slow boot units</strong></p><ul class="guest-intel-recs">';
+    bootAnalysis.slow_units.slice(0, 5).forEach((u) => {
+      html += `<li>${escapeHtml(u.name)} — ${u.time_ms}ms</li>`;
+    });
+    html += '</ul>';
+    if (bootAnalysis.total_boot_time_ms) {
+      html += `<p class="finding ok">Total boot ~${Math.round(bootAnalysis.total_boot_time_ms / 1000)}s (kernel ${bootAnalysis.kernel_time_ms || 0}ms · userspace ${bootAnalysis.userspace_time_ms || 0}ms)</p>`;
+    }
+  }
+
+  if (health.critical_services?.length) {
+    html += '<ul class="guest-intel-services">';
+    health.critical_services.slice(0, 5).forEach((svc) => {
+      const failure = svc.last_failure ? `<br><em>${escapeHtml(svc.last_failure)}</em>` : '';
+      html += `<li class="finding err"><strong>${escapeHtml(svc.name)}</strong> — ${escapeHtml(svc.reason || svc.state)}${failure}<br><span>${escapeHtml(svc.suggested_action || '')}</span></li>`;
+    });
+    html += '</ul>';
+  }
+  if (health.recommendations?.length) {
+    html += '<p class="finding ok"><strong>Recommendations</strong></p><ul class="guest-intel-recs">';
+    health.recommendations.slice(0, 3).forEach((r) => {
+      html += `<li>${escapeHtml(r.title)} — ${escapeHtml(r.detail)}</li>`;
+    });
+    html += '</ul>';
+  }
+  if (intel.report_source) {
+    html += `<p class="finding ok"><strong>Report source</strong> ${escapeHtml(intel.report_source)}</p>`;
+  }
+
+  if (intel.recent_events?.length) {
+    html += '<p class="finding ok"><strong>Recent systemd events</strong></p><ul class="guest-intel-recs">';
+    intel.recent_events.slice(0, 8).forEach((ev) => {
+      const detail = ev.detail || ev.kind || '';
+      html += `<li><code>${escapeHtml(ev.timestamp || '')}</code> ${escapeHtml(ev.unit || '')} — ${escapeHtml(detail)}</li>`;
+    });
+    html += '</ul>';
+  }
+
+  html += '<div class="guest-intel-actions">';
+  html += `<button type="button" class="btn glass sm" data-guest-action="collect-bundle">Collect support bundle</button>`;
+  html += `<button type="button" class="btn glass sm" data-guest-action="refresh">Refresh guest intel</button>`;
+  if (health.critical_services?.length) {
+    health.critical_services.slice(0, 3).forEach((svc) => {
+      html += `<button type="button" class="btn glass sm guest-intel-unit-btn" data-guest-action="restart-unit" data-unit="${escapeHtml(svc.name)}">Restart ${escapeHtml(svc.name)}</button>`;
+      html += `<button type="button" class="btn glass sm guest-intel-unit-btn" data-guest-action="view-journal" data-unit="${escapeHtml(svc.name)}">Journal ${escapeHtml(svc.name)}</button>`;
+    });
+  }
+  html += '</div>';
+
+  html += '</div>';
+  container.innerHTML += html;
+}
+
+async function clusterGuestRestartUnit(unit) {
+  const vm = state.selectedClusterVm;
+  if (!vm || !unit) return;
+  feed(`Restarting <strong>${escapeHtml(unit)}</strong> in guest…`);
+  try {
+    await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/actions/restart-unit`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit }),
+      },
+    );
+    toast(`Restarted ${unit}`, 'ok');
+    await fetchClusterGuestInfo(false);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function clusterGuestCollectBundle() {
+  const vm = state.selectedClusterVm;
+  if (!vm) return;
+  feed('Collecting guest support bundle…');
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/actions/collect-support-bundle`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      },
+    );
+    const bundle = data.data?.bundle;
+    const inner = bundle?.result || bundle;
+    showRaw({ mode: 'guest-support-bundle', bundle: inner });
+    if (inner?.encoding === 'base64' && inner?.data) {
+      const binary = Uint8Array.from(atob(inner.data), (c) => c.charCodeAt(0));
+      const ext = inner.format === 'tar.zst' ? 'tar.zst' : 'json';
+      const blob = new Blob([binary], { type: ext === 'tar.zst' ? 'application/zstd' : 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${vm.namespace}-${vm.name}-support.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast('Support bundle collected', 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function clusterGuestViewJournal(unit) {
+  const vm = state.selectedClusterVm;
+  if (!vm || !unit) return;
+  feed(`Fetching journal for <strong>${escapeHtml(unit)}</strong>…`);
+  try {
+    const data = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/journal?unit=${encodeURIComponent(unit)}&boot=current`,
+    );
+    showRaw({ mode: 'guest-journal', unit, slice: data.data });
+    toast(`Journal loaded for ${unit}`, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
 function renderClusterGuestSummary(info, bootInspect) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
@@ -1218,6 +1405,7 @@ function renderClusterGuestSummary(info, bootInspect) {
     const ips = info.interfaces.map((i) => i.ipAddress).filter(Boolean).join(', ');
     if (ips) content.innerHTML += `<p class="finding ok"><strong>Interfaces</strong> ${escapeHtml(ips)}</p>`;
   }
+  renderGuestIntelligenceCard(content, state.lastClusterGuestIntel);
   if (bootInspect) {
     const bootClass = bootInspect.available ? 'ok' : 'warn';
     const bootDetail = [
@@ -1259,7 +1447,7 @@ function renderClusterGuestSummary(info, bootInspect) {
   showRaw({ mode: 'kubevirt-live', guest_agent: info, boot_inspect: bootInspect || null });
   const vm = state.selectedClusterVm;
   if (vm) {
-    renderClusterDetailDrawer(vm, info);
+    renderClusterDetailDrawer(vm, info, state.lastClusterGuestIntel);
     updateVmtoolsLifecycleButtons(vm, info);
     renderClusterCopilot(info, vm, bootInspect).catch((e) => {
       console.error('Cluster Copilot render failed:', e);
@@ -2870,6 +3058,16 @@ function setupActions() {
   });
 
   $('#fleetEmptyRefresh')?.addEventListener('click', () => loadClusterFleet());
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-guest-action]');
+    if (!btn || !state.selectedClusterVm) return;
+    const action = btn.dataset.guestAction;
+    if (action === 'restart-unit') clusterGuestRestartUnit(btn.dataset.unit);
+    else if (action === 'view-journal') clusterGuestViewJournal(btn.dataset.unit);
+    else if (action === 'collect-bundle') clusterGuestCollectBundle();
+    else if (action === 'refresh') fetchClusterGuestInfo(true);
+  });
 
   $$('[data-cluster-action]').forEach((btn) => {
     btn.addEventListener('click', () => {

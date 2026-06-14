@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Protocol version string.
-pub const PROTOCOL_VERSION: &str = "1.0";
+pub const PROTOCOL_VERSION: &str = "1.2";
 
 /// Virtio-serial channel name — same as QEMU guest agent (libvirt `qemu-agent-command`).
 pub const VIRTIO_CHANNEL_NAME: &str = "org.qemu.guest_agent.0";
@@ -30,6 +30,24 @@ pub const METHOD_GET_FILESYSTEM: &str = "guestkit.getFilesystem";
 pub const METHOD_EXEC: &str = "guestkit.exec";
 pub const METHOD_ENABLE_RDP: &str = "guestkit.enableRdp";
 pub const METHOD_DISABLE_RDP: &str = "guestkit.disableRdp";
+pub const METHOD_GET_GUEST_HEALTH: &str = "guestkit.getGuestHealth";
+pub const METHOD_GET_SYSTEMD_UNITS: &str = "guestkit.getSystemdUnits";
+pub const METHOD_GET_FAILED_UNITS: &str = "guestkit.getFailedUnits";
+pub const METHOD_GET_BOOT_ANALYSIS: &str = "guestkit.getBootAnalysis";
+pub const METHOD_GET_JOURNAL_SLICE: &str = "guestkit.getJournalSlice";
+pub const METHOD_GET_LOGIN_STATE: &str = "guestkit.getLoginState";
+pub const METHOD_GET_DNS_STATE: &str = "guestkit.getDnsState";
+pub const METHOD_GET_TIMEDATE_STATE: &str = "guestkit.getTimedateState";
+pub const METHOD_GET_SNAPSHOT_READINESS: &str = "guestkit.getSnapshotReadiness";
+pub const METHOD_FREEZE_FILESYSTEM: &str = "guestkit.freezeFilesystem";
+pub const METHOD_THAW_FILESYSTEM: &str = "guestkit.thawFilesystem";
+pub const METHOD_RESTART_UNIT: &str = "guestkit.restartUnit";
+pub const METHOD_EXECUTE_REMEDIATION_PLAN: &str = "guestkit.executeRemediationPlan";
+pub const METHOD_COLLECT_SUPPORT_BUNDLE: &str = "guestkit.collectSupportBundle";
+pub const METHOD_GET_GUEST_INFO: &str = "guestkit.getGuestInfo";
+pub const METHOD_GET_SYSTEMD_UNIT: &str = "guestkit.getSystemdUnit";
+pub const METHOD_GET_SYSTEMD_EVENTS: &str = "guestkit.getSystemdEvents";
+pub const METHOD_GET_PROCESSES: &str = "guestkit.getProcesses";
 
 /// Capability flags returned during negotiation.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -61,6 +79,24 @@ impl AgentCapabilities {
                 METHOD_EXEC.to_string(),
                 METHOD_ENABLE_RDP.to_string(),
                 METHOD_DISABLE_RDP.to_string(),
+                METHOD_GET_GUEST_HEALTH.to_string(),
+                METHOD_GET_SYSTEMD_UNITS.to_string(),
+                METHOD_GET_FAILED_UNITS.to_string(),
+                METHOD_GET_BOOT_ANALYSIS.to_string(),
+                METHOD_GET_JOURNAL_SLICE.to_string(),
+                METHOD_GET_LOGIN_STATE.to_string(),
+                METHOD_GET_DNS_STATE.to_string(),
+                METHOD_GET_TIMEDATE_STATE.to_string(),
+                METHOD_GET_SNAPSHOT_READINESS.to_string(),
+                METHOD_FREEZE_FILESYSTEM.to_string(),
+                METHOD_THAW_FILESYSTEM.to_string(),
+                METHOD_RESTART_UNIT.to_string(),
+                METHOD_EXECUTE_REMEDIATION_PLAN.to_string(),
+                METHOD_COLLECT_SUPPORT_BUNDLE.to_string(),
+                METHOD_GET_GUEST_INFO.to_string(),
+                METHOD_GET_SYSTEMD_UNIT.to_string(),
+                METHOD_GET_SYSTEMD_EVENTS.to_string(),
+                METHOD_GET_PROCESSES.to_string(),
                 METHOD_RUN_FIX_PLAN.to_string(),
                 METHOD_RUN_FIX_PLAN_ROLLBACK.to_string(),
             ],

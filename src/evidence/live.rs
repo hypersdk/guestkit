@@ -18,12 +18,17 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
     let packages = collect_packages_live();
     let security = collect_security_live();
     let vm_tools = collect_vm_tools_live();
-    let systemd = collect_systemd_live();
+    let systemd = collect_systemd_live().map(|mut info| {
+        info.runtime = crate::collectors::dbus::collect_systemd_runtime_safe();
+        info
+    });
     let kubevirt = Some(crate::evidence::collectors::collect_kubevirt_live());
     let cloud_init = Some(crate::evidence::collectors::collect_cloud_init_live());
     let network_probes = Some(crate::evidence::collectors::collect_network_probes_live());
     let snapshot_readiness = Some(crate::evidence::collectors::collect_snapshot_readiness_live());
     let windows = crate::evidence::collectors::collect_windows_live();
+    let process = Some(crate::collectors::process::collect_process_evidence());
+    let hardware = Some(crate::collectors::hardware::collect_hardware_evidence());
 
     Ok(EvidenceSnapshot {
         schema_version: SCHEMA_VERSION,
@@ -43,6 +48,8 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
         cloud_init,
         network_probes,
         snapshot_readiness,
+        process,
+        hardware,
     })
 }
 
@@ -224,6 +231,7 @@ fn collect_network_live() -> NetworkEvidence {
             }
         }
     }
+    crate::collectors::network_live::enrich_network_evidence(&mut network);
     network
 }
 

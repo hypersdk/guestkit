@@ -17,6 +17,10 @@ pub struct SemanticAnalysis {
     pub timer_units: Vec<UnitSummary>,
     pub socket_units: Vec<UnitSummary>,
     pub problem_units: Vec<UnitSummary>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub journal_hints: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub runtime_failed_units: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -94,7 +98,32 @@ pub fn analyze_semantic(evidence: &EvidenceSnapshot) -> SemanticAnalysis {
                 path: hint.path.clone(),
             });
         }
+
+        if let Some(runtime) = &systemd.runtime {
+            for unit in runtime.units.iter().filter(|u| u.active_state == "failed") {
+                if out
+                    .runtime_failed_units
+                    .iter()
+                    .any(|n| n == &unit.name)
+                {
+                    continue;
+                }
+                out.runtime_failed_units.push(unit.name.clone());
+                if !out.problem_units.iter().any(|p| p.name == unit.name) {
+                    out.problem_units.push(UnitSummary {
+                        name: unit.name.clone(),
+                        unit_type: "service".into(),
+                        state: "failed".into(),
+                        description: Some(unit.description.clone()),
+                        path: unit.fragment_path.clone(),
+                    });
+                }
+            }
+        }
     }
+
+    #[cfg(feature = "agent")]
+    enrich_journal_hints(&mut out);
 
     if let Some(windows) = &evidence.windows {
         out.windows_risks = analyze_windows_risks(&windows.services);
@@ -260,6 +289,22 @@ fn analyze_windows_risks(services: &[WindowsServiceEntry]) -> Vec<WindowsService
 
     risks
 }
+
+#[cfg(feature = "agent")]
+fn enrich_journal_hints(out: &mut SemanticAnalysis) {
+    for unit in out.runtime_failed_units.iter().take(3) {
+        let slice = crate::journal::live::collect_journal_slice(unit, 15);
+        for pattern in slice.top_patterns.iter().take(2) {
+            let hint = format!("{unit}: {pattern}");
+            if !out.journal_hints.contains(&hint) {
+                out.journal_hints.push(hint);
+            }
+        }
+    }
+}
+
+#[cfg(not(feature = "agent"))]
+fn enrich_journal_hints(_out: &mut SemanticAnalysis) {}
 
 #[cfg(test)]
 mod tests {

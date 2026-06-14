@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// Normalized evidence collected from an offline disk image.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +31,10 @@ pub struct EvidenceSnapshot {
     pub network_probes: Option<NetworkProbeEvidence>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub snapshot_readiness: Option<SnapshotReadinessEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process: Option<ProcessEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hardware: Option<HardwareEvidence>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -94,6 +98,22 @@ pub struct NetworkEvidence {
     pub interfaces: Vec<String>,
     pub dns_servers: Vec<String>,
     pub udev_persistent_net: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub live_interfaces: Vec<NetworkInterfaceLive>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_gateway: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub network_stack: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NetworkInterfaceLive {
+    pub name: String,
+    pub state: String,
+    pub mac: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<String>,
+    pub carrier: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -133,6 +153,107 @@ pub struct SystemdInfo {
     pub units: Vec<SystemdUnit>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub problem_hints: Vec<SystemdProblemHint>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime: Option<SystemdRuntimeInfo>,
+}
+
+/// Live systemd manager state from D-Bus org.freedesktop.systemd1.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdRuntimeInfo {
+    pub manager_state: String,
+    pub failed_unit_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manager: Option<SystemdManagerInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub units: Vec<SystemdRuntimeUnit>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jobs: Vec<SystemdJob>,
+}
+
+/// Manager-level properties from org.freedesktop.systemd1.Manager.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdManagerInfo {
+    pub system_state: String,
+    pub n_failed_units: u32,
+    pub n_jobs: u32,
+    pub architecture: String,
+    pub virtualization: String,
+    pub boot_timestamps: SystemdBootTimestamps,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdBootTimestamps {
+    pub firmware_us: Option<u64>,
+    pub loader_us: Option<u64>,
+    pub kernel_us: Option<u64>,
+    pub initrd_us: Option<u64>,
+    pub userspace_us: Option<u64>,
+    pub finish_us: Option<u64>,
+    pub security_start_us: Option<u64>,
+    pub security_finish_us: Option<u64>,
+    pub units_load_start_us: Option<u64>,
+    pub units_load_finish_us: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdRuntimeUnit {
+    pub name: String,
+    pub description: String,
+    pub load_state: String,
+    pub active_state: String,
+    pub sub_state: String,
+    pub unit_file_state: String,
+    pub fragment_path: String,
+    pub main_pid: u32,
+    pub n_restarts: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exec_main_start_timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exec_main_exit_timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exec_main_status: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cgroup_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub following: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub drop_in_paths: Vec<String>,
+    pub need_daemon_reload: bool,
+    pub can_start: bool,
+    pub can_stop: bool,
+    pub can_reload: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub control_pid: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exec_main_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restart: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restart_usec: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_start_usec: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_stop_usec: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub watchdog_usec: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oom_policy: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reload_result: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clean_result: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemdJob {
+    pub id: u32,
+    pub unit: String,
+    pub job_type: String,
+    pub state: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -375,6 +496,60 @@ pub struct WindowsForensicEvent {
     pub level: String,
     pub time_created: String,
     pub summary: String,
+}
+
+/// Process and cgroup intelligence from /proc.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ProcessEvidence {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub top_cpu: Vec<ProcessSummary>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub top_memory: Vec<ProcessSummary>,
+    pub zombie_count: usize,
+    pub d_state_count: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub listening_ports: Vec<ListeningPort>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressure_cpu: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressure_memory: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressure_io: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ProcessSummary {
+    pub pid: u32,
+    pub name: String,
+    pub cpu_percent: f32,
+    pub memory_kb: u64,
+    pub state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ListeningPort {
+    pub port: u16,
+    pub pid: u32,
+    pub process: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+}
+
+/// Hardware and identity inventory.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HardwareEvidence {
+    pub dmi_manufacturer: String,
+    pub dmi_product: String,
+    pub dmi_uuid: String,
+    pub machine_id: String,
+    pub virtio_net_count: usize,
+    pub virtio_blk_count: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub block_devices: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zeus_vm_uid: Option<String>,
 }
 
 impl EvidenceSnapshot {

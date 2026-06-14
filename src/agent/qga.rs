@@ -80,6 +80,18 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
         "guestkit-migrate-score" => guestkit_migrate_score(&args),
         "guestkit-get-metrics" => guestkit_get_metrics(),
         "guestkit-get-filesystem" => guestkit_get_filesystem(),
+        "guestkit-get-guest-health" => guestkit_get_guest_health(),
+        "guestkit-get-guest-info" => guestkit_get_guest_info(),
+        "guestkit-get-systemd-units" => guestkit_get_systemd_units(),
+        "guestkit-get-systemd-unit" => guestkit_get_systemd_unit(&args),
+        "guestkit-get-systemd-events" => guestkit_get_systemd_events(&args),
+        "guestkit-get-processes" => guestkit_get_processes(),
+        "guestkit-get-journal-slice" => guestkit_get_journal_slice(&args),
+        "guestkit-get-failed-units" => guestkit_get_failed_units(),
+        "guestkit-get-boot-analysis" => guestkit_get_boot_analysis(),
+        "guestkit-get-login-state" => guestkit_get_login_state(),
+        "guestkit-get-dns-state" => guestkit_get_dns_state(),
+        "guestkit-get-snapshot-readiness" => guestkit_get_snapshot_readiness(),
         "guestkit-exec" => guestkit_exec(&args),
         "guestkit-enable-rdp" => guestkit_enable_rdp(),
         "guestkit-disable-rdp" => guestkit_disable_rdp(),
@@ -158,6 +170,15 @@ fn guest_info() -> Value {
             "guestkit-migrate-score",
             "guestkit-get-metrics",
             "guestkit-get-filesystem",
+            "guestkit-get-guest-health",
+            "guestkit-get-guest-info",
+            "guestkit-get-systemd-units",
+            "guestkit-get-systemd-unit",
+            "guestkit-get-systemd-events",
+            "guestkit-get-processes",
+            "guestkit-get-journal-slice",
+            "guestkit-get-failed-units",
+            "guestkit-get-boot-analysis",
             "guestkit-exec",
             "guestkit-enable-rdp",
             "guestkit-disable-rdp"
@@ -454,6 +475,14 @@ fn guest_fsfreeze_thaw() -> Result<Value, String> {
     Ok(json!({ "frozen": 0 }))
 }
 
+pub fn freeze_fs() -> Result<(), String> {
+    guest_fsfreeze_freeze().map(|_| ())
+}
+
+pub fn thaw_fs() -> Result<(), String> {
+    guest_fsfreeze_thaw().map(|_| ())
+}
+
 fn guest_get_host_name() -> Result<Value, String> {
     let hostname = std::fs::read_to_string("/etc/hostname")
         .ok()
@@ -732,6 +761,124 @@ fn guestkit_get_metrics() -> Result<Value, String> {
 
 fn guestkit_get_filesystem() -> Result<Value, String> {
     filesystem_mounts_normalized()
+}
+
+fn guestkit_get_guest_health() -> Result<Value, String> {
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let health = crate::health::build_guest_health(&evidence);
+    serde_json::to_value(health).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_guest_info() -> Result<Value, String> {
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let info = crate::health::build_guest_info(&evidence);
+    serde_json::to_value(info).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_systemd_units() -> Result<Value, String> {
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let units = evidence
+        .systemd
+        .as_ref()
+        .and_then(|s| s.runtime.as_ref())
+        .map(|r| r.units.clone())
+        .unwrap_or_default();
+    serde_json::to_value(units).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_systemd_unit(args: &Value) -> Result<Value, String> {
+    let unit = args
+        .get("unit")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "missing unit".to_string())?;
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let detail = crate::health::build_service_health(unit, &evidence).or_else(|| {
+        #[cfg(target_os = "linux")]
+        {
+            crate::collectors::dbus::get_unit_detail(unit).map(|u| {
+                guestkit_agent_protocol::ServiceHealth {
+                    name: u.name,
+                    state: u.active_state,
+                    sub_state: u.sub_state,
+                    main_pid: u.main_pid,
+                    exit_code: u.exec_main_status,
+                    restart_count: u.n_restarts,
+                    last_failure: None,
+                    journal_cursor: None,
+                    actions: vec!["view_logs".into(), "restart_unit".into()],
+                }
+            })
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            None
+        }
+    });
+    serde_json::to_value(detail).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_systemd_events(args: &Value) -> Result<Value, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let cursor = args.get("cursor").and_then(|v| v.as_u64()).unwrap_or(0);
+        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+        let (next_cursor, events) = if cursor > 0 {
+            crate::collectors::dbus::systemd_events::get_events_since(cursor)
+        } else {
+            let events = crate::collectors::dbus::systemd_events::recent_events(limit);
+            let (_, c) = crate::collectors::dbus::systemd_events::get_events_since(0);
+            (c, events)
+        };
+        Ok(json!({ "cursor": next_cursor, "events": events }))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = args;
+        Ok(json!({ "cursor": 0, "events": [] }))
+    }
+}
+
+fn guestkit_get_processes() -> Result<Value, String> {
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let process = evidence
+        .process
+        .clone()
+        .unwrap_or_else(|| crate::collectors::process::collect_process_evidence());
+    serde_json::to_value(process).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_journal_slice(args: &Value) -> Result<Value, String> {
+    let unit = args.get("unit").and_then(|v| v.as_str()).unwrap_or("");
+    let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(200) as usize;
+    let boot = args.get("boot").and_then(|v| v.as_str()).unwrap_or("current");
+    let slice = crate::journal::live::collect_journal_slice_boot(unit, limit, boot);
+    serde_json::to_value(slice).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_failed_units() -> Result<Value, String> {
+    let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    let failed = crate::health::list_failed_units_from_evidence(&evidence);
+    serde_json::to_value(failed).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_boot_analysis() -> Result<Value, String> {
+    let analysis = crate::boot::live::collect_boot_analysis();
+    serde_json::to_value(analysis).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_login_state() -> Result<Value, String> {
+    let state = crate::collectors::dbus::collect_login_state_safe();
+    serde_json::to_value(state).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_dns_state() -> Result<Value, String> {
+    let dns = crate::collectors::dbus::collect_dns_health_safe();
+    serde_json::to_value(dns).map_err(|e| e.to_string())
+}
+
+fn guestkit_get_snapshot_readiness() -> Result<Value, String> {
+    let report = crate::agent::snapshot_hooks::build_snapshot_readiness_report();
+    serde_json::to_value(report).map_err(|e| e.to_string())
 }
 
 fn guestkit_exec(args: &Value) -> Result<Value, String> {

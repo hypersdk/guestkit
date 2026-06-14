@@ -58,6 +58,15 @@ pub mod inference;
 pub mod storage;
 
 #[cfg(feature = "agent")]
+pub mod collectors;
+
+#[cfg(feature = "agent")]
+pub mod health;
+
+#[cfg(feature = "agent")]
+pub mod journal;
+
+#[cfg(feature = "agent")]
 pub mod metrics;
 
 // Optional modules

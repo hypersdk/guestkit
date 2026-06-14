@@ -221,12 +221,17 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
         .unwrap_or("kvm");
 
     let rpc_method = match (method, path_only) {
+        ("POST", "/rpc") | ("POST", "/api/rpc") => "__passthrough__",
+        ("GET", "/guest/health") | ("GET", "/api/guest/health") => "guestkit.getGuestHealth",
+        ("GET", "/guest/info") | ("GET", "/api/guest/info") => "guestkit.getGuestInfo",
+        ("GET", "/guest/processes") | ("GET", "/api/guest/processes") => "guestkit.getProcesses",
+        ("GET", "/guest/systemd") | ("GET", "/api/guest/systemd") => "guestkit.getSystemdUnits",
+        ("GET", "/guest/journal") | ("GET", "/api/guest/journal") => "guestkit.getJournalSlice",
         ("GET", "/evidence") | ("GET", "/api/evidence") => "guestkit.getEvidence",
         ("GET", "/doctor") | ("GET", "/api/doctor") => "guestkit.doctor",
         ("GET", "/ping") | ("GET", "/api/ping") => "guestkit.ping",
         ("GET", "/capabilities") | ("GET", "/api/capabilities") => "guestkit.getCapabilities",
         ("POST", "/fix-plan") | ("POST", "/api/fix-plan") => "guestkit.runFixPlan",
-        ("POST", "/rpc") | ("POST", "/api/rpc") => "__passthrough__",
         _ => {
             return write_http_error(&mut stream, 404, "not found").await;
         }
@@ -258,6 +263,38 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
         (
             rpc_method.to_string(),
             serde_json::json!({ "target": query_target }),
+        )
+    } else if rpc_method == "guestkit.getJournalSlice" {
+        let unit = query
+            .split('&')
+            .find_map(|pair| {
+                let mut kv = pair.splitn(2, '=');
+                let k = kv.next()?;
+                let v = kv.next().unwrap_or("");
+                if k == "unit" { Some(v) } else { None }
+            })
+            .unwrap_or("");
+        let boot = query
+            .split('&')
+            .find_map(|pair| {
+                let mut kv = pair.splitn(2, '=');
+                let k = kv.next()?;
+                let v = kv.next().unwrap_or("");
+                if k == "boot" { Some(v) } else { None }
+            })
+            .unwrap_or("current");
+        let limit = query
+            .split('&')
+            .find_map(|pair| {
+                let mut kv = pair.splitn(2, '=');
+                let k = kv.next()?;
+                let v = kv.next().unwrap_or("");
+                if k == "limit" { v.parse().ok() } else { None }
+            })
+            .unwrap_or(200);
+        (
+            rpc_method.to_string(),
+            serde_json::json!({ "unit": unit, "boot": boot, "limit": limit }),
         )
     } else {
         (rpc_method.to_string(), serde_json::json!({}))

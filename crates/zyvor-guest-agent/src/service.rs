@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::daemon;
 use anyhow::Result;
 use std::ffi::OsString;
 use windows_service::{
@@ -58,7 +57,16 @@ fn run_service_impl() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     std::thread::spawn(|| {
-        if let Err(e) = daemon::run("stdio") {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime");
+        if let Err(e) = rt.block_on(guestkit::agent::run_agent(guestkit::agent::AgentArgs {
+            channel: guestkit::agent::AgentChannel::Stdio,
+            device: None,
+            socket: None,
+            user: None,
+        })) {
             log::error!("agent daemon: {e:#}");
         }
     });

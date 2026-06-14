@@ -14,7 +14,7 @@ pub use live::{build_agent_status_live, build_evidence_live, AgentStatus};
 pub use snapshot::{
     BootEvidence, CloudInitEvidence, EvidenceSnapshot, KubevirtEvidence, NetworkEvidence,
     NetworkProbeEvidence, OsEvidence, PackageEvidence, SecurityEvidence, SnapshotReadinessEvidence,
-    StorageEvidence, SystemdInfo, SystemdProblemHint, SystemdProblemSeverity, SystemdUnit,
-    SystemdUnitState, VirtioDiskEntry, VmToolsEvidence, WindowsAppEntry, WindowsEvidence,
+    StorageEvidence,     SystemdInfo, SystemdJob, SystemdProblemHint, SystemdProblemSeverity, SystemdRuntimeInfo,
+    SystemdRuntimeUnit, SystemdUnit, SystemdUnitState, VirtioDiskEntry, VmToolsEvidence, WindowsAppEntry, WindowsEvidence,
     WindowsServiceEntry, WindowsStartType, SCHEMA_VERSION,
 };

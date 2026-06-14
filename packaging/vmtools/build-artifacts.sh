@@ -11,20 +11,35 @@ DEB_ROOT="${DIST}/deb-root"
 echo "Building zyvor-guest-agent (musl)..."
 cd "${ROOT}"
 rustup target add x86_64-unknown-linux-musl 2>/dev/null || true
-cargo build --release --features agent --no-default-features \
-  --target x86_64-unknown-linux-musl --bin zyvor-guest-agent
+cargo build --release -p zyvor-guest-agent \
+  --target x86_64-unknown-linux-musl
 
 mkdir -p "${DIST}/linux" "${ISO_DIR}/linux"
 cp "target/x86_64-unknown-linux-musl/release/zyvor-guest-agent" "${DIST}/linux/zyvor-guest-agent"
+cp "target/x86_64-unknown-linux-musl/release/zyvor-guest-agent-exec" "${DIST}/linux/zyvor-guest-agent-exec"
 cp templates/agent/zyvor-guest-agent.service "${DIST}/linux/"
+cp templates/agent/zyvor-guest-agent-exec.service "${DIST}/linux/"
+cp templates/agent/zyvor-guest-updater.service "${DIST}/linux/"
+cp templates/agent/zyvor-guest-updater.timer "${DIST}/linux/"
+cp templates/agent/agent-policy.yaml "${DIST}/linux/"
+cp templates/agent/guest-agent.toml "${DIST}/linux/"
 tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
-  -C "${DIST}/linux" zyvor-guest-agent zyvor-guest-agent.service
+  -C "${DIST}/linux" zyvor-guest-agent zyvor-guest-agent-exec \
+  zyvor-guest-agent.service zyvor-guest-agent-exec.service \
+  zyvor-guest-updater.service zyvor-guest-updater.timer \
+  agent-policy.yaml guest-agent.toml
 
 echo "Building DEB..."
 rm -rf "${DEB_ROOT}"
-mkdir -p "${DEB_ROOT}/DEBIAN" "${DEB_ROOT}/usr/bin" "${DEB_ROOT}/lib/systemd/system"
+mkdir -p "${DEB_ROOT}/DEBIAN" "${DEB_ROOT}/usr/bin" "${DEB_ROOT}/lib/systemd/system" "${DEB_ROOT}/etc/zyvor"
 cp "${DIST}/linux/zyvor-guest-agent" "${DEB_ROOT}/usr/bin/"
+cp "${DIST}/linux/zyvor-guest-agent-exec" "${DEB_ROOT}/usr/bin/"
 cp "${DIST}/linux/zyvor-guest-agent.service" "${DEB_ROOT}/lib/systemd/system/"
+cp "${DIST}/linux/zyvor-guest-agent-exec.service" "${DEB_ROOT}/lib/systemd/system/"
+cp "${DIST}/linux/zyvor-guest-updater.service" "${DEB_ROOT}/lib/systemd/system/"
+cp "${DIST}/linux/zyvor-guest-updater.timer" "${DEB_ROOT}/lib/systemd/system/"
+cp "${DIST}/linux/agent-policy.yaml" "${DEB_ROOT}/etc/zyvor/"
+cp "${DIST}/linux/guest-agent.toml" "${DEB_ROOT}/etc/zyvor/"
 cat > "${DEB_ROOT}/DEBIAN/control" <<EOF
 Package: zyvor-vm-tools
 Version: ${VERSION}
@@ -40,6 +55,9 @@ cat > "${DEB_ROOT}/DEBIAN/postinst" <<'EOF'
 set -e
 systemctl daemon-reload || true
 systemctl enable zyvor-guest-agent.service || true
+systemctl enable zyvor-guest-agent-exec.service || true
+systemctl enable zyvor-guest-updater.timer || true
+systemctl start zyvor-guest-agent-exec.service || true
 EOF
 chmod 755 "${DEB_ROOT}/DEBIAN/postinst"
 dpkg-deb --build "${DEB_ROOT}" "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb"
@@ -71,9 +89,17 @@ else
   cp linux/zyvor-guest-agent /usr/bin/zyvor-guest-agent
 fi
 chmod 755 /usr/bin/zyvor-guest-agent
+chmod 755 /usr/bin/zyvor-guest-agent-exec
 install -Dm644 linux/zyvor-guest-agent.service /etc/systemd/system/zyvor-guest-agent.service
+install -Dm644 linux/zyvor-guest-agent-exec.service /etc/systemd/system/zyvor-guest-agent-exec.service
+install -Dm644 linux/zyvor-guest-updater.service /etc/systemd/system/zyvor-guest-updater.service
+install -Dm644 linux/zyvor-guest-updater.timer /etc/systemd/system/zyvor-guest-updater.timer
+install -Dm644 linux/agent-policy.yaml /etc/zyvor/agent-policy.yaml
+install -Dm644 linux/guest-agent.toml /etc/zyvor/guest-agent.toml
 systemctl daemon-reload
+systemctl enable --now zyvor-guest-agent-exec
 systemctl enable --now zyvor-guest-agent
+systemctl enable --now zyvor-guest-updater.timer
 echo "Zyvor VM Tools installed"
 EOF
 chmod +x "${ISO_DIR}/linux/install.sh"

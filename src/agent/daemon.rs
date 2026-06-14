@@ -4,6 +4,7 @@
 use crate::agent::handler::RequestHandler;
 use crate::agent::transport::{FramedTransport, TransportConfig};
 use anyhow::{Context, Result};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::signal;
 use tokio::task;
@@ -12,14 +13,14 @@ const MIN_REQUEST_INTERVAL: Duration = Duration::from_millis(10);
 
 pub struct AgentDaemon {
     config: TransportConfig,
-    handler: RequestHandler,
+    handler: Arc<RequestHandler>,
 }
 
 impl AgentDaemon {
     pub fn new(config: TransportConfig) -> Self {
         Self {
             config,
-            handler: RequestHandler::new(),
+            handler: Arc::new(RequestHandler::new()),
         }
     }
 
@@ -30,8 +31,25 @@ impl AgentDaemon {
             self.config.kind
         );
 
+        // Local Unix socket API (read-only + policy-gated writes).
+        crate::agent::transport::unix_listen::spawn_local_socket(
+            Arc::clone(&self.handler),
+            None,
+        )
+        .ok();
+
+        // Outbound Zeus mTLS push worker.
+        task::spawn(async {
+            if let Err(e) = crate::agent::transport::zeus_push::run_push_worker().await {
+                log::warn!("Zeus push worker stopped: {e}");
+            }
+        });
+
+        #[cfg(target_os = "linux")]
+        crate::collectors::dbus::systemd_events::spawn_subscriber();
+
         let config = self.config.clone();
-        let handler = self.handler;
+        let handler = Arc::clone(&self.handler);
 
         let loop_handle = task::spawn_blocking(move || -> Result<()> {
             let mut transport = FramedTransport::open(&config)?;
@@ -41,7 +59,6 @@ impl AgentDaemon {
                 let frame = match transport.read_message() {
                     Ok(f) => f,
                     Err(e) => {
-                        // Host may not have sent a QGA frame yet (virtio channel idle).
                         log::debug!("waiting for host frame: {e}");
                         std::thread::sleep(Duration::from_millis(250));
                         continue;
