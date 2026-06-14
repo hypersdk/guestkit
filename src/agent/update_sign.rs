@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 pub struct UpdateManifest {
     pub version: String,
     pub channel: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub linux_tar_sha256: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub windows_zip_sha256: String,
 }
 
 impl UpdateManifest {
@@ -96,6 +99,7 @@ mod tests {
             version: "0.2.0".into(),
             channel: "stable".into(),
             linux_tar_sha256: "abc123".into(),
+            windows_zip_sha256: String::new(),
         };
         let sig = sign_manifest(&manifest).expect("sign");
         verify_manifest(&manifest, &sig).expect("verify");

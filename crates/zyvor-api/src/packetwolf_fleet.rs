@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Periodic fleet-wide PacketWolf correlation across all guest-agent reports.
 
-use kube::api::{Api, Patch, PatchParams};
+use kube::api::{Api, PatchParams};
 use kube::Client;
 use redis::AsyncCommands;
 use serde_json::{json, Value};
@@ -174,7 +174,6 @@ async fn patch_fleet_annotations(client: &Client, snapshot_id: &str, count: usiz
         }
     };
     let ar = vm_resource();
-    let api: Api<kube::api::DynamicObject> = Api::all_with(client.clone(), &ar);
     let at = chrono::Utc::now().to_rfc3339();
     for vm in vms {
         let name = vm
