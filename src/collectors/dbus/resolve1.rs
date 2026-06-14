@@ -14,26 +14,11 @@ pub fn collect_dns_health() -> Result<DnsHealth> {
         "org.freedesktop.resolve1.Manager",
     )?;
 
-    let dns_servers: Vec<String> = proxy
-        .get_property("DNS")
-        .unwrap_or(Ok(Vec::new()))
-        .unwrap_or_default();
-    let search_domains: Vec<String> = proxy
-        .get_property("Domains")
-        .unwrap_or(Ok(Vec::new()))
-        .unwrap_or_default();
-    let dnssec: String = proxy
-        .get_property("DNSSEC")
-        .unwrap_or(Ok(String::new()))
-        .unwrap_or_default();
-    let llmnr: String = proxy
-        .get_property("LLMNR")
-        .unwrap_or(Ok(String::new()))
-        .unwrap_or_default();
-    let mdns: String = proxy
-        .get_property("MulticastDNS")
-        .unwrap_or(Ok(String::new()))
-        .unwrap_or_default();
+    let dns_servers: Vec<String> = proxy.get_property("DNS").unwrap_or_default();
+    let search_domains: Vec<String> = proxy.get_property("Domains").unwrap_or_default();
+    let dnssec: String = proxy.get_property("DNSSEC").unwrap_or_default();
+    let llmnr: String = proxy.get_property("LLMNR").unwrap_or_default();
+    let mdns: String = proxy.get_property("MulticastDNS").unwrap_or_default();
 
     let mut errors = Vec::new();
     if dns_servers.is_empty() {

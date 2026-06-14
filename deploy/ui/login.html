@@ -48,14 +48,14 @@
     <div class="login-card">
       <img src="img/zavor-logo.webp" width="120" height="40" alt="GuestKit" style="margin-bottom:1rem;" />
       <h1>Sign in to GuestKit</h1>
-      <p>Authenticate to access the VM migration console.</p>
+      <p class="login-subtitle" id="loginSubtitle">Authenticate to access the VM migration console.</p>
       <div class="login-error hidden" id="loginError"></div>
       <div class="login-actions">
         <button type="button" class="btn primary" id="ssoLoginBtn" style="width:100%;">Sign in with SSO</button>
         <button type="button" class="btn glass hidden" id="samlLoginBtn" style="width:100%;">Sign in with SAML</button>
         <button type="button" class="btn glass hidden" id="localBypassBtn" style="width:100%;">Continue without SSO</button>
       </div>
-      <p class="login-foot">Powered by ZyvorAI Labs · OIDC &amp; SAML identity</p>
+      <p class="login-foot hidden" id="loginFoot">Optional SSO — enable in Settings when you need identity controls.</p>
     </div>
   </div>
   <script src="guestkit-auth.js?v=20260613auth2"></script>
@@ -65,6 +65,7 @@
       const err = params.get('error');
       const token = params.get('token');
       const errEl = document.getElementById('loginError');
+      const footEl = document.getElementById('loginFoot');
       const ssoBtn = document.getElementById('ssoLoginBtn');
       const samlBtn = document.getElementById('samlLoginBtn');
       const bypassBtn = document.getElementById('localBypassBtn');
@@ -83,6 +84,12 @@
         return;
       }
 
+      const cfg = await GuestKitAuth.fetchAuthConfig();
+      if (!cfg.auth_enabled) {
+        window.location.replace('index.html');
+        return;
+      }
+
       try {
         const existing = await GuestKitAuth.fetchAuthMe();
         if (existing.authenticated) {
@@ -91,13 +98,7 @@
         }
       } catch (_) {}
 
-      let cfg = { auth_enabled: false, oidc_enabled: false, saml_enabled: false, allow_local_bypass: true, oidc_button_label: 'Sign in with SSO', saml_button_label: 'Sign in with SAML' };
-      try {
-        cfg = await GuestKitAuth.fetchAuthConfig();
-      } catch (e) {
-        errEl.textContent = e.message || String(e);
-        errEl.classList.remove('hidden');
-      }
+      footEl?.classList.remove('hidden');
 
       ssoBtn.textContent = cfg.oidc_button_label || 'Sign in with SSO';
       if (!cfg.auth_enabled || !cfg.oidc_enabled) {

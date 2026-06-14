@@ -461,22 +461,28 @@ html[data-theme='tahoe'] .mac-desktop-root,
 .mac-menubar-clock-date { font-size: 0.6875rem; color: rgba(255, 255, 255, 0.55); }
 
 .mac-dock {
-  position: fixed; bottom: 0.75rem; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 0.85rem; left: 50%; transform: translateX(-50%);
   z-index: 45; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
   pointer-events: none;
 }
 .mac-dock-inner, .mac-dock-utilities-inner {
   pointer-events: auto;
-  display: flex; align-items: flex-end; gap: 0.35rem;
-  padding: 0.45rem 0.65rem;
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(28px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  display: flex; align-items: flex-end; gap: 0.2rem;
+  padding: 0.5rem 0.85rem 0.65rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 18%, transparent 42%),
+    rgba(22, 28, 38, 0.62);
+  backdrop-filter: blur(32px) saturate(1.65);
+  -webkit-backdrop-filter: blur(32px) saturate(1.65);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 1.35rem;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
 }
 .mac-dock-inner-unified {
-  align-items: center;
+  align-items: flex-end;
   min-width: min(92vw, 56rem);
   max-width: 92vw;
 }
@@ -538,23 +544,28 @@ html[data-theme='tahoe'] .mac-desktop-root,
   display: flex; align-items: center; justify-content: center;
   width: 3rem; height: 3rem; border-radius: 0.85rem;
   color: rgba(255, 255, 255, 0.88);
-  transform: scale(var(--dock-scale, 1)) translateY(calc((var(--dock-scale, 1) - 1) * -8px));
-  transition: transform 0.12s ease;
+  transform: scale(var(--dock-scale, 1)) translateY(calc((var(--dock-scale, 1) - 1) * -10px));
+  transform-origin: bottom center;
+  transition: transform 0.1s ease-out, background 0.15s ease;
+  will-change: transform;
 }
 .mac-dock-item:hover { background: rgba(255, 255, 255, 0.08); }
 .mac-dock-item-active { background: rgba(56, 189, 248, 0.15); }
 .mac-dock-dot {
-  position: absolute; bottom: 0.15rem; width: 0.25rem; height: 0.25rem;
-  border-radius: 9999px; background: rgba(255, 255, 255, 0.85);
+  position: absolute; bottom: 0.12rem; width: 0.28rem; height: 0.28rem;
+  border-radius: 9999px; background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
 }
 .mac-dock-tooltip {
-  position: absolute; bottom: calc(100% + 0.35rem); left: 50%; transform: translateX(-50%);
-  white-space: nowrap; font-size: 0.6875rem; padding: 0.2rem 0.45rem; border-radius: 0.375rem;
-  background: rgba(0, 0, 0, 0.85); color: #fff; opacity: 0; pointer-events: none;
+  position: absolute; bottom: calc(100% + 0.45rem); left: 50%; transform: translateX(-50%) translateY(4px);
+  white-space: nowrap; font-size: 0.6875rem; font-weight: 500; padding: 0.28rem 0.55rem; border-radius: 0.4rem;
+  background: rgba(12, 16, 24, 0.92); color: #fff; border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.mac-dock-item:hover .mac-dock-tooltip { opacity: 1; }
+.mac-dock-item:hover .mac-dock-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
 .mac-dock-item-ask { color: rgb(251, 191, 36); }
-.mac-dock-divider { width: 1px; height: 2rem; background: rgba(255, 255, 255, 0.12); margin: 0 0.15rem; }
+.mac-dock-divider { width: 1px; height: 2.35rem; background: rgba(255, 255, 255, 0.14); margin: 0 0.2rem; align-self: center; }
 .mac-dock-modules-autohide-hidden { opacity: 0; transform: translateY(12px); pointer-events: none; }
 
 .tahoe-sidebar {
@@ -637,6 +648,8 @@ html[data-shell-density='calm'] .ironwolf-main-content-pad { max-width: none; }
 .mac-quicklook { backdrop-filter: blur(24px); }
 
 .mac-dock-item:hover + .mac-dock-item,
-.mac-dock-item:has(+ .mac-dock-item:hover) {
-  transform: scale(1.08) translateY(-2px);
+.mac-dock-item:has(+ .mac-dock-item:hover),
+.dock-item:hover + .dock-item,
+.dock-item:has(+ .dock-item:hover) {
+  transform: scale(calc(var(--dock-scale, 1) * 1.06)) translateY(calc((var(--dock-scale, 1) * 1.06 - 1) * -10px));
 }

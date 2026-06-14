@@ -27,6 +27,8 @@ spec:
             - redis://redis:6379
             - --results-dir
             - /var/lib/guestkit/results
+            - --work-dir
+            - /var/lib/guestkit/work
             - --max-concurrent
             - "4"
           env:
@@ -43,6 +45,8 @@ spec:
             {{- include "zyvor.kubevirtStorageVolumeMount" . | nindent 12 }}
             - name: results
               mountPath: /var/lib/guestkit/results
+            - name: work
+              mountPath: /var/lib/guestkit/work
             - name: dev
               mountPath: /dev
               mountPropagation: HostToContainer
@@ -50,6 +54,8 @@ spec:
         {{- include "zyvor.vmVolume" . | nindent 8 }}
         {{- include "zyvor.kubevirtStorageVolume" . | nindent 8 }}
         - name: results
+          emptyDir: {}
+        - name: work
           emptyDir: {}
         - name: dev
           hostPath:
@@ -64,5 +70,6 @@ spec:
   selector:
     app: guestkit-worker
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080

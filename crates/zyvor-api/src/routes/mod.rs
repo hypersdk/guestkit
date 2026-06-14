@@ -160,6 +160,10 @@ pub fn api_router() -> Router<AppState> {
             get(crate::guest_actions::list_pending_guest_actions),
         )
         .route(
+            "/api/v1/guest-actions/audit",
+            get(crate::guest_actions::list_guest_action_audit),
+        )
+        .route(
             "/api/v1/guest-actions/:id/approve",
             post(crate::guest_actions::approve_guest_action),
         )

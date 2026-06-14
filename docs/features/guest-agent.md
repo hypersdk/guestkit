@@ -179,7 +179,7 @@ bootstrap_token = "..."  # required when Zeus sets AGENT_BOOTSTRAP_TOKEN
 
 **Guest remediation (Zeus UI):** restart failed units, collect a support bundle (`tar.zst` with evidence, health, semantic analysis, journal excerpts), and view per-unit journal slices from the Guest Intelligence card when a VM is selected.
 
-When `GuestActionPolicy.spec.requireApproval` is true, remediation APIs return `pending_approval` with an `action_id`. Approve via `POST /api/v1/guest-actions/{id}/approve` or the Zeus UI pending-approval buttons.
+When `GuestActionPolicy.spec.requireApproval` is true, remediation APIs return `pending_approval` with an `action_id`. Approve or reject via `POST /api/v1/guest-actions/{id}/approve` and `POST /api/v1/guest-actions/{id}/reject`, or use the Zeus fleet **Guest action approvals** panel and per-VM Guest Intelligence buttons. Audit history: `GET /api/v1/guest-actions/audit?limit=50`.
 
 **mTLS bootstrap:** `POST /api/v1/guest-agents/bootstrap` issues client certificates when `AGENT_BOOTSTRAP_TOKEN` matches. Agents push heartbeats/reports on port 8443 when `AGENT_MTLS_PUBLIC_URL` is configured.
 

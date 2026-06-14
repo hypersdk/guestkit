@@ -21,7 +21,7 @@
 - name: kubevirt-local-storage
   hostPath:
     path: {{ .Values.persistence.kubevirtLocalPath }}
-    type: Directory
+    type: DirectoryOrCreate
 {{- end }}
 {{- end }}
 

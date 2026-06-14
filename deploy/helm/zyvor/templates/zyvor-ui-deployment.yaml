@@ -33,7 +33,8 @@ spec:
   selector:
     app: zyvor-ui
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 80
       {{- if eq .Values.zyvorUi.service.type "NodePort" }}
       nodePort: {{ .Values.zyvorUi.service.nodePort }}

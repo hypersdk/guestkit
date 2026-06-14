@@ -8,6 +8,29 @@ function authApiBase() {
   return window.ZYVOR_API_URL || '/api/v1';
 }
 
+function defaultAuthConfig() {
+  return {
+    auth_enabled: false,
+    oidc_enabled: false,
+    saml_enabled: false,
+    allow_local_bypass: true,
+    oidc_button_label: 'Sign in with SSO',
+    saml_button_label: 'Sign in with SAML',
+  };
+}
+
+let cachedAuthConfig = null;
+
+async function parseApiJson(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 function getAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY) || '';
 }
@@ -43,18 +66,46 @@ function authHeaders(extra = {}) {
 }
 
 async function fetchAuthConfig() {
-  const res = await fetch(`${authApiBase()}/auth/config`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to load auth config');
-  return data.data;
+  try {
+    const res = await fetch(`${authApiBase()}/auth/config`);
+    if (res.status === 404) {
+      cachedAuthConfig = defaultAuthConfig();
+      return cachedAuthConfig;
+    }
+    const data = await parseApiJson(res);
+    if (!data) {
+      cachedAuthConfig = defaultAuthConfig();
+      return cachedAuthConfig;
+    }
+    if (!res.ok) throw new Error(data.message || 'Failed to load auth config');
+    cachedAuthConfig = data.data || defaultAuthConfig();
+    return cachedAuthConfig;
+  } catch (e) {
+    console.warn('auth config unavailable; continuing without auth', e);
+    cachedAuthConfig = defaultAuthConfig();
+    return cachedAuthConfig;
+  }
 }
 
 async function fetchAuthMe() {
-  const res = await fetch(`${authApiBase()}/auth/me`, { headers: authHeaders() });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Auth check failed');
-  if (data.data?.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data.user));
-  return data.data;
+  const cfg = await fetchAuthConfig();
+  if (!cfg.auth_enabled) {
+    return { authenticated: true, user: null };
+  }
+  try {
+    const res = await fetch(`${authApiBase()}/auth/me`, { headers: authHeaders() });
+    if (res.status === 404) {
+      return { authenticated: true, user: null };
+    }
+    const data = await parseApiJson(res);
+    if (!data) throw new Error('Auth check returned invalid JSON');
+    if (!res.ok) throw new Error(data.message || 'Auth check failed');
+    if (data.data?.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.data.user));
+    return data.data;
+  } catch (e) {
+    console.warn('auth me check failed', e);
+    return { authenticated: false, user: null };
+  }
 }
 
 async function localBypassLogin() {
@@ -100,11 +151,14 @@ function redirectToLogin(error) {
 
 async function requireAuthOrRedirect() {
   captureTokenFromUrl();
+  const cfg = await fetchAuthConfig();
+  if (!cfg.auth_enabled) {
+    return { authenticated: true, user: null };
+  }
   try {
     const me = await fetchAuthMe();
     if (me.authenticated) return me;
-    const cfg = await fetchAuthConfig();
-    if (!cfg.auth_enabled || cfg.allow_local_bypass) return me;
+    if (cfg.allow_local_bypass) return me;
   } catch (e) {
     console.warn('auth check failed', e);
   }

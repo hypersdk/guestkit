@@ -45,7 +45,7 @@ rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
 hyper = "1"
 hyper-util = { version = "0.1", features = ["tokio", "server-auto"] }
 tokio-rustls = "0.26"
-rustls = "0.23"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2"
 tower = "0.5"
 

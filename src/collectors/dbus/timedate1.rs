@@ -14,19 +14,10 @@ pub fn collect_timedate_health() -> Result<TimedateHealth> {
         "org.freedesktop.timedate1",
     )?;
 
-    let timezone: String = proxy.get_property("Timezone").unwrap_or(Ok(String::new()))?;
-    let ntp_enabled: bool = proxy
-        .get_property("NTP")
-        .unwrap_or(Ok(false))
-        .unwrap_or(false);
-    let ntp_synchronized: bool = proxy
-        .get_property("NTPSynchronized")
-        .unwrap_or(Ok(false))
-        .unwrap_or(false);
-    let rtc_in_local_time: bool = proxy
-        .get_property("LocalRTC")
-        .unwrap_or(Ok(false))
-        .unwrap_or(false);
+    let timezone: String = proxy.get_property("Timezone").unwrap_or_default();
+    let ntp_enabled: bool = proxy.get_property("NTP").unwrap_or(false);
+    let ntp_synchronized: bool = proxy.get_property("NTPSynchronized").unwrap_or(false);
+    let rtc_in_local_time: bool = proxy.get_property("LocalRTC").unwrap_or(false);
 
     Ok(TimedateHealth {
         timezone,

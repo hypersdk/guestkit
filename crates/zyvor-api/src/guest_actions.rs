@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Pending guest remediation actions (approval workflow stub).
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Extension;
 use axum::Json;
 use redis::AsyncCommands;
@@ -44,6 +44,23 @@ fn pending_key(id: &str) -> String {
 }
 
 const PENDING_INDEX: &str = "guest-action:pending:index";
+const AUDIT_INDEX: &str = "guest-action:audit:index";
+
+#[derive(Debug, Deserialize)]
+pub struct GuestActionAuditQuery {
+    pub limit: Option<usize>,
+}
+
+async fn track_audit(
+    redis: &mut redis::aio::ConnectionManager,
+    id: &str,
+) -> Result<(), ApiError> {
+    redis
+        .sadd::<_, _, ()>(AUDIT_INDEX, id)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(())
+}
 
 pub async fn enqueue_restart_unit(
     redis: &mut redis::aio::ConnectionManager,
@@ -77,6 +94,7 @@ pub async fn enqueue_restart_unit(
         .sadd::<_, _, ()>(PENDING_INDEX, &id)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+    track_audit(redis, &id).await?;
     Ok(id)
 }
 
@@ -111,6 +129,7 @@ pub async fn enqueue_support_bundle(
         .sadd::<_, _, ()>(PENDING_INDEX, &id)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+    track_audit(redis, &id).await?;
     Ok(id)
 }
 
@@ -225,6 +244,29 @@ pub async fn list_pending_guest_actions(
         }
     }
     out.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    Ok(Json(ApiResponse::ok(out)))
+}
+
+pub async fn list_guest_action_audit(
+    State(state): State<AppState>,
+    Query(query): Query<GuestActionAuditQuery>,
+    user: Option<Extension<AuthUserClaims>>,
+) -> ApiResult<Json<ApiResponse<Vec<PendingGuestAction>>>> {
+    require_guest_action_approver(&state, user.as_deref())?;
+    let limit = query.limit.unwrap_or(50).clamp(1, 200);
+    let mut redis = state.redis.clone();
+    let ids: Vec<String> = redis
+        .smembers(AUDIT_INDEX)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let mut out = Vec::new();
+    for id in ids {
+        if let Ok(action) = load_pending(&mut redis, &id).await {
+            out.push(action);
+        }
+    }
+    out.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    out.truncate(limit);
     Ok(Json(ApiResponse::ok(out)))
 }
 

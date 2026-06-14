@@ -49,6 +49,7 @@ const state = {
   vmtoolsPolicy: null,
   vmtoolsBundle: null,
   pendingGuestActions: [],
+  guestActionAudit: [],
   serverStorage: { rootId: 0, path: '', roots: [] },
 };
 
@@ -73,8 +74,11 @@ async function api(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && window.GuestKitAuth) {
-    window.GuestKitAuth.redirectToLogin();
-    throw new Error('Authentication required');
+    const cfg = await window.GuestKitAuth.fetchAuthConfig().catch(() => ({ auth_enabled: false }));
+    if (cfg.auth_enabled) {
+      window.GuestKitAuth.redirectToLogin();
+      throw new Error('Authentication required');
+    }
   }
   if (!res.ok) throw new Error(data.message || data.error || res.statusText);
   return data;
@@ -506,6 +510,7 @@ function updateFleetToolbar() {
   $('#fleetVmtoolsPolicy')?.classList.toggle('hidden', !isCluster);
   $('#fleetVmtoolsPolicyBadge')?.classList.toggle('hidden', !isCluster);
   $('#fleetPacketwolfBadge')?.classList.toggle('hidden', !isCluster);
+  $('#fleetGuestApprovalsBadge')?.classList.toggle('hidden', !isCluster);
   $('#packetwolfSyncBtn')?.classList.toggle('hidden', !isCluster);
   $('#clusterLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
   $('#clusterVmtoolsLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
@@ -531,6 +536,25 @@ function updateFleetToolbar() {
     if (el) {
       el.textContent += ` · ${state.pendingGuestActions.length} action approval(s)`;
       el.classList.add('warn');
+    }
+  }
+  if (isCluster) {
+    const approvalsBadge = $('#fleetGuestApprovalsBadge');
+    const pendingCount = state.pendingGuestActions?.length || 0;
+    if (approvalsBadge) {
+      approvalsBadge.textContent = pendingCount
+        ? `${pendingCount} pending approval${pendingCount === 1 ? '' : 's'}`
+        : 'Approvals';
+      approvalsBadge.classList.toggle('warn', pendingCount > 0);
+      approvalsBadge.classList.toggle('live', pendingCount > 0);
+    }
+    const approvalsPanel = $('#fleetGuestApprovals');
+    if (approvalsPanel) {
+      const auditCount = (state.guestActionAudit || []).length;
+      approvalsPanel.classList.toggle(
+        'hidden',
+        !pendingCount && !auditCount,
+      );
     }
   }
   if (isCluster && state.vmtoolsPolicy) {
@@ -841,8 +865,21 @@ async function loadPendingGuestActions() {
     const data = await api('/guest-actions/pending');
     state.pendingGuestActions = data.data || [];
     updateFleetToolbar();
+    renderGuestApprovalsPanel();
   } catch {
     state.pendingGuestActions = [];
+    renderGuestApprovalsPanel();
+  }
+}
+
+async function loadGuestActionAudit() {
+  try {
+    const data = await api('/guest-actions/audit?limit=40');
+    state.guestActionAudit = data.data || [];
+    renderGuestApprovalsPanel();
+  } catch {
+    state.guestActionAudit = [];
+    renderGuestApprovalsPanel();
   }
 }
 
@@ -852,9 +889,61 @@ async function approveGuestAction(actionId) {
     await api(`/guest-actions/${encodeURIComponent(actionId)}/approve`, { method: 'POST' });
     toast('Guest action approved', 'ok');
     await loadPendingGuestActions();
+    await loadGuestActionAudit();
     await fetchClusterGuestInfo(false);
   } catch (e) {
     toast(e.message, 'err');
+  }
+}
+
+async function rejectGuestAction(actionId) {
+  feed(`Rejecting guest action <strong>${escapeHtml(actionId)}</strong>…`);
+  try {
+    await api(`/guest-actions/${encodeURIComponent(actionId)}/reject`, { method: 'POST' });
+    toast('Guest action rejected', 'ok');
+    await loadPendingGuestActions();
+    await loadGuestActionAudit();
+    await fetchClusterGuestInfo(false);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function renderGuestApprovalsPanel() {
+  const panel = $('#fleetGuestApprovals');
+  if (!panel) return;
+  const pending = state.pendingGuestActions || [];
+  const audit = (state.guestActionAudit || []).filter((a) => a.status !== 'pending');
+  const pendingEl = $('#fleetGuestApprovalsPending');
+  const auditEl = $('#fleetGuestApprovalsAudit');
+  if (pendingEl) {
+    if (!pending.length) {
+      pendingEl.innerHTML = '<p class="muted">No pending approvals.</p>';
+    } else {
+      pendingEl.innerHTML = '<ul class="guest-intel-recs">' + pending.map((a) => {
+        const who = a.requested_by ? ` <span class="muted">by ${escapeHtml(a.requested_by)}</span>` : '';
+        const vm = `${escapeHtml(a.namespace)}/${escapeHtml(a.vm_name)}`;
+        const unit = a.unit ? ` ${escapeHtml(a.unit)}` : '';
+        return `<li><strong>${vm}</strong> ${escapeHtml(a.action)}${unit}${who}
+          <button type="button" class="btn glass sm accent" data-guest-approve="${escapeHtml(a.id)}">Approve</button>
+          <button type="button" class="btn glass sm" data-guest-reject="${escapeHtml(a.id)}">Reject</button></li>`;
+      }).join('') + '</ul>';
+    }
+  }
+  if (auditEl) {
+    if (!audit.length) {
+      auditEl.innerHTML = '<p class="muted">No recent approval history.</p>';
+    } else {
+      auditEl.innerHTML = '<ul class="guest-intel-recs guest-action-audit">' + audit.slice(0, 20).map((a) => {
+        const vm = `${escapeHtml(a.namespace)}/${escapeHtml(a.vm_name)}`;
+        const unit = a.unit ? ` ${escapeHtml(a.unit)}` : '';
+        const actor = a.approved_by || a.rejected_by || '';
+        const when = a.approved_at || a.rejected_at || a.created_at || '';
+        const statusClass = a.status === 'approved' ? 'ok' : 'warn';
+        return `<li class="${statusClass}"><code>${escapeHtml(when)}</code> <strong>${vm}</strong> ${escapeHtml(a.action)}${unit}
+          <span class="muted">${escapeHtml(a.status)}${actor ? ` by ${escapeHtml(actor)}` : ''}</span></li>`;
+      }).join('') + '</ul>';
+    }
   }
 }
 
@@ -986,6 +1075,7 @@ async function loadClusterFleet() {
     await loadVmtoolsBundle();
     await loadPacketwolfFleet();
     await loadPendingGuestActions();
+    await loadGuestActionAudit();
     if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
     }
@@ -1415,7 +1505,9 @@ function renderGuestIntelligenceCard(container, intel) {
     if (pending.length) {
       html += '<p class="finding warn"><strong>Pending approvals</strong></p><ul class="guest-intel-recs">';
       pending.forEach((a) => {
-        html += `<li>${escapeHtml(a.action)} ${escapeHtml(a.unit || '')}${a.requested_by ? ` <span class="muted">by ${escapeHtml(a.requested_by)}</span>` : ''} <button type="button" class="btn glass sm" data-guest-approve="${escapeHtml(a.id)}">Approve</button></li>`;
+        html += `<li>${escapeHtml(a.action)} ${escapeHtml(a.unit || '')}${a.requested_by ? ` <span class="muted">by ${escapeHtml(a.requested_by)}</span>` : ''}
+          <button type="button" class="btn glass sm accent" data-guest-approve="${escapeHtml(a.id)}">Approve</button>
+          <button type="button" class="btn glass sm" data-guest-reject="${escapeHtml(a.id)}">Reject</button></li>`;
       });
       html += '</ul>';
     }
@@ -3185,6 +3277,11 @@ function setupActions() {
     const approveBtn = e.target.closest('[data-guest-approve]');
     if (approveBtn) {
       approveGuestAction(approveBtn.dataset.guestApprove);
+      return;
+    }
+    const rejectBtn = e.target.closest('[data-guest-reject]');
+    if (rejectBtn) {
+      rejectGuestAction(rejectBtn.dataset.guestReject);
       return;
     }
     const btn = e.target.closest('[data-guest-action]');
