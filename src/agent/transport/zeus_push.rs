@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 const DEFAULT_CONFIG: &str = "/etc/zyvor/guest-agent.toml";
+#[cfg(target_os = "windows")]
+const DEFAULT_CONFIG_WINDOWS: &str = "C:\\ProgramData\\zyvor\\guest-agent.toml";
 const AGENT_STATE_PATH: &str = "/var/lib/zyvor/agent-state.json";
 const DEFAULT_CERT_DIR: &str = "/var/lib/zyvor";
 const DEFAULT_CERT_PATH: &str = "/var/lib/zyvor/agent.crt";
@@ -40,7 +42,16 @@ fn default_interval() -> u64 {
 }
 
 pub fn load_config() -> ZeusPushConfig {
-    let path = std::env::var("ZYVOR_AGENT_CONFIG").unwrap_or_else(|_| DEFAULT_CONFIG.to_string());
+    let path = std::env::var("ZYVOR_AGENT_CONFIG").unwrap_or_else(|_| {
+        #[cfg(target_os = "windows")]
+        {
+            DEFAULT_CONFIG_WINDOWS.to_string()
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            DEFAULT_CONFIG.to_string()
+        }
+    });
     if Path::new(&path).exists() {
         std::fs::read_to_string(&path)
             .ok()
@@ -224,10 +235,8 @@ async fn push_heartbeat(
 }
 
 async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Result<()> {
-    let evidence = crate::evidence::build_evidence_live()?;
-    let health = crate::health::build_guest_health(&evidence);
-    let metrics = crate::metrics::collect_metrics_live();
     let recent_events = recent_systemd_events(100);
+    let (health, metrics) = build_push_health()?;
     let body = serde_json::json!({
         "guest_health": health,
         "metrics": metrics,
@@ -236,6 +245,35 @@ async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Re
     let url = format!("{base}/api/v1/guest-agents/{agent_id}/report");
     client.post(&url).json(&body).send().await.context("report POST")?;
     Ok(())
+}
+
+fn build_push_health() -> Result<(guestkit_agent_protocol::GuestHealth, serde_json::Value)> {
+    let health = crate::health::build_guest_health_live()?;
+    #[cfg(target_os = "windows")]
+    {
+        let mut metrics_val = serde_json::json!({});
+        if let Some(ev) = crate::collectors::windows_live::collect_windows_live() {
+            if let Some(obj) = metrics_val.as_object_mut() {
+                obj.insert("ips".into(), serde_json::json!(ev.ip_addresses));
+                if let Some(gw) = ev.default_gateway {
+                    obj.insert("default_gateway".into(), serde_json::json!(gw));
+                }
+            }
+        }
+        Ok((health, metrics_val))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let metrics = crate::metrics::collect_metrics_live();
+        let mut metrics_val = serde_json::to_value(metrics)?;
+        if let Some(obj) = metrics_val.as_object_mut() {
+            obj.insert(
+                "ips".into(),
+                serde_json::json!(crate::evidence::live::collect_live_ips()),
+            );
+        }
+        Ok((health, metrics_val))
+    }
 }
 
 fn build_client(config: &ZeusPushConfig) -> Result<reqwest::Client> {

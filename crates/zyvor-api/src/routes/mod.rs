@@ -7,6 +7,7 @@ mod copilot;
 pub mod guest_agent;
 mod health;
 mod jobs;
+mod packetwolf;
 pub(crate) mod kubevirt;
 mod settings;
 mod storage;
@@ -79,6 +80,14 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/storage/browse", get(storage::browse_storage))
         .route("/api/v1/vms/import-from-storage", post(storage::import_from_storage))
         .route("/api/v1/vmtools/bundle", get(vmtools::get_bundle))
+        .route(
+            "/api/v1/packetwolf/fleet-snapshot",
+            get(packetwolf::get_fleet_snapshot),
+        )
+        .route(
+            "/api/v1/packetwolf/fleet-correlate",
+            post(packetwolf::trigger_fleet_correlation),
+        )
         .route("/api/v1/vmtools/coverage", get(vmtools::get_coverage))
         .route("/api/v1/vmtools/policy", get(vmtools::get_policy).put(vmtools::put_policy))
         .route(

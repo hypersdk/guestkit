@@ -2,7 +2,10 @@
 # Run as Administrator inside the guest VM.
 param(
     [string]$AgentUrl = $env:ZYVOR_AGENT_URL,
-    [string]$InstallDir = "$env:ProgramFiles\Zyvor\VM Tools"
+    [string]$ConfigUrl = $env:ZYVOR_AGENT_CONFIG_URL,
+    [string]$PolicyUrl = $env:ZYVOR_AGENT_POLICY_URL,
+    [string]$InstallDir = "$env:ProgramFiles\Zyvor\VM Tools",
+    [string]$ConfigDir = "$env:ProgramData\zyvor"
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,10 +15,28 @@ if (-not $AgentUrl) {
 }
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
 $agentPath = Join-Path $InstallDir "zyvor-guest-agent.exe"
 
 Write-Host "Downloading Zeus VM Tools agent from $AgentUrl"
 Invoke-WebRequest -Uri $AgentUrl -OutFile $agentPath -UseBasicParsing
+
+$configPath = Join-Path $ConfigDir "guest-agent.toml"
+if ($ConfigUrl) {
+    Write-Host "Downloading guest-agent.toml from $ConfigUrl"
+    Invoke-WebRequest -Uri $ConfigUrl -OutFile $configPath -UseBasicParsing
+} elseif (-not (Test-Path $configPath)) {
+    @"
+zeus_url = ""
+interval_secs = 60
+"@ | Set-Content -Path $configPath -Encoding UTF8
+}
+
+$policyPath = Join-Path $ConfigDir "agent-policy.yaml"
+if ($PolicyUrl) {
+    Write-Host "Downloading agent-policy.yaml from $PolicyUrl"
+    Invoke-WebRequest -Uri $PolicyUrl -OutFile $policyPath -UseBasicParsing
+}
 
 $svcName = "ZyvorGuestAgent"
 $svcDisplay = "Zeus VM Tools Guest Agent"
@@ -31,3 +52,4 @@ New-Service -Name $svcName -BinaryPathName $binPath -DisplayName $svcDisplay -St
 Start-Service -Name $svcName
 
 Write-Host "Zeus VM Tools installed. Service $svcName is running."
+Write-Host "Config: $configPath"
