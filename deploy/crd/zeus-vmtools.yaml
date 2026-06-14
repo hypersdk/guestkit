@@ -104,6 +104,22 @@ spec:
                   type: boolean
                 lastHeartbeat:
                   type: string
+                guestHealth:
+                  type: string
+                healthScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                failedUnits:
+                  type: integer
+                  minimum: 0
+                systemdState:
+                  type: string
+                hostname:
+                  type: string
+                journalHintCount:
+                  type: integer
+                  minimum: 0
       subresources:
         status: {}
 ---

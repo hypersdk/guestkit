@@ -167,6 +167,21 @@ pub async fn guest_agent_report(
                     .set_ex::<_, _, ()>(vm_report_key(ns, vm), &raw, 86400)
                     .await
                     .map_err(|e| ApiError::internal(e.to_string()))?;
+
+                if let Some(client) = state.kube.clone() {
+                    let version = meta
+                        .get("agent_version")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    crate::kubevirt_guest_cr::patch_vmguestagent_health(
+                        &client,
+                        ns,
+                        vm,
+                        &body.guest_health,
+                        version,
+                    )
+                    .await;
+                }
             }
         }
     }

@@ -85,6 +85,7 @@ impl Executor {
                 other => format!("unsupported action: {other}"),
             };
             let success = !result.starts_with("denied") && !result.contains("unsupported");
+            self.audit(&action.action, &action.target, success, &result);
             results.push(RemediationActionResult {
                 action: action.action.clone(),
                 success,
@@ -114,7 +115,7 @@ impl Executor {
     }
 
     fn run_systemctl(&self, op: &str, unit: &str) -> Result<String> {
-        Command::new("systemctl")
+        let result = Command::new("systemctl")
             .arg(op)
             .arg(unit)
             .output()
@@ -125,7 +126,18 @@ impl Executor {
                     String::from_utf8_lossy(&o.stderr).to_string()
                 }
             })
-            .map_err(|e| anyhow::anyhow!("{e}"))
+            .map_err(|e| anyhow::anyhow!("{e}"));
+        let success = result
+            .as_ref()
+            .map(|r| r.ends_with(" ok"))
+            .unwrap_or(false);
+        self.audit(
+            &format!("systemctl_{op}"),
+            unit,
+            success,
+            result.as_ref().map(String::as_str).unwrap_or(""),
+        );
+        result
     }
 
     fn audit(&self, action: &str, target: &str, success: bool, detail: &str) {

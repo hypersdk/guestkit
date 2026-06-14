@@ -18,6 +18,10 @@ pub struct ZeusPushConfig {
     pub ca_path: Option<String>,
     #[serde(default = "default_interval")]
     pub interval_secs: u64,
+    #[serde(default)]
+    pub namespace: Option<String>,
+    #[serde(default)]
+    pub vm_name: Option<String>,
 }
 
 fn default_interval() -> u64 {
@@ -41,6 +45,8 @@ struct RegisterRequest {
     hostname: String,
     agent_version: String,
     bootstrap_token: Option<String>,
+    namespace: Option<String>,
+    vm_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,6 +81,14 @@ pub async fn run_push_worker() -> Result<()> {
             hostname,
             agent_version: crate::VERSION.to_string(),
             bootstrap_token: config.bootstrap_token.clone(),
+            namespace: config
+                .namespace
+                .clone()
+                .or_else(|| std::env::var("ZYVOR_VM_NAMESPACE").ok()),
+            vm_name: config
+                .vm_name
+                .clone()
+                .or_else(|| std::env::var("ZYVOR_VM_NAME").ok()),
         };
         let url = format!("{base}/api/v1/guest-agents/register");
         if let Ok(resp) = client.post(&url).json(&body).send().await {
