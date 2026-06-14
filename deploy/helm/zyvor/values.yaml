@@ -35,6 +35,10 @@ zyvorApi:
     enabled: false
     vsockPort: 1234
     listen: "127.0.0.1:8765"
+  agentMtls:
+    enabled: true
+    bindAddr: "0.0.0.0:8443"
+    serverSans: "localhost,zyvor-api,api.zyvor.local"
   auth:
     enabled: false
     jwtSecret: ""          # set via secret when auth.enabled=true

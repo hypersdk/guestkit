@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Local Unix socket client for in-guest zyvor-guestctl status.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use guestkit_agent_protocol::{read_frame, write_frame};
+use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
+use std::time::Duration;
 
 pub const DEFAULT_SOCKET_PATH: &str = "/var/run/zyvor/guest-agent.sock";
 
@@ -51,6 +53,31 @@ pub fn print_local_status(socket_path: Option<&str>) -> Result<()> {
             println!("  - {name}: {state} {failure}");
         }
     }
+    Ok(())
+}
+
+/// Read a JSON-RPC request from stdin, forward via framed local socket, print JSON response.
+pub fn run_rpc_stdio(socket_path: Option<&str>) -> Result<()> {
+    let path = socket_path.unwrap_or(DEFAULT_SOCKET_PATH);
+    let mut stdin = io::stdin().lock();
+    let mut req = Vec::new();
+    stdin.read_to_end(&mut req)?;
+    if req.is_empty() {
+        bail!("empty rpc request on stdin");
+    }
+
+    let mut stream =
+        UnixStream::connect(path).with_context(|| format!("connect to agent at {path}"))?;
+    stream.set_read_timeout(Some(Duration::from_secs(120)))?;
+
+    let mut writer = stream.try_clone()?;
+    write_frame(&mut writer, &req)?;
+    let mut reader = stream.try_clone()?;
+    let frame = read_frame(&mut reader).map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    let mut stdout = io::stdout().lock();
+    stdout.write_all(&frame)?;
+    stdout.write_all(b"\n")?;
     Ok(())
 }
 
