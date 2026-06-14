@@ -70,6 +70,9 @@ fn mtls_push_url_for_config(config: &crate::config::Config) -> Option<String> {
     if config.agent_mtls_bind_addr.is_none() {
         return None;
     }
+    if let Some(url) = config.agent_mtls_public_url.as_ref() {
+        return Some(url.trim_end_matches('/').to_string());
+    }
     let port = config
         .agent_mtls_bind_addr
         .as_ref()

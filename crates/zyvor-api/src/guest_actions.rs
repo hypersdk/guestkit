@@ -2,11 +2,14 @@
 //! Pending guest remediation actions (approval workflow stub).
 
 use axum::extract::{Path, State};
+use axum::Extension;
 use axum::Json;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::auth::rbac::can_approve_guest_actions;
+use crate::auth::types::AuthUserClaims;
 use crate::error::{ApiError, ApiResult};
 use crate::guest_action_policy::{enforce_restart_unit, fetch_guest_action_policy};
 use crate::models::ApiResponse;
@@ -23,7 +26,15 @@ pub struct PendingGuestAction {
     pub status: String,
     pub created_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub requested_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approved_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rejected_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rejected_by: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
 }
@@ -39,6 +50,7 @@ pub async fn enqueue_restart_unit(
     namespace: &str,
     vm_name: &str,
     unit: &str,
+    requested_by: Option<&str>,
 ) -> Result<String, ApiError> {
     let id = uuid::Uuid::new_v4().to_string();
     let action = PendingGuestAction {
@@ -49,7 +61,11 @@ pub async fn enqueue_restart_unit(
         unit: Some(unit.into()),
         status: "pending".into(),
         created_at: chrono::Utc::now().to_rfc3339(),
+        requested_by: requested_by.map(String::from),
         approved_at: None,
+        approved_by: None,
+        rejected_at: None,
+        rejected_by: None,
         result: None,
     };
     let raw = serde_json::to_string(&action).map_err(|e| ApiError::internal(e.to_string()))?;
@@ -68,6 +84,7 @@ pub async fn enqueue_support_bundle(
     redis: &mut redis::aio::ConnectionManager,
     namespace: &str,
     vm_name: &str,
+    requested_by: Option<&str>,
 ) -> Result<String, ApiError> {
     let id = uuid::Uuid::new_v4().to_string();
     let action = PendingGuestAction {
@@ -78,7 +95,11 @@ pub async fn enqueue_support_bundle(
         unit: None,
         status: "pending".into(),
         created_at: chrono::Utc::now().to_rfc3339(),
+        requested_by: requested_by.map(String::from),
         approved_at: None,
+        approved_by: None,
+        rejected_at: None,
+        rejected_by: None,
         result: None,
     };
     let raw = serde_json::to_string(&action).map_err(|e| ApiError::internal(e.to_string()))?;
@@ -162,9 +183,34 @@ async fn execute_pending(state: &AppState, action: &PendingGuestAction) -> ApiRe
     }
 }
 
+fn require_guest_action_approver(
+    state: &AppState,
+    user: Option<&AuthUserClaims>,
+) -> ApiResult<()> {
+    if !state.config.auth_enabled {
+        return Ok(());
+    }
+    let user = user.ok_or_else(|| ApiError::unauthorized("authentication required"))?;
+    if !can_approve_guest_actions(user) {
+        return Err(ApiError::forbidden("operator or admin role required"));
+    }
+    Ok(())
+}
+
+fn actor_label(user: Option<&AuthUserClaims>) -> Option<String> {
+    user.map(|u| {
+        u.email
+            .clone()
+            .or_else(|| u.name.clone())
+            .unwrap_or_else(|| u.sub.clone())
+    })
+}
+
 pub async fn list_pending_guest_actions(
     State(state): State<AppState>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Vec<PendingGuestAction>>>> {
+    require_guest_action_approver(&state, user.as_deref())?;
     let mut redis = state.redis.clone();
     let ids: Vec<String> = redis
         .smembers(PENDING_INDEX)
@@ -185,7 +231,10 @@ pub async fn list_pending_guest_actions(
 pub async fn approve_guest_action(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    require_guest_action_approver(&state, user.as_deref())?;
+    let approver = actor_label(user.as_deref());
     let mut redis = state.redis.clone();
     let mut action = load_pending(&mut redis, &id).await?;
     if action.status != "pending" {
@@ -194,6 +243,7 @@ pub async fn approve_guest_action(
     let result = execute_pending(&state, &action).await?;
     action.status = "approved".into();
     action.approved_at = Some(chrono::Utc::now().to_rfc3339());
+    action.approved_by = approver;
     action.result = Some(result.clone());
     save_pending(&mut redis, &action).await?;
     redis
@@ -210,13 +260,18 @@ pub async fn approve_guest_action(
 pub async fn reject_guest_action(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    require_guest_action_approver(&state, user.as_deref())?;
+    let rejector = actor_label(user.as_deref());
     let mut redis = state.redis.clone();
     let mut action = load_pending(&mut redis, &id).await?;
     if action.status != "pending" {
         return Err(ApiError::bad_request("action is not pending"));
     }
     action.status = "rejected".into();
+    action.rejected_at = Some(chrono::Utc::now().to_rfc3339());
+    action.rejected_by = rejector;
     save_pending(&mut redis, &action).await?;
     redis
         .srem::<_, _, ()>(PENDING_INDEX, &id)
