@@ -234,3 +234,32 @@ async fn patch_packetwolf_annotations(
         warn!("PacketWolf VM annotation patch failed: {e}");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn build_member_extracts_ips_and_health() {
+        let guest_health = json!({
+            "vm_hostname": "vm-a",
+            "guest_health": "degraded",
+            "score": 72,
+            "failed_units": 1,
+            "systemd_state": "running",
+            "journal_hints": ["hint1"],
+            "agent_version": "0.3.9",
+        });
+        let metrics = json!({
+            "ips": ["10.0.0.5"],
+            "network": { "rx_bytes": 1000, "tx_bytes": 2000 },
+        });
+        let member = build_member("default", "vm-a", &guest_health, &metrics, &json!([]), "0.3.9");
+        assert_eq!(member.namespace, "default");
+        assert_eq!(member.vm_name, "vm-a");
+        assert_eq!(member.guest_health, "degraded");
+        assert_eq!(member.ip_addresses, vec!["10.0.0.5".to_string()]);
+        assert_eq!(member.journal_hints, 1);
+    }
+}

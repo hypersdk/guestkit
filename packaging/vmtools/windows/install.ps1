@@ -53,3 +53,9 @@ Start-Service -Name $svcName
 
 Write-Host "Zeus VM Tools installed. Service $svcName is running."
 Write-Host "Config: $configPath"
+
+$updaterScript = Join-Path $InstallDir "register-updater-task.ps1"
+if (Test-Path $updaterScript) {
+    Write-Host "Registering daily signed update task…"
+    & $updaterScript
+}

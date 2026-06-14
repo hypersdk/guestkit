@@ -505,6 +505,8 @@ function updateFleetToolbar() {
   $('#fleetVmtoolsCoverage')?.classList.toggle('hidden', !isCluster);
   $('#fleetVmtoolsPolicy')?.classList.toggle('hidden', !isCluster);
   $('#fleetVmtoolsPolicyBadge')?.classList.toggle('hidden', !isCluster);
+  $('#fleetPacketwolfBadge')?.classList.toggle('hidden', !isCluster);
+  $('#packetwolfSyncBtn')?.classList.toggle('hidden', !isCluster);
   $('#clusterLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
   $('#clusterVmtoolsLifecycle')?.classList.toggle('hidden', !isCluster || !state.selectedClusterVm);
   if (isCluster && state.clusterLastSync) {
@@ -551,6 +553,17 @@ function updateFleetToolbar() {
     if (installToggle) installToggle.checked = Boolean(autoInstall);
     const upgradeToggle = $('#vmtoolsAutoUpgrade');
     if (upgradeToggle) upgradeToggle.checked = Boolean(autoUpgrade);
+  }
+  if (isCluster && state.packetwolfFleet) {
+    const badge = $('#fleetPacketwolfBadge');
+    const snap = state.packetwolfFleet;
+    const count = snap.member_count ?? snap.members?.length ?? 0;
+    const id = snap.snapshot_id || snap.observed_at || '';
+    if (badge) {
+      badge.textContent = count ? `PW ${count} VMs` : 'PW idle';
+      badge.title = id ? `PacketWolf fleet ${id}` : 'PacketWolf fleet correlation';
+      badge.classList.toggle('ok', count > 0);
+    }
   }
 }
 
@@ -864,6 +877,30 @@ async function loadVmtoolsBundle() {
   }
 }
 
+async function loadPacketwolfFleet() {
+  try {
+    const data = await api('/packetwolf/fleet-snapshot');
+    state.packetwolfFleet = data.data || {};
+    updateFleetToolbar();
+  } catch {
+    /* optional when PacketWolf not configured */
+  }
+}
+
+async function syncPacketwolfFleet() {
+  feed('Running PacketWolf fleet correlation…');
+  try {
+    const data = await api('/packetwolf/fleet-correlate', { method: 'POST' });
+    state.packetwolfFleet = data.data || {};
+    updateFleetToolbar();
+    const count = state.packetwolfFleet.member_count ?? state.packetwolfFleet.members?.length ?? 0;
+    toast(`PacketWolf fleet sync: ${count} VM(s)`, 'ok');
+    await loadClusterFleet();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
 async function loadVmtoolsPolicy() {
   try {
     const data = await api('/vmtools/policy');
@@ -947,6 +984,7 @@ async function loadClusterFleet() {
     await loadVmtoolsCoverage();
     await loadVmtoolsPolicy();
     await loadVmtoolsBundle();
+    await loadPacketwolfFleet();
     await loadPendingGuestActions();
     if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
@@ -3116,6 +3154,7 @@ function setupActions() {
   $('#vmtoolsAutoInstall')?.addEventListener('change', () => saveVmtoolsPolicy());
   $('#vmtoolsAutoUpgrade')?.addEventListener('change', () => saveVmtoolsPolicy());
   $('#vmtoolsReconcileBtn')?.addEventListener('click', () => reconcileVmtoolsFleet());
+  $('#packetwolfSyncBtn')?.addEventListener('click', () => syncPacketwolfFleet());
   $('#fleetEmptyBrowseCluster')?.addEventListener('click', () => openClusterFleet());
   $('#fleetEmptyImport')?.addEventListener('click', () => triggerDiskUpload());
 

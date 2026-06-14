@@ -2,9 +2,12 @@
 //! PacketWolf fleet correlation API.
 
 use axum::extract::State;
+use axum::Extension;
 use axum::Json;
 
+use crate::auth::types::AuthUserClaims;
 use crate::error::ApiResult;
+use crate::guest_remediation_auth::require_guest_remediation_requester;
 use crate::models::ApiResponse;
 use crate::state::AppState;
 
@@ -20,7 +23,9 @@ pub async fn get_fleet_snapshot(
 
 pub async fn trigger_fleet_correlation(
     State(state): State<AppState>,
+    user: Option<Extension<AuthUserClaims>>,
 ) -> ApiResult<Json<ApiResponse<serde_json::Value>>> {
+    require_guest_remediation_requester(&state, user.as_deref())?;
     let mut redis = state.redis.clone();
     let url = crate::packetwolf_fleet::fleet_url_public(&state.config);
     crate::packetwolf_fleet::run_fleet_correlation(

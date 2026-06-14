@@ -33,6 +33,7 @@ else
 fi
 
 cp "${ROOT}/packaging/vmtools/windows/install.ps1" "${STAGING}/"
+cp "${ROOT}/templates/agent/windows/register-updater-task.ps1" "${STAGING}/"
 cp "${TEMPLATES}/guest-agent-windows.toml" "${STAGING}/guest-agent.toml"
 cp "${TEMPLATES}/agent-policy.yaml" "${STAGING}/agent-policy.yaml"
 
