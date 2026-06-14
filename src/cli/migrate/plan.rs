@@ -131,6 +131,8 @@ mod tests {
             cloud_init: None,
             network_probes: None,
             snapshot_readiness: None,
+            process: None,
+            hardware: None,
         }
     }
 

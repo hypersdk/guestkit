@@ -1,0 +1,11 @@
+[Unit]
+Description=Zyvor GuestAgent update check (stub)
+Documentation=https://zyvor.dev/guestkit
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/zyvor-guest-agent --check-update
+User=root
+
+[Install]
+WantedBy=multi-user.target

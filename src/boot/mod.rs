@@ -5,5 +5,8 @@ pub mod checks;
 pub mod engine;
 pub mod report;
 
+#[cfg(feature = "agent")]
+pub mod live;
+
 pub use engine::{analyze_bootability, BootTarget};
 pub use report::{BootabilityReport, CheckResult, CheckSeverity, Finding};

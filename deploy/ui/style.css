@@ -1830,3 +1830,65 @@ html[data-theme="aurora"] .badge.live.running {
     background: rgba(28, 32, 48, 0.92);
   }
 }
+
+.guest-intel-card {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+}
+
+.guest-intel-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.guest-intel-services,
+.guest-intel-recs {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.1rem;
+}
+
+.guest-intel-drawer {
+  margin-top: 0.75rem;
+}
+
+.guest-intel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.guest-intel-chip {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.guest-intel-chip.ok {
+  border-color: rgba(72, 199, 142, 0.45);
+  color: #8ee4b8;
+}
+
+.guest-intel-chip.warn {
+  border-color: rgba(255, 193, 7, 0.45);
+  color: #ffd666;
+}
+
+.guest-intel-chip.err {
+  border-color: rgba(255, 99, 99, 0.45);
+  color: #ff9a9a;
+}
+
+.guest-intel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.guest-intel-unit-btn {
+  font-size: 0.75rem;
+}
