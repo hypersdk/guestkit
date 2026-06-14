@@ -181,15 +181,18 @@ bootstrap_token = "..."  # required when Zeus sets AGENT_BOOTSTRAP_TOKEN
 
 When `GuestActionPolicy.spec.requireApproval` is true, remediation APIs return `pending_approval` with an `action_id`. Approve via `POST /api/v1/guest-actions/{id}/approve` or the Zeus UI pending-approval buttons.
 
-**mTLS bootstrap (stub):** `POST /api/v1/guest-agents/bootstrap` validates bootstrap token and returns cert path hints; full CA issuance is deferred.
+**mTLS bootstrap:** `POST /api/v1/guest-agents/bootstrap` issues client certificates when `AGENT_BOOTSTRAP_TOKEN` matches. Agents push heartbeats/reports on port 8443 when `AGENT_MTLS_PUBLIC_URL` is configured.
 
-**Update channel (stub):** `zyvor-guest-updater.timer` runs `zyvor-guest-agent --check-update` daily (logs current version; signed auto-update deferred).
+**Signed self-update:** `zyvor-guest-updater.timer` runs `zyvor-guest-agent --scheduled-update` daily (Linux). Windows guests register the same via `register-updater-task.ps1` (daily scheduled task). Updates require Ed25519-signed bundle manifests and SHA256-verified artifacts (`linux` tar or `windows` zip).
 
 ```bash
 zyvor-guest-agent --check-update
+zyvor-guest-agent --scheduled-update   # policy-gated auto-apply when enabled
 ```
 
-**Hardening:** the agent still runs as root for privileged remediation; non-root `zyvor-agent` user + syscall sandbox is deferred until executor permissions are fully audited.
+**PacketWolf:** Zeus POSTs guest health to `PACKETWOLF_CORRELATION_URL` and runs fleet batch sweeps (`PACKETWOLF_FLEET_CORRELATE_URL`). UI: Guest Intelligence card + `POST /api/v1/packetwolf/fleet-correlate`.
+
+**Hardening:** Linux agent runs as `zyvor-agent` with systemd sandbox; privileged remediation goes through `zyvor-guest-agent-exec`.
 
 ## Security
 
