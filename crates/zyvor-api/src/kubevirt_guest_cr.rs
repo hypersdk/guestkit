@@ -5,7 +5,7 @@ use kube::api::{Api, ApiResource, Patch, PatchParams};
 use kube::Client;
 use serde_json::{json, Value};
 
-fn vmguestagent_resource() -> ApiResource {
+pub fn vmguestagent_resource() -> ApiResource {
     ApiResource {
         group: "zeus.zyvor.dev".into(),
         version: "v1alpha1".into(),
@@ -90,5 +90,32 @@ pub async fn patch_vmguestagent_health(
 
     let _ = api
         .patch_status(&cr_name, &PatchParams::default(), &Patch::Merge(&status))
+        .await;
+
+    patch_vm_health_annotations(client, namespace, vm_name, guest_level, score, failed_units).await;
+}
+
+async fn patch_vm_health_annotations(
+    client: &Client,
+    namespace: &str,
+    vm_name: &str,
+    guest_level: &str,
+    score: u8,
+    failed_units: u32,
+) {
+    let ar = crate::routes::kubevirt::vm_resource();
+    let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), namespace, &ar);
+    let patch = json!({
+        "metadata": {
+            "annotations": {
+                "zeus.zyvor.dev/guest-health": guest_level,
+                "zeus.zyvor.dev/health-score": score.to_string(),
+                "zeus.zyvor.dev/failed-units": failed_units.to_string(),
+                "zeus.zyvor.dev/guest-health-at": chrono::Utc::now().to_rfc3339(),
+            }
+        }
+    });
+    let _ = api
+        .patch(vm_name, &PatchParams::default(), &Patch::Merge(&patch))
         .await;
 }

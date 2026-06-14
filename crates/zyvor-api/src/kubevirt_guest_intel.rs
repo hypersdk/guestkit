@@ -111,6 +111,9 @@ pub async fn post_restart_unit(
         .get("unit")
         .and_then(|v| v.as_str())
         .ok_or_else(|| ApiError::bad_request("unit is required"))?;
+
+    crate::guest_action_policy::enforce_restart_unit(state.kube.as_ref(), unit).await?;
+
     let proxy = state
         .config
         .agent_proxy_url
@@ -162,6 +165,8 @@ pub async fn post_collect_support_bundle(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
+    crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref()).await?;
+
     let proxy = state
         .config
         .agent_proxy_url

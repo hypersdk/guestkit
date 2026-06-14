@@ -28,6 +28,8 @@ pub struct Config {
     pub ui_base_url: String,
     pub default_role: String,
     pub nfs_mount_root: PathBuf,
+    /// When set, guest agent registration must present this bootstrap token.
+    pub agent_bootstrap_token: Option<String>,
 }
 
 impl Config {
@@ -126,6 +128,9 @@ impl Config {
             nfs_mount_root: PathBuf::from(
                 std::env::var("NFS_MOUNT_ROOT").unwrap_or_else(|_| "/mnt/nfs".into()),
             ),
+            agent_bootstrap_token: std::env::var("AGENT_BOOTSTRAP_TOKEN")
+                .ok()
+                .filter(|t| !t.trim().is_empty()),
         })
     }
 }
