@@ -7,6 +7,12 @@ use std::path::Path;
 use std::time::Duration;
 
 const DEFAULT_CONFIG: &str = "/etc/zyvor/guest-agent.toml";
+const AGENT_STATE_PATH: &str = "/var/lib/zyvor/agent-state.json";
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+struct AgentStateFile {
+    agent_id: Option<String>,
+}
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ZeusPushConfig {
@@ -70,7 +76,7 @@ pub async fn run_push_worker() -> Result<()> {
 
     let base = zeus_url.unwrap().trim_end_matches('/').to_string();
     let client = build_client(&config)?;
-    let mut agent_id = config.agent_id.clone();
+    let mut agent_id = config.agent_id.clone().or_else(load_persisted_agent_id);
 
     if agent_id.is_none() {
         let hostname = std::fs::read_to_string("/etc/hostname")
@@ -94,7 +100,8 @@ pub async fn run_push_worker() -> Result<()> {
         if let Ok(resp) = client.post(&url).json(&body).send().await {
             if let Ok(reg) = resp.json::<RegisterResponse>().await {
                 log::info!("registered with Zeus as agent {}", reg.agent_id);
-                agent_id = Some(reg.agent_id);
+                agent_id = Some(reg.agent_id.clone());
+                persist_agent_id(&reg.agent_id);
             }
         }
     }
@@ -187,6 +194,26 @@ fn build_client(config: &ZeusPushConfig) -> Result<reqwest::Client> {
     }
 
     builder.build().context("build reqwest client")
+}
+
+fn load_persisted_agent_id() -> Option<String> {
+    std::fs::read_to_string(AGENT_STATE_PATH)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<AgentStateFile>(&raw).ok())
+        .and_then(|s| s.agent_id)
+        .filter(|id| !id.is_empty())
+}
+
+fn persist_agent_id(agent_id: &str) {
+    let state = AgentStateFile {
+        agent_id: Some(agent_id.to_string()),
+    };
+    if let Some(dir) = std::path::Path::new(AGENT_STATE_PATH).parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(&state) {
+        let _ = std::fs::write(AGENT_STATE_PATH, json);
+    }
 }
 
 fn recent_systemd_events(limit: usize) -> Vec<guestkit_agent_protocol::SystemdEvent> {
