@@ -33,7 +33,7 @@ persistence:
     storageClass: local-path
     accessMode: ReadWriteOnce
     hostPath: /var/lib/zyvor/images
-  kubevirtLocalPath: /var/lib/rancher/k3s/storage
+  kubevirtLocalPath: /data/k3s/storage
 
 minio:
   enabled: true

@@ -114,6 +114,10 @@ pub struct NetworkInterfaceLive {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub addresses: Vec<String>,
     pub carrier: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rx_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tx_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

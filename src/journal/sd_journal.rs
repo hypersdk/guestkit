@@ -118,6 +118,21 @@ impl BootSelector {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::BootSelector;
+
+    #[test]
+    fn boot_selector_from_str() {
+        assert_eq!(BootSelector::from_str("current").as_str(), "current");
+        assert_eq!(BootSelector::from_str("0").as_str(), "current");
+        assert_eq!(BootSelector::from_str("previous").as_str(), "previous");
+        assert_eq!(BootSelector::from_str("-1").as_str(), "previous");
+        assert_eq!(BootSelector::from_str("all").as_str(), "all");
+        assert_eq!(BootSelector::from_str("bogus").as_str(), "all");
+    }
+}
+
 fn parse_journal_json(json: &serde_json::Value, default_unit: &str) -> JournalEntrySummary {
     let message = json
         .get("MESSAGE")

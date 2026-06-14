@@ -6,7 +6,7 @@ use crate::evidence::snapshot::{
 };
 use anyhow::{Context, Result};
 use zbus::blocking::Connection;
-use zbus::zvariant::{OwnedObjectPath, OwnedValue};
+use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value};
 
 pub fn collect_systemd_runtime() -> Option<SystemdRuntimeInfo> {
     collect_systemd_runtime_inner().ok()
@@ -141,67 +141,57 @@ fn parse_unit_list(conn: &Connection, units_raw: &[OwnedValue]) -> Result<Vec<Sy
 }
 
 fn enrich_unit(conn: &Connection, name: &str, unit: &mut SystemdRuntimeUnit) {
-    let path: Result<OwnedObjectPath, _> = {
-        let manager = manager_proxy(conn)?;
-        manager.call("GetUnit", &(name,))
+    let Ok(manager) = manager_proxy(conn) else {
+        return;
+    };
+    let unit_path = match manager.call::<_, _, OwnedObjectPath>("GetUnit", &(name,)) {
+        Ok(path) => path.to_string(),
+        Err(_) => return,
     };
 
-    if let Ok(unit_path) = path {
-        if let Ok(unit_proxy) = zbus::blocking::Proxy::new(
+    {
+        let unit_proxy = match zbus::blocking::Proxy::new(
             conn,
             "org.freedesktop.systemd1",
             unit_path.as_str(),
             "org.freedesktop.systemd1.Unit",
         ) {
-            unit.main_pid = get_prop_u32(&unit_proxy, "MainPID");
-            unit.n_restarts = get_prop_u32(&unit_proxy, "NRestarts");
-            unit.fragment_path = get_prop_string(&unit_proxy, "FragmentPath");
-            unit.unit_file_state = get_prop_string(&unit_proxy, "UnitFileState");
-            unit.exec_main_status = unit_proxy.get_property("ExecMainStatus").ok().and_then(|v| v.ok());
-            unit.cgroup_path = unit_proxy.get_property("ControlGroup").ok().and_then(|v| v.ok());
-            unit.following = unit_proxy.get_property("Following").ok().and_then(|v| v.ok());
-            unit.source_path = get_prop_string_opt(&unit_proxy, "SourcePath");
-            unit.drop_in_paths = unit_proxy
-                .get_property("DropInPaths")
-                .ok()
-                .and_then(|v| v.ok())
-                .unwrap_or_default();
-            unit.need_daemon_reload = unit_proxy
-                .get_property("NeedDaemonReload")
-                .ok()
-                .and_then(|v| v.ok())
-                .unwrap_or(false);
-            unit.can_start = unit_proxy
-                .get_property("CanStart")
-                .ok()
-                .and_then(|v| v.ok())
-                .unwrap_or(false);
-            unit.can_stop = unit_proxy
-                .get_property("CanStop")
-                .ok()
-                .and_then(|v| v.ok())
-                .unwrap_or(false);
-            unit.can_reload = unit_proxy
-                .get_property("CanReload")
-                .ok()
-                .and_then(|v| v.ok())
-                .unwrap_or(false);
+            Ok(proxy) => proxy,
+            Err(_) => return,
+        };
 
-            if let Ok(ts) = unit_proxy.get_property::<u64>("ExecMainStartTimestamp") {
-                if ts > 0 {
-                    unit.exec_main_start_timestamp = Some(format!("{ts}"));
-                }
-            }
-            if let Ok(ts) = unit_proxy.get_property::<u64>("ExecMainExitTimestamp") {
-                if ts > 0 {
-                    unit.exec_main_exit_timestamp = Some(format!("{ts}"));
-                }
+        unit.main_pid = get_prop_u32(&unit_proxy, "MainPID");
+        unit.n_restarts = get_prop_u32(&unit_proxy, "NRestarts");
+        unit.fragment_path = get_prop_string(&unit_proxy, "FragmentPath");
+        unit.unit_file_state = get_prop_string(&unit_proxy, "UnitFileState");
+        unit.exec_main_status = unit_proxy.get_property("ExecMainStatus").ok();
+        unit.cgroup_path = unit_proxy.get_property("ControlGroup").ok();
+        unit.following = unit_proxy.get_property("Following").ok();
+        unit.source_path = get_prop_string_opt(&unit_proxy, "SourcePath");
+        unit.drop_in_paths = unit_proxy
+            .get_property::<Vec<String>>("DropInPaths")
+            .unwrap_or_default();
+        unit.need_daemon_reload = unit_proxy
+            .get_property("NeedDaemonReload")
+            .unwrap_or(false);
+        unit.can_start = unit_proxy.get_property("CanStart").unwrap_or(false);
+        unit.can_stop = unit_proxy.get_property("CanStop").unwrap_or(false);
+        unit.can_reload = unit_proxy.get_property("CanReload").unwrap_or(false);
+
+        if let Ok(ts) = unit_proxy.get_property::<u64>("ExecMainStartTimestamp") {
+            if ts > 0 {
+                unit.exec_main_start_timestamp = Some(format!("{ts}"));
             }
         }
-
-        if name.ends_with(".service") {
-            enrich_service_unit(conn, unit_path.as_str(), unit);
+        if let Ok(ts) = unit_proxy.get_property::<u64>("ExecMainExitTimestamp") {
+            if ts > 0 {
+                unit.exec_main_exit_timestamp = Some(format!("{ts}"));
+            }
         }
+    }
+
+    if name.ends_with(".service") {
+        enrich_service_unit(conn, unit_path.as_str(), unit);
     }
 }
 
@@ -213,12 +203,12 @@ fn enrich_service_unit(conn: &Connection, unit_path: &str, unit: &mut SystemdRun
         "org.freedesktop.systemd1.Service",
     ) {
         unit.control_pid = Some(get_prop_u32(&svc_proxy, "ControlPID"));
-        unit.exec_main_code = svc_proxy.get_property("ExecMainCode").ok().and_then(|v| v.ok());
+        unit.exec_main_code = svc_proxy.get_property("ExecMainCode").ok();
         unit.restart = get_prop_string_opt(&svc_proxy, "Restart");
-        unit.restart_usec = svc_proxy.get_property("RestartUSec").ok().and_then(|v| v.ok());
-        unit.timeout_start_usec = svc_proxy.get_property("TimeoutStartUSec").ok().and_then(|v| v.ok());
-        unit.timeout_stop_usec = svc_proxy.get_property("TimeoutStopUSec").ok().and_then(|v| v.ok());
-        unit.watchdog_usec = svc_proxy.get_property("WatchdogUSec").ok().and_then(|v| v.ok());
+        unit.restart_usec = svc_proxy.get_property("RestartUSec").ok();
+        unit.timeout_start_usec = svc_proxy.get_property("TimeoutStartUSec").ok();
+        unit.timeout_stop_usec = svc_proxy.get_property("TimeoutStopUSec").ok();
+        unit.watchdog_usec = svc_proxy.get_property("WatchdogUSec").ok();
         unit.oom_policy = get_prop_string_opt(&svc_proxy, "OOMPolicy");
         unit.result = get_prop_string_opt(&svc_proxy, "Result");
         unit.reload_result = get_prop_string_opt(&svc_proxy, "ReloadResult");
@@ -236,35 +226,27 @@ fn manager_proxy(conn: &Connection) -> Result<zbus::blocking::Proxy<'_>> {
 }
 
 fn get_prop_string(proxy: &zbus::blocking::Proxy<'_>, name: &str) -> String {
-    proxy
-        .get_property(name)
-        .ok()
-        .and_then(|v| v.ok())
-        .unwrap_or_default()
+    proxy.get_property::<String>(name).unwrap_or_default()
 }
 
 fn get_prop_string_opt(proxy: &zbus::blocking::Proxy<'_>, name: &str) -> Option<String> {
-    proxy.get_property(name).ok().and_then(|v| v.ok())
+    proxy.get_property(name).ok()
 }
 
 fn get_prop_u32(proxy: &zbus::blocking::Proxy<'_>, name: &str) -> u32 {
-    proxy
-        .get_property(name)
-        .ok()
-        .and_then(|v| v.ok())
-        .unwrap_or(0)
+    proxy.get_property::<u32>(name).unwrap_or(0)
 }
 
 fn get_timestamp_us(proxy: &zbus::blocking::Proxy<'_>, name: &str) -> Option<u64> {
-    let raw: OwnedValue = proxy.get_property(name).ok()?.ok()?;
+    let raw: OwnedValue = proxy.get_property(name).ok()?;
     if let Ok(ts) = raw.downcast_ref::<u64>() {
-        return Some(*ts);
+        return Some(ts);
     }
     if let Ok(row) = raw.downcast_ref::<zbus::zvariant::Structure>() {
         let fields = row.fields();
         if fields.len() >= 2 {
-            let secs = fields[0].downcast_ref::<u64>().copied().unwrap_or(0);
-            let usecs = fields[1].downcast_ref::<u64>().copied().unwrap_or(0);
+            let secs = fields[0].downcast_ref::<u64>().unwrap_or(0);
+            let usecs = fields[1].downcast_ref::<u64>().unwrap_or(0);
             return Some(secs * 1_000_000 + usecs);
         }
     }
@@ -306,14 +288,14 @@ fn parse_jobs(raw: &[OwnedValue]) -> Vec<SystemdJob> {
     out
 }
 
-fn value_to_string(v: &OwnedValue) -> String {
+fn value_to_string(v: &Value<'_>) -> String {
     v.downcast_ref::<String>()
         .map(|s| s.clone())
-        .unwrap_or_else(|| format!("{v:?}"))
+        .unwrap_or_else(|_| format!("{v:?}"))
 }
 
-fn value_to_u32(v: &OwnedValue) -> u32 {
-    v.downcast_ref::<u32>().copied().unwrap_or(0)
+fn value_to_u32(v: &Value<'_>) -> u32 {
+    v.downcast_ref::<u32>().unwrap_or(0)
 }
 
 /// List units matching failed state.
@@ -330,6 +312,8 @@ pub fn list_failed_units(runtime: &SystemdRuntimeInfo) -> Vec<SystemdRuntimeUnit
 pub fn restart_unit(name: &str) -> Result<String> {
     let conn = Connection::system().context("connect to system dbus")?;
     let proxy = manager_proxy(&conn)?;
-    proxy.call("RestartUnit", &(name, "replace"))?;
+    let _job: u32 = proxy
+        .call("RestartUnit", &(name, "replace"))
+        .context("RestartUnit D-Bus call")?;
     Ok(format!("restarted {name}"))
 }

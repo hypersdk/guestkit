@@ -307,6 +307,26 @@
   border-top: 1px solid var(--glass-border);
 }
 
+.fleet-panel-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 100%;
+}
+
+.fleet-panel-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 100%;
+  color: var(--text-muted);
+}
+
+.guest-action-audit li.ok { color: var(--ok); }
+.guest-action-audit li.warn { color: var(--warn); }
+
+.badge.fleet-guest-approvals.warn { color: var(--warn); }
+
 .policy-toggle {
   display: flex;
   align-items: center;

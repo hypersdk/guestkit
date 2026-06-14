@@ -586,6 +586,121 @@ paths:
       responses:
         '200':
           description: BootInspectInfo
+  /system/status:
+    get:
+      summary: Zeus API and cluster integration status
+      responses:
+        '200':
+          description: SystemStatus
+  /guest-actions/pending:
+    get:
+      summary: List pending guest remediation actions (operator/admin when auth enabled)
+      responses:
+        '200':
+          description: PendingGuestAction list
+  /guest-actions/audit:
+    get:
+      summary: Recent guest remediation audit history
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: PendingGuestAction audit list
+  /guest-actions/{id}/approve:
+    post:
+      summary: Approve and execute a pending guest remediation action
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action approved
+  /guest-actions/{id}/reject:
+    post:
+      summary: Reject a pending guest remediation action
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action rejected
+  /packetwolf/fleet-snapshot:
+    get:
+      summary: Last PacketWolf fleet correlation snapshot from Redis
+      responses:
+        '200':
+          description: Fleet correlation snapshot
+  /packetwolf/fleet-correlate:
+    post:
+      summary: Trigger PacketWolf fleet correlation sweep (operator/admin when auth enabled)
+      responses:
+        '200':
+          description: Fleet correlation result
+  /guest-agents/register:
+    post:
+      summary: Register a Zyvor guest agent (push transport)
+      responses:
+        '200':
+          description: Registration result
+  /guest-agents/bootstrap-info:
+    get:
+      summary: Guest agent bootstrap CA and policy hints
+      responses:
+        '200':
+          description: Bootstrap info
+  /guest-agents/bootstrap:
+    post:
+      summary: Issue guest agent mTLS certificate
+      responses:
+        '200':
+          description: Bootstrap certificate
+  /guest-agents/{agent_id}/heartbeat:
+    post:
+      summary: Guest agent heartbeat (push transport)
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heartbeat acknowledged
+  /guest-agents/{agent_id}/report:
+    get:
+      summary: Fetch last guest agent report for agent id
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Guest agent report
+    post:
+      summary: Guest agent evidence push (health, metrics, journal)
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report accepted
 components:
   schemas:
     BootInspectRequest:
@@ -738,3 +853,72 @@ components:
           type: array
           items:
             type: string
+    SystemStatus:
+      type: object
+      properties:
+        agent:
+          type: string
+        cluster:
+          type: string
+        storage:
+          type: string
+        kubevirt:
+          type: string
+        cdi:
+          type: string
+        last_scan:
+          type: string
+          nullable: true
+        disk_count:
+          type: integer
+        cluster_vm_count:
+          type: integer
+          nullable: true
+        worker:
+          type: string
+        guest_agent_mtls:
+          type: boolean
+        packetwolf_correlation:
+          type: boolean
+        packetwolf_fleet:
+          type: boolean
+    PendingGuestAction:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        namespace:
+          type: string
+        vm_name:
+          type: string
+        unit:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        created_at:
+          type: string
+          format: date-time
+        requested_by:
+          type: string
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        approved_by:
+          type: string
+          nullable: true
+        rejected_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejected_by:
+          type: string
+          nullable: true
+        result:
+          type: object
+          nullable: true

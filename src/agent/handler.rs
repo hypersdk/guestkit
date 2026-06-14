@@ -453,7 +453,7 @@ impl RequestHandler {
                 crate::collectors::dbus::systemd_events::get_events_since(cursor)
             } else {
                 let events = crate::collectors::dbus::systemd_events::recent_events(limit);
-                let (_, c) = crate::collectors::dbus::systemd_events::get_events_since(0);
+                let (c, _) = crate::collectors::dbus::systemd_events::get_events_since(0);
                 (c, events)
             };
             JsonRpcResponse::success(

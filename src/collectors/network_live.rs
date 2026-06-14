@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Live network interface and route collection (ip -j / procfs).
+//! Live network interface and route collection (procfs + ip -j).
 
 use crate::evidence::snapshot::{NetworkEvidence, NetworkInterfaceLive};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 pub fn enrich_network_evidence(network: &mut NetworkEvidence) {
     network.network_stack = detect_network_stack();
+    apply_proc_net_dev_stats(network);
     collect_ip_json(network);
     if network.default_gateway.is_none() {
         network.default_gateway = read_default_gateway_proc();
@@ -35,6 +37,53 @@ fn detect_network_stack() -> String {
         return "systemd-networkd".into();
     }
     "unknown".into()
+}
+
+fn parse_proc_net_dev(content: &str) -> HashMap<String, (u64, u64)> {
+    let mut out = HashMap::new();
+    for line in content.lines().skip(2) {
+        let mut parts = line.split_whitespace();
+        let iface = parts.next().unwrap_or("").trim_end_matches(':');
+        if iface.is_empty() || iface == "lo" {
+            continue;
+        }
+        let rx = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+        for _ in 0..7 {
+            parts.next();
+        }
+        let tx = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+        out.insert(iface.to_string(), (rx, tx));
+    }
+    out
+}
+
+fn read_proc_net_dev_stats() -> HashMap<String, (u64, u64)> {
+    fs::read_to_string("/proc/net/dev")
+        .map(|content| parse_proc_net_dev(&content))
+        .unwrap_or_default()
+}
+
+fn apply_proc_net_dev_stats(network: &mut NetworkEvidence) {
+    let stats = read_proc_net_dev_stats();
+    for (name, (rx, tx)) in stats {
+        if let Some(live) = network.live_interfaces.iter_mut().find(|i| i.name == name) {
+            live.rx_bytes = Some(rx);
+            live.tx_bytes = Some(tx);
+            continue;
+        }
+        if !network.interfaces.contains(&name) {
+            network.interfaces.push(name.clone());
+        }
+        network.live_interfaces.push(NetworkInterfaceLive {
+            name,
+            state: String::new(),
+            mac: String::new(),
+            addresses: Vec::new(),
+            carrier: true,
+            rx_bytes: Some(rx),
+            tx_bytes: Some(tx),
+        });
+    }
 }
 
 fn collect_ip_json(network: &mut NetworkEvidence) {
@@ -67,16 +116,28 @@ fn collect_ip_json(network: &mut NetworkEvidence) {
                 if !network.interfaces.contains(&name) {
                     network.interfaces.push(name.clone());
                 }
-                network.live_interfaces.push(NetworkInterfaceLive {
-                    name,
-                    state,
-                    mac,
-                    addresses,
-                    carrier: iface
+                if let Some(live) = network.live_interfaces.iter_mut().find(|i| i.name == name) {
+                    live.state = state;
+                    live.mac = mac;
+                    live.addresses = addresses;
+                    live.carrier = iface
                         .get("carrier")
                         .and_then(|v| v.as_bool())
-                        .unwrap_or(true),
-                });
+                        .unwrap_or(true);
+                } else {
+                    network.live_interfaces.push(NetworkInterfaceLive {
+                        name,
+                        state,
+                        mac,
+                        addresses,
+                        carrier: iface
+                            .get("carrier")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true),
+                        rx_bytes: None,
+                        tx_bytes: None,
+                    });
+                }
             }
         }
     }
@@ -106,11 +167,12 @@ fn collect_ip_json(network: &mut NetworkEvidence) {
                 if let Some(stats) = stats {
                     let rx = stats.get("rx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
                     let tx = stats.get("tx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-                    for live in &mut network.live_interfaces {
-                        if live.name == name {
-                            live.addresses.push(format!("rx_bytes={rx}"));
-                            live.addresses.push(format!("tx_bytes={tx}"));
-                            break;
+                    if let Some(live) = network.live_interfaces.iter_mut().find(|i| i.name == name) {
+                        if live.rx_bytes.is_none() {
+                            live.rx_bytes = Some(rx);
+                        }
+                        if live.tx_bytes.is_none() {
+                            live.tx_bytes = Some(tx);
                         }
                     }
                 }
@@ -135,4 +197,20 @@ fn read_default_gateway_proc() -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_proc_net_dev_extracts_rx_tx() {
+        let sample = "Inter-|   Receive                                                |  Transmit\n\
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n\
+  eth0: 1234567890    1000    0    0    0     0          0         0 9876543210    2000    0    0    0     0       0          0\n\
+    lo:       42       1    0    0    0     0          0         0       42       1    0    0    0     0       0          0\n";
+        let stats = parse_proc_net_dev(sample);
+        assert_eq!(stats.get("eth0"), Some(&(1234567890, 9876543210)));
+        assert!(!stats.contains_key("lo"));
+    }
 }
