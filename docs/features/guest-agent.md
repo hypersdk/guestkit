@@ -166,7 +166,15 @@ Zeus API routes (via `zyvor-api`):
 - `GET .../guest/systemd/units/{unit}`
 - `GET .../guest/systemd/events`
 
-Heartbeat/report push includes `recent_events` from the systemd D-Bus black-box recorder (stored in Redis).
+Heartbeat/report push includes `recent_events` from the systemd D-Bus black-box recorder (stored in Redis). Push reports sync **VMGuestAgent** CR status with `guestHealth`, `healthScore`, `failedUnits`, and `systemdState` when namespace/vm are configured in `guest-agent.toml`.
+
+Configure push identity:
+
+```toml
+zeus_url = "https://zeus.example.com"
+namespace = "default"
+vm_name = "my-vm"
+```
 
 **Guest remediation (Zeus UI):** restart failed units, collect a support bundle (`tar.zst` with evidence, health, semantic analysis, journal excerpts), and view per-unit journal slices from the Guest Intelligence card when a VM is selected.
 

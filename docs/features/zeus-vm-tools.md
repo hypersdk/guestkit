@@ -15,7 +15,7 @@ Kubernetes-native guest agent, drivers bootstrap, and migration assurance for Ku
 | Cloud-init install via zyvor-api | Shipped |
 | Windows virtio-win path (Zeus deep link) | Shipped |
 | Fleet coverage API | Shipped |
-| CRDs (`VMToolsBundle`, `VMGuestAgent`, `VMToolsPolicy`) | Schema shipped |
+| CRDs (`VMToolsBundle`, `VMGuestAgent`, `VMToolsPolicy`, `GuestActionPolicy`) | Schema shipped |
 | Windows MSI | Phase 4 |
 
 ## Phase 2 capabilities
@@ -125,7 +125,9 @@ metadata:
     zeus.zyvor.dev/last-heartbeat: "..."
 ```
 
-`VMGuestAgent` CR `{vm-name}-vmtools` is upserted in the VM namespace with live status.
+`VMGuestAgent` CR `{vm-name}-vmtools` is upserted in the VM namespace with live status (`guestHealth`, `healthScore`, `failedUnits`, `systemdState` from agent push when `namespace`/`vm_name` are registered).
+
+`GuestActionPolicy` CRD (`deploy/crd/zeus-guest-action-policy.yaml`) defines cluster-wide remediation allowlists and approval requirements (enforcement in agent policy is incremental).
 
 ## Windows (separate track)
 
