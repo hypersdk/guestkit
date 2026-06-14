@@ -112,6 +112,10 @@ pub fn api_router() -> Router<AppState> {
             post(guest_agent::register_guest_agent),
         )
         .route(
+            "/api/v1/guest-agents/bootstrap-info",
+            get(guest_agent::guest_agent_bootstrap_info),
+        )
+        .route(
             "/api/v1/guest-agents/:agent_id/heartbeat",
             post(guest_agent::guest_agent_heartbeat),
         )

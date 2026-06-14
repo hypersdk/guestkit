@@ -23,11 +23,14 @@ cp templates/agent/zyvor-guest-updater.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-updater.timer "${DIST}/linux/"
 cp templates/agent/agent-policy.yaml "${DIST}/linux/"
 cp templates/agent/guest-agent.toml "${DIST}/linux/"
+mkdir -p "${DIST}/linux/hooks/pre-snapshot"
+cp templates/agent/hooks/pre-snapshot/*.sh "${DIST}/linux/hooks/pre-snapshot/"
+chmod 755 "${DIST}/linux/hooks/pre-snapshot/"*.sh
 tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
   -C "${DIST}/linux" zyvor-guest-agent zyvor-guest-agent-exec \
   zyvor-guest-agent.service zyvor-guest-agent-exec.service \
   zyvor-guest-updater.service zyvor-guest-updater.timer \
-  agent-policy.yaml guest-agent.toml
+  agent-policy.yaml guest-agent.toml hooks
 
 echo "Building DEB..."
 rm -rf "${DEB_ROOT}"
@@ -40,6 +43,9 @@ cp "${DIST}/linux/zyvor-guest-updater.service" "${DEB_ROOT}/lib/systemd/system/"
 cp "${DIST}/linux/zyvor-guest-updater.timer" "${DEB_ROOT}/lib/systemd/system/"
 cp "${DIST}/linux/agent-policy.yaml" "${DEB_ROOT}/etc/zyvor/"
 cp "${DIST}/linux/guest-agent.toml" "${DEB_ROOT}/etc/zyvor/"
+mkdir -p "${DEB_ROOT}/etc/zyvor/hooks/pre-snapshot"
+cp "${DIST}/linux/hooks/pre-snapshot/"*.sh "${DEB_ROOT}/etc/zyvor/hooks/pre-snapshot/"
+chmod 755 "${DEB_ROOT}/etc/zyvor/hooks/pre-snapshot/"*.sh
 cat > "${DEB_ROOT}/DEBIAN/control" <<EOF
 Package: zyvor-vm-tools
 Version: ${VERSION}
@@ -96,6 +102,8 @@ install -Dm644 linux/zyvor-guest-updater.service /etc/systemd/system/zyvor-guest
 install -Dm644 linux/zyvor-guest-updater.timer /etc/systemd/system/zyvor-guest-updater.timer
 install -Dm644 linux/agent-policy.yaml /etc/zyvor/agent-policy.yaml
 install -Dm644 linux/guest-agent.toml /etc/zyvor/guest-agent.toml
+mkdir -p /etc/zyvor/hooks/pre-snapshot
+install -m755 linux/hooks/pre-snapshot/*.sh /etc/zyvor/hooks/pre-snapshot/ 2>/dev/null || true
 systemctl daemon-reload
 systemctl enable --now zyvor-guest-agent-exec
 systemctl enable --now zyvor-guest-agent
