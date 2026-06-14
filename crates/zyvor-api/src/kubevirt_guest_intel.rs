@@ -112,7 +112,25 @@ pub async fn post_restart_unit(
         .and_then(|v| v.as_str())
         .ok_or_else(|| ApiError::bad_request("unit is required"))?;
 
-    crate::guest_action_policy::enforce_restart_unit(state.kube.as_ref(), unit).await?;
+    crate::guest_action_policy::enforce_restart_unit(state.kube.as_ref(), unit, true).await?;
+
+    if crate::guest_actions::policy_requires_approval(state.kube.as_ref()).await {
+        let mut redis = state.redis.clone();
+        let action_id = crate::guest_actions::enqueue_restart_unit(
+            &mut redis,
+            &namespace,
+            &name,
+            unit,
+        )
+        .await?;
+        return Ok(Json(ApiResponse::ok(json!({
+            "namespace": namespace,
+            "name": name,
+            "unit": unit,
+            "status": "pending_approval",
+            "action_id": action_id,
+        }))));
+    }
 
     let proxy = state
         .config
@@ -165,7 +183,23 @@ pub async fn post_collect_support_bundle(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref()).await?;
+    crate::guest_action_policy::enforce_support_bundle(state.kube.as_ref(), true).await?;
+
+    if crate::guest_actions::policy_requires_approval(state.kube.as_ref()).await {
+        let mut redis = state.redis.clone();
+        let action_id = crate::guest_actions::enqueue_support_bundle(
+            &mut redis,
+            &namespace,
+            &name,
+        )
+        .await?;
+        return Ok(Json(ApiResponse::ok(json!({
+            "namespace": namespace,
+            "name": name,
+            "status": "pending_approval",
+            "action_id": action_id,
+        }))));
+    }
 
     let proxy = state
         .config

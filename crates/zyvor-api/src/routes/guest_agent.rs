@@ -58,7 +58,39 @@ pub async fn guest_agent_bootstrap_info(
         "token_required": state.config.agent_bootstrap_token.is_some(),
         "mtls_ready": false,
         "register_path": "/api/v1/guest-agents/register",
+        "bootstrap_path": "/api/v1/guest-agents/bootstrap",
         "protocol_version": "1.2",
+    }))))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BootstrapCertRequest {
+    pub hostname: String,
+    #[serde(default)]
+    pub bootstrap_token: Option<String>,
+    #[serde(default)]
+    pub csr_pem: Option<String>,
+}
+
+pub async fn guest_agent_bootstrap_cert(
+    State(state): State<AppState>,
+    Json(body): Json<BootstrapCertRequest>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    if let Some(expected) = &state.config.agent_bootstrap_token {
+        let token = body.bootstrap_token.as_deref().unwrap_or("");
+        if token != expected {
+            return Err(ApiError::unauthorized("invalid or missing bootstrap token"));
+        }
+    }
+
+    Ok(Json(ApiResponse::ok(json!({
+        "status": "stub",
+        "message": "Zeus guest-agent CA is not configured; use bootstrap_token + HTTPS push until mTLS issuance ships",
+        "hostname": body.hostname,
+        "csr_received": body.csr_pem.is_some(),
+        "cert_path_hint": "/etc/zyvor/agent.crt",
+        "key_path_hint": "/etc/zyvor/agent.key",
+        "ca_path_hint": "/etc/zyvor/ca.crt",
     }))))
 }
 

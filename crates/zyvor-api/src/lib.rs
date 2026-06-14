@@ -5,6 +5,7 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod guest_actions;
 pub mod guest_action_policy;
 pub mod kubevirt_apply;
 pub mod kubevirt_boot_inspect;
