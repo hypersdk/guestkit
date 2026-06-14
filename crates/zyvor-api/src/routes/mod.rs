@@ -116,6 +116,22 @@ pub fn api_router() -> Router<AppState> {
             get(guest_agent::guest_agent_bootstrap_info),
         )
         .route(
+            "/api/v1/guest-agents/bootstrap",
+            post(guest_agent::guest_agent_bootstrap_cert),
+        )
+        .route(
+            "/api/v1/guest-actions/pending",
+            get(crate::guest_actions::list_pending_guest_actions),
+        )
+        .route(
+            "/api/v1/guest-actions/:id/approve",
+            post(crate::guest_actions::approve_guest_action),
+        )
+        .route(
+            "/api/v1/guest-actions/:id/reject",
+            post(crate::guest_actions::reject_guest_action),
+        )
+        .route(
             "/api/v1/guest-agents/:agent_id/heartbeat",
             post(guest_agent::guest_agent_heartbeat),
         )

@@ -179,6 +179,10 @@ bootstrap_token = "..."  # required when Zeus sets AGENT_BOOTSTRAP_TOKEN
 
 **Guest remediation (Zeus UI):** restart failed units, collect a support bundle (`tar.zst` with evidence, health, semantic analysis, journal excerpts), and view per-unit journal slices from the Guest Intelligence card when a VM is selected.
 
+When `GuestActionPolicy.spec.requireApproval` is true, remediation APIs return `pending_approval` with an `action_id`. Approve via `POST /api/v1/guest-actions/{id}/approve` or the Zeus UI pending-approval buttons.
+
+**mTLS bootstrap (stub):** `POST /api/v1/guest-agents/bootstrap` validates bootstrap token and returns cert path hints; full CA issuance is deferred.
+
 **Update channel (stub):** `zyvor-guest-updater.timer` runs `zyvor-guest-agent --check-update` daily (logs current version; signed auto-update deferred).
 
 ```bash

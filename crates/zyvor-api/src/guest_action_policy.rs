@@ -64,10 +64,11 @@ pub fn action_allowed(policy: &GuestActionPolicySpec, action: &str) -> bool {
 pub async fn enforce_restart_unit(
     client: Option<&Client>,
     unit: &str,
+    skip_approval: bool,
 ) -> ApiResult<()> {
     if let Some(client) = client {
         if let Some(policy) = fetch_guest_action_policy(client).await {
-            if policy.require_approval {
+            if !skip_approval && policy.require_approval {
                 return Err(ApiError::bad_request(
                     "GuestActionPolicy requires approval for remediation actions",
                 ));
@@ -82,10 +83,10 @@ pub async fn enforce_restart_unit(
     Ok(())
 }
 
-pub async fn enforce_support_bundle(client: Option<&Client>) -> ApiResult<()> {
+pub async fn enforce_support_bundle(client: Option<&Client>, skip_approval: bool) -> ApiResult<()> {
     if let Some(client) = client {
         if let Some(policy) = fetch_guest_action_policy(client).await {
-            if policy.require_approval {
+            if !skip_approval && policy.require_approval {
                 return Err(ApiError::bad_request(
                     "GuestActionPolicy requires approval for support bundle collection",
                 ));

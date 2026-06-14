@@ -48,6 +48,7 @@ const state = {
   vmtoolsCoverage: null,
   vmtoolsPolicy: null,
   vmtoolsBundle: null,
+  pendingGuestActions: [],
   serverStorage: { rootId: 0, path: '', roots: [] },
 };
 
@@ -523,6 +524,13 @@ function updateFleetToolbar() {
       el.classList.toggle('warn', cov.missing > 0 || cov.pending > 0);
     }
   }
+  if (isCluster && state.pendingGuestActions?.length) {
+    const el = $('#fleetVmtoolsCoverage');
+    if (el) {
+      el.textContent += ` · ${state.pendingGuestActions.length} action approval(s)`;
+      el.classList.add('warn');
+    }
+  }
   if (isCluster && state.vmtoolsPolicy) {
     const badge = $('#fleetVmtoolsPolicyBadge');
     const autoInstall = state.vmtoolsPolicy.spec?.autoInstall;
@@ -814,6 +822,28 @@ async function loadClusterNamespaces() {
   }
 }
 
+async function loadPendingGuestActions() {
+  try {
+    const data = await api('/guest-actions/pending');
+    state.pendingGuestActions = data.data || [];
+    updateFleetToolbar();
+  } catch {
+    state.pendingGuestActions = [];
+  }
+}
+
+async function approveGuestAction(actionId) {
+  feed(`Approving guest action <strong>${escapeHtml(actionId)}</strong>…`);
+  try {
+    await api(`/guest-actions/${encodeURIComponent(actionId)}/approve`, { method: 'POST' });
+    toast('Guest action approved', 'ok');
+    await loadPendingGuestActions();
+    await fetchClusterGuestInfo(false);
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
 async function loadVmtoolsCoverage() {
   try {
     const data = await api('/vmtools/coverage');
@@ -916,6 +946,7 @@ async function loadClusterFleet() {
     await loadVmtoolsCoverage();
     await loadVmtoolsPolicy();
     await loadVmtoolsBundle();
+    await loadPendingGuestActions();
     if (!state.clusterVms.length && !state.fleetFilters.search && !state.fleetFilters.namespace && !state.fleetFilters.phase) {
       toast('No KubeVirt VMs found — create VMs in Zeus OS first', 'err');
     }
@@ -1321,6 +1352,20 @@ function renderGuestIntelligenceCard(container, intel) {
   }
   html += '</div>';
 
+  const vm = state.selectedClusterVm;
+  if (vm) {
+    const pending = (state.pendingGuestActions || []).filter(
+      (a) => a.namespace === vm.namespace && a.vm_name === vm.name && a.status === 'pending',
+    );
+    if (pending.length) {
+      html += '<p class="finding warn"><strong>Pending approvals</strong></p><ul class="guest-intel-recs">';
+      pending.forEach((a) => {
+        html += `<li>${escapeHtml(a.action)} ${escapeHtml(a.unit || '')} <button type="button" class="btn glass sm" data-guest-approve="${escapeHtml(a.id)}">Approve</button></li>`;
+      });
+      html += '</ul>';
+    }
+  }
+
   html += '</div>';
   container.innerHTML += html;
 }
@@ -1330,7 +1375,7 @@ async function clusterGuestRestartUnit(unit) {
   if (!vm || !unit) return;
   feed(`Restarting <strong>${escapeHtml(unit)}</strong> in guest…`);
   try {
-    await api(
+    const data = await api(
       `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/actions/restart-unit`,
       {
         method: 'POST',
@@ -1338,6 +1383,12 @@ async function clusterGuestRestartUnit(unit) {
         body: JSON.stringify({ unit }),
       },
     );
+    const result = data.data;
+    if (result?.status === 'pending_approval' && result?.action_id) {
+      toast(`Restart queued for approval (${result.action_id})`, 'warn');
+      await loadPendingGuestActions();
+      return;
+    }
     toast(`Restarted ${unit}`, 'ok');
     await fetchClusterGuestInfo(false);
   } catch (e) {
@@ -1358,8 +1409,14 @@ async function clusterGuestCollectBundle() {
         body: '{}',
       },
     );
-    const bundle = data.data?.bundle;
-    const inner = bundle?.result || bundle;
+    const result = data.data;
+    if (result?.status === 'pending_approval' && result?.action_id) {
+      toast(`Bundle collection queued for approval (${result.action_id})`, 'warn');
+      await loadPendingGuestActions();
+      return;
+    }
+    const bundle = result?.bundle;
+    const inner = bundle?.result || bundle || result;
     showRaw({ mode: 'guest-support-bundle', bundle: inner });
     if (inner?.encoding === 'base64' && inner?.data) {
       const binary = Uint8Array.from(atob(inner.data), (c) => c.charCodeAt(0));
@@ -3069,6 +3126,11 @@ function setupActions() {
   $('#fleetEmptyRefresh')?.addEventListener('click', () => loadClusterFleet());
 
   document.addEventListener('click', (e) => {
+    const approveBtn = e.target.closest('[data-guest-approve]');
+    if (approveBtn) {
+      approveGuestAction(approveBtn.dataset.guestApprove);
+      return;
+    }
     const btn = e.target.closest('[data-guest-action]');
     if (!btn || !state.selectedClusterVm) return;
     const action = btn.dataset.guestAction;

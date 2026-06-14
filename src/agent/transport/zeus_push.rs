@@ -76,6 +76,24 @@ pub async fn run_push_worker() -> Result<()> {
 
     let base = zeus_url.unwrap().trim_end_matches('/').to_string();
     let client = build_client(&config)?;
+
+    if let Ok(info) = client
+        .get(format!("{base}/api/v1/guest-agents/bootstrap-info"))
+        .send()
+        .await
+    {
+        if let Ok(body) = info.json::<serde_json::Value>().await {
+            if body
+                .pointer("/data/token_required")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+                && config.bootstrap_token.is_none()
+            {
+                log::warn!("Zeus requires AGENT_BOOTSTRAP_TOKEN but guest-agent.toml has no bootstrap_token");
+            }
+        }
+    }
+
     let mut agent_id = config.agent_id.clone().or_else(load_persisted_agent_id);
 
     if agent_id.is_none() {
