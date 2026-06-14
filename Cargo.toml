@@ -109,6 +109,8 @@ futures-util = { version = "0.3", optional = true }
 tar = { version = "0.4", optional = true }
 zstd = { version = "0.13", optional = true }
 flate2 = { version = "1", optional = true }
+ed25519-dalek = { version = "2", features = ["rand_core"], optional = true }
+hex = { version = "0.4", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -130,7 +132,7 @@ cloud-s3 = []
 cloud-azure = []
 cloud-gcs = []
 cloud = ["cloud-s3", "cloud-azure", "cloud-gcs"]
-agent = ["guestkit-agent-protocol", "sysinfo", "nix", "zbus", "futures-util", "reqwest", "tar", "zstd", "flate2"]
+agent = ["guestkit-agent-protocol", "sysinfo", "nix", "zbus", "futures-util", "reqwest", "tar", "zstd", "flate2", "ed25519-dalek", "hex"]
 # nix fs for QGA guest-get-fsinfo statvfs
 
 # Python module (optional)

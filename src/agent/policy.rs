@@ -22,6 +22,16 @@ pub struct PolicyActions {
     pub run_shell_command: ShellPolicy,
     #[serde(default)]
     pub reboot_vm: ApprovalPolicy,
+    #[serde(default)]
+    pub self_update: SelfUpdatePolicy,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SelfUpdatePolicy {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub auto_apply: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -72,8 +82,16 @@ impl AgentPolicy {
                 reboot_vm: ApprovalPolicy {
                     require_approval: true,
                 },
+                self_update: SelfUpdatePolicy {
+                    enabled: false,
+                    auto_apply: false,
+                },
             },
         }
+    }
+
+    pub fn can_auto_apply_update(&self) -> bool {
+        self.actions.self_update.enabled && self.actions.self_update.auto_apply
     }
 
     pub fn can_restart_unit(&self, unit: &str) -> bool {

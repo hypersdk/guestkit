@@ -119,6 +119,10 @@ spec:
             - name: VMTOOLS_LINUX_TAR_SHA256
               value: {{ .Values.vmtools.bundle.linuxTarSha256 | quote }}
             {{- end }}
+            {{- if .Values.vmtools.bundle.linuxTarSignature }}
+            - name: VMTOOLS_LINUX_TAR_SIGNATURE
+              value: {{ .Values.vmtools.bundle.linuxTarSignature | quote }}
+            {{- end }}
             {{- end }}
             {{- if .Values.vmtools.reconcile.preferIso }}
             - name: VMTOOLS_RECONCILE_ISO

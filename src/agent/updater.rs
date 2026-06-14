@@ -24,6 +24,7 @@ struct BundleInfo {
     channel: String,
     linux_tar_url: Option<String>,
     linux_tar_sha256: Option<String>,
+    linux_tar_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -78,6 +79,19 @@ pub async fn stage_update(apply: bool) -> Result<String> {
         .as_ref()
         .filter(|s| !s.is_empty())
         .context("bundle has no linux tar sha256; refusing unsigned download")?;
+
+    let bundle = fetch_bundle_info().await?;
+    let manifest = crate::agent::update_sign::UpdateManifest {
+        version: check.remote_version.clone().unwrap_or_default(),
+        channel: check.channel.clone(),
+        linux_tar_sha256: expected_sha.clone(),
+    };
+    if let Some(sig) = bundle.linux_tar_signature.as_ref().filter(|s| !s.is_empty()) {
+        crate::agent::update_sign::verify_manifest(&manifest, sig)
+            .context("update manifest signature verification failed")?;
+    } else {
+        anyhow::bail!("bundle has no linux tar signature; refusing unsigned download");
+    }
 
     let bytes = download_bytes(url).await?;
     let actual_sha = hex_sha256(&bytes);
@@ -252,9 +266,53 @@ pub fn apply_staged_update_privileged() -> Result<String> {
         anyhow::bail!("no install target found for staged agent binary");
     }
 
+    restart_agent_services();
+
     Ok(format!(
-        "applied {} to {} (sha256 verified)",
+        "applied {} to {} (sha256 verified, services restarted)",
         meta.version,
         updated.join(", ")
     ))
+}
+
+#[cfg(target_os = "linux")]
+fn restart_agent_services() {
+    use std::process::Command;
+    for unit in [
+        "zyvor-guest-agent.service",
+        "zyvor-guest-agent-exec.service",
+    ] {
+        let _ = Command::new("systemctl").args(["try-restart", unit]).status();
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn restart_agent_services() {}
+
+pub async fn run_scheduled_update() -> Result<String> {
+    let policy = crate::agent::policy::AgentPolicy::load();
+    if !policy.actions.self_update.enabled {
+        return Ok("self-update disabled by agent policy".into());
+    }
+    let check = check_update().await?;
+    if !check.update_available {
+        return Ok(format!(
+            "Zyvor GuestAgent {} is current (channel {})",
+            check.current_version, check.channel
+        ));
+    }
+    if !policy.can_auto_apply_update() {
+        return Ok(format!(
+            "update {} available on channel {} (auto_apply disabled)",
+            check.remote_version.unwrap_or_default(),
+            check.channel
+        ));
+    }
+    stage_update(true).await
+}
+
+pub fn sign_manifest_cli(manifest_json: &str) -> Result<String> {
+    let manifest: crate::agent::update_sign::UpdateManifest =
+        serde_json::from_str(manifest_json).context("parse manifest json")?;
+    crate::agent::update_sign::sign_manifest(&manifest)
 }

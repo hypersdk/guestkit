@@ -33,6 +33,11 @@ tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
   agent-policy.yaml guest-agent.toml hooks
 LINUX_TAR_SHA256="$(sha256sum "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" | awk '{print $1}')"
 echo "${LINUX_TAR_SHA256}" > "${DIST}/linux/zyvor-vm-tools-linux-amd64.sha256"
+MANIFEST_JSON=$(printf '{"version":"%s","channel":"stable","linux_tar_sha256":"%s"}' "$VERSION" "$LINUX_TAR_SHA256")
+LINUX_TAR_SIGNATURE=$(cargo run -q -p zyvor-guest-agent -- sign-manifest "${MANIFEST_JSON}" 2>/dev/null || true)
+if [ -n "${LINUX_TAR_SIGNATURE}" ]; then
+  echo "${LINUX_TAR_SIGNATURE}" > "${DIST}/linux/zyvor-vm-tools-linux-amd64.sig"
+fi
 
 echo "Building DEB..."
 rm -rf "${DEB_ROOT}"

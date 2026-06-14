@@ -39,6 +39,7 @@ pub struct VMToolsBundleInfo {
     pub iso_url: Option<String>,
     pub agent_binary_url: String,
     pub linux_tar_sha256: Option<String>,
+    pub linux_tar_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -130,6 +131,19 @@ pub fn bundle_info_with_spec(state: &AppState, spec: Option<&VMToolsBundleSpec>)
                         None
                     } else {
                         Some(sha)
+                    }
+                }),
+        ),
+        linux_tar_signature: non_empty(
+            std::env::var("VMTOOLS_LINUX_TAR_SIGNATURE")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let sig = spec.linux.tar_signature.clone();
+                    if sig.is_empty() {
+                        None
+                    } else {
+                        Some(sig)
                     }
                 }),
         ),
