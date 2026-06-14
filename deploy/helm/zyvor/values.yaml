@@ -114,6 +114,7 @@ vmtools:
     channel: stable
     baseUrl: ""
     linuxTarSha256: ""
+    linuxTarSignature: ""
   reconcile:
     enabled: false
     schedule: "*/15 * * * *"

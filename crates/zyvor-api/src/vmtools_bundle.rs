@@ -53,6 +53,8 @@ pub struct VMToolsLinuxArtifacts {
     pub tar: String,
     #[serde(default)]
     pub tar_sha256: String,
+    #[serde(default)]
+    pub tar_signature: String,
 }
 
 pub fn vmtoolsbundle_resource() -> ApiResource {
@@ -85,6 +87,7 @@ pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
     let channel = std::env::var("VMTOOLS_CHANNEL").unwrap_or_else(|_| "stable".into());
     let agent = crate::kubevirt_guest_agent::resolve_guestkit_binary_url();
     let tar_sha256 = std::env::var("VMTOOLS_LINUX_TAR_SHA256").unwrap_or_default();
+    let tar_signature = std::env::var("VMTOOLS_LINUX_TAR_SIGNATURE").unwrap_or_default();
     VMToolsBundleSpec {
         version: version.clone(),
         channel,
@@ -93,6 +96,7 @@ pub fn bundle_spec_from_env(state: &AppState) -> VMToolsBundleSpec {
             deb: format!("{base}/linux/zyvor-vm-tools_{version}_amd64.deb"),
             tar: format!("{base}/linux/zyvor-vm-tools-linux-amd64.tar.gz"),
             tar_sha256,
+            tar_signature,
         },
         windows: VMToolsWindowsArtifacts {
             exe: format!("{base}/windows/zyvor-guest-agent.exe"),
@@ -156,6 +160,12 @@ fn parse_bundle_spec(val: &Value) -> VMToolsBundleSpec {
             tar_sha256: linux
                 .get("tarSha256")
                 .or_else(|| linux.get("tar_sha256"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .into(),
+            tar_signature: linux
+                .get("tarSignature")
+                .or_else(|| linux.get("tar_signature"))
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .into(),
