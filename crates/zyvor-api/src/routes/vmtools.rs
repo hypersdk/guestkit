@@ -49,6 +49,9 @@ pub struct VMToolsCoverage {
     pub missing: usize,
     pub outdated: usize,
     pub windows_virtio_win: usize,
+    pub health_healthy: usize,
+    pub health_degraded: usize,
+    pub health_unhealthy: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -171,7 +174,19 @@ pub async fn get_coverage(
         missing: 0,
         outdated: 0,
         windows_virtio_win: 0,
+        health_healthy: 0,
+        health_degraded: 0,
+        health_unhealthy: 0,
     };
+
+    let (health_healthy, health_degraded, health_unhealthy) = if let Some(client) = state.kube.as_ref() {
+        crate::guest_action_policy::count_guest_health(client).await
+    } else {
+        (0, 0, 0)
+    };
+    coverage.health_healthy = health_healthy;
+    coverage.health_degraded = health_degraded;
+    coverage.health_unhealthy = health_unhealthy;
 
     for vm in vms {
         let name = vm.pointer("/metadata/name").and_then(|v| v.as_str()).unwrap_or("");
