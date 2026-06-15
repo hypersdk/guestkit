@@ -192,6 +192,14 @@ pub fn api_router() -> Router<AppState> {
             get(crate::kubevirt_guest_intel::get_guest_journal),
         )
         .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/evidence",
+            get(crate::kubevirt_guest_intel::get_guest_evidence),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/network",
+            get(crate::kubevirt_guest_intel::get_guest_network),
+        )
+        .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest/processes",
             get(crate::kubevirt_guest_intel::get_guest_processes),
         )

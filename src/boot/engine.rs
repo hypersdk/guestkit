@@ -138,6 +138,10 @@ fn remediation_for(check_id: &str) -> String {
         "BOOT-006" => "Install virtio drivers and rebuild initramfs before migration".to_string(),
         "BOOT-009" => "Allow SELinux relabel on first boot or run fixfiles onboot".to_string(),
         "BOOT-010" => "Remove VMware/Hyper-V guest tools and install qemu-guest-agent".to_string(),
+        "BOOT-012" => "Repair EFI boot chain: verify bootmgfw.efi and run bcdboot from WinPE"
+            .to_string(),
+        "BOOT-013" => "Rebuild BCD from WinPE: bcdboot %WINDIR% or bootrec /rebuildbcd"
+            .to_string(),
         _ => "Review check output and apply fix plan".to_string(),
     }
 }

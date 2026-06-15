@@ -248,6 +248,17 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut A
                             Err(e) => app.show_notification(format!("Export failed: {e:#}")),
                         }
                     }
+                    KeyCode::Char('A')
+                        if key.modifiers.contains(KeyModifiers::SHIFT)
+                            && app.current_view == app::View::Assurance
+                            && app.migration_report.is_some()
+                            && !app.is_searching() =>
+                    {
+                        match app.apply_assurance_plan(false) {
+                            Ok(msg) => app.show_notification(msg),
+                            Err(e) => app.show_notification(format!("Apply failed: {e:#}")),
+                        }
+                    }
                     KeyCode::Char('e') => app.toggle_export_menu(),
                     KeyCode::Char(',')
                         if !app.is_searching()
