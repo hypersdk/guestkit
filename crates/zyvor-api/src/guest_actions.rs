@@ -333,3 +333,53 @@ pub async fn policy_requires_approval(client: Option<&kube::Client>) -> bool {
     }
     false
 }
+
+const ACTION_AUDIT_INDEX: &str = "guest-action:audit:events";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuestActionAuditEvent {
+    pub id: String,
+    pub action: String,
+    pub namespace: String,
+    pub vm_name: String,
+    pub transport: String,
+    pub network_required: bool,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<Value>,
+}
+
+pub async fn record_guest_action_audit(
+    redis: &mut redis::aio::ConnectionManager,
+    action: &str,
+    namespace: &str,
+    vm_name: &str,
+    transport: &str,
+    network_required: bool,
+    detail: Value,
+) -> Result<(), ApiError> {
+    let event = GuestActionAuditEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        action: action.into(),
+        namespace: namespace.into(),
+        vm_name: vm_name.into(),
+        transport: transport.into(),
+        network_required,
+        created_at: chrono::Utc::now().to_rfc3339(),
+        detail: Some(detail),
+    };
+    let raw = serde_json::to_string(&event).map_err(|e| ApiError::internal(e.to_string()))?;
+    redis
+        .set_ex::<_, _, ()>(
+            format!("guest-action:audit:event:{}", event.id),
+            &raw,
+            86400 * 7,
+        )
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    redis
+        .sadd::<_, _, ()>(ACTION_AUDIT_INDEX, &event.id)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(())
+}
