@@ -11,6 +11,7 @@ pub mod guest_agent_vm;
 pub mod guest_remediation_auth;
 pub mod guest_actions;
 pub mod guest_action_policy;
+pub mod guest_control;
 pub mod kubevirt_guest_pull;
 pub mod kubevirt_apply;
 pub mod kubevirt_boot_inspect;
@@ -100,6 +101,8 @@ pub async fn serve(config: Config) -> Result<()> {
         state.kube.clone(),
         state.redis.clone(),
     );
+
+    guest_control::polling::spawn_airgap_poll_worker(state.clone());
 
     let addr: SocketAddr = config.bind_addr.parse()?;
     tracing::info!("zyvor-api listening on {addr}");

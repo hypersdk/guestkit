@@ -1039,6 +1039,44 @@
 
 .agent-status.ok { color: var(--success); }
 .agent-status.err { color: var(--danger); }
+.agent-status.warn { color: var(--warning, #c9a227); }
+
+.guest-exec-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  font-size: 0.85rem;
+  color: var(--warning, #c9a227);
+}
+
+.guest-control-card {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.guest-control-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.guest-control-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.guest-doctor-tree {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.guest-doctor-tree summary {
+  cursor: pointer;
+  font-weight: 600;
+}
 
 .agent-proxy-row {
   display: grid;

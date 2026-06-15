@@ -34,6 +34,8 @@ const state = {
   selectedClusterVm: null,
   lastClusterGuestInfo: null,
   lastClusterGuestIntel: null,
+  lastGuestControlStatus: null,
+  lastGuestDoctor: null,
   lastClusterBootInspect: null,
   lastClusterInspect: null,
   lastClusterBriefing: null,
@@ -68,6 +70,30 @@ const AGENT_QUICK_RPC = [
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+function guestEnvelope(res) {
+  if (res && typeof res.ok === 'boolean') return res;
+  if (res?.data && typeof res.data.ok === 'boolean') return res.data;
+  return { ok: res?.success ?? true, data: res?.data ?? res, transport: null, controlState: null, warnings: [], recommendedActions: [] };
+}
+
+function controlStateLabel(state) {
+  const map = {
+    full_agent: 'CONNECTED — FULL AGENT',
+    airgap_live: 'CONNECTED VIA QGA EXEC',
+    qga_only: 'QGA ONLY',
+    disk_only: 'DISK ONLY',
+    console_only: 'CONSOLE ONLY',
+    blind_vm: 'BLIND VM',
+  };
+  return map[state] || (state || 'UNKNOWN').replace(/_/g, ' ').toUpperCase();
+}
+
+function controlStateClass(state) {
+  if (state === 'full_agent' || state === 'airgap_live') return 'ok';
+  if (state === 'qga_only' || state === 'disk_only') return 'warn';
+  return 'err';
+}
 
 async function api(path, options = {}) {
   const headers = window.GuestKitAuth?.authHeaders(options.headers || {}) || (options.headers || {});
@@ -1098,18 +1124,28 @@ async function fetchClusterGuestInfo(showToast = true) {
   feed(`Fetching guest info for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
   setActiveTab('summary');
   try {
-    const [guestRes, intelRes, bootRes] = await Promise.allSettled([
+    const [guestRes, intelRes, bootRes, statusRes, doctorRes] = await Promise.allSettled([
       api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest-agent`),
       api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/info`),
       api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/boot-inspect`),
+      api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/status`),
+      api(`/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/doctor`),
     ]);
     if (guestRes.status === 'rejected') throw guestRes.reason;
     const info = guestRes.value.data;
     state.lastClusterGuestInfo = info;
     state.lastClusterGuestIntel = intelRes.status === 'fulfilled' ? intelRes.value.data : null;
     state.lastClusterBootInspect = bootRes.status === 'fulfilled' ? bootRes.value.data : null;
+    state.lastGuestControlStatus = statusRes.status === 'fulfilled' ? guestEnvelope(statusRes.value) : null;
+    state.lastGuestDoctor = doctorRes.status === 'fulfilled' ? guestEnvelope(doctorRes.value) : null;
     renderClusterGuestSummary(info, state.lastClusterBootInspect);
-    setAgentStatus(info.agent_connected ? 'agent connected' : info.health, info.agent_connected);
+    const control = state.lastGuestControlStatus;
+    if (control?.controlState) {
+      setAgentControlStatus(control);
+    } else {
+      setAgentStatus(info.agent_connected ? 'agent connected' : info.health, info.agent_connected);
+    }
+    updateExecWarningBanner(control);
     if (showToast) toast(info.agent_connected ? 'Guest agent connected' : 'Guest agent not connected', info.agent_connected ? 'ok' : 'err');
     feed(info.message);
     if (state.lastClusterBootInspect?.message) feed(state.lastClusterBootInspect.message);
@@ -1600,12 +1636,108 @@ async function clusterGuestViewJournal(unit) {
   }
 }
 
+function renderGuestControlPanel(container, control, doctor) {
+  if (!control && !doctor) return;
+  const caps = control?.capabilities || {};
+  const data = control?.data || {};
+  const transport = control?.transport || caps.transport || '—';
+  const stateLabel = controlStateLabel(control?.controlState || caps.control_state);
+  const stateClass = controlStateClass(control?.controlState || caps.control_state);
+  let html = `<div class="guest-control-card glass-inset"><h3>Guest Control</h3>`;
+  html += `<p class="finding ${stateClass}"><strong>${escapeHtml(stateLabel)}</strong></p>`;
+  html += `<div class="guest-control-chips">`;
+  html += `<span class="guest-intel-chip ${data.networkAvailable || caps.network ? 'ok' : 'warn'}">Network: ${data.networkAvailable || caps.network ? 'Available' : 'Unavailable'}</span>`;
+  html += `<span class="guest-intel-chip ${data.qgaConnected || caps.qga ? 'ok' : 'warn'}">QGA: ${data.qgaConnected || caps.qga ? 'Connected' : 'Disconnected'}</span>`;
+  html += `<span class="guest-intel-chip ${data.zyvorAgentInstalled || caps.zyvorAgent ? 'ok' : 'warn'}">Zyvor Agent: ${data.zyvorAgentInstalled || caps.zyvorAgent ? 'Installed' : 'Missing'}</span>`;
+  html += `<span class="guest-intel-chip ${caps.pushTelemetry || caps.push_registered ? 'ok' : 'muted'}">Push: ${caps.pushTelemetry || caps.push_registered ? 'Enabled' : 'Disabled'}</span>`;
+  html += `<span class="guest-intel-chip muted">Transport: ${escapeHtml(transport)}</span>`;
+  if (control?.controlState === 'airgap_live') {
+    html += `<span class="guest-intel-chip ok">Telemetry: Pull via virt-launcher</span>`;
+  }
+  html += `</div>`;
+  const warnings = [...(control?.warnings || []), ...(caps.warnings || [])];
+  if (warnings.length) {
+    html += `<p class="finding warn"><strong>Warnings</strong> ${escapeHtml(warnings.join(' · '))}</p>`;
+  }
+  const actions = control?.recommendedActions || caps.recommended_actions || caps.recommendedActions || [];
+  if (actions.length) {
+    html += `<p class="finding ok"><strong>Recommended</strong> ${escapeHtml(actions.join(', '))}</p>`;
+  }
+  if (doctor?.data || doctor?.nodes) {
+    const report = doctor.data || doctor;
+    const nodes = report.nodes || [];
+    if (nodes.length) {
+      html += `<details class="guest-doctor-tree"><summary>Agent Doctor (${report.readinessScore ?? report.readiness_score ?? '—'}/100)</summary><ul class="guest-intel-recs">`;
+      nodes.forEach((n) => {
+        const cls = n.ok ? 'ok' : 'warn';
+        html += `<li class="finding ${cls}">${escapeHtml(n.question)} → <strong>${escapeHtml(n.answer)}</strong></li>`;
+      });
+      html += `</ul></details>`;
+    }
+  }
+  if (control?.controlState === 'disk_only') {
+    html += `<p class="finding warn"><button type="button" class="btn glass sm" id="clusterGuestRepairBtn">Repair Guest Tools (offline)</button></p>`;
+  }
+  html += `</div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  $('#clusterGuestRepairBtn')?.addEventListener('click', () => runClusterGuestRepairPlan());
+}
+
+async function runClusterGuestRepairPlan() {
+  const vm = state.selectedClusterVm;
+  if (!vm) return;
+  feed(`Submitting offline guest repair plan for <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  try {
+    const res = await api(
+      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/repair-plan`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dryRun: true,
+          injectQga: true,
+          injectZyvorAgent: true,
+          enableSystemd: true,
+        }),
+      },
+    );
+    const envelope = guestEnvelope(res);
+    showRaw({ mode: 'guest-repair-plan', result: envelope.data || envelope });
+    toast('Guest repair plan submitted', 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function updateExecWarningBanner(control) {
+  const el = $('#guestExecWarning');
+  if (!el) return;
+  const transport = control?.transport || '';
+  const hostMediated = transport === 'qga-exec' || transport === 'qga-builtin' || control?.controlState === 'airgap_live';
+  if (hostMediated) {
+    el.classList.remove('hidden');
+    el.textContent = 'Host-mediated exec: commands run via virt-launcher / QGA (guest network not required).';
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function setAgentControlStatus(control) {
+  const el = $('#agentStatus');
+  if (!el || !control) return;
+  const label = controlStateLabel(control.controlState);
+  const ok = control.controlState === 'full_agent' || control.controlState === 'airgap_live';
+  el.textContent = label;
+  el.className = 'agent-status' + (ok ? ' ok' : ' warn');
+}
+
 function renderClusterGuestSummary(info, bootInspect) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
   ph.classList.add('hidden');
   content.classList.remove('hidden');
   content.innerHTML = '';
+  renderGuestControlPanel(content, state.lastGuestControlStatus, state.lastGuestDoctor);
   const healthClass = info.agent_connected ? 'ok' : info.health === 'absent' ? 'warn' : 'warn';
   content.innerHTML += `<p class="finding ${healthClass}"><strong>Guest agent:</strong> ${escapeHtml(info.health)} — ${escapeHtml(info.message)}</p>`;
   if (info.is_windows && !info.agent_connected) {
@@ -1857,12 +1989,22 @@ async function installClusterGuestAgent(method = 'auto') {
   const label = method === 'iso' ? 'Attaching VM Tools ISO' : 'Installing Zeus VM Tools';
   feed(`${label} on ${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}…`);
   try {
-    const data = await api(
-      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/install?restart=true&method=${encodeURIComponent(method)}`,
-      { method: 'POST' },
-    );
-    const result = data.data;
-    toast(result.message, result.success ? 'ok' : 'err');
+    const airgap = state.lastGuestControlStatus?.controlState === 'airgap_live'
+      || state.lastGuestControlStatus?.controlState === 'qga_only';
+    const endpoint = airgap
+      ? `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/guest/install-agent`
+      : `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/vmtools/install?restart=true&method=${encodeURIComponent(method)}`;
+    const options = airgap
+      ? {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategy: 'auto', restart: true }),
+        }
+      : { method: 'POST' };
+    const data = await api(endpoint, options);
+    const envelope = guestEnvelope(data);
+    const result = envelope.data || data.data || data;
+    toast(result.message || (result.success ? 'Install started' : 'Install failed'), result.success !== false ? 'ok' : 'err');
     feed(result.next_steps?.join(' ') || result.message);
     if (result.bootstrap_script) {
       feed(`<pre class="raw-json">${escapeHtml(result.bootstrap_script)}</pre>`);

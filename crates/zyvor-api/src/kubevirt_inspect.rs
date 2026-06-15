@@ -28,11 +28,22 @@ fn default_target() -> String {
     "kubevirt".into()
 }
 
-struct ResolvedDisk {
-    shadow_id: Uuid,
-    disk_path: std::path::PathBuf,
-    format: String,
-    label: String,
+pub struct ResolvedDisk {
+    pub shadow_id: Uuid,
+    pub disk_path: std::path::PathBuf,
+    pub format: String,
+    pub label: String,
+}
+
+/// Public disk resolution for guest control offline repair routes.
+pub async fn resolve_stopped_vm_disk_public(
+    state: &AppState,
+    client: &Client,
+    namespace: &str,
+    name: &str,
+    shadow_prefix: &str,
+) -> ApiResult<ResolvedDisk> {
+    resolve_stopped_vm_disk(state, client, namespace, name, shadow_prefix).await
 }
 
 async fn resolve_stopped_vm_disk(

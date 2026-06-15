@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Guest Control Fabric** — transport-independent guest control with 7-tier ladder (virtio-serial → QGA exec → QGA builtin → push cache → offline disk)
+- **New API routes** — `guest/status`, `guest/capabilities`, `guest/doctor`, `guest/readiness`, `guest/install-agent`, `guest/repair-plan`, `guest/file/read|write`, `guest/poll-reconcile`
+- **QGA file bootstrap** — airgap agent install via `guest-file-write` + `guest-exec` (no guest network)
+- **Agent Doctor** — probe tree, readiness score (0–100), live `guestkit.doctor` via transport ladder
+- **Host-mediated polling** — background reconciler for `airgap_live` VMs without push telemetry
+- **GuestActionPolicy extensions** — `execAllowlist`, `fileReadAllowlist`, `fileWriteAllowlist`, `freezeAllowed`, `maxExecOutputBytes`
+- **UI** — Guest Control panel, Agent Doctor tree, control-state chips, host-mediated exec warning banner
+- **Docs** — [guest-control-fabric.md](../features/guest-control-fabric.md)
+
+### Changed
+- **`kubevirt_guest_pull`** — delegates to transport ladder with attempt logging; proxy fallback only after ladder exhaustion
+- **Offline inject** — agent binary path aligned to `/usr/local/bin/zyvor-guest-agent` and `zyvor-guest-agent` systemd unit
+- **Worker repair** — honors `inject_zyvor_agent` from job payload
+
 ## [0.3.10] - 2026-06-14
 
 ### Added

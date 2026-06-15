@@ -220,3 +220,7 @@ zyvor-guest-agent --scheduled-update   # policy-gated auto-apply when enabled
 ## Security
 
 Same trust model as qemu-guest-agent: only the hypervisor host can connect to the virtio channel. Dangerous operations require `fix_apply` capability.
+
+## Guest Control Fabric
+
+For transport-independent control (QGA airgap install, capability contract, Agent Doctor, offline repair), see [guest-control-fabric.md](guest-control-fabric.md).

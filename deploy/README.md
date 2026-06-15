@@ -91,7 +91,9 @@ AGENT_NODE=http://<node-ip>:30092 \
 bash deploy/scripts/e2e-ubuntu-k3s.sh
 ```
 
-Imports Ubuntu 22.04, runs offline inspect/doctor, provisions a CDI VM with IP-only cloud-init (QGA deb + `zyvor-guest-agent` from MinIO), exercises live guest intel, then offline cluster inspect/doctor on a halted VM.
+Imports Ubuntu 22.04, runs offline inspect/doctor, provisions a CDI VM with IP-only cloud-init (QGA deb + `zyvor-guest-agent` from MinIO), exercises **Guest Control Fabric** routes (`guest/status`, `guest/doctor`, airgap `guest/install-agent`), live guest intel, then offline cluster inspect/doctor on a halted VM.
+
+**Airgap install:** when QGA is up but guest network is down, `POST .../guest/install-agent` with `strategy: auto` selects QGA file bootstrap (chunked `guest-file-write`, no curl in guest). See [guest-control-fabric.md](../docs/features/guest-control-fabric.md).
 
 Trigger manually:
 
