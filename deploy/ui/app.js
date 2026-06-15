@@ -1134,7 +1134,9 @@ async function fetchClusterGuestInfo(showToast = true) {
     if (guestRes.status === 'rejected') throw guestRes.reason;
     const info = guestRes.value.data;
     state.lastClusterGuestInfo = info;
-    state.lastClusterGuestIntel = intelRes.status === 'fulfilled' ? intelRes.value.data : null;
+    state.lastClusterGuestIntel = intelRes.status === 'fulfilled'
+      ? (guestEnvelope(intelRes.value).data ?? intelRes.value.data)
+      : null;
     state.lastClusterBootInspect = bootRes.status === 'fulfilled' ? bootRes.value.data : null;
     state.lastGuestControlStatus = statusRes.status === 'fulfilled' ? guestEnvelope(statusRes.value) : null;
     state.lastGuestDoctor = doctorRes.status === 'fulfilled' ? guestEnvelope(doctorRes.value) : null;

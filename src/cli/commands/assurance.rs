@@ -535,6 +535,10 @@ fn repair_boot_command_impl(
             dry_run,
             verbose,
             inject_agent,
+            inject_qga: false,
+            enable_systemd: true,
+            fix_cloud_init_network: false,
+            validate_fstab: false,
             #[cfg(feature = "agent")]
             agent_binary,
             #[cfg(feature = "agent")]

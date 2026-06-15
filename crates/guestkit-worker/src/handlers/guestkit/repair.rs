@@ -90,6 +90,10 @@ impl OperationHandler for RepairHandler {
             dry_run: p.dry_run,
             verbose: false,
             inject_agent: p.inject_zyvor_agent,
+            inject_qga: p.inject_qga,
+            enable_systemd: p.enable_systemd,
+            fix_cloud_init_network: p.fix_cloud_init_network,
+            validate_fstab: p.validate_fstab,
             ..Default::default()
         };
 

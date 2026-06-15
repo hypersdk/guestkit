@@ -232,6 +232,19 @@ pub async fn exec_vm_handler(
         ));
     }
 
+    let command = if let Some(cmd) = body.command.as_deref().filter(|s| !s.is_empty()) {
+        cmd.to_string()
+    } else {
+        let path = body
+            .path
+            .as_deref()
+            .filter(|p| !p.is_empty())
+            .ok_or_else(|| ApiError::bad_request("Provide command or path"))?;
+        format!("{} {}", path, body.args.join(" "))
+    };
+    let max_out =
+        crate::guest_action_policy::enforce_exec(state.kube.as_ref(), &command, false).await?;
+
     let (path, args) = if let Some(cmd) = body.command.as_deref().filter(|s| !s.is_empty()) {
         if cmd.contains('\\') || cmd.to_ascii_lowercase().contains("powershell") {
             (
@@ -257,11 +270,17 @@ pub async fn exec_vm_handler(
     };
 
     let result = crate::kubevirt_qga::qga_exec(&client, &namespace, &name, &path, &args, 120).await?;
+    let (stdout, stderr) = crate::kubevirt_qga::truncate_exec_output(
+        &result.stdout,
+        &result.stderr,
+        max_out,
+    );
     Ok(Json(ApiResponse::ok(json!({
         "success": result.exit_code == 0,
         "exitCode": result.exit_code,
-        "stdout": result.stdout,
-        "stderr": result.stderr,
+        "stdout": stdout,
+        "stderr": stderr,
         "method": "qga-guest-exec",
+        "hostMediated": true,
     }))))
 }
