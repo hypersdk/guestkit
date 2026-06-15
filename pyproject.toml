@@ -44,6 +44,7 @@ Changelog = "https://github.com/hypersdk/guestkit/releases"
 
 [tool.maturin]
 manifest-path = "Cargo.toml"
+bindings = "pyo3"
 features = ["python-bindings"]
 module-name = "guestkit"
 include = ["guestkit.pyi"]

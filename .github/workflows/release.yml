@@ -220,5 +220,5 @@ jobs:
             echo "Skipping PyPI publish (PYPI_API_TOKEN not configured)"
             exit 0
           fi
-          maturin build --release --features python-bindings --out dist
+          maturin build --release --bindings pyo3 --features python-bindings --out dist
           maturin upload --username __token__ --password "${PYPI_API_TOKEN}" dist/*.whl --skip-existing
