@@ -264,6 +264,18 @@ pub fn api_router() -> Router<AppState> {
             post(crate::kubevirt_inspect::post_doctor_vm),
         )
         .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/migration-plan",
+            post(crate::kubevirt_inspect::post_migration_plan_vm),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/repair-plan",
+            post(crate::kubevirt_inspect::post_repair_plan_vm),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/provision",
+            post(crate::kubevirt_inspect::post_provision_vm),
+        )
+        .route(
             "/api/v1/kubevirt/vms/:namespace/:name/export-disk",
             post(crate::kubevirt_export::export_vm_disk),
         )

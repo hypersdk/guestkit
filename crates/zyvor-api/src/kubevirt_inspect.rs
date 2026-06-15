@@ -3,6 +3,7 @@
 
 use axum::extract::{Path, Query, State};
 use axum::Json;
+use guestkit::export::{generate_kubevirt_manifests, manifests_to_yaml, DiskMetadata};
 use kube::Client;
 use serde::Deserialize;
 use serde_json::json;
@@ -11,7 +12,7 @@ use uuid::Uuid;
 use crate::error::{ApiError, ApiResult};
 use crate::jobs::submit_disk_path_job;
 use crate::kubevirt_boot_inspect::{resolve_disk_path, root_pvc_from_vm};
-use crate::models::{ApiResponse, JobEnqueueResponse};
+use crate::models::{ApiResponse, JobEnqueueResponse, ProvisionResponse};
 use crate::routes::kubevirt::{fetch_vm, fetch_vmi, json_str};
 use crate::state::AppState;
 
@@ -157,6 +158,122 @@ pub async fn post_doctor_vm(
     )
     .await?;
     Ok(Json(ApiResponse::ok(resp)))
+}
+
+pub async fn post_migration_plan_vm(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+    Query(query): Query<ClusterDoctorQuery>,
+) -> ApiResult<Json<ApiResponse<JobEnqueueResponse>>> {
+    let client = kube_client(&state)?;
+    let disk =
+        resolve_stopped_vm_disk(&state, &client, &namespace, &name, "cluster migrate").await?;
+    let resp = submit_disk_path_job(
+        &state,
+        disk.shadow_id,
+        &disk.disk_path,
+        &disk.format,
+        "guestkit.migrate-plan",
+        "guestkit.migrate-plan.v1",
+        json!({
+            "target": query.target,
+            "explain": query.explain,
+            "export_fix_plan": true,
+            "cluster_vm": disk.label,
+        }),
+    )
+    .await?;
+    Ok(Json(ApiResponse::ok(resp)))
+}
+
+pub async fn post_repair_plan_vm(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> ApiResult<Json<ApiResponse<JobEnqueueResponse>>> {
+    let client = kube_client(&state)?;
+    let disk =
+        resolve_stopped_vm_disk(&state, &client, &namespace, &name, "cluster repair").await?;
+    let resp = submit_disk_path_job(
+        &state,
+        disk.shadow_id,
+        &disk.disk_path,
+        &disk.format,
+        "guestkit.repair",
+        "guestkit.repair.v1",
+        json!({
+            "fix": "boot",
+            "dry_run": true,
+            "cluster_vm": disk.label,
+        }),
+    )
+    .await?;
+    Ok(Json(ApiResponse::ok(resp)))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ClusterProvisionQuery {
+    #[serde(default)]
+    pub apply: bool,
+}
+
+pub async fn post_provision_vm(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+    Query(query): Query<ClusterProvisionQuery>,
+) -> ApiResult<Json<ApiResponse<ProvisionResponse>>> {
+    let client = kube_client(&state)?;
+    let disk =
+        resolve_stopped_vm_disk(&state, &client, &namespace, &name, "cluster provision").await?;
+
+    let plan_result = guestkit::assurance::run_migrate_plan(
+        &disk.disk_path,
+        "kubevirt",
+        &guestkit::assurance::MigratePlanOptions {
+            explain: false,
+            verbose: false,
+            export_fix_plan: true,
+            inject_agent: false,
+        },
+    )
+    .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    let mut disk_meta = DiskMetadata::from_image_path(
+        &disk.disk_path,
+        &namespace,
+        &state.config.storage_class,
+    );
+    disk_meta.import_url = Some(format!(
+        "{}/cluster-shadow/{}",
+        state.config.storage_public_url.trim_end_matches('/'),
+        disk.shadow_id
+    ));
+
+    let manifests = generate_kubevirt_manifests(&plan_result, &disk_meta)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let yaml = manifests_to_yaml(&manifests).map_err(|e| ApiError::internal(e.to_string()))?;
+
+    let mut applied = false;
+    let mut resources = None;
+    let mut apply_errors = None;
+    if query.apply {
+        let client = state.kube.clone().ok_or_else(|| {
+            ApiError::bad_request("provision apply=true requires in-cluster Kubernetes access")
+        })?;
+        let result = crate::kubevirt_apply::apply_kubevirt_manifests(&client, &yaml).await?;
+        applied = result.applied;
+        resources = Some(result.resources);
+        if !result.errors.is_empty() {
+            apply_errors = Some(result.errors);
+        }
+    }
+
+    Ok(Json(ApiResponse::ok(ProvisionResponse {
+        vm_id: disk.shadow_id,
+        yaml,
+        applied,
+        resources,
+        apply_errors,
+    })))
 }
 
 fn kube_client(state: &AppState) -> ApiResult<Client> {

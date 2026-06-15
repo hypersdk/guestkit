@@ -805,6 +805,9 @@ function updateClusterLifecycleButtons(vm) {
   if (stopBtn) stopBtn.disabled = !running;
   if (restartBtn) restartBtn.disabled = !running;
   if (startBtn && stopped && !running) startBtn.disabled = false;
+  if (state.selectedClusterVm?.name === vm.name && state.selectedClusterVm?.namespace === vm.namespace) {
+    setClusterDockEnabled(true);
+  }
 }
 
 function updateVmtoolsLifecycleButtons(vm, info) {
@@ -1886,12 +1889,20 @@ function setDockEnabled(on) {
   });
 }
 
+function clusterVmStopped(vm) {
+  if (!vm) return false;
+  const phase = String(vm.phase || vm.status || '').toLowerCase();
+  return !phase.includes('run');
+}
+
 function setClusterDockEnabled(on) {
+  const vm = state.selectedClusterVm;
+  const stopped = on && clusterVmStopped(vm);
   $('#dockInspect')?.toggleAttribute('disabled', !on);
   $('#dockDoctor')?.toggleAttribute('disabled', !on);
   ['#dockPlan', '#dockRepair', '#dockLaunch'].forEach((sel) => {
     const el = $(sel);
-    if (el) el.disabled = true;
+    if (el) el.disabled = !stopped;
   });
 }
 
@@ -2949,30 +2960,54 @@ async function runClusterGuestkitInspect() {
   }
 }
 
-async function runClusterGuestkitDoctor() {
+async function runClusterGuestkitJob(action) {
   const vm = state.selectedClusterVm;
   if (!vm) {
     toast('Select a cluster VM first', 'err');
     return { ok: false };
   }
-  feed(`GuestKit doctor on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
-  setActiveTab('summary');
-  setWizardStep('assure');
+  if (!clusterVmStopped(vm)) {
+    toast('Stop the VM for offline GuestKit disk workflows', 'err');
+    return { ok: false };
+  }
   const target = getTarget();
+  const base = `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}`;
+  let path = `${base}/${action}`;
+  if (action === 'doctor' || action === 'migration-plan') {
+    path += `?target=${encodeURIComponent(target)}&explain=true`;
+  }
+  feed(`GuestKit <strong>${escapeHtml(action)}</strong> on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
+  setActiveTab('summary');
+  setWizardStep(action === 'provision' ? 'launch' : 'plan');
   try {
-    const data = await api(
-      `/kubevirt/vms/${encodeURIComponent(vm.namespace)}/${encodeURIComponent(vm.name)}/doctor?target=${encodeURIComponent(target)}&explain=true`,
-      { method: 'POST' },
-    );
+    const data = await api(path, { method: 'POST' });
+    if (action === 'provision' && data?.data?.yaml) {
+      renderSummary({ data: data.data }, action);
+      showYaml(data.data.yaml);
+      setActiveTab('yaml');
+      toast('KubeVirt YAML ready', 'ok');
+      return { ok: true, data };
+    }
     const jobId = data?.data?.job_id;
-    if (!jobId) return { ok: false };
+    if (!jobId) {
+      toast(`${action} did not start`, 'err');
+      return { ok: false };
+    }
     state.lastJobId = jobId;
-    showJobTracker('doctor', jobId);
-    return await pollJob(jobId, 'doctor');
+    showJobTracker(action, jobId);
+    return await pollJob(jobId, action);
   } catch (e) {
     toast(e.message, 'err');
     return { ok: false, error: e.message };
   }
+}
+
+async function runClusterProvision() {
+  return runClusterGuestkitJob('provision');
+}
+
+async function runClusterGuestkitDoctor() {
+  return runClusterGuestkitJob('doctor');
 }
 
 async function runClusterAction(action) {
@@ -2989,7 +3024,10 @@ async function runClusterAction(action) {
     await fetchClusterBootInspect(true);
     return { ok: false };
   }
-  toast('Export root disk to run migrate/repair/provision offline workflows', 'err');
+  if (action === 'migration-plan' || action === 'repair-plan' || action === 'provision') {
+    return runClusterGuestkitJob(action);
+  }
+  toast('Unsupported cluster workflow', 'err');
   return { ok: false };
 }
 
