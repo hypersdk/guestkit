@@ -22,6 +22,17 @@ pub struct CloudInitCheck;
 pub struct SelinuxRelabelCheck;
 pub struct VmToolsRemnantsCheck;
 pub struct SystemdStaticCheck;
+pub struct WindowsEfiBootCheck;
+pub struct WindowsBcdCheck;
+
+fn is_windows_guest(evidence: &EvidenceSnapshot) -> bool {
+    evidence.windows.is_some()
+        || evidence
+            .os
+            .os_type
+            .to_lowercase()
+            .contains("windows")
+}
 
 impl BootCheck for FstabUuidCheck {
     fn id(&self) -> &str {
@@ -513,6 +524,117 @@ impl BootCheck for SystemdStaticCheck {
     }
 }
 
+impl BootCheck for WindowsEfiBootCheck {
+    fn id(&self) -> &str {
+        "BOOT-012"
+    }
+    fn name(&self) -> &str {
+        "Windows EFI boot chain"
+    }
+    fn weight(&self) -> f64 {
+        12.0
+    }
+    fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        if !is_windows_guest(evidence) {
+            return CheckResult {
+                id: self.id().to_string(),
+                name: self.name().to_string(),
+                passed: true,
+                severity: CheckSeverity::Info,
+                message: "Skipped for non-Windows guest".to_string(),
+                weight: 0.0,
+            };
+        }
+
+        let windows = evidence.windows.as_ref();
+        let efi_ready = evidence.boot.efi_present
+            && windows.map(|w| w.bootmgr_found).unwrap_or(false);
+        let passed = efi_ready || !evidence.boot.efi_present;
+        let severity = if passed {
+            CheckSeverity::Info
+        } else {
+            CheckSeverity::Blocker
+        };
+        let message = if !evidence.boot.efi_present {
+            "Legacy BIOS boot — EFI bootmgr check not required".to_string()
+        } else if efi_ready {
+            "EFI system partition and Windows bootmgr present".to_string()
+        } else {
+            "EFI partition detected but Windows bootmgfw.efi not found".to_string()
+        };
+
+        CheckResult {
+            id: self.id().to_string(),
+            name: self.name().to_string(),
+            passed,
+            severity,
+            message,
+            weight: self.weight(),
+        }
+    }
+}
+
+impl BootCheck for WindowsBcdCheck {
+    fn id(&self) -> &str {
+        "BOOT-013"
+    }
+    fn name(&self) -> &str {
+        "Windows BCD store"
+    }
+    fn weight(&self) -> f64 {
+        10.0
+    }
+    fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        if !is_windows_guest(evidence) {
+            return CheckResult {
+                id: self.id().to_string(),
+                name: self.name().to_string(),
+                passed: true,
+                severity: CheckSeverity::Info,
+                message: "Skipped for non-Windows guest".to_string(),
+                weight: 0.0,
+            };
+        }
+
+        let windows = evidence.windows.as_ref();
+        let systemroot_ok = windows
+            .map(|w| !w.systemroot.trim().is_empty())
+            .unwrap_or(false);
+        let bcd_ok = windows.map(|w| w.bcd_store_found).unwrap_or(false);
+        let pending_reboot = windows.map(|w| w.pending_reboot).unwrap_or(false);
+
+        let passed = systemroot_ok && bcd_ok;
+        let severity = if !passed {
+            CheckSeverity::Blocker
+        } else if pending_reboot {
+            CheckSeverity::Warning
+        } else {
+            CheckSeverity::Info
+        };
+        let message = if !systemroot_ok {
+            "Windows SYSTEMROOT not detected".to_string()
+        } else if !bcd_ok {
+            format!(
+                "BCD store not found under {} or /EFI/Microsoft/Boot",
+                windows.map(|w| w.systemroot.as_str()).unwrap_or("/Windows")
+            )
+        } else if pending_reboot {
+            "BCD store present; pending reboot flag set in registry".to_string()
+        } else {
+            "Windows BCD store located".to_string()
+        };
+
+        CheckResult {
+            id: self.id().to_string(),
+            name: self.name().to_string(),
+            passed,
+            severity,
+            message,
+            weight: self.weight(),
+        }
+    }
+}
+
 pub fn all_checks() -> Vec<Box<dyn BootCheck>> {
     vec![
         Box::new(FstabUuidCheck),
@@ -526,5 +648,7 @@ pub fn all_checks() -> Vec<Box<dyn BootCheck>> {
         Box::new(SelinuxRelabelCheck),
         Box::new(VmToolsRemnantsCheck),
         Box::new(SystemdStaticCheck),
+        Box::new(WindowsEfiBootCheck),
+        Box::new(WindowsBcdCheck),
     ]
 }

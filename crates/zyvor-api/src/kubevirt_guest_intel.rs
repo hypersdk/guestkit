@@ -433,3 +433,56 @@ pub async fn get_guest_systemd_events(
         "source": "pull",
     }))))
 }
+
+pub async fn get_guest_evidence(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getEvidence",
+        json!({}),
+    )
+    .await?;
+
+    Ok(Json(ApiResponse::ok(json!({
+        "namespace": namespace,
+        "name": name,
+        "evidence": rpc_result(resp),
+        "source": "pull",
+    }))))
+}
+
+pub async fn get_guest_network(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    let resp = pull_for_vm_api(
+        &state,
+        &namespace,
+        &name,
+        "guestkit.getEvidence",
+        json!({}),
+    )
+    .await?;
+
+    let evidence = rpc_result(resp);
+    let network = evidence.get("network").cloned().unwrap_or(json!({}));
+    let dns = evidence.get("dns").cloned().or_else(|| {
+        evidence
+            .pointer("/network/dns_servers")
+            .map(|_| evidence.get("network").cloned().unwrap_or(json!({})))
+    });
+    let guest_health = evidence.get("guest_health").cloned();
+
+    Ok(Json(ApiResponse::ok(json!({
+        "namespace": namespace,
+        "name": name,
+        "network": network,
+        "dns": dns,
+        "guest_health": guest_health,
+        "source": "pull",
+    }))))
+}

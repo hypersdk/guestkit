@@ -382,6 +382,22 @@ impl EvidenceBuilder {
         let minidump_path = format!("{}/Minidump", systemroot);
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
 
+        let bcd_candidates = [
+            "/EFI/Microsoft/Boot/BCD".to_string(),
+            format!("{}/Boot/EFI/BCD", systemroot),
+            "/Windows/Boot/EFI/BCD".to_string(),
+        ];
+        let bcd_store_found = bcd_candidates
+            .iter()
+            .any(|path| g.exists(path).unwrap_or(false));
+        let bootmgr_candidates = [
+            "/EFI/Microsoft/Boot/bootmgfw.efi".to_string(),
+            format!("{}/Boot/EFI/bootmgfw.efi", systemroot),
+        ];
+        let bootmgr_found = bootmgr_candidates
+            .iter()
+            .any(|path| g.exists(path).unwrap_or(false));
+
         let details = collect_windows_details(g, root);
 
         WindowsEvidence {
@@ -399,6 +415,8 @@ impl EvidenceBuilder {
             hypervisor_remnants,
             av_edr,
             minidump_count,
+            bcd_store_found,
+            bootmgr_found,
             services: details.services,
             installed_apps: details.installed_apps,
             persistence: details.persistence,

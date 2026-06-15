@@ -2554,8 +2554,8 @@ fn context_help_for_view(view: View) -> Vec<&'static str> {
         ],
         View::Assurance => vec![
             "Assurance — doctor boot gate + migrate-plan scoring.",
-            "d doctor • t target • p plan preview • e export YAML",
-            ": doctor · : plan preview · : export plan",
+            "d doctor • t target • p plan preview • e export YAML • Shift+A apply plan",
+            ": doctor · : plan preview · : export plan · : apply plan",
         ],
         _ => vec![
             "j/k or arrows scroll • Tab switch view • q quit",

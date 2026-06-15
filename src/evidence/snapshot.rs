@@ -398,6 +398,10 @@ pub struct WindowsEvidence {
     pub hypervisor_remnants: Vec<String>,
     pub av_edr: Vec<String>,
     pub minidump_count: usize,
+    #[serde(default)]
+    pub bcd_store_found: bool,
+    #[serde(default)]
+    pub bootmgr_found: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub services: Vec<WindowsServiceEntry>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
