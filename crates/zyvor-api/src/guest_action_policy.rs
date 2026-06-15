@@ -15,7 +15,25 @@ pub struct GuestActionPolicySpec {
     #[serde(default)]
     pub restart_unit_allowlist: Vec<String>,
     #[serde(default)]
+    pub exec_allowlist: Vec<String>,
+    #[serde(default)]
+    pub file_read_allowlist: Vec<String>,
+    #[serde(default)]
+    pub file_write_allowlist: Vec<String>,
+    #[serde(default = "default_true")]
+    pub freeze_allowed: bool,
+    #[serde(default = "default_max_output")]
+    pub max_exec_output_bytes: usize,
+    #[serde(default)]
     pub require_approval: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_max_output() -> usize {
+    32 * 1024
 }
 
 fn guest_action_policy_resource() -> ApiResource {
@@ -95,6 +113,120 @@ pub async fn enforce_support_bundle(client: Option<&Client>, skip_approval: bool
                 return Err(ApiError::bad_request(
                     "collect_support_bundle denied by GuestActionPolicy",
                 ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn path_matches_allowlist(allowlist: &[String], path: &str) -> bool {
+    if allowlist.is_empty() {
+        return true;
+    }
+    allowlist.iter().any(|p| path.starts_with(p) || path == p)
+}
+
+fn command_matches_allowlist(allowlist: &[String], command: &str) -> bool {
+    allowlist.iter().any(|pat| {
+        if pat.ends_with('*') {
+            command.starts_with(pat.trim_end_matches('*'))
+        } else {
+            command == pat || command.contains(pat)
+        }
+    })
+}
+
+pub async fn enforce_exec(
+    client: Option<&Client>,
+    command: &str,
+    skip_approval: bool,
+) -> ApiResult<usize> {
+    if let Some(client) = client {
+        if let Some(policy) = fetch_guest_action_policy(client).await {
+            if !skip_approval && policy.require_approval {
+                return Err(ApiError::bad_request(
+                    "GuestActionPolicy requires approval for exec",
+                ));
+            }
+            if !action_allowed(&policy, "exec") && !policy.allowed_actions.is_empty() {
+                return Err(ApiError::bad_request("exec denied by GuestActionPolicy"));
+            }
+            if !policy.exec_allowlist.is_empty()
+                && !command_matches_allowlist(&policy.exec_allowlist, command)
+            {
+                return Err(ApiError::bad_request(
+                    "exec command not in GuestActionPolicy allowlist",
+                ));
+            }
+            return Ok(policy.max_exec_output_bytes);
+        }
+    }
+    Ok(default_max_output())
+}
+
+pub async fn enforce_file_read(
+    client: Option<&Client>,
+    path: &str,
+    skip_approval: bool,
+) -> ApiResult<()> {
+    if let Some(client) = client {
+        if let Some(policy) = fetch_guest_action_policy(client).await {
+            if !skip_approval && policy.require_approval {
+                return Err(ApiError::bad_request(
+                    "GuestActionPolicy requires approval for file read",
+                ));
+            }
+            if !action_allowed(&policy, "file_read") && !policy.allowed_actions.is_empty() {
+                return Err(ApiError::bad_request("file_read denied by GuestActionPolicy"));
+            }
+            if !path_matches_allowlist(&policy.file_read_allowlist, path) {
+                return Err(ApiError::bad_request(
+                    "file path not in GuestActionPolicy read allowlist",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn enforce_file_write(
+    client: Option<&Client>,
+    path: &str,
+    skip_approval: bool,
+) -> ApiResult<()> {
+    if let Some(client) = client {
+        if let Some(policy) = fetch_guest_action_policy(client).await {
+            if !skip_approval && policy.require_approval {
+                return Err(ApiError::bad_request(
+                    "GuestActionPolicy requires approval for file write",
+                ));
+            }
+            if !action_allowed(&policy, "file_write") && !policy.allowed_actions.is_empty() {
+                return Err(ApiError::bad_request("file_write denied by GuestActionPolicy"));
+            }
+            if !path_matches_allowlist(&policy.file_write_allowlist, path) {
+                return Err(ApiError::bad_request(
+                    "file path not in GuestActionPolicy write allowlist",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn enforce_freeze(client: Option<&Client>, skip_approval: bool) -> ApiResult<()> {
+    if let Some(client) = client {
+        if let Some(policy) = fetch_guest_action_policy(client).await {
+            if !skip_approval && policy.require_approval {
+                return Err(ApiError::bad_request(
+                    "GuestActionPolicy requires approval for filesystem freeze",
+                ));
+            }
+            if !policy.freeze_allowed {
+                return Err(ApiError::bad_request("freeze denied by GuestActionPolicy"));
+            }
+            if !action_allowed(&policy, "freeze") && !policy.allowed_actions.is_empty() {
+                return Err(ApiError::bad_request("freeze denied by GuestActionPolicy"));
             }
         }
     }

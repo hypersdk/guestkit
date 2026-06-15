@@ -230,6 +230,43 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/kubevirt/namespaces", get(kubevirt::list_kubevirt_namespaces))
         .route("/api/v1/kubevirt/vms", get(kubevirt::list_kubevirt_vms))
         .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/status",
+            get(crate::guest_control::routes::get_guest_status),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/capabilities",
+            get(crate::guest_control::routes::get_guest_capabilities),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/doctor",
+            get(crate::guest_control::routes::get_guest_doctor)
+                .post(crate::guest_control::routes::post_guest_doctor),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/readiness",
+            get(crate::guest_control::routes::get_guest_readiness),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/install-agent",
+            post(crate::guest_control::routes::post_install_agent),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/repair-plan",
+            post(crate::guest_control::routes::post_guest_repair_plan),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/file/read",
+            post(crate::guest_control::routes::post_guest_file_read),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/file/write",
+            post(crate::guest_control::routes::post_guest_file_write),
+        )
+        .route(
+            "/api/v1/kubevirt/guest/poll-reconcile",
+            post(crate::guest_control::routes::post_guest_poll_reconcile),
+        )
+        .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest-agent",
             get(kubevirt::get_guest_agent_info),
         )

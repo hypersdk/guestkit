@@ -45,14 +45,21 @@ Response (`data` object):
 | GET | `/api/v1/kubevirt/vms` | Fleet VM list |
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest-agent` | Live guest-agent status |
 | POST | `/api/v1/kubevirt/vms/{namespace}/{name}/guest-agent/install` | Cloud-init agent bootstrap |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/status` | Guest control state + transport probes |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/capabilities` | Negotiated capability contract |
+| GET/POST | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/doctor` | Agent Doctor tree; POST runs live doctor |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/readiness` | Migration readiness score |
+| POST | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/install-agent` | Strategy-aware install (incl. QGA file bootstrap) |
+| POST | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/repair-plan` | Offline repair for halted VM |
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/evidence` | Live evidence via per-VM QGA RPC |
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/network` | Network/DNS slice from live evidence |
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/health` | Guest health score |
 | POST | `/api/v1/kubevirt/vms/{namespace}/{name}/vmtools/exec` | QGA guest-exec (via virt-launcher pod) |
+| POST | `/api/v1/kubevirt/guest/poll-reconcile` | Poll AirgapLive VMs without push |
 
-Per-VM live pulls use `zyvor-guest-agent rpc` inside the guest (QEMU guest-agent `guest-exec`). The API locates the virt-launcher pod by label (`kubevirt.io/vm`, `kubevirt.io/domain`, or `vm.kubevirt.io/name`). When kube is available, failures surface the QGA/RPC error instead of falling back to the in-cluster `AGENT_PROXY_URL`.
+Per-VM live pulls use the **Guest Control Fabric** transport ladder: QGA exec RPC first, then push cache for read-only methods, then optional `AGENT_PROXY_URL` fallback. See [guest-control-fabric.md](guest-control-fabric.md).
 
-Agent install merges a virtio guestagent disk (`serial: org.qemu.guest_agent.0`) for KubeVirt 1.8+; see [guest-agent.md](guest-agent.md).
+Agent install merges a virtio guestagent disk (`serial: org.qemu.guest_agent.0`) for KubeVirt 1.8+; airgap installs use QGA file-write when guest network is unavailable. See [guest-agent.md](guest-agent.md).
 
 ## Disk path resolution
 

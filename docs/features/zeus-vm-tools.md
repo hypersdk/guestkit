@@ -91,8 +91,9 @@ Install query params: `restart=true|false`, `method=auto|cloud-init|qga|iso`
 
 1. **Cloud-init** — **Install VM Tools** (Linux; merges cloud-init + virtio channel)
 2. **QGA bootstrap** — when qemu-ga is connected, returns `bootstrap_script` for console install
-3. **ISO attach** — `?method=iso` creates CDI DataVolume, attaches CD-ROM, guest runs `/linux/install.sh`
-4. **Offline inject** — `guestkit repair --inject-agent` (GuestKit)
+3. **QGA file bootstrap** — airgap: API writes `zyvor-vm-tools` tar via `guest-file-write`, then `guest-exec` install (no guest network); see [guest-control-fabric.md](guest-control-fabric.md)
+4. **ISO attach** — `?method=iso` creates CDI DataVolume, attaches CD-ROM, guest runs `/linux/install.sh`
+5. **Offline inject** — `guestkit repair --inject-agent` or `POST .../guest/repair-plan` (GuestKit)
 
 ## Build packages
 

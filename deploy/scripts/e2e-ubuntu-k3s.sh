@@ -274,6 +274,16 @@ done
 log "Guest agent status..."
 curl -sf "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/guest-agent" | python3 -m json.tool | head -25
 
+log "Guest Control Fabric — status + doctor..."
+curl -sf "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/guest/status" | python3 -m json.tool | head -40 || true
+curl -sf "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/guest/doctor" | python3 -m json.tool | head -50 || true
+curl -sf "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/guest/capabilities" | python3 -m json.tool | head -35 || true
+
+log "Guest Control Fabric — airgap QGA file bootstrap install (when guest network unavailable)..."
+curl -sf -X POST "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/guest/install-agent" \
+  -H 'Content-Type: application/json' \
+  -d '{"strategy":"auto","restart":false}' | python3 -m json.tool | head -35 || true
+
 log "VM Tools install (cloud-init merge + agent)..."
 curl -sf -X POST "${API}/kubevirt/vms/${NS}/${VM_KV_NAME}/vmtools/install?restart=true&method=cloud-init" | python3 -m json.tool | head -30 || true
 

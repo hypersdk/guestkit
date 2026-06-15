@@ -257,6 +257,96 @@ paths:
       responses:
         '200':
           description: GuestAgentInfo
+  /kubevirt/vms/{namespace}/{name}/guest/status:
+    get:
+      summary: Guest control state, transport ladder probes, and capability contract
+      responses:
+        '200':
+          description: GuestControlEnvelope
+  /kubevirt/vms/{namespace}/{name}/guest/capabilities:
+    get:
+      summary: Negotiated guest capability contract
+      responses:
+        '200':
+          description: GuestControlEnvelope
+  /kubevirt/vms/{namespace}/{name}/guest/doctor:
+    get:
+      summary: Agent Doctor probe tree and recommendations
+      responses:
+        '200':
+          description: GuestControlEnvelope with AgentDoctorReport in data
+    post:
+      summary: Run live guestkit.doctor via best transport
+      responses:
+        '200':
+          description: GuestControlEnvelope with live doctor result
+  /kubevirt/vms/{namespace}/{name}/guest/readiness:
+    get:
+      summary: Guest readiness score (0-100) for migration preflight
+      responses:
+        '200':
+          description: GuestControlEnvelope
+  /kubevirt/vms/{namespace}/{name}/guest/install-agent:
+    post:
+      summary: Strategy-aware agent install (cloud-init, QGA curl, QGA file bootstrap)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                strategy:
+                  type: string
+                  enum: [auto, qga_file_bootstrap, qga_curl_bootstrap, cloud_init_curl, offline_inject, iso_attach]
+                restart:
+                  type: boolean
+                bundleUrl:
+                  type: string
+      responses:
+        '200':
+          description: GuestControlEnvelope
+  /kubevirt/vms/{namespace}/{name}/guest/repair-plan:
+    post:
+      summary: Offline repair plan for halted VM (inject agent, QGA, cloud-init fixes)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dryRun:
+                  type: boolean
+                injectQga:
+                  type: boolean
+                injectZyvorAgent:
+                  type: boolean
+                enableSystemd:
+                  type: boolean
+                fixCloudInitNetwork:
+                  type: boolean
+                validateFstab:
+                  type: boolean
+      responses:
+        '200':
+          description: GuestControlEnvelope with repair job enqueue result
+  /kubevirt/vms/{namespace}/{name}/guest/file/read:
+    post:
+      summary: Read guest file via QGA guest-file API
+      responses:
+        '200':
+          description: GuestControlEnvelope with base64 content
+  /kubevirt/vms/{namespace}/{name}/guest/file/write:
+    post:
+      summary: Write guest file via QGA guest-file API (airgap installer)
+      responses:
+        '200':
+          description: GuestControlEnvelope
+  /kubevirt/guest/poll-reconcile:
+    post:
+      summary: Host-mediated poll reconcile for AirgapLive VMs without push
+      responses:
+        '200':
+          description: Poll summary
   /kubevirt/vms/{namespace}/{name}/vmtools:
     get:
       summary: Zeus VM Tools status for a cluster VM

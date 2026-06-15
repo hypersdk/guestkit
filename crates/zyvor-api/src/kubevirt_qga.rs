@@ -246,3 +246,171 @@ fn decode_b64_field(value: Option<&Value>) -> String {
         })
         .unwrap_or_default()
 }
+
+fn encode_b64(data: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(data)
+}
+
+const QGA_FILE_CHUNK: usize = 48 * 1024;
+
+/// Write bytes to a guest path via guest-file-open/write/close (airgap installer path).
+pub async fn qga_file_write(
+    client: &Client,
+    namespace: &str,
+    name: &str,
+    guest_path: &str,
+    bytes: &[u8],
+    timeout_secs: u64,
+) -> ApiResult<()> {
+    let domain = libvirt_domain(namespace, name);
+    let pod = find_virt_launcher_pod(client, namespace, name).await?;
+    let open_body = json!({
+        "execute": "guest-file-open",
+        "arguments": {
+            "path": guest_path,
+            "mode": "w+"
+        }
+    });
+    let open_resp = virsh_qga_json(client, namespace, &pod, &domain, open_body).await?;
+    let handle = open_resp
+        .pointer("/return")
+        .and_then(|v| v.as_i64())
+        .ok_or_else(|| ApiError::internal(format!("guest-file-open missing handle: {open_resp}")))?;
+
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs.max(30));
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if std::time::Instant::now() >= deadline {
+            let _ = qga_file_close(client, namespace, &pod, &domain, handle).await;
+            return Err(ApiError::internal(format!(
+                "guest-file-write timed out after {timeout_secs}s"
+            )));
+        }
+        let end = (offset + QGA_FILE_CHUNK).min(bytes.len());
+        let chunk = &bytes[offset..end];
+        let write_body = json!({
+            "execute": "guest-file-write",
+            "arguments": {
+                "handle": handle,
+                "buf-b64": encode_b64(chunk),
+                "count": chunk.len()
+            }
+        });
+        let write_resp =
+            virsh_qga_json(client, namespace, &pod, &domain, write_body).await?;
+        let written = write_resp
+            .pointer("/return/count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as usize;
+        if written == 0 {
+            let _ = qga_file_close(client, namespace, &pod, &domain, handle).await;
+            return Err(ApiError::internal(format!(
+                "guest-file-write stalled at offset {offset}: {write_resp}"
+            )));
+        }
+        offset += written;
+    }
+    qga_file_close(client, namespace, &pod, &domain, handle).await
+}
+
+/// Read a guest file via guest-file-open/read/close.
+pub async fn qga_file_read(
+    client: &Client,
+    namespace: &str,
+    name: &str,
+    guest_path: &str,
+    max_bytes: usize,
+    timeout_secs: u64,
+) -> ApiResult<Vec<u8>> {
+    let domain = libvirt_domain(namespace, name);
+    let pod = find_virt_launcher_pod(client, namespace, name).await?;
+    let open_body = json!({
+        "execute": "guest-file-open",
+        "arguments": {
+            "path": guest_path,
+            "mode": "r"
+        }
+    });
+    let open_resp = virsh_qga_json(client, namespace, &pod, &domain, open_body).await?;
+    let handle = open_resp
+        .pointer("/return")
+        .and_then(|v| v.as_i64())
+        .ok_or_else(|| ApiError::internal(format!("guest-file-open missing handle: {open_resp}")))?;
+
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs.max(30));
+    let mut out = Vec::new();
+    loop {
+        if std::time::Instant::now() >= deadline {
+            let _ = qga_file_close(client, namespace, &pod, &domain, handle).await;
+            return Err(ApiError::internal(format!(
+                "guest-file-read timed out after {timeout_secs}s"
+            )));
+        }
+        if out.len() >= max_bytes {
+            break;
+        }
+        let to_read = (max_bytes - out.len()).min(QGA_FILE_CHUNK);
+        let read_body = json!({
+            "execute": "guest-file-read",
+            "arguments": {
+                "handle": handle,
+                "count": to_read
+            }
+        });
+        let read_resp = virsh_qga_json(client, namespace, &pod, &domain, read_body).await?;
+        let ret = read_resp
+            .get("return")
+            .ok_or_else(|| ApiError::internal(format!("guest-file-read: {read_resp}")))?;
+        if ret.get("eof").and_then(|v| v.as_bool()) == Some(true) {
+            break;
+        }
+        let chunk_b64 = ret.get("buf-b64").and_then(|v| v.as_str()).unwrap_or("");
+        if chunk_b64.is_empty() {
+            break;
+        }
+        let chunk = base64::engine::general_purpose::STANDARD
+            .decode(chunk_b64)
+            .map_err(|e| ApiError::internal(format!("decode guest-file-read: {e}")))?;
+        out.extend_from_slice(&chunk);
+    }
+    qga_file_close(client, namespace, &pod, &domain, handle).await?;
+    Ok(out)
+}
+
+async fn qga_file_close(
+    client: &Client,
+    namespace: &str,
+    pod: &str,
+    domain: &str,
+    handle: i64,
+) -> ApiResult<()> {
+    let close_body = json!({
+        "execute": "guest-file-close",
+        "arguments": { "handle": handle }
+    });
+    let close_resp = virsh_qga_json(client, namespace, pod, domain, close_body).await?;
+    if close_resp.get("return").is_some() {
+        Ok(())
+    } else if let Some(err) = close_resp.get("error") {
+        Err(ApiError::internal(format!("guest-file-close: {err}")))
+    } else {
+        Ok(())
+    }
+}
+
+/// Truncate guest exec output for policy limits.
+pub fn truncate_exec_output(stdout: &str, stderr: &str, max_bytes: usize) -> (String, String) {
+    let mut out = stdout.to_string();
+    let mut err = stderr.to_string();
+    if out.len() > max_bytes {
+        out.truncate(max_bytes);
+        out.push_str("…[truncated]");
+    }
+    if err.len() > max_bytes {
+        err.truncate(max_bytes);
+        err.push_str("…[truncated]");
+    }
+    (out, err)
+}

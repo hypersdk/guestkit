@@ -15,6 +15,16 @@ struct RepairPayload {
     dry_run: bool,
     #[serde(default = "default_fix")]
     fix: String,
+    #[serde(default)]
+    inject_qga: bool,
+    #[serde(default)]
+    inject_zyvor_agent: bool,
+    #[serde(default = "default_true")]
+    enable_systemd: bool,
+    #[serde(default)]
+    fix_cloud_init_network: bool,
+    #[serde(default)]
+    validate_fstab: bool,
 }
 
 fn default_true() -> bool {
@@ -79,7 +89,7 @@ impl OperationHandler for RepairHandler {
         let options = RepairOptions {
             dry_run: p.dry_run,
             verbose: false,
-            inject_agent: false,
+            inject_agent: p.inject_zyvor_agent,
             ..Default::default()
         };
 

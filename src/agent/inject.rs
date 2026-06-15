@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const GUEST_BINARY_DEST: &str = "/usr/bin/zyvor-guest-agent";
+pub const GUEST_BINARY_DEST: &str = "/usr/local/bin/zyvor-guest-agent";
 pub const GUEST_UNIT_DEST: &str = "/etc/systemd/system/zyvor-guest-agent.service";
 const DEFAULT_UNIT: &str = include_str!("../../templates/agent/zyvor-guest-agent.service");
 
@@ -45,7 +45,7 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
     });
 
     let unit_staging =
-        std::env::temp_dir().join(format!("guestkit-agent-{}.service", std::process::id()));
+        std::env::temp_dir().join(format!("zyvor-guest-agent-{}.service", std::process::id()));
     fs::write(&unit_staging, unit_content)?;
 
     plan.operations.push(Operation {
@@ -67,12 +67,12 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
     plan.operations.push(Operation {
         id: format!("agent-{:03}", op_base + 2),
         op_type: OperationType::CommandExec(CommandExec {
-            command: "chmod 0755 /usr/local/bin/guestkit".to_string(),
+            command: "chmod 0755 /usr/local/bin/zyvor-guest-agent".to_string(),
             expected_exit: 0,
             timeout: Some(30),
         }),
         priority: Priority::Low,
-        description: "Make guestkit binary executable".to_string(),
+        description: "Make zyvor-guest-agent binary executable".to_string(),
         risk: Priority::Low,
         reversible: false,
         depends_on: vec![format!("agent-{op_base:03}")],
@@ -83,12 +83,12 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
     plan.operations.push(Operation {
         id: format!("agent-{:03}", op_base + 3),
         op_type: OperationType::CommandExec(CommandExec {
-            command: "systemctl enable guestkit-agent || true".to_string(),
+            command: "systemctl enable zyvor-guest-agent || true".to_string(),
             expected_exit: 0,
             timeout: Some(60),
         }),
         priority: Priority::Medium,
-        description: "Enable guestkit-agent on boot".to_string(),
+        description: "Enable zyvor-guest-agent on boot".to_string(),
         risk: Priority::Low,
         reversible: true,
         depends_on: vec![format!("agent-{:03}", op_base + 1)],
@@ -164,7 +164,7 @@ pub fn inject_agent_into_image(
         GUEST_UNIT_DEST,
     )?;
 
-    let _ = g.command(&["systemctl", "enable", "guestkit-agent"]);
+    let _ = g.command(&["systemctl", "enable", "zyvor-guest-agent"]);
     let _ = g.umount_all();
     g.shutdown()?;
 
