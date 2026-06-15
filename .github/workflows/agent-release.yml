@@ -1,9 +1,9 @@
-name: Agent Release
+name: Agent Release (manual)
+
+# Agent artifacts are built and attached to GitHub Releases by release.yml on v* tags.
+# Use this workflow only to rebuild VM tools artifacts without cutting a release.
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:

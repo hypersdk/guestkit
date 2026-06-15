@@ -1,3 +1,5 @@
+# Deprecated for releases: use deploy/scripts/publish-images.sh and per-crate Dockerfiles.
+
 # Multi-stage build for guestkit
 # Stage 1: Builder
 FROM rust:1.70-slim-bookworm AS builder

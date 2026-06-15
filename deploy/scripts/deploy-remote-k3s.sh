@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Deploy Zyvor VM Services to a k3s host (build with podman, helm install).
-# Run ON the remote host after guestkit sources are synced.
+# Run ON the remote host or GHA runner after guestkit sources are synced.
 #
 # Usage:
 #   bash deploy/scripts/deploy-remote-k3s.sh
 #   ROOT=/path/to/guestkit bash deploy/scripts/deploy-remote-k3s.sh
-#   PULL_REGISTRY=ghcr.io/hypersdk bash deploy/scripts/deploy-remote-k3s.sh
+#   PULL_REGISTRY=ghcr.io/hypersdk IMAGE_TAG=v1.2.3 bash deploy/scripts/deploy-remote-k3s.sh
+#   HELM_VALUES_FILE=values-ci.yaml bash deploy/scripts/deploy-remote-k3s.sh
+#   SKIP_K3S_INSTALL=1 bash deploy/scripts/deploy-remote-k3s.sh
 set -euo pipefail
 
 ROOT="${ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
@@ -15,12 +17,26 @@ BUILDER="${BUILDER:-podman}"
 PULL_REGISTRY="${PULL_REGISTRY:-}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 NO_CACHE="${NO_CACHE:-}"
+HELM_VALUES_FILE="${HELM_VALUES_FILE:-values-k3s.yaml}"
+SKIP_K3S_INSTALL="${SKIP_K3S_INSTALL:-}"
 
 cd "${ROOT}"
 
+if [[ -z "${SKIP_K3S_INSTALL}" ]]; then
+  bash "${ROOT}/deploy/scripts/install-k3s-ubuntu.sh"
+fi
+
+if [[ -f "${HOME}/.kube/config" ]]; then
+  export KUBECONFIG="${KUBECONFIG:-${HOME}/.kube/config}"
+fi
+
 if ! command -v "${BUILDER}" >/dev/null; then
-  echo "ERROR: ${BUILDER} not found (install podman or set BUILDER=docker)"
-  exit 1
+  if command -v docker >/dev/null; then
+    BUILDER=docker
+  else
+    echo "ERROR: ${BUILDER} not found (install podman or set BUILDER=docker)"
+    exit 1
+  fi
 fi
 if ! command -v helm >/dev/null; then
   echo "ERROR: helm not found"
@@ -31,10 +47,30 @@ if ! command -v kubectl >/dev/null; then
   exit 1
 fi
 
-echo "=== Zyvor k3s deploy (root=${ROOT}) ==="
+VALUES_PATH="${ROOT}/deploy/helm/zyvor/${HELM_VALUES_FILE}"
+if [[ ! -f "${VALUES_PATH}" ]]; then
+  echo "ERROR: Helm values file not found: ${VALUES_PATH}"
+  exit 1
+fi
 
-sudo mkdir -p /var/lib/zyvor/images
-sudo chmod 1777 /var/lib/zyvor/images
+echo "=== Zyvor k3s deploy (root=${ROOT}, values=${HELM_VALUES_FILE}) ==="
+
+resolve_node_ip() {
+  local ip
+  ip="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || true)"
+  if [[ -z "${ip}" ]]; then
+    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  fi
+  echo "${ip}"
+}
+
+NODE_IP="${NODE_IP:-$(resolve_node_ip)}"
+API_NODE_PORT="${API_NODE_PORT:-30080}"
+MINIO_NODE_PORT="${MINIO_NODE_PORT:-30092}"
+
+ZEUS_PUBLIC_URL="${ZEUS_PUBLIC_URL:-http://${NODE_IP}:${API_NODE_PORT}}"
+VMTOOLS_BASE_URL="${VMTOOLS_BASE_URL:-http://${NODE_IP}:${MINIO_NODE_PORT}/vmtools}"
+GUESTKIT_BINARY_URL="${GUESTKIT_BINARY_URL:-http://${NODE_IP}:${MINIO_NODE_PORT}/vmtools/linux/zyvor-guest-agent}"
 
 build_and_import() {
   local name="$1"
@@ -53,7 +89,6 @@ build_and_import() {
   (cd /tmp && "${BUILDER}" save "${name}:latest" -o "${tar}")
   echo "Importing ${name} into k3s..."
   sudo "${K3S_BIN}" ctr -n k8s.io images import "${tar}"
-  # k3s resolves unqualified image names to docker.io/library/<name>
   local base="${name%%:*}"
   local tag="${name#*:}"
   if [[ "${base}" == "${tag}" ]]; then
@@ -92,11 +127,14 @@ fi
 echo "Installing Helm chart..."
 helm upgrade --install zyvor "${ROOT}/deploy/helm/zyvor" \
   -n "${NAMESPACE}" --create-namespace \
-  -f "${ROOT}/deploy/helm/zyvor/values-k3s.yaml" \
+  -f "${VALUES_PATH}" \
   --set guestkitWorker.image="${WORKER_IMAGE}" \
   --set zyvorApi.image="${API_IMAGE}" \
   --set zyvorUi.image="${UI_IMAGE}" \
-  --set minio.service.nodePort=30092
+  --set zyvorApi.zeusPublicUrl="${ZEUS_PUBLIC_URL}" \
+  --set zyvorApi.guestkitBinaryUrl="${GUESTKIT_BINARY_URL}" \
+  --set vmtools.bundle.baseUrl="${VMTOOLS_BASE_URL}" \
+  --set minio.service.nodePort="${MINIO_NODE_PORT}"
 
 if [[ -n "${NO_CACHE}" ]] || [[ -z "${PULL_REGISTRY}" ]]; then
   echo "Restarting API, UI, and worker pods to pick up freshly built :latest images..."
@@ -110,7 +148,6 @@ kubectl -n "${NAMESPACE}" rollout status deployment/zyvor-api --timeout=300s
 kubectl -n "${NAMESPACE}" rollout status deployment/guestkit-worker --timeout=300s
 kubectl -n "${NAMESPACE}" rollout status deployment/zyvor-ui --timeout=180s
 
-NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
 API_PORT="$(kubectl -n "${NAMESPACE}" get svc zyvor-api -o jsonpath='{.spec.ports[0].nodePort}')"
 UI_PORT="$(kubectl -n "${NAMESPACE}" get svc zyvor-ui -o jsonpath='{.spec.ports[0].nodePort}')"
 

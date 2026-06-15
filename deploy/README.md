@@ -26,6 +26,69 @@ Deploy GuestKit workers, zyvor-api, and supporting services for offline VM intel
 helm install zyvor deploy/helm/zyvor -n zyvor --create-namespace
 ```
 
+## k3s deploy (Ubuntu)
+
+Single-node k3s on Ubuntu (remote host or CI):
+
+```bash
+# Installs k3s, helm, qemu-utils, podman; deploys the full stack
+bash deploy/scripts/install-k3s-ubuntu.sh
+bash deploy/scripts/deploy-remote-k3s.sh
+
+# CI overlay (no hardcoded host IP — URLs computed at deploy time)
+HELM_VALUES_FILE=values-ci.yaml bash deploy/scripts/deploy-remote-k3s.sh
+
+# Pull release images from GHCR instead of local build
+PULL_REGISTRY=ghcr.io/hypersdk IMAGE_TAG=v0.3.3 bash deploy/scripts/deploy-remote-k3s.sh
+```
+
+Override public URLs when the node IP is not the client-facing address:
+
+```bash
+NODE_IP=203.0.113.10 \
+ZEUS_PUBLIC_URL=http://203.0.113.10:30080 \
+VMTOOLS_BASE_URL=http://203.0.113.10:30092/vmtools \
+bash deploy/scripts/deploy-remote-k3s.sh
+```
+
+Helm overlays:
+
+| File | Use |
+|------|-----|
+| `values-k3s.yaml` | Remote k3s (URLs via env/`--set`) |
+| `values-ci.yaml` | GitHub Actions `k3s-e2e.yml` |
+
+## Release artifacts (`v*` tags)
+
+The [release workflow](../.github/workflows/release.yml) publishes:
+
+| Asset | Destination |
+|-------|-------------|
+| `guestkit-<ver>-linux-amd64(.tar.gz)` | GitHub Release |
+| `zyvor-vm-tools-linux-amd64.tar.gz`, `.deb`, optional `.iso` | GitHub Release |
+| `ghcr.io/hypersdk/guestkit-worker:v<ver>` | GHCR |
+| `ghcr.io/hypersdk/zyvor-api:v<ver>` | GHCR |
+| `ghcr.io/hypersdk/zyvor-ui:v<ver>` | GHCR |
+
+Build images locally with `deploy/scripts/publish-images.sh`. The root `Dockerfile` is deprecated; use per-service Dockerfiles under `crates/` and `deploy/ui/`.
+
+Manual agent-only rebuild: [agent-release.yml](../.github/workflows/agent-release.yml) (`workflow_dispatch`).
+
+## CI k3s E2E
+
+[`.github/workflows/k3s-e2e.yml`](../.github/workflows/k3s-e2e.yml) on `ubuntu-latest`:
+
+1. `install-k3s-ubuntu.sh` — k3s, helm, qemu-utils
+2. `deploy-remote-k3s.sh` — PRs build images locally; `v*` tags pull GHCR release images
+3. `publish-vmtools-bundle.sh` — agent binaries into in-cluster MinIO
+4. `ci-k3s-e2e.sh` — API health, `e2e-smoke.sh` (cirros), VM tools bundle/API checks
+
+Trigger manually:
+
+```bash
+gh workflow run k3s-e2e.yml
+```
+
 ## API
 
 See [openapi/zyvor-vm-services.yaml](openapi/zyvor-vm-services.yaml).
