@@ -17,7 +17,7 @@ Wants=network-online.target
 ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0
 
 [Service]
-ExecStart=/usr/bin/zyvor-guest-agent
+ExecStart=/usr/local/bin/zyvor-guest-agent
 Restart=always
 RestartSec=5
 User=root
@@ -160,8 +160,8 @@ pub fn resolve_windows_agent_url(bundle_agent_url: Option<&str>) -> String {
 pub fn qga_bootstrap_script(binary_url: &str) -> String {
     format!(
         "mkdir -p /usr/bin /etc/systemd/system && \
-curl -fsSL '{binary_url}' -o /usr/bin/zyvor-guest-agent && \
-chmod +x /usr/bin/zyvor-guest-agent && \
+curl -fsSL '{binary_url}' -o /usr/local/bin/zyvor-guest-agent && \
+chmod +x /usr/local/bin/zyvor-guest-agent && \
 cat > /etc/systemd/system/zyvor-guest-agent.service <<'UNIT'\n{ZYVOR_AGENT_UNIT}UNIT\n\
 systemctl daemon-reload && systemctl enable --now zyvor-guest-agent"
     )
@@ -186,7 +186,7 @@ pub fn zyvor_tools_connected(vm: &Value, vmi: Option<&Value>) -> bool {
 
 fn guestkit_already_in_cloud_init(user_data: &str) -> bool {
     let lower = user_data.to_lowercase();
-    lower.contains("zyvor-guest-agent") || lower.contains("/usr/bin/zyvor-guest-agent")
+    lower.contains("zyvor-guest-agent") || lower.contains("/usr/local/bin/zyvor-guest-agent")
 }
 
 fn legacy_guestkit_bootstrap(user_data: &str) -> bool {
@@ -238,9 +238,9 @@ fn append_agent_runcmd_yaml(out: &mut String, binary_url: &str) {
     let url = binary_url.replace('\'', "'\"'\"'");
     out.push_str("runcmd:\n");
     out.push_str(&format!(
-        "  - curl -fsSL -o /usr/bin/zyvor-guest-agent '{url}' || true\n"
+        "  - curl -fsSL -o /usr/local/bin/zyvor-guest-agent '{url}' || true\n"
     ));
-    out.push_str("  - chmod 755 /usr/bin/zyvor-guest-agent\n");
+    out.push_str("  - chmod 755 /usr/local/bin/zyvor-guest-agent\n");
     out.push_str("  - systemctl daemon-reload\n");
     out.push_str("  - systemctl enable --now zyvor-guest-agent\n");
 }
@@ -285,12 +285,12 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
     }
     if !out.contains("runcmd:") {
         append_agent_runcmd_yaml(&mut out, binary_url);
-    } else if !out.contains("/usr/bin/zyvor-guest-agent") && !out.contains("/usr/local/bin/guestkit") {
+    } else if !out.contains("/usr/local/bin/zyvor-guest-agent") && !out.contains("/usr/bin/zyvor-guest-agent") {
         let url = binary_url.replace('\'', "'\"'\"'");
         out.push_str(&format!(
-            "  - curl -fsSL -o /usr/bin/zyvor-guest-agent '{url}' || true\n"
+            "  - curl -fsSL -o /usr/local/bin/zyvor-guest-agent '{url}' || true\n"
         ));
-        out.push_str("  - chmod 755 /usr/bin/zyvor-guest-agent\n");
+        out.push_str("  - chmod 755 /usr/local/bin/zyvor-guest-agent\n");
         out.push_str("  - systemctl daemon-reload\n");
         out.push_str("  - systemctl enable --now zyvor-guest-agent\n");
     }
@@ -301,7 +301,8 @@ fn merge_linux_guest_agent_cloud_init(user_data: &str, binary_url: &str) -> (Str
 }
 
 fn guest_agent_channel_present(vm: &Value) -> bool {
-    vm.pointer("/spec/template/spec/domain/devices/channels")
+    if vm
+        .pointer("/spec/template/spec/domain/devices/channels")
         .and_then(|c| c.as_array())
         .map(|arr| {
             arr.iter().any(|ch| {
@@ -311,32 +312,67 @@ fn guest_agent_channel_present(vm: &Value) -> bool {
             })
         })
         .unwrap_or(false)
+    {
+        return true;
+    }
+
+    vm.pointer("/spec/template/spec/domain/devices/disks")
+        .and_then(|d| d.as_array())
+        .map(|arr| {
+            arr.iter().any(|disk| {
+                disk.get("serial").and_then(|s| s.as_str()) == Some("org.qemu.guest_agent.0")
+                    || disk.get("name").and_then(|n| n.as_str()) == Some("guestagent")
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn merge_guest_agent_channel_into_vm(vm: &mut Value) -> bool {
     if vm_is_windows(Some(vm), None) || guest_agent_channel_present(vm) {
         return false;
     }
+
+    // KubeVirt 1.8+ exposes the QGA virtio-serial port via a disk serial, not devices.channels.
+    {
+        let Some(volumes) = vm
+            .pointer_mut("/spec/template/spec/volumes")
+            .and_then(|v| v.as_array_mut())
+        else {
+            return false;
+        };
+        let has_volume = volumes
+            .iter()
+            .any(|v| v.get("name").and_then(|n| n.as_str()) == Some("guestagent"));
+        if !has_volume {
+            volumes.push(json!({
+                "name": "guestagent",
+                "emptyDisk": { "capacity": "1Gi" }
+            }));
+        }
+    }
+
     let Some(devices) = vm
         .pointer_mut("/spec/template/spec/domain/devices")
         .and_then(|d| d.as_object_mut())
     else {
         return false;
     };
-    let channels = devices
-        .entry("channels".to_string())
+    let disks = devices
+        .entry("disks".to_string())
         .or_insert_with(|| Value::Array(vec![]));
-    let Some(arr) = channels.as_array_mut() else {
+    let Some(arr) = disks.as_array_mut() else {
         return false;
     };
-    arr.push(json!({
-        "name": "org.qemu.guest_agent.0",
-        "disk": { "bus": "virtio" },
-        "target": {
-            "type": "virtio",
-            "name": "org.qemu.guest_agent.0"
-        }
-    }));
+    let has_disk = arr
+        .iter()
+        .any(|d| d.get("name").and_then(|n| n.as_str()) == Some("guestagent"));
+    if !has_disk {
+        arr.push(json!({
+            "name": "guestagent",
+            "disk": { "bus": "virtio" },
+            "serial": "org.qemu.guest_agent.0"
+        }));
+    }
     true
 }
 

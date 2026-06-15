@@ -45,6 +45,14 @@ Response (`data` object):
 | GET | `/api/v1/kubevirt/vms` | Fleet VM list |
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest-agent` | Live guest-agent status |
 | POST | `/api/v1/kubevirt/vms/{namespace}/{name}/guest-agent/install` | Cloud-init agent bootstrap |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/evidence` | Live evidence via per-VM QGA RPC |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/network` | Network/DNS slice from live evidence |
+| GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/health` | Guest health score |
+| POST | `/api/v1/kubevirt/vms/{namespace}/{name}/vmtools/exec` | QGA guest-exec (via virt-launcher pod) |
+
+Per-VM live pulls use `zyvor-guest-agent rpc` inside the guest (QEMU guest-agent `guest-exec`). The API locates the virt-launcher pod by label (`kubevirt.io/vm`, `kubevirt.io/domain`, or `vm.kubevirt.io/name`). When kube is available, failures surface the QGA/RPC error instead of falling back to the in-cluster `AGENT_PROXY_URL`.
+
+Agent install merges a virtio guestagent disk (`serial: org.qemu.guest_agent.0`) for KubeVirt 1.8+; see [guest-agent.md](guest-agent.md).
 
 ## Disk path resolution
 

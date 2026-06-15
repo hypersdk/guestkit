@@ -66,6 +66,25 @@ HTTP endpoints (via `agent-proxy`):
 
 ## KubeVirt channel declaration
 
+**KubeVirt 1.8+** (recommended): expose the QGA virtio-serial port via a disk serial — `devices.channels` is rejected on current KubeVirt releases.
+
+```yaml
+spec:
+  domain:
+    devices:
+      disks:
+      - name: guestagent
+        disk:
+          bus: virtio
+        serial: org.qemu.guest_agent.0
+  volumes:
+  - name: guestagent
+    emptyDisk:
+      capacity: 1Gi
+```
+
+**KubeVirt &lt; 1.8** (legacy): virtio channel target:
+
 ```yaml
 spec:
   domain:
@@ -78,6 +97,10 @@ spec:
 ```
 
 Guest opens: `/dev/virtio-ports/org.qemu.guest_agent.0`
+
+**Linux install path:** cloud-init and `vmtools/install` place `zyvor-guest-agent` at `/usr/local/bin/zyvor-guest-agent`. Per-VM JSON-RPC via QGA guest-exec resolves the binary with `command -v` and falls back to `/usr/local/bin` then `/usr/bin`.
+
+**Masquerade guests without cluster DNS:** prefer IP-only cloud-init (`curl` QGA deb + agent from MinIO) instead of `packages:` apt lines that require working DNS during first boot.
 
 ## Offline injection
 

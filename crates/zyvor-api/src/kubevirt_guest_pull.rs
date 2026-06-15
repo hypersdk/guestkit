@@ -15,12 +15,9 @@ pub async fn pull_for_vm(
     params: Value,
 ) -> Result<Value, String> {
     if let Some(client) = state.kube.as_ref() {
-        if let Ok(resp) =
-            crate::guest_agent_vm::vm_guestkit_rpc(client, namespace, name, method, params.clone())
-                .await
-        {
-            return Ok(resp);
-        }
+        return crate::guest_agent_vm::vm_guestkit_rpc(client, namespace, name, method, params)
+            .await
+            .map_err(|e| e.to_string());
     }
 
     if let Some(proxy) = state.config.agent_proxy_url.as_ref() {
@@ -28,7 +25,7 @@ pub async fn pull_for_vm(
     }
 
     Err(format!(
-        "no guest pull path for {namespace}/{name} (kube unavailable or QGA failed, and AGENT_PROXY_URL unset)"
+        "no guest pull path for {namespace}/{name} (kube unavailable and AGENT_PROXY_URL unset)"
     ))
 }
 
