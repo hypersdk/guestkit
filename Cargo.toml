@@ -113,7 +113,7 @@ ed25519-dalek = { version = "2", features = ["rand_core"], optional = true }
 hex = { version = "0.4", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libsystemd-sys = "0.9"
+libsystemd-sys = { version = "0.9", optional = true }
 libc = "0.2"
 
 [dev-dependencies]
@@ -127,8 +127,9 @@ proptest = "1.4"
 num_cpus = "1.16"
 
 [features]
-default = ["guest-inspect"]
+default = ["guest-inspect", "journal-native"]
 guest-inspect = ["evtx"]
+journal-native = ["dep:libsystemd-sys"]
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
 local-ai = ["ai"]
