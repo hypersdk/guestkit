@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-06-14
+
 ### Added
 - **`deploy/scripts/e2e-ubuntu-k3s.sh`** — Ubuntu 22.04 k3s E2E: offline inspect/doctor, CDI VM, live guest intel, cluster offline inspect
 
