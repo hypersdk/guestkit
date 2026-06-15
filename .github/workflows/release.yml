@@ -42,6 +42,72 @@ jobs:
           prerelease: false
           generate_release_notes: false
 
+  build-agent-artifacts:
+    name: Build Zeus VM Tools Artifacts
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools genisoimage
+          rustup target add x86_64-unknown-linux-musl
+
+      - name: Build Zeus VM Tools artifacts
+        env:
+          VERSION: ${{ needs.create-release.outputs.version }}
+        run: bash packaging/vmtools/build-artifacts.sh
+
+      - name: Upload agent release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.create-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+          FILES=(
+            dist/vmtools/linux/zyvor-vm-tools-linux-amd64.tar.gz
+            dist/vmtools/linux/zyvor-vm-tools-linux-amd64.tar.gz.sha256
+            "dist/vmtools/linux/zyvor-vm-tools_${VERSION}_amd64.deb"
+          )
+          if [[ -f dist/vmtools/zyvor-vm-tools.iso ]]; then
+            FILES+=(dist/vmtools/zyvor-vm-tools.iso)
+          fi
+          gh release upload "${TAG}" "${FILES[@]}" --clobber
+
+  publish-release-images:
+    name: Publish GHCR Release Images
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish worker, API, and UI images
+        env:
+          VERSION: ${{ needs.create-release.outputs.version }}
+          TAG: v${{ needs.create-release.outputs.version }}
+          PUSH: "1"
+          BUILDER: docker
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x deploy/scripts/publish-images.sh
+          REGISTRY=ghcr.io/hypersdk bash deploy/scripts/publish-images.sh
+
   build-and-upload:
     name: Build and Upload Assets (${{ matrix.arch_suffix }})
     needs: create-release
