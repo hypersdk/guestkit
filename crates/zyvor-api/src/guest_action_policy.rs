@@ -119,14 +119,17 @@ pub async fn enforce_support_bundle(client: Option<&Client>, skip_approval: bool
     Ok(())
 }
 
-fn path_matches_allowlist(allowlist: &[String], path: &str) -> bool {
+fn path_matches_allowlist(allowlist: &[String], path: &str, policy_active: bool) -> bool {
     if allowlist.is_empty() {
-        return true;
+        return !policy_active;
     }
     allowlist.iter().any(|p| path.starts_with(p) || path == p)
 }
 
-fn command_matches_allowlist(allowlist: &[String], command: &str) -> bool {
+fn command_matches_allowlist(allowlist: &[String], command: &str, policy_active: bool) -> bool {
+    if allowlist.is_empty() {
+        return !policy_active;
+    }
     allowlist.iter().any(|pat| {
         if pat.ends_with('*') {
             command.starts_with(pat.trim_end_matches('*'))
@@ -151,9 +154,12 @@ pub async fn enforce_exec(
             if !action_allowed(&policy, "exec") && !policy.allowed_actions.is_empty() {
                 return Err(ApiError::bad_request("exec denied by GuestActionPolicy"));
             }
-            if !policy.exec_allowlist.is_empty()
-                && !command_matches_allowlist(&policy.exec_allowlist, command)
-            {
+            if policy.exec_allowlist.is_empty() {
+                return Err(ApiError::bad_request(
+                    "exec denied: configure execAllowlist in GuestActionPolicy (no raw shell by default)",
+                ));
+            }
+            if !command_matches_allowlist(&policy.exec_allowlist, command, true) {
                 return Err(ApiError::bad_request(
                     "exec command not in GuestActionPolicy allowlist",
                 ));
@@ -179,9 +185,9 @@ pub async fn enforce_file_read(
             if !action_allowed(&policy, "file_read") && !policy.allowed_actions.is_empty() {
                 return Err(ApiError::bad_request("file_read denied by GuestActionPolicy"));
             }
-            if !path_matches_allowlist(&policy.file_read_allowlist, path) {
+            if !path_matches_allowlist(&policy.file_read_allowlist, path, true) {
                 return Err(ApiError::bad_request(
-                    "file path not in GuestActionPolicy read allowlist",
+                    "file path not in GuestActionPolicy read allowlist (configure fileReadAllowlist)",
                 ));
             }
         }
@@ -204,9 +210,9 @@ pub async fn enforce_file_write(
             if !action_allowed(&policy, "file_write") && !policy.allowed_actions.is_empty() {
                 return Err(ApiError::bad_request("file_write denied by GuestActionPolicy"));
             }
-            if !path_matches_allowlist(&policy.file_write_allowlist, path) {
+            if !path_matches_allowlist(&policy.file_write_allowlist, path, true) {
                 return Err(ApiError::bad_request(
-                    "file path not in GuestActionPolicy write allowlist",
+                    "file path not in GuestActionPolicy write allowlist (configure fileWriteAllowlist)",
                 ));
             }
         }
