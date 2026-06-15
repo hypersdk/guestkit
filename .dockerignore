@@ -1,5 +1,7 @@
 # Build artifacts
 target/
+**/target/
+crates/*/target/
 *.so
 *.pyc
 *.pyo
