@@ -17,7 +17,7 @@ struct CursorStore {
 }
 
 pub fn collect_journal_slice(unit: &str, limit: usize, boot: BootSelector) -> JournalSlice {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "journal-native"))]
     if let Some(slice) = crate::journal::sd_journal_native::try_collect_journal_slice(unit, limit, boot) {
         return slice;
     }

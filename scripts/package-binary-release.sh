@@ -67,7 +67,12 @@ if $DO_BUILD; then
     echo "Building guestkit (release)..."
     cd "${REPO_DIR}"
     if [[ -n "${TARGET}" ]]; then
-        cargo build --release --target "${TARGET}" --bin guestkit
+        if [[ "${TARGET}" == *musl* ]]; then
+            cargo build --release --target "${TARGET}" --bin guestkit \
+                --no-default-features --features guest-inspect
+        else
+            cargo build --release --target "${TARGET}" --bin guestkit
+        fi
     else
         bash scripts/build-linux-release.sh
     fi

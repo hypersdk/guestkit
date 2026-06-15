@@ -4,7 +4,7 @@ pub mod analyze;
 pub mod live;
 pub mod sd_journal;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "journal-native"))]
 pub mod sd_journal_native;
 
 #[cfg(target_os = "windows")]
