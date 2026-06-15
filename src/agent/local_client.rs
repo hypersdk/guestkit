@@ -66,7 +66,7 @@ pub fn run_rpc_stdio(socket_path: Option<&str>) -> Result<()> {
         bail!("empty rpc request on stdin");
     }
 
-    let mut stream =
+    let stream =
         UnixStream::connect(path).with_context(|| format!("connect to agent at {path}"))?;
     stream.set_read_timeout(Some(Duration::from_secs(120)))?;
 
