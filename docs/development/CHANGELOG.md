@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-06-15
+
 ### Added
 - **Guest Control Fabric** — transport-independent guest control with 7-tier ladder (virtio-serial → QGA exec → QGA builtin → push cache → offline disk)
 - **New API routes** — `guest/status`, `guest/capabilities`, `guest/doctor`, `guest/readiness`, `guest/install-agent`, `guest/repair-plan`, `guest/file/read|write`, `guest/poll-reconcile`
