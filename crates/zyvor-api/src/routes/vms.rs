@@ -358,6 +358,35 @@ pub struct ImportUrlRequest {
     pub url: String,
 }
 
+fn import_filename_from_url(url: &str) -> &str {
+    let path = url
+        .strip_prefix("s3://")
+        .or_else(|| url.strip_prefix("gs://"))
+        .unwrap_or(url);
+    path.rsplit('/').next().filter(|s| !s.is_empty()).unwrap_or("imported-image")
+}
+
+fn is_cloud_disk_url(url: &str) -> bool {
+    url.starts_with("s3://")
+        || url.starts_with("gs://")
+        || (url.starts_with("https://") && url.contains(".blob.core.windows.net"))
+}
+
+async fn materialize_cloud_disk(url: &str, dest: &std::path::Path) -> ApiResult<i64> {
+    let url = url.to_string();
+    let dest = dest.to_path_buf();
+    let size = tokio::task::spawn_blocking(move || -> anyhow::Result<u64> {
+        let local = guestkit::storage::resolve_to_local_path(&url)?;
+        let bytes = std::fs::read(&local)?;
+        std::fs::write(&dest, &bytes)?;
+        Ok(bytes.len() as u64)
+    })
+    .await
+    .map_err(|e| ApiError::internal(e.to_string()))?
+    .map_err(|e| ApiError::bad_request(format!("cloud import failed: {e:#}")))?;
+    Ok(size as i64)
+}
+
 pub async fn import_from_url(
     State(state): State<AppState>,
     Json(body): Json<ImportUrlRequest>,
@@ -366,11 +395,7 @@ pub async fn import_from_url(
     if url.is_empty() {
         return Err(ApiError::bad_request("url is required"));
     }
-    let filename = url
-        .rsplit('/')
-        .next()
-        .filter(|s| !s.is_empty())
-        .unwrap_or("imported-image");
+    let filename = import_filename_from_url(url);
     let id = Uuid::new_v4();
     let format = PathBuf::from(filename)
         .extension()
@@ -380,23 +405,31 @@ pub async fn import_from_url(
     let object_key = format!("{id}.{format}");
     let disk_path = state.config.storage_path.join(&object_key);
 
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| ApiError::bad_request(format!("download failed: {e}")))?;
-    if !resp.status().is_success() {
-        return Err(ApiError::bad_request(format!("download HTTP {}", resp.status())));
-    }
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    tokio::fs::write(&disk_path, &bytes)
-        .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    let size_bytes = bytes.len() as i64;
+    let size_bytes = if is_cloud_disk_url(url) {
+        materialize_cloud_disk(url, &disk_path).await?
+    } else if url.starts_with("http://") || url.starts_with("https://") {
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| ApiError::bad_request(format!("download failed: {e}")))?;
+        if !resp.status().is_success() {
+            return Err(ApiError::bad_request(format!("download HTTP {}", resp.status())));
+        }
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        tokio::fs::write(&disk_path, &bytes)
+            .await
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        bytes.len() as i64
+    } else {
+        return Err(ApiError::bad_request(
+            "url must be http(s), s3://, gs://, or Azure blob https URL",
+        ));
+    };
 
     register_imported_vm(&state, id, filename, &object_key, &format, size_bytes).await?;
     Ok(Json(ApiResponse::ok(VmImportResponse {

@@ -103,6 +103,14 @@ pub const COMMANDS: &[PaletteCommand] = &[
         description: "Export fix plan YAML to cwd",
     },
     PaletteCommand {
+        name: "apply plan",
+        description: "Apply fix plan to disk (creates backup first)",
+    },
+    PaletteCommand {
+        name: "apply plan dry-run",
+        description: "Dry-run fix plan application",
+    },
+    PaletteCommand {
         name: "plan preview",
         description: "Preview fix plan operations (read-only)",
     },
@@ -142,6 +150,8 @@ pub enum PaletteAction {
     AssuranceRun,
     MigratePlan,
     ExportFixPlan,
+    ApplyFixPlan,
+    ApplyFixPlanDryRun,
     PlanPreview,
     ExportJson,
     ExportHtml,
@@ -198,6 +208,8 @@ pub fn parse_command(input: &str) -> PaletteAction {
         "goto logs" | "logs" => PaletteAction::Goto(View::Logs),
         "migrate-plan" | "migrate plan" => PaletteAction::MigratePlan,
         "export plan" | "export fix plan" => PaletteAction::ExportFixPlan,
+        "apply plan" | "apply fix plan" => PaletteAction::ApplyFixPlan,
+        "apply plan dry-run" | "dry-run plan" => PaletteAction::ApplyFixPlanDryRun,
         "plan preview" | "preview plan" => PaletteAction::PlanPreview,
         "export json" => PaletteAction::ExportJson,
         "export html" => PaletteAction::ExportHtml,

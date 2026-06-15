@@ -641,6 +641,14 @@ impl App {
                 Ok(path) => self.show_notification(format!("Exported {}", path)),
                 Err(e) => self.show_notification(format!("Export failed: {e}")),
             },
+            PaletteAction::ApplyFixPlan => match self.apply_assurance_plan(false) {
+                Ok(msg) => self.show_notification(msg),
+                Err(e) => self.show_notification(format!("Apply failed: {e:#}")),
+            },
+            PaletteAction::ApplyFixPlanDryRun => match self.apply_assurance_plan(true) {
+                Ok(msg) => self.show_notification(msg),
+                Err(e) => self.show_notification(format!("Dry-run failed: {e:#}")),
+            },
             PaletteAction::PlanPreview => {
                 self.toggle_plan_preview();
             }
@@ -793,6 +801,22 @@ impl App {
         let content = PlanExporter::to_yaml(&plan)?;
         std::fs::write(&path, content)?;
         Ok(format!("{path} ({} operations)", plan.operations.len()))
+    }
+
+    pub fn apply_assurance_plan(&mut self, dry_run: bool) -> Result<String> {
+        use crate::cli::plan::PlanApplicator;
+
+        let plan = self.build_assurance_fix_plan()?;
+        let applicator = PlanApplicator::new(self.image_path.clone(), dry_run);
+        let result = applicator.apply(&plan)?;
+        Ok(format!(
+            "{} — applied {} · failed {} · skipped {} ({})",
+            if result.success { "OK" } else { "FAILED" },
+            result.operations_applied,
+            result.operations_failed,
+            result.operations_skipped,
+            result.message
+        ))
     }
 
     pub fn go_to_assurance(&mut self) {
