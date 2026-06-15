@@ -145,30 +145,30 @@ pub async fn qga_exec_powershell(
 
 async fn find_virt_launcher_pod(client: &Client, namespace: &str, vm_name: &str) -> ApiResult<String> {
     let pods: Api<Pod> = Api::namespaced(client.clone(), namespace);
-    let label = format!("kubevirt.io/domain={vm_name}");
-    let lp = ListParams::default().labels(&label);
-    let list = pods
-        .list(&lp)
-        .await
-        .map_err(|e| ApiError::internal(format!("list virt-launcher pods: {e}")))?;
-    let pod = list
-        .items
-        .into_iter()
-        .find(|p| {
-            p.status
-                .as_ref()
-                .and_then(|s| s.phase.as_deref())
-                == Some("Running")
-        })
-        .ok_or_else(|| {
-            ApiError::bad_request(format!(
-                "No running virt-launcher pod for VM {namespace}/{vm_name}"
-            ))
-        })?;
-    pod.metadata
-        .name
-        .clone()
-        .ok_or_else(|| ApiError::internal("virt-launcher pod missing name"))
+    for label in [
+        format!("kubevirt.io/vm={vm_name}"),
+        format!("kubevirt.io/domain={vm_name}"),
+        format!("vm.kubevirt.io/name={vm_name}"),
+    ] {
+        let lp = ListParams::default().labels(&label);
+        if let Ok(list) = pods.list(&lp).await {
+            if let Some(pod) = list.items.into_iter().find(|p| {
+                p.status
+                    .as_ref()
+                    .and_then(|s| s.phase.as_deref())
+                    == Some("Running")
+            }) {
+                return pod
+                    .metadata
+                    .name
+                    .clone()
+                    .ok_or_else(|| ApiError::internal("virt-launcher pod missing name"));
+            }
+        }
+    }
+    Err(ApiError::bad_request(format!(
+        "No running virt-launcher pod for VM {namespace}/{vm_name}"
+    )))
 }
 
 async fn virsh_qga_json(

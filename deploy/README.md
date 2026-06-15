@@ -83,6 +83,16 @@ Manual agent-only rebuild: [agent-release.yml](../.github/workflows/agent-releas
 3. `publish-vmtools-bundle.sh` — agent binaries into in-cluster MinIO
 4. `ci-k3s-e2e.sh` — API health, `e2e-smoke.sh` (cirros), VM tools bundle/API checks
 
+**Ubuntu live E2E** (manual, on a k3s host with MinIO + KubeVirt):
+
+```bash
+API=http://<node-ip>:30080/api/v1 \
+AGENT_NODE=http://<node-ip>:30092 \
+bash deploy/scripts/e2e-ubuntu-k3s.sh
+```
+
+Imports Ubuntu 22.04, runs offline inspect/doctor, provisions a CDI VM with IP-only cloud-init (QGA deb + `zyvor-guest-agent` from MinIO), exercises live guest intel, then offline cluster inspect/doctor on a halted VM.
+
 Trigger manually:
 
 ```bash
