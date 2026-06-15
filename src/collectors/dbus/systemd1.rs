@@ -103,6 +103,7 @@ fn collect_list_units(conn: &Connection) -> Result<Vec<SystemdRuntimeUnit>> {
     parse_unit_list(conn, &units_raw)
 }
 
+#[allow(dead_code)]
 fn list_units_by_patterns(conn: &Connection, patterns: &[&str]) -> Result<Vec<SystemdRuntimeUnit>> {
     let proxy = manager_proxy(conn)?;
     let patterns: Vec<&str> = patterns.iter().map(|s| *s).collect();

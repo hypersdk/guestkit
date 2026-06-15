@@ -6,7 +6,7 @@ use guestkit_agent_protocol::{read_frame, write_frame};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::thread;
