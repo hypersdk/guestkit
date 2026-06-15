@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`deploy/scripts/e2e-ubuntu-k3s.sh`** — Ubuntu 22.04 k3s E2E: offline inspect/doctor, CDI VM, live guest intel, cluster offline inspect
+
+### Fixed
+- **KubeVirt QGA transport** — virt-launcher pod lookup uses `kubevirt.io/vm` (KubeVirt 1.8 labels) with fallbacks
+- **Guest agent install** — KubeVirt 1.8+ virtio guestagent disk (`serial: org.qemu.guest_agent.0`) instead of rejected `devices.channels`
+- **Per-VM guest pull** — install/RPC paths use `/usr/local/bin/zyvor-guest-agent`; QGA failures no longer silently fall back to in-cluster `AGENT_PROXY_URL`
+
 ## [0.3.9] - 2026-06-13
 
 ### Fixed

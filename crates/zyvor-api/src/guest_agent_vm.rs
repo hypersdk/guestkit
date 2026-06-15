@@ -32,8 +32,11 @@ pub async fn vm_guestkit_rpc(
         .map_err(|e| ApiError::internal(format!("serialize rpc: {e}")))?;
     let b64 = STANDARD.encode(&req_bytes);
     let script = format!(
-        "B64='{b64}'; echo \"$B64\" | base64 -d | /usr/bin/zyvor-guest-agent rpc 2>/dev/null || \
-         echo \"$B64\" | base64 -d | /usr/bin/zyvor-guest-agent --rpc 2>/dev/null"
+        "B64='{b64}'; AGENT=$(command -v zyvor-guest-agent 2>/dev/null || echo /usr/local/bin/zyvor-guest-agent); \
+         echo \"$B64\" | base64 -d | \"$AGENT\" rpc 2>/dev/null || \
+         echo \"$B64\" | base64 -d | \"$AGENT\" --rpc 2>/dev/null || \
+         echo \"$B64\" | base64 -d | /usr/bin/zyvor-guest-agent rpc 2>/dev/null || \
+         echo \"$B64\" | base64 -d | /usr/local/bin/zyvor-guest-agent rpc 2>/dev/null"
     );
 
     let exec = qga_exec_shell(client, namespace, name, &script, 120).await?;
