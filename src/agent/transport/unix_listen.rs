@@ -5,7 +5,6 @@ use crate::agent::handler::RequestHandler;
 use anyhow::{Context, Result};
 use guestkit_agent_protocol::{read_frame, write_frame};
 use std::fs;
-use std::io::Write;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::Arc;
