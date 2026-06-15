@@ -137,17 +137,29 @@ async fn qga_file_bootstrap_install(
         ApiError::bad_request("Kubernetes client required for QGA file bootstrap")
     })?;
 
-    let tar_bytes = load_agent_bundle_bytes(state, bundle_url).await?;
     let ctx = probe_guest_context(state, namespace, name).await;
-    let guest_tar = if ctx.is_windows {
-        "C:\\\\ProgramData\\\\Zyvor\\\\zyvor-vm-tools.tar.gz"
+    let bundle_bytes = if ctx.is_windows {
+        load_windows_bundle_bytes(state, bundle_url).await?
+    } else {
+        load_agent_bundle_bytes(state, bundle_url).await?
+    };
+    let guest_path = if ctx.is_windows {
+        "C:\\\\ProgramData\\\\Zyvor\\\\zyvor-vm-tools.zip"
     } else {
         "/tmp/zyvor-vm-tools.tar.gz"
     };
 
-    crate::kubevirt_qga::qga_file_write(client, namespace, name, guest_tar, &tar_bytes, 300).await?;
+    crate::kubevirt_qga::qga_file_write(client, namespace, name, guest_path, &bundle_bytes, 300)
+        .await?;
 
-    let install_script = if guest_tar.starts_with('/') {
+    let install_script = if ctx.is_windows {
+        r#"$dest='C:\ProgramData\Zyvor\install'
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Expand-Archive -Path 'C:\ProgramData\Zyvor\zyvor-vm-tools.zip' -DestinationPath $dest -Force
+if (Test-Path "$dest\zyvor-guest-agent.exe") { Copy-Item "$dest\zyvor-guest-agent.exe" 'C:\Program Files\Zyvor\zyvor-guest-agent.exe' -Force }
+if (Test-Path "$dest\install.ps1") { & "$dest\install.ps1" -ErrorAction SilentlyContinue }
+(Get-Service zyvor-guest-agent -ErrorAction SilentlyContinue).Status"#
+    } else {
         r#"set -eu
 mkdir -p /tmp/zyvor-install
 tar xzf /tmp/zyvor-vm-tools.tar.gz -C /tmp/zyvor-install
@@ -156,20 +168,13 @@ install -m644 /tmp/zyvor-install/zyvor-guest-agent.service /etc/systemd/system/z
 systemctl daemon-reload
 systemctl enable --now zyvor-guest-agent
 systemctl is-active zyvor-guest-agent"#
-    } else {
-        r#"$dest='C:\ProgramData\Zyvor'
-New-Item -ItemType Directory -Force -Path $dest | Out-Null
-tar -xf 'C:\ProgramData\Zyvor\zyvor-vm-tools.tar.gz' -C $dest
-Copy-Item "$dest\zyvor-guest-agent.exe" 'C:\Program Files\Zyvor\zyvor-guest-agent.exe' -Force
-& "$dest\install.ps1" -ErrorAction SilentlyContinue
-(Get-Service zyvor-guest-agent -ErrorAction SilentlyContinue).Status"#
     };
 
-    let exec = if guest_tar.starts_with('/') {
-        crate::kubevirt_qga::qga_exec_shell(client, namespace, name, install_script, 180).await?
-    } else {
+    let exec = if ctx.is_windows {
         crate::kubevirt_qga::qga_exec_powershell(client, namespace, name, install_script, 180)
             .await?
+    } else {
+        crate::kubevirt_qga::qga_exec_shell(client, namespace, name, install_script, 180).await?
     };
 
     Ok(json!({
@@ -182,6 +187,46 @@ Copy-Item "$dest\zyvor-guest-agent.exe" 'C:\Program Files\Zyvor\zyvor-guest-agen
         "stderr": exec.stderr,
         "message": "Installed zyvor-guest-agent via QGA file-write (airgap)",
     }))
+}
+
+async fn load_windows_bundle_bytes(
+    state: &AppState,
+    bundle_url: Option<&str>,
+) -> Result<Vec<u8>, ApiError> {
+    let version = std::env::var("VMTOOLS_VERSION").unwrap_or_else(|_| "0.1.0".into());
+    let url = bundle_url
+        .map(String::from)
+        .or_else(|| {
+            Some(format!(
+                "{}/windows/zyvor-vm-tools-windows-{}.zip",
+                default_bundle_base_url(state).trim_end_matches('/'),
+                version
+            ))
+        })
+        .ok_or_else(|| ApiError::bad_request("Windows VM tools bundle URL not configured"))?;
+    fetch_bundle_url(&url).await
+}
+
+async fn fetch_bundle_url(url: &str) -> Result<Vec<u8>, ApiError> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_request(format!("fetch bundle: {e}")))?;
+    if !resp.status().is_success() {
+        return Err(ApiError::bad_request(format!(
+            "bundle fetch HTTP {}",
+            resp.status()
+        )));
+    }
+    resp.bytes()
+        .await
+        .map(|b| b.to_vec())
+        .map_err(|e| ApiError::internal(e.to_string()))
 }
 
 async fn load_agent_bundle_bytes(
@@ -197,24 +242,5 @@ async fn load_agent_bundle_bytes(
             ))
         })
         .ok_or_else(|| ApiError::bad_request("VM tools bundle URL not configured"))?;
-
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    let resp = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| ApiError::bad_request(format!("fetch bundle: {e}")))?;
-    if !resp.status().is_success() {
-        return Err(ApiError::bad_request(format!(
-            "bundle fetch HTTP {}",
-            resp.status()
-        )));
-    }
-    resp.bytes()
-        .await
-        .map(|b| b.to_vec())
-        .map_err(|e| ApiError::internal(e.to_string()))
+    fetch_bundle_url(&url).await
 }

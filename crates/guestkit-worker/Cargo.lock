@@ -307,6 +307,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "build-env"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1522ac6ee801a11bf9ef3f80403f4ede6eb41291fac3dde3de09989679305f25"
+
+[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1222,7 +1228,7 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "guestkit"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "base64",
@@ -1240,6 +1246,7 @@ dependencies = [
  "glob",
  "indicatif",
  "libc",
+ "libsystemd-sys",
  "log",
  "memmap2",
  "miette",
@@ -1849,6 +1856,18 @@ dependencies = [
  "bitflags 2.10.0",
  "libc",
  "redox_syscall 0.7.0",
+]
+
+[[package]]
+name = "libsystemd-sys"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "976306de183e6046819ef6505888d00996214766a3f4660a2ed5761c84a20aed"
+dependencies = [
+ "build-env",
+ "cfg-if",
+ "libc",
+ "pkg-config",
 ]
 
 [[package]]

@@ -8,16 +8,26 @@ use serde_json::{json, Value};
 
 use crate::error::{ApiError, ApiResult};
 use crate::auth::types::AuthUserClaims;
-use crate::models::ApiResponse;
+use crate::guest_control::envelope::GuestControlEnvelope;
+use crate::guest_control::routes::envelope_for_vm;
 use crate::routes::guest_agent::fetch_vm_guest_report;
 use crate::kubevirt_guest_pull::{pull_for_vm, pull_for_vm_api, rpc_result};
 use crate::routes::kubevirt::{build_guest_info, fetch_vm, fetch_vmi};
 use crate::state::AppState;
 
+async fn intel_envelope(
+    state: &AppState,
+    namespace: &str,
+    name: &str,
+    data: Value,
+) -> Json<GuestControlEnvelope> {
+    Json(envelope_for_vm(state, namespace, name, None, data).await)
+}
+
 pub async fn get_guest_info(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let client = state
         .kube
         .clone()
@@ -75,7 +85,11 @@ pub async fn get_guest_info(
 
     let packetwolf = vm.as_ref().map(packetwolf_from_vm).unwrap_or(json!({}));
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "guest": guest,
         "guest_health": guest_health,
         "boot_analysis": boot_analysis,
@@ -84,7 +98,7 @@ pub async fn get_guest_info(
         "report_source": report_source,
         "received_at": received_at,
         "packetwolf": packetwolf,
-    }))))
+    })).await)
 }
 
 fn packetwolf_from_vm(vm: &serde_json::Value) -> serde_json::Value {
@@ -101,7 +115,7 @@ fn packetwolf_from_vm(vm: &serde_json::Value) -> serde_json::Value {
 pub async fn get_guest_systemd(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -112,11 +126,15 @@ pub async fn get_guest_systemd(
     .await?;
 
     let units = rpc_result(resp);
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "units": units,
-    }))))
+    })).await)
 }
 
 pub async fn post_restart_unit(
@@ -124,7 +142,7 @@ pub async fn post_restart_unit(
     Path((namespace, name)): Path<(String, String)>,
     user: Option<Extension<AuthUserClaims>>,
     Json(body): Json<Value>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     crate::guest_remediation_auth::require_guest_remediation_requester(
         &state,
         user.as_deref(),
@@ -152,13 +170,17 @@ pub async fn post_restart_unit(
             requested_by.as_deref(),
         )
         .await?;
-        return Ok(Json(ApiResponse::ok(json!({
+        return Ok(intel_envelope(
+            &state,
+            &namespace,
+            &name,
+            json!({
             "namespace": namespace,
             "name": name,
             "unit": unit,
             "status": "pending_approval",
             "action_id": action_id,
-        }))));
+        })).await);
     }
 
     let resp = pull_for_vm_api(
@@ -170,18 +192,22 @@ pub async fn post_restart_unit(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "unit": unit,
         "result": resp,
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_logs(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -191,18 +217,22 @@ pub async fn get_guest_logs(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "journal": rpc_result(resp),
-    }))))
+    })).await)
 }
 
 pub async fn post_collect_support_bundle(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
     user: Option<Extension<AuthUserClaims>>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     crate::guest_remediation_auth::require_guest_remediation_requester(
         &state,
         user.as_deref(),
@@ -224,12 +254,16 @@ pub async fn post_collect_support_bundle(
             requested_by.as_deref(),
         )
         .await?;
-        return Ok(Json(ApiResponse::ok(json!({
+        return Ok(intel_envelope(
+            &state,
+            &namespace,
+            &name,
+            json!({
             "namespace": namespace,
             "name": name,
             "status": "pending_approval",
             "action_id": action_id,
-        }))));
+        })).await);
     }
 
     let resp = pull_for_vm_api(
@@ -241,18 +275,22 @@ pub async fn post_collect_support_bundle(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "bundle": rpc_result(resp),
-    }))))
+    })).await)
 }
 
 pub async fn post_pre_snapshot_freeze(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
     user: Option<Extension<AuthUserClaims>>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     crate::guest_remediation_auth::require_guest_remediation_requester(
         &state,
         user.as_deref(),
@@ -266,19 +304,23 @@ pub async fn post_pre_snapshot_freeze(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "action": "freeze",
         "result": resp,
-    }))))
+    })).await)
 }
 
 pub async fn post_post_snapshot_thaw(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
     user: Option<Extension<AuthUserClaims>>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     crate::guest_remediation_auth::require_guest_remediation_requester(
         &state,
         user.as_deref(),
@@ -292,18 +334,22 @@ pub async fn post_post_snapshot_thaw(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "action": "thaw",
         "result": resp,
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_health(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let mut redis = state.redis.clone();
     let cached = fetch_vm_guest_report(&mut redis, &namespace, &name).await;
 
@@ -316,28 +362,36 @@ pub async fn get_guest_health(
     )
     .await
     {
-        return Ok(Json(ApiResponse::ok(json!({
+        return Ok(intel_envelope(
+            &state,
+            &namespace,
+            &name,
+            json!({
             "namespace": namespace,
             "name": name,
             "guest_health": rpc_result(resp),
             "source": "pull",
-        }))));
+        })).await);
     }
 
     let guest_health = cached.as_ref().and_then(|c| c.get("guest_health").cloned());
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "guest_health": guest_health,
         "source": if cached.is_some() { "push" } else { "none" },
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_journal(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let unit = query.get("unit").cloned().unwrap_or_default();
     let boot = query.get("boot").cloned().unwrap_or_else(|| "current".into());
     let limit = query
@@ -354,17 +408,21 @@ pub async fn get_guest_journal(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "journal": rpc_result(resp),
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_processes(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -374,17 +432,21 @@ pub async fn get_guest_processes(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "processes": rpc_result(resp),
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_systemd_unit(
     State(state): State<AppState>,
     Path((namespace, name, unit)): Path<(String, String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -394,27 +456,35 @@ pub async fn get_guest_systemd_unit(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "unit": unit,
         "detail": rpc_result(resp),
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_systemd_events(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let mut redis = state.redis.clone();
     let cached = fetch_vm_guest_report(&mut redis, &namespace, &name).await;
     if let Some(events) = cached.as_ref().and_then(|c| c.get("recent_events").cloned()) {
-        return Ok(Json(ApiResponse::ok(json!({
+        return Ok(intel_envelope(
+            &state,
+            &namespace,
+            &name,
+            json!({
             "namespace": namespace,
             "name": name,
             "events": events,
             "source": "push",
-        }))));
+        })).await);
     }
 
     let resp = pull_for_vm_api(
@@ -426,18 +496,22 @@ pub async fn get_guest_systemd_events(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "events": rpc_result(resp),
         "source": "pull",
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_evidence(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -447,18 +521,22 @@ pub async fn get_guest_evidence(
     )
     .await?;
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "evidence": rpc_result(resp),
         "source": "pull",
-    }))))
+    })).await)
 }
 
 pub async fn get_guest_network(
     State(state): State<AppState>,
     Path((namespace, name)): Path<(String, String)>,
-) -> ApiResult<Json<ApiResponse<Value>>> {
+) -> ApiResult<Json<GuestControlEnvelope>> {
     let resp = pull_for_vm_api(
         &state,
         &namespace,
@@ -477,12 +555,16 @@ pub async fn get_guest_network(
     });
     let guest_health = evidence.get("guest_health").cloned();
 
-    Ok(Json(ApiResponse::ok(json!({
+    Ok(intel_envelope(
+        &state,
+        &namespace,
+        &name,
+        json!({
         "namespace": namespace,
         "name": name,
         "network": network,
         "dns": dns,
         "guest_health": guest_health,
         "source": "pull",
-    }))))
+    })).await)
 }

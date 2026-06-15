@@ -4,6 +4,7 @@
 //! Used by CLI, worker handlers, and zyvor-api. Does not write to stdout.
 
 mod copilot;
+mod repair_extras;
 
 pub use copilot::{
     answer_copilot_question, build_evidence_digest, generate_briefing, CopilotAction,
@@ -271,6 +272,10 @@ pub struct RepairOptions {
     pub dry_run: bool,
     pub verbose: bool,
     pub inject_agent: bool,
+    pub inject_qga: bool,
+    pub enable_systemd: bool,
+    pub fix_cloud_init_network: bool,
+    pub validate_fstab: bool,
     #[cfg(feature = "agent")]
     pub agent_binary: Option<std::path::PathBuf>,
     #[cfg(feature = "agent")]
@@ -285,7 +290,7 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
 
     let has_boot_issues = !boot_report.blockers.is_empty() || !boot_report.warnings.is_empty();
 
-    if !has_boot_issues && !options.inject_agent {
+    if !has_boot_issues && !options.inject_agent && !options.inject_qga && !options.fix_cloud_init_network && !options.validate_fstab {
         return Ok(RepairPlanResult {
             dry_run: options.dry_run,
             before_score: boot_report.score,
@@ -304,7 +309,7 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
         FixPlan::new(image.display().to_string(), "boot".to_string())
     };
     #[cfg(not(feature = "agent"))]
-    let plan = if has_boot_issues {
+    let mut plan = if has_boot_issues {
         generator.from_boot_report(&boot_report, image)?
     } else {
         FixPlan::new(image.display().to_string(), "boot".to_string())
@@ -316,6 +321,8 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
         let unit = crate::agent::inject::resolve_agent_unit(options.agent_unit.as_deref())?;
         crate::agent::inject::append_agent_ops(&mut plan, &binary, &unit)?;
     }
+
+    repair_extras::append_repair_extras(&mut plan, options, &boot_report);
 
     #[cfg(not(feature = "agent"))]
     if options.inject_agent {
@@ -391,9 +398,11 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
         before_score,
         after_score: None,
         fix_plan: plan,
-        applied: options.inject_agent,
+        applied: options.inject_agent || options.inject_qga || options.fix_cloud_init_network || options.validate_fstab,
         message: if options.inject_agent {
             "GuestKit agent injected.".to_string()
+        } else if options.inject_qga || options.fix_cloud_init_network || options.validate_fstab {
+            "Repair plan generated with guest-control extras.".to_string()
         } else {
             "No changes applied.".to_string()
         },

@@ -18,7 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs** — [guest-control-fabric.md](../features/guest-control-fabric.md)
 
 ### Changed
-- **`kubevirt_guest_pull`** — delegates to transport ladder with attempt logging; proxy fallback only after ladder exhaustion
+- **Guest intel routes** — `/guest/*` intel endpoints return `GuestControlEnvelope` with legacy fields in `data`
+- **Exec policy** — when `GuestActionPolicy` exists, `execAllowlist` is required (no raw shell by default)
+- **Repair worker** — honors `inject_qga`, `fix_cloud_init_network`, `validate_fstab`, `enable_systemd` job payload fields
+- **Transport ladder** — attempts VirtioSerial (daemon + socket) and InGuestSocket before QGA exec RPC
 - **Offline inject** — agent binary path aligned to `/usr/local/bin/zyvor-guest-agent` and `zyvor-guest-agent` systemd unit
 - **Worker repair** — honors `inject_zyvor_agent` from job payload
 

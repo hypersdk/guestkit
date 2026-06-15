@@ -5,7 +5,8 @@ use guestkit_agent_protocol::capabilities::METHOD_GET_CAPABILITIES;
 use serde_json::Value;
 use std::time::Instant;
 
-use crate::kubevirt_guest_agent::zyvor_tools_connected;
+use crate::guest_agent_vm::{vm_agent_daemon_active, vm_in_guest_socket_rpc};
+use crate::kubevirt_guest_agent::{vm_is_windows, zyvor_tools_connected};
 use crate::routes::guest_agent::fetch_vm_guest_report;
 use crate::routes::kubevirt::{fetch_vm, fetch_vmi};
 use crate::state::AppState;
@@ -316,6 +317,82 @@ pub async fn pull_method(
     let read_only = read_only_method(method);
 
     if let Some(client) = state.kube.as_ref() {
+        let vm = fetch_vm(client, namespace, name).await;
+        let vmi = fetch_vmi(client, namespace, name).await;
+        let is_windows = vm_is_windows(vm.as_ref(), vmi.as_ref());
+
+        if rank(min) <= rank(GuestTransport::VirtioSerial) {
+            let t0 = Instant::now();
+            if vm_agent_daemon_active(client, namespace, name, is_windows).await {
+                match vm_in_guest_socket_rpc(
+                    client,
+                    namespace,
+                    name,
+                    method,
+                    params.clone(),
+                    is_windows,
+                )
+                .await
+                {
+                    Ok(v) => {
+                        attempts.push(TransportAttempt {
+                            tier: GuestTransport::VirtioSerial.as_str().into(),
+                            ok: true,
+                            latency_ms: t0.elapsed().as_millis() as u64,
+                            error: None,
+                        });
+                        return Ok(PullResult {
+                            value: v,
+                            transport: GuestTransport::VirtioSerial,
+                            attempts,
+                            network_required: false,
+                        });
+                    }
+                    Err(e) => attempts.push(TransportAttempt {
+                        tier: GuestTransport::VirtioSerial.as_str().into(),
+                        ok: false,
+                        latency_ms: t0.elapsed().as_millis() as u64,
+                        error: Some(e.message.clone()),
+                    }),
+                }
+            }
+        }
+
+        if rank(min) <= rank(GuestTransport::InGuestSocket) {
+            let t0 = Instant::now();
+            match vm_in_guest_socket_rpc(
+                client,
+                namespace,
+                name,
+                method,
+                params.clone(),
+                is_windows,
+            )
+            .await
+            {
+                Ok(v) => {
+                    attempts.push(TransportAttempt {
+                        tier: GuestTransport::InGuestSocket.as_str().into(),
+                        ok: true,
+                        latency_ms: t0.elapsed().as_millis() as u64,
+                        error: None,
+                    });
+                    return Ok(PullResult {
+                        value: v,
+                        transport: GuestTransport::InGuestSocket,
+                        attempts,
+                        network_required: false,
+                    });
+                }
+                Err(e) => attempts.push(TransportAttempt {
+                    tier: GuestTransport::InGuestSocket.as_str().into(),
+                    ok: false,
+                    latency_ms: t0.elapsed().as_millis() as u64,
+                    error: Some(e.message.clone()),
+                }),
+            }
+        }
+
         if rank(min) <= rank(GuestTransport::QgaExecRpc) {
             let t0 = Instant::now();
             match crate::guest_agent_vm::vm_guestkit_rpc(
