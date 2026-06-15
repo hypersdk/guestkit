@@ -17,7 +17,7 @@ pub async fn pull_for_vm(
     if let Some(client) = state.kube.as_ref() {
         return crate::guest_agent_vm::vm_guestkit_rpc(client, namespace, name, method, params)
             .await
-            .map_err(|e| e.to_string());
+            .map_err(|e| e.message);
     }
 
     if let Some(proxy) = state.config.agent_proxy_url.as_ref() {

@@ -140,7 +140,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils
+          sudo apt-get install -y qemu-utils libsystemd-dev pkg-config
 
       - name: Build and package customer bundle
         env:
@@ -170,7 +170,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils
+          sudo apt-get install -y qemu-utils libsystemd-dev pkg-config
 
       - name: Publish to crates.io
         env:
