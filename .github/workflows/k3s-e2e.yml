@@ -1,0 +1,90 @@
+name: k3s E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'deploy/**'
+      - 'packaging/vmtools/**'
+      - '.github/workflows/k3s-e2e.yml'
+  push:
+    tags:
+      - 'v*'
+
+# Privileged worker (NBD) and k3s install require sudo on ubuntu-latest.
+jobs:
+  k3s-stack-e2e:
+    name: k3s stack install + E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k3s and prerequisites
+        run: bash deploy/scripts/install-k3s-ubuntu.sh
+
+      - name: Resolve image source
+        id: images
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            echo "pull_registry=ghcr.io/hypersdk" >> "${GITHUB_OUTPUT}"
+            echo "image_tag=${VERSION}" >> "${GITHUB_OUTPUT}"
+            echo "use_release_images=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "pull_registry=" >> "${GITHUB_OUTPUT}"
+            echo "image_tag=latest" >> "${GITHUB_OUTPUT}"
+            echo "use_release_images=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Log in to GHCR (release smoke)
+        if: steps.images.outputs.use_release_images == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for GHCR release images
+        if: steps.images.outputs.use_release_images == 'true'
+        run: |
+          TAG="${{ steps.images.outputs.image_tag }}"
+          for img in guestkit-worker zyvor-api zyvor-ui; do
+            echo "Waiting for ghcr.io/hypersdk/${img}:${TAG}..."
+            for i in $(seq 1 40); do
+              if curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                "https://ghcr.io/v2/hypersdk/${img}/manifests/${TAG}" >/dev/null; then
+                echo "  ${img} available"
+                break
+              fi
+              if [[ "${i}" -eq 40 ]]; then
+                echo "ERROR: timed out waiting for ghcr.io/hypersdk/${img}:${TAG}" >&2
+                exit 1
+              fi
+              sleep 30
+            done
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Zyvor stack
+        env:
+          PULL_REGISTRY: ${{ steps.images.outputs.pull_registry }}
+          IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
+          HELM_VALUES_FILE: values-ci.yaml
+        run: bash deploy/scripts/deploy-remote-k3s.sh
+
+      - name: Publish VM tools bundle to MinIO
+        env:
+          MINIO_VIA_KUBECTL: "1"
+          MINIO_NAMESPACE: zyvor
+        run: bash deploy/scripts/publish-vmtools-bundle.sh
+
+      - name: Run k3s E2E orchestrator
+        run: bash deploy/scripts/ci-k3s-e2e.sh

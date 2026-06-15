@@ -1,8 +1,5 @@
-# k3s / single-node overlay (e.g. deploy-remote-k3s.sh)
-# Set URLs at deploy time via env or --set:
-#   ZEUS_PUBLIC_URL=http://<host>:30080
-#   VMTOOLS_BASE_URL=http://<host>:30092/vmtools
-#   GUESTKIT_BINARY_URL=http://<host>:30092/vmtools/linux/zyvor-guest-agent
+# GitHub Actions / local CI overlay (deploy/scripts/ci-k3s-e2e.sh, k3s-e2e.yml).
+# URLs are set at deploy time via --set (NODE_IP from kubectl or hostname -I).
 ingress:
   enabled: false
 
@@ -16,7 +13,7 @@ zyvorApi:
   storageClass: local-path
   privileged: true
   zeusPublicUrl: ""
-  clusterName: "k3s-guestkit"
+  clusterName: "k3s-ci"
   guestkitBinaryUrl: ""
   agentProxyUrl: "http://127.0.0.1:8765"
   agentProxy:
