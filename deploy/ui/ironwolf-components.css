@@ -1,5 +1,49 @@
 /* GuestKit IronWolf Shell — components */
 
+/* ── Command Bay shell (100dvh grid, workbench-only scroll) ── */
+.guestkit-shell.mac-desktop-root {
+  position: relative;
+  z-index: 1;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.guestkit-body.mac-desktop-body {
+  display: grid;
+  grid-template-columns: var(--iw-sidebar-w) minmax(0, 1fr) var(--iw-inspector-w);
+  flex: 1;
+  min-height: 0;
+  height: calc(100dvh - var(--iw-menubar-h));
+  padding-top: var(--iw-menubar-h);
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.guestkit-workbench.mac-desktop-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+  padding-bottom: 0 !important;
+}
+
+.workbench-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ironwolf-sidebar.mission-rail,
+.ironwolf-inspector.guestkit-brain {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .mac-desktop-root {
   position: relative;
   z-index: 1;
@@ -17,15 +61,483 @@
   padding-bottom: var(--iw-dock-offset);
 }
 
+@media (max-width: 1280px) {
+  .guestkit-body.mac-desktop-body { grid-template-columns: var(--iw-sidebar-w) minmax(0, 1fr); }
+  .guestkit-brain.brain-drawer {
+    position: fixed;
+    top: var(--iw-menubar-h);
+    right: 0;
+    bottom: 0;
+    width: min(var(--iw-inspector-w), 92vw);
+    z-index: 180;
+    transform: translateX(100%);
+    transition: transform var(--transition-spring);
+    display: flex !important;
+    flex-direction: column;
+    pointer-events: none;
+  }
+  .guestkit-brain.brain-drawer.open {
+    transform: translateX(0);
+    pointer-events: auto;
+    box-shadow: -12px 0 48px rgba(0, 0, 0, 0.45);
+  }
+  .brain-drawer__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: -1;
+  }
+  .guestkit-brain.brain-drawer.open .brain-drawer__overlay { display: block !important; }
+  .brain-drawer__panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: inherit;
+  }
+  .brain-drawer__close { margin-left: auto; }
+}
+
+.guestkit-shell .mission-rail,
+.guestkit-shell .ironwolf-inspector.guestkit-brain {
+  position: static;
+  height: 100%;
+  max-height: none;
+  top: auto;
+}
+
 @media (max-width: 1200px) {
   .mac-desktop-body { grid-template-columns: var(--iw-sidebar-w) 1fr; }
-  .ironwolf-inspector, .guestkit-brain { display: none; }
+  .ironwolf-inspector:not(.guestkit-brain) { display: none; }
 }
 
 @media (max-width: 768px) {
+  .guestkit-body.mac-desktop-body,
   .mac-desktop-body { grid-template-columns: 1fr; }
   .ironwolf-sidebar, .mission-rail { display: none; }
 }
+
+.guestkit-shell[data-cinema="true"] .command-dock.dock-hidden {
+  display: flex !important;
+  pointer-events: auto;
+}
+.guestkit-shell[data-cinema="true"] .dock-controls--cinema {
+  display: flex !important;
+}
+.guestkit-shell[data-cinema="true"] {
+  --iw-dock-offset: 92px;
+}
+.guestkit-shell[data-cinema="true"] .workbench-scroll {
+  padding-bottom: var(--iw-dock-offset);
+}
+
+.command-dock.dock-hidden {
+  display: none !important;
+}
+
+.dock-controls--cinema { display: none; }
+
+/* ── Selected command bar ── */
+.selected-command-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.65rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--cb-line);
+  background: var(--cb-panel);
+  backdrop-filter: blur(16px);
+}
+
+.selected-command-bar__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.selected-command-bar__name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selected-command-bar__score {
+  font-size: 0.68rem;
+  color: var(--cb-cyan);
+}
+
+.selected-command-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* ── Disk inspector ── */
+.disk-inspector {
+  margin-bottom: 0.75rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--cb-line);
+  background: var(--cb-panel-strong);
+  backdrop-filter: blur(20px);
+}
+
+.disk-inspector__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.disk-inspector__rings {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.disk-inspector__title-block h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.disk-inspector__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  color: var(--cb-muted);
+}
+
+.disk-inspector__flight {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+  padding: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.flight-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 4.5rem;
+  font-size: 0.62rem;
+  color: var(--cb-muted);
+}
+
+.flight-node__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--cb-line);
+  background: var(--cb-bg);
+}
+
+.flight-node.done .flight-node__dot { background: var(--cb-green); border-color: var(--cb-green); }
+.flight-node.active .flight-node__dot { background: var(--cb-cyan); border-color: var(--cb-cyan); box-shadow: 0 0 8px var(--cb-cyan); }
+.flight-node.warn .flight-node__dot { background: var(--cb-orange); border-color: var(--cb-orange); }
+
+.flight-connector {
+  flex: 1;
+  min-width: 1rem;
+  height: 2px;
+  background: var(--cb-line);
+  margin-bottom: 1rem;
+}
+
+.flight-connector.done { background: linear-gradient(90deg, var(--cb-green), var(--cb-cyan)); }
+
+.disk-inspector__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.disk-inspector__action-card {
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--cb-line);
+  background: var(--cb-panel);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.2s;
+}
+
+.disk-inspector__action-card:hover { border-color: var(--cb-cyan); }
+.disk-inspector__action-card strong { display: block; font-size: 0.75rem; }
+.disk-inspector__action-card span { font-size: 0.62rem; color: var(--cb-muted); }
+
+.disk-inspector__dna {
+  font-size: 0.72rem;
+  color: var(--cb-muted);
+  border-top: 1px solid var(--cb-line);
+  padding-top: 0.5rem;
+}
+
+/* ── Readiness ring ── */
+.readiness-ring {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.readiness-ring--lg { width: 64px; height: 64px; }
+
+.readiness-ring__svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.readiness-ring__track {
+  fill: none;
+  stroke: var(--cb-line);
+  stroke-width: 3;
+}
+
+.readiness-ring__fill {
+  fill: none;
+  stroke: var(--cb-cyan);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 97.4;
+  stroke-dashoffset: 97.4;
+  transition: stroke-dashoffset 0.4s ease, stroke 0.3s;
+}
+
+.readiness-ring[data-score] .readiness-ring__fill {
+  stroke-dashoffset: calc(97.4 - (97.4 * var(--ring-pct, 0) / 100));
+}
+
+.readiness-ring[data-score="high"] .readiness-ring__fill { stroke: var(--cb-green); }
+.readiness-ring[data-score="mid"] .readiness-ring__fill { stroke: var(--cb-orange); }
+.readiness-ring[data-score="low"] .readiness-ring__fill { stroke: var(--cb-danger); }
+
+.readiness-ring__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--iw-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.readiness-ring--lg .readiness-ring__value { font-size: 0.82rem; }
+
+/* ── Mission rail flight path ── */
+.mission-rail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.mission-rail__compact-btn { padding: 0.2rem 0.4rem !important; }
+
+.mission-rail[data-compact="true"] .mission-step__body,
+.mission-rail[data-compact="true"] .mission-step__hint,
+.mission-rail[data-compact="true"] .mission-badge { display: none; }
+
+.mission-rail[data-compact="true"] .mission-step {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.mission-rail[data-compact="true"] .mission-step__num { min-width: auto; }
+
+.mission-flight-path {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0.35rem 0.5rem 0.65rem;
+  overflow-x: auto;
+}
+
+.mission-flight-seg {
+  flex: 1;
+  height: 3px;
+  min-width: 0.5rem;
+  border-radius: 2px;
+  background: var(--cb-line);
+}
+
+.mission-flight-seg.done { background: var(--cb-green); }
+.mission-flight-seg.active { background: var(--cb-cyan); }
+
+.mission-step__warn-count {
+  font-size: 0.58rem;
+  color: var(--cb-orange);
+  margin-left: 0.25rem;
+}
+
+/* ── Brain drawer & primary actions ── */
+.brain-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.brain-overflow { margin-top: 0.25rem; }
+.brain-overflow__toggle { list-style: none; cursor: pointer; width: 100%; text-align: center; }
+.brain-overflow__toggle::-webkit-details-marker { display: none; }
+
+.brain-fleet-summary {
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--cb-line);
+  background: var(--cb-panel);
+  font-size: 0.75rem;
+}
+
+.brain-fleet-summary strong { color: var(--cb-cyan); }
+
+/* ── Evidence console ── */
+.evidence-console .output-tabs { flex-wrap: wrap; }
+
+.evidence-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.evidence-empty.hidden { display: none; }
+
+.evidence-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.evidence-timeline li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--cb-line);
+  font-size: 0.78rem;
+}
+
+.evidence-timeline li.done::before {
+  content: "✓ ";
+  color: var(--cb-green);
+}
+
+.evidence-logs {
+  margin: 0;
+  padding: 0.65rem;
+  font-size: 0.68rem;
+  max-height: 280px;
+  overflow: auto;
+  background: var(--cb-bg);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+}
+
+.risk-content .risk-item {
+  padding: 0.45rem 0.55rem;
+  margin-bottom: 0.35rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--cb-orange);
+  background: var(--cb-panel);
+  font-size: 0.78rem;
+}
+
+.risk-content .risk-item.fail { border-left-color: var(--cb-danger); }
+
+/* ── Launch drawer ── */
+.launch-drawer__head { margin-bottom: 0.75rem; }
+
+.launch-drawer__ring-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.launch-drawer__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--cb-muted);
+}
+
+.launch-checklist {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+}
+
+.launch-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--cb-line);
+}
+
+.launch-checklist li.pass::before { content: "✓"; color: var(--cb-green); }
+.launch-checklist li.fail::before { content: "✗"; color: var(--cb-danger); }
+.launch-checklist li.warn::before { content: "!"; color: var(--cb-orange); }
+.launch-checklist li.pending::before { content: "○"; color: var(--cb-muted); }
+
+/* ── Status strip compact ── */
+.status-strip--compact {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.68rem;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.status-strip--compact .status-strip__item strong { font-size: 0.68rem; }
+
+/* ── Carbon-glass disk cards ── */
+.disk-card.carbon-glass {
+  background: var(--cb-panel);
+  border-color: var(--cb-line);
+  backdrop-filter: blur(12px);
+}
+
+.disk-card.carbon-glass.selected {
+  border-color: var(--cb-cyan);
+  box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.2);
+}
+
+.disk-card__readiness {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  color: var(--cb-muted);
+}
+
+.disk-card__readiness-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--cb-line);
+  overflow: hidden;
+}
+
+.disk-card__readiness-fill {
+  height: 100%;
+  background: var(--cb-cyan);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.disk-card__actions--compact .btn { flex: 1; min-width: 0; }
 
 .job-tracker--mirrored {
   display: none !important;

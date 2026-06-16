@@ -26,6 +26,8 @@ const BRAIN_PROMPTS = [
 ];
 
 const DOCK_PREFS_KEY = 'zyvor.dockPrefs';
+const RAIL_COMPACT_KEY = 'zyvor.railCompact';
+const CINEMA_KEY = 'zyvor.cinemaMode';
 
 function gk$(sel) { return document.querySelector(sel); }
 
@@ -78,25 +80,71 @@ function missionBadgeForStep(stepId, vm, cache) {
   }
 }
 
+function setReadinessRing(el, score) {
+  if (!el) return;
+  const pct = score != null ? Math.max(0, Math.min(100, Math.round(score))) : null;
+  el.style.setProperty('--ring-pct', pct != null ? String(pct) : '0');
+  const valueEl = el.querySelector('.readiness-ring__value');
+  if (valueEl) valueEl.textContent = pct != null ? String(pct) : '—';
+  if (pct == null) el.dataset.score = '0';
+  else if (pct >= 85) el.dataset.score = 'high';
+  else if (pct >= 60) el.dataset.score = 'mid';
+  else el.dataset.score = 'low';
+}
+
+function missionWarningCount(stepId, vm, cache) {
+  if (!vm) return 0;
+  if (stepId === 'diagnose') {
+    const fails = (cache?.checks || []).filter((c) => !c.passed).length;
+    const blockers = cache?.blockers?.length || 0;
+    return fails + blockers;
+  }
+  if (stepId === 'repair' && cache?.blockers?.length) return cache.blockers.length;
+  return 0;
+}
+
 function renderMissionRail() {
   const nav = gk$('#missionRailNav');
+  const rail = gk$('#missionRail');
   if (!nav) return;
   const vm = window.state?.selectedVm;
   const cache = vm ? window.getVmCache?.(vm.id) || {} : {};
   const activeWizard = window.state?.wizard?.step || 'ingest';
+
+  const progress = gk$('#missionProgress');
+  if (progress) {
+    const doneCount = MISSION_STEPS.filter((s) => {
+      const b = missionBadgeForStep(s.id, vm, cache);
+      return b.cls === 'done';
+    }).length;
+    const segs = MISSION_STEPS.map((s, i) => {
+      const badge = missionBadgeForStep(s.id, vm, cache);
+      const cls = badge.cls === 'done' ? 'done' : (s.wizard === activeWizard ? 'active' : '');
+      return `<span class="mission-flight-seg ${cls}" title="${s.label}"></span>`;
+    }).join('');
+    progress.innerHTML = `<div class="mission-flight-path" aria-hidden="true">${segs}</div>
+      <p class="mission-progress-label mono" style="font-size:0.62rem;color:var(--text-muted);margin:0 0.35rem;">${doneCount}/${MISSION_STEPS.length} complete</p>`;
+  }
+
   nav.innerHTML = MISSION_STEPS.map((s) => {
     const badge = missionBadgeForStep(s.id, vm, cache);
+    const warnN = missionWarningCount(s.id, vm, cache);
     const active = s.wizard === activeWizard || (activeWizard === 'assure' && ['fingerprint', 'diagnose'].includes(s.id) && s.wizard === 'assure');
     return `
-      <button type="button" class="mission-step${active ? ' active' : ''}" data-mission="${s.id}" data-wizard="${s.wizard}" data-action="${s.action || ''}">
+      <button type="button" class="mission-step${active ? ' active' : ''}" data-mission="${s.id}" data-wizard="${s.wizard}" data-action="${s.action || ''}" title="${s.hint}">
         <span class="mission-step__num">${s.num}</span>
         <span class="mission-step__body">
-          <span class="mission-step__label">${s.label}</span>
+          <span class="mission-step__label">${s.label}${warnN ? `<span class="mission-step__warn-count">(${warnN})</span>` : ''}</span>
           <span class="mission-step__hint">${s.hint}</span>
         </span>
         <span class="mission-badge ${badge.cls}">${badge.text}</span>
       </button>`;
   }).join('');
+
+  if (rail) {
+    const compact = localStorage.getItem(RAIL_COMPACT_KEY) === '1';
+    rail.dataset.compact = compact ? 'true' : 'false';
+  }
 
   nav.querySelectorAll('.mission-step').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -122,6 +170,35 @@ function renderBrainPanel() {
   const cache = vm ? window.getVmCache?.(vm.id) || {} : {};
   const inspect = cache.inspect || window.state?.lastClusterInspect?.inspect;
   const briefing = window.state?.lastBriefing || window.state?.lastClusterBriefing;
+
+  const fleetEl = gk$('#brainFleetSummary');
+  const fleetSection = gk$('#brainFleetSummarySection');
+  if (fleetEl) {
+    if (!vm && !clusterVm) {
+      const disks = (window.state?.vms || []).filter((v) => window.isFleetDisk?.(v) ?? true);
+      const ready = disks.filter((d) => {
+        const c = window.getVmCache?.(d.id) || {};
+        return c.bootScore != null && c.bootScore >= 70;
+      }).length;
+      fleetEl.classList.remove('hidden');
+      fleetEl.innerHTML = `<strong>${disks.length}</strong> disks · <strong>${ready}</strong> launch-ready · select a card to inspect`;
+      fleetSection?.classList.remove('hidden');
+    } else {
+      fleetEl.classList.add('hidden');
+      fleetSection?.classList.add('hidden');
+    }
+  }
+
+  const primary = gk$('#brainPrimaryActions');
+  if (primary) {
+    const repairBtn = gk$('#brainQuickRepair');
+    const scanBtn = gk$('#quickScanBtn');
+    const yamlBtn = gk$('#brainQuickYaml');
+    const hasVm = !!(vm || clusterVm);
+    if (repairBtn) repairBtn.disabled = !hasVm;
+    if (scanBtn) scanBtn.disabled = !hasVm;
+    if (yamlBtn) yamlBtn.disabled = !hasVm || (cache.bootScore != null && cache.bootScore < 50);
+  }
 
   const dnaEl = gk$('#brainDna');
   if (dnaEl) {
@@ -201,6 +278,179 @@ function renderBrainPanel() {
 
   renderBrainTimeline(vm?.id || (clusterVm ? `cluster:${clusterVm.namespace}/${clusterVm.name}` : null));
   syncBrainJobTracker();
+  renderDiskInspector(vm, cache);
+  updateSelectedCommandBar(vm, cache);
+  renderEvidenceConsole(vm, cache);
+}
+
+function renderDiskInspector(vm, cache) {
+  const el = gk$('#diskInspector');
+  if (!el) return;
+  if (!vm) {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  cache = cache || window.getVmCache?.(vm.id) || {};
+
+  gk$('#diskInspectorTitle').textContent = vm.name || 'Unnamed disk';
+  gk$('#diskInspectorMeta').textContent = `${vm.format || 'disk'} · ${window.fmtBytes?.(vm.size_bytes)} · ${vm.id.slice(0, 12)}…`;
+
+  setReadinessRing(gk$('#diskInspectorRing'), cache.bootScore);
+  const scoreEl = gk$('#diskInspectorScore');
+  if (scoreEl && cache.bootScore == null) scoreEl.textContent = '—';
+
+  const flight = gk$('#diskInspectorFlight');
+  if (flight) {
+    const steps = [
+      { id: 'capture', label: 'Capture', done: true },
+      { id: 'fingerprint', label: 'Fingerprint', done: !!cache.inspect },
+      { id: 'diagnose', label: 'Diagnose', done: cache.bootScore != null, warn: (cache.blockers?.length || 0) > 0 },
+      { id: 'repair', label: 'Repair', done: cache.lastOp === 'repair-plan' },
+      { id: 'launch', label: 'Launch', done: cache.lastOp === 'provision' },
+    ];
+    flight.innerHTML = steps.map((s, i) => {
+      const cls = s.done ? 'done' : (i === steps.findIndex((x) => !x.done) ? 'active' : '');
+      const warn = s.warn ? ' warn' : '';
+      const conn = i < steps.length - 1
+        ? `<span class="flight-connector${s.done ? ' done' : ''}"></span>`
+        : '';
+      return `${i ? '' : ''}<div class="flight-node ${cls}${warn}"><span class="flight-node__dot"></span>${s.label}</div>${conn}`;
+    }).join('');
+  }
+
+  const actions = gk$('#diskInspectorActions');
+  if (actions) {
+    actions.innerHTML = `
+      <button type="button" class="disk-inspector__action-card" data-inspector-action="inspect">
+        <strong>Inspect</strong><span>OS fingerprint</span>
+      </button>
+      <button type="button" class="disk-inspector__action-card" data-inspector-action="doctor">
+        <strong>Doctor</strong><span>Boot score</span>
+      </button>
+      <button type="button" class="disk-inspector__action-card" data-inspector-action="provision">
+        <strong>Launch</strong><span>KubeVirt VM</span>
+      </button>`;
+    actions.querySelectorAll('[data-inspector-action]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.inspectorAction;
+        if (action === 'provision') showLaunchPreview(() => window.runAction?.('provision'));
+        else window.runAction?.(action);
+      });
+    });
+  }
+
+  const dna = gk$('#diskInspectorDna');
+  if (dna) {
+    const inspect = cache.inspect;
+    if (inspect?.os) {
+      dna.textContent = `${inspect.os.distribution || inspect.os.os_type || 'unknown'} · ${inspect.boot?.mode || inspect.boot?.boot_mode || 'boot ?'} · last: ${cache.lastOp || 'never'}`;
+    } else {
+      dna.textContent = 'Run Inspect to populate disk DNA.';
+    }
+  }
+}
+
+function updateSelectedCommandBar(vm, cache) {
+  const bar = gk$('#selectedCommandBar');
+  if (!bar) return;
+  if (!vm) {
+    bar.classList.add('hidden');
+    return;
+  }
+  bar.classList.remove('hidden');
+  cache = cache || window.getVmCache?.(vm.id) || {};
+  gk$('#commandBarName').textContent = vm.name || 'Unnamed';
+  const scoreEl = gk$('#commandBarScore');
+  if (scoreEl) {
+    scoreEl.textContent = cache.bootScore != null ? `boot ${Math.round(cache.bootScore)}` : 'not scanned';
+  }
+}
+
+function renderEvidenceConsole(vm, cache) {
+  if (!vm) {
+    gk$('#timelineEmpty')?.classList.remove('hidden');
+    gk$('#evidenceTimeline')?.replaceChildren();
+    gk$('#riskEmpty')?.classList.remove('hidden');
+    gk$('#riskContent')?.classList.add('hidden');
+    gk$('#logsEmpty')?.classList.remove('hidden');
+    gk$('#evidenceLogs')?.replaceChildren();
+    return;
+  }
+  cache = cache || window.getVmCache?.(vm.id) || {};
+  renderEvidenceTimeline(vm.id);
+  renderRiskTab(cache);
+  renderEvidenceLogs(vm, cache);
+}
+
+function renderEvidenceTimeline(vmId) {
+  const list = gk$('#evidenceTimeline');
+  const empty = gk$('#timelineEmpty');
+  if (!list) return;
+  const events = loadTimeline(vmId);
+  if (!events.length) {
+    empty?.classList.remove('hidden');
+    list.innerHTML = '';
+    return;
+  }
+  empty?.classList.add('hidden');
+  list.innerHTML = events.map((e) => {
+    const label = TIMELINE_LABELS[e.event] || e.event;
+    const time = new Date(e.at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `<li class="done"><strong>${window.escapeHtml?.(label) || label}</strong>${e.detail ? ` — ${window.escapeHtml?.(e.detail) || e.detail}` : ''} <span class="mono" style="color:var(--text-muted)">${time}</span></li>`;
+  }).join('');
+}
+
+function renderRiskTab(cache) {
+  const empty = gk$('#riskEmpty');
+  const content = gk$('#riskContent');
+  if (!content) return;
+  const checks = (cache?.checks || []).filter((c) => !c.passed);
+  const blockers = cache?.blockers || [];
+  const items = [
+    ...blockers.map((b) => ({ msg: typeof b === 'string' ? b : (b.message || b.id || 'blocker'), fail: true })),
+    ...checks.map((c) => ({ msg: c.message || c.id, fail: !c.passed })),
+  ];
+  if (!items.length) {
+    empty?.classList.remove('hidden');
+    content.classList.add('hidden');
+    content.innerHTML = '';
+    return;
+  }
+  empty?.classList.add('hidden');
+  content.classList.remove('hidden');
+  content.innerHTML = items.map((it) =>
+    `<div class="risk-item${it.fail ? ' fail' : ''}">${window.escapeHtml?.(it.msg) || it.msg}</div>`
+  ).join('');
+}
+
+function renderEvidenceLogs(vm, cache) {
+  const empty = gk$('#logsEmpty');
+  const logs = gk$('#evidenceLogs');
+  if (!logs) return;
+  const lines = [];
+  if (cache.lastOp) lines.push(`[${cache.lastOp}] status=${cache.status || 'unknown'}`);
+  if (cache.lastError) lines.push(`ERROR: ${cache.lastError}`);
+  if (cache.bootScore != null) lines.push(`boot_score=${Math.round(cache.bootScore)}`);
+  if (window.state?.lastJobResult) {
+    try {
+      lines.push(JSON.stringify(window.state.lastJobResult, null, 2).slice(0, 4000));
+    } catch { /* ignore */ }
+  }
+  if (!lines.length) {
+    empty?.classList.remove('hidden');
+    logs.textContent = '';
+    return;
+  }
+  empty?.classList.add('hidden');
+  logs.textContent = lines.join('\n');
+}
+
+function clearDiskSelectionUi() {
+  gk$('#diskInspector')?.classList.add('hidden');
+  gk$('#selectedCommandBar')?.classList.add('hidden');
+  renderEvidenceConsole(null);
 }
 
 function timelineKey(vmId) {
@@ -280,6 +530,8 @@ function renderFleetDiskCard(vm, selected, cache) {
   const status = window.vmStatusLabel?.(cache, vm) || 'unknown';
   const icon = osIcon(vm, cache);
   const scanned = cache?.lastOp ? cache.lastOp : 'never';
+  const score = cache?.bootScore;
+  const scorePct = score != null ? Math.round(score) : 0;
   return `
     <span class="disk-card__head">
       <span class="disk-card__icon">${icon}</span>
@@ -291,13 +543,17 @@ function renderFleetDiskCard(vm, selected, cache) {
     <div class="disk-card__tags">
       <span class="disk-tag ${status === 'ready' ? 'ready' : status === 'failed' ? 'risk' : ''}">${status}</span>
       ${risk.cls ? `<span class="disk-tag ${risk.cls}">${risk.label}</span>` : ''}
-      ${cache?.bootScore != null ? `<span class="disk-tag ready">boot ${Math.round(cache.bootScore)}</span>` : ''}
+      ${score != null ? `<span class="disk-tag ready">boot ${scorePct}</span>` : ''}
       ${smoke ? '<span class="disk-tag warn">smoke</span>' : ''}
     </div>
-    <div class="disk-card__actions">
+    <div class="disk-card__readiness">
+      <span>readiness</span>
+      <div class="disk-card__readiness-bar"><div class="disk-card__readiness-fill" style="width:${scorePct}%"></div></div>
+      <span class="mono">${score != null ? scorePct : '—'}</span>
+    </div>
+    <div class="disk-card__actions disk-card__actions--compact">
       <button type="button" class="btn sm glass" data-disk-action="inspect">Inspect</button>
-      <button type="button" class="btn sm glass" data-disk-action="doctor">Doctor</button>
-      <button type="button" class="btn sm glass" data-disk-action="migration-plan">Plan</button>
+      <button type="button" class="btn sm accent" data-disk-action="doctor">Doctor</button>
       <button type="button" class="btn sm primary" data-disk-action="provision">Launch</button>
     </div>
     <p class="disk-card__meta">Last scan: ${scanned}</p>`;
@@ -330,14 +586,74 @@ function saveDockPrefs(prefs) {
 function applyDockPrefs() {
   const prefs = getDockPrefs();
   const dock = gk$('#commandDock');
+  const root = document.querySelector('.guestkit-shell');
+  const cinema = localStorage.getItem(CINEMA_KEY) === '1' || prefs.cinema;
+  if (root) root.dataset.cinema = cinema ? 'true' : 'false';
   if (!dock) return;
-  dock.classList.remove('pos-bottom', 'pos-left', 'pos-right', 'compact', 'auto-hide', 'pinned');
+  dock.classList.remove('pos-bottom', 'pos-left', 'pos-right', 'compact', 'auto-hide', 'pinned', 'dock-hidden');
+  if (!cinema) {
+    dock.classList.add('dock-hidden');
+    document.documentElement.style.setProperty('--iw-dock-offset', '0px');
+    return;
+  }
   dock.classList.add(`pos-${prefs.position || 'bottom'}`);
   if (prefs.compact) dock.classList.add('compact');
   if (prefs.autoHide) dock.classList.add('auto-hide');
-  if (prefs.pinned) dock.classList.add('pinned');
+  if (prefs.pinned !== false) dock.classList.add('pinned');
   const offset = prefs.position === 'left' || prefs.position === 'right' ? '24px' : '92px';
   document.documentElement.style.setProperty('--iw-dock-offset', offset);
+}
+
+function setupCinemaMode() {
+  gk$('#cinemaModeBtn')?.addEventListener('click', () => {
+    const on = localStorage.getItem(CINEMA_KEY) !== '1';
+    localStorage.setItem(CINEMA_KEY, on ? '1' : '0');
+    applyDockPrefs();
+    window.toast?.(on ? 'Cinema mode — floating dock enabled' : 'Command bar mode — dock hidden', 'ok');
+  });
+}
+
+function setupBrainDrawer() {
+  const drawer = gk$('#brainDrawer');
+  const toggle = () => drawer?.classList.toggle('open');
+  gk$('#brainDrawerToggle')?.addEventListener('click', toggle);
+  gk$('#brainDrawerClose')?.addEventListener('click', () => drawer?.classList.remove('open'));
+  gk$('#brainDrawerOverlay')?.addEventListener('click', () => drawer?.classList.remove('open'));
+}
+
+function setupRailCompact() {
+  gk$('#railCompactBtn')?.addEventListener('click', () => {
+    const rail = gk$('#missionRail');
+    const compact = rail?.dataset.compact !== 'true';
+    localStorage.setItem(RAIL_COMPACT_KEY, compact ? '1' : '0');
+    if (rail) rail.dataset.compact = compact ? 'true' : 'false';
+  });
+}
+
+function setupCommandBar() {
+  gk$('#cmdBarInspect')?.addEventListener('click', () => window.runAction?.('inspect'));
+  gk$('#cmdBarDoctor')?.addEventListener('click', () => window.runAction?.('doctor'));
+  gk$('#cmdBarLaunch')?.addEventListener('click', () => showLaunchPreview(() => window.runAction?.('provision')));
+  gk$('#cmdBarClear')?.addEventListener('click', () => {
+    window.state.selectedVm = null;
+    window.renderFleet?.();
+    clearDiskSelectionUi();
+    renderMissionRail();
+    renderBrainPanel();
+  });
+  gk$('#diskInspectorClose')?.addEventListener('click', () => {
+    window.state.selectedVm = null;
+    window.renderFleet?.();
+    clearDiskSelectionUi();
+    renderMissionRail();
+    renderBrainPanel();
+  });
+  document.querySelectorAll('.evidence-cta').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (action) window.runAction?.(action);
+    });
+  });
 }
 
 function setupDockMagnification() {
@@ -512,6 +828,32 @@ function showLaunchPreview(onConfirm) {
   const vm = window.state?.selectedVm;
   const cache = vm ? window.getVmCache?.(vm.id) : {};
   const spec = parseLaunchSpec(vm, cache);
+  const score = cache?.bootScore;
+  const blockers = cache?.blockers?.length || 0;
+  const hasInspect = !!cache?.inspect;
+  const hasDoctor = score != null;
+
+  setReadinessRing(gk$('#launchReadinessRing'), score);
+  const label = gk$('#launchReadinessLabel');
+  if (label) {
+    if (score == null) label.textContent = 'Run Doctor before launch';
+    else if (blockers) label.textContent = `${blockers} blocker(s) — review risks`;
+    else if (score >= 85) label.textContent = 'Ready to launch';
+    else label.textContent = 'Launch with caution';
+  }
+
+  const checklist = gk$('#launchChecklist');
+  if (checklist) {
+    const items = [
+      { text: 'Disk captured & fingerprinted', state: hasInspect ? 'pass' : 'pending' },
+      { text: 'Boot score assessed (Doctor)', state: hasDoctor ? (score >= 70 ? 'pass' : 'warn') : 'pending' },
+      { text: 'No critical blockers', state: blockers ? 'fail' : (hasDoctor ? 'pass' : 'pending') },
+      { text: 'Migration target selected', state: document.getElementById('targetSelect')?.value ? 'pass' : 'pending' },
+      { text: 'VM manifest spec ready', state: window.state?.lastYaml ? 'pass' : 'warn' },
+    ];
+    checklist.innerHTML = items.map((it) => `<li class="${it.state}">${window.escapeHtml?.(it.text) || it.text}</li>`).join('');
+  }
+
   const tbody = gk$('#launchPreviewBody');
   if (tbody && vm) {
     tbody.innerHTML = `
@@ -519,7 +861,7 @@ function showLaunchPreview(onConfirm) {
       <tr><td>Namespace</td><td>${window.escapeHtml?.(window.state?.uiConfig?.default_namespace || 'default')}</td></tr>
       <tr><td>CPU / Memory</td><td>${spec.cpu} vCPU · ${window.escapeHtml?.(spec.mem)}</td></tr>
       <tr><td>Disk</td><td>${window.fmtBytes?.(vm.size_bytes)} ${vm.format}</td></tr>
-      <tr><td>Boot score</td><td>${cache?.bootScore != null ? Math.round(cache.bootScore) : '—'}</td></tr>
+      <tr><td>Boot score</td><td>${score != null ? Math.round(score) : '—'}</td></tr>
       <tr><td>Migrate score</td><td>${cache?.migrateScore != null ? Math.round(cache.migrateScore) : '—'}</td></tr>
       <tr><td>Target</td><td>${window.escapeHtml?.(document.getElementById('targetSelect')?.value || 'kubevirt')}</td></tr>
       <tr id="launchAiAdviceRow" class="hidden"><td>AI advice</td><td id="launchAiAdvice">—</td></tr>`;
@@ -774,6 +1116,10 @@ function initGuestKitConsole() {
   renderMissionRail();
   renderBrainPanel();
   setupCommandDock();
+  setupCinemaMode();
+  setupBrainDrawer();
+  setupRailCompact();
+  setupCommandBar();
   setupImportPortal();
   setupBrainAsk();
   window.GuestKitAi?.initGuestKitAi?.();
@@ -807,6 +1153,9 @@ function onJobCompleteConsole(action, vmId) {
   }
   renderMissionRail();
   renderBrainPanel();
+  const vm = window.state?.selectedVm;
+  const cache = vmId ? window.getVmCache?.(vmId) || {} : {};
+  if (vm) renderEvidenceConsole(vm, cache);
   window.GuestKitFeatures?.loadJobHistory?.(vmId);
 }
 
@@ -825,4 +1174,8 @@ window.GuestKitConsole = {
   injectLaunchAdvice,
   appendTimelineEvent,
   resetJobBadge,
+  renderDiskInspector,
+  updateSelectedCommandBar,
+  renderEvidenceConsole,
+  clearDiskSelectionUi,
 };
