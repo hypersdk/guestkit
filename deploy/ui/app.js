@@ -764,7 +764,7 @@ function renderClusterFleet() {
       const healthClass = healthLabel === 'unhealthy' ? 'err' : healthLabel ? 'warn' : '';
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'vm-card cluster' + (selected ? ' selected' : '');
+      card.className = 'vm-card cluster carbon-glass' + (selected ? ' selected' : '');
       card.innerHTML = `
         <span class="vm-format">kubevirt</span>
         <span class="vm-status ${clusterVmStatusClass(vm)}">${escapeHtml(vm.status || vm.phase || 'Unknown')}</span>
@@ -2884,6 +2884,7 @@ function pollJob(jobId, action) {
         const progress = live.progress ?? live.progress_percent;
         if (progress != null) setJobProgress(progress, live.message || status);
         else if (live.message) setJobProgress(null, live.message);
+        window.GuestKitConsole?.appendEvidenceLog?.(`[${status}] ${live.message || action}${progress != null ? ` (${progress}%)` : ''}`);
         window.GuestKitConsole?.syncBrainJobTracker?.();
 
         if (status === 'completed') {
@@ -3268,6 +3269,8 @@ async function runActionInner(action) {
     const jobId = data?.data?.job_id;
     if (jobId) {
       state.lastJobId = jobId;
+      window.GuestKitConsole?.clearEvidenceLogs?.();
+      window.GuestKitConsole?.appendEvidenceLog?.(`[queued] ${action} job ${jobId.slice(0, 8)}…`);
       showJobTracker(action, jobId);
       toast('Job queued', 'ok');
       return await pollJob(jobId, action);

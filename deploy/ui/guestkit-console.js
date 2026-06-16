@@ -331,6 +331,12 @@ function renderDiskInspector(vm, cache) {
       <button type="button" class="disk-inspector__action-card" data-inspector-action="provision">
         <strong>Launch</strong><span>KubeVirt VM</span>
       </button>`;
+    const secondary = document.createElement('div');
+    secondary.className = 'disk-inspector__secondary';
+    secondary.innerHTML = `
+      <button type="button" class="btn sm ghost" data-inspector-action="migration-plan">Migration plan</button>
+      <button type="button" class="btn sm ghost" data-inspector-action="repair-plan">Repair dry-run</button>`;
+    actions.appendChild(secondary);
     actions.querySelectorAll('[data-inspector-action]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -365,6 +371,17 @@ function updateSelectedCommandBar(vm, cache) {
   const scoreEl = gk$('#commandBarScore');
   if (scoreEl) {
     scoreEl.textContent = cache.bootScore != null ? `boot ${Math.round(cache.bootScore)}` : 'not scanned';
+  }
+  const riskEl = gk$('#commandBarRisk');
+  if (riskEl) {
+    const n = (cache?.blockers?.length || 0) + (cache?.checks || []).filter((c) => !c.passed).length;
+    if (n > 0) {
+      riskEl.textContent = `${n} risk${n === 1 ? '' : 's'}`;
+      riskEl.classList.remove('hidden');
+    } else {
+      riskEl.textContent = '';
+      riskEl.classList.add('hidden');
+    }
   }
 }
 
@@ -423,6 +440,21 @@ function renderRiskTab(cache) {
   content.innerHTML = items.map((it) =>
     `<div class="risk-item${it.fail ? ' fail' : ''}">${window.escapeHtml?.(it.msg) || it.msg}</div>`
   ).join('');
+}
+
+function appendEvidenceLog(line) {
+  const logs = gk$('#evidenceLogs');
+  const empty = gk$('#logsEmpty');
+  if (!logs || !line) return;
+  empty?.classList.add('hidden');
+  const prev = logs.textContent || '';
+  logs.textContent = prev ? `${prev}\n${line}` : line;
+  logs.scrollTop = logs.scrollHeight;
+}
+
+function clearEvidenceLogs() {
+  const logs = gk$('#evidenceLogs');
+  if (logs) logs.textContent = '';
 }
 
 function renderEvidenceLogs(vm, cache) {
@@ -666,6 +698,8 @@ function setupCommandBar() {
   gk$('#cmdBarInspect')?.addEventListener('click', () => window.runAction?.('inspect'));
   gk$('#cmdBarDoctor')?.addEventListener('click', () => window.runAction?.('doctor'));
   gk$('#cmdBarLaunch')?.addEventListener('click', () => showLaunchPreview(() => window.runAction?.('provision')));
+  gk$('#cmdBarRepair')?.addEventListener('click', () => window.runAction?.('repair-plan'));
+  gk$('#cmdBarMigrate')?.addEventListener('click', () => window.runAction?.('migration-plan'));
   gk$('#cmdBarClear')?.addEventListener('click', () => clearDiskSelection());
   gk$('#diskInspectorClose')?.addEventListener('click', () => clearDiskSelection());
   document.querySelectorAll('.evidence-cta').forEach((btn) => {
@@ -1202,6 +1236,8 @@ window.GuestKitConsole = {
   injectLaunchAdvice,
   appendTimelineEvent,
   resetJobBadge,
+  appendEvidenceLog,
+  clearEvidenceLogs,
   renderDiskInspector,
   updateSelectedCommandBar,
   renderEvidenceConsole,
