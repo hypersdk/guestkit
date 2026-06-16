@@ -539,6 +539,54 @@
 
 .disk-card__actions--compact .btn { flex: 1; min-width: 0; }
 
+/* ── Inspect mode bar (Command Bay fleet toolbar) ── */
+.inspect-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.65rem;
+  margin-bottom: 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--cb-line);
+  background: var(--cb-panel);
+}
+
+.inspect-mode-bar.hidden { display: none; }
+
+/* ── Advanced actions panel (online / cluster fallback) ── */
+.panel-advanced { margin: 0; }
+.panel-advanced__toggle {
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.35rem 0;
+  list-style: none;
+}
+.panel-advanced__toggle::-webkit-details-marker { display: none; }
+.panel-advanced[open] .panel-advanced__toggle { color: var(--cb-cyan); }
+
+.guestkit-menubar__chip.active {
+  background: rgba(103, 232, 249, 0.15);
+  border-color: rgba(103, 232, 249, 0.35);
+  color: var(--cb-cyan);
+}
+
+.disk-inspector--reveal,
+.selected-command-bar.disk-inspector--reveal {
+  animation: cb-reveal 0.35s ease;
+}
+
+@keyframes cb-reveal {
+  from { opacity: 0.6; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.command-bay-active .fleet-grid {
+  max-height: none;
+}
+
 .job-tracker--mirrored {
   display: none !important;
 }
