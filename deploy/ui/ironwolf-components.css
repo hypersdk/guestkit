@@ -587,6 +587,27 @@
   max-height: none;
 }
 
+.selected-command-bar__risk {
+  font-size: 0.62rem;
+  color: var(--cb-orange);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 138, 42, 0.12);
+}
+
+.disk-inspector__secondary {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.vm-card.cluster.carbon-glass {
+  background: var(--cb-panel);
+  border-color: var(--cb-line);
+}
+
 .job-tracker--mirrored {
   display: none !important;
 }

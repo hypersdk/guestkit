@@ -218,12 +218,15 @@
               <div class="selected-command-bar__meta">
                 <span class="selected-command-bar__name" id="commandBarName">—</span>
                 <span class="selected-command-bar__score mono" id="commandBarScore">—</span>
+                <span class="selected-command-bar__risk hidden" id="commandBarRisk"></span>
               </div>
               <div class="selected-command-bar__actions">
                 <button type="button" class="btn sm accent" data-cmd="inspect" id="cmdBarInspect">Inspect</button>
                 <button type="button" class="btn sm primary" data-cmd="doctor" id="cmdBarDoctor">Doctor</button>
                 <button type="button" class="btn sm glass" data-cmd="launch" id="cmdBarLaunch">Launch</button>
-                <button type="button" class="btn sm ghost" id="cmdBarClear" title="Clear selection">×</button>
+                <button type="button" class="btn sm ghost" data-cmd="repair" id="cmdBarRepair" title="Repair plan">Repair</button>
+                <button type="button" class="btn sm ghost" data-cmd="migrate" id="cmdBarMigrate" title="Migration plan">Plan</button>
+                <button type="button" class="btn sm ghost" id="cmdBarClear" title="Clear selection (Esc)">×</button>
               </div>
             </div>
             <div class="disk-inspector hidden" id="diskInspector" aria-label="Disk intelligence">
