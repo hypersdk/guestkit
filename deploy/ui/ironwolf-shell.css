@@ -584,6 +584,7 @@ html[data-theme='tahoe'] .mac-desktop-root,
   background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.06), transparent 60%);
 }
 .tahoe-page-root { position: relative; }
+.guestkit-shell .mac-desktop-main { padding-bottom: 0; }
 .mac-desktop-main { padding-bottom: 5.5rem; }
 /* Full-width page canvas (was capped at 72rem / 64rem calm). */
 .ironwolf-main-content-pad { max-width: none; margin: 0; width: 100%; }
