@@ -450,7 +450,38 @@ function renderEvidenceLogs(vm, cache) {
 function clearDiskSelectionUi() {
   gk$('#diskInspector')?.classList.add('hidden');
   gk$('#selectedCommandBar')?.classList.add('hidden');
+  document.querySelector('.guestkit-shell')?.classList.remove('command-bay-active');
   renderEvidenceConsole(null);
+}
+
+function scrollToDiskContext() {
+  const inspector = gk$('#diskInspector');
+  const bar = gk$('#selectedCommandBar');
+  const el = inspector && !inspector.classList.contains('hidden') ? inspector : bar;
+  if (!el || el.classList.contains('hidden')) return;
+  requestAnimationFrame(() => {
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    el.classList.remove('disk-inspector--reveal');
+    void el.offsetWidth;
+    el.classList.add('disk-inspector--reveal');
+  });
+}
+
+function scrollToEvidenceConsole() {
+  const el = gk$('#panel-results');
+  if (!el) return;
+  requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+}
+
+function clearDiskSelection() {
+  if (!window.state?.selectedVm) return false;
+  window.state.selectedVm = null;
+  window.renderFleet?.();
+  clearDiskSelectionUi();
+  window.updateSelectionPanels?.();
+  renderMissionRail();
+  renderBrainPanel();
+  return true;
 }
 
 function timelineKey(vmId) {
@@ -589,6 +620,7 @@ function applyDockPrefs() {
   const root = document.querySelector('.guestkit-shell');
   const cinema = localStorage.getItem(CINEMA_KEY) === '1' || prefs.cinema;
   if (root) root.dataset.cinema = cinema ? 'true' : 'false';
+  gk$('#cinemaModeBtn')?.classList.toggle('active', cinema);
   if (!dock) return;
   dock.classList.remove('pos-bottom', 'pos-left', 'pos-right', 'compact', 'auto-hide', 'pinned', 'dock-hidden');
   if (!cinema) {
@@ -634,20 +666,8 @@ function setupCommandBar() {
   gk$('#cmdBarInspect')?.addEventListener('click', () => window.runAction?.('inspect'));
   gk$('#cmdBarDoctor')?.addEventListener('click', () => window.runAction?.('doctor'));
   gk$('#cmdBarLaunch')?.addEventListener('click', () => showLaunchPreview(() => window.runAction?.('provision')));
-  gk$('#cmdBarClear')?.addEventListener('click', () => {
-    window.state.selectedVm = null;
-    window.renderFleet?.();
-    clearDiskSelectionUi();
-    renderMissionRail();
-    renderBrainPanel();
-  });
-  gk$('#diskInspectorClose')?.addEventListener('click', () => {
-    window.state.selectedVm = null;
-    window.renderFleet?.();
-    clearDiskSelectionUi();
-    renderMissionRail();
-    renderBrainPanel();
-  });
+  gk$('#cmdBarClear')?.addEventListener('click', () => clearDiskSelection());
+  gk$('#diskInspectorClose')?.addEventListener('click', () => clearDiskSelection());
   document.querySelectorAll('.evidence-cta').forEach((btn) => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
@@ -721,8 +741,9 @@ function setupCommandDock() {
   });
 
   gk$('#dockLogsBtn')?.addEventListener('click', () => {
-    window.scrollToPanel?.('launch');
-    window.setActiveTab?.('raw');
+    window.scrollToPanel?.('assure');
+    window.setActiveTab?.('logs');
+    scrollToEvidenceConsole();
   });
   gk$('#dockYamlBtn')?.addEventListener('click', () => {
     window.setActiveTab?.('yaml');
@@ -1132,6 +1153,8 @@ function initGuestKitConsole() {
 function onSelectVmConsole() {
   renderMissionRail();
   renderBrainPanel();
+  scrollToDiskContext();
+  if (window.innerWidth < 1280) gk$('#brainDrawer')?.classList.add('open');
   window.GuestKitAi?.onSelectVmAi?.();
 }
 
@@ -1155,7 +1178,12 @@ function onJobCompleteConsole(action, vmId) {
   renderBrainPanel();
   const vm = window.state?.selectedVm;
   const cache = vmId ? window.getVmCache?.(vmId) || {} : {};
-  if (vm) renderEvidenceConsole(vm, cache);
+  if (vm) {
+    renderEvidenceConsole(vm, cache);
+    if (['inspect', 'doctor', 'repair-plan', 'migration-plan', 'provision'].includes(action)) {
+      setTimeout(() => scrollToEvidenceConsole(), 120);
+    }
+  }
   window.GuestKitFeatures?.loadJobHistory?.(vmId);
 }
 
@@ -1178,4 +1206,7 @@ window.GuestKitConsole = {
   updateSelectedCommandBar,
   renderEvidenceConsole,
   clearDiskSelectionUi,
+  clearDiskSelection,
+  scrollToDiskContext,
+  scrollToEvidenceConsole,
 };

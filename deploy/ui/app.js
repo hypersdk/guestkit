@@ -636,6 +636,11 @@ function clusterVmStatusClass(vm) {
 function updateSelectionPanels() {
   const clusterSelected = Boolean(state.selectedClusterVm);
   const diskSelected = Boolean(state.selectedVm) && !clusterSelected;
+  const commandBay = diskSelected && state.inspectionMode === 'offline';
+  const root = document.querySelector('.guestkit-shell');
+  root?.classList.toggle('command-bay-active', commandBay);
+  $('#panel-actions')?.classList.toggle('hidden', commandBay);
+  $('#inspectModeBar')?.classList.toggle('hidden', !diskSelected);
   $('#actionDeck')?.classList.toggle('hidden', !diskSelected || state.inspectionMode !== 'offline');
   $('#clusterDeck')?.classList.toggle('hidden', !clusterSelected);
   $('#clusterLifecycle')?.classList.toggle('hidden', !clusterSelected);
@@ -702,6 +707,9 @@ function renderFleet() {
     }
     card.addEventListener('click', () => selectVm(vm));
     grid.appendChild(card);
+    if (state.selectedVm?.id === vm.id) {
+      requestAnimationFrame(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    }
   });
 }
 
@@ -2845,7 +2853,15 @@ function onJobComplete(action, data) {
   if (payload?.copilot && (action === 'doctor' || action === 'migration-plan')) {
     setActiveTab('copilot');
     feed('Migration <strong>Copilot</strong> briefing ready', 'ok');
+  } else if (action === 'doctor') {
+    const hasRisks = blockers.length || (patch.checks || []).some((c) => !c.passed);
+    setActiveTab(hasRisks ? 'risk' : 'summary');
+  } else if (action === 'inspect') {
+    setActiveTab('summary');
+  } else if (action === 'repair-plan' || action === 'migration-plan' || action === 'provision') {
+    setActiveTab('summary');
   }
+  window.GuestKitConsole?.scrollToEvidenceConsole?.();
   window.GuestKitConsole?.onJobCompleteConsole?.(action, vm.id);
   window.GuestKitConsole?.renderBrainPanel?.();
   window.GuestKitConsole?.renderEvidenceConsole?.(vm, getVmCache(vm.id));
@@ -3595,6 +3611,7 @@ async function init() {
   window.loadFleet = loadFleet;
   window.scrollToPanel = scrollToPanel;
   window.setActiveTab = setActiveTab;
+  window.updateSelectionPanels = updateSelectionPanels;
   window.toast = toast;
   window.extractPayload = extractPayload;
   window.API_BASE = API_BASE;

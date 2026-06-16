@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="dark" />
   <title>GuestKit — Offline VM Intelligence</title>
   <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260616cb" />
-  <link rel="stylesheet" href="ironwolf-shell.css?v=20260616cb" />
-  <link rel="stylesheet" href="ironwolf-components.css?v=20260616cb" />
-  <link rel="stylesheet" href="style.css?v=20260616cb" />
-  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260616cb" />
+  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260616cb2" />
+  <link rel="stylesheet" href="ironwolf-shell.css?v=20260616cb2" />
+  <link rel="stylesheet" href="ironwolf-components.css?v=20260616cb2" />
+  <link rel="stylesheet" href="style.css?v=20260616cb2" />
+  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260616cb2" />
 </head>
 <body>
   <div class="mac-desktop-root guestkit-shell" data-theme="tahoe" data-wallpaper="tahoe">
@@ -195,6 +195,14 @@
                 <div id="fleetGuestApprovalsAudit"></div>
               </div>
             </div>
+            <div class="inspect-mode-bar glass-inset" id="inspectModeBar">
+              <span class="inspect-mode-label">Inspection</span>
+              <div class="inspect-mode-toggle" role="group" aria-label="Inspection mode">
+                <button type="button" class="mode-btn active" data-mode="offline" id="modeOfflineBtn">Offline disk</button>
+                <button type="button" class="mode-btn" data-mode="online" id="modeOnlineBtn">Online agent</button>
+              </div>
+              <span class="agent-status" id="agentStatus">agent idle</span>
+            </div>
             <div class="fleet-vault-toolbar">
               <input type="search" class="fleet-search" id="fleetDiskSearch" placeholder="Search disks… (/)" spellcheck="false" />
               <select class="fleet-select" id="fleetDiskSort" aria-label="Sort disks">
@@ -274,18 +282,12 @@
             <div class="brain-section hidden" id="compareAiNarrative"></div>
           </section>
 
-          <section class="panel glass-inset" id="panel-actions" data-panel="assure plan">
+          <section class="panel glass-inset hidden" id="panel-actions" data-panel="assure plan">
+            <details class="panel-advanced" id="panelAdvanced">
+              <summary class="panel-advanced__toggle">Advanced actions</summary>
             <div class="panel-head">
               <h2 id="selectedVmTitle">Select a VM</h2>
               <p id="selectedVmMeta">Choose a fleet card to unlock actions.</p>
-            </div>
-            <div class="inspect-mode-row glass-inset">
-              <span class="inspect-mode-label">Inspection</span>
-              <div class="inspect-mode-toggle" role="group" aria-label="Inspection mode">
-                <button type="button" class="mode-btn active" data-mode="offline" id="modeOfflineBtn">Offline disk</button>
-                <button type="button" class="mode-btn" data-mode="online" id="modeOnlineBtn">Online agent</button>
-              </div>
-              <span class="agent-status" id="agentStatus">agent idle</span>
             </div>
             <p class="guest-exec-warning hidden" id="guestExecWarning" role="status"></p>
             <div class="agent-proxy-row hidden" id="agentProxyRow">
@@ -375,6 +377,7 @@
                 <strong>Metrics</strong><span>Live host stats</span>
               </button>
             </div>
+            </details>
           </section>
 
           <section class="panel glass-inset wide evidence-console" id="panel-results" data-panel="assure plan launch">
@@ -758,8 +761,9 @@
         <li><kbd>1</kbd>–<kbd>6</kbd> Mission Rail steps</li>
         <li><kbd>I</kbd> Inspect · <kbd>D</kbd> Doctor · <kbd>R</kbd> Repair</li>
         <li><kbd>M</kbd> Migration plan · <kbd>L</kbd> Launch preview</li>
+        <li><kbd>B</kbd> Toggle Brain · <kbd>E</kbd> Evidence console</li>
         <li><kbd>U</kbd> Upload · <kbd>/</kbd> Search disks</li>
-        <li><kbd>Esc</kbd> Close modals</li>
+        <li><kbd>Esc</kbd> Close modals · clear disk selection</li>
         <li><kbd>Q</kbd> Quick scan (inspect + doctor)</li>
         <li><kbd>C</kbd> Compare mode</li>
         <li><kbd>A</kbd> Focus AI chat</li>

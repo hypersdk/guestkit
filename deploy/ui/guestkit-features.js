@@ -162,7 +162,13 @@ function setupKeyboardShortcuts() {
       return;
     }
     if (e.key === 'Escape') {
-      document.querySelectorAll('.guestkit-modal-backdrop:not(.hidden)').forEach((m) => m.classList.add('hidden'));
+      const modals = document.querySelectorAll('.guestkit-modal-backdrop:not(.hidden)');
+      if (modals.length) {
+        modals.forEach((m) => m.classList.add('hidden'));
+        return;
+      }
+      document.getElementById('brainDrawer')?.classList.remove('open');
+      if (window.GuestKitConsole?.clearDiskSelection?.()) return;
       return;
     }
     if (e.metaKey || e.ctrlKey) return;
@@ -176,6 +182,12 @@ function setupKeyboardShortcuts() {
       u: () => document.getElementById('fileInput')?.click(),
       q: () => quickScan(),
       c: () => window.GuestKitConsole?.showCompareMode?.(),
+      b: () => document.getElementById('brainDrawer')?.classList.toggle('open'),
+      e: () => {
+        window.scrollToPanel?.('assure');
+        window.setActiveTab?.('timeline');
+        window.GuestKitConsole?.scrollToEvidenceConsole?.();
+      },
       '/': () => { e.preventDefault(); document.getElementById('fleetDiskSearch')?.focus(); },
     };
     if (map[e.key]) { e.preventDefault(); map[e.key](); return; }
