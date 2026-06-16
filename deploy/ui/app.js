@@ -684,7 +684,7 @@ function renderFleet() {
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'disk-card vm-card'
+    card.className = 'disk-card vm-card carbon-glass'
       + (state.selectedVm?.id === vm.id ? ' selected' : '')
       + (smoke ? ' smoke' : '');
     if (window.GuestKitConsole?.renderFleetDiskCard) {
@@ -2431,7 +2431,9 @@ function renderGuestkitInspect(inspect, contentEl) {
 function renderSummary(data, action) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
-  ph.classList.add('hidden');
+  const emptyWrap = $('#summaryEmpty');
+  ph?.classList.add('hidden');
+  emptyWrap?.classList.add('hidden');
   content.classList.remove('hidden');
   content.innerHTML = '';
 
@@ -2781,6 +2783,9 @@ function setActiveTab(name) {
   $$('.tab-pane').forEach((p) => p.classList.remove('active'));
   const map = {
     summary: '#pane-summary',
+    timeline: '#pane-timeline',
+    risk: '#pane-risk',
+    logs: '#pane-logs',
     copilot: '#pane-copilot',
     agent: '#pane-agent',
     yaml: '#pane-yaml',
@@ -2843,6 +2848,7 @@ function onJobComplete(action, data) {
   }
   window.GuestKitConsole?.onJobCompleteConsole?.(action, vm.id);
   window.GuestKitConsole?.renderBrainPanel?.();
+  window.GuestKitConsole?.renderEvidenceConsole?.(vm, getVmCache(vm.id));
 }
 
 function pollJob(jobId, action) {
