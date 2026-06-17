@@ -31,7 +31,7 @@
 
 Inspect **QCOW2, VMDK, or RAW** images **without powering them on** — using GuestKit's **pure Rust** disk engine (not libguestfs). Score boot probability, generate hypervisor-aware migration plans, export executable fix plans, and explore disks from a carbon-themed TUI — all in **Rust**, with structured JSON/YAML/HTML/PDF for CI.
 
-Part of the open-source stack on **[zyvor.dev](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)** · pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM pipelines.
+**[Documentation](docs/README.md)** · **[User stories](docs/USER_STORIES.md)** · Part of the open-source stack on **[zyvor.dev](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)** · pairs with **[hyper2kvm](https://github.com/hypersdk/hyper2kvm)** for VMware → KVM pipelines.
 
 ## Three commands before cutover
 
