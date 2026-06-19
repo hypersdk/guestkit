@@ -2,151 +2,175 @@
 <html lang="en" data-theme="ironwolf">
 <head>
   <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='8' y1='8' x2='56' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23ff8a3d'/%3E%3Cstop offset='1' stop-color='%23f0583a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23bg)'/%3E%3Cpath d='M19 18h26v7L29 40h16v7H19v-7l16-15H19z' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='8' y1='8' x2='56' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23ff8a3d'/%3E%3Cstop offset='1' stop-color='%23f0583a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23bg)'/%3E%3Cpath d='M19 18h26v7L29 40h16v7H19v-7l16-15H19z' fill='%23fff'/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark" />
   <title>GuestKit — Offline VM Intelligence</title>
-  <link rel="icon" href="img/zavor-favicon.png" type="image/png" />
-  <link rel="stylesheet" href="ironwolf-tokens.css?v=20260616cb2" />
-  <link rel="stylesheet" href="ironwolf-shell.css?v=20260616cb2" />
-  <link rel="stylesheet" href="ironwolf-components.css?v=20260616cb2" />
-  <link rel="stylesheet" href="style.css?v=20260616cb2" />
-  <link rel="stylesheet" href="ironwolf-overrides.css?v=20260616cb2" />
+  <link rel="stylesheet" href="nebula-tokens.css?v=20260616nebula2" />
+  <link rel="stylesheet" href="nebula-shell.css?v=20260616nebula2" />
+  <link rel="stylesheet" href="nebula-components.css?v=20260616nebula2" />
+  <link rel="stylesheet" href="style.css?v=20260616nebula2" />
 </head>
 <body>
-  <div class="mac-desktop-root guestkit-shell" data-theme="tahoe" data-wallpaper="tahoe">
+  <div class="nebula-root guestkit-shell" id="nebulaRoot">
 
-  <header class="mac-menubar guestkit-menubar" role="banner">
-    <div class="mac-menubar-inner">
-    <a class="guestkit-menubar__brand mac-menubar-title" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">
-      <img class="guestkit-menubar__logo" src="img/zavor-logo.webp" width="96" height="32" alt="GuestKit" />
-      <span class="guestkit-menubar__title">GuestKit</span>
-      <span class="guestkit-menubar__tagline">Offline VM Intelligence</span>
+  <header class="nebula-header" role="banner">
+    <a class="nebula-header__brand" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">
+      <img class="nebula-header__logo" src="img/zavor-logo.webp" width="96" height="32" alt="GuestKit" />
+      <span class="nebula-header__title">GuestKit</span>
+      <span class="nebula-header__tagline">Offline VM Intelligence</span>
     </a>
-    <nav class="guestkit-menubar__nav" aria-label="View">
-      <button type="button" class="guestkit-menubar__link" data-goto="ingest">Capture</button>
-      <button type="button" class="guestkit-menubar__link" data-goto="assure">Image Vault</button>
-      <button type="button" class="guestkit-menubar__link" id="menubarClusterBtn">Cluster</button>
-      <button type="button" class="guestkit-menubar__link" data-goto="launch">Launch</button>
+    <nav class="nebula-header__nav guestkit-menubar__nav" aria-label="View">
+      <button type="button" class="nebula-header__link guestkit-menubar__link active" data-goto="ingest">Capture</button>
+      <button type="button" class="nebula-header__link guestkit-menubar__link" data-goto="assure">Image Vault</button>
+      <button type="button" class="nebula-header__link" id="menubarClusterBtn">Cluster</button>
+      <button type="button" class="nebula-header__link guestkit-menubar__link" data-goto="launch">Launch</button>
+      <button type="button" class="nebula-header__link guestkit-menubar__link" data-goto="assure">Reports</button>
     </nav>
-    <div class="guestkit-menubar__actions">
-      <select class="target-select" id="targetSelect" aria-label="Migration target" style="font-size:0.72rem;padding:0.25rem 0.5rem;border-radius:6px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);">
+    <div class="nebula-header__actions">
+      <select class="target-select" id="targetSelect" aria-label="Migration target" style="font-size:12px;padding:6px 10px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border-soft);color:var(--text-muted);">
         <option value="kubevirt" selected>kubevirt</option>
         <option value="kvm">kvm</option>
         <option value="proxmox">proxmox</option>
         <option value="generic">generic</option>
       </select>
-      <button type="button" class="guestkit-menubar__chip" id="helpShortcutsBtn" title="Keyboard shortcuts (?)">?</button>
-      <span class="guestkit-menubar__chip hidden" id="authUserChip" title="Signed-in user"></span>
-      <button type="button" class="guestkit-menubar__chip hidden" id="authSignOutBtn" title="Sign out">Sign out</button>
-      <button type="button" class="guestkit-menubar__chip" id="openSettingsBtn" title="Identity &amp; SSO settings">⚙</button>
       <div class="recent-disks-wrap">
-        <button type="button" class="guestkit-menubar__chip" id="recentDisksToggle">Recent ▾</button>
+        <button type="button" class="nebula-header__chip" id="recentDisksToggle">Recent</button>
         <div class="recent-disks-menu" id="recentDisksMenu"></div>
       </div>
-      <button type="button" class="guestkit-menubar__chip" id="brainDrawerToggle" title="Toggle Brain panel">Brain</button>
-      <button type="button" class="guestkit-menubar__chip" id="cinemaModeBtn" title="Cinema mode (floating dock)">Cinema</button>
-      <button type="button" class="guestkit-menubar__chip" id="refreshFleetBtn" title="Refresh fleet">
-        <span class="pulse-dot" id="healthDot"></span>
-        <span id="healthLabel">Connecting…</span>
-      </button>
-      <span class="guestkit-menubar__chip mono" id="hudVmCount">0 assets</span>
-    </div>
+      <button type="button" class="nebula-header__chip brain-drawer-trigger" id="brainDrawerToggle" aria-label="Open Brain">Brain</button>
+      <button type="button" class="nebula-header__chip" id="cinemaModeBtn" aria-label="Cinema mode">Cinema</button>
+      <span class="nebula-header__pill" id="healthPill"><span class="pulse-dot" id="healthDot"></span> <span id="healthLabel">Connecting…</span></span>
+      <div class="nebula-header__more" id="headerMore">
+        <button type="button" class="nebula-header__chip" id="headerMoreBtn" aria-label="More options">More ▾</button>
+        <div class="nebula-header__more-menu">
+          <button type="button" class="nebula-header__chip" id="helpShortcutsBtn">Shortcuts</button>
+          <button type="button" class="nebula-header__chip" id="openSettingsBtn">Settings</button>
+          <span class="nebula-header__chip hidden" id="authUserChip"></span>
+          <button type="button" class="nebula-header__chip hidden" id="authSignOutBtn">Sign out</button>
+          <button type="button" class="nebula-header__chip" id="refreshFleetBtn">Refresh</button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <div class="mac-desktop-body guestkit-body">
-    <aside class="ironwolf-sidebar tahoe-sidebar mission-rail" aria-label="Mission Rail" id="missionRail">
-      <div class="mission-rail__head">
-        <p class="mission-rail__label">Mission Flow</p>
-        <button type="button" class="btn sm ghost mission-rail__compact-btn" id="railCompactBtn" title="Compact rail">▣</button>
-      </div>
-      <nav id="missionRailNav"></nav>
-      <div id="missionProgress" class="mission-progress-wrap"></div>
-      <div class="sidebar-foot" style="margin-top:auto;padding:0.5rem 0.35rem;font-size:0.62rem;color:var(--text-muted);">
-        <p style="margin:0;">© ZyvorAI Labs · <a href="https://zyvor.dev" style="color:var(--accent-cyan);">zyvor.dev</a></p>
-      </div>
-    </aside>
+  <div class="cinema-bar">
+    <strong>GuestKit Cinema</strong>
+    <button type="button" class="btn secondary sm" id="cinemaExitBtn">Exit Cinema</button>
+  </div>
 
-    <main class="mac-desktop-main tahoe-page-root guestkit-workbench workbench">
-      <div class="workbench-window workbench-scroll">
-        <div class="status-strip status-strip--compact" id="statusStrip" aria-label="Cluster status">
-          <span class="status-strip__item"><span class="status-strip__dot"></span> Agent <strong id="hudAgent">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot"></span> Cluster <strong id="hudCluster">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot"></span> Storage <strong id="hudStorage">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot"></span> KubeVirt <strong id="hudKubevirt">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot"></span> CDI <strong id="hudCdi">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot ai"></span> Last Scan <strong id="hudLastScan">—</strong></span>
-          <span class="status-strip__item"><span class="status-strip__dot"></span> Worker <strong id="hudWorker">—</strong></span>
-          <span class="status-strip__item"><strong id="hudDiskCount">—</strong></span>
-        </div>
+  <div class="nebula-status-strip" id="statusStrip" aria-label="System status">
+    <span><span class="status-dot" id="statusDotApi"></span> API <strong id="healthLabelStrip">online</strong></span>
+    <span><strong id="hudVmCount">0 assets</strong></span>
+    <span>Cluster <strong id="hudCluster">—</strong></span>
+    <span>Storage <strong id="hudStorage">—</strong></span>
+    <span>Agent <strong id="hudAgent">—</strong></span>
+    <span>KubeVirt <strong id="hudKubevirt">—</strong></span>
+    <span>CDI <strong id="hudCdi">—</strong></span>
+    <span>Last scan <strong id="hudLastScan">—</strong></span>
+    <span class="hidden" id="hudWorker">—</span>
+    <span class="hidden" id="hudDiskCount">—</span>
+  </div>
 
-        <div class="workbench-hero">
-          <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
-          <p class="workbench-hero__eyebrow">GuestKit Workbench</p>
-          <h1 class="workbench-hero__title">From dead disk to live KubeVirt VM</h1>
-          <p class="workbench-hero__subtitle">Inspected. Repaired. Converted. Launched.</p>
-        </div>
+  <div class="nebula-body">
+    <main class="nebula-main">
+      <div class="workspace-grid">
+        <div class="workspace-main">
 
-        <div class="wizard-bar glass-inset hidden" id="wizardBar" aria-label="Migration wizard">
-          <div class="wizard-steps" id="wizardSteps"></div>
-          <p class="wizard-subtitle" id="wizardSubtitle">Step 1 of 4 — Upload disk</p>
-        </div>
-
-        <div class="panels" id="panels" data-wizard-step="ingest">
-          <section class="panel glass-inset" id="panel-ingest" data-panel="ingest">
-            <div class="dropzone intake-portal" id="dropzone">
-              <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi,.vhdx,.iso" hidden />
-              <div class="dropzone-inner">
-                <p class="intake-portal__title">VM Intake Portal</p>
-                <p class="intake-portal__sub">Drop a disk image — staged for offline intelligence — or <button type="button" class="linkish" id="browseBtn">choose file…</button></p>
-                <div class="intake-portal__formats">
-                  <span class="format-chip">qcow2</span><span class="format-chip">vmdk</span><span class="format-chip">vhdx</span>
-                  <span class="format-chip">raw</span><span class="format-chip">ova</span><span class="format-chip">iso</span>
-                </div>
+          <div class="nebula-card nebula-intake" id="dropzone">
+            <input type="file" id="fileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi,.vhdx,.iso" hidden />
+            <div class="dropzone-inner">
+              <div class="nebula-intake__icon" aria-hidden="true">💿</div>
+              <h1 class="page-title">Drop a VM disk. GuestKit will fingerprint it before you boot it.</h1>
+              <p class="body-text">Detect OS, bootloader, drivers, packages, services, network config, cloud-init, risk, and migration readiness.</p>
+              <div class="format-chips">
+                <span class="format-chip">QCOW2</span><span class="format-chip">VMDK</span><span class="format-chip">VHDX</span>
+                <span class="format-chip">RAW</span><span class="format-chip">OVA</span><span class="format-chip">ISO</span>
               </div>
-              <div class="drop-progress hidden" id="uploadProgress">
-                <div class="drop-progress-bar" id="uploadBar"></div>
-                <span id="uploadLabel">Uploading…</span>
-              </div>
+              <span class="nebula-intake__badge">Analyze without booting</span>
+              <p class="caption" id="serverStoragePath">Server path: —</p>
+            </div>
+            <div class="drop-progress hidden" id="uploadProgress">
+              <div class="drop-progress-bar" id="uploadBar"></div>
+              <span id="uploadLabel">Uploading…</span>
             </div>
             <div class="intake-actions">
-              <button type="button" class="btn primary" id="ingestUploadBtn2">Upload Local</button>
-              <button type="button" class="btn glass" id="serverStorageUploadBtn2">Browse Server Images</button>
-              <button type="button" class="btn glass" id="importUrlBtn">Import URL</button>
-              <button type="button" class="btn glass" id="importS3Btn">Import S3</button>
-              <button type="button" class="btn glass" id="importNfsBtn">Import NFS</button>
-              <button type="button" class="btn glass" id="openClusterFleetBtn2">Import OVA / Cluster</button>
+              <button type="button" class="btn primary" id="nebulaUpload">Upload Disk</button>
+              <button type="button" class="btn secondary" id="nebulaBrowseVault">Browse Server Vault</button>
+              <button type="button" class="btn secondary" id="nebulaImportUrl">Import from URL</button>
             </div>
-            <div class="ingest-remote glass-inset">
-              <div class="ingest-remote-head row">
-                <div>
-                  <p><strong>Server disks</strong> — browse images already on the host, or upload directly to server storage.</p>
-                  <p class="ingest-remote-meta" id="serverStoragePath">—</p>
-                </div>
-                <div class="ingest-remote-actions">
-                  <select class="fleet-select" id="serverStorageRoot" aria-label="Storage location"></select>
-                  <button type="button" class="btn glass sm" id="serverStorageRefresh">Refresh</button>
-                  <button type="button" class="btn primary sm" id="serverStorageUploadBtn">Upload to server</button>
-                  <input type="file" id="serverFileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
-                </div>
+            <details class="intake-more">
+              <summary>More sources: S3, NFS, OVA, Cluster PVC</summary>
+              <div class="intake-more-actions">
+                <button type="button" class="btn secondary sm" id="importUrlBtn">Import URL</button>
+                <button type="button" class="btn secondary sm" id="importS3Btn">Import S3</button>
+                <button type="button" class="btn secondary sm" id="importNfsBtn">Import NFS</button>
+                <button type="button" class="btn secondary sm" id="openClusterFleetBtn2">OVA / Cluster</button>
+                <button type="button" class="btn secondary sm" id="ingestUploadBtn2">Upload Local</button>
+                <button type="button" class="btn secondary sm" id="serverStorageUploadBtn2">Browse Server</button>
               </div>
-              <nav class="storage-breadcrumb" id="serverStorageBreadcrumb" aria-label="Storage path"></nav>
-              <div class="storage-browser" id="serverStorageBrowser">
-                <p class="storage-browser-empty">Loading server disks…</p>
-              </div>
-            </div>
-            <div class="ingest-alt glass-inset">
-              <p><strong>Already on KubeVirt?</strong> Skip disk upload — browse running VMs and pull guest info from the cluster.</p>
-              <div class="ingest-alt-actions">
-                <button type="button" class="btn glass sm" id="ingestUploadBtn">Upload disk</button>
-                <button type="button" class="btn primary sm" id="openClusterFleetBtn">Browse cluster VMs</button>
-              </div>
-            </div>
-          </section>
+            </details>
+          </div>
 
-          <section class="panel glass-inset" id="panel-fleet" data-panel="assure">
+          <div class="source-segmented" role="tablist" aria-label="Import source">
+            <button type="button" class="source-segment active" data-source="local" role="tab">Local Upload</button>
+            <button type="button" class="source-segment" data-source="server" role="tab">Server Vault</button>
+            <button type="button" class="source-segment" data-source="url" role="tab">URL</button>
+            <button type="button" class="source-segment" data-source="s3" role="tab">S3</button>
+            <button type="button" class="source-segment" data-source="nfs" role="tab">NFS</button>
+            <button type="button" class="source-segment" data-source="ova" role="tab">OVA / Cluster</button>
+          </div>
+
+          <div class="source-panel active" data-source-panel="local" id="panel-ingest" data-panel="ingest">
+            <p class="body-text">Drag a disk here or choose a file. GuestKit analyzes locally before upload when possible.</p>
+            <button type="button" class="btn secondary sm" id="browseBtn">Choose file…</button>
+            <button type="button" class="btn secondary sm hidden" id="ingestUploadBtn">Upload disk</button>
+          </div>
+          <div class="source-panel" data-source-panel="server">
+            <div class="vault-toolbar">
+              <input type="search" class="vault-search" id="vaultSearch" placeholder="Search images…" spellcheck="false" />
+              <select id="vaultTypeFilter" aria-label="Type filter">
+                <option value="">Type: All</option>
+                <option value="folder">Folders</option>
+                <option value="qcow2">QCOW2</option>
+                <option value="vmdk">VMDK</option>
+                <option value="raw">RAW</option>
+                <option value="iso">ISO</option>
+                <option value="ova">OVA</option>
+              </select>
+              <select id="vaultSort" aria-label="Sort">
+                <option value="name">Sort: Name</option>
+                <option value="size">Sort: Size</option>
+                <option value="date">Sort: Newest</option>
+              </select>
+              <select id="serverStorageRoot" aria-label="Storage location"></select>
+              <button type="button" class="btn secondary sm" id="serverStorageRefresh">Refresh</button>
+              <button type="button" class="btn primary sm" id="serverStorageUploadBtn">Upload to server</button>
+              <input type="file" id="serverFileInput" accept=".qcow2,.vmdk,.raw,.ova,.img,.vpc,.vdi" hidden />
+            </div>
+            <nav class="storage-breadcrumb" id="serverStorageBreadcrumb" aria-label="Storage path"></nav>
+            <div id="serverStorageBrowser"><p class="body-text">Loading server disks…</p></div>
+          </div>
+          <div class="source-panel" data-source-panel="url"><p class="body-text">Import a disk image from a public or signed URL.</p><button type="button" class="btn primary sm" id="importUrlBtnAlt">Import URL…</button></div>
+          <div class="source-panel" data-source-panel="s3"><p class="body-text">Pull from S3-compatible storage.</p><button type="button" class="btn primary sm" id="importS3BtnAlt">Import S3…</button></div>
+          <div class="source-panel" data-source-panel="nfs"><p class="body-text">Import from NFS path on the API host.</p><button type="button" class="btn primary sm" id="importNfsBtnAlt">Import NFS…</button></div>
+          <div class="source-panel" data-source-panel="ova">
+            <p class="body-text">Browse KubeVirt cluster VMs or import OVA bundles.</p>
+            <button type="button" class="btn primary sm" id="openClusterFleetBtn">Browse cluster VMs</button>
+          </div>
+
+          <div class="pipeline-ribbon" id="pipelineRibbon" aria-label="Intelligence pipeline"></div>
+
+          <div class="nebula-card disk-preview" id="diskPreview">
+            <p class="brain-rec">Select a disk to see intelligence preview.</p>
+          </div>
+
+          <div class="wizard-bar hidden" id="wizardBar"><div class="wizard-steps" id="wizardSteps"></div><p class="wizard-subtitle" id="wizardSubtitle"></p></div>
+          <div class="panels" id="panels" data-wizard-step="ingest">
+          <section class="nebula-card" id="panel-fleet" data-panel="assure">
             <div class="panel-head row">
-              <div><h2>Image Vault</h2><p id="fleetSubtitle">Imported disks or live KubeVirt VMs.</p></div>
+              <div><h2 class="section-title">Server Image Vault</h2><p class="caption" id="fleetSubtitle">Imported disks and live cluster VMs.</p></div>
               <div class="fleet-head-actions">
                 <div class="fleet-tabs" role="tablist" aria-label="Fleet source">
                   <button type="button" class="fleet-tab active" data-fleet="disks" id="fleetTabDisks">Imported disks</button>
@@ -203,6 +227,17 @@
               </div>
               <span class="agent-status" id="agentStatus">agent idle</span>
             </div>
+            <div class="fleet-vault-summary carbon-glass" id="fleetVaultSummary">0 imported</div>
+            <div class="fleet-filter-chips" id="fleetFilterChips" role="group" aria-label="Disk filters">
+              <button type="button" class="filter-chip active" data-filter="">All</button>
+              <button type="button" class="filter-chip" data-filter="unscanned">Unscanned</button>
+              <button type="button" class="filter-chip" data-filter="bootable">Bootable</button>
+              <button type="button" class="filter-chip" data-filter="repair">Needs Repair</button>
+              <button type="button" class="filter-chip" data-filter="ready">Ready for KubeVirt</button>
+              <button type="button" class="filter-chip" data-filter="linux">Linux</button>
+              <button type="button" class="filter-chip" data-filter="windows">Windows</button>
+              <button type="button" class="filter-chip" data-filter="failed">Failed</button>
+            </div>
             <div class="fleet-vault-toolbar">
               <input type="search" class="fleet-search" id="fleetDiskSearch" placeholder="Search disks… (/)" spellcheck="false" />
               <select class="fleet-select" id="fleetDiskSort" aria-label="Sort disks">
@@ -211,60 +246,43 @@
                 <option value="size">Size</option>
                 <option value="score">Boot score</option>
               </select>
+              <select class="fleet-select" id="fleetSavedView" aria-label="Saved view">
+                <option value="">Saved views</option>
+                <option value="all">All imported</option>
+                <option value="repair">Needs repair</option>
+                <option value="ready">Ready to launch</option>
+              </select>
+              <button type="button" class="btn sm ghost" id="fleetViewCard" title="Card view">Cards</button>
+              <button type="button" class="btn sm ghost" id="fleetViewTable" title="Table view">Table</button>
               <button type="button" class="btn sm glass" id="fleetAiOverviewBtn">AI fleet scan</button>
               <button type="button" class="btn sm primary" id="fullMigrationBtn">Full migration</button>
             </div>
-            <div class="selected-command-bar hidden" id="selectedCommandBar" aria-label="Selected disk actions">
-              <div class="selected-command-bar__meta">
-                <span class="selected-command-bar__name" id="commandBarName">—</span>
-                <span class="selected-command-bar__score mono" id="commandBarScore">—</span>
-                <span class="selected-command-bar__risk hidden" id="commandBarRisk"></span>
-              </div>
-              <div class="selected-command-bar__actions">
-                <button type="button" class="btn sm accent" data-cmd="inspect" id="cmdBarInspect">Inspect</button>
-                <button type="button" class="btn sm primary" data-cmd="doctor" id="cmdBarDoctor">Doctor</button>
-                <button type="button" class="btn sm glass" data-cmd="launch" id="cmdBarLaunch">Launch</button>
-                <button type="button" class="btn sm ghost" data-cmd="repair" id="cmdBarRepair" title="Repair plan">Repair</button>
-                <button type="button" class="btn sm ghost" data-cmd="migrate" id="cmdBarMigrate" title="Migration plan">Plan</button>
-                <button type="button" class="btn sm ghost" id="cmdBarClear" title="Clear selection (Esc)">×</button>
-              </div>
-            </div>
-            <div class="disk-inspector hidden" id="diskInspector" aria-label="Disk intelligence">
-              <div class="disk-inspector__head">
-                <div class="disk-inspector__rings">
-                  <div class="readiness-ring" id="diskInspectorRing" data-score="0">
-                    <svg viewBox="0 0 36 36" class="readiness-ring__svg" aria-hidden="true">
-                      <circle class="readiness-ring__track" cx="18" cy="18" r="15.5" />
-                      <circle class="readiness-ring__fill" cx="18" cy="18" r="15.5" />
-                    </svg>
-                    <span class="readiness-ring__value" id="diskInspectorScore">—</span>
-                  </div>
-                  <div class="disk-inspector__title-block">
-                    <h3 id="diskInspectorTitle">Select a disk</h3>
-                    <p class="disk-inspector__meta mono" id="diskInspectorMeta">—</p>
-                  </div>
-                </div>
-                <button type="button" class="btn sm ghost" id="diskInspectorClose" aria-label="Close inspector">×</button>
-              </div>
-              <div class="disk-inspector__flight" id="diskInspectorFlight"></div>
-              <div class="disk-inspector__actions" id="diskInspectorActions"></div>
-              <div class="disk-inspector__dna" id="diskInspectorDna"></div>
+            <div class="fleet-batch-bar hidden" id="fleetBatchBar">
+              <span id="fleetBatchCount">0 selected</span>
+              <button type="button" class="btn sm glass" id="batchScanBtn">Scan selected</button>
+              <button type="button" class="btn sm accent" id="batchDoctorBtn">Doctor selected</button>
+              <button type="button" class="btn sm glass" id="batchExportBtn">Export report</button>
+              <button type="button" class="btn sm danger" id="batchDeleteBtn">Delete</button>
             </div>
             <div class="fleet-layout">
+              <table class="fleet-table hidden" id="fleetTable">
+                <thead><tr><th><input type="checkbox" id="fleetSelectAll" /></th><th>Name</th><th>OS</th><th>Format</th><th>Size</th><th>Boot</th><th>KV</th><th>Risk</th><th>Last scan</th><th></th></tr></thead>
+                <tbody id="fleetTableBody"></tbody>
+              </table>
               <div class="fleet-grid" id="fleetGrid">
-              <div class="fleet-empty" id="fleetEmpty">
-                <p id="fleetEmptyText">No disks yet.</p>
-                <div class="fleet-toolbar" style="justify-content:center;margin-top:0.75rem;">
-                  <button type="button" class="btn primary sm hidden" id="fleetEmptyImport">Upload disk</button>
-                  <button type="button" class="btn primary sm hidden" id="fleetEmptyBrowseCluster">Browse cluster VMs</button>
-                  <button type="button" class="btn glass sm hidden" id="fleetEmptyRefresh">Refresh cluster</button>
+                <div class="fleet-empty" id="fleetEmpty">
+                  <p id="fleetEmptyText">No disks yet.</p>
+                  <div class="fleet-toolbar" style="justify-content:center;margin-top:0.75rem;">
+                    <button type="button" class="btn primary sm hidden" id="fleetEmptyImport">Upload disk</button>
+                    <button type="button" class="btn primary sm hidden" id="fleetEmptyBrowseCluster">Browse cluster VMs</button>
+                    <button type="button" class="btn secondary sm hidden" id="fleetEmptyRefresh">Refresh cluster</button>
+                  </div>
                 </div>
-              </div>
               </div>
               <aside class="cluster-detail-drawer hidden" id="clusterDetailDrawer" aria-label="Cluster VM details">
                 <div class="drawer-head">
                   <h3 id="clusterDrawerTitle">VM details</h3>
-                  <button type="button" class="btn glass sm" id="clusterDrawerClose" aria-label="Close details">×</button>
+                  <button type="button" class="btn secondary sm" id="clusterDrawerClose" aria-label="Close details">×</button>
                 </div>
                 <dl class="drawer-meta" id="clusterDrawerMeta"></dl>
                 <div class="drawer-links" id="clusterDrawerLinks"></div>
@@ -272,328 +290,89 @@
             </div>
           </section>
 
-          <section class="panel glass-inset hidden" id="panel-compare" data-panel="assure">
-            <div class="panel-head row">
-              <div>
-                <h2>Compare split view</h2>
-                <p id="compareSplitSubtitle">Side-by-side disk intelligence before and after.</p>
-              </div>
-              <button type="button" class="btn glass sm" id="compareSplitClose">Dismiss</button>
-            </div>
-            <div class="compare-split" id="compareSplitView"></div>
-            <div id="compareWorkbenchResults"></div>
-            <div class="brain-section hidden" id="compareAiNarrative"></div>
-          </section>
-
-          <section class="panel glass-inset hidden" id="panel-actions" data-panel="assure plan">
-            <details class="panel-advanced" id="panelAdvanced">
-              <summary class="panel-advanced__toggle">Advanced actions</summary>
-            <div class="panel-head">
-              <h2 id="selectedVmTitle">Select a VM</h2>
-              <p id="selectedVmMeta">Choose a fleet card to unlock actions.</p>
-            </div>
-            <p class="guest-exec-warning hidden" id="guestExecWarning" role="status"></p>
-            <div class="agent-proxy-row hidden" id="agentProxyRow">
-              <label for="agentProxyUrl">Agent proxy URL</label>
-              <input type="url" id="agentProxyUrl" placeholder="http://127.0.0.1:8765" spellcheck="false" />
-              <button type="button" class="btn glass sm" id="agentPingBtn">Ping agent</button>
-            </div>
-            <div class="action-deck" id="actionDeck">
-              <button type="button" class="action-card glass" data-action="inspect" disabled>
-                <strong>Inspect</strong><span>OS & services</span>
-              </button>
-              <button type="button" class="action-card glass accent" data-action="doctor" disabled>
-                <strong>Doctor</strong><span>Boot score</span>
-              </button>
-              <button type="button" class="action-card glass" data-action="migration-plan" disabled>
-                <strong>Migrate</strong><span>Plan & drivers</span>
-              </button>
-              <button type="button" class="action-card glass" data-action="repair-plan" disabled>
-                <strong>Repair</strong><span>Dry-run fixes</span>
-              </button>
-              <button type="button" class="action-card glass launch" data-action="provision" disabled>
-                <strong>Provision</strong><span>KubeVirt YAML</span>
-              </button>
-            </div>
-            <div class="action-deck cluster-deck hidden" id="clusterDeck">
-              <button type="button" class="action-card glass accent" data-cluster-action="guest-info">
-                <strong>Guest info</strong><span>Agent status & OS</span>
-              </button>
-              <button type="button" class="action-card glass accent" data-cluster-action="guestkit-inspect">
-                <strong>GuestKit inspect</strong><span>Offline OS & packages</span>
-              </button>
-              <button type="button" class="action-card glass" data-cluster-action="boot-inspect">
-                <strong>Boot inspect</strong><span>Offline boot hints</span>
-              </button>
-              <button type="button" class="action-card glass accent hidden" id="clusterInstallAgentBtn" data-cluster-action="install-agent" disabled>
-                <strong>Install VM Tools</strong><span>Zeus guest agent</span>
-              </button>
-              <button type="button" class="action-card glass" data-cluster-action="install-iso">
-                <strong>Attach ISO</strong><span>CD-ROM VM Tools install</span>
-              </button>
-              <button type="button" class="action-card glass" data-cluster-action="vmtools-diagnostics">
-                <strong>Diagnostics</strong><span>Agent health check</span>
-              </button>
-              <button type="button" class="action-card glass" data-cluster-action="zeus-vm">
-                <strong>Open in Zeus</strong><span>Console & Guest Tools</span>
-              </button>
-              <button type="button" class="action-card glass" data-cluster-action="export-disk">
-                <strong>Export root disk</strong><span>Offline Doctor & YAML</span>
-              </button>
-            </div>
-            <div class="action-deck cluster-lifecycle hidden" id="clusterLifecycle">
-              <button type="button" class="action-card glass accent" id="clusterStartBtn" data-cluster-action="start">
-                <strong>Start</strong><span>Boot VM</span>
-              </button>
-              <button type="button" class="action-card glass" id="clusterStopBtn" data-cluster-action="stop">
-                <strong>Stop</strong><span>Power off</span>
-              </button>
-              <button type="button" class="action-card glass" id="clusterRestartBtn" data-cluster-action="restart">
-                <strong>Restart</strong><span>KubeVirt restart</span>
-              </button>
-            </div>
-            <div class="action-deck cluster-vmtools hidden" id="clusterVmtoolsLifecycle">
-              <button type="button" class="action-card glass" id="clusterQuiesceBtn" data-cluster-action="vmtools-quiesce">
-                <strong>Quiesce</strong><span>Freeze FS for snapshot</span>
-              </button>
-              <button type="button" class="action-card glass" id="clusterUnquiesceBtn" data-cluster-action="vmtools-unquiesce">
-                <strong>Unquiesce</strong><span>Thaw filesystem</span>
-              </button>
-              <button type="button" class="action-card glass accent" id="clusterGuestRebootBtn" data-cluster-action="vmtools-reboot">
-                <strong>Guest reboot</strong><span>Soft reboot via agent</span>
-              </button>
-              <button type="button" class="action-card glass" id="clusterGuestShutdownBtn" data-cluster-action="vmtools-shutdown">
-                <strong>Guest shutdown</strong><span>Graceful ACPI stop</span>
-              </button>
-            </div>
-            <div class="action-deck agent-deck hidden" id="agentDeck">
-              <button type="button" class="action-card glass" data-agent-action="evidence" disabled>
-                <strong>Live inspect</strong><span>Agent evidence</span>
-              </button>
-              <button type="button" class="action-card glass accent" data-agent-action="doctor" disabled>
-                <strong>Live doctor</strong><span>Boot score (running VM)</span>
-              </button>
-              <button type="button" class="action-card glass" data-agent-action="capabilities" disabled>
-                <strong>Capabilities</strong><span>Agent methods</span>
-              </button>
-              <button type="button" class="action-card glass" data-agent-action="metrics" disabled>
-                <strong>Metrics</strong><span>Live host stats</span>
-              </button>
-            </div>
-            </details>
-          </section>
-
-          <section class="panel glass-inset wide evidence-console" id="panel-results" data-panel="assure plan launch">
-            <div class="panel-head row">
-              <div><h2>Live Evidence Console</h2><p>Timeline, risks, logs, and manifests.</p></div>
-              <div class="output-head-actions">
-                <button type="button" class="btn glass sm hidden" id="applyYamlBtn">Apply to cluster</button>
-                <button type="button" class="btn glass sm hidden" id="copyYamlBtn">Copy YAML</button>
-              </div>
-            </div>
-            <div class="results-layout">
-              <div class="score-ring-wrap glass hidden" id="scorePanel">
-                <svg class="score-ring" viewBox="0 0 120 120">
-                  <circle class="ring-bg" cx="60" cy="60" r="52" />
-                  <circle class="ring-fg" id="scoreRing" cx="60" cy="60" r="52" />
-                </svg>
-                <div class="score-center">
-                  <span class="score-value" id="scoreValue">—</span>
-                  <span class="score-label">boot</span>
-                </div>
-              </div>
-              <div class="output-pane glass">
-                <div class="output-tabs">
-                  <button type="button" class="tab active" data-tab="summary">Summary</button>
-                  <button type="button" class="tab" data-tab="timeline" id="timelineTab">Timeline</button>
-                  <button type="button" class="tab" data-tab="risk" id="riskTab">Risk</button>
-                  <button type="button" class="tab" data-tab="logs" id="logsTab">Logs</button>
-                  <button type="button" class="tab hidden" data-tab="copilot" id="copilotTab">Copilot</button>
-                  <button type="button" class="tab hidden" data-tab="agent" id="agentTab">Agent</button>
-                  <button type="button" class="tab" data-tab="raw">JSON</button>
-                  <button type="button" class="tab hidden" data-tab="yaml" id="yamlTab">YAML</button>
-                </div>
-                <div class="output-body">
-                  <div class="tab-pane active" id="pane-summary">
-                    <div class="evidence-empty" id="summaryEmpty">
-                      <p class="placeholder" id="summaryPlaceholder">Run an action to see results.</p>
-                      <button type="button" class="btn sm primary evidence-cta" id="summaryEmptyCta" data-action="doctor">Run Doctor</button>
-                    </div>
-                    <div id="summaryContent" class="summary-content hidden"></div>
-                    <div id="checksHeatmap" class="checks-heatmap hidden"></div>
-                  </div>
-                  <div class="tab-pane" id="pane-timeline">
-                    <div class="evidence-empty" id="timelineEmpty">
-                      <p class="placeholder">No mission events yet.</p>
-                      <button type="button" class="btn sm accent evidence-cta" data-action="inspect">Run Inspect</button>
-                    </div>
-                    <ul class="evidence-timeline" id="evidenceTimeline"></ul>
-                  </div>
-                  <div class="tab-pane" id="pane-risk">
-                    <div class="evidence-empty" id="riskEmpty">
-                      <p class="placeholder">Boot risks appear after Doctor.</p>
-                      <button type="button" class="btn sm primary evidence-cta" data-action="doctor">Run Doctor</button>
-                    </div>
-                    <div id="riskContent" class="risk-content hidden"></div>
-                  </div>
-                  <div class="tab-pane" id="pane-logs">
-                    <div class="evidence-empty" id="logsEmpty">
-                      <p class="placeholder">Job logs appear when a scan runs.</p>
-                      <button type="button" class="btn sm glass evidence-cta" data-action="inspect">Start Inspect</button>
-                    </div>
-                    <pre class="evidence-logs mono" id="evidenceLogs"></pre>
-                  </div>
-                  <div class="tab-pane" id="pane-agent">
-                    <p class="placeholder" id="agentPlaceholder">Switch to Online agent mode, ping the proxy, then inspect or talk to the in-guest agent.</p>
-                    <div class="agent-chat" id="agentChat"></div>
-                    <div class="agent-chips" id="agentChips"></div>
-                    <form class="copilot-input-row" id="agentForm">
-                      <input type="text" id="agentInput" placeholder="RPC method e.g. guestkit.exec or a question…" autocomplete="off" />
-                      <button type="submit" class="btn primary sm">Send</button>
-                    </form>
-                  </div>
-                  <div class="tab-pane" id="pane-copilot">
-                    <div class="copilot-brief glass-inset hidden" id="copilotBrief"></div>
-                    <p class="placeholder" id="copilotPlaceholder">Run Doctor with explain to unlock Migration Copilot.</p>
-                    <div class="copilot-chips" id="copilotChips"></div>
-                    <div class="copilot-chat" id="copilotChat"></div>
-                    <form class="copilot-input-row" id="copilotForm">
-                      <input type="text" id="copilotInput" placeholder="Ask about blockers, fixes, readiness…" autocomplete="off" />
-                      <button type="submit" class="btn primary sm">Ask</button>
-                    </form>
-                  </div>
-                  <pre class="tab-pane code" id="pane-raw"><code id="rawJson">{}</code></pre>
-                  <pre class="tab-pane code hidden" id="pane-yaml"><code id="yamlContent"></code></pre>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div class="copilot-banner glass-inset hidden" id="copilotBanner">
-          <span class="copilot-banner-icon" aria-hidden="true">✦</span>
-          <div class="copilot-banner-text">
-            <strong id="copilotBannerTitle">Copilot insight</strong>
-            <p id="copilotBannerMsg"></p>
+          <div class="legacy-hidden wizard-footer" id="wizardFooter">
+            <button type="button" id="wizardBackBtn"></button>
+            <button type="button" id="wizardActionBtn"></button>
+            <button type="button" id="wizardChainBtn"></button>
+            <button type="button" id="wizardContinueBtn"></button>
           </div>
-          <button type="button" class="btn glass sm" id="copilotBannerAction">Next step</button>
-        </div>
+          <div class="legacy-hidden" id="copilotBanner"><span id="copilotBannerTitle"></span><p id="copilotBannerMsg"></p><button id="copilotBannerAction"></button></div>
 
-        <div class="wizard-footer glass-inset" id="wizardFooter">
-          <button type="button" class="btn glass sm" id="wizardBackBtn" disabled>Back</button>
-          <div class="wizard-footer-actions">
-            <button type="button" class="btn glass sm hidden" id="wizardActionBtn">Run Doctor</button>
-            <button type="button" class="btn glass sm accent hidden" id="wizardChainBtn">Full migration</button>
-            <button type="button" class="btn primary sm" id="wizardContinueBtn">Continue</button>
+          <div class="legacy-hidden">
+            <div id="missionRail"><nav id="missionRailNav"></nav><div id="missionProgress"></div></div>
+            <div id="stickyMiniHeader"><span id="stickyDiskName"></span><span id="stickyRisk"></span></div>
+            <section id="panelHero"><div id="heroTitle"></div><div id="heroMeta"></div><div id="heroPath"></div><div id="heroSummary"></div><div id="heroJourneyStrip"></div><div id="heroNextAction"></div><div id="heroConfidenceRings"></div><div id="heroReadinessRing"></div></section>
+            <div id="diskInspector"><div id="diskInspectorRing"></div><h3 id="diskInspectorTitle"></h3><p id="diskInspectorMeta"></p><div id="diskInspectorFlight"></div><div id="diskInspectorActions"></div><div id="diskInspectorDna"></div><button id="diskInspectorClose"></button></div>
+            <div id="selectedCommandBar"><span id="commandBarName"></span><span id="commandBarScore"></span><span id="commandBarRisk"></span><button id="cmdBarInspect"></button><button id="cmdBarDoctor"></button><button id="cmdBarLaunch"></button><button id="cmdBarYaml"></button><button id="cmdBarRepair"></button><button id="cmdBarMigrate"></button><button id="cmdBarClear"></button></div>
+            <section id="panel-dna"><div id="panelDnaContent"></div></section>
+            <section id="panel-boot-doctor"><div id="panelBootDoctorContent"></div></section>
+            <section id="panel-repair-bay"><div id="panelRepairBayContent"></div></section>
+            <section id="panel-kubevirt-forge"><div id="panelForgeContent"></div></section>
+            <section id="panel-results"><div id="findingsContent"></div><div id="findingsEmpty"></div><div id="diffContent"></div><div id="diffEmpty"></div><div id="evidenceTimeline"></div><div id="timelineEmpty"></div><div id="riskContent"></div><div id="riskEmpty"></div><div id="evidenceLogs"></div><div id="logsEmpty"></div><pre id="rawJson"></pre><div id="yamlContent"></div><button id="copyDebugBundleBtn"></button><button id="copyYamlBtn"></button><button id="applyYamlBtn"></button></section>
+            <section id="panel-actions"><h2 id="selectedVmTitle"></h2><p id="selectedVmMeta"></p><div id="actionDeck"></div><div id="clusterDeck"></div></section>
+            <div id="brainFleetSummary"></div><div id="brainContextMode"></div><p id="brainConfidenceLabel"></p><div id="brainDna"></div><div id="brainConfidence"></div><div id="brainRecs"></div><div id="brainPrimaryActions"><button id="brainQuickRepair"></button><button id="quickScanBtn"></button><button id="brainQuickYaml"></button></div>
+            <details id="brainOverflow"><button id="applyYamlBrainBtn"></button><button id="brainQuickExplain"></button><button id="brainQuickPlan"></button><button id="brainCompareBtn"></button><button id="brainExportReport"></button><button id="copyDiskIdBtn"></button><button id="copyJsonBtn"></button><button id="exportTimelineBtn"></button><button id="openZeusBtn"></button><button id="deleteDiskBtn"></button><button id="cleanupShadowsBtn"></button></details>
+            <div id="brainAiDeck"></div><div id="brainAiNarrative"></div><div id="brainPromptChips"></div><div id="brainAskChat"></div><form id="brainAskForm"><input id="brainAskInput" /><button type="submit"></button></form>
+            <div id="brainJobHistory"></div><ul id="brainTimeline"></ul><div id="brainChecks"></div><div id="jobTracker"><span id="jobOp"></span><span id="jobStatus"></span><div id="jobBar"></div><p id="jobIdDisplay"></p><button id="jobRetryBtn"></button><span id="jobBadge"></span></div>
           </div>
-        </div>
-      </div>
+
+          </div><!-- /.panels -->
+          </div><!-- /.workspace-main -->
+
+          <aside class="nebula-brain nebula-brain--side" id="brainPanel" aria-label="GuestKit Brain">
+            <div id="brainPanelContent"></div>
+          </aside>
+        </div><!-- /.workspace-grid -->
     </main>
+  </div><!-- /.nebula-body -->
 
-    <aside class="ironwolf-inspector guestkit-brain brain-drawer" id="brainDrawer" aria-label="GuestKit Brain">
-      <div class="brain-drawer__overlay hidden" id="brainDrawerOverlay"></div>
-      <div class="brain-drawer__panel">
-      <div class="brain-header">
-        <span class="brain-header__icon">🧠</span>
-        <h2 class="brain-header__title">GuestKit Brain</h2>
-        <span class="badge live" id="jobBadge">idle</span>
-        <button type="button" class="btn sm ghost brain-drawer__close" id="brainDrawerClose" aria-label="Close Brain">×</button>
+  <div class="nebula-brain-drawer" id="nebulaBrainDrawer">
+    <div class="nebula-brain-drawer__overlay"></div>
+    <div class="nebula-brain-drawer__panel">
+      <button type="button" class="btn ghost sm" id="brainDrawerClose" style="float:right;">×</button>
+      <div id="brainDrawerContent"></div>
+    </div>
+  </div>
+
+  <aside class="legacy-hidden" id="brainDrawer"></aside>
+  <aside class="cluster-readiness-drawer hidden" id="clusterReadinessDrawer" aria-label="Cluster readiness">
+    <div class="drawer-head"><h3>Cluster Readiness</h3><button type="button" class="btn ghost sm" id="clusterReadinessClose">×</button></div>
+    <div id="clusterReadinessBody"></div>
+  </aside>
+
+  <div class="guestkit-modal-backdrop hidden" id="launchMonitorModal">
+    <div class="guestkit-modal launch-monitor">
+      <h2>Launch Monitor</h2>
+      <div id="launchMonitorBody"></div>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="launchMonitorClose">Close</button>
+        <button type="button" class="btn primary" id="launchMonitorConsole">Open Console</button>
       </div>
-      <div class="brain-section" id="brainFleetSummarySection">
-        <div id="brainFleetSummary" class="brain-fleet-summary hidden"></div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="sessionRestoreModal">
+    <div class="guestkit-modal">
+      <h2>Continue where you left off?</h2>
+      <p id="sessionRestoreText">—</p>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="sessionRestoreFresh">Start fresh</button>
+        <button type="button" class="btn primary" id="sessionRestoreResume">Resume</button>
       </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title">Disk DNA</h3>
-        <div id="brainDna"><p class="brain-rec">Select a disk to view fingerprint.</p></div>
+    </div>
+  </div>
+
+  <div class="guestkit-modal-backdrop hidden" id="fleetScanModal">
+    <div class="guestkit-modal">
+      <h2>Fleet Scan</h2>
+      <p id="fleetScanStatus">Queued…</p>
+      <ul class="fleet-scan-stages" id="fleetScanStages">
+        <li>Import check</li><li>Partition scan</li><li>OS detection</li><li>Bootloader scan</li><li>Driver scan</li><li>KubeVirt readiness</li>
+      </ul>
+      <div class="guestkit-modal__actions">
+        <button type="button" class="btn glass" id="fleetScanClose">Close</button>
       </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title cyan">Boot Confidence</h3>
-        <div id="brainConfidence"><p class="brain-rec">Run Doctor for boot score.</p></div>
-      </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title purple">AI Recommendations</h3>
-        <div id="brainRecs"><p class="brain-rec">Copilot insights appear after Doctor.</p></div>
-      </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title">Quick Actions</h3>
-        <div class="brain-primary-actions" id="brainPrimaryActions">
-          <button type="button" class="btn sm primary" id="brainQuickRepair">Auto Repair</button>
-          <button type="button" class="btn sm accent" id="quickScanBtn">Quick scan</button>
-          <button type="button" class="btn sm glass" id="brainQuickYaml">Generate VM YAML</button>
-        </div>
-        <details class="brain-overflow" id="brainOverflow">
-          <summary class="btn sm ghost brain-overflow__toggle">More actions</summary>
-          <div class="brain-actions brain-actions--overflow">
-          <button type="button" class="btn sm glass" id="applyYamlBrainBtn">Apply YAML</button>
-          <button type="button" class="btn sm accent" id="brainQuickExplain">Explain Risk</button>
-          <button type="button" class="btn sm glass" id="brainQuickPlan">Create Migration Plan</button>
-          <button type="button" class="btn sm glass" id="brainCompareBtn">Compare Mode</button>
-          <button type="button" class="btn sm glass" id="brainExportReport">Export Readiness Report</button>
-          <button type="button" class="btn sm glass" id="copyDiskIdBtn">Copy disk ID</button>
-          <button type="button" class="btn sm glass" id="copyJsonBtn">Copy JSON</button>
-          <button type="button" class="btn sm glass" id="exportTimelineBtn">Export timeline</button>
-          <button type="button" class="btn sm glass" id="openZeusBtn">Open Zeus</button>
-          <button type="button" class="btn sm glass" id="deleteDiskBtn">Remove disk</button>
-          <button type="button" class="btn sm glass" id="cleanupShadowsBtn">Clean shadow rows</button>
-          </div>
-        </details>
-      </div>
-      <div class="brain-section brain-prefs">
-        <label><input type="checkbox" id="prefsNotifications" /> Job notifications</label>
-        <label><input type="checkbox" id="prefsAutoRefresh" checked /> Auto-refresh fleet (60s)</label>
-        <label><input type="checkbox" id="prefsAutoExplain" /> Auto-summarize after Doctor</label>
-      </div>
-      <div class="brain-section hidden" id="brainAiNarrative"></div>
-      <div class="brain-section">
-        <h3 class="brain-section__title purple">AI Briefing Deck</h3>
-        <div class="brain-ai-toolbar">
-          <button type="button" class="btn sm glass" id="brainAiRefresh">Refresh briefing</button>
-          <button type="button" class="btn sm accent" id="brainAiLaunchAdvice">Launch advice</button>
-          <button type="button" class="btn sm glass" id="brainAiFleetBtn">Fleet AI overview</button>
-          <button type="button" class="btn sm glass" id="brainAiCommandBtn">⌘K Ask anything</button>
-        </div>
-        <div id="brainAiDeck"><p class="brain-rec">Run Doctor with explain to populate AI deck.</p></div>
-      </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title purple">Ask GuestKit</h3>
-        <div class="brain-prompt-chips" id="brainPromptChips"></div>
-        <div class="brain-ai-chat-toolbar">
-          <button type="button" class="btn sm glass" id="brainAiExportChat">Export chat</button>
-          <button type="button" class="btn sm glass" id="brainAiClearChat">Clear</button>
-        </div>
-        <div id="brainAskChat" class="brain-ask-chat"></div>
-        <div class="brain-followups" id="brainFollowUpChips"></div>
-        <form class="brain-ask-input" id="brainAskForm">
-          <input type="text" id="brainAskInput" placeholder="Ask about boot risks, migration… (A to focus)" autocomplete="off" />
-          <button type="submit" class="btn sm primary">Ask</button>
-        </form>
-      </div>
-      <div class="brain-section hidden" id="brainChecks"></div>
-      <div class="brain-section">
-        <h3 class="brain-section__title">Job history</h3>
-        <div id="brainJobHistory"><p class="brain-rec">Select a disk to view jobs.</p></div>
-      </div>
-      <div class="brain-section">
-        <h3 class="brain-section__title">Mission Timeline</h3>
-        <ul class="brain-timeline" id="brainTimeline"><li>Mission events appear here.</li></ul>
-      </div>
-      <div class="brain-section hidden" id="brainJobTracker"></div>
-      <div class="job-tracker glass-inset hidden" id="jobTracker">
-        <div class="job-meta">
-          <span class="job-op" id="jobOp">—</span>
-          <span class="job-status" id="jobStatus">pending</span>
-        </div>
-        <div class="job-bar"><div class="job-bar-fill" id="jobBar"></div></div>
-        <p class="job-id mono" id="jobIdDisplay"></p>
-        <button type="button" class="btn glass sm hidden" id="jobRetryBtn">Retry</button>
-      </div>
-      <div class="copilot-mini glass-inset hidden" id="copilotMini" style="display:none;">
-        <p class="copilot-mini-headline" id="copilotMiniHeadline">—</p>
-        <span class="readiness-pill" id="copilotReadiness">—</span>
-      </div>
-      <ul class="activity-feed hidden" id="activityFeed" style="display:none;"></ul>
-      </div>
-    </aside>
+    </div>
   </div>
 
   <div class="dock-controls dock-controls--cinema hidden" id="dockControls" aria-hidden="true">
@@ -861,10 +640,12 @@
 
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
   </div>
-  <script src="guestkit-auth.js?v=20260613auth"></script>
-  <script src="guestkit-console.js?v=20260614dock"></script>
-  <script src="guestkit-ai.js?v=20260612iw3"></script>
-  <script src="guestkit-features.js?v=20260612iw3"></script>
-  <script src="app.js?v=20260612iw3"></script>
+  <script src="guestkit-auth.js?v=20260616nebula2"></script>
+  <script src="guestkit-journey.js?v=20260616nebula2"></script>
+  <script src="guestkit-nebula.js?v=20260616nebula2"></script>
+  <script src="guestkit-console.js?v=20260616nebula2"></script>
+  <script src="guestkit-ai.js?v=20260616nebula2"></script>
+  <script src="guestkit-features.js?v=20260616nebula2"></script>
+  <script src="app.js?v=20260616nebula2"></script>
 </body>
 </html>

@@ -197,8 +197,12 @@ function feed(msg, type = '') {
 function setHealth(ok) {
   const dot = $('#healthDot');
   const label = $('#healthLabel');
+  const stripLabel = $('#healthLabelStrip');
+  const stripDot = $('#statusDotApi');
   dot.className = 'pulse-dot ' + (ok ? 'ok' : 'err');
   label.textContent = ok ? 'API online' : 'API offline';
+  if (stripLabel) stripLabel.textContent = ok ? 'online' : 'offline';
+  if (stripDot) stripDot.className = 'status-dot ' + (ok ? 'ok' : 'err');
 }
 
 async function checkHealth() {
@@ -217,6 +221,9 @@ function getVmCache(vmId) {
 function updateVmCache(vmId, patch) {
   state.vmCache[vmId] = { ...getVmCache(vmId), ...patch };
   renderFleet();
+  if (state.selectedVm?.id === vmId) {
+    window.GuestKitNebula?.renderAllNebula?.(state.selectedVm, state.vmCache[vmId]);
+  }
 }
 
 function vmStatusLabel(cache, vm) {
@@ -389,6 +396,11 @@ async function browseServerStorage(path = '', rootId = state.serverStorage.rootI
 }
 
 function renderServerStorageBrowser(result) {
+  if (window.state?.serverStorage) window.state.serverStorage.lastResult = result;
+  if (window.GuestKitNebula?.renderServerVaultBrowser) {
+    window.GuestKitNebula.renderServerVaultBrowser(result);
+    return;
+  }
   const browser = $('#serverStorageBrowser');
   const crumb = $('#serverStorageBreadcrumb');
   if (!browser || !result) return;
@@ -2089,6 +2101,7 @@ function selectVm(vm) {
   updateCopilotPlaceholder();
   window.GuestKitConsole?.onSelectVmConsole?.();
   window.GuestKitFeatures?.loadJobHistory?.(vm.id);
+  window.GuestKitNebula?.renderAllNebula?.(vm, cache);
   feed(`Selected <strong>${escapeHtml(vm.name)}</strong>${smoke ? ' (smoke — not bootable)' : ''}`, smoke ? 'err' : '');
 }
 
@@ -2793,6 +2806,8 @@ function setActiveTab(name) {
     summary: '#pane-summary',
     timeline: '#pane-timeline',
     risk: '#pane-risk',
+    findings: '#pane-findings',
+    diff: '#pane-diff',
     logs: '#pane-logs',
     copilot: '#pane-copilot',
     agent: '#pane-agent',
@@ -2838,6 +2853,9 @@ function onJobComplete(action, data) {
     markWizardComplete('plan');
     if (!state.wizardChain) setWizardStep('launch');
   } else if (action === 'repair-plan') {
+    patch.repairPlan = payload;
+    if (payload?.before_score != null) patch.bootScore = payload.before_score;
+    if (payload?.after_score != null) patch.bootScore = payload.after_score;
     patch.status = payload?.before_score != null ? 'analyzed' : patch.status;
   } else if (action === 'convert') {
     patch.lastOp = 'convert';
@@ -2855,7 +2873,7 @@ function onJobComplete(action, data) {
     feed('Migration <strong>Copilot</strong> briefing ready', 'ok');
   } else if (action === 'doctor') {
     const hasRisks = blockers.length || (patch.checks || []).some((c) => !c.passed);
-    setActiveTab(hasRisks ? 'risk' : 'summary');
+    setActiveTab(hasRisks ? 'findings' : 'summary');
   } else if (action === 'inspect') {
     setActiveTab('summary');
   } else if (action === 'repair-plan' || action === 'migration-plan' || action === 'provision') {
@@ -2865,6 +2883,8 @@ function onJobComplete(action, data) {
   window.GuestKitConsole?.onJobCompleteConsole?.(action, vm.id);
   window.GuestKitConsole?.renderBrainPanel?.();
   window.GuestKitConsole?.renderEvidenceConsole?.(vm, getVmCache(vm.id));
+  window.GuestKitNebula?.renderAllNebula?.(vm, getVmCache(vm.id));
+  if (action === 'provision') window.GuestKitConsole?.showLaunchMonitor?.();
 }
 
 function pollJob(jobId, action) {
@@ -3626,6 +3646,7 @@ async function init() {
   setupGlassToggle();
   window.GuestKitConsole?.initGuestKitConsole?.();
   window.GuestKitFeatures?.initGuestKitFeatures?.();
+  window.GuestKitNebula?.initGuestKitNebula?.();
   setupWizard();
   setupInspectionMode();
   setupCopilot();
