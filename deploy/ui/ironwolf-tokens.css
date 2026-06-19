@@ -42,10 +42,21 @@ html[data-theme="ironwolf"] {
   --accent-steel-muted: rgba(148, 163, 184, 0.12);
 
   --primary: hsl(199, 89%, 48%);
-  --iw-menubar-h: 56px;
+  --iw-menubar-h: 52px;
   --iw-sidebar-w: 260px;
   --iw-inspector-w: 320px;
   --iw-dock-offset: 0px;
+  --cb-safe-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  --cb-space-1: 4px;
+  --cb-space-2: 8px;
+  --cb-space-3: 12px;
+  --cb-space-4: 16px;
+  --cb-space-5: 20px;
+  --cb-space-6: 24px;
+  --cb-title: 1.35rem;
+  --cb-section: 0.95rem;
+  --cb-body: 0.8125rem;
+  --cb-meta: 0.68rem;
 
   /* Command Bay palette */
   --cb-bg: #080b10;

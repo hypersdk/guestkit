@@ -1,0 +1,70 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/inter-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-latin.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: dark;
+
+  --bg-root: #05070d;
+  --bg-shell: #080c14;
+  --bg-panel: rgba(13, 18, 30, 0.82);
+  --bg-panel-strong: rgba(17, 24, 39, 0.92);
+  --bg-card: rgba(19, 27, 44, 0.86);
+
+  --border-soft: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(103, 232, 249, 0.34);
+
+  --text-main: #eef6ff;
+  --text-muted: #93a4b8;
+  --text-soft: #64748b;
+
+  --accent-cyan: #67e8f9;
+  --accent-blue: #38bdf8;
+  --accent-violet: #a78bfa;
+  --accent-orange: #fb923c;
+  --accent-green: #34d399;
+  --accent-red: #fb7185;
+
+  --glow-cyan: 0 0 32px rgba(103, 232, 249, 0.28);
+  --glow-violet: 0 0 36px rgba(167, 139, 250, 0.22);
+
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --header-h: 64px;
+  --strip-h: 36px;
+  --brain-w: 340px;
+  --safe-bottom: max(120px, env(safe-area-inset-bottom, 0px));
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  --bg-primary: var(--bg-shell);
+  --bg-secondary: var(--bg-panel-strong);
+  --text-primary: var(--text-main);
+  --text-secondary: var(--text-muted);
+  --border-color: var(--border-soft);
+  --accent: var(--accent-cyan);
+}

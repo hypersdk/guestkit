@@ -82,12 +82,33 @@ function renderMissionProgress() {
 function filterFleetVms(vms) {
   const q = (document.getElementById('fleetDiskSearch')?.value || '').trim().toLowerCase();
   const sort = document.getElementById('fleetDiskSort')?.value || 'rank';
+  const chip = document.querySelector('.filter-chip.active')?.dataset.filter || '';
+  const saved = document.getElementById('fleetSavedView')?.value || '';
   let list = (vms || []).filter((v) => window.isFleetDisk?.(v) ?? true);
   if (q) {
     list = list.filter((v) =>
       (v.name || '').toLowerCase().includes(q)
       || (v.format || '').toLowerCase().includes(q)
-      || v.id.toLowerCase().includes(q));
+      || v.id.toLowerCase().includes(q)
+      || (q.startsWith('os:') && (window.getVmCache?.(v.id)?.inspect?.os?.distribution || '').toLowerCase().includes(q.slice(3)))
+      || (q.startsWith('risk:high') && ((window.getVmCache?.(v.id)?.blockers?.length) || (window.getVmCache?.(v.id)?.bootScore != null && window.getVmCache?.(v.id).bootScore < 60))));
+  }
+  const filterKey = chip || saved;
+  if (filterKey) {
+    list = list.filter((v) => {
+      const c = window.getVmCache?.(v.id) || {};
+      const os = (c.inspect?.os?.distribution || c.inspect?.os?.os_type || '').toLowerCase();
+      switch (filterKey) {
+        case 'unscanned': return !c.inspect;
+        case 'bootable': return c.bootScore != null && c.bootScore >= 70 && !(c.blockers?.length);
+        case 'repair': return (c.blockers?.length) || (c.bootScore != null && c.bootScore < 60);
+        case 'ready': return c.bootScore != null && c.bootScore >= 85 && !(c.blockers?.length);
+        case 'linux': return !!c.inspect && !/windows|win/.test(os);
+        case 'windows': return /windows|win/.test(os);
+        case 'failed': return c.status === 'failed';
+        default: return true;
+      }
+    });
   }
   if (sort === 'name') list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   else if (sort === 'size') list.sort((a, b) => (b.size_bytes || 0) - (a.size_bytes || 0));
@@ -99,6 +120,180 @@ function filterFleetVms(vms) {
     });
   }
   return list;
+}
+
+const fleetBatch = new Set();
+let fleetViewMode = localStorage.getItem('zyvor.fleetView') || 'card';
+
+function setFleetViewMode(mode) {
+  fleetViewMode = mode;
+  localStorage.setItem('zyvor.fleetView', mode);
+  document.getElementById('fleetGrid')?.classList.toggle('hidden', mode === 'table');
+  document.getElementById('fleetTable')?.classList.toggle('hidden', mode !== 'table');
+  document.getElementById('fleetViewCard')?.classList.toggle('active', mode === 'card');
+  document.getElementById('fleetViewTable')?.classList.toggle('active', mode === 'table');
+}
+
+function updateFleetBatchBar() {
+  const bar = document.getElementById('fleetBatchBar');
+  const count = document.getElementById('fleetBatchCount');
+  if (!bar) return;
+  if (fleetBatch.size) {
+    bar.classList.remove('hidden');
+    if (count) count.textContent = `${fleetBatch.size} selected`;
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function renderFleetTable() {
+  const tbody = document.getElementById('fleetTableBody');
+  if (!tbody || fleetViewMode !== 'table') return;
+  const vms = filterFleetVms(window.state?.vms || []);
+  tbody.innerHTML = vms.map((vm) => {
+    const c = window.getVmCache?.(vm.id) || {};
+    const os = c.inspect?.os?.distribution || c.inspect?.os?.os_type || '—';
+    const risk = c.blockers?.length ? 'high' : (c.bootScore != null && c.bootScore < 70 ? 'caution' : 'low');
+    const checked = fleetBatch.has(vm.id) ? 'checked' : '';
+    return `<tr data-vm-id="${vm.id}">
+      <td><input type="checkbox" class="fleet-row-check" data-id="${vm.id}" ${checked} /></td>
+      <td>${window.escapeHtml?.(vm.name) || vm.name}</td>
+      <td>${window.escapeHtml?.(os)}</td>
+      <td>${vm.format || '—'}</td>
+      <td>${window.fmtBytes?.(vm.size_bytes)}</td>
+      <td>${c.bootScore != null ? Math.round(c.bootScore) : '—'}</td>
+      <td>${c.migrateScore != null ? Math.round(c.migrateScore) : '—'}</td>
+      <td>${risk}</td>
+      <td>${c.lastOp || 'never'}</td>
+      <td><button type="button" class="btn sm ghost fleet-row-open" data-id="${vm.id}">Open</button></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('.fleet-row-check').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) fleetBatch.add(cb.dataset.id);
+      else fleetBatch.delete(cb.dataset.id);
+      updateFleetBatchBar();
+    });
+  });
+  tbody.querySelectorAll('.fleet-row-open').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const vm = window.state?.vms?.find((v) => v.id === btn.dataset.id);
+      if (vm) window.selectVm?.(vm);
+    });
+  });
+}
+
+async function batchRunWorkflow(action) {
+  const ids = [...fleetBatch];
+  if (!ids.length) { window.toast?.('Select disks first', 'err'); return; }
+  for (const id of ids) {
+    const vm = window.state?.vms?.find((v) => v.id === id);
+    if (!vm) continue;
+    window.selectVm?.(vm);
+    const r = await window.runAction?.(action);
+    if (!r?.ok) break;
+  }
+  fleetBatch.clear();
+  updateFleetBatchBar();
+  window.renderFleet?.();
+}
+
+function exportFleetReport(fmt) {
+  const vms = filterFleetVms(window.state?.vms || []);
+  const rows = vms.map((vm) => {
+    const c = window.getVmCache?.(vm.id) || {};
+    return {
+      id: vm.id, name: vm.name, format: vm.format, size: vm.size_bytes,
+      boot: c.bootScore, kv: c.migrateScore, os: c.inspect?.os?.distribution,
+      status: c.status, lastOp: c.lastOp, blockers: c.blockers?.length || 0,
+    };
+  });
+  let blob; let name;
+  if (fmt === 'csv') {
+    const hdr = Object.keys(rows[0] || { id: '', name: '' }).join(',');
+    const body = rows.map((r) => Object.values(r).join(',')).join('\n');
+    blob = new Blob([`${hdr}\n${body}`], { type: 'text/csv' });
+    name = 'guestkit-fleet.csv';
+  } else if (fmt === 'md') {
+    const md = ['# GuestKit Fleet Report', '', ...rows.map((r) => `- **${r.name}** boot=${r.boot ?? '—'} blockers=${r.blockers}`)].join('\n');
+    blob = new Blob([md], { type: 'text/markdown' });
+    name = 'guestkit-fleet.md';
+  } else {
+    blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+    name = 'guestkit-fleet.json';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+async function runFleetScanModal() {
+  const modal = document.getElementById('fleetScanModal');
+  const status = document.getElementById('fleetScanStatus');
+  const stages = document.getElementById('fleetScanStages');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  const steps = ['Import check', 'Partition scan', 'OS detection', 'Bootloader scan', 'Driver scan', 'KubeVirt readiness'];
+  let i = 0;
+  const tick = () => {
+    if (i >= steps.length) {
+      if (status) status.textContent = 'Fleet scan complete';
+      return;
+    }
+    if (status) status.textContent = steps[i];
+    if (stages) {
+      stages.innerHTML = steps.map((s, idx) =>
+        `<li class="${idx < i ? 'done' : idx === i ? 'running' : ''}">${s}</li>`
+      ).join('');
+    }
+    i += 1;
+    setTimeout(tick, 800);
+  };
+  tick();
+  document.getElementById('fleetScanClose')?.addEventListener('click', () => modal.classList.add('hidden'), { once: true });
+}
+
+function setupFleetAdvanced() {
+  document.querySelectorAll('.filter-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+      window.renderFleet?.();
+    });
+  });
+  document.getElementById('fleetSavedView')?.addEventListener('change', (e) => {
+    const v = e.target.value;
+    const map = { all: '', repair: 'repair', ready: 'ready' };
+    if (map[v] != null) {
+      document.querySelectorAll('.filter-chip').forEach((c) => {
+        c.classList.toggle('active', c.dataset.filter === map[v]);
+      });
+    }
+    window.renderFleet?.();
+  });
+  document.getElementById('fleetViewCard')?.addEventListener('click', () => { setFleetViewMode('card'); window.renderFleet?.(); });
+  document.getElementById('fleetViewTable')?.addEventListener('click', () => { setFleetViewMode('table'); window.renderFleet?.(); });
+  document.getElementById('fleetSelectAll')?.addEventListener('change', (e) => {
+    const vms = filterFleetVms(window.state?.vms || []);
+    fleetBatch.clear();
+    if (e.target.checked) vms.forEach((v) => fleetBatch.add(v.id));
+    updateFleetBatchBar();
+    renderFleetTable();
+  });
+  document.getElementById('batchScanBtn')?.addEventListener('click', () => batchRunWorkflow('inspect'));
+  document.getElementById('batchDoctorBtn')?.addEventListener('click', () => batchRunWorkflow('doctor'));
+  document.getElementById('batchExportBtn')?.addEventListener('click', () => exportFleetReport('json'));
+  document.getElementById('batchDeleteBtn')?.addEventListener('click', async () => {
+    if (!fleetBatch.size || !confirm(`Delete ${fleetBatch.size} disk(s)?`)) return;
+    for (const id of [...fleetBatch]) {
+      try { await window.api?.(`/vms/${id}`, { method: 'DELETE' }); delete window.state.vmCache[id]; } catch { /* */ }
+    }
+    fleetBatch.clear();
+    updateFleetBatchBar();
+    await window.loadFleet?.();
+  });
+  setFleetViewMode(fleetViewMode);
 }
 
 async function runFullMigrationChain() {
@@ -202,7 +397,10 @@ function setupFleetToolbar() {
   document.getElementById('fleetDiskSearch')?.addEventListener('input', () => window.renderFleet?.());
   document.getElementById('fleetDiskSort')?.addEventListener('change', () => window.renderFleet?.());
   document.getElementById('fullMigrationBtn')?.addEventListener('click', runFullMigrationChain);
-  document.getElementById('fleetAiOverviewBtn')?.addEventListener('click', () => window.GuestKitAi?.aiFleetOverview?.());
+  document.getElementById('fleetAiOverviewBtn')?.addEventListener('click', () => {
+    runFleetScanModal();
+    window.GuestKitAi?.aiFleetOverview?.();
+  });
   document.getElementById('deleteDiskBtn')?.addEventListener('click', deleteSelectedDisk);
   document.getElementById('copyDiskIdBtn')?.addEventListener('click', async () => {
     const id = window.state?.selectedVm?.id;
@@ -357,6 +555,7 @@ async function submitNfsImport() {
 function initGuestKitFeatures() {
   loadVmCachePersist();
   setupFleetToolbar();
+  setupFleetAdvanced();
   setupKeyboardShortcuts();
   setupAutoRefresh();
   renderRecentDisks();
@@ -399,6 +598,17 @@ function initGuestKitFeatures() {
     renderMissionProgress();
     notifyJobDone(action);
   };
+  const origRenderFleet = window.renderFleet;
+  if (origRenderFleet) {
+    window.renderFleet = () => {
+      origRenderFleet();
+      renderFleetTable();
+      updateFleetBatchBar();
+      window.GuestKitJourney?.renderFleetSummaryBar?.(
+        window.GuestKitJourney?.deriveFleetStats?.(window.state?.vms)
+      );
+    };
+  }
 }
 
 window.GuestKitFeatures = {
@@ -411,4 +621,7 @@ window.GuestKitFeatures = {
   quickScan,
   populateCompareSelects,
   cleanupShadowRows,
+  renderFleetTable,
+  exportFleetReport,
+  runFleetScanModal,
 };

@@ -425,17 +425,32 @@ function showAiCommandPalette() {
 function setupAiCommandPalette() {
   const form = document.getElementById('aiCommandForm');
   const input = document.getElementById('aiCommandInput');
+  const runCmd = (q) => {
+    const cmd = q.toLowerCase().trim();
+    if (cmd.startsWith('/scan') || cmd.startsWith('/inspect') || cmd.startsWith('/fingerprint')) window.runAction?.('inspect');
+    else if (cmd.startsWith('/doctor')) window.runAction?.('doctor');
+    else if (cmd.startsWith('/repair')) window.runAction?.('repair-plan');
+    else if (cmd.startsWith('/yaml') || cmd.startsWith('/provision')) window.runAction?.('provision');
+    else if (cmd.startsWith('/launch')) window.GuestKitConsole?.showLaunchPreview?.(() => window.runAction?.('provision'));
+    else if (cmd.startsWith('/fleet')) { window.GuestKitFeatures?.runFleetScanModal?.(); aiFleetOverview(); }
+    else if (cmd.startsWith('/evidence') || cmd.startsWith('/logs')) {
+      window.GuestKitConsole?.scrollToEvidenceConsole?.();
+      window.setActiveTab?.('logs');
+    }
+    else if (cmd.startsWith('/cinema')) {
+      localStorage.setItem('zyvor.cinemaMode', localStorage.getItem('zyvor.cinemaMode') === '1' ? '0' : '1');
+      document.getElementById('cinemaModeBtn')?.click();
+    }
+    else if (cmd.startsWith('/rail')) document.getElementById('railCompactBtn')?.click();
+    else askBrain(q);
+  };
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     const q = input?.value?.trim();
     if (!q) return;
     document.getElementById('aiCommandModal')?.classList.add('hidden');
     input.value = '';
-    if (q.startsWith('/doctor')) window.runAction?.('doctor');
-    else if (q.startsWith('/repair')) window.runAction?.('repair-plan');
-    else if (q.startsWith('/launch')) window.GuestKitConsole?.showLaunchPreview?.(() => window.runAction?.('provision'));
-    else if (q.startsWith('/fleet')) aiFleetOverview();
-    else askBrain(q);
+    runCmd(q);
   });
   document.getElementById('aiCommandClose')?.addEventListener('click', () => {
     document.getElementById('aiCommandModal')?.classList.add('hidden');

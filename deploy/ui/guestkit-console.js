@@ -104,183 +104,19 @@ function missionWarningCount(stepId, vm, cache) {
 }
 
 function renderMissionRail() {
-  const nav = gk$('#missionRailNav');
-  const rail = gk$('#missionRail');
-  if (!nav) return;
-  const vm = window.state?.selectedVm;
-  const cache = vm ? window.getVmCache?.(vm.id) || {} : {};
-  const activeWizard = window.state?.wizard?.step || 'ingest';
-
-  const progress = gk$('#missionProgress');
-  if (progress) {
-    const doneCount = MISSION_STEPS.filter((s) => {
-      const b = missionBadgeForStep(s.id, vm, cache);
-      return b.cls === 'done';
-    }).length;
-    const segs = MISSION_STEPS.map((s, i) => {
-      const badge = missionBadgeForStep(s.id, vm, cache);
-      const cls = badge.cls === 'done' ? 'done' : (s.wizard === activeWizard ? 'active' : '');
-      return `<span class="mission-flight-seg ${cls}" title="${s.label}"></span>`;
-    }).join('');
-    progress.innerHTML = `<div class="mission-flight-path" aria-hidden="true">${segs}</div>
-      <p class="mission-progress-label mono" style="font-size:0.62rem;color:var(--text-muted);margin:0 0.35rem;">${doneCount}/${MISSION_STEPS.length} complete</p>`;
-  }
-
-  nav.innerHTML = MISSION_STEPS.map((s) => {
-    const badge = missionBadgeForStep(s.id, vm, cache);
-    const warnN = missionWarningCount(s.id, vm, cache);
-    const active = s.wizard === activeWizard || (activeWizard === 'assure' && ['fingerprint', 'diagnose'].includes(s.id) && s.wizard === 'assure');
-    return `
-      <button type="button" class="mission-step${active ? ' active' : ''}" data-mission="${s.id}" data-wizard="${s.wizard}" data-action="${s.action || ''}" title="${s.hint}">
-        <span class="mission-step__num">${s.num}</span>
-        <span class="mission-step__body">
-          <span class="mission-step__label">${s.label}${warnN ? `<span class="mission-step__warn-count">(${warnN})</span>` : ''}</span>
-          <span class="mission-step__hint">${s.hint}</span>
-        </span>
-        <span class="mission-badge ${badge.cls}">${badge.text}</span>
-      </button>`;
-  }).join('');
-
-  if (rail) {
-    const compact = localStorage.getItem(RAIL_COMPACT_KEY) === '1';
-    rail.dataset.compact = compact ? 'true' : 'false';
-  }
-
-  nav.querySelectorAll('.mission-step').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const wizard = btn.dataset.wizard;
-      const action = btn.dataset.action;
-      const mission = btn.dataset.mission;
-      if (mission === 'convert') {
-        showConvertStudio();
-        return;
-      }
-      if (wizard) window.scrollToPanel?.(wizard);
-      if (action && vm && !btn.querySelector('.mission-badge.blocked')) {
-        if (action === 'provision') showLaunchPreview(() => window.runAction?.('provision'));
-        else window.runAction?.(action);
-      }
-    });
-  });
+  /* Mission rail removed — pipeline rendered by GuestKitNebula */
 }
 
 function renderBrainPanel() {
   const vm = window.state?.selectedVm;
-  const clusterVm = window.state?.selectedClusterVm;
   const cache = vm ? window.getVmCache?.(vm.id) || {} : {};
-  const inspect = cache.inspect || window.state?.lastClusterInspect?.inspect;
-  const briefing = window.state?.lastBriefing || window.state?.lastClusterBriefing;
-
-  const fleetEl = gk$('#brainFleetSummary');
-  const fleetSection = gk$('#brainFleetSummarySection');
-  if (fleetEl) {
-    if (!vm && !clusterVm) {
-      const disks = (window.state?.vms || []).filter((v) => window.isFleetDisk?.(v) ?? true);
-      const ready = disks.filter((d) => {
-        const c = window.getVmCache?.(d.id) || {};
-        return c.bootScore != null && c.bootScore >= 70;
-      }).length;
-      fleetEl.classList.remove('hidden');
-      fleetEl.innerHTML = `<strong>${disks.length}</strong> disks · <strong>${ready}</strong> launch-ready · select a card to inspect`;
-      fleetSection?.classList.remove('hidden');
-    } else {
-      fleetEl.classList.add('hidden');
-      fleetSection?.classList.add('hidden');
-    }
-  }
-
-  const primary = gk$('#brainPrimaryActions');
-  if (primary) {
-    const repairBtn = gk$('#brainQuickRepair');
-    const scanBtn = gk$('#quickScanBtn');
-    const yamlBtn = gk$('#brainQuickYaml');
-    const hasVm = !!(vm || clusterVm);
-    if (repairBtn) repairBtn.disabled = !hasVm;
-    if (scanBtn) scanBtn.disabled = !hasVm;
-    if (yamlBtn) yamlBtn.disabled = !hasVm || (cache.bootScore != null && cache.bootScore < 50);
-  }
-
-  const dnaEl = gk$('#brainDna');
-  if (dnaEl) {
-    if (!vm && !clusterVm) {
-      dnaEl.innerHTML = '<p class="brain-rec">Select a disk or cluster VM to view Disk DNA.</p>';
-    } else if (inspect) {
-      const os = inspect.os || {};
-      const boot = inspect.boot || {};
-      dnaEl.innerHTML = `
-        <dl>
-          <div class="brain-dna-row"><dt>OS</dt><dd>${window.escapeHtml?.(os.distribution || os.os_type || 'unknown') || 'unknown'}</dd></div>
-          <div class="brain-dna-row"><dt>Boot mode</dt><dd>${window.escapeHtml?.(boot.mode || boot.boot_mode || '—') || '—'}</dd></div>
-          <div class="brain-dna-row"><dt>Kernel</dt><dd>${window.escapeHtml?.(boot.kernel || inspect.kernel?.version || '—') || '—'}</dd></div>
-          <div class="brain-dna-row"><dt>Filesystem</dt><dd>${window.escapeHtml?.(inspect.filesystem?.root_fs || inspect.storage?.root || '—') || '—'}</dd></div>
-          <div class="brain-dna-row"><dt>Cloud-init</dt><dd>${inspect.cloud_init?.present ? 'present' : 'none'}</dd></div>
-          <div class="brain-dna-row"><dt>Agent</dt><dd>${clusterVm ? (window.state?.lastClusterGuestInfo?.agent_connected ? 'connected' : 'missing') : 'offline disk'}</dd></div>
-        </dl>`;
-    } else {
-      dnaEl.innerHTML = '<p class="brain-rec">Run <strong>Fingerprint</strong> to populate Disk DNA.</p>';
-    }
-  }
-
-  const confEl = gk$('#brainConfidence');
-  if (confEl) {
-    const score = cache.bootScore;
-    const checks = cache.checks || [];
-    const topWarns = checks.filter((c) => !c.passed).slice(0, 4);
-    if (score != null) {
-      confEl.innerHTML = `
-        <div class="brain-confidence">
-          <div class="brain-confidence__ring">${Math.round(score)}</div>
-          <div>
-            ${topWarns.length ? topWarns.map((w) => `<p class="brain-rec">${window.escapeHtml?.(w.id || w.message || 'check failed')}</p>`).join('') : '<p class="brain-rec">No critical boot warnings.</p>'}
-          </div>
-        </div>`;
-    } else {
-      confEl.innerHTML = '<p class="brain-rec">Run <strong>Diagnose</strong> for boot confidence score.</p>';
-    }
-  }
-
-  const recEl = gk$('#brainRecs');
-  if (recEl) {
-    const actions = briefing?.recommended_actions || cache?.briefing?.recommended_actions || [];
-    if (actions.length) {
-      recEl.innerHTML = actions.slice(0, 5).map((a) =>
-        `<button type="button" class="brain-rec-action" data-workflow="${window.escapeHtml?.(a.workflow || '')}">
-          <strong>#${a.priority}</strong> ${window.escapeHtml?.(a.title) || ''} — ${window.escapeHtml?.(a.detail) || ''}
-        </button>`
-      ).join('');
-      recEl.querySelectorAll('.brain-rec-action').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const wf = btn.dataset.workflow;
-          if (wf === 'provision') showLaunchPreview(() => window.runAction?.('provision'));
-          else if (wf) window.runAction?.(wf.replace('guestkit.', '').replace('migrate-plan', 'migration-plan'));
-        });
-      });
-    } else if (cache?.status === 'failed' && cache?.lastError) {
-      const alt = window.pickBestVm?.((window.state?.vms || []).filter((v) => v.id !== vm?.id));
-      recEl.innerHTML = `
-        <p class="brain-rec brain-rec--err">${window.escapeHtml?.(cache.lastError) || cache.lastError}</p>
-        ${alt ? `<button type="button" class="btn sm accent" id="brainSwitchDiskBtn">Try ${window.escapeHtml?.(alt.name) || alt.name}</button>` : ''}
-        <button type="button" class="btn sm glass" id="brainRemoveDiskBtn">Remove this disk</button>`;
-      gk$('#brainSwitchDiskBtn')?.addEventListener('click', () => window.selectVm?.(alt));
-      gk$('#brainRemoveDiskBtn')?.addEventListener('click', () => document.getElementById('deleteDiskBtn')?.click());
-    } else if (briefing?.headline || cache?.briefing?.headline) {
-      const b = briefing || cache.briefing;
-      recEl.innerHTML = `<p class="brain-rec"><strong>${window.escapeHtml?.(b.headline)}</strong><br>${window.escapeHtml?.(b.summary || '')}</p>`;
-    } else {
-      recEl.innerHTML = '<p class="brain-rec">Run Doctor with explain for AI recommendations.</p>';
-    }
-  }
-
-  renderBrainChecksHeatmap(cache?.checks);
+  window.GuestKitNebula?.renderBrainPanel?.(vm, cache);
+  renderEvidenceConsole(vm, cache);
   window.GuestKitAi?.renderAiDeck?.();
   window.GuestKitAi?.renderAiNarrative?.();
   window.GuestKitFeatures?.loadJobHistory?.(vm?.id);
-
-  renderBrainTimeline(vm?.id || (clusterVm ? `cluster:${clusterVm.namespace}/${clusterVm.name}` : null));
+  renderBrainTimeline(vm?.id || (window.state?.selectedClusterVm ? `cluster:${window.state.selectedClusterVm.namespace}/${window.state.selectedClusterVm.name}` : null));
   syncBrainJobTracker();
-  renderDiskInspector(vm, cache);
-  updateSelectedCommandBar(vm, cache);
-  renderEvidenceConsole(vm, cache);
 }
 
 function renderDiskInspector(vm, cache) {
@@ -367,6 +203,7 @@ function updateSelectedCommandBar(vm, cache) {
   }
   bar.classList.remove('hidden');
   cache = cache || window.getVmCache?.(vm.id) || {};
+  const sys = window.state?.systemStatus || {};
   gk$('#commandBarName').textContent = vm.name || 'Unnamed';
   const scoreEl = gk$('#commandBarScore');
   if (scoreEl) {
@@ -383,6 +220,23 @@ function updateSelectedCommandBar(vm, cache) {
       riskEl.classList.add('hidden');
     }
   }
+  const cmds = [
+    ['cmdBarInspect', 'inspect'],
+    ['cmdBarDoctor', 'doctor'],
+    ['cmdBarLaunch', 'launch'],
+    ['cmdBarYaml', 'provision'],
+    ['cmdBarRepair', 'repair-plan'],
+    ['cmdBarMigrate', 'migration-plan'],
+  ];
+  cmds.forEach(([id, action]) => {
+    const btn = gk$(`#${id}`);
+    if (!btn) return;
+    const reason = window.GuestKitJourney?.explainDisabledAction?.(action, vm, cache, sys) || '';
+    btn.disabled = !!reason && action !== 'inspect';
+    btn.title = reason || btn.getAttribute('data-original-title') || '';
+    btn.classList.toggle('primary', action === (window.GuestKitJourney?.deriveNextAction?.(vm, cache, sys)?.primary));
+    btn.classList.toggle('ghost', !!reason);
+  });
 }
 
 function renderEvidenceConsole(vm, cache) {
@@ -393,12 +247,16 @@ function renderEvidenceConsole(vm, cache) {
     gk$('#riskContent')?.classList.add('hidden');
     gk$('#logsEmpty')?.classList.remove('hidden');
     gk$('#evidenceLogs')?.replaceChildren();
+    window.GuestKitJourney?.renderFindingsTab?.({});
+    window.GuestKitJourney?.renderDiffTab?.({});
     return;
   }
   cache = cache || window.getVmCache?.(vm.id) || {};
   renderEvidenceTimeline(vm.id);
   renderRiskTab(cache);
   renderEvidenceLogs(vm, cache);
+  window.GuestKitJourney?.renderFindingsTab?.(cache);
+  window.GuestKitJourney?.renderDiffTab?.(cache);
 }
 
 function renderEvidenceTimeline(vmId) {
@@ -512,7 +370,7 @@ function clearDiskSelection() {
   clearDiskSelectionUi();
   window.updateSelectionPanels?.();
   renderMissionRail();
-  renderBrainPanel();
+  window.GuestKitNebula?.renderAllNebula?.(null, {});
   return true;
 }
 
@@ -587,6 +445,13 @@ function mapTimelineEvent(action) {
   return map[action] || null;
 }
 
+function fleetCardVariant(cache) {
+  if (!cache?.inspect) return 'unscanned';
+  if (cache.blockers?.length || (cache.bootScore != null && cache.bootScore < 60)) return 'risky';
+  if (cache.bootScore != null && cache.bootScore >= 85) return 'ready';
+  return '';
+}
+
 function renderFleetDiskCard(vm, selected, cache) {
   const smoke = window.isSmokeDisk?.(vm);
   const risk = riskLevel(cache);
@@ -595,6 +460,15 @@ function renderFleetDiskCard(vm, selected, cache) {
   const scanned = cache?.lastOp ? cache.lastOp : 'never';
   const score = cache?.bootScore;
   const scorePct = score != null ? Math.round(score) : 0;
+  const variant = fleetCardVariant(cache);
+  const conf = window.GuestKitJourney?.deriveConfidenceBreakdown?.(cache) || {};
+  const confRings = ['boot', 'fs', 'drv', 'kv', 'ci'].map((k) => {
+    const v = conf[k];
+    return `<span class="conf-ring" title="${k.toUpperCase()}"><span class="conf-ring__label">${k.toUpperCase()}</span>
+      <span class="conf-ring__bar"><span class="conf-ring__fill" style="width:${v != null ? v : 0}%"></span></span></span>`;
+  }).join('');
+  const primaryAction = !cache?.inspect ? 'inspect' : (cache.bootScore == null ? 'doctor' : 'provision');
+  const primaryLabel = primaryAction === 'inspect' ? 'Fingerprint' : (primaryAction === 'doctor' ? 'Doctor' : 'Launch');
   return `
     <span class="disk-card__head">
       <span class="disk-card__icon">${icon}</span>
@@ -609,6 +483,7 @@ function renderFleetDiskCard(vm, selected, cache) {
       ${score != null ? `<span class="disk-tag ready">boot ${scorePct}</span>` : ''}
       ${smoke ? '<span class="disk-tag warn">smoke</span>' : ''}
     </div>
+    <div class="disk-card__confidence">${confRings}</div>
     <div class="disk-card__readiness">
       <span>readiness</span>
       <div class="disk-card__readiness-bar"><div class="disk-card__readiness-fill" style="width:${scorePct}%"></div></div>
@@ -617,12 +492,14 @@ function renderFleetDiskCard(vm, selected, cache) {
     <div class="disk-card__actions disk-card__actions--compact">
       <button type="button" class="btn sm glass" data-disk-action="inspect">Inspect</button>
       <button type="button" class="btn sm accent" data-disk-action="doctor">Doctor</button>
-      <button type="button" class="btn sm primary" data-disk-action="provision">Launch</button>
+      <button type="button" class="btn sm primary" data-disk-action="${primaryAction}">${primaryLabel}</button>
     </div>
     <p class="disk-card__meta">Last scan: ${scanned}</p>`;
 }
 
 function bindDiskCardActions(card, vm) {
+  const variant = fleetCardVariant(window.getVmCache?.(vm.id));
+  if (variant) card.dataset.variant = variant;
   card.querySelectorAll('[data-disk-action]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -649,10 +526,14 @@ function saveDockPrefs(prefs) {
 function applyDockPrefs() {
   const prefs = getDockPrefs();
   const dock = gk$('#commandDock');
-  const root = document.querySelector('.guestkit-shell');
+  const root = document.getElementById('nebulaRoot') || document.querySelector('.guestkit-shell');
   const cinema = localStorage.getItem(CINEMA_KEY) === '1' || prefs.cinema;
-  if (root) root.dataset.cinema = cinema ? 'true' : 'false';
+  if (root) {
+    root.dataset.cinema = cinema ? 'true' : 'false';
+    root.classList.toggle('cinema-mode', cinema);
+  }
   gk$('#cinemaModeBtn')?.classList.toggle('active', cinema);
+  gk$('#dockControls')?.classList.toggle('hidden', !cinema);
   if (!dock) return;
   dock.classList.remove('pos-bottom', 'pos-left', 'pos-right', 'compact', 'auto-hide', 'pinned', 'dock-hidden');
   if (!cinema) {
@@ -660,6 +541,7 @@ function applyDockPrefs() {
     document.documentElement.style.setProperty('--iw-dock-offset', '0px');
     return;
   }
+  dock.classList.remove('dock-hidden');
   dock.classList.add(`pos-${prefs.position || 'bottom'}`);
   if (prefs.compact) dock.classList.add('compact');
   if (prefs.autoHide) dock.classList.add('auto-hide');
@@ -673,16 +555,37 @@ function setupCinemaMode() {
     const on = localStorage.getItem(CINEMA_KEY) !== '1';
     localStorage.setItem(CINEMA_KEY, on ? '1' : '0');
     applyDockPrefs();
-    window.toast?.(on ? 'Cinema mode — floating dock enabled' : 'Command bar mode — dock hidden', 'ok');
+    window.toast?.(on ? 'Cinema mode — focused workspace' : 'Normal mode', 'ok');
+  });
+  gk$('#cinemaExitBtn')?.addEventListener('click', () => {
+    localStorage.setItem(CINEMA_KEY, '0');
+    applyDockPrefs();
   });
 }
 
 function setupBrainDrawer() {
-  const drawer = gk$('#brainDrawer');
-  const toggle = () => drawer?.classList.toggle('open');
-  gk$('#brainDrawerToggle')?.addEventListener('click', toggle);
-  gk$('#brainDrawerClose')?.addEventListener('click', () => drawer?.classList.remove('open'));
-  gk$('#brainDrawerOverlay')?.addEventListener('click', () => drawer?.classList.remove('open'));
+  /* Nebula brain drawer wired in initGuestKitNebula */
+}
+
+function setupNebulaExtras() {
+  gk$('#statusStrip')?.addEventListener('click', () => {
+    const drawer = gk$('#clusterReadinessDrawer');
+    drawer?.classList.add('open');
+    drawer?.classList.remove('hidden');
+    window.GuestKitJourney?.renderClusterReadinessDrawer?.(window.state?.systemStatus);
+  });
+  gk$('#clusterReadinessClose')?.addEventListener('click', () => {
+    gk$('#clusterReadinessDrawer')?.classList.remove('open');
+  });
+  gk$('#copyDebugBundleBtn')?.addEventListener('click', () => window.GuestKitJourney?.copyDebugBundle?.());
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-hero-action]');
+    if (btn) {
+      e.preventDefault();
+      window.runAction?.(btn.dataset.heroAction);
+    }
+  });
+  window.GuestKitJourney?.checkSessionRestore?.();
 }
 
 function setupRailCompact() {
@@ -694,10 +597,47 @@ function setupRailCompact() {
   });
 }
 
+function showLaunchMonitor() {
+  const stages = [
+    { id: 'create', label: 'Create VM', status: 'done' },
+    { id: 'import', label: 'Import disk', status: 'running' },
+    { id: 'schedule', label: 'Schedule pod', status: 'waiting' },
+    { id: 'boot', label: 'Boot guest', status: 'waiting' },
+    { id: 'agent', label: 'Guest agent', status: 'waiting' },
+    { id: 'console', label: 'Console ready', status: 'waiting' },
+  ];
+  window.GuestKitJourney?.renderLaunchMonitor?.(stages);
+  showModal('launchMonitorModal');
+  gk$('#launchMonitorClose')?.addEventListener('click', () => hideModal('launchMonitorModal'), { once: true });
+  pollLaunchMonitor();
+}
+
+async function pollLaunchMonitor() {
+  const vm = window.state?.selectedVm;
+  if (!vm) return;
+  try {
+    const data = await window.api?.('/kubevirt/vms');
+    const vms = data?.data || [];
+    const name = (vm.name || '').replace(/\.[^.]+$/, '');
+    const match = vms.find((v) => v.name === name || v.name?.includes(name.slice(0, 12)));
+    const phase = (match?.phase || match?.status || '').toLowerCase();
+    const stages = [
+      { id: 'create', label: 'Create VM', status: 'done' },
+      { id: 'import', label: 'Import disk', status: 'done' },
+      { id: 'schedule', label: 'Schedule pod', status: phase.includes('sched') || phase.includes('pend') ? 'running' : 'done' },
+      { id: 'boot', label: 'Boot guest', status: phase.includes('run') ? 'done' : (phase ? 'running' : 'waiting') },
+      { id: 'agent', label: 'Guest agent', status: match?.guest_agent_connected ? 'done' : 'waiting' },
+      { id: 'console', label: 'Console ready', status: phase.includes('run') ? 'running' : 'waiting' },
+    ];
+    window.GuestKitJourney?.renderLaunchMonitor?.(stages);
+  } catch { /* */ }
+}
+
 function setupCommandBar() {
   gk$('#cmdBarInspect')?.addEventListener('click', () => window.runAction?.('inspect'));
   gk$('#cmdBarDoctor')?.addEventListener('click', () => window.runAction?.('doctor'));
   gk$('#cmdBarLaunch')?.addEventListener('click', () => showLaunchPreview(() => window.runAction?.('provision')));
+  gk$('#cmdBarYaml')?.addEventListener('click', () => window.runAction?.('provision'));
   gk$('#cmdBarRepair')?.addEventListener('click', () => window.runAction?.('repair-plan'));
   gk$('#cmdBarMigrate')?.addEventListener('click', () => window.runAction?.('migration-plan'));
   gk$('#cmdBarClear')?.addEventListener('click', () => clearDiskSelection());
@@ -795,14 +735,28 @@ async function refreshHudStatus() {
   } catch {
     status = {};
   }
+  if (window.state) window.state.systemStatus = status;
+  window.GuestKitJourney?.renderClusterReadinessDrawer?.(status);
+  const healthPill = gk$('#healthPill');
+  const healthDot = gk$('#healthDot');
+  const healthLabel = gk$('#healthLabel');
+  const stripLabel = gk$('#healthLabelStrip');
+  const stripDot = gk$('#statusDotApi');
+  const agentOk = status.agent === 'online';
+  if (healthDot) healthDot.className = 'pulse-dot ' + (agentOk ? 'ok' : '');
+  if (healthPill) healthPill.classList.toggle('ok', agentOk);
+  if (healthLabel) healthLabel.textContent = agentOk ? 'Agent online' : (status.agent || 'Connecting…');
+  if (stripLabel) stripLabel.textContent = status.api === 'offline' ? 'offline' : 'online';
+  if (stripDot) stripDot.className = 'status-dot ' + (status.api === 'offline' ? 'err' : 'ok');
 
   const set = (id, val, ok) => {
     const el = gk$(`#${id}`);
     if (!el) return;
     el.textContent = val || '—';
-    const dot = el.parentElement?.querySelector('.status-strip__dot');
+    const dot = el.parentElement?.querySelector('.status-dot, .status-strip__dot');
     if (dot) {
-      dot.className = 'status-strip__dot ' + (ok === true ? 'ok' : ok === false ? 'err' : ok === 'ai' ? 'ai' : '');
+      dot.className = (dot.classList.contains('status-dot') ? 'status-dot ' : 'status-strip__dot ')
+        + (ok === true ? 'ok' : ok === false ? 'err' : ok === 'ai' ? 'ai' : '');
     }
   };
 
@@ -899,10 +853,15 @@ function showLaunchPreview(onConfirm) {
 
   const checklist = gk$('#launchChecklist');
   if (checklist) {
+    const sys = window.state?.systemStatus || {};
+    const kvOk = sys.kubevirt === 'healthy' || sys.kubevirt === 'ready';
+    const cdiOk = sys.cdi === 'ready';
     const items = [
       { text: 'Disk captured & fingerprinted', state: hasInspect ? 'pass' : 'pending' },
       { text: 'Boot score assessed (Doctor)', state: hasDoctor ? (score >= 70 ? 'pass' : 'warn') : 'pending' },
       { text: 'No critical blockers', state: blockers ? 'fail' : (hasDoctor ? 'pass' : 'pending') },
+      { text: 'KubeVirt cluster ready', state: kvOk ? 'pass' : 'fail' },
+      { text: 'CDI import ready', state: cdiOk ? 'pass' : 'fail' },
       { text: 'Migration target selected', state: document.getElementById('targetSelect')?.value ? 'pass' : 'pending' },
       { text: 'VM manifest spec ready', state: window.state?.lastYaml ? 'pass' : 'warn' },
     ];
@@ -1169,10 +1128,10 @@ function setupIronwolfTheme() {
 function initGuestKitConsole() {
   setupIronwolfTheme();
   renderMissionRail();
-  renderBrainPanel();
   setupCommandDock();
   setupCinemaMode();
   setupBrainDrawer();
+  setupNebulaExtras();
   setupRailCompact();
   setupCommandBar();
   setupImportPortal();
@@ -1185,10 +1144,11 @@ function initGuestKitConsole() {
 }
 
 function onSelectVmConsole() {
-  renderMissionRail();
   renderBrainPanel();
-  scrollToDiskContext();
-  if (window.innerWidth < 1280) gk$('#brainDrawer')?.classList.add('open');
+  const vm = window.state?.selectedVm;
+  const cache = vm ? window.getVmCache?.(vm.id) : {};
+  window.GuestKitNebula?.renderAllNebula?.(vm, cache);
+  if (window.innerWidth < 1200) gk$('#nebulaBrainDrawer')?.classList.add('open');
   window.GuestKitAi?.onSelectVmAi?.();
 }
 
@@ -1214,6 +1174,7 @@ function onJobCompleteConsole(action, vmId) {
   const cache = vmId ? window.getVmCache?.(vmId) || {} : {};
   if (vm) {
     renderEvidenceConsole(vm, cache);
+    window.GuestKitNebula?.renderAllNebula?.(vm, cache);
     if (['inspect', 'doctor', 'repair-plan', 'migration-plan', 'provision'].includes(action)) {
       setTimeout(() => scrollToEvidenceConsole(), 120);
     }
@@ -1231,6 +1192,7 @@ window.GuestKitConsole = {
   onSelectVmConsole,
   onJobCompleteConsole,
   showLaunchPreview,
+  showLaunchMonitor,
   showConvertStudio,
   showCompareMode,
   injectLaunchAdvice,
@@ -1245,4 +1207,6 @@ window.GuestKitConsole = {
   clearDiskSelection,
   scrollToDiskContext,
   scrollToEvidenceConsole,
+  setReadinessRing,
+  parseLaunchSpec,
 };
