@@ -207,7 +207,10 @@ _ssh() {
             return 0
         fi
         attempt=$((attempt + 1))
-        [ "$attempt" -le "$max" ] && warn "SSH retry ${attempt}/${max}" && sleep 2
+        if [ "$attempt" -le "$max" ]; then
+            local _d=$(( 2 * (attempt - 1) )); _d=$(( _d < 2 ? 2 : _d > 30 ? 30 : _d ))
+            warn "SSH retry ${attempt}/${max}" && sleep "${_d}"
+        fi
     done
     return 1
 }
