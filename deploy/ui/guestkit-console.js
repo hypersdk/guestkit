@@ -1120,13 +1120,13 @@ async function runCompare() {
   }
 }
 
-function setupIronwolfTheme() {
-  document.documentElement.dataset.theme = 'ironwolf';
-  localStorage.setItem('zyvor.theme', 'ironwolf');
+function setupAbyssTheme() {
+  document.documentElement.dataset.theme = 'abyss';
+  localStorage.setItem('zyvor.theme', 'abyss');
 }
 
 function initGuestKitConsole() {
-  setupIronwolfTheme();
+  setupAbyssTheme();
   renderMissionRail();
   setupCommandDock();
   setupCinemaMode();
