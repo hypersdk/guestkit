@@ -3417,8 +3417,8 @@ function setupWizard() {
 }
 
 function setupTheme() {
-  document.documentElement.dataset.theme = 'ironwolf';
-  localStorage.setItem('zyvor.theme', 'ironwolf');
+  document.documentElement.dataset.theme = 'abyss';
+  localStorage.setItem('zyvor.theme', 'abyss');
 }
 
 function setupGlassToggle() {
