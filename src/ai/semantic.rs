@@ -303,9 +303,6 @@ fn enrich_journal_hints(out: &mut SemanticAnalysis) {
     }
 }
 
-#[cfg(not(feature = "agent"))]
-fn enrich_journal_hints(_out: &mut SemanticAnalysis) {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
