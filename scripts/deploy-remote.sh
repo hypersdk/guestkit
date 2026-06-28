@@ -334,7 +334,13 @@ pkg_install() {
     $SUDO "$@" || return 1
 }
 
-if command -v dnf &>/dev/null; then
+# Prefer apt-get on Debian/Ubuntu even if dnf is installed as an extra package
+. /etc/os-release 2>/dev/null || true
+_ID="${ID:-}" _ID_LIKE="${ID_LIKE:-}"
+if [[ "$_ID" == "debian" || "$_ID" == "ubuntu" || "$_ID_LIKE" == *"debian"* || "$_ID_LIKE" == *"ubuntu"* ]]; then
+    PKG=apt-get
+    pkg_install apt-get update -qq
+elif command -v dnf &>/dev/null; then
     PKG=dnf
 elif command -v yum &>/dev/null; then
     PKG=yum
@@ -349,7 +355,8 @@ fi
 if [ "$PKG" = "apt-get" ]; then
     pkg_install apt-get install -y -qq \
         qemu-utils nbd-client lvm2 parted e2fsprogs \
-        build-essential pkg-config curl git
+        build-essential pkg-config curl git \
+        libsystemd-dev
 else
     # Core RPM packages (EL9: qemu-nbd is not a separate package — use qemu-img)
     pkg_install "$PKG" install -y \
