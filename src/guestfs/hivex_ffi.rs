@@ -256,7 +256,7 @@ fn decode_binary(data: &Value) -> Result<Vec<u8>> {
     }
     if let Some(s) = data.as_str() {
         let clean: String = s.chars().filter(|c| !c.is_whitespace()).collect();
-        if clean.len() % 2 != 0 {
+        if !clean.len().is_multiple_of(2) {
             return Err(Error::InvalidOperation("odd-length hex binary data".into()));
         }
         return (0..clean.len())
