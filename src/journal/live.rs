@@ -18,6 +18,6 @@ pub fn collect_journal_slice_boot(unit: &str, limit: usize, boot: &str) -> Journ
     }
     #[cfg(not(target_os = "windows"))]
     {
-        collect_sd(unit, limit, BootSelector::from_str(boot))
+        collect_sd(unit, limit, BootSelector::parse(boot))
     }
 }

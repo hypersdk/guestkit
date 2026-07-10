@@ -8,15 +8,18 @@ use std::path::Path;
 const DEFAULT_CONFIG: &str = "/etc/zyvor/guest-agent.toml";
 
 pub fn collect_hardware_evidence() -> HardwareEvidence {
-    let mut out = HardwareEvidence::default();
-    out.dmi_manufacturer = read_sysfs("/sys/class/dmi/id/sys_vendor");
-    out.dmi_product = read_sysfs("/sys/class/dmi/id/product_name");
-    out.dmi_uuid = read_sysfs("/sys/class/dmi/id/product_uuid");
-    out.machine_id = fs::read_to_string("/etc/machine-id")
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|_| read_sysfs("/var/lib/dbus/machine-id"));
-    out.virtio_net_count = count_dir_entries("/sys/class/net", "virtio");
-    out.virtio_blk_count = count_dir_entries("/sys/block", "vd");
+    let mut out = HardwareEvidence {
+        dmi_manufacturer: read_sysfs("/sys/class/dmi/id/sys_vendor"),
+        dmi_product: read_sysfs("/sys/class/dmi/id/product_name"),
+        dmi_uuid: read_sysfs("/sys/class/dmi/id/product_uuid"),
+        machine_id: fs::read_to_string("/etc/machine-id")
+            .map(|s| s.trim().to_string())
+            .unwrap_or_else(|_| read_sysfs("/var/lib/dbus/machine-id")),
+        virtio_net_count: count_dir_entries("/sys/class/net", "virtio"),
+        virtio_blk_count: count_dir_entries("/sys/block", "vd"),
+        zeus_vm_uid: load_zeus_vm_uid(),
+        ..Default::default()
+    };
     if let Ok(entries) = fs::read_dir("/sys/block") {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
@@ -25,7 +28,6 @@ pub fn collect_hardware_evidence() -> HardwareEvidence {
             }
         }
     }
-    out.zeus_vm_uid = load_zeus_vm_uid();
     out
 }
 

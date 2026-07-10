@@ -477,7 +477,7 @@ impl RequestHandler {
                 let process = evidence
                     .process
                     .clone()
-                    .unwrap_or_else(|| crate::collectors::process::collect_process_evidence());
+                    .unwrap_or_else(crate::collectors::process::collect_process_evidence);
                 JsonRpcResponse::success(id, serde_json::to_value(process).unwrap_or(json!({})))
             }
             Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),

@@ -29,7 +29,7 @@ pub fn collect_process_evidence() -> ProcessEvidence {
     evidence.top_cpu = by_cpu.into_iter().take(10).collect();
 
     let mut by_mem: Vec<ProcessSummary> = procs;
-    by_mem.sort_by(|a, b| b.memory_kb.cmp(&a.memory_kb));
+    by_mem.sort_by_key(|p| std::cmp::Reverse(p.memory_kb));
     evidence.top_memory = by_mem.into_iter().take(10).collect();
 
     evidence.listening_ports = collect_listening_ports();

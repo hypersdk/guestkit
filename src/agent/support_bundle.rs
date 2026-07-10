@@ -20,27 +20,28 @@ pub fn build_support_bundle_bytes() -> Result<Vec<u8>> {
         "hostname": evidence.os.hostname,
     });
 
-    let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
-    entries.push((
-        "manifest.json".into(),
-        serde_json::to_vec_pretty(&manifest).context("manifest json")?,
-    ));
-    entries.push((
-        "evidence.json".into(),
-        serde_json::to_vec_pretty(&evidence).context("evidence json")?,
-    ));
-    entries.push((
-        "guest_health.json".into(),
-        serde_json::to_vec_pretty(&health).context("guest_health json")?,
-    ));
-    entries.push((
-        "semantic.json".into(),
-        serde_json::to_vec_pretty(&semantic).context("semantic json")?,
-    ));
-    entries.push((
-        "guest_info.json".into(),
-        serde_json::to_vec_pretty(&guest_info).context("guest_info json")?,
-    ));
+    let mut entries: Vec<(String, Vec<u8>)> = vec![
+        (
+            "manifest.json".into(),
+            serde_json::to_vec_pretty(&manifest).context("manifest json")?,
+        ),
+        (
+            "evidence.json".into(),
+            serde_json::to_vec_pretty(&evidence).context("evidence json")?,
+        ),
+        (
+            "guest_health.json".into(),
+            serde_json::to_vec_pretty(&health).context("guest_health json")?,
+        ),
+        (
+            "semantic.json".into(),
+            serde_json::to_vec_pretty(&semantic).context("semantic json")?,
+        ),
+        (
+            "guest_info.json".into(),
+            serde_json::to_vec_pretty(&guest_info).context("guest_info json")?,
+        ),
+    ];
 
     if let Some(process) = &evidence.process {
         entries.push((

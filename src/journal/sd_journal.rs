@@ -101,7 +101,7 @@ pub enum BootSelector {
 }
 
 impl BootSelector {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s {
             "current" | "0" => BootSelector::Current,
             "previous" | "-1" => BootSelector::Previous,
@@ -115,21 +115,6 @@ impl BootSelector {
             BootSelector::Previous => "previous",
             BootSelector::All => "all",
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::BootSelector;
-
-    #[test]
-    fn boot_selector_from_str() {
-        assert_eq!(BootSelector::from_str("current").as_str(), "current");
-        assert_eq!(BootSelector::from_str("0").as_str(), "current");
-        assert_eq!(BootSelector::from_str("previous").as_str(), "previous");
-        assert_eq!(BootSelector::from_str("-1").as_str(), "previous");
-        assert_eq!(BootSelector::from_str("all").as_str(), "all");
-        assert_eq!(BootSelector::from_str("bogus").as_str(), "all");
     }
 }
 
@@ -184,5 +169,20 @@ fn save_cursors(store: &CursorStore) {
         let parent = Path::new(CURSOR_PATH).parent().unwrap_or(Path::new("/var/lib/zyvor"));
         fs::create_dir_all(parent).ok();
         fs::write(CURSOR_PATH, json).ok();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BootSelector;
+
+    #[test]
+    fn boot_selector_from_str() {
+        assert_eq!(BootSelector::parse("current").as_str(), "current");
+        assert_eq!(BootSelector::parse("0").as_str(), "current");
+        assert_eq!(BootSelector::parse("previous").as_str(), "previous");
+        assert_eq!(BootSelector::parse("-1").as_str(), "previous");
+        assert_eq!(BootSelector::parse("all").as_str(), "all");
+        assert_eq!(BootSelector::parse("bogus").as_str(), "all");
     }
 }
