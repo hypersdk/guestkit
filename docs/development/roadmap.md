@@ -4,7 +4,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
-- **Unreleased** — Offline Windows registry writes in fix-plan apply (`registry-write` feature, libhivex FFI) — `RegistryEdit` operations now mutate SOFTWARE/SYSTEM/SAM/SECURITY hives with backup instead of being skipped
+- **v0.3.12** — Offline Windows registry writes in fix-plan apply (`registry-write` feature, libhivex FFI) — `RegistryEdit` operations now mutate SOFTWARE/SYSTEM/SAM/SECURITY hives with backup instead of being skipped
 - **v0.3.11** — Guest Control Fabric: transport-independent guest control with a 7-tier ladder (virtio-serial → QGA exec → QGA builtin → push cache → offline disk), `guest/*` API routes (`status`, `capabilities`, `doctor`, `readiness`, `install-agent`, `repair-plan`, `file/read|write`, `poll-reconcile`), QGA airgap file bootstrap, Agent Doctor (probe tree + 0–100 readiness score), host-mediated polling for `airgap_live` VMs, and `GuestActionPolicy` exec/file allowlists
 - **v0.3.7–0.3.10** — `zyvor-guest-agent` crate (Windows/Linux VM Tools daemon), Windows forensic depth (EVTX parsing, persistence run keys, forensic profile merge), KubeVirt QGA transport hardening, web console (Copilot API: briefing/ask/fleet/compare/launch advice), Ubuntu k3s E2E harness
 - **v0.3.6** — In-guest agent (`guestkit agent`, `agent-proxy`, `guestkit-agent-protocol`), offline `--inject-agent`, worker jobs (`agent.evidence`, `agent.fix`), TUI LIVE badge + fix-plan preview + Assurance shortcuts
