@@ -1,0 +1,340 @@
+// SPDX-License-Identifier: Apache-2.0
+//! Windows registry **write** support via hand-rolled FFI to libhivex.
+//!
+//! The read path uses the pure-Rust `nt_hive2` crate (see [`super::hivex_ops`] and
+//! [`super::windows_registry`]), which is read-only. Offline hive mutation requires
+//! libhivex, which we bind directly here rather than pulling in the EUPL-licensed
+//! `hivex` crate — libhivex itself is LGPL-2.1 and dynamically linked, so it does not
+//! impose copyleft on GuestKit.
+//!
+//! Gated behind the `registry-write` feature; the build then links `libhivex`
+//! (Debian/Ubuntu `libhivex-dev`, Fedora/EL `hivex-devel`).
+
+use crate::core::{Error, Result};
+use serde_json::Value;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
+use std::path::Path;
+
+/// `HIVEX_OPEN_WRITE` — open the hive for writing.
+const HIVEX_OPEN_WRITE: c_int = 4;
+
+// libhivex uses `size_t` for node/value handles. `usize` matches on LP64/LLP64.
+type HiveH = *mut std::ffi::c_void;
+type HiveNodeH = usize;
+
+/// Mirrors `struct hive_set_value` from `<hivex.h>`.
+#[repr(C)]
+struct HiveSetValue {
+    key: *const c_char,
+    t: c_int,
+    len: usize,
+    value: *const c_char,
+}
+
+// hive_type constants (subset we emit).
+const REG_SZ: c_int = 1;
+const REG_EXPAND_SZ: c_int = 2;
+const REG_BINARY: c_int = 3;
+const REG_DWORD: c_int = 4;
+const REG_MULTI_SZ: c_int = 7;
+const REG_QWORD: c_int = 11;
+
+#[link(name = "hivex")]
+extern "C" {
+    fn hivex_open(filename: *const c_char, flags: c_int) -> HiveH;
+    fn hivex_close(h: HiveH) -> c_int;
+    fn hivex_root(h: HiveH) -> HiveNodeH;
+    fn hivex_node_get_child(h: HiveH, node: HiveNodeH, name: *const c_char) -> HiveNodeH;
+    fn hivex_node_add_child(h: HiveH, parent: HiveNodeH, name: *const c_char) -> HiveNodeH;
+    fn hivex_node_set_value(
+        h: HiveH,
+        node: HiveNodeH,
+        val: *const HiveSetValue,
+        flags: c_int,
+    ) -> c_int;
+    fn hivex_commit(h: HiveH, filename: *const c_char, flags: c_int) -> c_int;
+}
+
+/// RAII wrapper so the hive is always closed, even on early return.
+struct Hive(HiveH);
+
+impl Hive {
+    fn open_write(path: &Path) -> Result<Self> {
+        let c = path_to_cstring(path)?;
+        // SAFETY: `c` is a valid NUL-terminated C string for the duration of the call.
+        let h = unsafe { hivex_open(c.as_ptr(), HIVEX_OPEN_WRITE) };
+        if h.is_null() {
+            return Err(Error::CommandFailed(format!(
+                "hivex_open({}) failed: {}",
+                path.display(),
+                std::io::Error::last_os_error()
+            )));
+        }
+        Ok(Hive(h))
+    }
+
+    fn commit(&mut self) -> Result<()> {
+        // NULL filename => write back to the file it was opened from.
+        // SAFETY: self.0 is a live hive handle.
+        let rc = unsafe { hivex_commit(self.0, std::ptr::null(), 0) };
+        if rc != 0 {
+            return Err(Error::CommandFailed(format!(
+                "hivex_commit failed: {}",
+                std::io::Error::last_os_error()
+            )));
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Hive {
+    fn drop(&mut self) {
+        // SAFETY: self.0 is a live hive handle owned by this wrapper.
+        unsafe {
+            hivex_close(self.0);
+        }
+    }
+}
+
+/// Set (creating intermediate keys as needed) a single registry value in an
+/// offline hive file that has already been downloaded to the host.
+///
+/// * `hive_file` — host path to the hive (e.g. a downloaded SOFTWARE/SYSTEM hive).
+/// * `subpath` — key components **below the hive root** (the `HKLM\SOFTWARE`
+///   prefix maps to the hive root, so pass only what follows it).
+/// * `value_name` — value to set; empty string targets the key's default value.
+/// * `data_type` — REG_* type string (`REG_SZ`, `REG_DWORD`, `String`, `DWORD`, …).
+/// * `new_data` — the new value as JSON, interpreted per `data_type`.
+pub fn set_registry_value(
+    hive_file: &Path,
+    subpath: &[String],
+    value_name: &str,
+    data_type: &str,
+    new_data: &Value,
+) -> Result<()> {
+    let (reg_type, encoded) = encode_value(data_type, new_data)?;
+
+    let mut hive = Hive::open_write(hive_file)?;
+
+    // Navigate from root, creating missing intermediate keys.
+    // SAFETY: hive.0 is live for all of these calls.
+    let mut node: HiveNodeH = unsafe { hivex_root(hive.0) };
+    if node == 0 {
+        return Err(Error::CommandFailed(format!(
+            "hivex_root failed: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    for component in subpath {
+        let name = CString::new(component.as_str()).map_err(|_| {
+            Error::InvalidOperation(format!("registry key component has NUL byte: {component}"))
+        })?;
+        let child = unsafe { hivex_node_get_child(hive.0, node, name.as_ptr()) };
+        node = if child != 0 {
+            child
+        } else {
+            let created = unsafe { hivex_node_add_child(hive.0, node, name.as_ptr()) };
+            if created == 0 {
+                return Err(Error::CommandFailed(format!(
+                    "hivex_node_add_child({component}) failed: {}",
+                    std::io::Error::last_os_error()
+                )));
+            }
+            created
+        };
+    }
+
+    let key = CString::new(value_name).map_err(|_| {
+        Error::InvalidOperation(format!("registry value name has NUL byte: {value_name}"))
+    })?;
+    let set = HiveSetValue {
+        key: key.as_ptr(),
+        t: reg_type,
+        len: encoded.len(),
+        value: encoded.as_ptr() as *const c_char,
+    };
+    // SAFETY: `key` and `encoded` outlive this call; `set` points into both.
+    let rc = unsafe { hivex_node_set_value(hive.0, node, &set, 0) };
+    if rc != 0 {
+        return Err(Error::CommandFailed(format!(
+            "hivex_node_set_value({value_name}) failed: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+
+    hive.commit()?;
+    Ok(())
+}
+
+/// Encode a JSON value into libhivex's on-disk byte representation for `data_type`.
+fn encode_value(data_type: &str, data: &Value) -> Result<(c_int, Vec<u8>)> {
+    let norm = data_type.trim().to_ascii_uppercase();
+    let norm = norm.strip_prefix("REG_").unwrap_or(&norm);
+
+    match norm {
+        "SZ" | "STRING" | "EXPAND_SZ" | "EXPANDSTRING" => {
+            let s = data
+                .as_str()
+                .ok_or_else(|| Error::InvalidOperation("expected string data".into()))?;
+            let t = if norm.starts_with("EXPAND") {
+                REG_EXPAND_SZ
+            } else {
+                REG_SZ
+            };
+            Ok((t, utf16le_nul(s)))
+        }
+        "DWORD" | "DWORD_LITTLE_ENDIAN" => {
+            let n = as_u64(data)?;
+            Ok((REG_DWORD, (n as u32).to_le_bytes().to_vec()))
+        }
+        "QWORD" => {
+            let n = as_u64(data)?;
+            Ok((REG_QWORD, n.to_le_bytes().to_vec()))
+        }
+        "MULTI_SZ" | "MULTISTRING" => {
+            let arr = data
+                .as_array()
+                .ok_or_else(|| Error::InvalidOperation("expected array for MULTI_SZ".into()))?;
+            let mut bytes = Vec::new();
+            for item in arr {
+                let s = item.as_str().ok_or_else(|| {
+                    Error::InvalidOperation("MULTI_SZ items must be strings".into())
+                })?;
+                bytes.extend_from_slice(&utf16le_nul(s));
+            }
+            bytes.extend_from_slice(&[0, 0]); // final terminating NUL
+            Ok((REG_MULTI_SZ, bytes))
+        }
+        "BINARY" => Ok((REG_BINARY, decode_binary(data)?)),
+        other => Err(Error::InvalidOperation(format!(
+            "unsupported registry data type: {other}"
+        ))),
+    }
+}
+
+/// UTF-16LE encode with a trailing NUL, as Windows stores REG_SZ.
+fn utf16le_nul(s: &str) -> Vec<u8> {
+    let mut bytes: Vec<u8> = s
+        .encode_utf16()
+        .flat_map(|u| u.to_le_bytes())
+        .collect();
+    bytes.extend_from_slice(&[0, 0]);
+    bytes
+}
+
+/// Accept a JSON number, or a decimal/0x-hex string, as an integer.
+fn as_u64(data: &Value) -> Result<u64> {
+    if let Some(n) = data.as_u64() {
+        return Ok(n);
+    }
+    if let Some(s) = data.as_str() {
+        let s = s.trim();
+        let parsed = if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+            u64::from_str_radix(hex, 16)
+        } else {
+            s.parse::<u64>()
+        };
+        return parsed
+            .map_err(|_| Error::InvalidOperation(format!("invalid integer registry data: {s}")));
+    }
+    Err(Error::InvalidOperation("expected integer data".into()))
+}
+
+/// Binary data as a JSON array of byte values, or a hex string.
+fn decode_binary(data: &Value) -> Result<Vec<u8>> {
+    if let Some(arr) = data.as_array() {
+        return arr
+            .iter()
+            .map(|v| {
+                v.as_u64()
+                    .filter(|n| *n <= 0xFF)
+                    .map(|n| n as u8)
+                    .ok_or_else(|| Error::InvalidOperation("binary byte out of range".into()))
+            })
+            .collect();
+    }
+    if let Some(s) = data.as_str() {
+        let clean: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+        if clean.len() % 2 != 0 {
+            return Err(Error::InvalidOperation("odd-length hex binary data".into()));
+        }
+        return (0..clean.len())
+            .step_by(2)
+            .map(|i| {
+                u8::from_str_radix(&clean[i..i + 2], 16)
+                    .map_err(|_| Error::InvalidOperation("invalid hex in binary data".into()))
+            })
+            .collect();
+    }
+    Err(Error::InvalidOperation(
+        "expected byte array or hex string for REG_BINARY".into(),
+    ))
+}
+
+fn path_to_cstring(path: &Path) -> Result<CString> {
+    let s = path
+        .to_str()
+        .ok_or_else(|| Error::InvalidOperation("hive path is not valid UTF-8".into()))?;
+    CString::new(s).map_err(|_| Error::InvalidOperation("hive path contains NUL byte".into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn utf16le_encodes_with_terminator() {
+        // "AB" -> 41 00 42 00 00 00
+        assert_eq!(utf16le_nul("AB"), vec![0x41, 0x00, 0x42, 0x00, 0x00, 0x00]);
+        assert_eq!(utf16le_nul(""), vec![0x00, 0x00]);
+    }
+
+    #[test]
+    fn dword_encoding() {
+        let (t, b) = encode_value("REG_DWORD", &json!(1)).unwrap();
+        assert_eq!(t, REG_DWORD);
+        assert_eq!(b, vec![1, 0, 0, 0]);
+        // hex string form
+        let (_, b2) = encode_value("DWORD", &json!("0x100")).unwrap();
+        assert_eq!(b2, vec![0, 1, 0, 0]);
+    }
+
+    #[test]
+    fn qword_encoding() {
+        let (t, b) = encode_value("REG_QWORD", &json!(258)).unwrap();
+        assert_eq!(t, REG_QWORD);
+        assert_eq!(b, vec![2, 1, 0, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn multi_sz_has_double_terminator() {
+        let (t, b) = encode_value("REG_MULTI_SZ", &json!(["A", "B"])).unwrap();
+        assert_eq!(t, REG_MULTI_SZ);
+        // "A\0" "B\0" then final "\0"
+        assert_eq!(b, vec![0x41, 0, 0, 0, 0x42, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn binary_from_array_and_hex() {
+        let (t, b) = encode_value("REG_BINARY", &json!([1, 2, 255])).unwrap();
+        assert_eq!(t, REG_BINARY);
+        assert_eq!(b, vec![1, 2, 255]);
+        let (_, b2) = encode_value("BINARY", &json!("01 02 ff")).unwrap();
+        assert_eq!(b2, vec![1, 2, 255]);
+    }
+
+    #[test]
+    fn string_type() {
+        let (t, _) = encode_value("String", &json!("Enabled")).unwrap();
+        assert_eq!(t, REG_SZ);
+        let (t2, _) = encode_value("REG_EXPAND_SZ", &json!("%SystemRoot%")).unwrap();
+        assert_eq!(t2, REG_EXPAND_SZ);
+    }
+
+    #[test]
+    fn rejects_bad_type() {
+        assert!(encode_value("REG_WEIRD", &json!("x")).is_err());
+    }
+}

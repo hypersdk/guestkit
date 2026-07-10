@@ -301,14 +301,94 @@ impl PlanApplicator {
                 );
                 Ok(false)
             }
-            OperationType::RegistryEdit(re) => {
-                eprintln!(
-                    "Warning: Registry edit ({}) not yet supported, skipping",
-                    re.key
-                );
-                Ok(false)
-            }
+            OperationType::RegistryEdit(re) => self.apply_registry_edit(g, re),
         }
+    }
+
+    /// Apply a Windows registry edit to an offline hive via libhivex.
+    #[cfg(feature = "registry-write")]
+    fn apply_registry_edit(
+        &self,
+        g: &mut crate::guestfs::Guestfs,
+        re: &RegistryEdit,
+    ) -> Result<bool> {
+        let (hive_path, subpath) = self.resolve_registry_hive(g, &re.key)?;
+
+        // Pull the hive out to the host, mutate it, push it back.
+        let temp = tempfile::NamedTempFile::new()?;
+        let host_path = temp
+            .path()
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Temp hive path contains invalid UTF-8"))?;
+        g.download_hive(&hive_path, host_path)
+            .map_err(|e| anyhow::anyhow!("Failed to download hive {}: {}", hive_path, e))?;
+
+        crate::guestfs::hivex_ffi::set_registry_value(
+            temp.path(),
+            &subpath,
+            &re.value,
+            &re.data_type,
+            &re.new_data,
+        )
+        .with_context(|| format!("Registry edit failed for {}", re.key))?;
+
+        g.upload_hive(host_path, &hive_path)
+            .map_err(|e| anyhow::anyhow!("Failed to upload hive {}: {}", hive_path, e))?;
+        Ok(true)
+    }
+
+    /// Without the `registry-write` feature we cannot mutate hives offline.
+    #[cfg(not(feature = "registry-write"))]
+    fn apply_registry_edit(
+        &self,
+        _g: &mut crate::guestfs::Guestfs,
+        re: &RegistryEdit,
+    ) -> Result<bool> {
+        eprintln!(
+            "Warning: Registry edit ({}) skipped — rebuild with `--features registry-write` for offline hive writes",
+            re.key
+        );
+        Ok(false)
+    }
+
+    /// Map a `HKLM\<hive>\...` key to the guest hive file path and the key
+    /// components below the hive root.
+    #[cfg(feature = "registry-write")]
+    fn resolve_registry_hive(
+        &self,
+        g: &mut crate::guestfs::Guestfs,
+        key: &str,
+    ) -> Result<(String, Vec<String>)> {
+        let normalized = key.replace('/', "\\");
+        let parts: Vec<&str> = normalized.split('\\').filter(|s| !s.is_empty()).collect();
+        if parts.len() < 2 {
+            anyhow::bail!("Registry key too short to resolve a hive: {key}");
+        }
+
+        let root_key = parts[0].to_ascii_uppercase();
+        if !matches!(root_key.as_str(), "HKLM" | "HKEY_LOCAL_MACHINE") {
+            anyhow::bail!("Offline registry writes only support HKLM keys (got {})", parts[0]);
+        }
+
+        let roots = g.inspect_os()?;
+        let root = roots
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No OS root detected for registry write"))?
+            .clone();
+
+        let hive_name = parts[1].to_ascii_uppercase();
+        let hive_path = match hive_name.as_str() {
+            "SOFTWARE" => g.inspect_get_windows_software_hive(&root)?,
+            "SYSTEM" => g.inspect_get_windows_system_hive(&root)?,
+            "SAM" | "SECURITY" | "DEFAULT" | "COMPONENTS" => {
+                let systemroot = g.inspect_get_windows_systemroot(&root)?;
+                format!("{systemroot}/System32/config/{hive_name}")
+            }
+            other => anyhow::bail!("Unsupported registry hive: {other}"),
+        };
+
+        let subpath: Vec<String> = parts[2..].iter().map(|s| s.to_string()).collect();
+        Ok((hive_path, subpath))
     }
 
     /// Parse a command string into arguments, handling single and double quotes.

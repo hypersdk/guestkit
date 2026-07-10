@@ -133,6 +133,8 @@ journal-native = ["dep:libsystemd-sys"]
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
 local-ai = ["ai"]
+# Offline Windows registry writes via libhivex FFI (needs libhivex-dev / hivex-devel)
+registry-write = []
 cloud-s3 = []
 cloud-azure = []
 cloud-gcs = []

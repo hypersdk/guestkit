@@ -34,6 +34,8 @@ pub mod fstab_rewriter;
 pub mod glob_ops;
 pub mod grub_ops;
 pub mod handle;
+#[cfg(feature = "registry-write")]
+pub mod hivex_ffi;
 pub mod hivex_ops;
 pub mod inotify_ops;
 pub mod inspect;

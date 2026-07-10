@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Offline Windows registry writes** — `registry-write` feature links libhivex (hand-rolled FFI, LGPL-2.1 dynamic link — no copyleft crate) so fix-plan `RegistryEdit` operations mutate offline SOFTWARE/SYSTEM/SAM/SECURITY hives (`HKLM`) instead of being skipped; supports REG_SZ/EXPAND_SZ/DWORD/QWORD/MULTI_SZ/BINARY with whole-disk backup. Build with `--features registry-write` (needs `libhivex-dev`/`hivex-devel`)
+
 ## [0.3.11] - 2026-06-15
 
 ### Added
@@ -57,14 +60,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.7] - 2026-06-12
 
 ### Added
-- **IronWolf web console** — GuestKit deploy UI with macOS Tahoe shell, local Inter fonts, and GuestKit-branded brain/dock/mission rail
+- **Abyss web console** — GuestKit deploy UI with deep-navy design system (aurora background, indigo/violet accents, frosted-glass cards), local Inter fonts, and GuestKit-branded brain/dock/mission rail
 - **Console Copilot API** — briefing, ask, fleet overview, compare narrative, launch advice, and system status endpoints in `zyvor-api`
 - **`zyvor-guest-agent` crate** — in-guest agent daemon for Windows and Linux VM Tools
 - **Windows forensic depth** — EVTX parsing, persistence run keys, forensic profile merge in evidence collectors
 - **QGA helpers** — KubeVirt guest-agent transport improvements for live inspection
 
 ### Changed
-- Renamed Nebula UI modules to `guestkit-console.js`, `guestkit-ai.js`, `guestkit-features.js`
+- Renamed Abyss UI modules to `guestkit-console.js`, `guestkit-ai.js`, `guestkit-features.js`
 - Integration tests use `guestkit copy` (replacing removed `cp` alias)
 - TUI view registry includes Assurance, SystemdDeep, and AiInsights (21 views)
 
