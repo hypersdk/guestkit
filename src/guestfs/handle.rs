@@ -75,6 +75,7 @@ pub struct Guestfs {
     pub(crate) resource_limits: ResourceLimits,
     pub(crate) windows_version_cache: HashMap<String, (String, String, String)>, // Cache for Windows registry data (root -> (product, version, edition))
     pub(crate) open_hives: HashMap<i64, PathBuf>, // Tracks open registry hive files (handle -> host path)
+    pub(crate) ova_temp: Vec<tempfile::TempDir>, // Keeps VMDKs extracted from OVA archives alive for the handle's lifetime
 }
 
 /// Drive configuration
@@ -118,6 +119,7 @@ impl Guestfs {
             resource_limits: ResourceLimits::default(),
             windows_version_cache: HashMap::new(),
             open_hives: HashMap::new(),
+            ova_temp: Vec::new(),
         })
     }
 
@@ -153,13 +155,98 @@ impl Guestfs {
             ));
         }
 
+        // OVA/OVF bundles are tar archives, not disks — transparently extract the
+        // embedded disk and add that instead (extension is unreliable, sniff too).
+        let resolved = self.maybe_extract_ova(path.as_ref())?;
+
         self.drives.push(DriveConfig {
-            path: path.as_ref().to_path_buf(),
+            path: resolved,
             readonly,
             format: format.map(|s| s.to_string()),
         });
 
         Ok(())
+    }
+
+    /// If `path` is an OVA (a tar archive containing a disk image), extract the
+    /// primary disk to a temp dir owned by this handle and return its path.
+    /// Otherwise return `path` unchanged.
+    #[cfg(feature = "guest-inspect")]
+    fn maybe_extract_ova(&mut self, path: &Path) -> Result<PathBuf> {
+        let looks_ova = path
+            .extension()
+            .map(|e| e.eq_ignore_ascii_case("ova"))
+            .unwrap_or(false)
+            || Self::is_tar_archive(path);
+        if !looks_ova {
+            return Ok(path.to_path_buf());
+        }
+
+        let file = std::fs::File::open(path).map_err(Error::Io)?;
+        let mut archive = tar::Archive::new(file);
+        let dir = tempfile::tempdir().map_err(Error::Io)?;
+
+        // Pick the largest disk-shaped entry (OVAs list the boot disk first, but
+        // choosing by size is robust for multi-file bundles).
+        const DISK_EXTS: [&str; 7] = ["vmdk", "img", "raw", "qcow2", "vhd", "vhdx", "vdi"];
+        let mut best: Option<(PathBuf, u64)> = None;
+        for entry in archive.entries().map_err(Error::Io)? {
+            let mut entry = entry.map_err(Error::Io)?;
+            let ent_path = entry.path().map_err(Error::Io)?.to_path_buf();
+            let is_disk = ent_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| DISK_EXTS.contains(&e.to_ascii_lowercase().as_str()))
+                .unwrap_or(false);
+            if !is_disk {
+                continue;
+            }
+            let size = entry.header().size().unwrap_or(0);
+            let name = ent_path
+                .file_name()
+                .map(|n| n.to_os_string())
+                .unwrap_or_else(|| std::ffi::OsString::from("disk.img"));
+            let out = dir.path().join(name);
+            entry.unpack(&out).map_err(Error::Io)?;
+            match &best {
+                Some((_, bs)) if *bs >= size => {}
+                _ => best = Some((out, size)),
+            }
+        }
+
+        let disk = best
+            .map(|(p, _)| p)
+            .ok_or_else(|| Error::InvalidOperation(format!(
+                "OVA archive {} contains no disk image (.vmdk/.img/.raw/.qcow2)",
+                path.display()
+            )))?;
+
+        if self.verbose {
+            eprintln!("guestfs: extracted OVA disk -> {}", disk.display());
+        }
+        self.ova_temp.push(dir);
+        Ok(disk)
+    }
+
+    #[cfg(not(feature = "guest-inspect"))]
+    fn maybe_extract_ova(&mut self, path: &Path) -> Result<PathBuf> {
+        Ok(path.to_path_buf())
+    }
+
+    /// Sniff the POSIX tar `ustar` magic at offset 257 (covers .ova without the
+    /// `.ova` extension, e.g. a server-vault UUID filename).
+    #[cfg(feature = "guest-inspect")]
+    fn is_tar_archive(path: &Path) -> bool {
+        use std::io::{Read, Seek, SeekFrom};
+        let mut f = match std::fs::File::open(path) {
+            Ok(f) => f,
+            Err(_) => return false,
+        };
+        if f.seek(SeekFrom::Start(257)).is_err() {
+            return false;
+        }
+        let mut magic = [0u8; 5];
+        f.read_exact(&mut magic).is_ok() && &magic == b"ustar"
     }
 
     /// Choose loop (raw) vs NBD (qcow2/vmdk/…) based on on-disk format, not extension.

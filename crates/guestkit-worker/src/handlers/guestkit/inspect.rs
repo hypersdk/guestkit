@@ -442,7 +442,7 @@ impl OperationHandler for InspectHandler {
         }
 
         // Validate format
-        let supported_formats = ["qcow2", "vmdk", "vdi", "vhdx", "raw", "img"];
+        let supported_formats = ["qcow2", "vmdk", "vdi", "vhdx", "raw", "img", "ova"];
         if !supported_formats.contains(&inspect_payload.image.format.as_str()) {
             return Err(WorkerError::ExecutionError(
                 format!("Unsupported image format: {}", inspect_payload.image.format)
