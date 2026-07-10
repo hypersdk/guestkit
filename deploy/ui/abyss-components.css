@@ -880,3 +880,22 @@ kbd {
 .ir-rec p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
 .ir-list { margin: 4px 0 0; padding-left: 16px; }
 .ir-list li { font-size: 12px; color: var(--text-muted); margin: 2px 0; }
+/* Analyzing progress banner */
+.ir-analyzing { display: flex; align-items: center; gap: 10px; margin: 10px 0; padding: 10px 12px;
+  border-radius: var(--radius-md, 12px); border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 13px; color: var(--text-main); }
+.ir-analyzing b { font-family: var(--font-mono); color: var(--accent); }
+.ir-analyzing__bar { flex: 1; height: 4px; border-radius: 3px; background: rgba(127, 144, 176, 0.2); overflow: hidden; }
+.ir-analyzing__bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+.ir-spin { width: 14px; height: 14px; flex: none; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent); border-top-color: var(--accent); animation: ir-spin 0.8s linear infinite; }
+@keyframes ir-spin { to { transform: rotate(360deg); } }
+/* Section reveal on render */
+.intel-report .ir-sec { animation: ir-rise 0.35s ease both; }
+.intel-report .ir-sec:nth-child(2) { animation-delay: 0.04s; }
+.intel-report .ir-sec:nth-child(3) { animation-delay: 0.08s; }
+.intel-report .ir-sec:nth-child(4) { animation-delay: 0.12s; }
+.intel-report .ir-sec:nth-child(5) { animation-delay: 0.16s; }
+.intel-report .ir-sec:nth-child(n+6) { animation-delay: 0.2s; }
+@keyframes ir-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ir-spin { animation: none; } .intel-report .ir-sec { animation: none; } }
