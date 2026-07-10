@@ -2279,6 +2279,7 @@ function setScore(score, reason) {
   const panel = $('#scorePanel');
   const ring = $('#scoreRing');
   const val = $('#scoreValue');
+  if (!panel || !ring || !val) return; // score widget absent in this layout
   const label = panel.querySelector('.score-label');
 
   if (score == null || Number.isNaN(score)) {
@@ -3656,18 +3657,21 @@ async function init() {
   window.answerCopilotLocal = answerCopilotLocal;
   window.renderCopilot = renderCopilot;
 
-  setupDropzone();
-  setupGlassToggle();
-  window.GuestKitConsole?.initGuestKitConsole?.();
-  window.GuestKitFeatures?.initGuestKitFeatures?.();
-  window.GuestKitNebula?.initGuestKitNebula?.();
-  setupWizard();
-  setupInspectionMode();
-  setupCopilot();
-  setupActions();
-  setupServerStorage();
-  updateCopilotPlaceholder();
-  setDockEnabled(false);
+  // Legacy setup steps reference elements that the newer nebula console owns.
+  // Run each in isolation so a missing element can never abort the whole app.
+  const safe = (fn) => { try { return fn(); } catch (e) { console.warn('[init] skipped:', e?.message || e); } };
+  safe(setupDropzone);
+  safe(setupGlassToggle);
+  safe(() => window.GuestKitConsole?.initGuestKitConsole?.());
+  safe(() => window.GuestKitFeatures?.initGuestKitFeatures?.());
+  safe(() => window.GuestKitNebula?.initGuestKitNebula?.());
+  safe(setupWizard);
+  safe(setupInspectionMode);
+  safe(setupCopilot);
+  safe(setupActions);
+  safe(setupServerStorage);
+  safe(updateCopilotPlaceholder);
+  safe(() => setDockEnabled(false));
   await loadUiConfig();
   await loadServerStorageRoots();
   await browseServerStorage('', state.serverStorage.rootId);
