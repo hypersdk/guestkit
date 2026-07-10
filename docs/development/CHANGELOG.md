@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.13] - 2026-07-11
+
+### Added
+- **Deep offline inspection panels** — the `guestkit.inspect` worker handler now
+  collects and surfaces, from a mounted disk: partitions (device/fstype/UUID) +
+  fstab, installed kernels + default, boot-load kernel modules, systemd unit
+  inventory, and user accounts (`/etc/passwd` → name/uid/home/shell/login). A
+  second wave adds network detail (DNS servers, default gateway), machine-id,
+  cloud-init presence, VM guest tools (open-vm-tools/vmware/vbox/hyperv/qemu-ga),
+  firewall (ufw/firewalld/iptables) and SSH policy (root-login/password-auth).
+  The web report renders each as a token-driven panel (Storage table, Kernels,
+  Drivers, Systemd units, Users table, Guest platform), all reduced-motion aware.
+- **Premium web-console UX layer** (`guestkit-ux.js`) — ⌘K fuzzy command palette
+  (with `>` Ask-Zeus mode), dock cursor-magnify, event-bus rich toasts, activity
+  log, cinematic Zeus scan overlay + verdict burst, ambient aurora, theme wipe,
+  keyboard-driven fleet nav, click-to-copy, shortcut cheat sheet, skeleton
+  loaders, Ask-Zeus starter chips, global drag-to-analyze overlay, first-run
+  coach-mark tour, a canvas verdict share-card (PNG export), synthesized Web
+  Audio cues, a Konami "storm mode", and a client-side fleet compare view.
+- **OVA + cloud-image ingest** and **multi-node CephFS RWX vault** for shared
+  image storage across cluster nodes.
+
+### Fixed
+- **Windows boot doctor** — Linux-only checks (BOOT-003 Initramfs, BOOT-004 GRUB)
+  are now gated as N/A on Windows guests instead of failing as false blockers.
+- **Legacy-BIOS Windows BCD/bootmgr detection** — the evidence builder checked
+  only EFI paths, falsely flagging `BCD store not found` on legacy installs;
+  now also detects `/Boot/BCD` and `/bootmgr` at the boot-volume root.
+- **Security: JWT signing key fails closed** — with `AUTH_ENABLED=true`, the API
+  refuses to start unless `JWT_SECRET` is a real value (previously fell back to a
+  hardcoded, globally-known `change-me-in-production` key → forgeable tokens).
+- **Security: DB password out of plaintext env** — `DATABASE_URL` now comes from
+  the `zyvor-secrets` Secret via `secretKeyRef` instead of being interpolated
+  into the API Deployment env (visible in `kubectl describe`).
+- **`delete_vm` no longer 500s on analyzed disks** — the handler tears down
+  `job_results → jobs → vm_images` transactionally instead of hitting the
+  `jobs_vm_id_fkey` foreign-key constraint.
+- **Helm multi-tenant collision** — the KubeVirt ClusterRole/Binding names are
+  namespace-scoped (`zyvor-api-kubevirt-<ns>`) so a second install doesn't clash.
+
 ## [0.3.12] - 2026-07-10
 
 ### Added
