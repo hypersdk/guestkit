@@ -1076,3 +1076,34 @@ ul.gk-activity li .time { float: right; color: var(--text-soft); font-size: 10px
   .gk-aurora, .gk-wipe, .gk-scan__grid, .gk-scan__bolt, .gk-scan__dots, .gk-flash, .gk-sparks, .gk-storm-flash { animation: none !important; }
   .gk-aurora, .gk-wipe { display: none !important; }
 }
+
+/* ═══════════════ UX polish pack ═══════════════ */
+
+/* ── Cheat sheet ── */
+.shortcuts-list.gk-sheet { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 22px; }
+.gk-sheet__sec { grid-column: 1 / -1; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); margin: 14px 0 4px; font-weight: 700; }
+.gk-sheet__sec:first-child { margin-top: 0; }
+.gk-sheet__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 45%, transparent); }
+.gk-sheet__lbl { font-size: 13px; color: var(--text-muted); }
+.gk-sheet__k { display: flex; gap: 4px; flex: none; }
+.gk-sheet .gk-kbd { font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; color: var(--text-main); background: color-mix(in srgb, var(--text-main) 5%, transparent); }
+.gk-sheet__foot { grid-column: 1 / -1; margin-top: 14px; font-size: 11px; color: var(--text-soft); font-style: italic; }
+@media (max-width: 640px) { .shortcuts-list.gk-sheet { grid-template-columns: 1fr; } }
+
+/* ── Fleet skeletons ── */
+.gk-skel-card { border: 1px solid var(--border-soft); border-radius: 14px; padding: 16px; background: var(--bg-card); }
+.gk-skel-row { display: flex; gap: 8px; margin-top: 14px; }
+
+/* ── Arrow-key fleet focus ── */
+.vm-card.gk-kbd-focus { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* ── Click-to-copy feedback ── */
+.ir-mono.gk-copied { color: var(--success) !important; transition: color .15s; }
+.ir-mono.gk-copied::after { content: " ✓"; }
+
+/* ── Ask Zeus starter chips ── */
+.gk-starters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.gk-starter { font: inherit; font-size: 12px; color: var(--text-muted); background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: all .14s; }
+.gk-starter:hover { color: var(--text-main); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) { .gk-starter { transition: none; } }
