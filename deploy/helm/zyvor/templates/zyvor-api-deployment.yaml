@@ -79,7 +79,10 @@ spec:
             {{- end }}
             {{- end }}
             - name: DATABASE_URL
-              value: postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql:5432/{{ .Values.postgresql.database }}
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-secrets
+                  key: database-url
             - name: REDIS_URL
               value: redis://redis:6379
             - name: STORAGE_PATH
