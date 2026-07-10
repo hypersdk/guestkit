@@ -2454,6 +2454,7 @@ function renderSummary(data, action) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
   const emptyWrap = $('#summaryEmpty');
+  if (!content) return; // legacy summary panel removed in the nebula layout
   ph?.classList.add('hidden');
   emptyWrap?.classList.add('hidden');
   content.classList.remove('hidden');
@@ -2901,30 +2902,33 @@ function pollJob(jobId, action) {
     const tick = async () => {
       try {
         const data = await api(`/jobs/${jobId}`);
-        showRaw(data);
-        renderSummary(data, action);
-
         const live = data?.data?.live_status || {};
         const status = live.status || data?.data?.status || 'pending';
-        $('#jobStatus').textContent = status;
 
-        const progress = live.progress ?? live.progress_percent;
-        if (progress != null) setJobProgress(progress, live.message || status);
-        else if (live.message) setJobProgress(null, live.message);
-        window.GuestKitConsole?.appendEvidenceLog?.(`[${status}] ${live.message || action}${progress != null ? ` (${progress}%)` : ''}`);
-        window.GuestKitConsole?.syncBrainJobTracker?.();
+        // Renders must never block completion detection (legacy elements may be absent).
+        try {
+          showRaw(data);
+          renderSummary(data, action);
+          const js = $('#jobStatus'); if (js) js.textContent = status;
+          const progress = live.progress ?? live.progress_percent;
+          if (progress != null) setJobProgress(progress, live.message || status);
+          else if (live.message) setJobProgress(null, live.message);
+          window.GuestKitConsole?.appendEvidenceLog?.(`[${status}] ${live.message || action}${progress != null ? ` (${progress}%)` : ''}`);
+          window.GuestKitConsole?.syncBrainJobTracker?.();
+        } catch (e) { console.warn('[poll render]', e?.message || e); }
 
         if (status === 'completed') {
           clearInterval(state.pollTimer);
-          hideJobTracker('completed');
-          feed(`Job <span class="mono">${jobId.slice(0, 8)}…</span> completed`, 'ok');
-          toast(`${action} finished`, 'ok');
-          onJobComplete(action, data);
-
-          if (action === 'provision' && data?.data?.yaml) {
-            showYaml(data.data.yaml);
-            setActiveTab('yaml');
-          }
+          try {
+            hideJobTracker('completed');
+            feed(`Job <span class="mono">${jobId.slice(0, 8)}…</span> completed`, 'ok');
+            toast(`${action} finished`, 'ok');
+            onJobComplete(action, data);
+            if (action === 'provision' && data?.data?.yaml) {
+              showYaml(data.data.yaml);
+              setActiveTab('yaml');
+            }
+          } catch (e) { console.warn('[job complete]', e?.message || e); }
           resolve({ ok: true, data });
         } else if (status === 'failed') {
           clearInterval(state.pollTimer);
@@ -2934,7 +2938,7 @@ function pollJob(jobId, action) {
           feed(`Job failed: ${escapeHtml(err)}`, 'err');
           toast(err, 'err');
           state.lastFailedAction = action;
-          $('#jobRetryBtn').classList.remove('hidden');
+          $('#jobRetryBtn')?.classList.remove('hidden');
           if (state.selectedVm) {
             updateVmCache(state.selectedVm.id, {
               status: 'failed',
