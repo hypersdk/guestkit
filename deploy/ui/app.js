@@ -176,12 +176,8 @@ function fmtTime(d = new Date()) {
 }
 
 function toast(msg, type = 'ok') {
-  const stack = $('#toastStack');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  stack.appendChild(el);
-  setTimeout(() => el.remove(), 4200);
+  // Routed through the guestkit-ux toast bus (rich toasts: icon, dismiss, dedup).
+  window.dispatchEvent(new CustomEvent('gk:toast', { detail: { msg, type } }));
 }
 
 function feed(msg, type = '') {
@@ -3250,15 +3246,21 @@ async function runFullAnalysis() {
     ['migration-plan', 'Planning migration'],
   ];
   const reRender = () => window.GuestKitNebula?.renderAllNebula?.(vm, getVmCache(vm.id));
+  const emit = (phase, detail) => { try { window.dispatchEvent(new CustomEvent('gk:analyze', { detail: Object.assign({ phase, vm: vm.name || vm.id }, detail) })); } catch (e) {} };
   feed('Ask Zeus — running full analysis…');
+  emit('start', { steps: steps.map(s => s[1]), n: steps.length });
+  let ok = true;
   try {
     for (let i = 0; i < steps.length; i++) {
       const [step, label] = steps[i];
       state.analyzing = { label, i: i + 1, n: steps.length };
+      emit('step', { label, i: i + 1, n: steps.length });
       reRender();                       // show the progress banner immediately
       const r = await runActionInner(step);   // onJobComplete fills the report on completion
       if (r && r.ok === false) {
+        ok = false;
         feed(`Analysis stopped at ${escapeHtml(label)}: ${escapeHtml(r.error || 'failed')}`, 'err');
+        emit('error', { label, error: r.error || 'failed' });
         break;
       }
     }
@@ -3267,6 +3269,7 @@ async function runFullAnalysis() {
     reRender();
   }
   feed('Ask Zeus — intelligence report ready', 'ok');
+  emit('done', { ok, score: getVmCache(vm.id)?.bootScore });
   return { ok: true };
 }
 window.runFullAnalysis = runFullAnalysis;

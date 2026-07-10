@@ -181,7 +181,150 @@
     if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); pal && !pal.hidden ? closePal() : openPal(); }
   });
 
-  ready(function () { mountActivityLog(); mountToasts(); mountDock(); mountPalette();
+  /* ── Ambient aurora — drifting accent glow behind the shell ── */
+  function mountAurora() {
+    if (reduce || document.getElementById('gkAurora')) return;
+    var a = el('div', 'gk-aurora'); a.id = 'gkAurora';
+    a.innerHTML = '<span class="gk-aurora__b b1"></span><span class="gk-aurora__b b2"></span><span class="gk-aurora__b b3"></span>';
+    document.body.insertBefore(a, document.body.firstChild);
+  }
+
+  /* ── Theme-switch radial wipe ── */
+  function mountThemeWipe() {
+    if (reduce) return;
+    var last = document.documentElement.dataset.theme;
+    new MutationObserver(function () {
+      var t = document.documentElement.dataset.theme;
+      if (t === last) return; last = t;
+      var w = el('div', 'gk-wipe'); document.body.appendChild(w);
+      // paint with the NEW accent
+      requestAnimationFrame(function () {
+        w.style.background = 'radial-gradient(circle at 50% 42%, ' + accent() + ' 0%, transparent 60%)';
+        w.classList.add('go');
+      });
+      setTimeout(function () { w.remove(); }, 720);
+      window.gkToast('Theme · ' + (t ? t[0].toUpperCase() + t.slice(1) : ''), 'info');
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+  function accent() { try { return (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#7cf').trim(); } catch (e) { return '#7cf'; } }
+
+  /* ── Cinematic Zeus scan overlay (gk:analyze driven) ── */
+  function mountScan() {
+    var ov = null, phaseEls = [], stepTimer = null;
+    function build(steps) {
+      teardown();
+      ov = el('div', 'gk-scan');
+      var phaseHtml = (steps || []).map(function (s, i) {
+        return '<li class="gk-scan__ph" data-i="' + i + '"><span class="gk-scan__dot"></span><span>' + esc(s) + '</span></li>';
+      }).join('');
+      ov.innerHTML =
+        '<div class="gk-scan__core">' +
+          '<div class="gk-scan__ring"><svg viewBox="0 0 120 120"><circle class="gk-scan__trk" cx="60" cy="60" r="52"/><circle class="gk-scan__arc" cx="60" cy="60" r="52"/></svg>' +
+            '<div class="gk-scan__bolt">⚡</div><div class="gk-scan__num" hidden><b>0</b><small>boot</small></div></div>' +
+          '<div class="gk-scan__title">Zeus is scanning<span class="gk-scan__dots">…</span></div>' +
+          '<ul class="gk-scan__phases">' + phaseHtml + '</ul>' +
+          '<div class="gk-scan__verdict" hidden></div>' +
+        '</div><div class="gk-scan__grid"></div>';
+      document.body.appendChild(ov);
+      phaseEls = [].slice.call(ov.querySelectorAll('.gk-scan__ph'));
+      requestAnimationFrame(function () { ov.classList.add('go'); });
+      ov.addEventListener('click', function (e) { if (e.target === ov) dismiss(); });
+    }
+    function markStep(i) {
+      phaseEls.forEach(function (p, j) {
+        p.classList.toggle('done', j < i - 1);
+        p.classList.toggle('active', j === i - 1);
+      });
+      var arc = ov && ov.querySelector('.gk-scan__arc');
+      if (arc) { var frac = Math.max(0.06, (i - 0.4) / Math.max(1, phaseEls.length)); arc.style.strokeDashoffset = String(327 * (1 - frac)); }
+    }
+    function finish(ok, score) {
+      if (!ov) return;
+      phaseEls.forEach(function (p) { p.classList.remove('active'); p.classList.add('done'); });
+      var arc = ov.querySelector('.gk-scan__arc'); if (arc) arc.style.strokeDashoffset = '0';
+      var s = score == null ? null : Math.round(score);
+      var tone = !ok ? 'err' : (s != null && s >= 90 ? 'ok' : (s != null && s >= 60 ? 'warn' : (s == null ? 'ok' : 'err')));
+      ov.classList.add('done', tone);
+      ov.querySelector('.gk-scan__bolt').hidden = true;
+      var numWrap = ov.querySelector('.gk-scan__num');
+      var vEl = ov.querySelector('.gk-scan__verdict');
+      var titleEl = ov.querySelector('.gk-scan__title');
+      if (s != null) {
+        numWrap.hidden = false;
+        countUp(numWrap.querySelector('b'), s, 900);
+        var line = s >= 90 ? 'Boot-ready — ship it' : s >= 60 ? 'Bootable with fixes' : 'Blocked — needs repair';
+        titleEl.innerHTML = 'Verdict';
+        vEl.hidden = false; vEl.textContent = line;
+      } else {
+        titleEl.textContent = ok ? 'Analysis complete' : 'Analysis stopped';
+      }
+      if (ok && (s == null || s >= 60)) burst(tone === 'ok');
+      setTimeout(dismiss, s != null && s >= 90 ? 2600 : 3200);
+    }
+    function dismiss() { if (!ov) return; ov.classList.add('out'); var o = ov; ov = null; setTimeout(function () { o.remove(); }, 380); }
+    function teardown() { if (stepTimer) clearTimeout(stepTimer); if (ov) { ov.remove(); ov = null; } phaseEls = []; }
+    window.addEventListener('gk:analyze', function (ev) {
+      var d = ev.detail || {};
+      if (reduce) return; // respect reduced motion — banner + toasts still cover it
+      if (d.phase === 'start') build(d.steps);
+      else if (d.phase === 'step') { if (!ov) build(null); markStep(d.i); }
+      else if (d.phase === 'done') finish(d.ok !== false, d.score);
+      else if (d.phase === 'error') finish(false, null);
+    });
+  }
+  function countUp(node, to, ms) {
+    if (!node) return; var start = null, from = 0;
+    function tick(ts) { if (start == null) start = ts; var p = Math.min(1, (ts - start) / ms); node.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); }
+    requestAnimationFrame(tick);
+  }
+  /* lightning + spark burst */
+  function burst(good) {
+    if (reduce) return;
+    var flash = el('div', 'gk-flash' + (good ? ' ok' : ' warn')); document.body.appendChild(flash);
+    setTimeout(function () { flash.remove(); }, 620);
+    var wrap = el('div', 'gk-sparks'); document.body.appendChild(wrap);
+    var glyphs = good ? ['⚡', '✦', '✧', '⚡'] : ['⚠', '✦', '⚡'];
+    for (var i = 0; i < 18; i++) {
+      var s = el('span', 'gk-spark'); s.textContent = glyphs[i % glyphs.length];
+      var ang = (i / 18) * Math.PI * 2, dist = 120 + (i % 5) * 46;
+      s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+      s.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+      s.style.animationDelay = (i % 6) * 18 + 'ms';
+      wrap.appendChild(s);
+    }
+    setTimeout(function () { wrap.remove(); }, 1300);
+  }
+
+  /* ── Konami → Storm mode easter egg ── */
+  function mountStorm() {
+    var seq = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    var pos = 0, on = false, timer = null;
+    document.addEventListener('keydown', function (e) {
+      var k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      pos = (k === seq[pos]) ? pos + 1 : (k === seq[0] ? 1 : 0);
+      if (pos === seq.length) { pos = 0; toggle(); }
+    });
+    function toggle() {
+      on = !on;
+      if (on) {
+        document.body.classList.add('gk-storm-on');
+        window.gkToast('⚡ Storm mode engaged — Zeus is pleased', 'ok');
+        strike();
+        timer = setInterval(function () { if (!reduce) strike(); }, 3400);
+      } else {
+        clearInterval(timer); document.body.classList.remove('gk-storm-on');
+        window.gkToast('Storm mode off', 'info');
+      }
+    }
+    function strike() {
+      var f = el('div', 'gk-storm-flash'); document.body.appendChild(f);
+      setTimeout(function () { f.remove(); }, 500);
+    }
+    window.gkStorm = toggle;
+  }
+
+  ready(function () {
+    mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
     window.gkToast('Press ⌘K for the command palette', 'info');
   });
 })();
