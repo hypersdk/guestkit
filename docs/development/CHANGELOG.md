@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-07-10
+
 ### Added
 - **Offline Windows registry writes** — `registry-write` feature links libhivex (hand-rolled FFI, LGPL-2.1 dynamic link — no copyleft crate) so fix-plan `RegistryEdit` operations mutate offline SOFTWARE/SYSTEM/SAM/SECURITY hives (`HKLM`) instead of being skipped; supports REG_SZ/EXPAND_SZ/DWORD/QWORD/MULTI_SZ/BINARY with whole-disk backup. Build with `--features registry-write` (needs `libhivex-dev`/`hivex-devel`)
 
