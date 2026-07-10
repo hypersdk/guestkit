@@ -58,6 +58,47 @@ Helm overlays:
 | `values-k3s.yaml` | Remote k3s (URLs via env/`--set`) |
 | `values-ci.yaml` | GitHub Actions `k3s-e2e.yml` |
 
+## Fresh-cluster install notes
+
+A bare `helm install zyvor deploy/helm/zyvor -n zyvor --create-namespace` will
+**not** come up as-is on a stock cluster. The first-party images default to
+unregistered `:latest`, and the default StorageClass (`longhorn`) usually does
+not exist. A working from-scratch install (verified) overrides those:
+
+```bash
+helm install zyvor deploy/helm/zyvor -n zyvor --create-namespace \
+  --set namespace=zyvor \
+  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:<ver> \
+  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:<ver> \
+  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:<ver> \
+  --set zyvorApi.storageClass=<sc> \
+  --set persistence.vmImages.storageClass=<sc> \
+  --set persistence.vmImages.accessMode=ReadWriteMany   # RWX for multi-node; RWO single-node
+```
+
+Notes:
+- `.Values.namespace` is independent of `.Release.Namespace` — set both.
+- KubeVirt + CDI, an Ingress controller, and (for the k3s overlay) a CephFS/RWX
+  provider are **prerequisites**, not bundled.
+- The KubeVirt ClusterRole/Binding are namespace-scoped
+  (`zyvor-api-kubevirt-<ns>`), so multiple installs coexist.
+
+## Production hardening (before real customer data)
+
+These are deployment-time decisions the chart leaves to the operator:
+
+- **Auth**: off by default. Enable with `--set zyvorApi.auth.enabled=true` and a
+  real `--set zyvorApi.auth.jwtSecret=$(openssl rand -base64 32)`. The API
+  **fails closed** — it refuses to start if auth is on without a real secret.
+- **Secrets**: change the default `postgresql.password` / `minio` keys. The DB
+  DSN is delivered via the `zyvor-secrets` Secret (not plaintext env).
+- **Persistence**: postgres and minio use `emptyDir` by default → **data is lost
+  on pod restart**. Wire PVCs before production.
+- **TLS**: the Ingress is HTTP-only (`ssl-redirect: false`); terminate TLS at
+  your ingress / LB (e.g. cert-manager). Agent↔API is already mTLS on 8443.
+- **Backup**: no built-in backup/restore for the DB or image vault — add your own
+  (`pg_dump` CronJob, vault snapshot).
+
 ## Release artifacts (`v*` tags)
 
 The [release workflow](../.github/workflows/release.yml) publishes:

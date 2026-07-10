@@ -4,6 +4,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
+- **Unreleased** — Deep offline inspection panels (partitions/UUIDs, kernels, drivers, systemd units, users, network/DNS/gateway, cloud-init, VM tools, firewall, SSH policy, machine-id); premium web-console UX layer (⌘K palette, cinematic scan/verdict, drag-to-analyze, coach-mark tour, verdict share-card, fleet compare); Windows fixes (Linux-check gating + legacy-BIOS BCD detection); security hardening (fail-closed JWT, DB password via Secret, transactional `delete_vm`, namespace-scoped KubeVirt RBAC); OVA/cloud-image ingest + multi-node CephFS vault. Windows analysis verified end-to-end on a real Win10 VMDK (37→97 boot score after fixes)
 - **v0.3.12** — Offline Windows registry writes in fix-plan apply (`registry-write` feature, libhivex FFI) — `RegistryEdit` operations now mutate SOFTWARE/SYSTEM/SAM/SECURITY hives with backup instead of being skipped
 - **v0.3.11** — Guest Control Fabric: transport-independent guest control with a 7-tier ladder (virtio-serial → QGA exec → QGA builtin → push cache → offline disk), `guest/*` API routes (`status`, `capabilities`, `doctor`, `readiness`, `install-agent`, `repair-plan`, `file/read|write`, `poll-reconcile`), QGA airgap file bootstrap, Agent Doctor (probe tree + 0–100 readiness score), host-mediated polling for `airgap_live` VMs, and `GuestActionPolicy` exec/file allowlists
 - **v0.3.7–0.3.10** — `zyvor-guest-agent` crate (Windows/Linux VM Tools daemon), Windows forensic depth (EVTX parsing, persistence run keys, forensic profile merge), KubeVirt QGA transport hardening, web console (Copilot API: briefing/ask/fleet/compare/launch advice), Ubuntu k3s E2E harness
@@ -21,7 +22,8 @@ Phases 0–4 of the optional AI layer are complete — richer systemd/Windows ev
 | Area | Goal |
 |------|------|
 | **Guest Control Fabric depth** | Broaden transport ladder coverage and reconciler telemetry for `airgap_live` fleets |
-| **Windows boot** | Deeper EFI/BCD diagnostics for migration |
+| **Production Helm** | `values-prod.yaml`: PVCs for postgres/minio (currently `emptyDir`), pinned GHCR image tags, Ingress + TLS (cert-manager), backup/restore job for the image vault |
+| **Windows depth** | System-Reserved partition detection for multi-partition legacy layouts; richer driver/hotfix migration diagnostics |
 | **Performance** | Faster fleet scans, cache improvements on parallel inspect |
 | **Cloud** | Wider S3/Azure/GCS pull paths and CI recipes |
 
