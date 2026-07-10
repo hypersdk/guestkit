@@ -707,9 +707,30 @@ pub async fn delete_vm(
     let vm = load_vm(&state, id).await?;
     let disk_path = state.config.storage_path.join(&vm.object_key);
     let _ = tokio::fs::remove_file(&disk_path).await;
+    // Remove dependent rows first — jobs.vm_id and job_results.job_id are
+    // FKs without ON DELETE CASCADE, so a bare DELETE on vm_images fails for
+    // any disk that has ever been analyzed. Tear down the chain in one tx.
+    let mut tx = state
+        .pool
+        .begin()
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    sqlx::query("DELETE FROM job_results WHERE job_id IN (SELECT id FROM jobs WHERE vm_id = $1)")
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    sqlx::query("DELETE FROM jobs WHERE vm_id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
     sqlx::query("DELETE FROM vm_images WHERE id = $1")
         .bind(id)
-        .execute(&state.pool)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    tx.commit()
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": id }))))
