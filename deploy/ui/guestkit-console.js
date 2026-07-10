@@ -1124,7 +1124,7 @@ function setupAbyssTheme() {
   var saved = null;
   try { saved = localStorage.getItem('zyvor.theme'); } catch (e) {}
   document.documentElement.dataset.theme =
-    (saved === 'phosphor' || saved === 'abyss') ? saved : 'abyss';
+    (saved === 'phosphor' || saved === 'abyss') ? saved : 'phosphor';
 }
 
 function initGuestKitConsole() {
