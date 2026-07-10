@@ -15,7 +15,8 @@
 #
 # Live-test rows run only when their provider/creds are reachable; the following
 # env vars are forwarded to the remote matrix if set locally:
-#   OLLAMA_HOST  OPENAI_API_KEY  ANTHROPIC_API_KEY  XAI_API_KEY
+#   OLLAMA_HOST  OLLAMA_MODEL  GUESTKIT_AI_PROVIDER
+#   OPENAI_API_KEY  ANTHROPIC_API_KEY  XAI_API_KEY
 #   GK_TEST_DISK  GK_TEST_S3_URI  GK_TEST_AZURE_URI  GK_TEST_GCS_URI
 #
 # Exit code mirrors the remote matrix (non-zero if any compile row failed).
@@ -76,7 +77,8 @@ fi
 
 # Forward any live-test env that is set locally.
 FWD=""
-for v in OLLAMA_HOST OPENAI_API_KEY ANTHROPIC_API_KEY XAI_API_KEY \
+for v in OLLAMA_HOST OLLAMA_MODEL GUESTKIT_AI_PROVIDER \
+         OPENAI_API_KEY ANTHROPIC_API_KEY XAI_API_KEY \
          GK_TEST_DISK GK_TEST_S3_URI GK_TEST_AZURE_URI GK_TEST_GCS_URI; do
     val="$(printenv "$v" || true)"
     [ -n "$val" ] && FWD+="$v=$(printf %q "$val") "
