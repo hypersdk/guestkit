@@ -3239,16 +3239,30 @@ async function runAction(action) {
 async function runFullAnalysis() {
   const vm = state.selectedVm;
   if (!vm) { toast('Select a disk from the vault first', 'err'); return { ok: false }; }
-  feed('Full analysis — <strong>inspect → boot doctor → migration plan</strong>…');
-  for (const step of ['inspect', 'doctor', 'migration-plan']) {
-    const r = await runActionInner(step);
-    if (r && r.ok === false) {
-      feed(`Analysis stopped at ${escapeHtml(step)}: ${escapeHtml(r.error || 'failed')}`, 'err');
-      break;
+  if (isOnlineMode()) setInspectionMode('offline'); // analysis runs on the offline disk
+  const steps = [
+    ['inspect', 'Fingerprinting OS'],
+    ['doctor', 'Scoring bootability'],
+    ['migration-plan', 'Planning migration'],
+  ];
+  const reRender = () => window.GuestKitNebula?.renderAllNebula?.(vm, getVmCache(vm.id));
+  feed('Ask Zeus — running full analysis…');
+  try {
+    for (let i = 0; i < steps.length; i++) {
+      const [step, label] = steps[i];
+      state.analyzing = { label, i: i + 1, n: steps.length };
+      reRender();                       // show the progress banner immediately
+      const r = await runActionInner(step);   // onJobComplete fills the report on completion
+      if (r && r.ok === false) {
+        feed(`Analysis stopped at ${escapeHtml(label)}: ${escapeHtml(r.error || 'failed')}`, 'err');
+        break;
+      }
     }
+  } finally {
+    state.analyzing = null;
+    reRender();
   }
-  feed('Analysis complete — intelligence report ready', 'ok');
-  window.GuestKitNebula?.renderAllNebula?.(vm, getVmCache(vm.id));
+  feed('Ask Zeus — intelligence report ready', 'ok');
   return { ok: true };
 }
 window.runFullAnalysis = runFullAnalysis;

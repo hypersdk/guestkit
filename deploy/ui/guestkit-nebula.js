@@ -188,6 +188,10 @@ function renderDiskPreview(vm, cache) {
   const readiness = score != null ? Math.round(score) : null;
 
   const detected = renderIntelligenceReport(vm, cache);
+  const az = window.state?.analyzing;
+  const banner = az
+    ? `<div class="ir-analyzing"><span class="ir-spin"></span><span>Ask Zeus · ${window.escapeHtml?.(az.label)}… <b>${az.i}/${az.n}</b></span><span class="ir-analyzing__bar"><i style="width:${Math.round((az.i - 1) / az.n * 100)}%"></i></span></div>`
+    : '';
 
   el.innerHTML = `
     <div class="disk-preview__head">
@@ -197,9 +201,10 @@ function renderDiskPreview(vm, cache) {
       </div>
       ${readiness != null ? `<span class="badge ready">boot ${readiness}</span>` : '<span class="badge muted">unscanned</span>'}
     </div>
+    ${banner}
     ${detected}
     <div class="disk-preview__actions">
-      <button type="button" class="btn primary sm" id="previewAnalyzeBtn">⚡ Analyze</button>
+      <button type="button" class="btn primary sm" id="previewAnalyzeBtn"${az ? ' disabled' : ''}>${az ? '⏳ Analyzing…' : '⚡ Analyze'}</button>
       <button type="button" class="btn secondary sm" data-preview-action="inspect">Fingerprint</button>
       <button type="button" class="btn secondary sm" data-preview-action="doctor">Boot Doctor</button>
       <button type="button" class="btn secondary sm" data-preview-action="migration-plan">Migration Plan</button>
