@@ -34,9 +34,13 @@ zyvorUi:
 
 persistence:
   vmImages:
-    storageClass: local-path
-    accessMode: ReadWriteOnce
-    hostPath: /var/lib/zyvor/images
+    # Shared image store across the whole cluster (works with multiple nodes):
+    # CephFS RWX so API + worker pods on ANY node see the same vault.
+    # For a single-node box you can instead set hostPath: /var/lib/zyvor/images
+    # and storageClass/accessMode become irrelevant.
+    storageClass: zyvor-cephfs-shared
+    accessMode: ReadWriteMany
+    hostPath: ""
   kubevirtLocalPath: /data/k3s/storage
 
 minio:
