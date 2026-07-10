@@ -79,13 +79,21 @@ impl Config {
             .ok()
             .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes" | "on"))
             .unwrap_or(false);
-        let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
-            if auth_enabled {
-                "change-me-in-production".into()
-            } else {
-                "dev-local-auth-disabled".into()
+        // Fail closed: when auth is enabled, refuse to start unless a real
+        // JWT signing secret is provided. Previously this silently fell back
+        // to a hardcoded, globally-known key ("change-me-in-production"),
+        // which would let anyone forge valid operator tokens.
+        let jwt_secret = match std::env::var("JWT_SECRET") {
+            Ok(s) if !s.trim().is_empty() && s != "change-me-in-production" => s,
+            _ if auth_enabled => {
+                anyhow::bail!(
+                    "AUTH_ENABLED=true but JWT_SECRET is unset or insecure. \
+                     Set JWT_SECRET to a strong random value (e.g. `openssl rand -base64 32`) \
+                     before enabling authentication."
+                );
             }
-        });
+            _ => "dev-local-auth-disabled".into(),
+        };
 
         Ok(Self {
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
