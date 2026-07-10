@@ -383,16 +383,24 @@ impl EvidenceBuilder {
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
 
         let bcd_candidates = [
+            // UEFI: BCD on the EFI System Partition
             "/EFI/Microsoft/Boot/BCD".to_string(),
             format!("{}/Boot/EFI/BCD", systemroot),
             "/Windows/Boot/EFI/BCD".to_string(),
+            // Legacy BIOS: BCD lives at \Boot\BCD on the system/boot volume
+            // (a dedicated "System Reserved" partition, or the root of the
+            // Windows volume on single-partition installs).
+            "/Boot/BCD".to_string(),
         ];
         let bcd_store_found = bcd_candidates
             .iter()
             .any(|path| g.exists(path).unwrap_or(false));
         let bootmgr_candidates = [
+            // UEFI boot manager
             "/EFI/Microsoft/Boot/bootmgfw.efi".to_string(),
             format!("{}/Boot/EFI/bootmgfw.efi", systemroot),
+            // Legacy BIOS boot manager at the volume root
+            "/bootmgr".to_string(),
         ];
         let bootmgr_found = bootmgr_candidates
             .iter()
