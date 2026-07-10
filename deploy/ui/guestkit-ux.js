@@ -323,8 +323,133 @@
     window.gkStorm = toggle;
   }
 
+  /* ── Shortcut cheat sheet (declarative registry → accurate, styled) ── */
+  var THEMES = ['carbon', 'phosphor', 'solaris', 'abyss'];
+  function setTheme(t) {
+    try { document.documentElement.dataset.theme = t; localStorage.setItem('zyvor.theme', t); } catch (e) { document.documentElement.dataset.theme = t; }
+  }
+  function cycleTheme() {
+    var cur = document.documentElement.dataset.theme || 'phosphor';
+    setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
+  }
+  var SHORTCUTS = [
+    { sec: 'Analysis', rows: [
+      ['I', 'Fingerprint (inspect)'], ['D', 'Boot Doctor'], ['M', 'Migration plan'],
+      ['R', 'Repair plan'], ['Q', 'Quick scan · inspect + doctor'], ['L', 'Launch preview'],
+    ] },
+    { sec: 'Navigation', rows: [
+      ['← →', 'Move between disks'], ['Enter', 'Analyze focused disk'], ['/', 'Search disks'],
+      ['U', 'Upload a disk'], ['E', 'Evidence console'], ['C', 'Compare mode'],
+    ] },
+    { sec: 'Interface', rows: [
+      ['⌘K', 'Command palette'], ['B', 'Toggle Ask Zeus'], ['T', 'Cycle theme'],
+      ['?', 'This cheat sheet'], ['Esc', 'Close · clear selection'],
+    ] },
+  ];
+  function kbdify(keys) {
+    return keys.split(' ').map(function (k) { return '<kbd class="gk-kbd">' + esc(k) + '</kbd>'; }).join(' ');
+  }
+  function mountShortcuts() {
+    var modal = document.getElementById('shortcutsModal');
+    if (!modal) return;
+    var list = modal.querySelector('.shortcuts-list');
+    if (!list) return;
+    // Replace stale hardcoded rows with the accurate declarative sheet.
+    list.classList.add('gk-sheet');
+    list.innerHTML = SHORTCUTS.map(function (g) {
+      return '<li class="gk-sheet__sec">' + esc(g.sec) + '</li>' + g.rows.map(function (r) {
+        return '<li class="gk-sheet__row"><span class="gk-sheet__lbl">' + esc(r[1]) + '</span><span class="gk-sheet__k">' + kbdify(r[0]) + '</span></li>';
+      }).join('');
+    }).join('') + '<li class="gk-sheet__foot">Tip: try the Konami code ↑↑↓↓←→←→ B A</li>';
+    // Theme-cycle keybind (not handled elsewhere).
+    document.addEventListener('keydown', function (e) {
+      if (isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 't' || e.key === 'T') { e.preventDefault(); cycleTheme(); }
+    });
+  }
+
+  /* ── Skeleton loaders for the fleet grid ── */
+  function mountSkeletons() {
+    var grid = document.getElementById('fleetGrid');
+    if (!grid) return;
+    function hasReal() { return !!grid.querySelector('.vm-card'); }
+    function emptyShown() { var e = document.getElementById('fleetEmpty'); return e && !e.classList.contains('hidden'); }
+    function clearSkel() { grid.querySelectorAll('.gk-skel-card').forEach(function (n) { n.remove(); }); }
+    function showSkel() {
+      if (hasReal() || emptyShown() || grid.querySelector('.gk-skel-card')) return;
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < 3; i++) {
+        var c = el('div', 'gk-skel-card');
+        c.innerHTML = '<div class="gk-skel" style="height:14px;width:62%"></div>' +
+          '<div class="gk-skel" style="height:10px;width:40%;margin-top:9px"></div>' +
+          '<div class="gk-skel-row"><span class="gk-skel" style="height:22px;width:46px"></span><span class="gk-skel" style="height:22px;width:46px"></span><span class="gk-skel" style="height:22px;width:46px"></span></div>';
+        frag.appendChild(c);
+      }
+      grid.appendChild(frag);
+    }
+    showSkel();
+    new MutationObserver(function () { if (hasReal() || emptyShown()) clearSkel(); }).observe(grid, { childList: true });
+    // Safety: clear after 12s even if nothing rendered.
+    setTimeout(clearSkel, 12000);
+  }
+
+  /* ── Arrow-key fleet navigation ── */
+  function mountFleetNav() {
+    var focusI = -1;
+    function cards() { return [].slice.call(document.querySelectorAll('#fleetGrid .vm-card')); }
+    function paint(list) { list.forEach(function (c, i) { c.classList.toggle('gk-kbd-focus', i === focusI); }); if (list[focusI]) list[focusI].scrollIntoView({ block: 'nearest' }); }
+    document.addEventListener('keydown', function (e) {
+      if (isTyping(e) || e.metaKey || e.ctrlKey) return;
+      var list = cards(); if (!list.length) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusI = (focusI + 1) % list.length; paint(list); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); focusI = (focusI - 1 + list.length) % list.length; paint(list); }
+      else if (e.key === 'Enter' && focusI >= 0 && list[focusI]) { e.preventDefault(); list[focusI].click(); setTimeout(function () { window.runFullAnalysis && window.runFullAnalysis(); }, 120); }
+    });
+  }
+
+  /* ── Click-to-copy on report mono/UUID cells ── */
+  function mountCopy() {
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('.ir-mono') : null;
+      if (!t) return;
+      var txt = (t.textContent || '').trim();
+      if (!txt || txt === '—') return;
+      var done = function () { window.gkToast('Copied · ' + (txt.length > 28 ? txt.slice(0, 28) + '…' : txt), 'ok'); t.classList.add('gk-copied'); setTimeout(function () { t.classList.remove('gk-copied'); }, 700); };
+      try { navigator.clipboard.writeText(txt).then(done, function () {}); } catch (err) {}
+    });
+    // Hint affordance
+    var style = el('style'); style.textContent = '.ir-mono{cursor:copy}'; document.head.appendChild(style);
+  }
+
+  /* ── Ask Zeus starter chips on empty chat ── */
+  var STARTERS = ['Is this disk boot-ready?', 'What blocks migration to KubeVirt?', 'Explain the boot score', 'What should I fix first?'];
+  function mountStarterChips() {
+    var chat = document.getElementById('brainAskChat');
+    var form = document.getElementById('brainAskForm');
+    var input = document.getElementById('brainAskInput');
+    if (!chat || !form || !input) return;
+    function sync() {
+      var empty = !chat.querySelector('.brain-chat-msg');
+      var existing = chat.parentNode.querySelector('.gk-starters');
+      if (empty && !existing) {
+        var bar = el('div', 'gk-starters');
+        bar.innerHTML = STARTERS.map(function (p) { return '<button type="button" class="gk-starter">' + esc(p) + '</button>'; }).join('');
+        bar.querySelectorAll('.gk-starter').forEach(function (b) {
+          b.addEventListener('click', function () {
+            input.value = b.textContent;
+            if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          });
+        });
+        chat.parentNode.insertBefore(bar, chat.nextSibling);
+      } else if (!empty && existing) { existing.remove(); }
+    }
+    sync();
+    new MutationObserver(sync).observe(chat, { childList: true });
+  }
+
   ready(function () {
     mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
+    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips();
     window.gkToast('Press ⌘K for the command palette', 'info');
   });
 })();
