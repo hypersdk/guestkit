@@ -16,6 +16,12 @@ pub struct Executor {
     policy: AgentPolicy,
 }
 
+impl Default for Executor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Executor {
     pub fn new() -> Self {
         Self {
@@ -72,7 +78,6 @@ impl Executor {
             let result = match action.action.as_str() {
                 "restart_unit" => self
                     .restart_unit(&action.target)
-                    .map(|m| m)
                     .unwrap_or_else(|e| e.to_string()),
                 "fix_dns" => self
                     .run_systemctl("restart", "systemd-resolved.service")
@@ -108,7 +113,7 @@ impl Executor {
             )?;
             use base64::{engine::general_purpose::STANDARD, Engine};
             if let Some(data) = result.get("data").and_then(|v| v.as_str()) {
-                return Ok(STANDARD.decode(data).context("decode support bundle")?);
+                return STANDARD.decode(data).context("decode support bundle");
             }
         }
         crate::agent::support_bundle::build_support_bundle_bytes()

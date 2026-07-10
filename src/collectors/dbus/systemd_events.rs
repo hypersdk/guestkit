@@ -166,15 +166,14 @@ async fn run_subscriber_async() -> anyhow::Result<()> {
                         &unit_str,
                         &format!("job={} result={}", args.id, args.result),
                     );
-                    if args.result == "failed" || args.result == "timeout" {
-                        if record_unit_failure(&unit_str) {
+                    if (args.result == "failed" || args.result == "timeout")
+                        && record_unit_failure(&unit_str) {
                             push_event(
                                 "incident",
                                 &unit_str,
                                 "repeated service crash within 4 minutes",
                             );
                         }
-                    }
                 }
             }
             else => break,

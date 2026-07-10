@@ -106,7 +106,7 @@ fn collect_list_units(conn: &Connection) -> Result<Vec<SystemdRuntimeUnit>> {
 #[allow(dead_code)]
 fn list_units_by_patterns(conn: &Connection, patterns: &[&str]) -> Result<Vec<SystemdRuntimeUnit>> {
     let proxy = manager_proxy(conn)?;
-    let patterns: Vec<&str> = patterns.iter().map(|s| *s).collect();
+    let patterns: Vec<&str> = patterns.to_vec();
     let units_raw: Vec<OwnedValue> = proxy.call("ListUnitsByPatterns", &(Vec::<&str>::new(), patterns))?;
     parse_unit_list(conn, &units_raw)
 }
@@ -291,7 +291,6 @@ fn parse_jobs(raw: &[OwnedValue]) -> Vec<SystemdJob> {
 
 fn value_to_string(v: &Value<'_>) -> String {
     v.downcast_ref::<String>()
-        .map(|s| s.clone())
         .unwrap_or_else(|_| format!("{v:?}"))
 }
 

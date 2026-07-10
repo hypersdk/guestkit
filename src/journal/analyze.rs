@@ -29,7 +29,7 @@ pub fn analyze_journal(slice: &JournalSlice, top_n: usize) -> JournalSlice {
 
     out.top_patterns = {
         let mut pairs: Vec<(String, usize)> = pattern_counts.into_iter().collect();
-        pairs.sort_by(|a, b| b.1.cmp(&a.1));
+        pairs.sort_by_key(|p| std::cmp::Reverse(p.1));
         pairs.into_iter().take(top_n).map(|(p, _)| p).collect()
     };
 

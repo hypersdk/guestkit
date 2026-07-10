@@ -10,7 +10,6 @@ fn field_string(fields: &[zbus::zvariant::Value<'_>], idx: usize) -> String {
     fields
         .get(idx)
         .and_then(|v| v.downcast_ref::<String>().ok())
-        .map(|s| s.clone())
         .unwrap_or_default()
 }
 
