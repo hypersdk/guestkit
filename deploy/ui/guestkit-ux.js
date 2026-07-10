@@ -121,6 +121,8 @@
     cmds.push({ id: 'zeus', cat: 'Ask Zeus', label: '⚡ Ask Zeus', hint: 'open assistant', run: function () { var b = document.getElementById('brainDrawerToggle'); b && b.click(); } });
     cmds.push({ id: 'view:vault', cat: 'View', label: 'Browse Server Vault', hint: '', run: function () { var b = document.getElementById('nebulaBrowseVault'); b && b.click(); } });
     cmds.push({ id: 'view:refresh', cat: 'View', label: 'Refresh fleet', hint: '', run: function () { window.loadFleet && window.loadFleet(); } });
+    cmds.push({ id: 'share', cat: 'Export', label: '📸 Share verdict card', hint: st.selectedVm ? 'download PNG' : 'analyze a disk first', run: shareVerdict });
+    cmds.push({ id: 'sound', cat: 'System', label: (soundOn() ? '🔊 Sound: on' : '🔇 Sound: off') + ' — toggle', hint: 'audio cues', run: toggleSound });
     return cmds;
   }
 
@@ -130,7 +132,7 @@
     pal.setAttribute('role', 'dialog'); pal.setAttribute('aria-modal', 'true'); pal.hidden = true;
     pal.innerHTML =
       '<div class="gk-pal__box">' +
-      '<input class="gk-pal__in" id="gkPalInput" placeholder="Search disks, actions, themes — or ⚡ Ask Zeus…" autocomplete="off" spellcheck="false" />' +
+      '<input class="gk-pal__in" id="gkPalInput" placeholder="Search disks, actions, themes — type &gt; to Ask Zeus…" autocomplete="off" spellcheck="false" />' +
       '<div class="gk-pal__list" id="gkPalList" role="listbox"></div>' +
       '<footer class="gk-pal__foot"><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>↵</kbd> run <kbd>esc</kbd> close</footer>' +
       '</div>';
@@ -148,11 +150,17 @@
   function openPal() {
     if (!pal) mountPalette();
     palCmds = buildCommands(); palSel = 0; palInput.value = '';
-    pal.hidden = false; renderPal(); palInput.focus();
+    pal.hidden = false; renderPal(); palInput.focus(); cue('tick');
   }
   function closePal() { if (pal) pal.hidden = true; }
   function renderPal() {
     var q = palInput.value.trim();
+    if (q.charAt(0) === '>') {
+      // Ask-Zeus mode
+      var question = q.slice(1).trim();
+      palFiltered = [{ id: 'ask', cat: 'Ask Zeus', label: question ? '⚡ Ask: ' + question : '⚡ Type a question for Zeus…', hint: question ? 'send to assistant' : '', run: function () { question && askZeus(question); } }];
+      palSel = 0; paintRows(); return;
+    }
     if (!q) {
       var rec = recents(); var byId = {}; palCmds.forEach(function (c) { byId[c.id] = c; });
       palFiltered = rec.map(function (id) { return byId[id]; }).filter(Boolean).slice(0, 5);
@@ -162,8 +170,11 @@
         .filter(function (x) { return x.s > 0; }).sort(function (a, b) { return b.s - a.s; }).slice(0, 12).map(function (x) { return x.c; });
     }
     palSel = 0;
+    paintRows();
+  }
+  function paintRows() {
     palList.innerHTML = palFiltered.length ? palFiltered.map(function (c, i) {
-      return '<div class="gk-pal__row' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '" role="option"><span class="gk-pal__cat">' + esc(c.cat) + '</span><span class="gk-pal__label">' + esc(c.label) + '</span><span class="gk-pal__hint">' + esc(c.hint || '') + '</span></div>';
+      return '<div class="gk-pal__row' + (i === palSel ? ' sel' : '') + '" data-i="' + i + '" role="option"><span class="gk-pal__cat">' + esc(c.cat) + '</span><span class="gk-pal__label">' + esc(c.label) + '</span><span class="gk-pal__hint">' + esc(c.hint || '') + '</span></div>';
     }).join('') : '<div class="gk-pal__empty">No matches</div>';
     palList.querySelectorAll('.gk-pal__row').forEach(function (r) {
       r.addEventListener('mouseenter', function () { palSel = +r.dataset.i; renderSel(); });
@@ -319,6 +330,7 @@
     function strike() {
       var f = el('div', 'gk-storm-flash'); document.body.appendChild(f);
       setTimeout(function () { f.remove(); }, 500);
+      cue('rumble');
     }
     window.gkStorm = toggle;
   }
@@ -447,9 +459,135 @@
     new MutationObserver(sync).observe(chat, { childList: true });
   }
 
+  /* ── Ask Zeus from anywhere (fills + submits the chat) ── */
+  function askZeus(text) {
+    var toggle = document.getElementById('brainDrawerToggle');
+    var drawer = document.getElementById('brainDrawer');
+    if (drawer && !drawer.classList.contains('open') && toggle) toggle.click();
+    setTimeout(function () {
+      var input = document.getElementById('brainAskInput');
+      var form = document.getElementById('brainAskForm');
+      if (!input || !form) { window.gkToast('Ask Zeus panel unavailable', 'warn'); return; }
+      input.value = text;
+      if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      input.focus();
+    }, 160);
+  }
+
+  /* ── Synthesized Web Audio cues (no assets, CSP-safe) ── */
+  var actx = null;
+  function soundOn() { try { var v = localStorage.getItem('gk.sound'); return v == null ? !reduce : v === '1'; } catch (e) { return false; } }
+  function toggleSound() {
+    var next = !soundOn();
+    try { localStorage.setItem('gk.sound', next ? '1' : '0'); } catch (e) {}
+    if (next) { cue('chord'); window.gkToast('🔊 Sound cues on', 'ok'); } else { window.gkToast('🔇 Sound cues muted', 'info'); }
+  }
+  function ac() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = false; } } if (actx && actx.state === 'suspended') { try { actx.resume(); } catch (e) {} } return actx || null; }
+  function note(freq, start, dur, type, peak) {
+    var a = ac(); if (!a) return;
+    var t0 = a.currentTime + start;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak || 0.12, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  function cue(kind) {
+    if (!soundOn() || !ac()) return;
+    if (kind === 'tick') { note(1180, 0, 0.05, 'square', 0.05); }
+    else if (kind === 'chord') { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { note(f, i * 0.07, 0.5, 'triangle', 0.09); }); }
+    else if (kind === 'warn') { note(392, 0, 0.28, 'triangle', 0.1); note(311, 0.1, 0.32, 'triangle', 0.09); }
+    else if (kind === 'bad') { note(160, 0, 0.42, 'sawtooth', 0.11); }
+    else if (kind === 'rumble') { note(58, 0, 0.5, 'sine', 0.16); note(41, 0.04, 0.55, 'sine', 0.12); }
+  }
+  function mountAudioCues() {
+    window.addEventListener('gk:analyze', function (ev) {
+      var d = ev.detail || {};
+      if (d.phase === 'done') { var s = d.score; cue(d.ok === false ? 'bad' : (s != null && s >= 90 ? 'chord' : (s != null && s < 60 ? 'bad' : 'warn'))); }
+      else if (d.phase === 'error') { cue('bad'); }
+    });
+    window.gkCue = cue;
+  }
+
+  /* ── Zeus verdict share-card (canvas → PNG) ── */
+  function tok(name, fb) { try { var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; } catch (e) { return fb; } }
+  function shareVerdict() {
+    var st = window.state || {};
+    var vm = st.selectedVm;
+    var cache = vm && window.getVmCache ? window.getVmCache(vm.id) : null;
+    if (!vm || !cache || cache.bootScore == null) { window.gkToast('Run ⚡ Analyze on a disk first', 'warn'); return; }
+    var ins = (cache.inspect && cache.inspect.operating_system) || {};
+    var mp = cache.migrationPlan || {};
+    var score = Math.round(cache.bootScore);
+    var blockers = (cache.blockers || []).length;
+    var checks = cache.checks || [];
+    var passed = checks.filter(function (c) { return c.passed; }).length;
+    var mig = mp.migration_score && mp.migration_score.score != null ? Math.round(mp.migration_score.score) : null;
+    var accent = tok('--accent', '#7cc7ff');
+    var good = tok('--success', '#39d98a'), warn = tok('--warn', '#f5a623'), bad = tok('--danger', '#ff5c5c');
+    var ink = tok('--text-main', '#eaf2ff'), soft = tok('--text-soft', '#8aa0c0');
+    var scoreCol = score >= 90 ? good : score >= 60 ? warn : bad;
+    var W = 1200, H = 630, s = 2;
+    var cv = document.createElement('canvas'); cv.width = W * s; cv.height = H * s;
+    var x = cv.getContext('2d'); x.scale(s, s);
+    // background
+    var bg = x.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0a0f1a'); bg.addColorStop(1, '#111a2b');
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    // accent glow
+    var gl = x.createRadialGradient(950, 150, 40, 950, 150, 420);
+    gl.addColorStop(0, accent + '33'); gl.addColorStop(1, 'transparent');
+    x.fillStyle = gl; x.fillRect(0, 0, W, H);
+    // grid
+    x.strokeStyle = accent + '14'; x.lineWidth = 1;
+    for (var gx = 0; gx <= W; gx += 40) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke(); }
+    for (var gy = 0; gy <= H; gy += 40) { x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke(); }
+    // brand
+    x.fillStyle = accent; x.font = '700 34px system-ui,sans-serif'; x.fillText('⚡ Zeus AI', 64, 92);
+    x.fillStyle = soft; x.font = '400 18px ui-monospace,monospace'; x.fillText('OFFLINE VM INTELLIGENCE · GUESTKIT', 64, 122);
+    // ring
+    var cx = 960, cy = 315, r = 150;
+    x.lineWidth = 26; x.lineCap = 'round';
+    x.strokeStyle = accent + '22'; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = scoreCol; x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (score / 100)); x.stroke();
+    x.fillStyle = ink; x.textAlign = 'center'; x.font = '800 96px system-ui,sans-serif'; x.fillText(String(score), cx, cy + 20);
+    x.fillStyle = soft; x.font = '600 22px ui-monospace,monospace'; x.fillText('BOOT SCORE', cx, cy + 66);
+    x.textAlign = 'left';
+    // verdict
+    var verdict = blockers ? (blockers + ' blocker' + (blockers > 1 ? 's' : '') + ' to clear') : (mp.target ? 'Ready to migrate → ' + mp.target : 'Boot-ready');
+    x.fillStyle = ink; x.font = '700 52px system-ui,sans-serif'; x.fillText(verdict, 64, 250);
+    x.fillStyle = soft; x.font = '400 30px system-ui,sans-serif';
+    x.fillText((ins.product_name || ins.distribution || vm.name || 'Disk') + (ins.arch ? '  ·  ' + ins.arch : ''), 64, 300);
+    // stat chips
+    var stats = [[String(passed) + '/' + checks.length, 'CHECKS'], [String(blockers), 'BLOCKERS'], [mig != null ? String(mig) : '—', 'MIGRATE']];
+    var sx = 64;
+    stats.forEach(function (p) {
+      x.fillStyle = '#ffffff0d'; roundRect(x, sx, 360, 180, 96, 16); x.fill();
+      x.fillStyle = ink; x.font = '800 46px system-ui,sans-serif'; x.fillText(p[0], sx + 22, 418);
+      x.fillStyle = soft; x.font = '600 16px ui-monospace,monospace'; x.fillText(p[1], sx + 22, 444);
+      sx += 200;
+    });
+    // footer
+    x.fillStyle = soft; x.font = '400 18px ui-monospace,monospace';
+    x.fillText('zyvor.dev/guestkit', 64, 566);
+    // download
+    cv.toBlob(function (blob) {
+      if (!blob) { window.gkToast('Could not render card', 'err'); return; }
+      var url = URL.createObjectURL(blob);
+      var a = el('a'); a.href = url; a.download = 'zeus-verdict-' + (vm.name || vm.id).replace(/[^\w.-]+/g, '_') + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      window.gkToast('Verdict card downloaded', 'ok'); cue('chord');
+    }, 'image/png');
+  }
+  function roundRect(x, px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
+  window.gkShareVerdict = shareVerdict;
+
   ready(function () {
     mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
-    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips();
+    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues();
     window.gkToast('Press ⌘K for the command palette', 'info');
   });
 })();
