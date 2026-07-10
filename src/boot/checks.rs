@@ -34,6 +34,20 @@ fn is_windows_guest(evidence: &EvidenceSnapshot) -> bool {
             .contains("windows")
 }
 
+/// Neutral "not applicable" result for a Linux-only check running against a
+/// Windows guest — passes without counting as a blocker so it can't tank the
+/// score or pollute the fix plan with nonsensical Linux remediation.
+fn na_windows(id: &str, name: &str, weight: f64) -> CheckResult {
+    CheckResult {
+        id: id.to_string(),
+        name: name.to_string(),
+        passed: true,
+        severity: CheckSeverity::Info,
+        message: "Not applicable — Windows guest".to_string(),
+        weight,
+    }
+}
+
 impl BootCheck for FstabUuidCheck {
     fn id(&self) -> &str {
         "BOOT-001"
@@ -132,6 +146,9 @@ impl BootCheck for InitramfsCheck {
         12.0
     }
     fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        if is_windows_guest(evidence) {
+            return na_windows(self.id(), self.name(), self.weight());
+        }
         let has_initramfs = !evidence.boot.initramfs_paths.is_empty();
         let has_kernel = !evidence.boot.kernel_paths.is_empty();
         let passed = has_initramfs && has_kernel;
@@ -173,6 +190,9 @@ impl BootCheck for GrubConsistencyCheck {
         10.0
     }
     fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        if is_windows_guest(evidence) {
+            return na_windows(self.id(), self.name(), self.weight());
+        }
         let has_grub = evidence.boot.grub_cfg_path.is_some()
             || evidence.boot.bootloader.to_lowercase().contains("grub");
         let passed = has_grub;
