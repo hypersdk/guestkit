@@ -356,12 +356,13 @@ if [ "$PKG" = "apt-get" ]; then
     pkg_install apt-get install -y -qq \
         qemu-utils nbd-client lvm2 parted e2fsprogs \
         build-essential pkg-config curl git \
-        libsystemd-dev
+        libsystemd-dev libhivex-dev
 else
     # Core RPM packages (EL9: qemu-nbd is not a separate package — use qemu-img)
     pkg_install "$PKG" install -y \
         qemu-img nbd lvm2 parted e2fsprogs \
-        gcc make openssl-devel pkg-config curl git
+        gcc make openssl-devel pkg-config curl git \
+        hivex-devel
 
     # qemu-nbd binary: bundled in qemu-img on EL9+, or separate package on older releases
     if ! command -v qemu-nbd &>/dev/null; then
@@ -409,6 +410,12 @@ SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 source "$HOME/.cargo/env" 2>/dev/null || true
 cd "${REMOTE_STAGING}"
+# Include offline registry-write (libhivex FFI) when the dev headers are present.
+if [ -z "${GUESTKIT_BUILD_FEATURES:-}" ]; then
+    if pkg-config --exists hivex 2>/dev/null || ls /usr/include/hivex.h /usr/local/include/hivex.h &>/dev/null; then
+        export GUESTKIT_BUILD_FEATURES="agent registry-write"
+    fi
+fi
 bash scripts/build-linux-release.sh 2>&1 | tail -8
 $SUDO install -m755 target/release/guestkit /usr/local/bin/guestkit
 echo "Installed: $(guestkit --version 2>/dev/null || echo ok)"
