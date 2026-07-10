@@ -3103,9 +3103,12 @@ async function runClusterGuestkitInspect() {
   feed(`GuestKit inspect on <strong>${escapeHtml(vm.namespace)}/${escapeHtml(vm.name)}</strong>…`);
   setActiveTab('summary');
   setWizardStep('assure');
-  $('#summaryPlaceholder').textContent = 'Running GuestKit inspect…';
-  $('#summaryPlaceholder').classList.remove('hidden');
-  $('#summaryContent').classList.add('hidden');
+  const inspectPh = $('#summaryPlaceholder');
+  if (inspectPh) {
+    inspectPh.textContent = 'Running GuestKit inspect…';
+    inspectPh.classList.remove('hidden');
+  }
+  $('#summaryContent')?.classList.add('hidden');
 
   const running = String(vm.phase || vm.status || '').toLowerCase().includes('run');
   if (running) {
@@ -3267,9 +3270,12 @@ async function runActionInner(action) {
   try {
     const data = await api(path, { method: 'POST' });
     showRaw(data);
-    $('#summaryPlaceholder').textContent = 'Job running — results will stream in…';
-    $('#summaryPlaceholder').classList.remove('hidden');
-    $('#summaryContent').classList.add('hidden');
+    const jobPh = $('#summaryPlaceholder');
+    if (jobPh) {
+      jobPh.textContent = 'Job running — results will stream in…';
+      jobPh.classList.remove('hidden');
+    }
+    $('#summaryContent')?.classList.add('hidden');
     setScore(null);
     state.lastFailedAction = null;
     $('#jobRetryBtn').classList.add('hidden');

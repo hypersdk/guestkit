@@ -128,7 +128,7 @@ num_cpus = "1.16"
 
 [features]
 default = ["guest-inspect", "journal-native"]
-guest-inspect = ["evtx"]
+guest-inspect = ["evtx", "tar"]
 journal-native = ["dep:libsystemd-sys"]
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
