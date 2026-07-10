@@ -123,6 +123,7 @@
     cmds.push({ id: 'view:refresh', cat: 'View', label: 'Refresh fleet', hint: '', run: function () { window.loadFleet && window.loadFleet(); } });
     cmds.push({ id: 'share', cat: 'Export', label: '📸 Share verdict card', hint: st.selectedVm ? 'download PNG' : 'analyze a disk first', run: shareVerdict });
     cmds.push({ id: 'sound', cat: 'System', label: (soundOn() ? '🔊 Sound: on' : '🔇 Sound: off') + ' — toggle', hint: 'audio cues', run: toggleSound });
+    cmds.push({ id: 'tour', cat: 'System', label: '🧭 Take the tour', hint: 'guided walkthrough', run: function () { runTour(true); } });
     return cmds;
   }
 
@@ -585,9 +586,83 @@
   function roundRect(x, px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
   window.gkShareVerdict = shareVerdict;
 
+  /* ── Global drag-to-analyze drop overlay ── */
+  function mountDropCatcher() {
+    var ov = el('div', 'gk-drop');
+    ov.innerHTML = '<div class="gk-drop__card"><div class="gk-drop__ic">💿</div><div class="gk-drop__t">Drop to fingerprint</div>' +
+      '<div class="gk-drop__s">GuestKit analyzes the disk offline before you boot it</div>' +
+      '<div class="gk-drop__chips">QCOW2 · VMDK · VHDX · RAW · OVA · ISO</div></div>';
+    document.body.appendChild(ov);
+    var depth = 0;
+    function hasFiles(e) { var t = e.dataTransfer && e.dataTransfer.types; return t && (t.indexOf ? t.indexOf('Files') > -1 : t.contains && t.contains('Files')); }
+    function show() { ov.classList.add('on'); } function hide() { depth = 0; ov.classList.remove('on'); }
+    window.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; e.preventDefault(); depth++; show(); });
+    window.addEventListener('dragover', function (e) { if (ov.classList.contains('on')) e.preventDefault(); });
+    window.addEventListener('dragleave', function (e) { if (!ov.classList.contains('on')) return; depth--; if (depth <= 0) hide(); });
+    window.addEventListener('drop', function (e) {
+      if (!ov.classList.contains('on')) return;
+      e.preventDefault(); hide();
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      if (window.uploadFile) { window.uploadFile(f); window.gkToast('Uploading ' + f.name + '…', 'info'); cue('tick'); }
+      else { var inp = document.getElementById('fileInput'); if (inp) { try { var dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); } catch (err) {} } }
+    });
+    window.addEventListener('dragend', hide);
+  }
+
+  /* ── First-run coach-mark tour (spotlight) ── */
+  var TOUR = [
+    { sel: '#dropzone', title: 'Start here', body: 'Drop a VM disk — or drag one anywhere on the page. GuestKit fingerprints the OS, drivers, and boot config offline, before you ever launch it.' },
+    { sel: '#brainDrawerToggle', title: 'Ask Zeus', body: 'Your offline copilot. Ask about boot risks, migration blockers, or launch readiness. Tip: press ⌘K and type “>” to ask from anywhere.' },
+    { sel: '#themeToggle', title: 'Make it yours', body: 'Four themes — Carbon, Phosphor, Solaris, Abyss. Click here or press T to cycle. Everything restyles live.' },
+    { sel: null, title: 'You’re set ⚡', body: 'Press ⌘K for the command palette, ? for all shortcuts, and ⚡ Analyze on any disk for the full report. Happy migrating.' },
+  ];
+  function runTour(force) {
+    try { if (!force && localStorage.getItem('gk.onboarded') === '1') return; } catch (e) {}
+    var i = 0;
+    var back = el('div', 'gk-tour');
+    var hole = el('div', 'gk-tour__hole');
+    var card = el('div', 'gk-tour__card');
+    back.appendChild(hole); back.appendChild(card); document.body.appendChild(back);
+    function finish() { try { localStorage.setItem('gk.onboarded', '1'); } catch (e) {} back.remove(); window.removeEventListener('resize', place); window.removeEventListener('keydown', onKey); }
+    function place() {
+      var step = TOUR[i]; var t = step.sel ? document.querySelector(step.sel) : null;
+      if (t && t.getBoundingClientRect) {
+        var r = t.getBoundingClientRect(); var pad = 8;
+        hole.style.display = 'block';
+        hole.style.left = (r.left - pad) + 'px'; hole.style.top = (r.top - pad) + 'px';
+        hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
+        // place card below or above depending on space
+        var below = r.bottom + 180 < window.innerHeight;
+        card.style.left = Math.max(16, Math.min(r.left, window.innerWidth - 360)) + 'px';
+        card.style.top = (below ? r.bottom + pad + 12 : r.top - pad - 12) + 'px';
+        card.style.transform = below ? 'none' : 'translateY(-100%)';
+      } else {
+        hole.style.display = 'none';
+        card.style.left = '50%'; card.style.top = '50%'; card.style.transform = 'translate(-50%,-50%)';
+      }
+    }
+    function render() {
+      var step = TOUR[i]; var last = i === TOUR.length - 1;
+      card.innerHTML = '<div class="gk-tour__step">' + (i + 1) + ' / ' + TOUR.length + '</div>' +
+        '<h4>' + esc(step.title) + '</h4><p>' + esc(step.body) + '</p>' +
+        '<div class="gk-tour__nav">' + (last ? '' : '<button type="button" class="gk-tour__skip">Skip</button>') +
+        '<button type="button" class="gk-tour__next">' + (last ? 'Done' : 'Next →') + '</button></div>';
+      card.querySelector('.gk-tour__next').addEventListener('click', function () { if (last) finish(); else { i++; step0(); } });
+      var sk = card.querySelector('.gk-tour__skip'); if (sk) sk.addEventListener('click', finish);
+      place();
+    }
+    function step0() { render(); }
+    function onKey(e) { if (e.key === 'Escape') finish(); else if (e.key === 'Enter') { if (i === TOUR.length - 1) finish(); else { i++; render(); } } }
+    window.addEventListener('resize', place); window.addEventListener('keydown', onKey);
+    render(); cue('tick');
+  }
+  window.gkTour = function () { runTour(true); };
+
   ready(function () {
     mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
-    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues();
+    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues(); mountDropCatcher();
     window.gkToast('Press ⌘K for the command palette', 'info');
+    setTimeout(function () { runTour(false); }, 900);
   });
 })();

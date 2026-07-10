@@ -3692,6 +3692,7 @@ async function init() {
   window.pollJob = pollJob;
   window.showJobTracker = showJobTracker;
   window.loadFleet = loadFleet;
+  window.uploadFile = uploadFile;
   window.scrollToPanel = scrollToPanel;
   window.setActiveTab = setActiveTab;
   window.updateSelectionPanels = updateSelectionPanels;
