@@ -101,6 +101,30 @@ fn summarize_inspection(full: &serde_json::Value) -> serde_json::Value {
             "count": mounts.len(),
         });
     }
+    // Deep-inspection panels — forwarded for the TUI-style report.
+    if let Some(storage) = full.get("storage") {
+        out["storage"] = storage.clone();
+    }
+    if let Some(kernels) = full.get("kernels") {
+        out["kernels"] = kernels.clone();
+    }
+    if let Some(modules) = full.get("kernel_modules") {
+        out["kernel_modules"] = modules.clone();
+    }
+    if let Some(units) = full.get("systemd_units") {
+        let sample: Vec<serde_json::Value> = units
+            .get("units")
+            .and_then(|u| u.as_array())
+            .map(|arr| arr.iter().take(60).cloned().collect())
+            .unwrap_or_default();
+        out["systemd_units"] = serde_json::json!({
+            "count": units.get("count").cloned().unwrap_or(serde_json::json!(0)),
+            "sample": sample,
+        });
+    }
+    if let Some(users) = full.get("users") {
+        out["users"] = users.clone();
+    }
     out
 }
 
@@ -370,6 +394,120 @@ impl InspectHandler {
                 }
 
                 result["security"] = security;
+            }
+
+            // Collect storage / partition inventory (devices, fstypes, UUIDs, fstab)
+            if payload_clone.options.include_storage {
+                let mut partitions = Vec::new();
+                if let Ok(fs_map) = g.list_filesystems() {
+                    let mut devices: Vec<(String, String)> = fs_map.into_iter().collect();
+                    devices.sort_by(|a, b| a.0.cmp(&b.0));
+                    for (device, fstype) in devices {
+                        let uuid = g.vfs_uuid(&device).ok();
+                        partitions.push(serde_json::json!({
+                            "device": device,
+                            "fstype": fstype,
+                            "uuid": uuid,
+                        }));
+                    }
+                }
+                let fstab = g.list_fstab().ok();
+                if !partitions.is_empty() || fstab.is_some() {
+                    result["storage"] = serde_json::json!({
+                        "count": partitions.len(),
+                        "partitions": partitions,
+                        "fstab": fstab,
+                    });
+                }
+            }
+
+            // Collect installed kernels
+            if let Ok(kernels) = g.list_kernels() {
+                if !kernels.is_empty() {
+                    let default = g.get_default_kernel().ok();
+                    result["kernels"] = serde_json::json!({
+                        "count": kernels.len(),
+                        "installed": kernels,
+                        "default": default,
+                    });
+                }
+            }
+
+            // Collect kernel modules configured to load at boot (drivers)
+            {
+                let mut modules: Vec<String> = Vec::new();
+                if let Ok(content) = g.cat("/etc/modules") {
+                    for line in content.lines() {
+                        let line = line.trim();
+                        if !line.is_empty() && !line.starts_with('#') {
+                            modules.push(line.to_string());
+                        }
+                    }
+                }
+                if let Ok(files) = g.ls("/etc/modules-load.d") {
+                    for file in files.iter().filter(|f| f.ends_with(".conf")) {
+                        if let Ok(content) = g.cat(&format!("/etc/modules-load.d/{}", file)) {
+                            for line in content.lines() {
+                                let line = line.trim().to_string();
+                                if !line.is_empty() && !line.starts_with('#') && !modules.contains(&line) {
+                                    modules.push(line);
+                                }
+                            }
+                        }
+                    }
+                }
+                if !modules.is_empty() {
+                    result["kernel_modules"] = serde_json::json!({
+                        "count": modules.len(),
+                        "modules": modules,
+                    });
+                }
+            }
+
+            // Collect systemd unit files (complements enabled_services)
+            if let Ok(units) = g.list_systemd_units() {
+                if !units.is_empty() {
+                    result["systemd_units"] = serde_json::json!({
+                        "count": units.len(),
+                        "units": units,
+                    });
+                }
+            }
+
+            // Collect user accounts (parse /etc/passwd for uid/shell/login capability)
+            if payload_clone.options.include_users {
+                if let Ok(passwd) = g.cat("/etc/passwd") {
+                    let mut accounts = Vec::new();
+                    for line in passwd.lines() {
+                        let fields: Vec<&str> = line.split(':').collect();
+                        if fields.len() >= 7 {
+                            let uid: u64 = fields[2].parse().unwrap_or(0);
+                            let shell = fields[6];
+                            let login = !(shell.ends_with("/nologin")
+                                || shell.ends_with("/false")
+                                || shell.is_empty());
+                            accounts.push(serde_json::json!({
+                                "name": fields[0],
+                                "uid": uid,
+                                "home": fields[5],
+                                "shell": shell,
+                                "login": login,
+                                "system": uid < 1000,
+                            }));
+                        }
+                    }
+                    if !accounts.is_empty() {
+                        let login_count = accounts
+                            .iter()
+                            .filter(|a| a["login"].as_bool().unwrap_or(false))
+                            .count();
+                        result["users"] = serde_json::json!({
+                            "count": accounts.len(),
+                            "login_count": login_count,
+                            "accounts": accounts,
+                        });
+                    }
+                }
             }
 
             // Unmount and cleanup
