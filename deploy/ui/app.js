@@ -2833,8 +2833,12 @@ function onJobComplete(action, data) {
 
   if (action === 'doctor' || action === 'agent-doctor') {
     patch.bootScore = boot?.score;
+    patch.confidence = boot?.confidence;
     patch.blockers = blockers;
+    patch.warnings = boot?.warnings;
     patch.checks = boot?.checks;
+    patch.bootSummary = boot?.summary;
+    patch.rootCause = payload?.root_cause;
     patch.status = blockers.length ? 'failed' : 'analyzed';
     if (payload?.copilot) {
       patch.briefing = payload.copilot;
@@ -3230,6 +3234,24 @@ async function runAction(action) {
   }
   return runActionInner(action);
 }
+
+// Full analysis: inspect -> doctor -> migration-plan, merged into one report.
+async function runFullAnalysis() {
+  const vm = state.selectedVm;
+  if (!vm) { toast('Select a disk from the vault first', 'err'); return { ok: false }; }
+  feed('Full analysis — <strong>inspect → boot doctor → migration plan</strong>…');
+  for (const step of ['inspect', 'doctor', 'migration-plan']) {
+    const r = await runActionInner(step);
+    if (r && r.ok === false) {
+      feed(`Analysis stopped at ${escapeHtml(step)}: ${escapeHtml(r.error || 'failed')}`, 'err');
+      break;
+    }
+  }
+  feed('Analysis complete — intelligence report ready', 'ok');
+  window.GuestKitNebula?.renderAllNebula?.(vm, getVmCache(vm.id));
+  return { ok: true };
+}
+window.runFullAnalysis = runFullAnalysis;
 
 async function runActionInner(action) {
   if (state.selectedClusterVm && !state.selectedVm) {
