@@ -634,10 +634,7 @@ impl BootCheck for WindowsBcdCheck {
         let message = if !systemroot_ok {
             "Windows SYSTEMROOT not detected".to_string()
         } else if !bcd_ok {
-            format!(
-                "BCD store not found under {} or /EFI/Microsoft/Boot",
-                windows.map(|w| w.systemroot.as_str()).unwrap_or("/Windows")
-            )
+            "BCD store not found (checked /EFI/Microsoft/Boot for UEFI and /Boot/BCD for legacy BIOS)".to_string()
         } else if pending_reboot {
             "BCD store present; pending reboot flag set in registry".to_string()
         } else {
