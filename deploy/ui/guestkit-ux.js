@@ -124,6 +124,7 @@
     cmds.push({ id: 'share', cat: 'Export', label: '📸 Share verdict card', hint: st.selectedVm ? 'download PNG' : 'analyze a disk first', run: shareVerdict });
     cmds.push({ id: 'sound', cat: 'System', label: (soundOn() ? '🔊 Sound: on' : '🔇 Sound: off') + ' — toggle', hint: 'audio cues', run: toggleSound });
     cmds.push({ id: 'tour', cat: 'System', label: '🧭 Take the tour', hint: 'guided walkthrough', run: function () { runTour(true); } });
+    cmds.push({ id: 'compare', cat: 'View', label: '⚖ Compare disks', hint: 'side-by-side diff', run: function () { window.gkCompare && window.gkCompare(); } });
     return cmds;
   }
 
@@ -222,7 +223,7 @@
 
   /* ── Cinematic Zeus scan overlay (gk:analyze driven) ── */
   function mountScan() {
-    var ov = null, phaseEls = [], stepTimer = null;
+    var ov = null, phaseEls = [], dismissTimer = null;
     function build(steps) {
       teardown();
       ov = el('div', 'gk-scan');
@@ -271,10 +272,10 @@
         titleEl.textContent = ok ? 'Analysis complete' : 'Analysis stopped';
       }
       if (ok && (s == null || s >= 60)) burst(tone === 'ok');
-      setTimeout(dismiss, s != null && s >= 90 ? 2600 : 3200);
+      dismissTimer = setTimeout(dismiss, s != null && s >= 90 ? 2600 : 3200);
     }
     function dismiss() { if (!ov) return; ov.classList.add('out'); var o = ov; ov = null; setTimeout(function () { o.remove(); }, 380); }
-    function teardown() { if (stepTimer) clearTimeout(stepTimer); if (ov) { ov.remove(); ov = null; } phaseEls = []; }
+    function teardown() { if (dismissTimer) { clearTimeout(dismissTimer); dismissTimer = null; } if (ov) { ov.remove(); ov = null; } phaseEls = []; }
     window.addEventListener('gk:analyze', function (ev) {
       var d = ev.detail || {};
       if (reduce) return; // respect reduced motion — banner + toasts still cover it
@@ -413,6 +414,8 @@
     function paint(list) { list.forEach(function (c, i) { c.classList.toggle('gk-kbd-focus', i === focusI); }); if (list[focusI]) list[focusI].scrollIntoView({ block: 'nearest' }); }
     document.addEventListener('keydown', function (e) {
       if (isTyping(e) || e.metaKey || e.ctrlKey) return;
+      // Don't hijack keys while a modal surface (tour / palette / compare) is open.
+      if (document.querySelector('.gk-tour') || (pal && !pal.hidden) || document.querySelector('.gk-cmp:not([hidden])')) return;
       var list = cards(); if (!list.length) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); focusI = (focusI + 1) % list.length; paint(list); }
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); focusI = (focusI - 1 + list.length) % list.length; paint(list); }
@@ -659,9 +662,64 @@
   }
   window.gkTour = function () { runTour(true); };
 
+  /* ── Fleet compare (client-side, uses cached analysis) ── */
+  function compareMetrics(vm) {
+    var c = (vm && window.getVmCache) ? window.getVmCache(vm.id) : {};
+    var ins = c.inspect || {}, os = ins.operating_system || {}, mp = c.migrationPlan || {};
+    var checks = c.checks || [];
+    return {
+      'OS': os.product_name || os.distribution || '—',
+      'Arch': os.arch || '—',
+      'Boot score': c.bootScore != null ? Math.round(c.bootScore) : null,
+      'Blockers': (c.blockers || []).length,
+      'Checks passed': checks.length ? checks.filter(function (x) { return x.passed; }).length + '/' + checks.length : '—',
+      'Migration score': mp.migration_score && mp.migration_score.score != null ? Math.round(mp.migration_score.score) : null,
+      'Packages': ins.packages && ins.packages.count != null ? ins.packages.count : '—',
+      'Kernels': ins.kernels && ins.kernels.count != null ? ins.kernels.count : '—',
+      'Users': ins.users && ins.users.count != null ? ins.users.count : '—',
+      'Guest tools': (ins.vm_tools && ins.vm_tools.detected || []).join(', ') || '—',
+      'cloud-init': ins.cloud_init ? (ins.cloud_init.enabled ? 'enabled' : 'present') : '—',
+    };
+  }
+  function mountCompare() {
+    var ov = el('div', 'gk-cmp'); ov.hidden = true;
+    ov.innerHTML = '<div class="gk-cmp__box"><header><h3>Compare disks</h3><button type="button" class="gk-cmp__x" aria-label="Close">✕</button></header>' +
+      '<div class="gk-cmp__sel"><select class="gk-cmp__a"></select><span class="gk-cmp__vs">vs</span><select class="gk-cmp__b"></select></div>' +
+      '<div class="gk-cmp__body"></div></div>';
+    document.body.appendChild(ov);
+    var selA = ov.querySelector('.gk-cmp__a'), selB = ov.querySelector('.gk-cmp__b'), body = ov.querySelector('.gk-cmp__body');
+    ov.querySelector('.gk-cmp__x').addEventListener('click', function () { ov.hidden = true; });
+    ov.addEventListener('mousedown', function (e) { if (e.target === ov) ov.hidden = true; });
+    function render() {
+      var vms = (window.state && window.state.vms) || [];
+      var a = vms.find(function (v) { return v.id === selA.value; });
+      var b = vms.find(function (v) { return v.id === selB.value; });
+      if (!a || !b) { body.innerHTML = '<p class="gk-cmp__empty">Pick two disks.</p>'; return; }
+      var ma = compareMetrics(a), mb = compareMetrics(b);
+      var keys = Object.keys(ma);
+      body.innerHTML = '<table class="gk-cmp__tbl"><thead><tr><th></th><th>' + esc(a.name || a.id) + '</th><th>' + esc(b.name || b.id) + '</th></tr></thead><tbody>' +
+        keys.map(function (k) {
+          var va = ma[k], vb = mb[k];
+          var da = va == null ? '—' : va, db = vb == null ? '—' : vb;
+          var diff = String(da) !== String(db);
+          return '<tr class="' + (diff ? 'gk-cmp__diff' : '') + '"><td class="gk-cmp__k">' + esc(k) + '</td><td>' + esc(da) + '</td><td>' + esc(db) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+    function open() {
+      var vms = (window.state && window.state.vms) || [];
+      if (vms.length < 2) { window.gkToast('Need at least two disks to compare', 'warn'); return; }
+      var opts = vms.map(function (v) { return '<option value="' + esc(v.id) + '">' + esc(v.name || v.id) + '</option>'; }).join('');
+      selA.innerHTML = opts; selB.innerHTML = opts;
+      selA.selectedIndex = 0; selB.selectedIndex = Math.min(1, vms.length - 1);
+      ov.hidden = false; render(); cue('tick');
+    }
+    selA.addEventListener('change', render); selB.addEventListener('change', render);
+    window.gkCompare = open;
+  }
+
   ready(function () {
     mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
-    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues(); mountDropCatcher();
+    mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues(); mountDropCatcher(); mountCompare();
     window.gkToast('Press ⌘K for the command palette', 'info');
     setTimeout(function () { runTour(false); }, 900);
   });

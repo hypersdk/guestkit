@@ -188,15 +188,33 @@ function renderIntelligenceReport(vm, cache) {
       ${irKV('Hostname', os.hostname || ins.network?.hostname)}
       ${irKV('Packaging', os.package_format || ins.packages?.manager)}
       ${irKV('Mounts', ins.mountpoints?.count)}
+      ${ins.machine_id ? `<div><dt>Machine ID</dt><dd><span class="ir-mono">${irEsc(ins.machine_id)}</span></dd></div>` : ''}
     </dl>`, irOsEmoji(os)));
   }
 
-  if (hasInspect && ins.security) {
-    const se = ins.security.selinux, aa = ins.security.apparmor;
+  if (hasInspect && (ins.security || ins.ssh || ins.firewall)) {
+    const se = ins.security?.selinux, aa = ins.security?.apparmor, ssh = ins.ssh || {}, fw = ins.firewall || {};
+    const fwLabel = fw.ufw ? `ufw ${fw.ufw.enabled ? 'enabled' : 'disabled'}` : fw.firewalld ? 'firewalld' : fw.iptables ? 'iptables' : (ins.firewall ? 'present' : null);
+    const rootLogin = ssh.permit_root_login;
     secs.push(irCard('Security', `<dl class="ir-grid">
       ${irKV('SELinux', se ? (se.status || (se.enabled ? 'enabled' : 'disabled')) : '—')}
       ${irKV('AppArmor', aa ? (aa.enabled ? 'enabled' : 'disabled') : '—')}
+      ${fwLabel ? irKV('Firewall', fwLabel) : ''}
+      ${rootLogin ? `<div><dt>SSH root login</dt><dd><span class="ir-chip ${/^(yes|prohibit-password)/i.test(rootLogin) ? 'warn' : 'ok'}">${irEsc(rootLogin)}</span></dd></div>` : ''}
+      ${ssh.password_auth != null ? irKV('SSH password auth', ssh.password_auth ? 'enabled' : 'disabled') : ''}
     </dl>`, '⛨'));
+  }
+
+  if (hasInspect && (ins.cloud_init || ins.vm_tools || ins.network?.dns_servers?.length || ins.network?.gateway)) {
+    const ci = ins.cloud_init, vt = ins.vm_tools, nw = ins.network || {};
+    const legacyTool = (vt?.detected || []).some((t) => t === 'vmware-tools' || t === 'virtualbox-guest');
+    secs.push(irCard('Guest platform', `<dl class="ir-grid">
+      ${ci ? irKV('cloud-init', ci.present ? (ci.enabled ? 'enabled' : 'present · disabled') : 'absent') : ''}
+      ${nw.gateway ? `<div><dt>Gateway</dt><dd><span class="ir-mono">${irEsc(nw.gateway)}</span></dd></div>` : ''}
+    </dl>
+      ${vt?.detected?.length ? `<div class="ir-sub">Guest tools${legacyTool ? ' · migrate off legacy' : ''}</div><div class="ir-chiprow">${(vt.detected).map((t) => `<span class="ir-chip ${t === 'vmware-tools' || t === 'virtualbox-guest' ? 'warn' : t === 'qemu-guest-agent' ? 'ok' : ''}">${irEsc(t)}</span>`).join('')}</div>` : ''}
+      ${nw.dns_servers?.length ? `<div class="ir-sub">DNS servers</div><div class="ir-chiprow">${irChips(nw.dns_servers)}</div>` : ''}
+    `, '☁'));
   }
 
   if (hasInspect && (ins.packages || ins.services || ins.network)) {
