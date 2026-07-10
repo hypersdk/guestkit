@@ -3372,20 +3372,26 @@ function setupInspectionMode() {
 }
 
 function setupCopilot() {
-  $('#copilotForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const input = $('#copilotInput');
-    const q = input.value.trim();
-    if (!q) return;
-    input.value = '';
-    setActiveTab('copilot');
-    askCopilot(q);
-  });
+  const form = $('#copilotForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('#copilotInput');
+      const q = input ? input.value.trim() : '';
+      if (!q) return;
+      input.value = '';
+      setActiveTab('copilot');
+      askCopilot(q);
+    });
+  }
 
-  $('#copilotBannerAction').addEventListener('click', (e) => {
-    const action = e.currentTarget.dataset.action;
-    if (action) runWorkflow(action);
-  });
+  const banner = $('#copilotBannerAction');
+  if (banner) {
+    banner.addEventListener('click', (e) => {
+      const action = e.currentTarget.dataset.action;
+      if (action) runWorkflow(action);
+    });
+  }
 }
 
 function setupWizard() {
@@ -3420,7 +3426,7 @@ function setupTheme() {
   var saved = null;
   try { saved = localStorage.getItem('zyvor.theme'); } catch (e) {}
   document.documentElement.dataset.theme =
-    (saved === 'phosphor' || saved === 'abyss') ? saved : 'phosphor';
+    ['carbon', 'phosphor', 'solaris', 'abyss'].includes(saved) ? saved : 'phosphor';
 }
 
 function setupGlassToggle() {
