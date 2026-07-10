@@ -830,7 +830,30 @@ kbd {
 }
 
 /* ── Intelligence report (TUI-style, token-driven so it themes everywhere) ── */
-.intel-report { display: grid; gap: 12px; margin-top: 12px; }
+.intel-report { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+@media (max-width: 720px) { .intel-report { grid-template-columns: 1fr; } }
+.intel-report .ir-sec.span2 { grid-column: 1 / -1; }
+/* Hero verdict band */
+.ir-hero { display: flex; align-items: center; gap: 18px; margin-top: 14px; padding: 16px 18px;
+  border: 1px solid var(--border-soft); border-left: 4px solid var(--accent);
+  border-radius: var(--radius-lg, 16px); background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 10%, var(--bg-card)), var(--bg-card)); }
+.ir-hero.ok { border-left-color: var(--success); }
+.ir-hero.warn { border-left-color: var(--warn); }
+.ir-hero.crit { border-left-color: var(--danger); }
+.ir-hero__b { flex: 1; min-width: 0; }
+.ir-hero__v { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-main); text-wrap: balance; }
+.ir-hero__sub { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.ir-hero .ir-ring { width: 92px; height: 92px; }
+.ir-hero .ir-ring__n { font-size: 28px; }
+.ir-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.ir-stat { display: flex; flex-direction: column; align-items: center; min-width: 62px; padding: 6px 10px;
+  border: 1px solid var(--border-soft); border-radius: 10px; background: color-mix(in srgb, var(--text-main) 3%, transparent); }
+.ir-stat__v { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--text-main); line-height: 1; font-variant-numeric: tabular-nums; }
+.ir-stat__l { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-soft); margin-top: 3px; }
+.ir-stat.ok .ir-stat__v { color: var(--success); }
+.ir-stat.warn .ir-stat__v { color: var(--warn); }
+.ir-stat.crit .ir-stat__v { color: var(--danger); }
+@media (prefers-reduced-motion: no-preference) { .ir-hero { animation: ir-rise 0.4s ease both; } }
 .ir-sec { border: 1px solid var(--border-soft); border-radius: var(--radius-md, 12px); background: var(--bg-card); padding: 12px 14px; }
 .ir-sec__h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .ir-sec__h h4 { margin: 0; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
