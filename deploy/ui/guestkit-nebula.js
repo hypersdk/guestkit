@@ -250,8 +250,8 @@ function renderBrainPanel(vm, cache) {
 
   const html = `
     <div class="brain-block">
-      <h4 class="brain-block__title">GuestKit Brain</h4>
-      <p class="caption">Offline VM Intelligence</p>
+      <h4 class="brain-block__title">⚡ Ask Zeus</h4>
+      <p class="caption">Zeus AI · GuestKit engine</p>
     </div>
     <div class="brain-block">
       <h4 class="brain-block__title">Readiness</h4>
@@ -280,11 +280,11 @@ function renderBrainPanel(vm, cache) {
       <p class="caption" style="margin-top:8px;">${window.escapeHtml?.(state.summary?.slice(0, 120) || '')}</p>
     </div>
     <div class="brain-block">
-      <h4 class="brain-block__title">Ask GuestKit</h4>
+      <h4 class="brain-block__title">Ask Zeus</h4>
       <div class="brain-prompt-chips" id="brainPromptChipsMini"></div>
       <div id="brainAskChatMini" class="brain-ask-chat"></div>
       <form class="brain-ask-input" id="brainAskFormMini">
-        <input type="text" id="brainAskInputMini" placeholder="Ask about boot risks…" autocomplete="off" />
+        <input type="text" id="brainAskInputMini" placeholder="Ask Zeus about boot risks…" autocomplete="off" />
         <button type="submit" class="btn primary sm">Ask</button>
       </form>
     </div>

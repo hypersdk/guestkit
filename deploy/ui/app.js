@@ -1405,7 +1405,7 @@ async function renderClusterCopilot(info, vm, bootInspect) {
   markWizardComplete('assure');
   updateWizardFooter();
   setActiveTab('copilot');
-  feed('Cluster <strong>Copilot</strong> briefing ready', 'ok');
+  feed('Cluster <strong>Ask Zeus</strong> briefing ready', 'ok');
 }
 
 function updateCopilotPlaceholder() {
@@ -1413,7 +1413,7 @@ function updateCopilotPlaceholder() {
   if (!ph) return;
   ph.textContent = state.selectedClusterVm
     ? 'Fetch guest info on a cluster VM — Copilot briefs live agent status automatically.'
-    : 'Run Doctor with explain to unlock Migration Copilot.';
+    : 'Run Doctor with explain to unlock Ask Zeus.';
 }
 
 function runWorkflow(workflow) {
@@ -1821,7 +1821,7 @@ function renderClusterGuestSummary(info, bootInspect) {
     updateVmtoolsLifecycleButtons(vm, info);
     renderClusterCopilot(info, vm, bootInspect).catch((e) => {
       console.error('Cluster Copilot render failed:', e);
-      feed(`Copilot briefing failed: ${escapeHtml(e.message)}`, 'err');
+      feed(`Ask Zeus briefing failed: ${escapeHtml(e.message)}`, 'err');
     });
   }
 }
@@ -2716,7 +2716,7 @@ function answerCopilotLocal(question) {
   if (!b?.insights?.length) {
     return {
       answer: state.selectedClusterVm
-        ? 'Fetch guest info on the selected cluster VM to build a live Copilot briefing.'
+        ? 'Fetch guest info on the selected cluster VM to build a live Ask Zeus briefing.'
         : 'Run Doctor first to build a migration briefing.',
     };
   }
@@ -2877,7 +2877,7 @@ function onJobComplete(action, data) {
 
   if (payload?.copilot && (action === 'doctor' || action === 'migration-plan')) {
     setActiveTab('copilot');
-    feed('Migration <strong>Copilot</strong> briefing ready', 'ok');
+    feed('Migration <strong>Ask Zeus</strong> briefing ready', 'ok');
   } else if (action === 'doctor') {
     const hasRisks = blockers.length || (patch.checks || []).some((c) => !c.passed);
     setActiveTab(hasRisks ? 'findings' : 'summary');
