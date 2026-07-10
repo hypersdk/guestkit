@@ -125,6 +125,11 @@ fn summarize_inspection(full: &serde_json::Value) -> serde_json::Value {
     if let Some(users) = full.get("users") {
         out["users"] = users.clone();
     }
+    for key in ["machine_id", "cloud_init", "vm_tools", "firewall", "ssh"] {
+        if let Some(v) = full.get(key) {
+            out[key] = v.clone();
+        }
+    }
     out
 }
 
@@ -507,6 +512,127 @@ impl InspectHandler {
                             "accounts": accounts,
                         });
                     }
+                }
+            }
+
+            // Extended network detail (DNS, gateway) merged into network object
+            if payload_clone.options.include_network {
+                if let Ok(dns) = g.get_dns() {
+                    if !dns.is_empty() {
+                        if !result["network"].is_object() { result["network"] = serde_json::json!({}); }
+                        result["network"]["dns_servers"] = serde_json::json!(dns);
+                    }
+                }
+                // Best-effort default gateway from netplan / ifupdown config
+                let mut gateway: Option<String> = None;
+                if let Ok(files) = g.ls("/etc/netplan") {
+                    for f in files.iter().filter(|f| f.ends_with(".yaml") || f.ends_with(".yml")) {
+                        if let Ok(content) = g.cat(&format!("/etc/netplan/{}", f)) {
+                            for line in content.lines() {
+                                let l = line.trim();
+                                if let Some(rest) = l.strip_prefix("gateway4:").or_else(|| l.strip_prefix("via:")) {
+                                    gateway = Some(rest.trim().trim_matches('"').to_string());
+                                    break;
+                                }
+                            }
+                        }
+                        if gateway.is_some() { break; }
+                    }
+                }
+                if gateway.is_none() {
+                    if let Ok(content) = g.cat("/etc/network/interfaces") {
+                        for line in content.lines() {
+                            if let Some(rest) = line.trim().strip_prefix("gateway ") {
+                                gateway = Some(rest.trim().to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+                if let Some(gw) = gateway {
+                    if !result["network"].is_object() { result["network"] = serde_json::json!({}); }
+                    result["network"]["gateway"] = serde_json::Value::String(gw);
+                }
+            }
+
+            // Machine ID (identity)
+            if let Ok(mid) = g.get_machine_id() {
+                if !mid.is_empty() {
+                    result["machine_id"] = serde_json::Value::String(mid);
+                }
+            }
+
+            // cloud-init presence
+            {
+                let present = g.exists("/etc/cloud/cloud.cfg").unwrap_or(false)
+                    || g.exists("/etc/cloud").unwrap_or(false);
+                let disabled = g.exists("/etc/cloud/cloud-init.disabled").unwrap_or(false);
+                if present {
+                    result["cloud_init"] = serde_json::json!({
+                        "present": true,
+                        "enabled": !disabled,
+                    });
+                }
+            }
+
+            // VM guest tooling detection (offline, by well-known paths)
+            {
+                let probes: [(&str, &[&str]); 5] = [
+                    ("open-vm-tools", &["/usr/bin/vmtoolsd", "/usr/bin/vmware-toolbox-cmd"]),
+                    ("vmware-tools", &["/etc/vmware-tools", "/usr/lib/vmware-tools"]),
+                    ("virtualbox-guest", &["/usr/bin/VBoxControl", "/opt/VBoxGuestAdditions"]),
+                    ("hyperv", &["/usr/sbin/hv_kvp_daemon", "/usr/lib/hyperv-daemons"]),
+                    ("qemu-guest-agent", &["/usr/sbin/qemu-ga", "/usr/bin/qemu-ga"]),
+                ];
+                let mut tools = Vec::new();
+                for (name, paths) in probes.iter() {
+                    if paths.iter().any(|p| g.exists(p).unwrap_or(false)) {
+                        tools.push((*name).to_string());
+                    }
+                }
+                if !tools.is_empty() {
+                    result["vm_tools"] = serde_json::json!({ "detected": tools });
+                }
+            }
+
+            // Firewall configuration (offline)
+            {
+                let mut fw = serde_json::Map::new();
+                if let Ok(conf) = g.cat("/etc/ufw/ufw.conf") {
+                    let enabled = conf.lines().any(|l| l.trim().eq_ignore_ascii_case("ENABLED=yes"));
+                    fw.insert("ufw".into(), serde_json::json!({ "enabled": enabled }));
+                }
+                if g.exists("/etc/firewalld").unwrap_or(false) {
+                    fw.insert("firewalld".into(), serde_json::json!(true));
+                }
+                if g.exists("/etc/iptables/rules.v4").unwrap_or(false)
+                    || g.exists("/etc/sysconfig/iptables").unwrap_or(false) {
+                    fw.insert("iptables".into(), serde_json::json!(true));
+                }
+                if !fw.is_empty() {
+                    result["firewall"] = serde_json::Value::Object(fw);
+                }
+            }
+
+            // SSH server policy (offline, from sshd_config)
+            if let Ok(sshd) = g.get_sshd_config() {
+                let mut root_login: Option<String> = None;
+                let mut password_auth: Option<bool> = None;
+                for line in sshd.lines() {
+                    let l = line.trim();
+                    if l.starts_with('#') { continue; }
+                    let lower = l.to_ascii_lowercase();
+                    if let Some(v) = lower.strip_prefix("permitrootlogin") {
+                        root_login = Some(v.trim().to_string());
+                    } else if let Some(v) = lower.strip_prefix("passwordauthentication") {
+                        password_auth = Some(v.trim() == "yes");
+                    }
+                }
+                if root_login.is_some() || password_auth.is_some() {
+                    result["ssh"] = serde_json::json!({
+                        "permit_root_login": root_login,
+                        "password_auth": password_auth,
+                    });
                 }
             }
 
