@@ -68,10 +68,19 @@ if $DO_BUILD; then
     cd "${REPO_DIR}"
     if [[ -n "${TARGET}" ]]; then
         if [[ "${TARGET}" == *musl* ]]; then
+            # Static musl build: minimal, no dynamic C deps (no libhivex/libsystemd).
             cargo build --release --target "${TARGET}" --bin guestkit \
                 --no-default-features --features guest-inspect
         else
-            cargo build --release --target "${TARGET}" --bin guestkit
+            # glibc build: enable offline registry writes when libhivex headers
+            # are present (adds a runtime dependency on libhivex0).
+            EXTRA_FEATURES=""
+            if pkg-config --exists hivex 2>/dev/null \
+                || ls /usr/include/hivex.h /usr/local/include/hivex.h &>/dev/null; then
+                EXTRA_FEATURES="--features registry-write"
+                echo "  libhivex found — enabling registry-write"
+            fi
+            cargo build --release --target "${TARGET}" --bin guestkit ${EXTRA_FEATURES}
         fi
     else
         bash scripts/build-linux-release.sh
