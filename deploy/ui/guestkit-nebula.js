@@ -224,8 +224,9 @@ function renderIntelligenceReport(vm, cache) {
 
   if (hasInspect && ins.kernels?.installed?.length) {
     const k = ins.kernels;
-    const chips = k.installed.map((v) => `<span class="ir-chip ${v === k.default ? 'ok' : ''}">${irEsc(v)}${v === k.default ? ' ★' : ''}</span>`).join('');
-    secs.push(irCard(`Kernels · ${k.count ?? k.installed.length}`, `${k.default ? `<div class="ir-sub">Default → ${irEsc(k.default)}</div>` : ''}<div class="ir-chiprow">${chips}</div>`, '⊞'));
+    const def = (k.default || '').replace(/^vmlinu[xz]-/, '');
+    const chips = k.installed.map((v) => `<span class="ir-chip ${v === def ? 'ok' : ''}">${irEsc(v)}${v === def ? ' ★' : ''}</span>`).join('');
+    secs.push(irCard(`Kernels · ${k.count ?? k.installed.length}`, `${def ? `<div class="ir-sub">Default → ${irEsc(def)}</div>` : ''}<div class="ir-chiprow">${chips}</div>`, '⊞'));
   }
 
   if (hasInspect && ins.kernel_modules?.modules?.length) {
