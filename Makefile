@@ -4,6 +4,7 @@ CARGO ?= cargo
 BINARY = guestkit
 
 .PHONY: all build release install uninstall clean check test fmt clippy selftest \
+	test-features test-features-remote \
 	deploy deploy-remote deploy-remote-quick deploy-remote-preflight deploy-remote-verify deploy-remote-uninstall deploy-remote-fleet
 
 all: build
@@ -36,6 +37,13 @@ clippy:
 
 selftest:
 	bash scripts/selftest.sh
+
+test-features: ## Compile+clippy matrix of every feature (run locally; needs libhivex/libsystemd)
+	bash scripts/test-feature-matrix.sh
+
+test-features-remote: ## Feature matrix on a remote box: make test-features-remote H=ip U=user [SETUP=1]
+	@test -n "$(H)" || { echo "  ❌ H (host) is required"; exit 1; }
+	bash scripts/test-feature-matrix-remote.sh $(H) $(or $(U),root) $(if $(SETUP),--setup) --key $(ARGS)
 
 deploy: deploy-remote ## Alias for deploy-remote
 
