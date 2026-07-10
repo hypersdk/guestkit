@@ -2784,7 +2784,9 @@ function escapeHtml(s) {
 }
 
 function showRaw(data) {
-  $('#rawJson').textContent = JSON.stringify(data, null, 2);
+  const el = $('#rawJson');
+  if (el) el.textContent = JSON.stringify(data, null, 2);
+  window.GuestKitConsole?.appendEvidenceLog?.(JSON.stringify(data, null, 2));
 }
 
 /** @deprecated use showRaw — kept for cached older app.js callers */
@@ -2794,9 +2796,9 @@ function setRawJson(data) {
 
 function showYaml(yaml) {
   state.lastYaml = yaml;
-  $('#yamlContent').textContent = yaml || '';
-  $('#yamlTab').classList.toggle('hidden', !yaml);
-  $('#copyYamlBtn').classList.toggle('hidden', !yaml);
+  const yc = $('#yamlContent'); if (yc) yc.textContent = yaml || '';
+  $('#yamlTab')?.classList.toggle('hidden', !yaml);
+  $('#copyYamlBtn')?.classList.toggle('hidden', !yaml);
   $('#applyYamlBtn')?.classList.toggle('hidden', !yaml);
 }
 
