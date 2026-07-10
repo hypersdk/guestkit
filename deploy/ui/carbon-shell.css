@@ -107,3 +107,65 @@
 [data-theme="carbon"] *::-webkit-scrollbar-track { background: transparent; }
 
 [data-theme="carbon"] ::selection { background: rgba(255, 122, 0, 0.3); color: #160a02; }
+
+/* ══ Full component coverage (mirrors the aurora theme surface) ══ */
+
+/* glass top highlight (machined edge) */
+[data-theme="carbon"] .glass::before { background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 44%); opacity: .7; }
+
+/* segmented controls */
+[data-theme="carbon"] .segmented { background: rgba(9,12,16,0.7); border: 1px solid rgba(160,175,200,0.12); }
+[data-theme="carbon"] .seg-btn.active { background: rgba(255,122,0,0.14); color: var(--indigo-bright); box-shadow: inset 0 0 0 1px rgba(255,122,0,0.28); }
+
+/* menubar + target chips */
+[data-theme="carbon"] .menubar-chip, [data-theme="carbon"] .target-chip { border: 1px solid rgba(160,175,200,0.14); background: rgba(20,26,36,0.6); }
+[data-theme="carbon"] .target-chip { color: var(--indigo-bright); }
+[data-theme="carbon"] .menubar-chip:hover { background: rgba(255,122,0,0.10); border-color: rgba(255,122,0,0.4); }
+
+/* pipeline steps */
+[data-theme="carbon"] .pipe-step.active { background: rgba(255,122,0,0.07); border-color: rgba(255,122,0,0.28); }
+[data-theme="carbon"] .pipe-step:hover { background: rgba(160,175,200,0.06); }
+[data-theme="carbon"] .pipe-icon { background: rgba(255,122,0,0.10); color: var(--indigo-bright); }
+
+/* wizard steps */
+[data-theme="carbon"] .wizard-step { border: 1px solid rgba(160,175,200,0.10); background: rgba(15,19,26,0.6); }
+[data-theme="carbon"] .wizard-step:hover:not(.locked) { background: rgba(160,175,200,0.06); }
+[data-theme="carbon"] .wizard-step.active { background: rgba(255,122,0,0.08); border-color: rgba(255,122,0,0.4); }
+[data-theme="carbon"] .wizard-num { background: rgba(255,122,0,0.2); color: #160a02; }
+
+/* dropzone hero */
+[data-theme="carbon"] .dropzone:hover, [data-theme="carbon"] .dropzone.dragover { border-color: rgba(255,122,0,0.45); box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,122,0,0.15); }
+[data-theme="carbon"] .drop-icon, [data-theme="carbon"] .nebula-intake__icon { filter: drop-shadow(0 0 10px rgba(255,122,0,0.35)); }
+
+/* checks heatmap */
+[data-theme="carbon"] .check-cell.pass { background: rgba(53,208,160,0.12); color: var(--teal); }
+[data-theme="carbon"] .check-cell.warn { background: rgba(255,176,32,0.14); color: var(--amber); }
+[data-theme="carbon"] .check-cell.fail { background: rgba(255,92,108,0.16); color: var(--rose); }
+
+/* readiness pills + meters/progress */
+[data-theme="carbon"] .readiness-pill.ok { background: rgba(53,208,160,0.14); color: var(--teal); }
+[data-theme="carbon"] .job-bar-fill.done,
+[data-theme="carbon"] .brain-readiness__fill,
+[data-theme="carbon"] .drop-progress-bar { background: linear-gradient(90deg, #ff8c1f, var(--indigo)); }
+
+/* toasts / findings */
+[data-theme="carbon"] .toast.ok, [data-theme="carbon"] .finding.ok { border-left-color: var(--indigo); }
+
+/* button variants */
+[data-theme="carbon"] .btn.accent { background: rgba(255,122,0,0.08); color: var(--indigo-bright); border: 1px solid rgba(255,122,0,0.3); }
+[data-theme="carbon"] .btn.glass, [data-theme="carbon"] .btn.secondary { background: rgba(20,26,36,0.6); border: 1px solid rgba(160,175,200,0.14); color: var(--text-main); }
+
+/* copilot / brain / agent */
+[data-theme="carbon"] .copilot-send { background: linear-gradient(180deg, #ff8c1f, var(--indigo)); color: #160a02; }
+[data-theme="carbon"] .copilot-action:hover { background: rgba(255,122,0,0.08); }
+[data-theme="carbon"] .agent-msg.user, [data-theme="carbon"] .copilot-msg.user { background: rgba(255,122,0,0.08); border: 1px solid rgba(255,122,0,0.16); }
+[data-theme="carbon"] .copilot-headline, [data-theme="carbon"] .copilot-score, [data-theme="carbon"] .brain-block__title { color: var(--indigo-bright); }
+
+/* vm cards / scores / launch */
+[data-theme="carbon"] .vm-card.selected { border-color: rgba(255,122,0,0.4); box-shadow: 0 0 0 1px rgba(255,122,0,0.14); }
+[data-theme="carbon"] .vm-score,
+[data-theme="carbon"] .dock-launch .dock-icon,
+[data-theme="carbon"] .launch-badge { color: var(--indigo-bright) !important; }
+
+/* window chrome */
+[data-theme="carbon"] .traffic-lights span { background: rgba(160,175,200,0.25); }
