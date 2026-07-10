@@ -1107,3 +1107,34 @@ ul.gk-activity li .time { float: right; color: var(--text-soft); font-size: 10px
 .gk-starter:hover { color: var(--text-main); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
 
 @media (prefers-reduced-motion: reduce) { .gk-starter { transition: none; } }
+
+/* ── Global drag-to-analyze overlay ── */
+.gk-drop { position: fixed; inset: 0; z-index: 10130; display: grid; place-items: center; pointer-events: none; opacity: 0;
+  background: color-mix(in srgb, var(--bg-base, #060a12) 72%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity .18s ease; }
+.gk-drop.on { opacity: 1; pointer-events: auto; }
+.gk-drop__card { text-align: center; padding: 48px 60px; border-radius: 24px; border: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent); box-shadow: 0 0 80px color-mix(in srgb, var(--accent) 30%, transparent);
+  animation: gk-drop-pulse 1.3s ease-in-out infinite; }
+.gk-drop__ic { font-size: 68px; line-height: 1; }
+.gk-drop__t { font-size: 30px; font-weight: 800; color: var(--text-main); margin-top: 14px; letter-spacing: -.01em; }
+.gk-drop__s { font-size: 15px; color: var(--text-muted); margin-top: 6px; }
+.gk-drop__chips { font-family: var(--font-mono); font-size: 12px; color: var(--text-soft); margin-top: 16px; letter-spacing: .04em; }
+@keyframes gk-drop-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+/* ── Coach-mark tour ── */
+.gk-tour { position: fixed; inset: 0; z-index: 10140; }
+.gk-tour__hole { position: absolute; border-radius: 14px; box-shadow: 0 0 0 9999px color-mix(in srgb, var(--bg-base, #060a12) 68%, rgba(0,0,0,.68)), 0 0 0 2px var(--accent), 0 0 30px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition: all .32s cubic-bezier(.4,0,.2,1); pointer-events: none; }
+.gk-tour__card { position: absolute; width: 340px; max-width: calc(100vw - 32px); background: var(--bg-panel-strong); border: 1px solid var(--border-strong); border-radius: 16px; padding: 18px 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); animation: gk-tour-in .3s cubic-bezier(.2,.9,.3,1) both; }
+.gk-tour__step { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; color: var(--accent); }
+.gk-tour__card h4 { margin: 6px 0 6px; font-size: 18px; color: var(--text-main); }
+.gk-tour__card p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text-muted); }
+.gk-tour__nav { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.gk-tour__skip { font: inherit; font-size: 13px; color: var(--text-soft); background: none; border: none; cursor: pointer; padding: 7px 12px; }
+.gk-tour__skip:hover { color: var(--text-main); }
+.gk-tour__next { font: inherit; font-size: 13px; font-weight: 600; color: #05121f; background: var(--accent); border: none; border-radius: 9px; padding: 7px 16px; cursor: pointer; }
+.gk-tour__next:hover { filter: brightness(1.08); }
+@keyframes gk-tour-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) { .gk-drop__card, .gk-tour__hole, .gk-tour__card { animation: none !important; transition: none !important; } }
