@@ -1,4 +1,7 @@
 namespace: zyvor
+# Let `helm --create-namespace` (or a pre-created namespace) own the namespace.
+# Set true only if you install without --create-namespace.
+createNamespace: false
 
 ingress:
   enabled: true
