@@ -843,7 +843,7 @@ fn guestkit_get_processes() -> Result<Value, String> {
     let process = evidence
         .process
         .clone()
-        .unwrap_or_else(|| crate::collectors::process::collect_process_evidence());
+        .unwrap_or_else(crate::collectors::process::collect_process_evidence);
     serde_json::to_value(process).map_err(|e| e.to_string())
 }
 
