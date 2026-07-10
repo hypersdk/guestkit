@@ -1,0 +1,59 @@
+/* GuestKit — Phosphor shell overrides (CRT signal-room atmosphere).
+   Scoped to [data-theme="phosphor"] so it is inert under Abyss. */
+
+/* Ambient tube glow — recolor the shell's aurora layers to phosphor */
+[data-theme="phosphor"] .nebula-root::before {
+  background:
+    radial-gradient(ellipse 42% 55% at 22% 28%, rgba(87, 245, 203, 0.13) 0%, transparent 62%),
+    radial-gradient(ellipse 36% 48% at 78% 72%, rgba(255, 180, 84, 0.09) 0%, transparent 58%);
+}
+[data-theme="phosphor"] .nebula-root::after {
+  background:
+    radial-gradient(ellipse 34% 44% at 86% 18%, rgba(87, 245, 203, 0.11) 0%, transparent 58%);
+}
+
+/* CRT scanlines — full-screen, never intercepts pointer events */
+[data-theme="phosphor"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.16) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+
+/* Screen vignette */
+[data-theme="phosphor"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8999;
+  background: radial-gradient(130% 100% at 50% 40%, transparent 58%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* Header: darker tube + monospace wordmark for the terminal feel */
+[data-theme="phosphor"] .nebula-header {
+  background: rgba(6, 12, 10, 0.92);
+}
+[data-theme="phosphor"] .nebula-header__title {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-shadow: var(--glow-teal);
+}
+[data-theme="phosphor"] .nebula-header__link {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* Give the phosphor accent a faint bloom on primary readouts/headings */
+[data-theme="phosphor"] h1,
+[data-theme="phosphor"] h2 {
+  text-shadow: 0 0 18px rgba(87, 245, 203, 0.18);
+}

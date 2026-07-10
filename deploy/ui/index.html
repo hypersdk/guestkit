@@ -2,6 +2,7 @@
 <html lang="en" data-theme="abyss">
 <head>
   <meta charset="UTF-8" />
+  <script>try{var t=localStorage.getItem('zyvor.theme');if(t==='phosphor'||t==='abyss')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='8' y1='8' x2='56' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23ff8a3d'/%3E%3Cstop offset='1' stop-color='%23f0583a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23bg)'/%3E%3Cpath d='M19 18h26v7L29 40h16v7H19v-7l16-15H19z' fill='%23fff'/%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='8' y1='8' x2='56' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23ff8a3d'/%3E%3Cstop offset='1' stop-color='%23f0583a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23bg)'/%3E%3Cpath d='M19 18h26v7L29 40h16v7H19v-7l16-15H19z' fill='%23fff'/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +12,8 @@
   <link rel="stylesheet" href="abyss-shell.css?v=20260627abyss1" />
   <link rel="stylesheet" href="abyss-components.css?v=20260627abyss1" />
   <link rel="stylesheet" href="style.css?v=20260627abyss1" />
+  <link rel="stylesheet" href="phosphor-tokens.css?v=20260710phosphor1" />
+  <link rel="stylesheet" href="phosphor-shell.css?v=20260710phosphor1" />
 </head>
 <body>
   <div class="nebula-root guestkit-shell" id="nebulaRoot">
@@ -640,6 +643,37 @@
 
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
   </div>
+  <button id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme (Abyss / Phosphor)">
+    <span aria-hidden="true">◐</span> <span id="themeName">Abyss</span>
+  </button>
+  <style>
+    #themeToggle{
+      position:fixed; right:16px; bottom:16px; z-index:9999;
+      display:inline-flex; align-items:center; gap:7px;
+      font-family:var(--font-mono); font-size:12px; letter-spacing:.04em;
+      color:var(--text-main); background:var(--bg-panel-strong);
+      border:1px solid var(--border-strong); border-radius:22px;
+      padding:8px 14px; cursor:pointer; box-shadow:var(--glow-indigo);
+      -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+      transition:border-color .15s, transform .15s;
+    }
+    #themeToggle:hover{border-color:var(--accent); transform:translateY(-1px)}
+    #themeToggle:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  </style>
+  <script>
+    (function(){
+      var btn=document.getElementById('themeToggle'), name=document.getElementById('themeName');
+      function cur(){return document.documentElement.dataset.theme==='phosphor'?'phosphor':'abyss';}
+      function paint(){name.textContent = cur()==='phosphor'?'Phosphor':'Abyss';}
+      paint();
+      btn.addEventListener('click',function(){
+        var next = cur()==='phosphor'?'abyss':'phosphor';
+        document.documentElement.dataset.theme = next;
+        try{localStorage.setItem('zyvor.theme', next);}catch(e){}
+        paint();
+      });
+    })();
+  </script>
   <script src="guestkit-auth.js?v=20260616nebula2"></script>
   <script src="guestkit-journey.js?v=20260616nebula2"></script>
   <script src="guestkit-nebula.js?v=20260616nebula2"></script>
