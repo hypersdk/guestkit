@@ -58,6 +58,121 @@ function renderPipeline(vm, cache) {
   ).join('');
 }
 
+// ── TUI-style intelligence report ────────────────────────────────────────────
+function irEsc(s) { return window.escapeHtml ? window.escapeHtml(String(s ?? '')) : String(s ?? ''); }
+function irOsEmoji(os) {
+  const d = String(os?.distribution || os?.type || '').toLowerCase();
+  if (d.includes('ubuntu')) return '🟠'; if (d.includes('debian')) return '🌀';
+  if (d.includes('photon')) return '🪷'; if (d.includes('rhel') || d.includes('centos') || d.includes('fedora')) return '🎩';
+  if (d.includes('suse')) return '🦎'; if (d.includes('arch')) return '🏔️';
+  if (d.includes('windows')) return '🪟'; return '🐧';
+}
+function irScoreCol(n) { return n == null ? 'var(--text-muted)' : n >= 75 ? 'var(--success)' : n >= 50 ? 'var(--warn)' : 'var(--danger)'; }
+function irRing(score, label) {
+  if (score == null) return '';
+  const pct = Math.max(0, Math.min(100, Math.round(score)));
+  return `<div class="ir-ring" style="--p:${pct};--rc:${irScoreCol(pct)}"><span class="ir-ring__n">${pct}</span><span class="ir-ring__l">${irEsc(label || '')}</span></div>`;
+}
+function irKV(k, v) { return (v == null || v === '') ? '' : `<div><dt>${irEsc(k)}</dt><dd>${irEsc(v)}</dd></div>`; }
+function irCard(title, body, badge) {
+  if (!body || !body.trim()) return '';
+  return `<section class="ir-sec"><header class="ir-sec__h">${badge ? `<span class="ir-sec__ic">${badge}</span>` : ''}<h4>${irEsc(title)}</h4></header>${body}</section>`;
+}
+function irChips(arr, cls) { return (arr || []).map((x) => `<span class="ir-chip ${cls || ''}">${irEsc(x)}</span>`).join(''); }
+function irBullets(arr) { return `<ul class="ir-list">${(arr || []).slice(0, 12).map((x) => `<li>${irEsc(x)}</li>`).join('')}</ul>`; }
+function irSevOf(sev) { const s = String(sev || '').toLowerCase(); if (s.startsWith('block') || s === 'critical' || s === 'high') return 'crit'; if (s.startsWith('warn') || s === 'medium') return 'warn'; return 'ok'; }
+function irFinding(f, cls) {
+  const t = typeof f === 'string' ? f : (f.title || f.check_id || '');
+  const m = typeof f === 'string' ? '' : (f.message || '');
+  const rem = typeof f === 'string' ? '' : (f.remediation || '');
+  return `<div class="ir-find ${cls}"><div class="ir-find__t">${irEsc(t)}</div>${m ? `<div class="ir-find__m">${irEsc(m)}</div>` : ''}${rem ? `<div class="ir-find__r">→ ${irEsc(rem)}</div>` : ''}</div>`;
+}
+function irCheck(c) {
+  const cls = c.passed ? 'ok' : irSevOf(c.severity);
+  return `<div class="ir-check ${cls}"><span class="ir-check__s">${c.passed ? '✓' : '✗'}</span><span class="ir-check__id">${irEsc(c.id || '')}</span><span class="ir-check__n">${irEsc(c.name || c.message || '')}</span></div>`;
+}
+function irPriCls(p) { const s = String(p || '').toLowerCase(); if (s === 'critical') return 'crit'; if (s === 'high') return 'warn'; if (s === 'medium') return 'warn'; return 'ok'; }
+function irOp(op) {
+  return `<div class="ir-op"><span class="ir-chip ${irPriCls(op.priority)}">${irEsc(op.priority || '—')}</span><span class="ir-op__d">${irEsc(op.description || op.id || '')}</span>${op.risk ? `<span class="ir-op__risk">${irEsc(op.risk)}</span>` : ''}</div>`;
+}
+function renderIntelligenceReport(vm, cache) {
+  const ins = cache.inspect || {};
+  const hasInspect = !!cache.inspect;
+  const os = ins.operating_system || {};
+  const bs = cache.bootScore;
+  const mp = cache.migrationPlan || {};
+  const mscore = mp.migration_score || {};
+  const fix = mp.fix_plan || {};
+  const cop = cache.briefing || {};
+  const checks = cache.checks || [];
+  const blockers = cache.blockers || [];
+  const warnings = cache.warnings || [];
+
+  if (!hasInspect && bs == null && !cache.migrationPlan) {
+    return '<p class="body-text">No intelligence yet — click <strong>Analyze</strong> to fingerprint the OS, score bootability, and plan migration.</p>';
+  }
+
+  const secs = [];
+
+  if (hasInspect) {
+    secs.push(irCard('System', `<dl class="ir-grid">
+      ${irKV('OS', os.product_name || os.distribution || os.type || 'Unknown')}
+      ${irKV('Version', os.version)}
+      ${irKV('Arch', os.arch)}
+      ${irKV('Hostname', os.hostname || ins.network?.hostname)}
+      ${irKV('Packaging', os.package_format || ins.packages?.manager)}
+      ${irKV('Mounts', ins.mountpoints?.count)}
+    </dl>`, irOsEmoji(os)));
+  }
+
+  if (bs != null || blockers.length || checks.length) {
+    const conf = cache.confidence != null ? ` · confidence ${Math.round(cache.confidence * 100)}%` : '';
+    const prob = bs != null ? `${Math.round(bs)}% chance of a clean first boot${conf}` : (cache.bootSummary || '');
+    const blk = blockers.length ? `<div class="ir-sub">Blockers</div>${blockers.map((b) => irFinding(b, 'crit')).join('')}` : '';
+    const wrn = warnings.length ? `<div class="ir-sub">Warnings</div>${warnings.map((w) => irFinding(w, 'warn')).join('')}` : '';
+    const chk = checks.length ? `<div class="ir-checks">${checks.map(irCheck).join('')}</div>` : '';
+    secs.push(irCard('Boot gate', `<div class="ir-gate">${irRing(bs, 'boot')}<div class="ir-gate__b"><p class="ir-prob">${irEsc(prob)}</p>${blk}${wrn}</div></div>${chk}`, '◉'));
+  }
+
+  if (cache.migrationPlan) {
+    const dt = mscore.estimated_downtime_minutes;
+    secs.push(irCard('Migration readiness', `<div class="ir-gate">${irRing(mscore.score, 'migrate')}<div class="ir-gate__b">
+      ${dt != null ? `<p class="ir-prob">~${dt} min estimated downtime → ${irEsc(mp.target || 'kubevirt')}</p>` : ''}
+      ${mscore.driver_injections?.length ? `<div class="ir-sub">Driver injections</div><div class="ir-chiprow">${irChips(mscore.driver_injections, 'ok')}</div>` : ''}
+      ${mscore.required_changes?.length ? `<div class="ir-sub">Required changes</div>${irBullets(mscore.required_changes)}` : ''}
+      ${mscore.licensing_warnings?.length ? `<div class="ir-sub">Licensing</div>${irBullets(mscore.licensing_warnings)}` : ''}
+    </div></div>`, '⚙'));
+  }
+
+  if (fix.operations?.length) {
+    secs.push(irCard(`Fix plan · ${fix.operations.length} ops`, `<div class="ir-ops">${fix.operations.slice(0, 40).map(irOp).join('')}</div>`, '✦'));
+  }
+
+  if (hasInspect && ins.security) {
+    const se = ins.security.selinux, aa = ins.security.apparmor;
+    secs.push(irCard('Security', `<dl class="ir-grid">
+      ${irKV('SELinux', se ? (se.status || (se.enabled ? 'enabled' : 'disabled')) : '—')}
+      ${irKV('AppArmor', aa ? (aa.enabled ? 'enabled' : 'disabled') : '—')}
+    </dl>`, '⛨'));
+  }
+
+  if (hasInspect && (ins.packages || ins.services || ins.network)) {
+    const pk = ins.packages || {}, sv = ins.services || {}, nw = ins.network || {};
+    secs.push(irCard('Inventory', `
+      ${pk.count != null ? `<div class="ir-sub">Packages · ${pk.count} (${irEsc(pk.manager || '?')})</div><div class="ir-chiprow">${irChips((pk.sample || []).slice(0, 24))}</div>` : ''}
+      ${sv.count != null ? `<div class="ir-sub">Enabled services · ${sv.count}</div><div class="ir-chiprow">${irChips((sv.sample || []).slice(0, 24))}</div>` : ''}
+      ${nw.interfaces?.length ? `<div class="ir-sub">Network interfaces</div><div class="ir-chiprow">${irChips(nw.interfaces, 'ok')}</div>` : ''}
+    `, '▤'));
+  }
+
+  if (cop.recommended_actions?.length || cop.headline) {
+    const recs = (cop.recommended_actions || []).slice(0, 8).map((r) => `<div class="ir-rec"><span class="ir-chip ${r.priority <= 1 ? 'crit' : r.priority <= 2 ? 'warn' : 'ok'}">P${r.priority ?? '-'}</span><div><strong>${irEsc(r.title)}</strong>${r.detail ? `<p>${irEsc(r.detail)}</p>` : ''}</div></div>`).join('');
+    secs.push(irCard('Recommendations', `${cop.headline ? `<p class="ir-prob">${irEsc(cop.headline)}</p>` : ''}${recs}`, '✦'));
+  }
+
+  return `<div class="intel-report">${secs.join('')}</div>`;
+}
+
 function renderDiskPreview(vm, cache) {
   const el = nb$('#diskPreview');
   if (!el) return;
@@ -72,20 +187,7 @@ function renderDiskPreview(vm, cache) {
   const score = cache.bootScore;
   const readiness = score != null ? Math.round(score) : null;
 
-  let detected = '';
-  if (cache.inspect) {
-    detected = `
-      <dl class="disk-preview__grid">
-        <div><dt>Detected OS</dt><dd>${window.escapeHtml?.(os)}</dd></div>
-        <div><dt>Boot</dt><dd>${window.escapeHtml?.(String(boot))}</dd></div>
-        <div><dt>Kernel</dt><dd>${window.escapeHtml?.(inspect.boot?.kernel || inspect.kernel?.version || '—')}</dd></div>
-        <div><dt>Cloud-init</dt><dd>${inspect.cloud_init?.present ? 'present' : 'none'}</dd></div>
-        <div><dt>Risk</dt><dd>${cache.blockers?.length ? `${cache.blockers.length} blocker(s)` : (readiness != null ? 'low' : 'unknown')}</dd></div>
-        <div><dt>Migration readiness</dt><dd>${readiness != null ? `${readiness}%` : '—'}</dd></div>
-      </dl>`;
-  } else {
-    detected = '<p class="body-text">OS not detected — run Fingerprint to analyze bootloader, drivers, and migration readiness.</p>';
-  }
+  const detected = renderIntelligenceReport(vm, cache);
 
   el.innerHTML = `
     <div class="disk-preview__head">
@@ -97,9 +199,10 @@ function renderDiskPreview(vm, cache) {
     </div>
     ${detected}
     <div class="disk-preview__actions">
-      <button type="button" class="btn primary sm" data-preview-action="inspect">Run Fingerprint</button>
+      <button type="button" class="btn primary sm" id="previewAnalyzeBtn">⚡ Analyze</button>
+      <button type="button" class="btn secondary sm" data-preview-action="inspect">Fingerprint</button>
       <button type="button" class="btn secondary sm" data-preview-action="doctor">Boot Doctor</button>
-      <button type="button" class="btn secondary sm" data-preview-action="migration-plan">Generate Report</button>
+      <button type="button" class="btn secondary sm" data-preview-action="migration-plan">Migration Plan</button>
       <button type="button" class="btn secondary sm" data-preview-action="provision">Create VM</button>
       <button type="button" class="btn secondary sm" id="previewConvertBtn">Convert Disk</button>
       <button type="button" class="btn danger sm" id="previewDeleteBtn">Delete</button>
@@ -113,6 +216,7 @@ function renderDiskPreview(vm, cache) {
       else window.runAction?.(a);
     });
   });
+  nb$('#previewAnalyzeBtn')?.addEventListener('click', () => window.runFullAnalysis?.());
   nb$('#previewConvertBtn')?.addEventListener('click', () => window.GuestKitConsole?.showConvertStudio?.());
   nb$('#previewDeleteBtn')?.addEventListener('click', () => document.getElementById('deleteDiskBtn')?.click());
   appendIntelLog(cache);
