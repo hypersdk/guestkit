@@ -74,9 +74,9 @@ function irRing(score, label) {
   return `<div class="ir-ring" style="--p:${pct};--rc:${irScoreCol(pct)}"><span class="ir-ring__n">${pct}</span><span class="ir-ring__l">${irEsc(label || '')}</span></div>`;
 }
 function irKV(k, v) { return (v == null || v === '') ? '' : `<div><dt>${irEsc(k)}</dt><dd>${irEsc(v)}</dd></div>`; }
-function irCard(title, body, badge) {
+function irCard(title, body, badge, span) {
   if (!body || !body.trim()) return '';
-  return `<section class="ir-sec"><header class="ir-sec__h">${badge ? `<span class="ir-sec__ic">${badge}</span>` : ''}<h4>${irEsc(title)}</h4></header>${body}</section>`;
+  return `<section class="ir-sec ${span || ''}"><header class="ir-sec__h">${badge ? `<span class="ir-sec__ic">${badge}</span>` : ''}<h4>${irEsc(title)}</h4></header>${body}</section>`;
 }
 function irChips(arr, cls) { return (arr || []).map((x) => `<span class="ir-chip ${cls || ''}">${irEsc(x)}</span>`).join(''); }
 function irBullets(arr) { return `<ul class="ir-list">${(arr || []).slice(0, 12).map((x) => `<li>${irEsc(x)}</li>`).join('')}</ul>`; }
@@ -95,46 +95,73 @@ function irPriCls(p) { const s = String(p || '').toLowerCase(); if (s === 'criti
 function irOp(op) {
   return `<div class="ir-op"><span class="ir-chip ${irPriCls(op.priority)}">${irEsc(op.priority || '—')}</span><span class="ir-op__d">${irEsc(op.description || op.id || '')}</span>${op.risk ? `<span class="ir-op__risk">${irEsc(op.risk)}</span>` : ''}</div>`;
 }
+function irScoreCls(n) { return n == null ? '' : n >= 75 ? 'ok' : n >= 50 ? 'warn' : 'crit'; }
+function irStat(label, value, cls) {
+  if (value == null || value === '') return '';
+  return `<div class="ir-stat ${cls || ''}"><span class="ir-stat__v">${irEsc(value)}</span><span class="ir-stat__l">${irEsc(label)}</span></div>`;
+}
 function renderIntelligenceReport(vm, cache) {
   const ins = cache.inspect || {};
   const hasInspect = !!cache.inspect;
   const os = ins.operating_system || {};
-  const bs = cache.bootScore;
   const mp = cache.migrationPlan || {};
+  // Merge doctor + migration bootability so sections populate from whichever ran.
+  const mb = mp.bootability || {};
+  const boot = {
+    score: cache.bootScore ?? mb.score,
+    confidence: cache.confidence ?? mb.confidence,
+    checks: (cache.checks && cache.checks.length ? cache.checks : mb.checks) || [],
+    blockers: (cache.blockers && cache.blockers.length ? cache.blockers : mb.blockers) || [],
+    warnings: (cache.warnings && cache.warnings.length ? cache.warnings : mb.warnings) || [],
+    summary: cache.bootSummary || mb.summary,
+  };
   const mscore = mp.migration_score || {};
   const fix = mp.fix_plan || {};
-  const cop = cache.briefing || {};
-  const checks = cache.checks || [];
-  const blockers = cache.blockers || [];
-  const warnings = cache.warnings || [];
+  const cop = cache.briefing || mp.copilot || {};
+  const hasBoot = boot.score != null || boot.blockers.length || boot.checks.length;
+  const hasMig = !!cache.migrationPlan;
 
-  if (!hasInspect && bs == null && !cache.migrationPlan) {
-    return '<p class="body-text">No intelligence yet — click <strong>Analyze</strong> to fingerprint the OS, score bootability, and plan migration.</p>';
+  if (!hasInspect && !hasBoot && !hasMig) {
+    return '<p class="body-text">No intelligence yet — click <strong>⚡ Analyze</strong> to fingerprint the OS, score bootability, and plan migration.</p>';
   }
+
+  // ── Hero verdict band ──
+  const passed = boot.checks.filter((c) => c.passed).length;
+  const verdict = cop.headline
+    || (boot.blockers.length ? `${boot.blockers.length} blocker${boot.blockers.length > 1 ? 's' : ''} before migration`
+      : hasMig ? 'Ready to migrate'
+        : boot.score != null ? 'Bootable' : `${os.product_name || os.distribution || 'Disk'} fingerprinted`);
+  const heroScore = boot.score ?? mscore.score;
+  const verdictCls = boot.blockers.length ? 'crit' : (boot.warnings.length ? 'warn' : 'ok');
+  const stats = [
+    irStat('boot', boot.score != null ? Math.round(boot.score) : null, irScoreCls(boot.score)),
+    irStat('migrate', mscore.score != null ? Math.round(mscore.score) : null, irScoreCls(mscore.score)),
+    irStat('blockers', hasBoot ? boot.blockers.length : null, boot.blockers.length ? 'crit' : 'ok'),
+    irStat('checks', boot.checks.length ? `${passed}/${boot.checks.length}` : null, passed === boot.checks.length ? 'ok' : 'warn'),
+    irStat('packages', ins.packages?.count, ''),
+    irStat('downtime', mscore.estimated_downtime_minutes != null ? `${mscore.estimated_downtime_minutes}m` : null, ''),
+  ].join('');
+  const hero = `<div class="ir-hero ${verdictCls}">
+    ${irRing(heroScore, hasMig ? 'ready' : 'boot')}
+    <div class="ir-hero__b">
+      <div class="ir-hero__v">${irEsc(verdict)}</div>
+      <div class="ir-hero__sub">${irEsc(os.product_name || os.distribution || vm.name || '')}${os.arch ? ` · ${irEsc(os.arch)}` : ''}${mp.target ? ` → ${irEsc(mp.target)}` : ''}</div>
+      <div class="ir-stats">${stats}</div>
+    </div>
+  </div>`;
 
   const secs = [];
 
-  if (hasInspect) {
-    secs.push(irCard('System', `<dl class="ir-grid">
-      ${irKV('OS', os.product_name || os.distribution || os.type || 'Unknown')}
-      ${irKV('Version', os.version)}
-      ${irKV('Arch', os.arch)}
-      ${irKV('Hostname', os.hostname || ins.network?.hostname)}
-      ${irKV('Packaging', os.package_format || ins.packages?.manager)}
-      ${irKV('Mounts', ins.mountpoints?.count)}
-    </dl>`, irOsEmoji(os)));
+  if (hasBoot) {
+    const conf = boot.confidence != null ? ` · confidence ${Math.round(boot.confidence * 100)}%` : '';
+    const prob = boot.score != null ? `${Math.round(boot.score)}% chance of a clean first boot${conf}` : (boot.summary || '');
+    const blk = boot.blockers.length ? `<div class="ir-sub">Blockers</div>${boot.blockers.map((b) => irFinding(b, 'crit')).join('')}` : '';
+    const wrn = boot.warnings.length ? `<div class="ir-sub">Warnings</div>${boot.warnings.map((w) => irFinding(w, 'warn')).join('')}` : '';
+    const chk = boot.checks.length ? `<div class="ir-checks">${boot.checks.map(irCheck).join('')}</div>` : '';
+    secs.push(irCard('Boot gate', `<p class="ir-prob">${irEsc(prob)}</p>${blk}${wrn}${chk}`, '◉', 'span2'));
   }
 
-  if (bs != null || blockers.length || checks.length) {
-    const conf = cache.confidence != null ? ` · confidence ${Math.round(cache.confidence * 100)}%` : '';
-    const prob = bs != null ? `${Math.round(bs)}% chance of a clean first boot${conf}` : (cache.bootSummary || '');
-    const blk = blockers.length ? `<div class="ir-sub">Blockers</div>${blockers.map((b) => irFinding(b, 'crit')).join('')}` : '';
-    const wrn = warnings.length ? `<div class="ir-sub">Warnings</div>${warnings.map((w) => irFinding(w, 'warn')).join('')}` : '';
-    const chk = checks.length ? `<div class="ir-checks">${checks.map(irCheck).join('')}</div>` : '';
-    secs.push(irCard('Boot gate', `<div class="ir-gate">${irRing(bs, 'boot')}<div class="ir-gate__b"><p class="ir-prob">${irEsc(prob)}</p>${blk}${wrn}</div></div>${chk}`, '◉'));
-  }
-
-  if (cache.migrationPlan) {
+  if (hasMig) {
     const dt = mscore.estimated_downtime_minutes;
     secs.push(irCard('Migration readiness', `<div class="ir-gate">${irRing(mscore.score, 'migrate')}<div class="ir-gate__b">
       ${dt != null ? `<p class="ir-prob">~${dt} min estimated downtime → ${irEsc(mp.target || 'kubevirt')}</p>` : ''}
@@ -145,7 +172,18 @@ function renderIntelligenceReport(vm, cache) {
   }
 
   if (fix.operations?.length) {
-    secs.push(irCard(`Fix plan · ${fix.operations.length} ops`, `<div class="ir-ops">${fix.operations.slice(0, 40).map(irOp).join('')}</div>`, '✦'));
+    secs.push(irCard(`Fix plan · ${fix.operations.length} ops`, `<div class="ir-ops">${fix.operations.slice(0, 40).map(irOp).join('')}</div>`, '✦', 'span2'));
+  }
+
+  if (hasInspect) {
+    secs.push(irCard('System', `<dl class="ir-grid">
+      ${irKV('OS', os.product_name || os.distribution || os.type || 'Unknown')}
+      ${irKV('Version', os.version)}
+      ${irKV('Arch', os.arch)}
+      ${irKV('Hostname', os.hostname || ins.network?.hostname)}
+      ${irKV('Packaging', os.package_format || ins.packages?.manager)}
+      ${irKV('Mounts', ins.mountpoints?.count)}
+    </dl>`, irOsEmoji(os)));
   }
 
   if (hasInspect && ins.security) {
@@ -162,15 +200,15 @@ function renderIntelligenceReport(vm, cache) {
       ${pk.count != null ? `<div class="ir-sub">Packages · ${pk.count} (${irEsc(pk.manager || '?')})</div><div class="ir-chiprow">${irChips((pk.sample || []).slice(0, 24))}</div>` : ''}
       ${sv.count != null ? `<div class="ir-sub">Enabled services · ${sv.count}</div><div class="ir-chiprow">${irChips((sv.sample || []).slice(0, 24))}</div>` : ''}
       ${nw.interfaces?.length ? `<div class="ir-sub">Network interfaces</div><div class="ir-chiprow">${irChips(nw.interfaces, 'ok')}</div>` : ''}
-    `, '▤'));
+    `, '▤', 'span2'));
   }
 
   if (cop.recommended_actions?.length || cop.headline) {
     const recs = (cop.recommended_actions || []).slice(0, 8).map((r) => `<div class="ir-rec"><span class="ir-chip ${r.priority <= 1 ? 'crit' : r.priority <= 2 ? 'warn' : 'ok'}">P${r.priority ?? '-'}</span><div><strong>${irEsc(r.title)}</strong>${r.detail ? `<p>${irEsc(r.detail)}</p>` : ''}</div></div>`).join('');
-    secs.push(irCard('Recommendations', `${cop.headline ? `<p class="ir-prob">${irEsc(cop.headline)}</p>` : ''}${recs}`, '✦'));
+    secs.push(irCard('Recommendations', recs || (cop.headline ? `<p class="ir-prob">${irEsc(cop.headline)}</p>` : ''), '✦', 'span2'));
   }
 
-  return `<div class="intel-report">${secs.join('')}</div>`;
+  return `${hero}<div class="intel-report">${secs.join('')}</div>`;
 }
 
 function renderDiskPreview(vm, cache) {
