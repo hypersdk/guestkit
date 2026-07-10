@@ -100,6 +100,11 @@ function irStat(label, value, cls) {
   if (value == null || value === '') return '';
   return `<div class="ir-stat ${cls || ''}"><span class="ir-stat__v">${irEsc(value)}</span><span class="ir-stat__l">${irEsc(label)}</span></div>`;
 }
+// Cells are pre-rendered HTML (caller escapes). Head labels are escaped here.
+function irTable(head, rows) {
+  if (!rows || !rows.length) return '';
+  return `<div class="ir-tblwrap"><table class="ir-tbl"><thead><tr>${head.map((h) => `<th>${irEsc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
 function renderIntelligenceReport(vm, cache) {
   const ins = cache.inspect || {};
   const hasInspect = !!cache.inspect;
@@ -201,6 +206,49 @@ function renderIntelligenceReport(vm, cache) {
       ${sv.count != null ? `<div class="ir-sub">Enabled services · ${sv.count}</div><div class="ir-chiprow">${irChips((sv.sample || []).slice(0, 24))}</div>` : ''}
       ${nw.interfaces?.length ? `<div class="ir-sub">Network interfaces</div><div class="ir-chiprow">${irChips(nw.interfaces, 'ok')}</div>` : ''}
     `, '▤', 'span2'));
+  }
+
+  // ── Deep-TUI panels (partitions / kernels / drivers / units / users) ──
+  if (hasInspect && ins.storage && (ins.storage.partitions?.length || ins.storage.fstab?.length)) {
+    const st = ins.storage;
+    const rows = (st.partitions || []).map((p) => [
+      `<code class="ir-mono">${irEsc(p.device)}</code>`,
+      `<span class="ir-chip ok">${irEsc(p.fstype || '?')}</span>`,
+      `<span class="ir-mono ir-dim">${irEsc(p.uuid || '—')}</span>`,
+    ]);
+    const fstab = st.fstab?.length
+      ? `<div class="ir-sub">fstab · ${st.fstab.length} entries</div><pre class="ir-pre">${st.fstab.slice(0, 12).map(irEsc).join('\n')}</pre>`
+      : '';
+    secs.push(irCard(`Storage · ${st.count ?? rows.length} partition${(st.count ?? rows.length) === 1 ? '' : 's'}`, irTable(['Device', 'FS', 'UUID'], rows) + fstab, '▰', 'span2'));
+  }
+
+  if (hasInspect && ins.kernels?.installed?.length) {
+    const k = ins.kernels;
+    const chips = k.installed.map((v) => `<span class="ir-chip ${v === k.default ? 'ok' : ''}">${irEsc(v)}${v === k.default ? ' ★' : ''}</span>`).join('');
+    secs.push(irCard(`Kernels · ${k.count ?? k.installed.length}`, `${k.default ? `<div class="ir-sub">Default → ${irEsc(k.default)}</div>` : ''}<div class="ir-chiprow">${chips}</div>`, '⊞'));
+  }
+
+  if (hasInspect && ins.kernel_modules?.modules?.length) {
+    const km = ins.kernel_modules;
+    secs.push(irCard(`Drivers · ${km.count ?? km.modules.length} module${(km.count ?? km.modules.length) === 1 ? '' : 's'}`, `<div class="ir-chiprow">${irChips(km.modules.slice(0, 40))}</div>`, '⚡'));
+  }
+
+  if (hasInspect && ins.systemd_units) {
+    const su = ins.systemd_units;
+    const sample = su.sample || su.units || [];
+    if (sample.length) secs.push(irCard(`Systemd units · ${su.count ?? sample.length}`, `<div class="ir-chiprow">${irChips(sample.slice(0, 40))}</div>`, '❖', 'span2'));
+  }
+
+  if (hasInspect && ins.users?.accounts?.length) {
+    const u = ins.users;
+    const sorted = u.accounts.slice().sort((a, b) => (b.login ? 1 : 0) - (a.login ? 1 : 0) || (a.uid || 0) - (b.uid || 0));
+    const rows = sorted.slice(0, 30).map((a) => [
+      `<strong>${irEsc(a.name)}</strong>`,
+      `<span class="ir-mono ir-dim">${irEsc(a.uid)}</span>`,
+      `<span class="ir-mono">${irEsc(a.shell || '—')}</span>`,
+      a.login ? '<span class="ir-chip ok">login</span>' : '<span class="ir-chip ir-dim">nologin</span>',
+    ]);
+    secs.push(irCard(`Users · ${u.count} (${u.login_count ?? 0} login)`, irTable(['User', 'UID', 'Shell', ''], rows), '☺', 'span2'));
   }
 
   if (cop.recommended_actions?.length || cop.headline) {
