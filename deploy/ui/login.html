@@ -51,12 +51,17 @@
     }
     .login-actions { display: grid; gap: 0.75rem; }
     .login-foot { margin-top: 1.25rem; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+    .login-credit { margin-top: 1.25rem; font-size: 0.75rem; color: var(--text-muted); text-align: center; opacity: .8; }
+    .login-credit a { color: var(--accent, #7cc7ff); text-decoration: none; font-weight: 600; }
+    .login-credit a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="login-page">
     <div class="login-card">
-      <img src="img/zavor-logo.webp" width="120" height="40" alt="GuestKit" style="margin-bottom:1rem;" />
+      <a href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="zyvor.dev" style="display:inline-block;margin-bottom:1rem;border-radius:6px;">
+        <img src="img/zavor-logo.webp" width="120" height="40" alt="Zyvor · GuestKit" />
+      </a>
       <h1>Sign in to GuestKit</h1>
       <p class="login-subtitle" id="loginSubtitle">Authenticate to access the VM migration console.</p>
       <div class="login-error hidden" id="loginError"></div>
@@ -67,6 +72,10 @@
       </div>
       <p class="login-foot hidden" id="loginFoot">Optional SSO — enable in Settings when you need identity controls.</p>
     </div>
+    <p class="login-credit">
+      <a href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">zyvor.dev</a>
+      <span aria-hidden="true"> · </span>HyperSDK<span aria-hidden="true"> · </span>© 2026 ZyvorAI Labs
+    </p>
   </div>
   <script src="guestkit-auth.js?v=20260710fix6"></script>
   <script>

@@ -646,6 +646,19 @@
   </div>
 
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <footer class="nebula-footer" role="contentinfo">
+    <a class="nebula-footer__logo" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer" title="zyvor.dev">
+      <img src="img/zavor-logo.webp" width="66" height="22" alt="Zyvor" />
+    </a>
+    <span class="nebula-footer__line">
+      <a class="nebula-footer__link" href="https://zyvor.dev" target="_blank" rel="noopener noreferrer">zyvor.dev</a>
+      <span class="nebula-footer__sep" aria-hidden="true">·</span>
+      <span class="nebula-footer__brand">HyperSDK</span>
+      <span class="nebula-footer__sep" aria-hidden="true">·</span>
+      <span class="nebula-footer__copy">© 2026 ZyvorAI Labs</span>
+    </span>
+  </footer>
   </div>
   <button id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme (Abyss / Phosphor)">
     <span aria-hidden="true">◐</span> <span id="themeName">Abyss</span>
@@ -663,6 +676,26 @@
     }
     #themeToggle:hover{border-color:var(--accent); transform:translateY(-1px)}
     #themeToggle:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+    /* ── Zyvor brand footer — zyvor.dev · HyperSDK · © (matches PacketWolf) ── */
+    .nebula-footer{
+      display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+      gap:12px 14px; padding:16px 20px 22px; margin-top:8px;
+      border-top:1px solid var(--border-soft, var(--border-strong));
+      font-family:var(--font-mono); font-size:12px; line-height:1.5;
+      color:var(--text-muted, var(--text-soft));
+    }
+    .nebula-footer__logo{display:inline-flex; align-items:center; border-radius:6px; opacity:.9; transition:opacity .15s}
+    .nebula-footer__logo:hover{opacity:1}
+    .nebula-footer__logo img{height:22px; width:auto; display:block}
+    .nebula-footer__logo:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+    .nebula-footer__line{display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap}
+    .nebula-footer__link{color:var(--accent); text-decoration:none; font-weight:600}
+    .nebula-footer__link:hover{text-decoration:underline}
+    .nebula-footer__link:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+    .nebula-footer__sep{color:var(--text-muted, var(--text-soft)); opacity:.6}
+    .nebula-footer__brand{font-weight:600}
+    .nebula-footer__copy{opacity:.85}
   </style>
   <script>
     (function(){
