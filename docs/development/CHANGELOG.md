@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-07-11
+
+### Added
+- **Boot-score trend** (`guestkit-ux.js`) — every boot score is recorded per disk
+  in localStorage; a re-scan after a repair toasts the delta (`▲ +N` / `▼ −N`),
+  and a new **📈 Boot-score trend** command renders the history as an inline SVG
+  sparkline (CSP-safe, no external assets, reduced-motion aware).
+- **Zyvor brand footer + logo** — the web console and login page now carry the
+  `zyvor.dev` logo (linked) and a `zyvor.dev · HyperSDK · © 2026` credit line,
+  matching the PacketWolf branding treatment.
+
+### Documentation
+- **Default web console login documented** — the seeded `admin` / `Admin@321`
+  (previously only printed at install time by `package-auth-bootstrap.sh`) is now
+  in the remote-deploy guide, getting-started, and README, each with a
+  change-on-first-login warning. Also surfaced as a first-run hint on the login
+  page, shown only when local login/bypass is available.
+- **Run the web stack from GHCR** — new `deploy/docker-compose.ghcr.yml` (pulls
+  only the public `ghcr.io/hypersdk/{zyvor-ui,zyvor-api,guestkit-worker}` images)
+  plus a "Published images (GHCR)" guide covering pull, Compose (eval), and Helm
+  (prod), cross-linked from the README and deployment docs.
+
 ## [0.3.13] - 2026-07-11
 
 ### Added
