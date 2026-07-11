@@ -126,6 +126,18 @@ guestctl tui vm.qcow2 --compare other.qcow2
 
 See [TUI enhancements](../features/tui-enhancements.md) and [migration assurance](../features/migration-assurance.md).
 
+## Web console login
+
+Packaged/remote installs ship a web console with a seeded default administrator:
+
+| Username | Password |
+|----------|----------|
+| `admin`  | `Admin@321` |
+
+> ⚠️ Change the password (and API key / `JWT_SECRET`) right after first login, and
+> enable SSO/SAML from **Settings** before exposing the console beyond localhost.
+> See the [remote deployment guide](../guides/DEPLOY-REMOTE.md#web-console-access).
+
 ## Integration with hyper2kvm
 
 To use guestkit in hyper2kvm:
