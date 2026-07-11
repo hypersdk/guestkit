@@ -39,7 +39,8 @@ Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot pro
 | **TUI** | Carbon-themed multi-view dashboard |
 | **Python** | `hypersdk-guestkit` on PyPI |
 | **K8s** | KubeVirt integration hooks — `k8s/` |
-| **Deploy** | Docker, remote deploy scripts — `deploy/` |
+| **Web stack** | Prebuilt GHCR images — `ghcr.io/hypersdk/{zyvor-ui,zyvor-api,guestkit-worker}` |
+| **Deploy** | Docker/Helm, remote deploy scripts — `deploy/` |
 
 ---
 
@@ -69,6 +70,28 @@ guestctl tui vm.qcow2
 
 ---
 
+## Run from GHCR (prebuilt images)
+
+The web stack is published to the GitHub Container Registry under **`ghcr.io/hypersdk`** — **public images, no `docker login` required.**
+
+| Image | Role |
+|-------|------|
+| `ghcr.io/hypersdk/zyvor-ui` | Web console + login |
+| `ghcr.io/hypersdk/zyvor-api` | API backend |
+| `ghcr.io/hypersdk/guestkit-worker` | Disk-inspection worker |
+
+Tags: `latest`, `vX.Y.Z` (e.g. `v0.3.13`), per-commit SHA. Bring the whole stack up straight from GHCR:
+
+```bash
+docker compose -f deploy/docker-compose.ghcr.yml pull
+docker compose -f deploy/docker-compose.ghcr.yml up -d
+open http://localhost:8088          # web console
+```
+
+For clusters, use the [Helm chart](deploy/helm/zyvor). Full details: [docs/guides/DOCKER.md → Published images](docs/guides/DOCKER.md#published-images-ghcr).
+
+---
+
 ## Three Commands Before Cutover
 
 | Command | Outcome |
@@ -84,6 +107,8 @@ guestctl tui vm.qcow2
 | Goal | Document |
 |------|----------|
 | Docs index | [docs/README.md](docs/README.md) |
+| Run from GHCR / Docker | [docs/guides/DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
+| Remote deploy | [docs/guides/DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
 | User stories | [docs/USER_STORIES.md](docs/USER_STORIES.md) |
 | Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | Full index | [docs/INDEX.md](docs/INDEX.md) |
