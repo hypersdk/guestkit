@@ -1,6 +1,84 @@
 # Docker Deployment Guide
 
-This guide covers running guestkit in containers for automation and batch processing workflows.
+This guide covers running guestkit in containers — both the **web stack from
+published GHCR images** (no build required) and the **single-container CLI** for
+automation and batch processing.
+
+- **Run the web console from GHCR** → [Published images](#published-images-ghcr) (pull + `docker compose up`)
+- **Run the CLI in a container** → [Quick Start](#quick-start) (build locally)
+
+---
+
+## Published images (GHCR)
+
+The web stack is published to the GitHub Container Registry under
+**`ghcr.io/hypersdk`**. The packages are **public — no `docker login` needed to pull.**
+
+| Image | Role | Port |
+|-------|------|------|
+| `ghcr.io/hypersdk/zyvor-ui` | Web console + login page (nginx) | 80 |
+| `ghcr.io/hypersdk/zyvor-api` | API backend (auto-runs DB migrations) | 8080 |
+| `ghcr.io/hypersdk/guestkit-worker` | Disk-inspection worker (Redis queue) | — |
+
+**Tags:** `latest`, semver `vX.Y.Z` (e.g. `v0.3.13`), and a per-commit short SHA.
+Published automatically by CI — `publish-zyvor-images.yml` on every push to `main`
+(tags `:<sha>` + `:latest`) and `release.yml` on a release (tags `:vX.Y.Z` + `:latest`).
+
+### Pull
+
+```bash
+docker pull ghcr.io/hypersdk/zyvor-ui:latest
+docker pull ghcr.io/hypersdk/zyvor-api:latest
+docker pull ghcr.io/hypersdk/guestkit-worker:latest
+```
+
+### Run the full stack (evaluation)
+
+The stack needs Postgres + Redis behind the three images. A ready-to-run compose
+file ships in the repo — it pulls only from GHCR (nothing is built locally):
+
+```bash
+# From the repo root
+docker compose -f deploy/docker-compose.ghcr.yml pull
+docker compose -f deploy/docker-compose.ghcr.yml up -d
+
+# Open the web console
+open http://localhost:8088          # macOS  (Linux: xdg-open)
+```
+
+Pin a version or a different registry with env vars:
+
+```bash
+REGISTRY=ghcr.io/hypersdk TAG=v0.3.13 \
+  docker compose -f deploy/docker-compose.ghcr.yml up -d
+```
+
+The eval stack starts with `AUTH_ENABLED=false`, so the console opens without a
+login. To require sign-in, set `AUTH_ENABLED=true` and a strong `JWT_SECRET` on
+the `zyvor-api` service — see
+[Web console access](DEPLOY-REMOTE.md#web-console-access) for the default
+`admin` / `Admin@321` credentials and how to change them.
+
+> The `zyvor-ui` container's nginx proxies `/api/` to `http://zyvor-api:8080`, so
+> the API service must keep the name **`zyvor-api`** if you write your own compose.
+
+### Run the full stack (production) — Helm
+
+For clusters, use the Helm chart in [`deploy/helm/zyvor`](../../deploy/helm/zyvor),
+pointing each image at GHCR:
+
+```bash
+helm upgrade --install zyvor deploy/helm/zyvor \
+  --create-namespace --namespace zyvor \
+  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:v0.3.13 \
+  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:v0.3.13 \
+  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:v0.3.13
+```
+
+The chart also provisions Postgres, Redis, and MinIO. Enable auth via
+`--set zyvorApi.auth.enabled=true` and supply `jwtSecret` through a secret.
+
+---
 
 ## Quick Start
 
@@ -349,6 +427,8 @@ singularity run --writable-tmpfs guestkit.sif inspect /vms/vm.qcow2
 
 ## Further Reading
 
-- [README.md](README.md) - Main documentation
-- [SECURITY.md](SECURITY.md) - Security guidelines
+- [Published images (GHCR)](#published-images-ghcr) - Pull + `docker compose` / Helm for the web stack
+- [Remote deploy](DEPLOY-REMOTE.md) - SSH deploy of the CLI + web console access
+- [Helm chart](../../deploy/helm/zyvor) - Production Kubernetes install
+- [Project README](../../README.md) - Main documentation
 - [Docker Security Best Practices](https://docs.docker.com/engine/security/)

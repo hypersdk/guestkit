@@ -138,6 +138,14 @@ Packaged/remote installs ship a web console with a seeded default administrator:
 > enable SSO/SAML from **Settings** before exposing the console beyond localhost.
 > See the [remote deployment guide](../guides/DEPLOY-REMOTE.md#web-console-access).
 
+Run the whole web stack from prebuilt GHCR images (no build):
+
+```bash
+docker compose -f deploy/docker-compose.ghcr.yml up -d   # → http://localhost:8088
+```
+
+See [Docker → Published images](../guides/DOCKER.md#published-images-ghcr) for tags, Helm, and auth options.
+
 ## Integration with hyper2kvm
 
 To use guestkit in hyper2kvm:
