@@ -51,6 +51,21 @@ ssh root@10.0.0.5 'guestkit --version'
 ssh root@10.0.0.5 'bash ~/.deployments/guestkit/scripts/selftest.sh'
 ```
 
+## Web console access
+
+The packaged install seeds a default administrator so you can sign in immediately:
+
+| Field | Default |
+|-------|---------|
+| Username | `admin` |
+| Password | `Admin@321` |
+| API key | `Admin@321` (where applicable) |
+
+> ⚠️ **Change these immediately after first login.** The defaults are seeded by
+> `scripts/lib/package-auth-bootstrap.sh` into the product env file. Rotate the
+> password (and API key / `JWT_SECRET`) before exposing the console to any
+> untrusted network. SSO/SAML can be enabled from **Settings** to retire local login.
+
 ## Logs
 
 Set `GUESTKIT_DEPLOY_LOG` to capture a timestamped log under `~/.guestkit/`.

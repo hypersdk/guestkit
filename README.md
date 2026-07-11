@@ -65,6 +65,8 @@ guestctl tui vm.qcow2
 | Migration assurance | [docs/features/migration-assurance.md](docs/features/migration-assurance.md) |
 | CE vs Enterprise | [docs/ce-vs-enterprise.md](docs/ce-vs-enterprise.md) |
 
+**Web console:** packaged installs seed a default admin — **`admin` / `Admin@321`**. Change it on first login (see [remote deploy](docs/guides/DEPLOY-REMOTE.md#web-console-access)).
+
 ---
 
 ## Three Commands Before Cutover
