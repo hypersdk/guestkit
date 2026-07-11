@@ -30,8 +30,9 @@
 
 | Guide | Description |
 |-------|-------------|
-| [Docker](guides/DOCKER.md) | Container usage |
-| [Remote deploy](guides/DEPLOY-REMOTE.md) | SSH deploy to Linux hosts |
+| [Run from GHCR](guides/DOCKER.md#published-images-ghcr) | Pull `ghcr.io/hypersdk/*` images, `docker compose up`, or Helm |
+| [Docker](guides/DOCKER.md) | Container usage (web stack + CLI) |
+| [Remote deploy](guides/DEPLOY-REMOTE.md) | SSH deploy to Linux hosts + web console access |
 | [RPM build](development/RPM-BUILD.md) | Fedora/RHEL packages |
 
 ## Architecture & project
