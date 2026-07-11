@@ -125,6 +125,7 @@
     cmds.push({ id: 'sound', cat: 'System', label: (soundOn() ? '🔊 Sound: on' : '🔇 Sound: off') + ' — toggle', hint: 'audio cues', run: toggleSound });
     cmds.push({ id: 'tour', cat: 'System', label: '🧭 Take the tour', hint: 'guided walkthrough', run: function () { runTour(true); } });
     cmds.push({ id: 'compare', cat: 'View', label: '⚖ Compare disks', hint: 'side-by-side diff', run: function () { window.gkCompare && window.gkCompare(); } });
+    cmds.push({ id: 'trend', cat: 'View', label: '📈 Boot-score trend', hint: st.selectedVm ? 'history sparkline' : 'analyze a disk first', run: function () { window.gkScoreTrend && window.gkScoreTrend(); } });
     return cmds;
   }
 
@@ -717,9 +718,143 @@
     window.gkCompare = open;
   }
 
+  /* ── Boot-score momentum — remember every score per disk, so a re-scan
+        after a repair can answer "did it actually help?". Records history in
+        localStorage keyed by the analyzed disk, celebrates the delta with a
+        toast, and backs the 📈 trend sparkline. Token-driven, CSP-safe. ── */
+  var SCORE_HKEY = 'gk.scoreHist';
+  function readScoreHist() { try { var o = JSON.parse(localStorage.getItem(SCORE_HKEY) || '{}'); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
+  function writeScoreHist(o) { try { localStorage.setItem(SCORE_HKEY, JSON.stringify(o)); } catch (e) {} }
+  function histFor(key) { var a = readScoreHist()[key]; return Array.isArray(a) ? a : []; }
+  function nowTs() { try { return Date.now(); } catch (e) { return 0; } }
+  function relTime(ts) {
+    if (!ts) return '';
+    var d = Math.max(0, (nowTs() - ts) / 1000);
+    if (d < 45) return 'just now';
+    if (d < 3600) return Math.round(d / 60) + 'm ago';
+    if (d < 86400) return Math.round(d / 3600) + 'h ago';
+    return Math.round(d / 86400) + 'd ago';
+  }
+  function toneCol(s) { return s >= 90 ? tok('--success', '#39d98a') : s >= 60 ? tok('--warn', '#f5a623') : tok('--danger', '#ff5c5c'); }
+
+  function mountScoreMomentum() {
+    window.addEventListener('gk:analyze', function (ev) {
+      var d = ev.detail || {};
+      if (d.phase !== 'done') return;
+      var s = d.score;
+      if (typeof s !== 'number' || isNaN(s)) return; // only real boot scores
+      s = Math.round(s);
+      var key = d.vm || '(disk)';
+      var all = readScoreHist();
+      var arr = Array.isArray(all[key]) ? all[key] : [];
+      var prev = arr.length ? arr[arr.length - 1].s : null;
+      arr.push({ t: nowTs(), s: s });
+      if (arr.length > 24) arr = arr.slice(arr.length - 24);
+      all[key] = arr; writeScoreHist(all);
+      if (prev != null && s !== prev) {
+        var delta = s - prev, up = delta > 0;
+        window.gkToast((up ? '▲ +' : '▼ −') + Math.abs(delta) + ' boot score since last scan', up ? 'ok' : 'warn',
+          { label: '📈 Trend', run: function () { window.gkScoreTrend && window.gkScoreTrend(); } });
+      }
+    });
+  }
+
+  /* ── 📈 Boot-score trend sparkline (inline SVG, no assets) ── */
+  function sparkSvg(hist) {
+    var W = 520, H = 120, pad = 14, n = hist.length;
+    var innerW = W - 2 * pad, innerH = H - 2 * pad;
+    var xs = function (i) { return n <= 1 ? W / 2 : pad + i * innerW / (n - 1); };
+    var ys = function (v) { return pad + (1 - Math.max(0, Math.min(100, v)) / 100) * innerH; };
+    var latest = hist[n - 1].s, col = toneCol(latest);
+    var acc = tok('--accent', '#7cc7ff'), soft = tok('--text-soft', '#8aa0c0');
+    var pts = hist.map(function (h, i) { return xs(i).toFixed(1) + ',' + ys(h.s).toFixed(1); });
+    var area = 'M ' + xs(0).toFixed(1) + ',' + (H - pad) + ' L ' + pts.join(' L ') + ' L ' + xs(n - 1).toFixed(1) + ',' + (H - pad) + ' Z';
+    var g60 = ys(60), g90 = ys(90);
+    var dots = hist.map(function (h, i) {
+      var last = i === n - 1;
+      return '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.s).toFixed(1) + '" r="' + (last ? 4.5 : 2.6) + '" fill="' + (last ? col : acc) + '"' + (last ? ' class="gk-trend__last"' : '') + '><title>' + esc(h.s + ' · ' + relTime(h.t)) + '</title></circle>';
+    }).join('');
+    return '<svg class="gk-trend__svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Boot score history">' +
+      '<line x1="' + pad + '" y1="' + g90.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + g90.toFixed(1) + '" stroke="' + tok('--success', '#39d98a') + '" stroke-dasharray="3 5" stroke-opacity="0.45"/>' +
+      '<line x1="' + pad + '" y1="' + g60.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + g60.toFixed(1) + '" stroke="' + tok('--warn', '#f5a623') + '" stroke-dasharray="3 5" stroke-opacity="0.45"/>' +
+      '<text x="' + (W - pad) + '" y="' + (g90 - 4).toFixed(1) + '" text-anchor="end" font-size="9" fill="' + soft + '">90 · ship</text>' +
+      '<text x="' + (W - pad) + '" y="' + (g60 - 4).toFixed(1) + '" text-anchor="end" font-size="9" fill="' + soft + '">60 · boot</text>' +
+      '<path d="' + area + '" fill="' + acc + '" fill-opacity="0.12"/>' +
+      (n > 1 ? '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' : '') +
+      dots + '</svg>';
+  }
+  function trendTile(val, label) { return '<div class="gk-trend__tile"><b>' + esc(String(val)) + '</b><span>' + esc(label) + '</span></div>'; }
+  function renderTrend(vm, hist) {
+    var n = hist.length, latest = hist[n - 1].s, first = hist[0].s;
+    var best = hist.reduce(function (m, h) { return Math.max(m, h.s); }, 0);
+    var delta = latest - first, col = toneCol(latest);
+    var name = (vm && (vm.name || vm.id)) || 'Disk';
+    var verdict = latest >= 90 ? 'Boot-ready — ship it' : latest >= 60 ? 'Bootable with fixes' : 'Blocked — needs repair';
+    return '<div class="gk-trend__head"><div><div class="gk-trend__name">' + esc(name) + '</div>' +
+      '<div class="gk-trend__verdict" style="color:' + col + '">' + esc(verdict) + '</div></div>' +
+      '<div class="gk-trend__big" style="color:' + col + '">' + latest + '<small>/100</small></div></div>' +
+      sparkSvg(hist) +
+      '<div class="gk-trend__stats">' +
+        trendTile(best, 'Best') + trendTile(first, 'First') +
+        trendTile((delta >= 0 ? '+' : '−') + Math.abs(delta), 'Δ since first') + trendTile(n, 'Scans') +
+      '</div>' +
+      '<div class="gk-trend__list">' + hist.slice().reverse().slice(0, 6).map(function (h) {
+        return '<span class="gk-trend__pill"><b style="color:' + toneCol(h.s) + '">' + h.s + '</b> ' + esc(relTime(h.t)) + '</span>';
+      }).join('') + '</div>';
+  }
+  function mountScoreTrend() {
+    var css =
+      '.gk-trend{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,#05070c 72%,transparent);backdrop-filter:blur(4px)}' +
+      '.gk-trend[hidden]{display:none}' +
+      '.gk-trend__box{width:min(560px,94vw);background:var(--bg-card,#111a2b);border:1px solid var(--border-soft,#26324a);border-radius:var(--radius-lg,16px);box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden;animation:gkTrendIn .22s ease}' +
+      '.gk-trend__box>header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border-soft,#26324a)}' +
+      '.gk-trend__box h3{margin:0;font-size:15px;color:var(--text-main,#eaf2ff)}' +
+      '.gk-trend__x{background:none;border:0;color:var(--text-soft,#8aa0c0);font-size:16px;line-height:1;cursor:pointer}.gk-trend__x:hover{color:var(--text-main,#eaf2ff)}' +
+      '.gk-trend__body{padding:18px}' +
+      '.gk-trend__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}' +
+      '.gk-trend__name{font-size:14px;font-weight:600;color:var(--text-main,#eaf2ff);word-break:break-all}' +
+      '.gk-trend__verdict{font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}' +
+      '.gk-trend__big{font-size:42px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;flex:none}' +
+      '.gk-trend__big small{font-size:14px;color:var(--text-soft,#8aa0c0);font-weight:600}' +
+      '.gk-trend__svg{display:block;width:100%;height:auto;margin:10px 0 14px}' +
+      '.gk-trend__stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}' +
+      '.gk-trend__tile{background:color-mix(in srgb,var(--text-main,#eaf2ff) 4%,transparent);border:1px solid var(--border-soft,#26324a);border-radius:12px;padding:9px 6px;text-align:center}' +
+      '.gk-trend__tile b{display:block;font-size:19px;color:var(--text-main,#eaf2ff);font-variant-numeric:tabular-nums}' +
+      '.gk-trend__tile span{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-soft,#8aa0c0)}' +
+      '.gk-trend__list{display:flex;flex-wrap:wrap;gap:6px}' +
+      '.gk-trend__pill{font-size:11px;color:var(--text-soft,#8aa0c0);background:color-mix(in srgb,var(--text-main,#eaf2ff) 4%,transparent);border-radius:999px;padding:3px 9px}' +
+      '.gk-trend__pill b{font-variant-numeric:tabular-nums}' +
+      '@keyframes gkTrendIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}' +
+      '@keyframes gkTrendPulse{0%,100%{opacity:1}50%{opacity:.35}}' +
+      '.gk-trend__last{animation:gkTrendPulse 1.6s ease-in-out infinite}' +
+      '@media (prefers-reduced-motion:reduce){.gk-trend__box{animation:none}.gk-trend__last{animation:none}}';
+    var style = el('style'); style.textContent = css; document.head.appendChild(style);
+
+    var ov = el('div', 'gk-trend'); ov.hidden = true;
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    ov.innerHTML = '<div class="gk-trend__box"><header><h3>📈 Boot-score trend</h3>' +
+      '<button type="button" class="gk-trend__x" aria-label="Close">✕</button></header>' +
+      '<div class="gk-trend__body"></div></div>';
+    document.body.appendChild(ov);
+    var body = ov.querySelector('.gk-trend__body');
+    function close() { ov.hidden = true; }
+    ov.querySelector('.gk-trend__x').addEventListener('click', close);
+    ov.addEventListener('mousedown', function (e) { if (e.target === ov) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ov.hidden) close(); });
+    window.gkScoreTrend = function () {
+      var st = window.state || {}, vm = st.selectedVm;
+      var key = vm ? (vm.name || vm.id) : null;
+      var hist = key ? histFor(key) : [];
+      if (hist.length < 1) { window.gkToast('Run ⚡ Analyze on a disk to start its trend', 'warn'); return; }
+      body.innerHTML = renderTrend(vm, hist);
+      ov.hidden = false; cue('tick');
+    };
+  }
+
   ready(function () {
     mountAurora(); mountThemeWipe(); mountActivityLog(); mountToasts(); mountDock(); mountPalette(); mountScan(); mountStorm();
     mountShortcuts(); mountSkeletons(); mountFleetNav(); mountCopy(); mountStarterChips(); mountAudioCues(); mountDropCatcher(); mountCompare();
+    mountScoreTrend(); mountScoreMomentum();
     window.gkToast('Press ⌘K for the command palette', 'info');
     setTimeout(function () { runTour(false); }, 900);
   });
