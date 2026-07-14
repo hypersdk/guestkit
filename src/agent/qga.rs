@@ -444,11 +444,17 @@ fn guest_set_time(args: &Value) -> Result<Value, String> {
     }
 }
 
+// QGA `guest-fsfreeze-status` returns the GuestFsfreezeStatus enum as a bare
+// STRING ("thawed" | "frozen"), not an object. KubeVirt's snapshot controller
+// parses the string; an object reply ({"return":{"frozen":0}}) makes it fail with
+// "failed to strip FSFreeze status" and wedges every online snapshot InProgress.
 fn guest_fsfreeze_status() -> Result<Value, String> {
     let frozen = FS_FROZEN.lock().map_err(|e| e.to_string())?;
-    Ok(json!({ "frozen": if *frozen { 1 } else { 0 } }))
+    Ok(json!(if *frozen { "frozen" } else { "thawed" }))
 }
 
+// QGA `guest-fsfreeze-freeze` returns the NUMBER of frozen filesystems as a bare
+// integer (wrapped by the caller as {"return": N}).
 fn guest_fsfreeze_freeze() -> Result<Value, String> {
     let status = Command::new("fsfreeze")
         .arg("-f")
@@ -459,9 +465,11 @@ fn guest_fsfreeze_freeze() -> Result<Value, String> {
         return Err(format!("fsfreeze -f / failed: {status}"));
     }
     *FS_FROZEN.lock().map_err(|e| e.to_string())? = true;
-    Ok(json!({ "frozen": 1 }))
+    Ok(json!(1))
 }
 
+// QGA `guest-fsfreeze-thaw` returns the NUMBER of thawed filesystems as a bare
+// integer.
 fn guest_fsfreeze_thaw() -> Result<Value, String> {
     let status = Command::new("fsfreeze")
         .arg("-u")
@@ -472,7 +480,7 @@ fn guest_fsfreeze_thaw() -> Result<Value, String> {
         return Err(format!("fsfreeze -u / failed: {status}"));
     }
     *FS_FROZEN.lock().map_err(|e| e.to_string())? = false;
-    Ok(json!({ "frozen": 0 }))
+    Ok(json!(1))
 }
 
 pub fn freeze_fs() -> Result<(), String> {
@@ -910,5 +918,19 @@ mod tests {
         assert!(!is_qga_request(
             br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#
         ));
+    }
+
+    #[test]
+    fn fsfreeze_status_is_qga_string_enum_not_object() {
+        // KubeVirt's snapshot controller parses guest-fsfreeze-status as a bare
+        // enum STRING ("thawed"|"frozen"); an object reply wedges online snapshots.
+        let resp = handle(br#"{"execute":"guest-fsfreeze-status"}"#);
+        let v: Value = serde_json::from_slice(&resp).unwrap();
+        let ret = v.get("return").expect("has return");
+        assert!(
+            ret.is_string(),
+            "guest-fsfreeze-status return must be a string, got {ret}"
+        );
+        assert_eq!(ret.as_str().unwrap(), "thawed");
     }
 }
