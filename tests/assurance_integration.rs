@@ -56,7 +56,8 @@ fn doctor_help_lists_target_and_explain() {
         .assert()
         .success()
         .stdout(predicate::str::contains("--target"))
-        .stdout(predicate::str::contains("--explain"));
+        .stdout(predicate::str::contains("--explain"))
+        .stdout(predicate::str::contains("--fail-below"));
 }
 
 #[test]
@@ -91,6 +92,24 @@ fn repair_boot_dry_run_on_missing_image_fails() {
         .arg("--dry-run")
         .assert()
         .failure();
+}
+
+#[test]
+#[ignore = "requires guestfs and a test disk image"]
+fn doctor_fail_below_on_test_image() {
+    let image = require_test_image();
+    guestkit()
+        .arg("doctor")
+        .arg(&image)
+        .arg("--target")
+        .arg("kvm")
+        .arg("-o")
+        .arg("json")
+        .arg("--fail-below")
+        .arg("100")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("bootability"));
 }
 
 #[test]

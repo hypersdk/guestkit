@@ -16,6 +16,9 @@ spec:
       containers:
         - name: redis
           image: {{ .Values.redis.image }}
+          {{- if .Values.redis.password }}
+          command: ["redis-server", "--requirepass", "{{ .Values.redis.password }}"]
+          {{- end }}
           ports:
             - containerPort: 6379
 ---

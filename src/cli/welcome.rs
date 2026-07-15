@@ -31,7 +31,7 @@ pub fn print_welcome() {
     println!();
     println!("{}", "Common workflows:".bold());
     println!(
-        "  {}  Boot probability before migration",
+        "  {}  Boot assurance score before migration",
         orange(&invocation::example("doctor disk.qcow2 --target kvm")).dimmed()
     );
     println!(

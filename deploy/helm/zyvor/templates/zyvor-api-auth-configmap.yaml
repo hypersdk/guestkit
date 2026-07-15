@@ -28,6 +28,9 @@ metadata:
 type: Opaque
 stringData:
   JWT_SECRET: {{ .Values.zyvorApi.auth.jwtSecret | quote }}
+  {{- if .Values.zyvorApi.auth.agentBootstrapToken }}
+  AGENT_BOOTSTRAP_TOKEN: {{ .Values.zyvorApi.auth.agentBootstrapToken | quote }}
+  {{- end }}
   {{- if .Values.zyvorApi.auth.oidc.clientSecret }}
   OIDC_CLIENT_SECRET: {{ .Values.zyvorApi.auth.oidc.clientSecret | quote }}
   {{- end }}

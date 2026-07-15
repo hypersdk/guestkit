@@ -470,11 +470,15 @@ impl OperationHandler for ProfileHandler {
                 ProfileType::Hardening => self.run_hardening_profile(&context, image_path.clone()).await?,
                 ProfileType::Performance => {
                     context.report_progress("performance", Some(60), "Running performance profile").await?;
-                    Vec::new() // TODO: Implement with real guestkit
+                    return Err(WorkerError::ExecutionError(
+                        "performance profile is not yet implemented in the worker".to_string(),
+                    ));
                 }
                 ProfileType::Migration => {
                     context.report_progress("migration", Some(80), "Running migration profile").await?;
-                    Vec::new() // TODO: Implement with real guestkit
+                    return Err(WorkerError::ExecutionError(
+                        "migration profile is not yet implemented in the worker".to_string(),
+                    ));
                 }
             };
             all_findings.extend(findings);

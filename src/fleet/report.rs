@@ -10,6 +10,14 @@ pub struct FleetAnalysisReport {
     pub snowflakes: Vec<SnowflakeVm>,
     pub migration_blockers: Vec<MigrationBlocker>,
     pub golden_image_candidates: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub failed_vms: Vec<FleetFailedVm>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FleetFailedVm {
+    pub image: String,
+    pub error: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,3 +1,11 @@
+{{- define "zyvor.redisUrl" -}}
+{{- if .Values.redis.password -}}
+redis://:{{ .Values.redis.password }}@redis:6379
+{{- else -}}
+redis://redis:6379
+{{- end -}}
+{{- end }}
+
 {{- define "zyvor.vmVolume" -}}
 {{- if .Values.persistence.vmImages.hostPath }}
 - name: vm-images

@@ -24,7 +24,7 @@ spec:
             - --transport
             - {{ .Values.guestkitWorker.transport }}
             - --redis-url
-            - redis://redis:6379
+            - {{ include "zyvor.redisUrl" . | quote }}
             - --results-dir
             - /var/lib/guestkit/results
             - --work-dir
@@ -33,7 +33,7 @@ spec:
             - "4"
           env:
             - name: QUEUE_URL
-              value: redis://redis:6379
+              value: {{ include "zyvor.redisUrl" . | quote }}
             - name: RUST_LOG
               value: info
           securityContext:
