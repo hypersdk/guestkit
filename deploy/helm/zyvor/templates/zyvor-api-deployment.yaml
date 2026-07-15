@@ -77,6 +77,13 @@ spec:
                   name: zyvor-api-auth
                   key: SAML_CERTIFICATE_PEM
             {{- end }}
+            {{- if .Values.zyvorApi.auth.agentBootstrapToken }}
+            - name: AGENT_BOOTSTRAP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-api-auth
+                  key: AGENT_BOOTSTRAP_TOKEN
+            {{- end }}
             {{- end }}
             - name: DATABASE_URL
               valueFrom:
@@ -84,7 +91,7 @@ spec:
                   name: zyvor-secrets
                   key: database-url
             - name: REDIS_URL
-              value: redis://redis:6379
+              value: {{ include "zyvor.redisUrl" . | quote }}
             - name: STORAGE_PATH
               value: /var/lib/zyvor/images
             - name: STORAGE_PUBLIC_URL

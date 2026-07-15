@@ -1048,6 +1048,10 @@ enum Commands {
         /// Simulate package updates
         #[arg(long)]
         simulate_update: bool,
+
+        /// Use demo CVE/outdated-package data (training only — not a live vuln feed)
+        #[arg(long)]
+        simulate: bool,
     },
 
     /// Generate Software Bill of Materials (SBOM)
@@ -1408,6 +1412,10 @@ enum Commands {
         /// Export report to file
         #[arg(short = 'e', long)]
         export: Option<PathBuf>,
+
+        /// Use demo IOC database (training only — not live threat intel)
+        #[arg(long)]
+        simulate: bool,
     },
 
     /// Change simulation and impact modeling
@@ -1760,6 +1768,10 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+
+        /// Exit with code 1 if boot score is below this threshold (0–100, for CI gates)
+        #[arg(long, value_name = "SCORE")]
+        fail_below: Option<u8>,
     },
 
     /// Policy-as-code compliance check
@@ -1922,6 +1934,10 @@ enum FleetAction {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+
+        /// Scan subdirectories for disk images (default: top level only)
+        #[arg(long)]
+        recursive: bool,
     },
 }
 
@@ -2763,6 +2779,7 @@ pub fn run() -> anyhow::Result<()> {
             severity,
             export,
             simulate_update,
+            simulate,
         } => {
             patch_command(
                 &image,
@@ -2770,6 +2787,7 @@ pub fn run() -> anyhow::Result<()> {
                 severity,
                 export,
                 simulate_update,
+                simulate,
                 cli.verbose,
             )?;
         }
@@ -3019,6 +3037,7 @@ pub fn run() -> anyhow::Result<()> {
             threat_level,
             correlate,
             export,
+            simulate,
         } => {
             intelligence_command(
                 &image,
@@ -3026,6 +3045,7 @@ pub fn run() -> anyhow::Result<()> {
                 &threat_level,
                 correlate,
                 export,
+                simulate,
                 cli.verbose,
             )?;
         }
@@ -3147,7 +3167,7 @@ pub fn run() -> anyhow::Result<()> {
             println!("{} {}", invocation::name(), VERSION);
             println!("A modern VM disk inspection and manipulation toolkit");
             println!();
-            println!("Project: https://github.com/ssahani/guestkit");
+            println!("Project: https://github.com/hypersdk/guestkit");
             println!("License: Apache-2.0");
             println!("Copyright: ZyvorAI Labs Private Limited");
         }
@@ -3279,8 +3299,17 @@ pub fn run() -> anyhow::Result<()> {
             explain,
             ai,
             output,
+            fail_below,
         } => {
-            doctor_command(&image, &target, explain, ai, &output, cli.verbose)?;
+            doctor_command(
+                &image,
+                &target,
+                explain,
+                ai,
+                &output,
+                fail_below,
+                cli.verbose,
+            )?;
         }
 
         Commands::Policy { action } => match action {
@@ -3307,8 +3336,12 @@ pub fn run() -> anyhow::Result<()> {
         },
 
         Commands::Fleet { action } => match action {
-            FleetAction::Analyze { dir, output } => {
-                fleet_analyze_command(&dir, &output, cli.verbose)?;
+            FleetAction::Analyze {
+                dir,
+                output,
+                recursive,
+            } => {
+                fleet_analyze_command(&dir, &output, recursive, cli.verbose)?;
             }
         },
 

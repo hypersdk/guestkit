@@ -225,7 +225,7 @@ pub async fn oidc_callback(
     let discovery = fetch_discovery(state.http_client().as_ref(), &issuer_url)
         .await
         .map_err(|e| ApiError::internal(format!("OIDC discovery failed: {e}")))?;
-    let mut user = exchange_code(
+    let mut user = match exchange_code(
         state.http_client().as_ref(),
         &state.config,
         &settings.oidc,
@@ -235,7 +235,18 @@ pub async fn oidc_callback(
         &code_verifier,
     )
     .await
-    .map_err(|e| ApiError::internal(format!("OIDC token exchange failed: {e}")))?;
+    {
+        Ok(user) => user,
+        Err(e) => {
+            let msg = format!("OIDC login rejected: {e}");
+            let url = format!(
+                "{}/login.html?error={}",
+                state.config.ui_base_url.trim_end_matches('/'),
+                urlencoding::encode(&msg)
+            );
+            return Ok(Redirect::temporary(&url).into_response());
+        }
+    };
     user.jti = Some(Uuid::new_v4().to_string());
 
     let jwt = issue_token(&state.config, &user, settings.session_secs())

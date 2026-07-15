@@ -21,6 +21,7 @@ pub fn doctor_command(
     explain: bool,
     ai: bool,
     output_format: &str,
+    fail_below: Option<u8>,
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
@@ -33,64 +34,77 @@ pub fn doctor_command(
 
     if output_format == "json" {
         println!("{}", serde_json::to_string_pretty(&result)?);
-        return Ok(());
-    }
+    } else {
+        println!();
+        println!("{}", "Bootability Assessment".bold().cyan());
+        println!("{}", "═".repeat(50));
+        println!();
+        println!(
+            "  {}",
+            boot_report.assurance_score_message().green().bold()
+        );
+        println!();
 
-    println!();
-    println!("{}", "Bootability Assessment".bold().cyan());
-    println!("{}", "═".repeat(50));
-    println!();
-    println!(
-        "  {}",
-        boot_report.boot_probability_message().green().bold()
-    );
-    println!();
+        if !boot_report.blockers.is_empty() {
+            println!("{}", "Blockers:".red().bold());
+            for b in &boot_report.blockers {
+                println!("  {} {} — {}", "✗".red(), b.title.bold(), b.message);
+                if let Some(r) = &b.remediation {
+                    println!("    → {}", r.dimmed());
+                }
+            }
+            println!();
+        }
 
-    if !boot_report.blockers.is_empty() {
-        println!("{}", "Blockers:".red().bold());
-        for b in &boot_report.blockers {
-            println!("  {} {} — {}", "✗".red(), b.title.bold(), b.message);
-            if let Some(r) = &b.remediation {
-                println!("    → {}", r.dimmed());
+        if !boot_report.warnings.is_empty() {
+            println!("{}", "Warnings:".yellow().bold());
+            for w in &boot_report.warnings {
+                println!("  {} {} — {}", "⚠".yellow(), w.title, w.message);
+            }
+            println!();
+        }
+
+        println!("{}", "Checks:".bold());
+        for check in &boot_report.checks {
+            if check.weight <= 0.0 {
+                continue;
+            }
+            let icon = if check.passed {
+                "✓".green()
+            } else {
+                "✗".red()
+            };
+            println!("  {} [{}] {}", icon, check.id, check.message);
+        }
+
+        if let Some(root_cause) = &result.root_cause {
+            println!();
+            println!("{}", "Root Cause Analysis".bold().cyan());
+            println!("  {}", root_cause.summary.yellow());
+            for step in &root_cause.chain {
+                println!("  {}. {}", step.step, step.description);
             }
         }
-        println!();
-    }
 
-    if !boot_report.warnings.is_empty() {
-        println!("{}", "Warnings:".yellow().bold());
-        for w in &boot_report.warnings {
-            println!("  {} {} — {}", "⚠".yellow(), w.title, w.message);
-        }
-        println!();
-    }
-
-    println!("{}", "Checks:".bold());
-    for check in &boot_report.checks {
-        if check.weight <= 0.0 {
-            continue;
-        }
-        let icon = if check.passed {
-            "✓".green()
-        } else {
-            "✗".red()
-        };
-        println!("  {} [{}] {}", icon, check.id, check.message);
-    }
-
-    if let Some(root_cause) = &result.root_cause {
-        println!();
-        println!("{}", "Root Cause Analysis".bold().cyan());
-        println!("  {}", root_cause.summary.yellow());
-        for step in &root_cause.chain {
-            println!("  {}. {}", step.step, step.description);
+        if explain || ai {
+            print_guest_intelligence(image, target, verbose, ai, result.copilot.clone())?;
         }
     }
 
-    if explain || ai {
-        print_guest_intelligence(image, target, verbose, ai, result.copilot.clone())?;
-    }
+    enforce_doctor_score_gate(boot_report.score, fail_below)?;
+    Ok(())
+}
 
+/// Fail CI pipelines when the boot score is below `--fail-below`.
+pub fn enforce_doctor_score_gate(score: f64, fail_below: Option<u8>) -> Result<()> {
+    if let Some(threshold) = fail_below {
+        if score < f64::from(threshold) {
+            anyhow::bail!(
+                "boot score {:.0} is below --fail-below threshold {threshold}",
+                score
+            );
+        }
+    }
     Ok(())
 }
 
@@ -181,24 +195,16 @@ pub fn policy_check_command(
 }
 
 /// Fleet analysis: `guestkit fleet analyze`
-pub fn fleet_analyze_command(dir: &Path, output_format: &str, verbose: bool) -> Result<()> {
+pub fn fleet_analyze_command(
+    dir: &Path,
+    output_format: &str,
+    recursive: bool,
+    verbose: bool,
+) -> Result<()> {
     use crate::core::ProgressReporter;
+    use crate::fleet::report::FleetFailedVm;
 
-    let mut images: Vec<PathBuf> = Vec::new();
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                if matches!(
-                    ext.to_lowercase().as_str(),
-                    "qcow2" | "vmdk" | "raw" | "img" | "vhd" | "vdi"
-                ) {
-                    images.push(path);
-                }
-            }
-        }
-    }
+    let images = collect_fleet_disk_images(dir, recursive)?;
 
     if images.is_empty() {
         anyhow::bail!("No disk images found in {}", dir.display());
@@ -207,72 +213,143 @@ pub fn fleet_analyze_command(dir: &Path, output_format: &str, verbose: bool) -> 
     let msg = format!("Analyzing {} VMs...", images.len());
     let progress = ProgressReporter::spinner(&msg);
     let mut snapshots = Vec::new();
+    let mut failed_vms = Vec::new();
 
     for image in &images {
         if verbose {
             eprintln!("  → {}", image.display());
         }
-        if let Ok((evidence, boot)) = collect_assurance_data(image, BootTarget::Kvm, false) {
-            snapshots.push((image.display().to_string(), evidence, boot.score));
+        match collect_assurance_data(image, BootTarget::Kvm, false) {
+            Ok((evidence, boot)) => {
+                snapshots.push((image.display().to_string(), evidence, boot.score));
+            }
+            Err(e) => {
+                failed_vms.push(FleetFailedVm {
+                    image: image.display().to_string(),
+                    error: e.to_string(),
+                });
+            }
         }
     }
     progress.finish_and_clear();
 
-    let report = analyze_fleet(&snapshots);
+    let mut report = analyze_fleet(&snapshots);
+    report.total_vms = images.len();
+    report.failed_vms = failed_vms;
 
     if output_format == "json" {
         println!("{}", serde_json::to_string_pretty(&report)?);
-        return Ok(());
-    }
+    } else {
+        println!();
+        println!("{}", "Fleet Analysis".bold().cyan());
+        println!("  Total VMs: {}", report.total_vms);
+        println!("  Analyzed: {}", snapshots.len());
+        if !report.failed_vms.is_empty() {
+            println!("  Failed: {}", report.failed_vms.len());
+        }
+        println!();
 
-    println!();
-    println!("{}", "Fleet Analysis".bold().cyan());
-    println!("  Total VMs: {}", report.total_vms);
-    println!();
+        for cluster in &report.clusters {
+            if cluster.count > 1 {
+                println!(
+                    "  {} {} identical {} nodes",
+                    "●".green(),
+                    cluster.count,
+                    cluster.os
+                );
+                for m in &cluster.members {
+                    println!("      - {}", m);
+                }
+            }
+        }
 
-    for cluster in &report.clusters {
-        if cluster.count > 1 {
-            println!(
-                "  {} {} identical {} nodes",
-                "●".green(),
-                cluster.count,
-                cluster.os
-            );
-            for m in &cluster.members {
-                println!("      - {}", m);
+        if !report.snowflakes.is_empty() {
+            println!();
+            println!("{}", "Anomalous VMs:".yellow().bold());
+            for s in &report.snowflakes {
+                println!("  {} {} — {}", "◆".yellow(), s.image, s.reason);
+            }
+        }
+
+        if !report.migration_blockers.is_empty() {
+            println!();
+            println!("{}", "Migration blockers:".red().bold());
+            for b in &report.migration_blockers {
+                println!(
+                    "  {} {} (assurance score: {:.0}%)",
+                    "✗".red(),
+                    b.image,
+                    b.boot_score
+                );
+            }
+        }
+
+        if !report.golden_image_candidates.is_empty() {
+            println!();
+            println!("{}", "Golden image candidates:".green().bold());
+            for g in &report.golden_image_candidates {
+                println!("  {} {}", "★".green(), g);
+            }
+        }
+
+        if !report.failed_vms.is_empty() {
+            println!();
+            println!("{}", "Failed analyses:".red().bold());
+            for f in &report.failed_vms {
+                println!("  {} {} — {}", "✗".red(), f.image, f.error);
             }
         }
     }
 
-    if !report.snowflakes.is_empty() {
-        println!();
-        println!("{}", "Anomalous VMs:".yellow().bold());
-        for s in &report.snowflakes {
-            println!("  {} {} — {}", "◆".yellow(), s.image, s.reason);
-        }
+    if !report.failed_vms.is_empty() {
+        anyhow::bail!(
+            "{} of {} VM(s) failed fleet analysis",
+            report.failed_vms.len(),
+            report.total_vms
+        );
     }
 
-    if !report.migration_blockers.is_empty() {
-        println!();
-        println!("{}", "Migration blockers:".red().bold());
-        for b in &report.migration_blockers {
-            println!(
-                "  {} {} (boot score: {:.0}%)",
-                "✗".red(),
-                b.image,
-                b.boot_score
-            );
+    Ok(())
+}
+
+fn is_fleet_disk_image(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| {
+            matches!(
+                ext.to_lowercase().as_str(),
+                "qcow2" | "vmdk" | "raw" | "img" | "vhd" | "vdi"
+            )
+        })
+}
+
+fn collect_fleet_disk_images(dir: &Path, recursive: bool) -> Result<Vec<PathBuf>> {
+    let mut images = Vec::new();
+    if recursive {
+        collect_fleet_disk_images_recursive(dir, &mut images)?;
+    } else {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() && is_fleet_disk_image(&path) {
+                images.push(path);
+            }
         }
     }
+    images.sort();
+    Ok(images)
+}
 
-    if !report.golden_image_candidates.is_empty() {
-        println!();
-        println!("{}", "Golden image candidates:".green().bold());
-        for g in &report.golden_image_candidates {
-            println!("  {} {}", "★".green(), g);
+fn collect_fleet_disk_images_recursive(dir: &Path, images: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_fleet_disk_images_recursive(&path, images)?;
+        } else if is_fleet_disk_image(&path) {
+            images.push(path);
         }
     }
-
     Ok(())
 }
 
@@ -576,4 +653,50 @@ fn repair_boot_command_impl(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::enforce_doctor_score_gate;
+
+    #[test]
+    fn doctor_score_gate_passes_when_above_threshold() {
+        enforce_doctor_score_gate(85.0, Some(80)).expect("pass");
+    }
+
+    #[test]
+    fn doctor_score_gate_passes_when_equal_to_threshold() {
+        enforce_doctor_score_gate(80.0, Some(80)).expect("pass");
+    }
+
+    #[test]
+    fn doctor_score_gate_fails_when_below_threshold() {
+        let err = enforce_doctor_score_gate(79.0, Some(80)).unwrap_err();
+        assert!(err.to_string().contains("below --fail-below threshold 80"));
+    }
+
+    #[test]
+    fn doctor_score_gate_skipped_when_unset() {
+        enforce_doctor_score_gate(0.0, None).expect("pass");
+    }
+
+    #[test]
+    fn fleet_disk_image_extensions() {
+        use super::{collect_fleet_disk_images, is_fleet_disk_image};
+        use std::path::Path;
+
+        assert!(is_fleet_disk_image(Path::new("/vms/a.qcow2")));
+        assert!(!is_fleet_disk_image(Path::new("/vms/readme.txt")));
+
+        let dir = tempfile::TempDir::new().expect("tempdir");
+        std::fs::write(dir.path().join("one.raw"), b"x").expect("write");
+        std::fs::create_dir(dir.path().join("nested")).expect("mkdir");
+        std::fs::write(dir.path().join("nested/two.vmdk"), b"y").expect("write nested");
+
+        let flat = collect_fleet_disk_images(dir.path(), false).expect("flat");
+        assert_eq!(flat.len(), 1);
+
+        let deep = collect_fleet_disk_images(dir.path(), true).expect("recursive");
+        assert_eq!(deep.len(), 2);
+    }
 }
