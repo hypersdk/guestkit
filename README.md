@@ -113,6 +113,7 @@ For clusters, use the [Helm chart](deploy/helm/zyvor). Full details: [docs/guide
 | Run from GHCR / Docker | [docs/guides/DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
 | Remote deploy | [docs/guides/DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
 | User stories | [docs/USER_STORIES.md](docs/USER_STORIES.md) |
+| Industry use cases | [docs/INDUSTRY_USE_CASES.md](docs/INDUSTRY_USE_CASES.md) |
 | Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | Full index | [docs/INDEX.md](docs/INDEX.md) |
 
