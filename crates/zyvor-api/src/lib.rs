@@ -44,6 +44,8 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 pub async fn serve(config: Config) -> Result<()> {
+    config.emit_startup_warnings();
+
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&config.database_url)

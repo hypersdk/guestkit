@@ -40,12 +40,38 @@ pub struct Finding {
 }
 
 impl BootabilityReport {
-    pub fn boot_probability_message(&self) -> String {
+    pub fn assurance_score_message(&self) -> String {
         format!(
-            "{:.0}% chance of successful first boot on {} (confidence: {:.0}%)",
+            "{:.0}% boot assurance score on {} (confidence: {:.0}%)",
             self.score,
             self.target,
             self.confidence * 100.0
         )
+    }
+
+    /// Alias for [`assurance_score_message`](Self::assurance_score_message).
+    pub fn boot_probability_message(&self) -> String {
+        self.assurance_score_message()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BootabilityReport;
+
+    #[test]
+    fn assurance_score_message_uses_assurance_wording() {
+        let report = BootabilityReport {
+            score: 82.0,
+            confidence: 0.91,
+            target: "kvm".into(),
+            blockers: vec![],
+            warnings: vec![],
+            checks: vec![],
+            summary: String::new(),
+        };
+        let msg = report.assurance_score_message();
+        assert!(msg.contains("boot assurance score"));
+        assert!(!msg.contains("chance of successful first boot"));
     }
 }

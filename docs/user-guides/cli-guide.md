@@ -7,6 +7,7 @@
 ```bash
 guestkit inspect disk.qcow2
 guestkit doctor disk.qcow2 --target proxmox --explain
+guestkit doctor disk.qcow2 --target proxmox -o json --fail-below 80
 guestkit migrate-plan disk.qcow2 --target kvm --export plan.yaml
 guestctl tui disk.qcow2
 ```

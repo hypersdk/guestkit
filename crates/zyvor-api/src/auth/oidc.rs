@@ -203,7 +203,17 @@ pub async fn exchange_code(
     }
 
     if let Some(id_token) = token.id_token {
-        return claims_from_id_token(client, discovery, identity, &id_token).await;
+        if oidc.client_id.is_empty() {
+            return Err(anyhow!("OIDC client_id is required to verify id_token"));
+        }
+        return claims_from_id_token(
+            client,
+            discovery,
+            identity,
+            &oidc.client_id,
+            &id_token,
+        )
+        .await;
     }
 
     Err(anyhow!(
@@ -215,25 +225,22 @@ async fn claims_from_id_token(
     client: &Client,
     discovery: &OidcDiscovery,
     identity: &IdentitySettings,
+    client_id: &str,
     id_token: &str,
 ) -> Result<AuthUserClaims> {
+    let jwks_uri = discovery
+        .jwks_uri
+        .as_deref()
+        .ok_or_else(|| anyhow!("OIDC discovery missing jwks_uri; cannot verify id_token"))?;
+
     let header = decode_header(id_token).context("invalid id_token header")?;
-    let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[discovery.issuer.as_str()]);
-    validation.validate_aud = false;
-
-    let decoding_key = if let Some(jwks_uri) = &discovery.jwks_uri {
-        jwks_decoding_key(client, jwks_uri, header.kid.as_deref()).await?
-    } else {
-        return decode_id_token_unverified(identity, id_token);
-    };
-
-    let claims = match decode::<IdTokenClaims>(id_token, &decoding_key, &validation) {
-        Ok(data) => data.claims,
-        Err(_) => {
-            return decode_id_token_unverified(identity, id_token);
-        }
-    };
+    let decoding_key = jwks_decoding_key(client, jwks_uri, header.kid.as_deref()).await?;
+    let claims = decode_verified_id_token(
+        id_token,
+        &decoding_key,
+        &discovery.issuer,
+        client_id,
+    )?;
 
     let email = claims.email.clone();
     let name = claims
@@ -260,40 +267,24 @@ async fn claims_from_id_token(
     })
 }
 
-fn decode_id_token_unverified(identity: &IdentitySettings, id_token: &str) -> Result<AuthUserClaims> {
-    let parts: Vec<&str> = id_token.split('.').collect();
-    if parts.len() != 3 {
-        return Err(anyhow!("malformed id_token"));
-    }
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(parts[1])
-        .or_else(|_| base64::engine::general_purpose::STANDARD.decode(parts[1]))
-        .context("id_token payload base64")?;
-    let claims: IdTokenClaims =
-        serde_json::from_slice(&payload).context("id_token payload JSON")?;
-    let email = claims.email.clone();
-    let name = claims
-        .name
-        .clone()
-        .or(claims.preferred_username.clone());
-    let groups = groups_from_json(
-        &serde_json::Value::Object(claims.extra),
-        &identity.role_claim,
-    );
-    let role = resolve_role(
-        identity,
-        email.as_deref(),
-        name.as_deref(),
-        &groups,
-    );
-    Ok(AuthUserClaims {
-        sub: claims.sub,
-        email,
-        name,
-        role,
-        provider: "oidc".into(),
-        jti: None,
-    })
+fn id_token_validation(issuer: &str, client_id: &str) -> Validation {
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_issuer(&[issuer]);
+    validation.set_audience(&[client_id]);
+    validation.validate_aud = true;
+    validation
+}
+
+fn decode_verified_id_token(
+    id_token: &str,
+    decoding_key: &DecodingKey,
+    issuer: &str,
+    client_id: &str,
+) -> Result<IdTokenClaims> {
+    let validation = id_token_validation(issuer, client_id);
+    decode::<IdTokenClaims>(id_token, decoding_key, &validation)
+        .map(|data| data.claims)
+        .context("id_token signature or claim validation failed")
 }
 
 async fn jwks_decoding_key(
@@ -331,4 +322,79 @@ async fn jwks_decoding_key(
         return Err(anyhow!("unsupported JWK kty {}", key.kty));
     }
     DecodingKey::from_rsa_components(&n, &e).context("JWKS RSA components")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jsonwebtoken::{encode, EncodingKey, Header};
+    use openssl::rsa::Rsa;
+    use serde::Serialize;
+
+    const TEST_ISSUER: &str = "https://issuer.example";
+    const TEST_CLIENT_ID: &str = "zyvor-api-client";
+
+    #[derive(Debug, Serialize)]
+    struct TestIdTokenClaims {
+        sub: String,
+        iss: String,
+        aud: String,
+        exp: i64,
+    }
+
+    fn test_rsa_keys() -> (EncodingKey, DecodingKey) {
+        let rsa = Rsa::generate(2048).expect("rsa");
+        let priv_pem = rsa.private_key_to_pem().expect("private pem");
+        let pub_pem = rsa.public_key_to_pem_pkcs1().expect("public pem");
+        let encoding = EncodingKey::from_rsa_pem(&priv_pem).expect("encoding key");
+        let decoding = DecodingKey::from_rsa_pem(&pub_pem).expect("decoding key");
+        (encoding, decoding)
+    }
+
+    fn mint_id_token(encoding: &EncodingKey, aud: &str) -> String {
+        let claims = TestIdTokenClaims {
+            sub: "user-123".into(),
+            iss: TEST_ISSUER.into(),
+            aud: aud.into(),
+            exp: chrono::Utc::now().timestamp() + 3600,
+        };
+        encode(&Header::new(Algorithm::RS256), &claims, encoding).expect("token")
+    }
+
+    #[test]
+    fn id_token_validation_accepts_matching_audience() {
+        let (encoding, decoding) = test_rsa_keys();
+        let token = mint_id_token(&encoding, TEST_CLIENT_ID);
+        let claims = decode_verified_id_token(&token, &decoding, TEST_ISSUER, TEST_CLIENT_ID)
+            .expect("valid token");
+        assert_eq!(claims.sub, "user-123");
+    }
+
+    #[test]
+    fn id_token_validation_rejects_wrong_audience() {
+        let (encoding, decoding) = test_rsa_keys();
+        let token = mint_id_token(&encoding, "wrong-client");
+        let err = decode_verified_id_token(&token, &decoding, TEST_ISSUER, TEST_CLIENT_ID)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("id_token signature or claim validation failed"));
+    }
+
+    #[test]
+    fn id_token_validation_rejects_invalid_signature() {
+        let (encoding_a, _) = test_rsa_keys();
+        let (_, decoding_b) = test_rsa_keys();
+        let token = mint_id_token(&encoding_a, TEST_CLIENT_ID);
+        assert!(decode_verified_id_token(&token, &decoding_b, TEST_ISSUER, TEST_CLIENT_ID).is_err());
+    }
+
+    #[test]
+    fn id_token_validation_rejects_wrong_issuer() {
+        let (encoding, decoding) = test_rsa_keys();
+        let token = mint_id_token(&encoding, TEST_CLIENT_ID);
+        assert!(
+            decode_verified_id_token(&token, &decoding, "https://evil.example", TEST_CLIENT_ID)
+                .is_err()
+        );
+    }
 }

@@ -34,6 +34,11 @@ docker pull ghcr.io/hypersdk/guestkit-worker:latest
 
 ### Run the full stack (evaluation)
 
+> **Evaluation only — not for production.** The eval compose file (`deploy/docker-compose.ghcr.yml`)
+> runs with `AUTH_ENABLED=false`, no Redis password, and no agent bootstrap token. Use it on
+> **localhost only**. For production, see [Production checklist](#production-checklist) and
+> `deploy/docker-compose.prod.example.yml`.
+
 The stack needs Postgres + Redis behind the three images. A ready-to-run compose
 file ships in the repo — it pulls only from GHCR (nothing is built locally):
 
@@ -76,7 +81,51 @@ helm upgrade --install zyvor deploy/helm/zyvor \
 ```
 
 The chart also provisions Postgres, Redis, and MinIO. Enable auth via
-`--set zyvorApi.auth.enabled=true` and supply `jwtSecret` through a secret.
+`--set zyvorApi.auth.enabled=true` and supply `jwtSecret` and `agentBootstrapToken`
+through a secret. Use `deploy/helm/zyvor/values-prod.yaml` as a starting point.
+
+### Production checklist
+
+Before exposing the web stack beyond localhost, verify:
+
+| Item | Eval default | Production requirement |
+|------|--------------|------------------------|
+| Authentication | `AUTH_ENABLED=false` | `AUTH_ENABLED=true` + strong `JWT_SECRET` |
+| Agent bootstrap | Open registration | `AGENT_BOOTSTRAP_TOKEN` set (required when auth or mTLS is on) |
+| Redis | No password | `REDIS_PASSWORD` / `redis.password` in Helm |
+| Postgres | `zyvor`/`zyvor` | Strong unique password |
+| Image tags | `:latest` | Pin semver (e.g. `v0.3.14`) |
+| Worker | `privileged: true` | Isolate on dedicated nodes; network-policy Redis |
+| Exposure | localhost:8088 | TLS ingress; do not publish eval compose to the internet |
+
+**Generate secrets:**
+
+```bash
+openssl rand -base64 32   # JWT_SECRET
+openssl rand -base64 32   # AGENT_BOOTSTRAP_TOKEN
+openssl rand -base64 24   # POSTGRES_PASSWORD / REDIS_PASSWORD
+```
+
+**Docker Compose (production example):**
+
+```bash
+cp deploy/docker-compose.prod.example.yml deploy/docker-compose.prod.yml
+# Edit deploy/docker-compose.prod.yml — set TAG, JWT_SECRET, AGENT_BOOTSTRAP_TOKEN, passwords
+docker compose -f deploy/docker-compose.prod.yml up -d
+```
+
+**Helm (production):**
+
+```bash
+helm upgrade --install zyvor deploy/helm/zyvor \
+  -f deploy/helm/zyvor/values.yaml \
+  -f deploy/helm/zyvor/values-prod.yaml \
+  --create-namespace --namespace zyvor
+```
+
+The API **refuses to start** when `AUTH_ENABLED=true` or `AGENT_MTLS_BIND_ADDR` is set
+without `AGENT_BOOTSTRAP_TOKEN`. Startup logs warn when auth is disabled or the bootstrap
+token is unset.
 
 ---
 

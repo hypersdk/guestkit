@@ -117,16 +117,32 @@ pub struct BootstrapCertRequest {
     pub csr_pem: Option<String>,
 }
 
+fn enforce_agent_bootstrap(
+    state: &AppState,
+    provided: Option<&str>,
+) -> ApiResult<()> {
+    match &state.config.agent_bootstrap_token {
+        Some(expected) => {
+            if provided.unwrap_or("") != expected {
+                Err(ApiError::unauthorized("invalid or missing bootstrap token"))
+            } else {
+                Ok(())
+            }
+        }
+        None if state.config.auth_enabled || state.config.agent_mtls_bind_addr.is_some() => {
+            Err(ApiError::internal(
+                "guest agent bootstrap token not configured — set AGENT_BOOTSTRAP_TOKEN",
+            ))
+        }
+        None => Ok(()),
+    }
+}
+
 pub async fn guest_agent_bootstrap_cert(
     State(state): State<AppState>,
     Json(body): Json<BootstrapCertRequest>,
 ) -> ApiResult<Json<ApiResponse<Value>>> {
-    if let Some(expected) = &state.config.agent_bootstrap_token {
-        let token = body.bootstrap_token.as_deref().unwrap_or("");
-        if token != expected {
-            return Err(ApiError::unauthorized("invalid or missing bootstrap token"));
-        }
-    }
+    enforce_agent_bootstrap(&state, body.bootstrap_token.as_deref())?;
 
     let ca = crate::guest_agent_ca::AgentCa::from_config(state.config.agent_ca_dir.clone());
     let issued = ca.issue_client_cert(&body.hostname)?;
@@ -159,12 +175,7 @@ pub async fn register_guest_agent(
     State(state): State<AppState>,
     Json(body): Json<RegisterGuestAgentRequest>,
 ) -> ApiResult<Json<ApiResponse<RegisterGuestAgentResponse>>> {
-    if let Some(expected) = &state.config.agent_bootstrap_token {
-        let token = body.bootstrap_token.as_deref().unwrap_or("");
-        if token != expected {
-            return Err(ApiError::unauthorized("invalid or missing bootstrap token"));
-        }
-    }
+    enforce_agent_bootstrap(&state, body.bootstrap_token.as_deref())?;
 
     let agent_id = if body.hostname.is_empty() {
         uuid::Uuid::new_v4().to_string()
