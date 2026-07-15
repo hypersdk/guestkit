@@ -71,6 +71,8 @@ The packaged install seeds a default administrator so you can sign in immediatel
 > `scripts/lib/package-auth-bootstrap.sh` into the product env file. Rotate the
 > password (and API key / `JWT_SECRET`) before exposing the console to any
 > untrusted network. SSO/SAML can be enabled from **Settings** to retire local login.
+> OIDC providers must publish `jwks_uri` in discovery; ID tokens are verified with
+> signature, issuer, audience (`client_id`), and expiry — unverified tokens are rejected.
 
 ## Logs
 
