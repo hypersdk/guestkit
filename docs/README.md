@@ -13,6 +13,7 @@ Offline VM intelligence and migration assurance
 | Architecture | [overview.md](architecture/overview.md) |
 | Full index | [INDEX.md](INDEX.md) |
 | **User journeys & acceptance criteria** | [User Stories](USER_STORIES.md) |
+| **Industry use cases & Zyvor stack** | [INDUSTRY_USE_CASES.md](INDUSTRY_USE_CASES.md) |
 
 ## User Stories
 
@@ -26,18 +27,23 @@ Persona-based journeys with acceptance criteria: **[USER_STORIES.md](USER_STORIE
 
 ## Ecosystem
 
-Part of the [Zyvor / HyperSDK platform stack](https://zyvor.dev):
+Part of the [Zyvor / HyperSDK platform stack](https://zyvor.dev) — **15 products, one pipeline**. Full industry context: **[INDUSTRY_USE_CASES.md](INDUSTRY_USE_CASES.md)**.
 
 | Product | Role |
 |---------|------|
-| **hypercluster** | Kubernetes bootstrap |
-| **machina** | Bare-metal hypervisor OS |
-| **zeus-os (v9s)** | Cloud / KubeVirt control plane |
-| **forge** | AI infrastructure on K8s |
-| **hypersdk / hyper2kvm** | VM migration |
-| **guestkit** | Offline VM assurance |
-| **packetwolf** | Network intelligence |
-| **Aether** | Runtime portability |
-| **hermes** | Application layer for K8s |
+| **HyperSDK Platform** | Multi-cloud VM export & APIs |
+| **hyper2kvm** | Hypervisor → KVM conversion |
+| **guestkit** | Offline VM migration assurance |
+| **Veyron** | KubeVirt VM command center |
+| **Aether** | Universal runtime portability |
+| **Zeus OS** | Cloud / KubeVirt control plane |
+| **Hermes** | Application layer for Kubernetes |
+| **Machina** | libvirt/KVM hypervisor OS |
+| **Zyvor Fabric** | systemd-native private cloud |
+| **Ragnarok** | AI ops automation on K8s |
+| **PacketWolf** | Kernel-native network intelligence |
+| **Forge** | GPU fabric on Kubernetes |
+| **IronWolf** | Bare-metal lifecycle (Metal3) |
+| **HyperCluster** | Bare-metal Kubernetes bootstrap |
 
-See also: [../README.md](../README.md)
+Pipeline: **Export → Convert → Inspect (GuestKit) → Build → Deploy → Manage → Operate** — [zyvor.dev](https://zyvor.dev)
