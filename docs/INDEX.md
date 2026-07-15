@@ -19,6 +19,7 @@
 | [Interactive shell](user-guides/interactive-mode.md) | REPL mode |
 | [Security profiles](user-guides/profiles.md) | Security, compliance, migration profiles |
 | [Migration assurance](features/migration-assurance.md) | Doctor, migrate-plan, fleet, policy, forensic diff |
+| [Industry use cases](INDUSTRY_USE_CASES.md) | Real-world scenarios, PM/TA view, Zyvor product stack |
 | [Fix plans](features/fix-plans.md) | Offline patch workflow |
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
 | [Python bindings](user-guides/python-bindings.md) | PyO3 API |

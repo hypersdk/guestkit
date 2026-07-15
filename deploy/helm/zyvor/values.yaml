@@ -50,6 +50,7 @@ zyvorApi:
   auth:
     enabled: false
     jwtSecret: ""          # set via secret when auth.enabled=true
+    agentBootstrapToken: "" # required when auth.enabled=true (see zyvor-api config)
     jwtIssuer: guestkit
     jwtExpiryHours: 24
     defaultRole: operator
@@ -87,6 +88,7 @@ postgresql:
 
 redis:
   image: redis:7-alpine
+  password: ""   # set in values-prod.yaml; enables Redis AUTH when non-empty
 
 minio:
   enabled: true

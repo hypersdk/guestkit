@@ -62,6 +62,49 @@ impl Config {
         &self.default_role
     }
 
+    /// True when the API listens only on loopback (127.0.0.1 / ::1).
+    pub fn is_localhost_bind(&self) -> bool {
+        self.bind_addr
+            .parse::<std::net::SocketAddr>()
+            .map(|addr| match addr.ip() {
+                std::net::IpAddr::V4(v4) => v4.is_loopback(),
+                std::net::IpAddr::V6(v6) => v6.is_loopback(),
+            })
+            .unwrap_or(false)
+    }
+
+    /// Log security warnings for misconfigured or evaluation-only deployments.
+    pub fn emit_startup_warnings(&self) {
+        if !self.auth_enabled {
+            if self.is_localhost_bind() {
+                tracing::warn!(
+                    "SECURITY: AUTH_ENABLED=false — evaluation/local mode only. \
+                     Set AUTH_ENABLED=true and a strong JWT_SECRET before production."
+                );
+            } else {
+                tracing::warn!(
+                    "SECURITY: AUTH_ENABLED=false while listening on {} — \
+                     all API routes are unauthenticated. NOT safe for production.",
+                    self.bind_addr
+                );
+            }
+        }
+        if self.agent_bootstrap_token.is_none() {
+            tracing::warn!(
+                "SECURITY: AGENT_BOOTSTRAP_TOKEN unset — guest agent registration and \
+                 certificate issuance are open. Set AGENT_BOOTSTRAP_TOKEN before production."
+            );
+        }
+        if self.redis_url.contains("redis://redis:6379")
+            && !self.redis_url.contains('@')
+            && self.auth_enabled
+        {
+            tracing::warn!(
+                "SECURITY: Redis has no password in REDIS_URL — enable Redis AUTH in production."
+            );
+        }
+    }
+
     pub fn oidc_redirect_uri(&self) -> String {
         format!(
             "{}/api/v1/auth/oidc/callback",
@@ -95,7 +138,7 @@ impl Config {
             _ => "dev-local-auth-disabled".into(),
         };
 
-        Ok(Self {
+        let config = Self {
             bind_addr: std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
             database_url: std::env::var("DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://zyvor:zyvor@localhost:5432/zyvor".into()),
@@ -169,6 +212,94 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(300),
-        })
+        };
+
+        validate_agent_bootstrap_requirements(
+            config.auth_enabled,
+            &config.agent_mtls_bind_addr,
+            &config.agent_bootstrap_token,
+        )?;
+
+        Ok(config)
+    }
+}
+
+/// Fail closed when production-oriented auth or mTLS is enabled without agent bootstrap.
+fn validate_agent_bootstrap_requirements(
+    auth_enabled: bool,
+    agent_mtls_bind_addr: &Option<String>,
+    agent_bootstrap_token: &Option<String>,
+) -> Result<()> {
+    if auth_enabled && agent_bootstrap_token.is_none() {
+        anyhow::bail!(
+            "AUTH_ENABLED=true but AGENT_BOOTSTRAP_TOKEN is unset. \
+             Guest agent registration and certificate issuance must be protected in production. \
+             Set AGENT_BOOTSTRAP_TOKEN to a strong random value (e.g. `openssl rand -base64 32`)."
+        );
+    }
+    if agent_mtls_bind_addr.is_some() && agent_bootstrap_token.is_none() {
+        anyhow::bail!(
+            "AGENT_MTLS_BIND_ADDR is set but AGENT_BOOTSTRAP_TOKEN is unset. \
+             mTLS guest-agent push requires a bootstrap token before issuing client certificates."
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn localhost_bind_detection() {
+        let mut cfg = Config {
+            bind_addr: "127.0.0.1:8080".into(),
+            database_url: String::new(),
+            redis_url: String::new(),
+            storage_path: PathBuf::new(),
+            storage_public_url: String::new(),
+            default_namespace: String::new(),
+            storage_class: String::new(),
+            max_upload_bytes: 0,
+            agent_proxy_url: None,
+            zeus_public_url: None,
+            cluster_name: None,
+            storage_browse_paths: vec![],
+            auth_enabled: false,
+            jwt_secret: String::new(),
+            jwt_issuer: String::new(),
+            jwt_expiry_hours: 0,
+            public_base_url: String::new(),
+            ui_base_url: String::new(),
+            default_role: String::new(),
+            nfs_mount_root: PathBuf::new(),
+            agent_bootstrap_token: None,
+            agent_ca_dir: PathBuf::new(),
+            agent_mtls_bind_addr: None,
+            agent_mtls_public_url: None,
+            packetwolf_correlation_url: None,
+            packetwolf_fleet_correlate_url: None,
+            packetwolf_fleet_interval_secs: 0,
+        };
+        assert!(cfg.is_localhost_bind());
+        cfg.bind_addr = "0.0.0.0:8080".into();
+        assert!(!cfg.is_localhost_bind());
+    }
+
+    #[test]
+    fn auth_enabled_requires_agent_bootstrap_token() {
+        let err = validate_agent_bootstrap_requirements(true, &None, &None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("AGENT_BOOTSTRAP_TOKEN"));
+    }
+
+    #[test]
+    fn agent_mtls_requires_bootstrap_token() {
+        let mtls = Some("0.0.0.0:8443".into());
+        let err = validate_agent_bootstrap_requirements(false, &mtls, &None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("AGENT_BOOTSTRAP_TOKEN"));
     }
 }
