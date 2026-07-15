@@ -60,7 +60,7 @@ Cross-reference: [Documentation index](README.md) · [Main README](../README.md)
 
 | Criterion | Notes |
 |-----------|-------|
-| Core capability | JSON/YAML export, --json |
+| Core capability | `guestkit doctor --fail-below <score>` with `-o json` |
 
 ---
 

@@ -77,7 +77,7 @@ pub fn analyze_fleet(snapshots: &[(String, EvidenceSnapshot, f64)]) -> FleetAnal
         .filter(|fp| fp.boot_score < 60.0)
         .map(|fp| MigrationBlocker {
             image: fp.image.clone(),
-            issue: format!("Low boot score: {:.0}%", fp.boot_score),
+            issue: format!("Low boot assurance score: {:.0}%", fp.boot_score),
             boot_score: fp.boot_score,
         })
         .collect();
@@ -94,6 +94,7 @@ pub fn analyze_fleet(snapshots: &[(String, EvidenceSnapshot, f64)]) -> FleetAnal
         snowflakes,
         migration_blockers,
         golden_image_candidates,
+        failed_vms: Vec::new(),
     }
 }
 

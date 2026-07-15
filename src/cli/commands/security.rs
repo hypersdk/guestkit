@@ -1871,6 +1871,7 @@ pub fn patch_command(
     severity: Option<String>,
     export: Option<PathBuf>,
     simulate_update: bool,
+    simulate: bool,
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
@@ -1909,92 +1910,95 @@ pub fn patch_command(
 
     // Analyze packages for known vulnerabilities
     if check_cves {
-        println!("🔍 CVE Analysis:");
-        println!();
+        if simulate {
+            println!("🔍 CVE Analysis [demo data — training only]:");
+            println!();
 
-        // Simulated CVE checking (in production, this would query a CVE database)
-        let vulnerable_packages = vec![
-            (
-                "openssl",
-                "1.1.1k",
-                "CVE-2021-3711",
-                "HIGH",
-                "Buffer overflow in SM2 decryption",
-            ),
-            (
-                "sudo",
-                "1.8.31",
-                "CVE-2021-3156",
-                "CRITICAL",
-                "Heap buffer overflow (Baron Samedit)",
-            ),
-            (
-                "systemd",
-                "245",
-                "CVE-2020-13776",
-                "MEDIUM",
-                "Improper access control",
-            ),
-            (
-                "kernel",
-                "5.4.0",
-                "CVE-2022-0847",
-                "CRITICAL",
-                "Dirty Pipe privilege escalation",
-            ),
-            (
-                "glibc",
-                "2.31",
-                "CVE-2021-33574",
-                "HIGH",
-                "Use-after-free in mq_notify",
-            ),
-        ];
+            let vulnerable_packages = vec![
+                (
+                    "openssl",
+                    "1.1.1k",
+                    "CVE-2021-3711",
+                    "HIGH",
+                    "Buffer overflow in SM2 decryption",
+                ),
+                (
+                    "sudo",
+                    "1.8.31",
+                    "CVE-2021-3156",
+                    "CRITICAL",
+                    "Heap buffer overflow (Baron Samedit)",
+                ),
+                (
+                    "systemd",
+                    "245",
+                    "CVE-2020-13776",
+                    "MEDIUM",
+                    "Improper access control",
+                ),
+                (
+                    "kernel",
+                    "5.4.0",
+                    "CVE-2022-0847",
+                    "CRITICAL",
+                    "Dirty Pipe privilege escalation",
+                ),
+                (
+                    "glibc",
+                    "2.31",
+                    "CVE-2021-33574",
+                    "HIGH",
+                    "Use-after-free in mq_notify",
+                ),
+            ];
 
-        let severity_filter = severity.as_deref().unwrap_or("ALL");
+            let severity_filter = severity.as_deref().unwrap_or("ALL");
 
-        for (pkg, ver, cve, sev, desc) in vulnerable_packages {
-            if packages.contains_key(pkg) && (severity_filter == "ALL" || severity_filter == sev) {
-                let icon = match sev {
-                    "CRITICAL" => "🔴",
-                    "HIGH" => "🟠",
-                    "MEDIUM" => "🟡",
-                    _ => "🟢",
-                };
+            for (pkg, ver, cve, sev, desc) in vulnerable_packages {
+                if packages.contains_key(pkg)
+                    && (severity_filter == "ALL" || severity_filter == sev)
+                {
+                    let icon = match sev {
+                        "CRITICAL" => "🔴",
+                        "HIGH" => "🟠",
+                        "MEDIUM" => "🟡",
+                        _ => "🟢",
+                    };
 
-                println!("{} {} [{}]", icon, cve, sev);
-                println!("   Package: {} {}", pkg, ver);
-                println!("   Description: {}", desc);
-                println!();
+                    println!("{} {} [{}]", icon, cve, sev);
+                    println!("   Package: {} {}", pkg, ver);
+                    println!("   Description: {}", desc);
+                    println!();
 
-                match sev {
-                    "CRITICAL" => critical_cves += 1,
-                    "HIGH" => high_cves += 1,
-                    "MEDIUM" => medium_cves += 1,
-                    _ => {}
+                    match sev {
+                        "CRITICAL" => critical_cves += 1,
+                        "HIGH" => high_cves += 1,
+                        "MEDIUM" => medium_cves += 1,
+                        _ => {}
+                    }
                 }
             }
-        }
 
-        println!("CVE Summary:");
-        println!("  Critical: {}", critical_cves);
-        println!("  High: {}", high_cves);
-        println!("  Medium: {}", medium_cves);
-        println!();
+            println!("CVE Summary:");
+            println!("  Critical: {}", critical_cves);
+            println!("  High: {}", high_cves);
+            println!("  Medium: {}", medium_cves);
+            println!();
 
-        if critical_cves > 0 {
-            println!(
-                "⚠️  URGENT: {} critical vulnerabilities require immediate patching!",
-                critical_cves
-            );
+            if critical_cves > 0 {
+                println!(
+                    "⚠️  [demo] {} critical vulnerabilities matched sample data",
+                    critical_cves
+                );
+            }
+        } else {
+            println!("🔍 CVE Analysis:");
+            println!("  Live CVE correlation requires a vulnerability feed (not bundled in OSS).");
+            println!("  Use --simulate to run demo CVE data for training only.");
+            println!();
         }
     }
 
-    // Check for outdated packages (simulated)
-    println!("📦 Package Update Status:");
-    println!();
-
-    // Sample outdated packages
     let sample_outdated = vec![
         ("curl", "7.68.0", "7.81.0"),
         ("wget", "1.20.3", "1.21.3"),
@@ -2002,31 +2006,45 @@ pub fn patch_command(
         ("vim", "8.1", "9.0"),
     ];
 
-    for (pkg, current, latest) in &sample_outdated {
-        if packages.contains_key(*pkg) {
-            println!("  📌 {} : {} → {} (update available)", pkg, current, latest);
-            outdated += 1;
-        }
-    }
-
-    if outdated == 0 {
-        println!("  ✓ All checked packages are up to date");
-    } else {
+    if simulate {
+        // Check for outdated packages (demo data only)
+        println!("📦 Package Update Status [demo data]:");
         println!();
-        println!("  Total updates available: {}", outdated);
+
+        for (pkg, current, latest) in &sample_outdated {
+            if packages.contains_key(*pkg) {
+                println!(
+                    "  📌 {} : {} → {} (demo update available)",
+                    pkg, current, latest
+                );
+                outdated += 1;
+            }
+        }
+
+        if outdated == 0 {
+            println!("  ✓ No demo outdated packages matched installed names");
+        } else {
+            println!();
+            println!("  Total demo updates available: {}", outdated);
+        }
     }
 
     if simulate_update {
-        println!();
-        println!("Update Simulation:");
-        println!("=================");
-        println!("The following packages would be updated:");
-        for (pkg, _current, latest) in &sample_outdated {
-            println!("  • {} → {}", pkg, latest);
+        if !simulate {
+            println!();
+            println!("--simulate-update requires --simulate (demo package data only).");
+        } else {
+            println!();
+            println!("Update Simulation:");
+            println!("=================");
+            println!("The following packages would be updated:");
+            for (pkg, _current, latest) in &sample_outdated {
+                println!("  • {} → {}", pkg, latest);
+            }
+            println!();
+            println!("Note: This is a simulation. No changes were made.");
+            println!("      To apply updates, use your package manager in the live system.");
         }
-        println!();
-        println!("Note: This is a simulation. No changes were made.");
-        println!("      To apply updates, use your package manager in the live system.");
     }
 
     // Export report
@@ -3669,6 +3687,7 @@ pub fn intelligence_command(
     threat_level: &str,
     correlate: bool,
     export: Option<PathBuf>,
+    simulate: bool,
     verbose: bool,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
@@ -3688,54 +3707,64 @@ pub fn intelligence_command(
     println!("Threat Level Filter: {}", threat_level);
     println!();
 
-    // Known malicious indicators (simulated threat intelligence)
+    if !simulate && ioc_file.is_none() {
+        println!(
+            "Built-in IOC correlation uses demo data only. Pass --simulate for training scenarios,"
+        );
+        println!("or --ioc-file for custom indicators.");
+        println!();
+    }
+
+    // Known malicious indicators (demo threat intelligence — requires --simulate)
     let mut ioc_database: HashMap<String, (&str, &str, &str)> = HashMap::new();
 
-    // IP addresses (IOC, threat level, description)
-    ioc_database.insert(
-        "192.168.100.50".to_string(),
-        ("IP", "HIGH", "Known C2 server"),
-    );
-    ioc_database.insert(
-        "10.0.0.13".to_string(),
-        ("IP", "MEDIUM", "Suspicious scanning host"),
-    );
+    if simulate {
+        // IP addresses (IOC, threat level, description)
+        ioc_database.insert(
+            "192.168.100.50".to_string(),
+            ("IP", "HIGH", "Known C2 server"),
+        );
+        ioc_database.insert(
+            "10.0.0.13".to_string(),
+            ("IP", "MEDIUM", "Suspicious scanning host"),
+        );
 
-    // File hashes (MD5)
-    ioc_database.insert(
-        "5d41402abc4b2a76b9719d911017c592".to_string(),
-        ("HASH", "CRITICAL", "Known ransomware"),
-    );
-    ioc_database.insert(
-        "098f6bcd4621d373cade4e832627b4f6".to_string(),
-        ("HASH", "HIGH", "Trojan backdoor"),
-    );
+        // File hashes (MD5)
+        ioc_database.insert(
+            "5d41402abc4b2a76b9719d911017c592".to_string(),
+            ("HASH", "CRITICAL", "Known ransomware"),
+        );
+        ioc_database.insert(
+            "098f6bcd4621d373cade4e832627b4f6".to_string(),
+            ("HASH", "HIGH", "Trojan backdoor"),
+        );
 
-    // Domains
-    ioc_database.insert(
-        "malicious-domain.evil".to_string(),
-        ("DOMAIN", "CRITICAL", "Command & Control"),
-    );
-    ioc_database.insert(
-        "phishing-site.bad".to_string(),
-        ("DOMAIN", "HIGH", "Phishing campaign"),
-    );
+        // Domains
+        ioc_database.insert(
+            "malicious-domain.evil".to_string(),
+            ("DOMAIN", "CRITICAL", "Command & Control"),
+        );
+        ioc_database.insert(
+            "phishing-site.bad".to_string(),
+            ("DOMAIN", "HIGH", "Phishing campaign"),
+        );
 
-    // File paths
-    ioc_database.insert(
-        "/tmp/.hidden_miner".to_string(),
-        ("FILE", "CRITICAL", "Cryptominer"),
-    );
-    ioc_database.insert(
-        "/dev/shm/backdoor".to_string(),
-        ("FILE", "HIGH", "Backdoor payload"),
-    );
+        // File paths
+        ioc_database.insert(
+            "/tmp/.hidden_miner".to_string(),
+            ("FILE", "CRITICAL", "Cryptominer"),
+        );
+        ioc_database.insert(
+            "/dev/shm/backdoor".to_string(),
+            ("FILE", "HIGH", "Backdoor payload"),
+        );
 
-    // Usernames
-    ioc_database.insert(
-        "backdoor_user".to_string(),
-        ("USER", "CRITICAL", "Unauthorized account"),
-    );
+        // Usernames
+        ioc_database.insert(
+            "backdoor_user".to_string(),
+            ("USER", "CRITICAL", "Unauthorized account"),
+        );
+    }
 
     // Load custom IOCs if provided
     if let Some(ioc_path) = ioc_file {

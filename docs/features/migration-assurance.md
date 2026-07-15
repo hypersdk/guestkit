@@ -54,7 +54,7 @@ The **Assurance** view in `guestctl tui` reuses the same evidence → boot → m
 
 ## Commands
 
-### `guestkit doctor` — boot probability
+### `guestkit doctor` — boot assurance score
 
 Predicts first-boot success on a target hypervisor before migration.
 
@@ -62,6 +62,7 @@ Predicts first-boot success on a target hypervisor before migration.
 guestkit doctor vm.qcow2 --target kvm
 guestkit doctor vm.vmdk --target proxmox --explain
 guestkit doctor vm.qcow2 --target kvm -o json
+guestkit doctor vm.qcow2 --target kvm -o json --fail-below 80
 ```
 
 | Flag | Description |
@@ -69,8 +70,22 @@ guestkit doctor vm.qcow2 --target kvm -o json
 | `--target` | `kvm`, `proxmox`, `qemu`, `hyperv`, `aws`, `azure`, `gcp`, `cloud` |
 | `--explain` | Root-cause chain from inference engine |
 | `-o json` | Machine-readable `bootability` + optional `root_cause` |
+| `--fail-below` | Exit code `1` if boot score is below threshold (0–100); JSON still printed |
 
-Output includes a **boot probability** message, **blockers** (with remediation hints), **warnings**, and per-check pass/fail lines.
+Output includes a **boot assurance score** message, **blockers** (with remediation hints), **warnings**, and per-check pass/fail lines.
+
+#### CI gate example
+
+```yaml
+# .github/workflows/vm-assurance.yml
+- name: Boot assurance gate
+  run: |
+    guestkit doctor vm-images/migrated.qcow2 \
+      --target proxmox \
+      -o json \
+      --fail-below 80 \
+      > boot-report.json
+```
 
 ### `guestkit migrate-plan` — hypervisor-aware migration score
 

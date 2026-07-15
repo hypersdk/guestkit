@@ -1,0 +1,35 @@
+# Production overrides for the Zyvor Helm chart.
+#
+#   helm upgrade --install zyvor deploy/helm/zyvor \
+#     -f deploy/helm/zyvor/values.yaml \
+#     -f deploy/helm/zyvor/values-prod.yaml \
+#     --create-namespace --namespace zyvor
+#
+# Replace placeholder secrets before installing.
+
+zyvorApi:
+  image: ghcr.io/hypersdk/zyvor-api:v0.3.14
+  auth:
+    enabled: true
+    jwtSecret: "REPLACE_WITH_openssl_rand_base64_32"
+    agentBootstrapToken: "REPLACE_WITH_openssl_rand_base64_32"
+    publicBaseUrl: "https://api.example.com"
+    uiBaseUrl: "https://console.example.com"
+  agentMtls:
+    enabled: true
+
+zyvorUi:
+  image: ghcr.io/hypersdk/zyvor-ui:v0.3.14
+
+guestkitWorker:
+  image: ghcr.io/hypersdk/guestkit-worker:v0.3.14
+
+postgresql:
+  password: "REPLACE_WITH_strong_postgres_password"
+
+redis:
+  password: "REPLACE_WITH_strong_redis_password"
+
+minio:
+  accessKey: "REPLACE_WITH_minio_access_key"
+  secretKey: "REPLACE_WITH_strong_minio_secret"
