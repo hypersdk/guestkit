@@ -2,6 +2,11 @@
 
 **Offline VM intelligence and migration assurance.**
 
+
+## 📖 Feature Guide
+
+**[GuestKit — Customer Feature Guide](docs/guestkit-customer-feature-guide.md)** — a complete, customer-facing reference covering all **63 features** across **10 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/guestkit-customer-feature-guide.pdf)**.
+
 Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot readiness, generate hypervisor-aware fix plans, and explore disks from a carbon-themed TUI — **Rust control plane, no libguestfs appliance** (uses host NBD/loop for mount).
 
 ```text
