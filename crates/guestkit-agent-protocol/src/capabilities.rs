@@ -94,6 +94,9 @@ pub const METHOD_SHUTDOWN: &str = "guestkit.shutdown";
 pub const METHOD_SNAPSHOT_PREPARE: &str = "guestkit.snapshot.prepare";
 pub const METHOD_SNAPSHOT_COMPLETE: &str = "guestkit.snapshot.complete";
 
+pub const METHOD_CONTAINERS_INVENTORY: &str = "guestkit.containers.inventory";
+pub const METHOD_INVENTORY_CACHE_WRITE: &str = "guestkit.inventory.cacheSnapshot";
+
 // --- Protocol 1.3: enterprise automation (Phase 6) ---
 pub const METHOD_PACKAGES_INVENTORY: &str = "guestkit.packages.inventory";
 pub const METHOD_PACKAGES_UPDATES: &str = "guestkit.packages.updates";
@@ -207,6 +210,8 @@ impl AgentCapabilities {
                 METHOD_SET_HOSTNAME.to_string(),
                 METHOD_SET_TIMEZONE.to_string(),
                 METHOD_SET_DNS.to_string(),
+                METHOD_CONTAINERS_INVENTORY.to_string(),
+                METHOD_INVENTORY_CACHE_WRITE.to_string(),
                 METHOD_FILE_READ.to_string(),
                 METHOD_FILE_WRITE.to_string(),
                 METHOD_FILE_STAT.to_string(),

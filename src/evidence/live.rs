@@ -57,6 +57,7 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
         process,
         hardware,
         linux_migration,
+        online_cache: None,
     };
     enrich_migration_fields_live(&mut snapshot);
     Ok(snapshot)

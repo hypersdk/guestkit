@@ -213,3 +213,51 @@ fn phase6_dotted_aliases_resolve() {
     );
     assert_eq!(RpcMethod::parse("customization.hostname"), RpcMethod::SetHostname);
 }
+
+// --- Phase 7: container awareness + offline cache (§10, §31) ---
+
+#[test]
+fn containers_inventory_via_handler() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.containers.inventory","id":40}"#);
+    let result = resp.result.expect("containers");
+    assert!(result.get("runtimes").is_some());
+    assert!(result.get("container_count").is_some());
+    assert!(result.get("migration_risks").is_some());
+}
+
+#[test]
+fn inventory_cache_offline_read_via_public_api() {
+    // A cache written by a running agent is read back offline with an
+    // integrity check. (write_cache's live path is exercised by the
+    // real-host e2e via guestkit.inventory.cacheSnapshot.)
+    let root = tempfile::tempdir().unwrap();
+    let dest = root.path().join("var/lib/guestkit/inventory.snapshot");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    // Build a valid cache using the same digest the reader verifies.
+    let payload = serde_json::json!({"heartbeat": {"agent_state": "healthy"}});
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(serde_json::to_vec(&payload).unwrap());
+    let digest: String = h.finalize().iter().map(|b| format!("{b:02x}")).collect();
+    let cache = serde_json::json!({
+        "schema": 1, "written_at": "2026-07-19T00:00:00Z", "agent_version": "test",
+        "hostname": "h", "boot_id": "b", "integrity_sha256": digest, "payload": payload
+    });
+    std::fs::write(&dest, serde_json::to_vec(&cache).unwrap()).unwrap();
+
+    let read = guestkit::agent::inventory_cache::read_cache_from_root(root.path())
+        .expect("offline read");
+    assert_eq!(read.schema, 1);
+    assert!(read.payload.get("heartbeat").is_some());
+}
+
+#[test]
+fn phase7_aliases_resolve() {
+    use guestkit_agent_protocol::RpcMethod;
+    assert_eq!(
+        RpcMethod::parse("containers.inventory"),
+        RpcMethod::ContainersInventory
+    );
+    assert_eq!(RpcMethod::parse("inventory.cache"), RpcMethod::InventoryCacheWrite);
+}

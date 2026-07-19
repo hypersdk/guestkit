@@ -470,6 +470,7 @@ mod tests {
             process: None,
             hardware: None,
             linux_migration: None,
+            online_cache: None,
         }
     }
 

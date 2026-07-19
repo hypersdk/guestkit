@@ -71,6 +71,9 @@ pub enum RpcMethod {
     // Protocol 1.3: orchestrated snapshots
     SnapshotPrepare,
     SnapshotComplete,
+    // Protocol 1.3: container awareness + offline cache
+    ContainersInventory,
+    InventoryCacheWrite,
     // Protocol 1.3: enterprise automation (Phase 6)
     PackagesInventory,
     PackagesUpdates,
@@ -156,6 +159,8 @@ impl RpcMethod {
             METHOD_SHUTDOWN => Self::Shutdown,
             METHOD_SNAPSHOT_PREPARE => Self::SnapshotPrepare,
             METHOD_SNAPSHOT_COMPLETE => Self::SnapshotComplete,
+            METHOD_CONTAINERS_INVENTORY => Self::ContainersInventory,
+            METHOD_INVENTORY_CACHE_WRITE => Self::InventoryCacheWrite,
             METHOD_PACKAGES_INVENTORY => Self::PackagesInventory,
             METHOD_PACKAGES_UPDATES => Self::PackagesUpdates,
             METHOD_PACKAGES_INSTALL => Self::PackagesInstall,
@@ -201,6 +206,8 @@ impl RpcMethod {
             "network.test" => Self::NetworkTest,
             "network.connections" | "network.listeners" => Self::NetworkConnections,
             "security.posture" => Self::SecurityPosture,
+            "containers.inventory" | "containers.list" => Self::ContainersInventory,
+            "inventory.cache" => Self::InventoryCacheWrite,
             "packages.inventory" | "packages.list" => Self::PackagesInventory,
             "packages.updates" => Self::PackagesUpdates,
             "packages.install" => Self::PackagesInstall,
@@ -265,6 +272,7 @@ impl RpcMethod {
                 | Self::SetHostname
                 | Self::SetTimezone
                 | Self::SetDns
+                | Self::InventoryCacheWrite
                 | Self::MigrationCutoverEnter
                 | Self::MigrationCutoverExit
                 | Self::SubscribeEvents
