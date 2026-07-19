@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Remote Desktop enable/disable from inside the guest.
 
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::process::Command;
 
 pub fn enable_rdp() -> Result<Value, String> {
