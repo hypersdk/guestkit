@@ -61,6 +61,38 @@ fn has_cmd(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// The CRI socket to hand crictl. k3s and rke2 run their own containerd on
+/// non-default socket paths; crictl won't find them without an explicit
+/// endpoint, so probe the known locations.
+fn cri_endpoint() -> Option<String> {
+    for sock in [
+        "/run/k3s/containerd/containerd.sock",
+        "/run/containerd/containerd.sock",
+        "/var/run/crio/crio.sock",
+        "/run/crio/crio.sock",
+    ] {
+        if Path::new(sock).exists() {
+            return Some(format!("unix://{sock}"));
+        }
+    }
+    None
+}
+
+/// Run crictl with the resolved runtime endpoint.
+fn crictl(args: &[&str]) -> Option<String> {
+    if !has_cmd("crictl") {
+        return None;
+    }
+    let mut full: Vec<String> = Vec::new();
+    if let Some(ep) = cri_endpoint() {
+        full.push("--runtime-endpoint".to_string());
+        full.push(ep);
+    }
+    full.extend(args.iter().map(|s| s.to_string()));
+    let refs: Vec<&str> = full.iter().map(String::as_str).collect();
+    run("crictl", &refs)
+}
+
 fn runtime_version(cmd: &str) -> Option<String> {
     run(cmd, &["--version"]).map(|s| s.lines().next().unwrap_or("").trim().to_string())
 }
@@ -74,8 +106,9 @@ fn detect_runtimes() -> Vec<(String, Option<String>)> {
     if has_cmd("podman") {
         out.push(("podman".to_string(), runtime_version("podman")));
     }
-    // containerd is the CRI runtime on most Kubernetes nodes.
-    if Path::new("/run/containerd/containerd.sock").exists() || has_cmd("containerd") {
+    // containerd is the CRI runtime on most Kubernetes nodes; k3s/rke2 use
+    // their own socket paths, resolved by cri_endpoint().
+    if cri_endpoint().is_some() || has_cmd("containerd") {
         out.push(("containerd".to_string(), runtime_version("containerd")));
     }
     out
@@ -165,13 +198,9 @@ fn kubernetes_info() -> Option<Value> {
         return None;
     }
     // crictl talks to the CRI socket; count running pods/containers.
-    let pods = has_cmd("crictl")
-        .then(|| run("crictl", &["pods", "-q"]))
-        .flatten()
+    let pods = crictl(&["pods", "-q"])
         .map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
-    let containers = has_cmd("crictl")
-        .then(|| run("crictl", &["ps", "-q"]))
-        .flatten()
+    let containers = crictl(&["ps", "-q"])
         .map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
     let distribution = if Path::new("/var/lib/rancher/k3s").exists() {
         "k3s"
@@ -201,7 +230,7 @@ fn kubernetes_info() -> Option<Value> {
 
 /// CRI containers (containerd on a k8s node without Docker) via crictl.
 fn cri_containers() -> Vec<ContainerSummary> {
-    let Some(out) = run("crictl", &["ps", "-a", "-o", "json"]) else {
+    let Some(out) = crictl(&["ps", "-a", "-o", "json"]) else {
         return Vec::new();
     };
     let Ok(v) = serde_json::from_str::<Value>(&out) else {
