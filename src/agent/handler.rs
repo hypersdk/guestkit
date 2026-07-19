@@ -211,6 +211,8 @@ impl RequestHandler {
             RpcMethod::GetMemoryStats => self.get_memory_stats(req.id),
             RpcMethod::GetPerformanceSummary => self.get_performance_summary(req.id, &req.params),
             RpcMethod::GetPerformanceHistory => self.get_performance_history(req.id, &req.params),
+            RpcMethod::SnapshotPrepare => self.snapshot_prepare(req.id, &req.params),
+            RpcMethod::SnapshotComplete => self.snapshot_complete(req.id),
             RpcMethod::MigrationAssess => self.migration_assess(req.id, &req.params),
             RpcMethod::MigrationPlan => self.migration_plan(req.id, &req.params),
             RpcMethod::MigrationRepair => self.migration_repair(req.id, &req.params),
@@ -242,6 +244,28 @@ impl RequestHandler {
             }
             RpcMethod::GetProcess => self.get_process(req.id, &req.params),
             RpcMethod::NetworkTest => self.network_test(req.id, &req.params),
+            RpcMethod::SecurityPosture => {
+                let report = crate::agent::posture::collect();
+                match serde_json::to_value(&report) {
+                    Ok(v) => JsonRpcResponse::success(req.id, v),
+                    Err(e) => JsonRpcResponse::error(
+                        req.id,
+                        RpcErrorCode::InternalError,
+                        e.to_string(),
+                    ),
+                }
+            }
+            RpcMethod::NetworkConnections => {
+                let intel = crate::agent::netintel::collect();
+                match serde_json::to_value(&intel) {
+                    Ok(v) => JsonRpcResponse::success(req.id, v),
+                    Err(e) => JsonRpcResponse::error(
+                        req.id,
+                        RpcErrorCode::InternalError,
+                        e.to_string(),
+                    ),
+                }
+            }
             RpcMethod::TimeSyncNow => self.time_sync_now(req.id),
             RpcMethod::Reboot => self.power_action(req.id, &req.params, "reboot"),
             RpcMethod::Shutdown => self.power_action(req.id, &req.params, "shutdown"),
@@ -401,6 +425,25 @@ impl RequestHandler {
                 RpcErrorCode::PlanApplyFailed,
                 format!("repair apply failed: {e}"),
             ),
+        }
+    }
+
+    fn snapshot_prepare(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
+        let watchdog_secs = params.get("watchdog_secs").and_then(Value::as_u64);
+        match crate::agent::snapshot::prepare(watchdog_secs) {
+            Ok(report) => {
+                JsonRpcResponse::success(id, serde_json::to_value(report).unwrap_or(json!({})))
+            }
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),
+        }
+    }
+
+    fn snapshot_complete(&self, id: Option<Value>) -> JsonRpcResponse {
+        match crate::agent::snapshot::complete() {
+            Ok(report) => {
+                JsonRpcResponse::success(id, serde_json::to_value(report).unwrap_or(json!({})))
+            }
+            Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),
         }
     }
 

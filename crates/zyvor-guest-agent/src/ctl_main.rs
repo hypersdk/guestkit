@@ -53,6 +53,22 @@ enum Cmd {
         #[arg(long, default_value = "kvm")]
         target: String,
     },
+    /// Security posture report
+    Posture,
+    /// Network connections with process/unit correlation
+    Connections {
+        /// Show only the aggregated egress map
+        #[arg(long)]
+        egress: bool,
+    },
+    /// Application-consistent snapshot: quiesce apps + freeze
+    SnapshotPrepare {
+        /// Auto-thaw watchdog in seconds
+        #[arg(long, default_value_t = 120)]
+        watchdog: u64,
+    },
+    /// Complete a prepared snapshot: thaw + resume applications
+    SnapshotComplete,
     /// Freeze filesystems
     Freeze,
     /// Thaw filesystems
@@ -72,8 +88,45 @@ enum Cmd {
     },
 }
 
+#[cfg(unix)]
 fn call(cli: &Cli, method: &str, params: Value) -> Result<Value> {
     guestkit::agent::local_client::call_local(cli.socket.as_deref(), method, params)
+}
+
+/// Windows: framed request/response over the agent's named pipe.
+#[cfg(windows)]
+fn call(cli: &Cli, method: &str, params: Value) -> Result<Value> {
+    use std::io::{Read, Write};
+    let pipe_path = cli
+        .socket
+        .clone()
+        .unwrap_or_else(|| guestkit::agent::transport::named_pipe::PIPE_NAME.to_string());
+    let mut pipe = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&pipe_path)
+        .map_err(|e| anyhow::anyhow!("connect to agent pipe {pipe_path}: {e}"))?;
+    let req = serde_json::json!({
+        "jsonrpc": "2.0", "method": method, "params": params, "id": 1
+    });
+    let payload = serde_json::to_vec(&req)?;
+    pipe.write_all(&(payload.len() as u32).to_be_bytes())?;
+    pipe.write_all(&payload)?;
+    pipe.flush()?;
+    let mut len_buf = [0u8; 4];
+    pipe.read_exact(&mut len_buf)?;
+    let len = u32::from_be_bytes(len_buf) as usize;
+    let mut frame = vec![0u8; len];
+    pipe.read_exact(&mut frame)?;
+    let resp: serde_json::Value = serde_json::from_slice(&frame)?;
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!(
+            "agent RPC error {}: {}",
+            err.get("code").and_then(Value::as_i64).unwrap_or(0),
+            err.get("message").and_then(Value::as_str).unwrap_or("")
+        );
+    }
+    Ok(resp.get("result").cloned().unwrap_or(Value::Null))
 }
 
 fn print_result(cli: &Cli, value: &Value) {
@@ -168,6 +221,75 @@ fn main() -> Result<()> {
                     }
                 }
             }
+        }
+        Cmd::Posture => {
+            let report = call(&cli, "guestkit.security.posture", json!({}))?;
+            if cli.json {
+                print_result(&cli, &report);
+            } else {
+                println!("Security Posture: {}/100", report["overall_score"]);
+                if let Some(cats) = report["categories"].as_array() {
+                    for cat in cats {
+                        println!("  {:<20} {}", cat["name"].as_str().unwrap_or(""), cat["score"]);
+                        if let Some(findings) = cat["findings"].as_array() {
+                            for f in findings.iter().filter(|f| f["passed"] == false) {
+                                println!(
+                                    "    ✗ [{}] {}",
+                                    f["id"].as_str().unwrap_or(""),
+                                    f["message"].as_str().unwrap_or("")
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Cmd::Connections { egress } => {
+            let intel = call(&cli, "guestkit.network.connections", json!({}))?;
+            if cli.json {
+                print_result(&cli, &intel);
+            } else if *egress {
+                println!("Egress map (process → destination):");
+                if let Some(edges) = intel["egress"].as_array() {
+                    for e in edges {
+                        println!(
+                            "  {} [{}] → {} ({} conn)",
+                            e["process"].as_str().unwrap_or("?"),
+                            e["unit"].as_str().unwrap_or("-"),
+                            e["destination"].as_str().unwrap_or("?"),
+                            e["connections"]
+                        );
+                    }
+                }
+            } else {
+                println!(
+                    "listening: {}  established: {}  unique remotes: {}",
+                    intel["total_listening"], intel["total_established"], intel["unique_remotes"]
+                );
+                if let Some(listeners) = intel["listeners"].as_array() {
+                    for l in listeners {
+                        println!(
+                            "  LISTEN {}:{} {} [{}]",
+                            l["local_addr"].as_str().unwrap_or(""),
+                            l["local_port"],
+                            l["process"].as_str().unwrap_or(""),
+                            l["unit"].as_str().unwrap_or("-")
+                        );
+                    }
+                }
+            }
+        }
+        Cmd::SnapshotPrepare { watchdog } => {
+            let r = call(
+                &cli,
+                "guestkit.snapshot.prepare",
+                json!({ "watchdog_secs": watchdog }),
+            )?;
+            print_result(&cli, &r);
+        }
+        Cmd::SnapshotComplete => {
+            let r = call(&cli, "guestkit.snapshot.complete", json!({}))?;
+            print_result(&cli, &r);
         }
         Cmd::Freeze => {
             let r = call(&cli, "guestkit.freezeFilesystem", json!({}))?;

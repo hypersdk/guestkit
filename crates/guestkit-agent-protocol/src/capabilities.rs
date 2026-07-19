@@ -75,6 +75,8 @@ pub const METHOD_START_UNIT: &str = "guestkit.startUnit";
 pub const METHOD_STOP_UNIT: &str = "guestkit.stopUnit";
 pub const METHOD_GET_PROCESS: &str = "guestkit.getProcess";
 pub const METHOD_NETWORK_TEST: &str = "guestkit.networkTest";
+pub const METHOD_NETWORK_CONNECTIONS: &str = "guestkit.network.connections";
+pub const METHOD_SECURITY_POSTURE: &str = "guestkit.security.posture";
 pub const METHOD_STORAGE_RESCAN: &str = "guestkit.storageRescan";
 pub const METHOD_STORAGE_TRIM: &str = "guestkit.storageTrim";
 pub const METHOD_STORAGE_EXPAND: &str = "guestkit.storageExpand";
@@ -87,6 +89,10 @@ pub const METHOD_SET_TIME: &str = "guestkit.setTime";
 pub const METHOD_TIME_SYNC_NOW: &str = "guestkit.timeSyncNow";
 pub const METHOD_REBOOT: &str = "guestkit.reboot";
 pub const METHOD_SHUTDOWN: &str = "guestkit.shutdown";
+
+// --- Protocol 1.3: orchestrated snapshots ---
+pub const METHOD_SNAPSHOT_PREPARE: &str = "guestkit.snapshot.prepare";
+pub const METHOD_SNAPSHOT_COMPLETE: &str = "guestkit.snapshot.complete";
 
 // --- Protocol 1.3: migration assurance ---
 pub const METHOD_MIGRATION_ASSESS: &str = "guestkit.migration.assess";
@@ -169,6 +175,8 @@ impl AgentCapabilities {
                 METHOD_STOP_UNIT.to_string(),
                 METHOD_GET_PROCESS.to_string(),
                 METHOD_NETWORK_TEST.to_string(),
+                METHOD_NETWORK_CONNECTIONS.to_string(),
+                METHOD_SECURITY_POSTURE.to_string(),
                 METHOD_TIME_SYNC_NOW.to_string(),
                 METHOD_REBOOT.to_string(),
                 METHOD_SHUTDOWN.to_string(),
@@ -186,6 +194,8 @@ impl AgentCapabilities {
                 METHOD_FILE_STAT.to_string(),
                 METHOD_FILE_LIST.to_string(),
                 METHOD_FILE_CHECKSUM.to_string(),
+                METHOD_SNAPSHOT_PREPARE.to_string(),
+                METHOD_SNAPSHOT_COMPLETE.to_string(),
                 METHOD_STORAGE_RESCAN.to_string(),
                 METHOD_STORAGE_TRIM.to_string(),
                 METHOD_STORAGE_EXPAND.to_string(),
