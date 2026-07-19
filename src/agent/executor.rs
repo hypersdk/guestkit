@@ -34,20 +34,32 @@ impl Executor {
             bail!("restart_unit denied by policy for {unit}");
         }
         if crate::agent::executor_ipc::executor_available() {
-            let result = crate::agent::executor_ipc::call_executor(
+            if let Ok(result) = crate::agent::executor_ipc::call_executor(
                 "restart_unit",
                 serde_json::json!({ "unit": unit }),
-            )?;
-            return result
-                .as_str()
-                .map(String::from)
-                .ok_or_else(|| anyhow::anyhow!("unexpected executor response"));
+            ) {
+                if let Some(msg) = result.as_str() {
+                    return Ok(msg.to_string());
+                }
+            }
+            // Fall through to a direct restart if the helper errored.
         }
         #[cfg(target_os = "linux")]
         {
-            let msg = crate::collectors::dbus::systemd1::restart_unit(unit)?;
-            self.audit("restart_unit", unit, true, &msg);
-            Ok(msg)
+            // Prefer the D-Bus path; fall back to `systemctl restart` (as
+            // control_unit does for start/stop), which is more robust on static
+            // musl builds where the system bus can be unreachable.
+            match crate::collectors::dbus::systemd1::restart_unit(unit) {
+                Ok(msg) => {
+                    self.audit("restart_unit", unit, true, &msg);
+                    Ok(msg)
+                }
+                Err(dbus_err) => self.run_systemctl("restart", unit).map_err(|se| {
+                    anyhow::anyhow!(
+                        "restart via D-Bus failed ({dbus_err}); systemctl fallback failed ({se})"
+                    )
+                }),
+            }
         }
         #[cfg(not(target_os = "linux"))]
         {
