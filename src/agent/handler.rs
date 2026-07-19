@@ -610,7 +610,9 @@ impl RequestHandler {
                 format!("no such process: {pid}"),
             );
         };
-        let info = json!({
+        // Mutated only in the Linux cgroup-enrichment block below.
+        #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
+        let mut info = json!({
             "pid": pid,
             "name": proc_.name().to_string_lossy(),
             "exe": proc_.exe().map(|p| p.display().to_string()),
