@@ -44,17 +44,28 @@
 //! - `cli` - Command-line interface
 
 pub mod ai;
+#[cfg(not(target_os = "windows"))]
 pub mod assurance;
 pub mod boot;
 pub mod cli;
-pub mod converters;
 pub mod core;
-pub mod disk;
 pub mod evidence;
+// Offline host-side subsystems (disk mounting, LVM, format conversion) are
+// Unix-only and not used by the in-guest agent at runtime; exclude them from
+// the Windows agent build so the crate compiles for Windows guests.
+#[cfg(not(target_os = "windows"))]
+pub mod converters;
+#[cfg(not(target_os = "windows"))]
+pub mod disk;
+#[cfg(not(target_os = "windows"))]
 pub mod export;
+#[cfg(not(target_os = "windows"))]
 pub mod fleet;
+#[cfg(not(target_os = "windows"))]
 pub mod guestfs;
+#[cfg(not(target_os = "windows"))]
 pub mod inference;
+#[cfg(not(target_os = "windows"))]
 pub mod storage;
 
 #[cfg(feature = "agent")]
@@ -81,21 +92,26 @@ pub mod python;
 pub mod agent;
 
 // Re-exports for convenience
+#[cfg(not(target_os = "windows"))]
 pub use assurance::{
     boot_target_from_str, collect_assurance_data, run_boot_inspect, run_doctor, run_migrate_plan,
     run_repair_plan, BootInspectSummary, DoctorResult, MigratePlanOptions, MigrationPlanResult,
     RepairOptions, RepairPlanResult,
 };
 pub use boot::{BootTarget, BootabilityReport};
+#[cfg(not(target_os = "windows"))]
 pub use converters::DiskConverter;
 pub use core::types::*;
 pub use core::{Error, Result, RetryConfig};
+#[cfg(not(target_os = "windows"))]
 pub use disk::{DiskReader, FileSystem, PartitionTable};
 pub use evidence::EvidenceSnapshot;
+#[cfg(not(target_os = "windows"))]
 pub use export::{
     create_variable_map, HtmlExportOptions, HtmlExporter, PaperSize, PdfExportOptions, PdfExporter,
     TemplateEngine, TemplateFormat, TemplateLevel,
 };
+#[cfg(not(target_os = "windows"))]
 pub use guestfs::Guestfs;
 
 #[cfg(feature = "guest-inspect")]

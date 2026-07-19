@@ -3,8 +3,11 @@ BINDIR ?= $(PREFIX)/bin
 CARGO ?= cargo
 BINARY = guestkit
 
+WIN_TARGET ?= x86_64-pc-windows-gnu
+
 .PHONY: all build release install uninstall clean check test fmt clippy selftest \
 	test-features test-features-remote \
+	agent-linux agent-windows windows-bundle windows-check \
 	deploy deploy-remote deploy-remote-quick deploy-remote-preflight deploy-remote-verify deploy-remote-uninstall deploy-remote-fleet
 
 all: build
@@ -37,6 +40,22 @@ clippy:
 
 selftest:
 	bash scripts/selftest.sh
+
+## --- In-guest agent (Linux + Windows) ---
+
+agent-linux: ## Build the Linux in-guest agent (guestkitd/guestkitctl/guestkitd-exec)
+	$(CARGO) build --release -p zyvor-guest-agent
+
+agent-windows: ## Cross-compile the Windows agent (needs mingw-w64 + rustup win-gnu target)
+	rustup target add $(WIN_TARGET) 2>/dev/null || true
+	$(CARGO) build --release -p zyvor-guest-agent --target $(WIN_TARGET)
+
+windows-check: ## Type-check the Windows agent without linking (fast CI gate)
+	rustup target add $(WIN_TARGET) 2>/dev/null || true
+	$(CARGO) check -p zyvor-guest-agent --target $(WIN_TARGET)
+
+windows-bundle: ## Build Windows agent + MSI + downloadable ISO (needs wixl + genisoimage)
+	bash scripts/build-windows-bundle.sh
 
 test-features: ## Compile+clippy matrix of every feature (run locally; needs libhivex/libsystemd)
 	bash scripts/test-feature-matrix.sh

@@ -127,7 +127,7 @@ fn powershell_bool(script: &str) -> Option<bool> {
     match raw.to_lowercase().as_str() {
         "true" | "1" => Some(true),
         "false" | "0" => Some(false),
-        _ => raw.parse::<usize>().map(|n| n != 0),
+        _ => raw.parse::<usize>().map(|n| n != 0).ok(),
     }
 }
 

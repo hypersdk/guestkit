@@ -6,7 +6,9 @@ pub mod stdio;
 #[cfg(unix)]
 pub mod unix_listen;
 pub mod virtio;
+#[cfg(not(target_os = "windows"))]
 pub mod vsock;
+#[cfg(not(target_os = "windows"))]
 pub mod vsock_host;
 pub mod zeus_push;
 
@@ -55,7 +57,10 @@ impl FramedTransport {
     pub fn open(config: &TransportConfig) -> Result<Self> {
         let mut transport = match config.kind {
             ChannelKind::Virtio => virtio::open(&config.device_path)?,
+            #[cfg(not(target_os = "windows"))]
             ChannelKind::Vsock => vsock::open(config.vsock_cid, config.vsock_port)?,
+            #[cfg(target_os = "windows")]
+            ChannelKind::Vsock => anyhow::bail!("AF_VSOCK transport is not available on Windows"),
             ChannelKind::Stdio => stdio::open()?,
         };
         transport.line_framing = config.kind == ChannelKind::Virtio;
