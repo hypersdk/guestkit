@@ -384,6 +384,7 @@ pub fn apply_staged_update_privileged() -> Result<String> {
         if Path::new(target).parent().map(|p| p.exists()).unwrap_or(false) {
             fs::copy(STAGED_AGENT, target)
                 .with_context(|| format!("install staged binary to {target}"))?;
+            #[cfg(unix)]
             fs::set_permissions(target, fs::Permissions::from_mode(0o755))?;
             updated.push(target.to_string());
         }

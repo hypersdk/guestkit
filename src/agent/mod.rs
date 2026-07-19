@@ -16,6 +16,7 @@ pub mod executor_ipc;
 pub mod file_ops;
 pub mod handler;
 pub mod heartbeat;
+#[cfg(not(target_os = "windows"))]
 pub mod inject;
 pub mod integrity;
 #[cfg(unix)]
@@ -29,6 +30,7 @@ pub mod users;
 pub mod state;
 pub mod storage_ops;
 pub mod telemetry;
+#[cfg(not(target_os = "windows"))]
 pub mod proxy;
 pub mod qga;
 pub mod rdp;
@@ -39,14 +41,15 @@ pub mod transport;
 pub mod update_sign;
 pub mod updater;
 
+#[cfg(unix)]
 pub use agent_call::call_agent_socket;
-pub use cli::{
-    run_agent, run_agent_call, run_agent_proxy, AgentArgs, AgentCallArgs, AgentChannel,
-    AgentProxyArgs,
-};
+pub use cli::{run_agent, AgentArgs, AgentChannel};
+#[cfg(unix)]
+pub use cli::{run_agent_call, run_agent_proxy, AgentCallArgs, AgentProxyArgs};
 pub use daemon::AgentDaemon;
 
-/// Ping guest agent via libvirt channel unix socket.
+/// Ping guest agent via libvirt channel unix socket (host-side, Unix only).
+#[cfg(unix)]
 pub fn ping_agent_socket(socket_path: &str) -> bool {
     use guestkit_agent_protocol::{read_frame, write_frame};
     use std::os::unix::net::UnixStream;

@@ -12,6 +12,63 @@ async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let args: Vec<String> = env::args().collect();
 
+    // Self-test: run a battery of read-only RPC methods against the local
+    // handler and write the results as JSON to a file. Used to validate the
+    // agent (especially the Windows probe code paths) at runtime without a
+    // transport/channel — e.g. driven by a boot service inside a VM.
+    if let Some(idx) = args.iter().position(|a| a == "selftest") {
+        let out = args.get(idx + 1).cloned().unwrap_or_else(|| {
+            if cfg!(windows) {
+                "C:\\gk-selftest.json".to_string()
+            } else {
+                "/tmp/gk-selftest.json".to_string()
+            }
+        });
+        let handler = guestkit::agent::handler::RequestHandler::new();
+        // Fast, self-contained probes first; heavier live-evidence collection
+        // (many PowerShell spawns) last, so a slow/hung probe still leaves the
+        // earlier results on disk. Results are flushed after every method.
+        let methods = [
+            "guestkit.ping",
+            "guestkit.getVersion",
+            "guestkit.getCapabilities",
+            "guestkit.getAgentHealth",
+            "guestkit.users.inventory",
+            "guestkit.integrity.baseline",
+            "guestkit.integrity.check",
+            "guestkit.containers.inventory",
+            "guestkit.certificates.inventory",
+            "guestkit.packages.inventory",
+            "guestkit.security.posture",
+            "guestkit.getEvidence",
+        ];
+        let mut results = serde_json::Map::new();
+        let flush = |results: &serde_json::Map<String, serde_json::Value>, done: &str| {
+            let doc = serde_json::json!({
+                "platform": std::env::consts::OS,
+                "agent_version": guestkit::VERSION,
+                "last_completed": done,
+                "results": results,
+            });
+            let _ = std::fs::write(&out, serde_json::to_vec_pretty(&doc).unwrap_or_default());
+        };
+        // Start marker so we can tell the exe ran even if the first probe hangs.
+        flush(&results, "starting");
+        for m in methods {
+            let req = format!(r#"{{"jsonrpc":"2.0","method":"{m}","id":1}}"#);
+            let resp = handler.handle(req.as_bytes());
+            let entry = if let Some(err) = &resp.error {
+                serde_json::json!({ "ok": false, "error": err.message })
+            } else {
+                serde_json::json!({ "ok": true, "result": resp.result })
+            };
+            results.insert(m.to_string(), entry);
+            flush(&results, m);
+        }
+        println!("selftest written to {out}");
+        return Ok(());
+    }
+
     if args.iter().any(|a| a == "rpc" || a == "--rpc") {
         #[cfg(unix)]
         {
