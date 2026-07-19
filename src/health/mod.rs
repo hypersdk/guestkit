@@ -347,6 +347,17 @@ fn read_inode_usage_percent() -> u8 {
     statvfs_inode_usage("/").unwrap_or(0)
 }
 
+#[cfg(target_os = "windows")]
+fn statvfs_usage(_path: &str) -> Option<u8> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn statvfs_inode_usage(_path: &str) -> Option<u8> {
+    None
+}
+
+#[cfg(not(target_os = "windows"))]
 fn statvfs_usage(path: &str) -> Option<u8> {
     use std::ffi::CString;
     let c_path = CString::new(path).ok()?;
@@ -361,6 +372,7 @@ fn statvfs_usage(path: &str) -> Option<u8> {
     Some(((used as u64) * 100 / stat.f_blocks as u64) as u8)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn statvfs_inode_usage(path: &str) -> Option<u8> {
     use std::ffi::CString;
     let c_path = CString::new(path).ok()?;

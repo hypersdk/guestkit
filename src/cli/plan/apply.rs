@@ -6,12 +6,14 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Applies fix plans to VM disks
+/// Applies fix plans to VM disks (offline, via guestfs — Unix host only).
+#[cfg(not(target_os = "windows"))]
 pub struct PlanApplicator {
     vm_path: String,
     dry_run: bool,
 }
 
+#[cfg(not(target_os = "windows"))]
 impl PlanApplicator {
     /// Create a new plan applicator
     pub fn new(vm_path: String, dry_run: bool) -> Self {

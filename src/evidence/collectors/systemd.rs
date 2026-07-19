@@ -5,6 +5,7 @@ use crate::evidence::snapshot::{
     SystemdInfo, SystemdProblemHint, SystemdProblemSeverity, SystemdUnit, SystemdUnitSection,
     SystemdUnitState,
 };
+#[cfg(not(target_os = "windows"))]
 use crate::Guestfs;
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -22,6 +23,7 @@ const UNIT_DIRS: &[&str] = &[
 ];
 
 /// Collect systemd evidence from a mounted guest image via Guestfs.
+#[cfg(not(target_os = "windows"))]
 pub fn collect_systemd_guest(g: &mut Guestfs, init_system: &str) -> Option<SystemdInfo> {
     if !init_system.eq_ignore_ascii_case("systemd")
         && !g.exists("/usr/lib/systemd/system").unwrap_or(false)
@@ -119,12 +121,14 @@ pub fn collect_systemd_live() -> Option<SystemdInfo> {
     Some(info)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn read_guest_file(g: &mut Guestfs, path: &str) -> Option<String> {
     g.read_file(path)
         .ok()
         .map(|b| String::from_utf8_lossy(&b).into_owned())
 }
 
+#[cfg(not(target_os = "windows"))]
 fn read_systemd_version_guest(g: &mut Guestfs) -> Option<String> {
     for path in ["/usr/lib/systemd/systemd", "/lib/systemd/systemd"] {
         if g.exists(path).unwrap_or(false) {
@@ -246,6 +250,7 @@ fn split_deps(value: Option<&String>) -> Vec<String> {
         .unwrap_or_default()
 }
 
+#[cfg(not(target_os = "windows"))]
 fn discover_enabled_units_guest(g: &mut Guestfs) -> HashSet<String> {
     let mut enabled = HashSet::new();
     for base in UNIT_DIRS {
@@ -268,6 +273,7 @@ fn discover_enabled_units_guest(g: &mut Guestfs) -> HashSet<String> {
     enabled
 }
 
+#[cfg(not(target_os = "windows"))]
 fn discover_masked_units_guest(g: &mut Guestfs) -> HashSet<String> {
     let mut masked = HashSet::new();
     for base in ["/etc/systemd/system", "/run/systemd/system"] {

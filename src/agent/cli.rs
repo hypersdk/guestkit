@@ -2,6 +2,7 @@
 //! CLI entry points for agent subcommands.
 
 use crate::agent::daemon::AgentDaemon;
+#[cfg(not(target_os = "windows"))]
 use crate::agent::proxy;
 use crate::agent::transport::{ChannelKind, TransportConfig};
 use anyhow::{Context, Result};
@@ -66,6 +67,7 @@ pub struct AgentCallArgs {
     pub params: Option<String>,
 }
 
+#[cfg(unix)]
 pub async fn run_agent_call(args: AgentCallArgs) -> Result<()> {
     let params = match args.params.as_deref() {
         Some(raw) if !raw.trim().is_empty() => {
@@ -83,6 +85,7 @@ pub async fn run_agent_call(args: AgentCallArgs) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(target_os = "windows"))]
 pub async fn run_agent_proxy(args: AgentProxyArgs) -> Result<()> {
     proxy::run_proxy(
         args.socket.as_deref(),

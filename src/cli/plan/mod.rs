@@ -11,8 +11,10 @@
 #![allow(unused_imports)]
 
 pub mod apply;
+#[cfg(not(target_os = "windows"))]
 pub mod command;
 pub mod export;
+#[cfg(not(target_os = "windows"))]
 pub mod generator;
 pub mod preview;
 pub mod types;
@@ -26,10 +28,14 @@ pub use types::{
     RegistryEdit, SELinuxMode, ServiceOperation,
 };
 
-pub use apply::{ApplyResult, PlanApplicator};
+pub use apply::ApplyResult;
+#[cfg(not(target_os = "windows"))]
+pub use apply::PlanApplicator;
+#[cfg(not(target_os = "windows"))]
 pub use command::PlanCommand;
 #[cfg(feature = "agent")]
 pub use executor_live::LivePlanExecutor;
 pub use export::PlanExporter;
+#[cfg(not(target_os = "windows"))]
 pub use generator::PlanGenerator;
 pub use preview::PlanPreview;
