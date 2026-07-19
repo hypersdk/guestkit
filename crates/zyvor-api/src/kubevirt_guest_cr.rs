@@ -15,6 +15,56 @@ pub fn vmguestagent_resource() -> ApiResource {
     }
 }
 
+/// Migration-readiness fragment for VMGuestAgent status, built from the
+/// agent's `guestkit.migration.assess` payload (protocol 1.3). Returns None
+/// when the payload lacks assessment fields.
+pub fn migration_readiness_status(assessment: &Value) -> Option<Value> {
+    let score = assessment.get("overall_score").and_then(|v| v.as_f64())?;
+    let readiness = assessment.get("readiness").and_then(|v| v.as_str())?;
+    let subs = assessment.get("sub_scores").cloned().unwrap_or(json!({}));
+    let blockers: Vec<Value> = assessment
+        .get("critical_blockers")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .map(|b| {
+                    json!({
+                        "checkId": b.get("check_id").and_then(|v| v.as_str()).unwrap_or(""),
+                        "title": b.get("title").and_then(|v| v.as_str()).unwrap_or(""),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(json!({
+        "score": score,
+        "readiness": readiness,
+        "subScores": subs,
+        "blockers": blockers,
+        "target": assessment.get("target").and_then(|v| v.as_str()).unwrap_or(""),
+        "assessedAt": assessment.get("assessed_at").and_then(|v| v.as_str()).unwrap_or(""),
+    }))
+}
+
+/// Merge a migration assessment into VMGuestAgent status.
+pub async fn patch_vmguestagent_migration(
+    client: &Client,
+    namespace: &str,
+    vm_name: &str,
+    assessment: &Value,
+) {
+    let Some(fragment) = migration_readiness_status(assessment) else {
+        return;
+    };
+    let cr_name = format!("{vm_name}-vmtools");
+    let ar = vmguestagent_resource();
+    let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), namespace, &ar);
+    let status = json!({ "status": { "migrationReadiness": fragment } });
+    let _ = api
+        .patch_status(&cr_name, &PatchParams::default(), &Patch::Merge(&status))
+        .await;
+}
+
 /// Patch VMGuestAgent status with live guest health from agent push.
 pub async fn patch_vmguestagent_health(
     client: &Client,
