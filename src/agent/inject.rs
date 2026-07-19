@@ -67,6 +67,7 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
     plan.operations.push(Operation {
         id: format!("agent-{:03}", op_base + 2),
         op_type: OperationType::CommandExec(CommandExec {
+            interpreter: None,
             command: "chmod 0755 /usr/local/bin/zyvor-guest-agent".to_string(),
             expected_exit: 0,
             timeout: Some(30),
@@ -83,6 +84,7 @@ pub fn append_agent_ops(plan: &mut FixPlan, binary: &Path, unit_content: &str) -
     plan.operations.push(Operation {
         id: format!("agent-{:03}", op_base + 3),
         op_type: OperationType::CommandExec(CommandExec {
+            interpreter: None,
             command: "systemctl enable zyvor-guest-agent || true".to_string(),
             expected_exit: 0,
             timeout: Some(60),

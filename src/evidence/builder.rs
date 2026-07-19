@@ -31,7 +31,7 @@ impl EvidenceBuilder {
             None
         };
 
-        Ok(EvidenceSnapshot {
+        let mut snapshot = EvidenceSnapshot {
             schema_version: SCHEMA_VERSION,
             image_path: image_path.display().to_string(),
             collected_at: Utc::now().to_rfc3339(),
@@ -51,7 +51,40 @@ impl EvidenceBuilder {
             snapshot_readiness: None,
             process: None,
             hardware: None,
-        })
+            linux_migration: None,
+        };
+        Self::derive_migration_fields(&mut snapshot);
+        Ok(snapshot)
+    }
+
+    /// Fill schema-v4 migration fields derivable from already-collected
+    /// evidence (no extra guestfs round trips).
+    fn derive_migration_fields(snapshot: &mut EvidenceSnapshot) {
+        let boot = &mut snapshot.boot;
+        if boot.firmware.is_empty() {
+            boot.firmware = if boot.efi_present { "uefi" } else { "bios" }.to_string();
+        }
+        boot.serial_console_configured = boot.kernel_cmdline.contains("console=ttyS");
+
+        if !snapshot.os.os_type.to_lowercase().contains("windows") {
+            let hypervisor_modules: Vec<String> = boot
+                .loaded_modules
+                .iter()
+                .filter(|m| {
+                    m.starts_with("vmw_")
+                        || m.starts_with("vmxnet")
+                        || m.starts_with("hv_")
+                        || m.starts_with("xen")
+                })
+                .cloned()
+                .collect();
+            let predictable = Some(!boot.kernel_cmdline.contains("net.ifnames=0"));
+            snapshot.linux_migration = Some(crate::evidence::snapshot::LinuxMigrationEvidence {
+                predictable_nic_names: predictable,
+                static_ip_configs: Vec::new(),
+                hypervisor_modules,
+            });
+        }
     }
 
     fn collect_os(g: &mut Guestfs, root: &str) -> OsEvidence {
@@ -117,6 +150,9 @@ impl EvidenceBuilder {
             swap_devices,
             root_filesystem,
             partition_uuids,
+            free_space_root_mb: None,
+            boot_disk: None,
+            disk_controller: None,
         }
     }
 
@@ -209,6 +245,10 @@ impl EvidenceBuilder {
             loaded_modules,
             pending_relabel,
             cloud_init_present,
+            initramfs_modules: Vec::new(),
+            secure_boot: None,
+            firmware: String::new(),
+            serial_console_configured: false,
         }
     }
 
@@ -408,6 +448,8 @@ impl EvidenceBuilder {
 
         let details = collect_windows_details(g, root);
 
+        let virtio_drivers = Self::derive_virtio_drivers(&details.services);
+
         WindowsEvidence {
             systemroot,
             product_name,
@@ -429,7 +471,48 @@ impl EvidenceBuilder {
             installed_apps: details.installed_apps,
             persistence: details.persistence,
             event_logs: details.event_logs,
+            virtio_drivers,
+            bitlocker: None,
+            vss: None,
+            ghost_nics: Vec::new(),
+            static_nic_configs: Vec::new(),
+            driver_signature_enforcement: None,
+            esp_present: Some(bootmgr_found),
+            activation: None,
         }
+    }
+
+    /// VirtIO driver install state derived from the parsed SYSTEM hive
+    /// service entries — the migration-critical set plus their boot flags.
+    fn derive_virtio_drivers(
+        services: &[crate::evidence::snapshot::WindowsServiceEntry],
+    ) -> Vec<crate::evidence::snapshot::WindowsDriverEntry> {
+        use crate::evidence::snapshot::{WindowsDriverEntry, WindowsStartType};
+        const VIRTIO: &[&str] = &["viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng"];
+        VIRTIO
+            .iter()
+            .map(|name| {
+                let entry = services
+                    .iter()
+                    .find(|s| s.name.eq_ignore_ascii_case(name) && s.kernel_driver);
+                match entry {
+                    Some(s) => WindowsDriverEntry {
+                        name: name.to_string(),
+                        version: None,
+                        start_type: format!("{:?}", s.start_type).to_lowercase(),
+                        boot_critical: s.start_type == WindowsStartType::Boot,
+                        present: true,
+                    },
+                    None => WindowsDriverEntry {
+                        name: name.to_string(),
+                        version: None,
+                        start_type: String::new(),
+                        boot_critical: false,
+                        present: false,
+                    },
+                }
+            })
+            .collect()
     }
 }
 

@@ -5390,9 +5390,12 @@ name = "zyvor-guest-agent"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
+ "clap",
  "env_logger",
  "guestkit",
  "log",
+ "serde_json",
  "tokio",
  "windows-service",
 ]

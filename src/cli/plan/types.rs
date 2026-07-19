@@ -122,6 +122,30 @@ pub enum OperationType {
 
     /// Set file permissions
     FilePermissions(FilePermissions),
+
+    /// Inject a Windows driver (pnputil live; virtio-win extraction offline)
+    DriverInject(DriverInject),
+}
+
+/// Windows driver injection. Kept as a first-class operation (rather than
+/// an opaque CommandExec) so repair plans stay introspectable and
+/// auditable. Boot-critical registration (Start=0, Group) is a separate
+/// RegistryEdit chained via depends_on.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriverInject {
+    /// Path to the .inf file inside the guest (or image, offline).
+    pub inf_path: String,
+
+    /// Driver name (e.g. "vioscsi", "netkvm").
+    pub driver_name: String,
+
+    /// Whether this driver must be registered boot-critical.
+    #[serde(default)]
+    pub boot_critical: bool,
+
+    /// Where the driver came from (e.g. "virtio-win 0.1.262").
+    #[serde(default)]
+    pub source: String,
 }
 
 /// File editing operation
@@ -234,6 +258,11 @@ pub struct CommandExec {
     /// Optional timeout in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u64>,
+
+    /// Interpreter override (e.g. "powershell -NoProfile -Command").
+    /// Default: `sh -c` on Unix, PowerShell on Windows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interpreter: Option<String>,
 }
 
 /// File copy operation
@@ -481,6 +510,7 @@ mod tests {
                 command: "systemctl restart sshd".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::High,
             description: "Restart SSH service".to_string(),
@@ -629,7 +659,8 @@ mod tests {
             command: "apt-get update".to_string(),
             expected_exit: 0,
             timeout: Some(300),
-        };
+                interpreter: None,
+            };
 
         assert_eq!(cmd.command, "apt-get update");
         assert_eq!(cmd.expected_exit, 0);
@@ -700,6 +731,7 @@ mod tests {
                 command: "echo test".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Test operation".to_string(),

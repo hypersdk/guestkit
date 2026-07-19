@@ -23,23 +23,35 @@ pub fn build_snapshot_readiness_report() -> SnapshotReadinessReport {
 }
 
 pub fn freeze_filesystems() -> Result<String, String> {
-    if Command::new("fsfreeze").args(["-f", "/"]).status().is_ok() {
+    let result = if Command::new("fsfreeze").args(["-f", "/"]).status().is_ok() {
         Ok("filesystems frozen".into())
     } else if crate::agent::qga::freeze_fs().is_ok() {
         Ok("filesystems frozen via QGA".into())
     } else {
         Err("freeze failed".into())
+    };
+    if result.is_ok() {
+        crate::agent::state::AgentRuntime::global()
+            .fs_frozen_hint
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
+    result
 }
 
 pub fn thaw_filesystems() -> Result<String, String> {
-    if Command::new("fsfreeze").args(["-u", "/"]).status().is_ok() {
+    let result = if Command::new("fsfreeze").args(["-u", "/"]).status().is_ok() {
         Ok("filesystems thawed".into())
     } else if crate::agent::qga::thaw_fs().is_ok() {
         Ok("filesystems thawed via QGA".into())
     } else {
         Err("thaw failed".into())
+    };
+    if result.is_ok() {
+        crate::agent::state::AgentRuntime::global()
+            .fs_frozen_hint
+            .store(false, std::sync::atomic::Ordering::Relaxed);
     }
+    result
 }
 
 fn run_pre_snapshot_hooks() -> Vec<HookResult> {

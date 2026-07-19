@@ -9,8 +9,9 @@ pub mod vsock_host;
 pub mod zeus_push;
 
 use anyhow::Result;
-use guestkit_agent_protocol::{read_frame, read_line, write_frame, write_line};
+use guestkit_agent_protocol::{read_frame, read_line, write_frame, write_line, JsonRpcNotification};
 use std::io::{BufReader, Read, Write};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelKind {
@@ -35,6 +36,20 @@ pub struct FramedTransport {
 }
 
 impl FramedTransport {
+    /// Assemble a transport from raw halves. Used by loopback tests and
+    /// embedders; production channels go through [`FramedTransport::open`].
+    pub fn from_parts(
+        reader: Box<dyn Read + Send>,
+        writer: Box<dyn Write + Send>,
+        line_framing: bool,
+    ) -> Self {
+        Self {
+            reader,
+            writer,
+            line_framing,
+        }
+    }
+
     pub fn open(config: &TransportConfig) -> Result<Self> {
         let mut transport = match config.kind {
             ChannelKind::Virtio => virtio::open(&config.device_path)?,
@@ -80,5 +95,71 @@ impl FramedTransport {
 
     pub fn write_delimited_frame(&mut self, payload: &[u8]) -> Result<()> {
         self.write_message(payload, true)
+    }
+
+    /// Split into an owned reader half and a clonable, thread-safe writer
+    /// half so a background task (heartbeat push) can share the write side
+    /// with the request/response loop.
+    pub fn split(self) -> (TransportReader, SharedWriter) {
+        (
+            TransportReader {
+                reader: self.reader,
+                line_framing: self.line_framing,
+            },
+            SharedWriter {
+                inner: Arc::new(Mutex::new(self.writer)),
+                line_framing: self.line_framing,
+            },
+        )
+    }
+}
+
+/// Owned read half of a split [`FramedTransport`].
+pub struct TransportReader {
+    reader: Box<dyn Read + Send>,
+    line_framing: bool,
+}
+
+impl TransportReader {
+    pub fn read_message(&mut self) -> Result<Vec<u8>> {
+        if self.line_framing {
+            let mut buf = BufReader::new(&mut self.reader);
+            read_line(&mut buf).map_err(|e| anyhow::anyhow!("{e}"))
+        } else {
+            read_frame(&mut self.reader).map_err(|e| anyhow::anyhow!("{e}"))
+        }
+    }
+}
+
+/// Clonable, mutex-guarded write half of a split [`FramedTransport`].
+/// Frames are written whole under the lock, so responses and pushed
+/// notifications never interleave mid-frame.
+#[derive(Clone)]
+pub struct SharedWriter {
+    inner: Arc<Mutex<Box<dyn Write + Send>>>,
+    line_framing: bool,
+}
+
+impl SharedWriter {
+    pub fn write_message(&self, payload: &[u8], delimited: bool) -> Result<()> {
+        let mut writer = self.inner.lock().unwrap_or_else(|e| e.into_inner());
+        if self.line_framing {
+            if delimited {
+                guestkit_agent_protocol::write_delimited_line(&mut *writer, payload)
+                    .map_err(|e| anyhow::anyhow!("{e}"))
+            } else {
+                write_line(&mut *writer, payload).map_err(|e| anyhow::anyhow!("{e}"))
+            }
+        } else if delimited {
+            guestkit_agent_protocol::write_delimited_line(&mut *writer, payload)
+                .map_err(|e| anyhow::anyhow!("{e}"))
+        } else {
+            write_frame(&mut *writer, payload).map_err(|e| anyhow::anyhow!("{e}"))
+        }
+    }
+
+    pub fn send_notification(&self, n: &JsonRpcNotification) -> Result<()> {
+        let payload = serde_json::to_vec(n)?;
+        self.write_message(&payload, false)
     }
 }

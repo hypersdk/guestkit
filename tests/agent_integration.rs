@@ -78,3 +78,82 @@ fn protocol_frame_round_trip() {
     let mut cursor = Cursor::new(buf);
     assert_eq!(read_frame(&mut cursor).unwrap(), payload);
 }
+
+// --- Protocol 1.3 security choke point ---
+
+#[test]
+fn file_ops_denied_by_default_policy() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.fileRead","params":{"path":"/etc/hostname"},"id":10}"#,
+    );
+    let err = resp.error.expect("expected policy denial");
+    assert_eq!(err.code, -32005); // PolicyDenied
+}
+
+#[test]
+fn expired_request_rejected() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.unsubscribeEvents","id":11,
+             "ts":"2020-01-01T00:00:00Z","ttl_ms":1000}"#,
+    );
+    let err = resp.error.expect("expected expiry rejection");
+    assert_eq!(err.code, -32003); // RequestExpired
+}
+
+#[test]
+fn nonce_replay_rejected() {
+    let handler = RequestHandler::new();
+    let body = br#"{"jsonrpc":"2.0","method":"guestkit.unsubscribeEvents","id":12,"nonce":"replay-test-n1"}"#;
+    let first = handler.handle(body);
+    assert!(first.error.is_none(), "{:?}", first.error);
+    let second = handler.handle(body);
+    let err = second.error.expect("expected replay rejection");
+    assert_eq!(err.code, -32004); // ReplayDetected
+}
+
+#[test]
+fn idempotency_key_returns_cached_response() {
+    let handler = RequestHandler::new();
+    let first = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.unsubscribeEvents","id":13,"idempotency_key":"idem-test-k1"}"#,
+    );
+    assert!(first.error.is_none());
+    let second = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.unsubscribeEvents","id":14,"idempotency_key":"idem-test-k1"}"#,
+    );
+    assert!(second.error.is_none());
+    assert_eq!(second.id, Some(serde_json::json!(14)));
+    assert_eq!(first.result, second.result);
+}
+
+#[test]
+fn capabilities_report_categories_and_events() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.getCapabilities","id":15}"#);
+    let caps = resp.result.expect("capabilities");
+    assert_eq!(caps["events"], true);
+    let cats: Vec<String> =
+        serde_json::from_value(caps["categories"].clone()).expect("categories array");
+    assert!(cats.contains(&"telemetry".to_string()));
+    assert!(!cats.contains(&"file_ops".to_string()));
+}
+
+#[test]
+fn network_test_gateway_default() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.networkTest","params":{},"id":16}"#);
+    let result = resp.result.expect("network test result");
+    assert!(result.get("gateway").is_some());
+}
+
+#[test]
+fn performance_summary_empty_store_is_well_formed() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.getPerformanceSummary","params":{"tier":"fine"},"id":17}"#,
+    );
+    let result = resp.result.expect("summary");
+    assert_eq!(result["tier"], "fine");
+}

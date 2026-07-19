@@ -55,6 +55,49 @@ impl Executor {
         }
     }
 
+    /// Start or stop a service, honoring the same unit allowlist as
+    /// restart. `op` is "start" or "stop".
+    pub fn control_unit(&self, op: &str, unit: &str) -> Result<String> {
+        if !matches!(op, "start" | "stop") {
+            bail!("unsupported unit operation: {op}");
+        }
+        if !self.policy.can_restart_unit(unit) {
+            bail!("{op}_unit denied by policy for {unit}");
+        }
+        if crate::agent::executor_ipc::executor_available() {
+            let result = crate::agent::executor_ipc::call_executor(
+                &format!("{op}_unit"),
+                serde_json::json!({ "unit": unit }),
+            );
+            if let Ok(result) = result {
+                if let Some(msg) = result.as_str() {
+                    return Ok(msg.to_string());
+                }
+            }
+            // Fall through: older helper binaries only know restart_unit.
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let output = Command::new("sc.exe").arg(op).arg(unit).output()?;
+            let success = output.status.success();
+            self.audit(
+                &format!("sc_{op}"),
+                unit,
+                success,
+                &String::from_utf8_lossy(&output.stdout),
+            );
+            if success {
+                Ok(format!("{op} {unit} ok"))
+            } else {
+                bail!("sc {op} {unit}: {}", String::from_utf8_lossy(&output.stderr))
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.run_systemctl(op, unit)
+        }
+    }
+
     pub fn execute_remediation_plan(
         &self,
         plan_id: &str,

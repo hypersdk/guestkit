@@ -16,6 +16,12 @@ pub enum RpcErrorCode {
     NotImplemented = -32000,
     CapabilityDenied = -32001,
     PlanApplyFailed = -32002,
+    /// Request `ts + ttl_ms` window elapsed before execution.
+    RequestExpired = -32003,
+    /// Nonce was already used — replay rejected.
+    ReplayDetected = -32004,
+    /// Method allowed by capabilities but denied by local policy.
+    PolicyDenied = -32005,
 }
 
 impl RpcErrorCode {
@@ -47,6 +53,15 @@ pub enum AgentError {
     #[error("capability denied: {0}")]
     CapabilityDenied(String),
 
+    #[error("request expired: {0}")]
+    RequestExpired(String),
+
+    #[error("replay detected: {0}")]
+    ReplayDetected(String),
+
+    #[error("policy denied: {0}")]
+    PolicyDenied(String),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -61,6 +76,9 @@ impl AgentError {
             Self::Internal(_) => RpcErrorCode::InternalError,
             Self::NotImplemented(_) => RpcErrorCode::NotImplemented,
             Self::CapabilityDenied(_) => RpcErrorCode::CapabilityDenied,
+            Self::RequestExpired(_) => RpcErrorCode::RequestExpired,
+            Self::ReplayDetected(_) => RpcErrorCode::ReplayDetected,
+            Self::PolicyDenied(_) => RpcErrorCode::PolicyDenied,
             Self::Io(e) => {
                 if e.kind() == std::io::ErrorKind::UnexpectedEof {
                     RpcErrorCode::ParseError

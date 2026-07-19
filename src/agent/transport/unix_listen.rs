@@ -10,18 +10,36 @@ use std::path::Path;
 use std::sync::Arc;
 use std::thread;
 
-pub const DEFAULT_SOCKET_PATH: &str = "/var/run/zyvor/guest-agent.sock";
+/// Canonical GuestKit socket; the legacy zyvor path stays bound for
+/// existing tooling.
+pub const DEFAULT_SOCKET_PATH: &str = "/run/guestkit/agent.sock";
+pub const LEGACY_SOCKET_PATH: &str = "/var/run/zyvor/guest-agent.sock";
 
 pub fn spawn_local_socket(handler: Arc<RequestHandler>, socket_path: Option<String>) -> Result<()> {
-    let path = socket_path.unwrap_or_else(|| DEFAULT_SOCKET_PATH.to_string());
+    match socket_path {
+        Some(path) => bind_one(handler, path),
+        None => {
+            // Two independent listeners: symlinked sockets don't reliably
+            // connect on every platform, and two binds are cheap.
+            bind_one(Arc::clone(&handler), DEFAULT_SOCKET_PATH.to_string())?;
+            if let Err(e) = bind_one(handler, LEGACY_SOCKET_PATH.to_string()) {
+                log::warn!("legacy socket unavailable: {e}");
+            }
+            Ok(())
+        }
+    }
+}
+
+fn bind_one(handler: Arc<RequestHandler>, path: String) -> Result<()> {
     if Path::new(&path).exists() {
         fs::remove_file(&path).ok();
     }
-    let parent = Path::new(&path).parent().unwrap_or(Path::new("/var/run/zyvor"));
-    fs::create_dir_all(parent).ok();
+    if let Some(parent) = Path::new(&path).parent() {
+        fs::create_dir_all(parent).ok();
+    }
 
     let listener = UnixListener::bind(&path).with_context(|| format!("bind {path}"))?;
-    log::info!("Zyvor guest agent local API listening on {path}");
+    log::info!("GuestKit agent local API listening on {path}");
 
     thread::spawn(move || {
         for conn in listener.incoming().flatten() {

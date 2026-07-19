@@ -29,6 +29,7 @@ pub struct ExecResponse {
 }
 
 pub fn spawn_executor_server() -> Result<()> {
+    IN_HELPER.store(true, std::sync::atomic::Ordering::Relaxed);
     let path = std::env::var("ZYVOR_EXEC_SOCKET").unwrap_or_else(|_| EXEC_SOCKET_PATH.to_string());
     if Path::new(&path).exists() {
         fs::remove_file(&path).ok();
@@ -141,6 +142,99 @@ fn dispatch(executor: &crate::agent::executor::Executor, req: &ExecRequest) -> E
                 error: Some(e.to_string()),
             },
         },
+        "start_unit" | "stop_unit" => {
+            let op = req.action.trim_end_matches("_unit");
+            let unit = req
+                .params
+                .get("unit")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match executor.control_unit(op, unit) {
+                Ok(msg) => ExecResponse {
+                    ok: true,
+                    result: Some(Value::String(msg)),
+                    error: None,
+                },
+                Err(e) => ExecResponse {
+                    ok: false,
+                    result: None,
+                    error: Some(e.to_string()),
+                },
+            }
+        }
+        "power_action" => {
+            let action = req
+                .params
+                .get("action")
+                .and_then(|v| v.as_str())
+                .unwrap_or("reboot");
+            let delay_secs = req
+                .params
+                .get("delay_secs")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1);
+            match run_power_action(action, delay_secs) {
+                Ok(msg) => ExecResponse {
+                    ok: true,
+                    result: Some(Value::String(msg)),
+                    error: None,
+                },
+                Err(e) => ExecResponse {
+                    ok: false,
+                    result: None,
+                    error: Some(e.to_string()),
+                },
+            }
+        }
+        "expand_filesystem" => {
+            let command = req
+                .params
+                .get("command")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            // Only the specific expansion commands the agent generates.
+            let allowed = command.starts_with("xfs_growfs ")
+                || command.starts_with("resize2fs ")
+                || command.starts_with("btrfs filesystem resize ")
+                || command.starts_with("lvextend ");
+            if !allowed || command.contains(';') || command.contains('|') || command.contains('&') {
+                ExecResponse {
+                    ok: false,
+                    result: None,
+                    error: Some(format!("refused expansion command: {command}")),
+                }
+            } else {
+                match std::process::Command::new("sh").arg("-c").arg(command).status() {
+                    Ok(s) if s.success() => ExecResponse {
+                        ok: true,
+                        result: Some(Value::String(format!("expanded via {command}"))),
+                        error: None,
+                    },
+                    Ok(s) => ExecResponse {
+                        ok: false,
+                        result: None,
+                        error: Some(format!("{command}: {s}")),
+                    },
+                    Err(e) => ExecResponse {
+                        ok: false,
+                        result: None,
+                        error: Some(e.to_string()),
+                    },
+                }
+            }
+        }
+        "time_sync" => match run_time_sync() {
+            Ok(msg) => ExecResponse {
+                ok: true,
+                result: Some(Value::String(msg)),
+                error: None,
+            },
+            Err(e) => ExecResponse {
+                ok: false,
+                result: None,
+                error: Some(e.to_string()),
+            },
+        },
         "apply_staged_update" => match crate::agent::updater::apply_staged_update_privileged() {
             Ok(msg) => ExecResponse {
                 ok: true,
@@ -159,6 +253,50 @@ fn dispatch(executor: &crate::agent::executor::Executor, req: &ExecRequest) -> E
             error: Some(format!("unsupported executor action: {other}")),
         },
     }
+}
+
+/// Schedule a reboot/shutdown via the platform shutdown command.
+pub fn run_power_action(action: &str, delay_secs: u64) -> Result<String> {
+    use std::process::Command;
+    let status = if cfg!(target_os = "windows") {
+        let flag = if action == "reboot" { "/r" } else { "/s" };
+        Command::new("shutdown")
+            .args([flag, "/t", &delay_secs.to_string()])
+            .status()?
+    } else {
+        // shutdown(8) takes minutes; round the delay up.
+        let minutes = delay_secs.div_ceil(60);
+        let flag = if action == "reboot" { "-r" } else { "-h" };
+        Command::new("shutdown")
+            .args([flag, &format!("+{minutes}")])
+            .status()?
+    };
+    if status.success() {
+        Ok(format!("{action} scheduled in {delay_secs}s"))
+    } else {
+        anyhow::bail!("shutdown command failed: {status}")
+    }
+}
+
+/// Trigger an immediate clock sync via chrony/timedatectl (or w32tm).
+pub fn run_time_sync() -> Result<String> {
+    use std::process::Command;
+    let attempts: &[(&str, &[&str])] = if cfg!(target_os = "windows") {
+        &[("w32tm", &["/resync"])]
+    } else {
+        &[
+            ("chronyc", &["makestep"]),
+            ("timedatectl", &["set-ntp", "true"]),
+        ]
+    };
+    for (cmd, args) in attempts {
+        if let Ok(output) = Command::new(cmd).args(*args).output() {
+            if output.status.success() {
+                return Ok(format!("time sync triggered via {cmd}"));
+            }
+        }
+    }
+    anyhow::bail!("no time sync mechanism succeeded (tried chronyc/timedatectl or w32tm)")
 }
 
 pub fn call_executor(action: &str, params: Value) -> Result<Value> {
@@ -186,7 +324,15 @@ pub fn call_executor(action: &str, params: Value) -> Result<Value> {
     }
 }
 
+/// Set inside the privileged helper process so executor methods invoked by
+/// `dispatch` run their local fallback instead of connecting back to the
+/// helper's own socket (which would recurse indefinitely).
+static IN_HELPER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 pub fn executor_available() -> bool {
+    if IN_HELPER.load(std::sync::atomic::Ordering::Relaxed) {
+        return false;
+    }
     let path = std::env::var("ZYVOR_EXEC_SOCKET").unwrap_or_else(|_| EXEC_SOCKET_PATH.to_string());
     Path::new(&path).exists()
 }

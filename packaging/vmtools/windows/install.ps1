@@ -11,12 +11,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not $AgentUrl) {
-    Write-Error "Set -AgentUrl or ZYVOR_AGENT_URL to the zyvor-guest-agent.exe download URL."
+    Write-Error "Set -AgentUrl or ZYVOR_AGENT_URL to the guestkitd.exe download URL."
 }
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$agentPath = Join-Path $InstallDir "zyvor-guest-agent.exe"
+$agentPath = Join-Path $InstallDir "guestkitd.exe"
 
 Write-Host "Downloading Zeus VM Tools agent from $AgentUrl"
 Invoke-WebRequest -Uri $AgentUrl -OutFile $agentPath -UseBasicParsing
@@ -38,7 +38,13 @@ if ($PolicyUrl) {
     Invoke-WebRequest -Uri $PolicyUrl -OutFile $policyPath -UseBasicParsing
 }
 
-$svcName = "ZyvorGuestAgent"
+$svcName = "GuestKitAgent"
+$legacySvcName = "ZyvorGuestAgent"
+# Remove the pre-rebrand service if present
+if (Get-Service $legacySvcName -ErrorAction SilentlyContinue) {
+    Stop-Service $legacySvcName -Force -ErrorAction SilentlyContinue
+    sc.exe delete $legacySvcName | Out-Null
+}
 $svcDisplay = "Zeus VM Tools Guest Agent"
 $binPath = "`"$agentPath`" --service"
 

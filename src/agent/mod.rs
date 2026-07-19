@@ -2,15 +2,22 @@
 //! In-guest agent daemon and host-side proxy.
 
 pub mod agent_call;
+pub mod audit;
 pub mod cli;
 pub mod daemon;
 pub mod exec;
 pub mod executor;
 pub mod executor_ipc;
+pub mod file_ops;
 pub mod handler;
+pub mod heartbeat;
 pub mod inject;
 pub mod local_client;
+pub mod nettest;
 pub mod policy;
+pub mod state;
+pub mod storage_ops;
+pub mod telemetry;
 pub mod proxy;
 pub mod qga;
 pub mod rdp;
