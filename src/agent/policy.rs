@@ -376,6 +376,9 @@ impl AgentPolicy {
                 denied("certificate inventory")
             }
             UsersInventory if !self.capabilities.users => denied("user inventory"),
+            ContainersInventory | InventoryCacheWrite if !self.capabilities.inventory => {
+                denied("inventory")
+            }
             SetHostname | SetTimezone | SetDns if !self.actions.customization.enabled => {
                 denied("customization")
             }

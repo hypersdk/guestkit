@@ -133,6 +133,26 @@ impl AgentDaemon {
             &self.runtime.telemetry,
         )));
 
+        // Periodic offline-inventory cache write (spec §31): lets offline
+        // disk inspection see the guest's last-known running state.
+        {
+            let runtime = Arc::clone(&self.runtime);
+            task::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(300));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                loop {
+                    interval.tick().await;
+                    let rt = Arc::clone(&runtime);
+                    let _ = tokio::task::spawn_blocking(move || {
+                        if let Err(e) = crate::agent::inventory_cache::write_cache(&rt) {
+                            log::debug!("inventory cache write: {e}");
+                        }
+                    })
+                    .await;
+                }
+            });
+        }
+
         let mut loop_handles = Vec::new();
         for plan in self.channel_plans() {
             let handler = Arc::clone(&self.handler);

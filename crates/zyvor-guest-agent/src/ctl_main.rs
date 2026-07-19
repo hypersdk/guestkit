@@ -63,6 +63,8 @@ enum Cmd {
     Certs,
     /// Local user and access inventory
     Users,
+    /// Container / Kubernetes awareness + migration risks
+    Containers,
     /// Network connections with process/unit correlation
     Connections {
         /// Show only the aggregated egress map
@@ -304,6 +306,43 @@ fn main() -> Result<()> {
         Cmd::Users => {
             let inv = call(&cli, "guestkit.users.inventory", json!({}))?;
             print_result(&cli, &inv);
+        }
+        Cmd::Containers => {
+            let inv = call(&cli, "guestkit.containers.inventory", json!({}))?;
+            if cli.json {
+                print_result(&cli, &inv);
+            } else {
+                let runtimes: Vec<String> = inv["runtimes"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .map(|r| r["name"].as_str().unwrap_or("?").to_string())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                println!(
+                    "{} container(s) via [{}]; {} running, {} privileged, {} host-networked",
+                    inv["container_count"],
+                    runtimes.join(", "),
+                    inv["running"],
+                    inv["privileged"],
+                    inv["host_networked"]
+                );
+                if !inv["kubernetes"].is_null() {
+                    let k = &inv["kubernetes"];
+                    println!(
+                        "  kubernetes: {} node ({} pods, {} containers running)",
+                        k["distribution"].as_str().unwrap_or("?"),
+                        k["running_pods"],
+                        k["running_containers"]
+                    );
+                }
+                if let Some(risks) = inv["migration_risks"].as_array() {
+                    for r in risks {
+                        println!("  ! {}", r.as_str().unwrap_or(""));
+                    }
+                }
+            }
         }
         Cmd::Connections { egress } => {
             let intel = call(&cli, "guestkit.network.connections", json!({}))?;

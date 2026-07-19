@@ -52,9 +52,48 @@ impl EvidenceBuilder {
             process: None,
             hardware: None,
             linux_migration: None,
+            online_cache: Self::read_online_cache(g),
         };
         Self::derive_migration_fields(&mut snapshot);
         Ok(snapshot)
+    }
+
+    /// Offline read of the live agent's inventory cache (spec §31): if the
+    /// powered-off image contains a cache written by a previously-running
+    /// agent, surface its last-known running state after integrity check.
+    fn read_online_cache(g: &mut Guestfs) -> Option<serde_json::Value> {
+        for path in [
+            "/var/lib/guestkit/inventory.snapshot",
+            "/ProgramData/Zyvor/GuestKit/inventory.snapshot",
+        ] {
+            let Ok(content) = g.read_file(path) else {
+                continue;
+            };
+            let Ok(cache) = serde_json::from_slice::<serde_json::Value>(content.as_ref()) else {
+                continue;
+            };
+            // Verify integrity_sha256 over payload before trusting it.
+            let (Some(payload), Some(claimed)) = (
+                cache.get("payload"),
+                cache.get("integrity_sha256").and_then(|v| v.as_str()),
+            ) else {
+                continue;
+            };
+            use sha2::{Digest, Sha256};
+            let canonical = serde_json::to_vec(payload).unwrap_or_default();
+            let mut hasher = Sha256::new();
+            hasher.update(&canonical);
+            let computed: String = hasher
+                .finalize()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect();
+            if computed == claimed {
+                return Some(cache);
+            }
+            log::warn!("offline inventory cache at {path} failed integrity check");
+        }
+        None
     }
 
     /// Fill schema-v4 migration fields derivable from already-collected

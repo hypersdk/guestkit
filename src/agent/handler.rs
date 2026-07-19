@@ -269,6 +269,14 @@ impl RequestHandler {
             RpcMethod::TimeSyncNow => self.time_sync_now(req.id),
             RpcMethod::Reboot => self.power_action(req.id, &req.params, "reboot"),
             RpcMethod::Shutdown => self.power_action(req.id, &req.params, "shutdown"),
+            RpcMethod::ContainersInventory => {
+                JsonRpcResponse::success(req.id, crate::agent::containers::inventory())
+            }
+            RpcMethod::InventoryCacheWrite => Self::json_result(
+                req.id,
+                crate::agent::inventory_cache::write_cache(&self.runtime)
+                    .map(|_| json!({ "written": crate::agent::inventory_cache::cache_path().display().to_string() })),
+            ),
             RpcMethod::PackagesInventory => {
                 JsonRpcResponse::success(req.id, crate::agent::packages::inventory())
             }

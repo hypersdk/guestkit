@@ -219,6 +219,7 @@ fn from_migration_report_unit_pipeline() {
         process: None,
         hardware: None,
         linux_migration: None,
+            online_cache: None,
     };
     let boot = BootabilityReport {
         score: 70.0,
@@ -343,5 +344,6 @@ fn minimal_windows_evidence() -> guestkit::evidence::EvidenceSnapshot {
         process: None,
         hardware: None,
         linux_migration: None,
+            online_cache: None,
     }
 }

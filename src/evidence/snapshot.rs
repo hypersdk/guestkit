@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 /// Normalized evidence collected from an offline disk image.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +37,12 @@ pub struct EvidenceSnapshot {
     pub hardware: Option<HardwareEvidence>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linux_migration: Option<LinuxMigrationEvidence>,
+    /// Integrity-verified snapshot of last-known *running* state, written by
+    /// the live agent and read back during offline disk inspection (§31).
+    /// Opaque JSON to keep this schema dependency-light; shape is
+    /// `agent::inventory_cache::OnlineInventoryCache`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub online_cache: Option<serde_json::Value>,
 }
 
 /// Linux migration-relevant state that no other section captures.
