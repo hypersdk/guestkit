@@ -214,4 +214,11 @@ else
   echo "  (cache file not at ${CACHE}; RPC reported success)"
 fi
 
+echo "  integrity baseline + check (Phase 8)..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.integrity.baseline","id":29}')"
+expect_contains "$R" '"suid_sgid"' "integrity baseline"
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.integrity.check","id":30}')"
+expect_contains "$R" '"has_baseline":true' "integrity check"
+expect_contains "$R" '"change_count"' "integrity check"
+
 echo "  live agent e2e passed"

@@ -65,6 +65,10 @@ enum Cmd {
     Users,
     /// Container / Kubernetes awareness + migration risks
     Containers,
+    /// Capture a security integrity baseline
+    IntegrityBaseline,
+    /// Check current state against the integrity baseline (tamper detection)
+    IntegrityCheck,
     /// Network connections with process/unit correlation
     Connections {
         /// Show only the aggregated egress map
@@ -340,6 +344,34 @@ fn main() -> Result<()> {
                 if let Some(risks) = inv["migration_risks"].as_array() {
                     for r in risks {
                         println!("  ! {}", r.as_str().unwrap_or(""));
+                    }
+                }
+            }
+        }
+        Cmd::IntegrityBaseline => {
+            let r = call(&cli, "guestkit.integrity.baseline", json!({}))?;
+            print_result(&cli, &r);
+        }
+        Cmd::IntegrityCheck => {
+            let r = call(&cli, "guestkit.integrity.check", json!({}))?;
+            if cli.json {
+                print_result(&cli, &r);
+            } else if r["has_baseline"] == false {
+                println!("No integrity baseline — run integrity-baseline first.");
+            } else {
+                println!(
+                    "Integrity: {} change(s), {} high-severity, tampered={}",
+                    r["change_count"], r["high_severity"], r["tampered"]
+                );
+                if let Some(changes) = r["changes"].as_array() {
+                    for c in changes {
+                        println!(
+                            "  [{}] {} {} — {}",
+                            c["severity"].as_str().unwrap_or(""),
+                            c["kind"].as_str().unwrap_or(""),
+                            c["category"].as_str().unwrap_or(""),
+                            c["item"].as_str().unwrap_or("")
+                        );
                     }
                 }
             }

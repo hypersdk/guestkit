@@ -272,6 +272,12 @@ impl RequestHandler {
             RpcMethod::ContainersInventory => {
                 JsonRpcResponse::success(req.id, crate::agent::containers::inventory())
             }
+            RpcMethod::IntegrityBaseline => {
+                Self::json_result(req.id, crate::agent::integrity::write_baseline())
+            }
+            RpcMethod::IntegrityCheck => {
+                JsonRpcResponse::success(req.id, crate::agent::integrity::check())
+            }
             RpcMethod::InventoryCacheWrite => Self::json_result(
                 req.id,
                 crate::agent::inventory_cache::write_cache(&self.runtime)

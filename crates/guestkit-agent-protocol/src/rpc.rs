@@ -74,6 +74,8 @@ pub enum RpcMethod {
     // Protocol 1.3: container awareness + offline cache
     ContainersInventory,
     InventoryCacheWrite,
+    IntegrityBaseline,
+    IntegrityCheck,
     // Protocol 1.3: enterprise automation (Phase 6)
     PackagesInventory,
     PackagesUpdates,
@@ -160,6 +162,8 @@ impl RpcMethod {
             METHOD_SNAPSHOT_PREPARE => Self::SnapshotPrepare,
             METHOD_SNAPSHOT_COMPLETE => Self::SnapshotComplete,
             METHOD_CONTAINERS_INVENTORY => Self::ContainersInventory,
+            METHOD_INTEGRITY_BASELINE => Self::IntegrityBaseline,
+            METHOD_INTEGRITY_CHECK => Self::IntegrityCheck,
             METHOD_INVENTORY_CACHE_WRITE => Self::InventoryCacheWrite,
             METHOD_PACKAGES_INVENTORY => Self::PackagesInventory,
             METHOD_PACKAGES_UPDATES => Self::PackagesUpdates,
@@ -207,6 +211,8 @@ impl RpcMethod {
             "network.connections" | "network.listeners" => Self::NetworkConnections,
             "security.posture" => Self::SecurityPosture,
             "containers.inventory" | "containers.list" => Self::ContainersInventory,
+            "integrity.baseline" | "security.integrity.baseline" => Self::IntegrityBaseline,
+            "integrity.check" | "security.integrity.check" => Self::IntegrityCheck,
             "inventory.cache" => Self::InventoryCacheWrite,
             "packages.inventory" | "packages.list" => Self::PackagesInventory,
             "packages.updates" => Self::PackagesUpdates,
@@ -273,6 +279,7 @@ impl RpcMethod {
                 | Self::SetTimezone
                 | Self::SetDns
                 | Self::InventoryCacheWrite
+                | Self::IntegrityBaseline
                 | Self::MigrationCutoverEnter
                 | Self::MigrationCutoverExit
                 | Self::SubscribeEvents
