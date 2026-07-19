@@ -7,7 +7,7 @@ WIN_TARGET ?= x86_64-pc-windows-gnu
 
 .PHONY: all build release install uninstall clean check test fmt clippy selftest \
 	test-features test-features-remote \
-	agent-linux agent-windows windows-bundle windows-check \
+	agent-linux agent-windows linux-bundle windows-bundle windows-check \
 	deploy deploy-remote deploy-remote-quick deploy-remote-preflight deploy-remote-verify deploy-remote-uninstall deploy-remote-fleet
 
 all: build
@@ -53,6 +53,9 @@ agent-windows: ## Cross-compile the Windows agent (needs mingw-w64 + rustup win-
 windows-check: ## Type-check the Windows agent without linking (fast CI gate)
 	rustup target add $(WIN_TARGET) 2>/dev/null || true
 	$(CARGO) check -p zyvor-guest-agent --target $(WIN_TARGET)
+
+linux-bundle: ## Build Linux agent + self-contained tarball (static musl if available)
+	bash scripts/build-linux-bundle.sh
 
 windows-bundle: ## Build Windows agent + MSI + downloadable ISO (needs wixl + genisoimage)
 	bash scripts/build-windows-bundle.sh
