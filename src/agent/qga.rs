@@ -105,6 +105,33 @@ pub fn handle(bytes: &[u8]) -> Vec<u8> {
     }
 }
 
+/// If `bytes` is a QGA `guestkit-rpc` passthrough envelope, return the inner
+/// JSON-RPC request bytes. This lets a QGA client reach ANY agent RPC method
+/// (all of `AgentCapabilities::standard`), not just the bespoke `guestkit-*`
+/// shims — the request is routed through the full [`RequestHandler`] dispatch.
+///
+/// Envelope: `{"execute":"guestkit-rpc","arguments":{"method":"<m>","params":{…},"id":<id>}}`.
+pub fn extract_rpc_passthrough(bytes: &[u8]) -> Option<Vec<u8>> {
+    let req: Value = serde_json::from_slice(bytes).ok()?;
+    if req.get("execute").and_then(|e| e.as_str()) != Some("guestkit-rpc") {
+        return None;
+    }
+    let args = req.get("arguments").cloned().unwrap_or_else(|| json!({}));
+    let method = args.get("method").and_then(|m| m.as_str())?;
+    let params = args.get("params").cloned().unwrap_or_else(|| json!({}));
+    let id = args.get("id").cloned().unwrap_or_else(|| json!(1));
+    let inner = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
+    serde_json::to_vec(&inner).ok()
+}
+
+/// Wrap a JSON-RPC response as a QGA reply (`{"return":…}` or `{"error":…}`).
+pub fn wrap_qga_response(resp: &guestkit_agent_protocol::JsonRpcResponse) -> Vec<u8> {
+    match &resp.error {
+        Some(err) => qga_error(resp.id.clone(), &err.message),
+        None => qga_ok(resp.id.clone(), resp.result.clone().unwrap_or(Value::Null)),
+    }
+}
+
 fn qga_ok(id: Option<Value>, ret: Value) -> Vec<u8> {
     let mut out = json!({ "return": ret });
     if let Some(i) = id {
@@ -162,6 +189,7 @@ fn guest_info() -> Value {
             "guest-exec-status",
             "guest-shutdown",
             "guest-reboot",
+            "guestkit-rpc",
             "guestkit-get-evidence",
             "guestkit-doctor",
             "guestkit-get-capabilities",
@@ -923,6 +951,29 @@ mod tests {
         assert!(!is_qga_request(
             br#"{"jsonrpc":"2.0","method":"guestkit.ping","id":1}"#
         ));
+    }
+
+    #[test]
+    fn rpc_passthrough_extracts_inner_request() {
+        let env = br#"{"execute":"guestkit-rpc","arguments":{"method":"guestkit.getVersion","params":{}}}"#;
+        let inner = extract_rpc_passthrough(env).expect("passthrough envelope");
+        let v: Value = serde_json::from_slice(&inner).unwrap();
+        assert_eq!(v["method"], "guestkit.getVersion");
+        assert_eq!(v["jsonrpc"], "2.0");
+        // A plain QGA command is not a passthrough.
+        assert!(extract_rpc_passthrough(br#"{"execute":"guest-ping"}"#).is_none());
+    }
+
+    #[test]
+    fn rpc_passthrough_round_trips_through_full_handler() {
+        // Any method reachable through the full handler is now reachable via QGA.
+        let handler = crate::agent::handler::RequestHandler::new();
+        let env = br#"{"execute":"guestkit-rpc","arguments":{"method":"guestkit.getCapabilities","params":{},"id":7}}"#;
+        let out = handler.handle_frame(env);
+        let v: Value = serde_json::from_slice(&out).unwrap();
+        let ret = v.get("return").expect("QGA return");
+        let methods = ret.get("methods").and_then(|m| m.as_array()).expect("methods array");
+        assert!(methods.len() > 50, "capabilities advertise the full method set");
     }
 
     #[test]
