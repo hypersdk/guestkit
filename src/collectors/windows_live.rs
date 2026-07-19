@@ -167,6 +167,392 @@ fn powershell_lines(script: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Pending-reboot detection via the standard registry markers.
+/// Returns (pending, reasons).
+#[cfg(target_os = "windows")]
+pub fn collect_pending_reboot() -> (bool, Vec<String>) {
+    let mut reasons = Vec::new();
+    let checks = [
+        (
+            "Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending'",
+            "component-based servicing reboot pending",
+        ),
+        (
+            "Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'",
+            "Windows Update reboot required",
+        ),
+        (
+            "[bool](Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue)",
+            "pending file rename operations",
+        ),
+    ];
+    for (script, reason) in checks {
+        if powershell_bool(script).unwrap_or(false) {
+            reasons.push(reason.to_string());
+        }
+    }
+    (!reasons.is_empty(), reasons)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn collect_pending_reboot() -> (bool, Vec<String>) {
+    (false, Vec::new())
+}
+
+/// Automatic-start services that are not running — the Windows analogue of
+/// systemd failed units for the heartbeat's `critical_services_failed`.
+#[cfg(target_os = "windows")]
+pub fn failed_auto_services() -> Vec<String> {
+    powershell_lines(
+        "Get-CimInstance Win32_Service -Filter \"StartMode='Auto' and State<>'Running' and DelayedAutoStart=0\" \
+         -ErrorAction SilentlyContinue | Where-Object { $_.ExitCode -ne 0 } | Select-Object -ExpandProperty Name",
+    )
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn failed_auto_services() -> Vec<String> {
+    Vec::new()
+}
+
+// --- Migration-evidence probes (schema v4) ---
+
+use crate::evidence::snapshot::{
+    ActivationInfo, BitLockerState, BitLockerVolume, GhostNicEntry, VssHealth,
+    WindowsDriverEntry, WindowsNicConfig,
+};
+
+const VIRTIO_DRIVER_NAMES: &[&str] =
+    &["viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng"];
+
+/// VirtIO driver presence + start mode from the live SCM.
+#[cfg(target_os = "windows")]
+pub fn collect_virtio_drivers() -> Vec<WindowsDriverEntry> {
+    let filter = VIRTIO_DRIVER_NAMES
+        .iter()
+        .map(|n| format!("Name='{n}'"))
+        .collect::<Vec<_>>()
+        .join(" or ");
+    let json = powershell_string(&format!(
+        "Get-CimInstance Win32_SystemDriver -Filter \"{filter}\" -ErrorAction SilentlyContinue | \
+         Select-Object Name,StartMode,State | ConvertTo-Json -Compress"
+    ))
+    .unwrap_or_default();
+    parse_virtio_driver_json(&json)
+}
+
+fn parse_virtio_driver_json(json: &str) -> Vec<WindowsDriverEntry> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        #[serde(rename = "Name")]
+        name: String,
+        #[serde(rename = "StartMode", default)]
+        start_mode: Option<String>,
+    }
+    let rows: Vec<Row> = if json.trim_start().starts_with('[') {
+        serde_json::from_str(json).unwrap_or_default()
+    } else if json.trim().is_empty() {
+        Vec::new()
+    } else {
+        serde_json::from_str::<Row>(json).map(|r| vec![r]).unwrap_or_default()
+    };
+    VIRTIO_DRIVER_NAMES
+        .iter()
+        .map(|name| {
+            let row = rows.iter().find(|r| r.name.eq_ignore_ascii_case(name));
+            match row {
+                Some(r) => {
+                    let start = r
+                        .start_mode
+                        .clone()
+                        .unwrap_or_default()
+                        .to_ascii_lowercase();
+                    WindowsDriverEntry {
+                        name: name.to_string(),
+                        version: None,
+                        boot_critical: start == "boot",
+                        start_type: start,
+                        present: true,
+                    }
+                }
+                None => WindowsDriverEntry {
+                    name: name.to_string(),
+                    ..Default::default()
+                },
+            }
+        })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_bitlocker_state() -> Option<BitLockerState> {
+    let json = powershell_string(
+        "Get-BitLockerVolume -ErrorAction SilentlyContinue | \
+         Select-Object MountPoint,ProtectionStatus | ConvertTo-Json -Compress",
+    )?;
+    parse_bitlocker_json(&json)
+}
+
+fn parse_bitlocker_json(json: &str) -> Option<BitLockerState> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        #[serde(rename = "MountPoint", default)]
+        mount_point: String,
+        // 0=Off, 1=On; PowerShell may render the enum as a string.
+        #[serde(rename = "ProtectionStatus", default)]
+        protection_status: serde_json::Value,
+    }
+    let rows: Vec<Row> = if json.trim_start().starts_with('[') {
+        serde_json::from_str(json).ok()?
+    } else {
+        vec![serde_json::from_str(json).ok()?]
+    };
+    let volumes: Vec<BitLockerVolume> = rows
+        .into_iter()
+        .map(|r| {
+            let protection = match &r.protection_status {
+                serde_json::Value::Number(n) if n.as_u64() == Some(1) => "on",
+                serde_json::Value::String(s) if s.eq_ignore_ascii_case("on") => "on",
+                _ => "off",
+            };
+            BitLockerVolume {
+                mount_point: r.mount_point,
+                protection: protection.to_string(),
+            }
+        })
+        .collect();
+    Some(BitLockerState {
+        any_protected: volumes.iter().any(|v| v.protection == "on"),
+        volumes,
+    })
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_vss_health() -> Option<VssHealth> {
+    let out = Command::new("vssadmin").args(["list", "writers"]).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(parse_vss_writers(&String::from_utf8_lossy(&out.stdout)))
+}
+
+fn parse_vss_writers(text: &str) -> VssHealth {
+    let mut writers_total = 0usize;
+    let mut writers_failed = Vec::new();
+    let mut current: Option<String> = None;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(name) = line.strip_prefix("Writer name:") {
+            writers_total += 1;
+            current = Some(name.trim().trim_matches('\'').to_string());
+        } else if let Some(state) = line.strip_prefix("State:") {
+            let stable = state.contains("Stable");
+            if !stable {
+                if let Some(name) = current.take() {
+                    writers_failed.push(name);
+                }
+            }
+        }
+    }
+    VssHealth {
+        writers_total,
+        healthy: writers_failed.is_empty() && writers_total > 0,
+        writers_failed,
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_ghost_nics() -> Vec<GhostNicEntry> {
+    let out = Command::new("pnputil")
+        .args(["/enum-devices", "/class", "Net", "/disconnected"])
+        .output();
+    match out {
+        Ok(o) if o.status.success() => parse_pnputil_devices(&String::from_utf8_lossy(&o.stdout)),
+        _ => Vec::new(),
+    }
+}
+
+fn parse_pnputil_devices(text: &str) -> Vec<GhostNicEntry> {
+    let mut entries = Vec::new();
+    let mut instance: Option<String> = None;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(id) = line.strip_prefix("Instance ID:") {
+            instance = Some(id.trim().to_string());
+        } else if let Some(desc) = line.strip_prefix("Device Description:") {
+            if let Some(id) = instance.take() {
+                entries.push(GhostNicEntry {
+                    instance_id: id,
+                    description: desc.trim().to_string(),
+                });
+            }
+        }
+    }
+    entries
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_nic_configs() -> Vec<WindowsNicConfig> {
+    let json = powershell_string(
+        "Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=true' \
+         -ErrorAction SilentlyContinue | \
+         Select-Object Description,MACAddress,IPAddress,DefaultIPGateway,DNSServerSearchOrder,DHCPEnabled | \
+         ConvertTo-Json -Compress",
+    )
+    .unwrap_or_default();
+    parse_nic_config_json(&json)
+}
+
+fn parse_nic_config_json(json: &str) -> Vec<WindowsNicConfig> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        #[serde(rename = "Description", default)]
+        description: String,
+        #[serde(rename = "MACAddress", default)]
+        mac: Option<String>,
+        #[serde(rename = "IPAddress", default)]
+        ips: Option<Vec<String>>,
+        #[serde(rename = "DefaultIPGateway", default)]
+        gateways: Option<Vec<String>>,
+        #[serde(rename = "DNSServerSearchOrder", default)]
+        dns: Option<Vec<String>>,
+        #[serde(rename = "DHCPEnabled", default)]
+        dhcp: bool,
+    }
+    let rows: Vec<Row> = if json.trim_start().starts_with('[') {
+        serde_json::from_str(json).unwrap_or_default()
+    } else if json.trim().is_empty() {
+        Vec::new()
+    } else {
+        serde_json::from_str::<Row>(json).map(|r| vec![r]).unwrap_or_default()
+    };
+    rows.into_iter()
+        .map(|r| WindowsNicConfig {
+            name: r.description,
+            mac: r.mac.unwrap_or_default(),
+            ip_addresses: r.ips.unwrap_or_default(),
+            gateway: r.gateways.and_then(|g| g.into_iter().next()),
+            dns: r.dns.unwrap_or_default(),
+            dhcp: r.dhcp,
+        })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_driver_signature_enforcement() -> Option<bool> {
+    let out = Command::new("bcdedit").args(["/enum", "{current}"]).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(parse_signature_enforcement(&String::from_utf8_lossy(
+        &out.stdout,
+    )))
+}
+
+fn parse_signature_enforcement(bcd_text: &str) -> bool {
+    let weakened = bcd_text.lines().any(|l| {
+        let l = l.to_ascii_lowercase();
+        (l.contains("testsigning") || l.contains("nointegritychecks")) && l.contains("yes")
+    });
+    !weakened
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_activation_info() -> Option<ActivationInfo> {
+    let json = powershell_string(
+        "Get-CimInstance SoftwareLicensingProduct -Filter \
+         \"PartialProductKey IS NOT NULL and ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'\" \
+         -ErrorAction SilentlyContinue | Select-Object -First 1 LicenseStatus,ProductKeyChannel | \
+         ConvertTo-Json -Compress",
+    )?;
+    parse_activation_json(&json)
+}
+
+fn parse_activation_json(json: &str) -> Option<ActivationInfo> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        #[serde(rename = "LicenseStatus", default)]
+        status: u32,
+        #[serde(rename = "ProductKeyChannel", default)]
+        channel: Option<String>,
+    }
+    let row: Row = serde_json::from_str(json).ok()?;
+    Some(ActivationInfo {
+        licensed: row.status == 1,
+        channel: row.channel.unwrap_or_default(),
+    })
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_esp_present() -> Option<bool> {
+    powershell_bool(
+        "[bool](Get-Partition -ErrorAction SilentlyContinue | \
+         Where-Object { $_.GptType -eq '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' })",
+    )
+}
+
+#[cfg(test)]
+mod migration_probe_tests {
+    use super::*;
+
+    #[test]
+    fn virtio_json_marks_missing_and_boot_critical() {
+        let json = r#"[{"Name":"viostor","StartMode":"Boot","State":"Running"},
+                       {"Name":"netkvm","StartMode":"Auto","State":"Running"}]"#;
+        let drivers = parse_virtio_driver_json(json);
+        let by = |n: &str| drivers.iter().find(|d| d.name == n).unwrap();
+        assert!(by("viostor").present && by("viostor").boot_critical);
+        assert!(by("netkvm").present && !by("netkvm").boot_critical);
+        assert!(!by("vioscsi").present);
+    }
+
+    #[test]
+    fn vss_writer_parse() {
+        let text = "\
+Writer name: 'System Writer'\n   State: [1] Stable\n\
+Writer name: 'SqlServerWriter'\n   State: [8] Failed\n";
+        let health = parse_vss_writers(text);
+        assert_eq!(health.writers_total, 2);
+        assert_eq!(health.writers_failed, vec!["SqlServerWriter"]);
+        assert!(!health.healthy);
+    }
+
+    #[test]
+    fn pnputil_ghost_nic_parse() {
+        let text = "\
+Instance ID:  PCI\\VEN_15AD&DEV_07B0\\000000\n\
+Device Description:  vmxnet3 Ethernet Adapter\n\
+Status:  Disconnected\n";
+        let nics = parse_pnputil_devices(text);
+        assert_eq!(nics.len(), 1);
+        assert!(nics[0].description.contains("vmxnet3"));
+    }
+
+    #[test]
+    fn signature_enforcement_parse() {
+        assert!(!parse_signature_enforcement("testsigning             Yes"));
+        assert!(parse_signature_enforcement("description  Windows 10"));
+    }
+
+    #[test]
+    fn bitlocker_parse_single_object() {
+        let state =
+            parse_bitlocker_json(r#"{"MountPoint":"C:","ProtectionStatus":1}"#).unwrap();
+        assert!(state.any_protected);
+        assert_eq!(state.volumes[0].protection, "on");
+    }
+
+    #[test]
+    fn nic_config_parse() {
+        let json = r#"{"Description":"Intel NIC","MACAddress":"00:11:22:33:44:55",
+                       "IPAddress":["10.0.0.5"],"DefaultIPGateway":["10.0.0.1"],
+                       "DNSServerSearchOrder":["10.0.0.2"],"DHCPEnabled":false}"#;
+        let nics = parse_nic_config_json(json);
+        assert_eq!(nics.len(), 1);
+        assert!(!nics[0].dhcp);
+        assert_eq!(nics[0].gateway.as_deref(), Some("10.0.0.1"));
+    }
+}
+
 pub fn build_windows_guest_health(hostname: &str) -> GuestHealth {
     let evidence = collect_windows_live();
     let (level, score, reasons, components, journal_hints) = if let Some(ev) = &evidence {

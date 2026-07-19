@@ -491,6 +491,11 @@ pub fn thaw_fs() -> Result<(), String> {
     guest_fsfreeze_thaw().map(|_| ())
 }
 
+/// Current freeze state as tracked by the QGA fsfreeze path.
+pub fn fs_frozen() -> bool {
+    FS_FROZEN.lock().map(|f| *f).unwrap_or(false)
+}
+
 fn guest_get_host_name() -> Result<Value, String> {
     let hostname = std::fs::read_to_string("/etc/hostname")
         .ok()

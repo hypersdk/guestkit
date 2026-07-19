@@ -1,19 +1,38 @@
 // SPDX-License-Identifier: Apache-2.0
 //! In-guest agent daemon and host-side proxy.
 
+#[cfg(unix)]
 pub mod agent_call;
+pub mod audit;
+pub mod certificates;
 pub mod cli;
+pub mod containers;
+pub mod customization;
+pub mod inventory_cache;
 pub mod daemon;
 pub mod exec;
 pub mod executor;
 pub mod executor_ipc;
+pub mod file_ops;
 pub mod handler;
+pub mod heartbeat;
 pub mod inject;
+pub mod integrity;
+#[cfg(unix)]
 pub mod local_client;
+pub mod netintel;
+pub mod nettest;
+pub mod packages;
 pub mod policy;
+pub mod posture;
+pub mod users;
+pub mod state;
+pub mod storage_ops;
+pub mod telemetry;
 pub mod proxy;
 pub mod qga;
 pub mod rdp;
+pub mod snapshot;
 pub mod snapshot_hooks;
 pub mod support_bundle;
 pub mod transport;
