@@ -234,13 +234,13 @@ impl RequestHandler {
                 Self::file_op(req.id, &req.params, crate::agent::file_ops::checksum)
             }
             RpcMethod::StorageRescan => {
-                Self::storage_result(req.id, crate::agent::storage_ops::rescan())
+                Self::json_result(req.id, crate::agent::storage_ops::rescan())
             }
             RpcMethod::StorageTrim => {
-                Self::storage_result(req.id, crate::agent::storage_ops::trim(&req.params))
+                Self::json_result(req.id, crate::agent::storage_ops::trim(&req.params))
             }
             RpcMethod::StorageExpand => {
-                Self::storage_result(req.id, crate::agent::storage_ops::expand(&req.params))
+                Self::json_result(req.id, crate::agent::storage_ops::expand(&req.params))
             }
             RpcMethod::GetProcess => self.get_process(req.id, &req.params),
             RpcMethod::NetworkTest => self.network_test(req.id, &req.params),
@@ -269,6 +269,30 @@ impl RequestHandler {
             RpcMethod::TimeSyncNow => self.time_sync_now(req.id),
             RpcMethod::Reboot => self.power_action(req.id, &req.params, "reboot"),
             RpcMethod::Shutdown => self.power_action(req.id, &req.params, "shutdown"),
+            RpcMethod::PackagesInventory => {
+                JsonRpcResponse::success(req.id, crate::agent::packages::inventory())
+            }
+            RpcMethod::PackagesUpdates => {
+                JsonRpcResponse::success(req.id, crate::agent::packages::updates())
+            }
+            RpcMethod::PackagesInstall => {
+                Self::json_result(req.id, crate::agent::packages::install(&req.params))
+            }
+            RpcMethod::CertificatesInventory => {
+                JsonRpcResponse::success(req.id, crate::agent::certificates::inventory())
+            }
+            RpcMethod::UsersInventory => {
+                JsonRpcResponse::success(req.id, crate::agent::users::inventory())
+            }
+            RpcMethod::SetHostname => {
+                Self::json_result(req.id, crate::agent::customization::set_hostname(&req.params))
+            }
+            RpcMethod::SetTimezone => {
+                Self::json_result(req.id, crate::agent::customization::set_timezone(&req.params))
+            }
+            RpcMethod::SetDns => {
+                Self::json_result(req.id, crate::agent::customization::set_dns(&req.params))
+            }
             RpcMethod::Unknown(name) => JsonRpcResponse::error(
                 req.id,
                 RpcErrorCode::MethodNotFound,
@@ -569,7 +593,7 @@ impl RequestHandler {
         }
     }
 
-    fn storage_result(id: Option<Value>, result: anyhow::Result<Value>) -> JsonRpcResponse {
+    fn json_result(id: Option<Value>, result: anyhow::Result<Value>) -> JsonRpcResponse {
         match result {
             Ok(v) => JsonRpcResponse::success(id, v),
             Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),

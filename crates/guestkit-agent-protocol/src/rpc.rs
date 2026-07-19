@@ -71,6 +71,15 @@ pub enum RpcMethod {
     // Protocol 1.3: orchestrated snapshots
     SnapshotPrepare,
     SnapshotComplete,
+    // Protocol 1.3: enterprise automation (Phase 6)
+    PackagesInventory,
+    PackagesUpdates,
+    PackagesInstall,
+    CertificatesInventory,
+    UsersInventory,
+    SetHostname,
+    SetTimezone,
+    SetDns,
     // Protocol 1.3: migration assurance
     MigrationAssess,
     MigrationPlan,
@@ -147,6 +156,14 @@ impl RpcMethod {
             METHOD_SHUTDOWN => Self::Shutdown,
             METHOD_SNAPSHOT_PREPARE => Self::SnapshotPrepare,
             METHOD_SNAPSHOT_COMPLETE => Self::SnapshotComplete,
+            METHOD_PACKAGES_INVENTORY => Self::PackagesInventory,
+            METHOD_PACKAGES_UPDATES => Self::PackagesUpdates,
+            METHOD_PACKAGES_INSTALL => Self::PackagesInstall,
+            METHOD_CERTIFICATES_INVENTORY => Self::CertificatesInventory,
+            METHOD_USERS_INVENTORY => Self::UsersInventory,
+            METHOD_SET_HOSTNAME => Self::SetHostname,
+            METHOD_SET_TIMEZONE => Self::SetTimezone,
+            METHOD_SET_DNS => Self::SetDns,
             METHOD_MIGRATION_ASSESS => Self::MigrationAssess,
             METHOD_MIGRATION_PLAN => Self::MigrationPlan,
             METHOD_MIGRATION_REPAIR => Self::MigrationRepair,
@@ -184,6 +201,14 @@ impl RpcMethod {
             "network.test" => Self::NetworkTest,
             "network.connections" | "network.listeners" => Self::NetworkConnections,
             "security.posture" => Self::SecurityPosture,
+            "packages.inventory" | "packages.list" => Self::PackagesInventory,
+            "packages.updates" => Self::PackagesUpdates,
+            "packages.install" => Self::PackagesInstall,
+            "certificates.inventory" | "certificates.list" => Self::CertificatesInventory,
+            "users.inventory" | "users.list" => Self::UsersInventory,
+            "customization.hostname" => Self::SetHostname,
+            "customization.timezone" => Self::SetTimezone,
+            "customization.dns" => Self::SetDns,
             "storage.rescan" => Self::StorageRescan,
             "storage.trim" => Self::StorageTrim,
             "storage.expand" => Self::StorageExpand,
@@ -236,6 +261,10 @@ impl RpcMethod {
                 | Self::MigrationRepair
                 | Self::SnapshotPrepare
                 | Self::SnapshotComplete
+                | Self::PackagesInstall
+                | Self::SetHostname
+                | Self::SetTimezone
+                | Self::SetDns
                 | Self::MigrationCutoverEnter
                 | Self::MigrationCutoverExit
                 | Self::SubscribeEvents

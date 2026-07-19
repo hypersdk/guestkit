@@ -94,6 +94,16 @@ pub const METHOD_SHUTDOWN: &str = "guestkit.shutdown";
 pub const METHOD_SNAPSHOT_PREPARE: &str = "guestkit.snapshot.prepare";
 pub const METHOD_SNAPSHOT_COMPLETE: &str = "guestkit.snapshot.complete";
 
+// --- Protocol 1.3: enterprise automation (Phase 6) ---
+pub const METHOD_PACKAGES_INVENTORY: &str = "guestkit.packages.inventory";
+pub const METHOD_PACKAGES_UPDATES: &str = "guestkit.packages.updates";
+pub const METHOD_PACKAGES_INSTALL: &str = "guestkit.packages.install";
+pub const METHOD_CERTIFICATES_INVENTORY: &str = "guestkit.certificates.inventory";
+pub const METHOD_USERS_INVENTORY: &str = "guestkit.users.inventory";
+pub const METHOD_SET_HOSTNAME: &str = "guestkit.system.setHostname";
+pub const METHOD_SET_TIMEZONE: &str = "guestkit.system.setTimezone";
+pub const METHOD_SET_DNS: &str = "guestkit.system.setDns";
+
 // --- Protocol 1.3: migration assurance ---
 pub const METHOD_MIGRATION_ASSESS: &str = "guestkit.migration.assess";
 pub const METHOD_MIGRATION_PLAN: &str = "guestkit.migration.plan";
@@ -189,6 +199,14 @@ impl AgentCapabilities {
                 METHOD_MIGRATION_VALIDATE.to_string(),
                 METHOD_BASELINE_CAPTURE.to_string(),
                 METHOD_BASELINE_DIFF.to_string(),
+                METHOD_PACKAGES_INVENTORY.to_string(),
+                METHOD_PACKAGES_UPDATES.to_string(),
+                METHOD_PACKAGES_INSTALL.to_string(),
+                METHOD_CERTIFICATES_INVENTORY.to_string(),
+                METHOD_USERS_INVENTORY.to_string(),
+                METHOD_SET_HOSTNAME.to_string(),
+                METHOD_SET_TIMEZONE.to_string(),
+                METHOD_SET_DNS.to_string(),
                 METHOD_FILE_READ.to_string(),
                 METHOD_FILE_WRITE.to_string(),
                 METHOD_FILE_STAT.to_string(),

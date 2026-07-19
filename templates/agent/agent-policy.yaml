@@ -18,6 +18,9 @@ actions:
   self_update:
     enabled: false
     auto_apply: false
+  customization:
+    # hostname/timezone/DNS changes (system identity); opt-in.
+    enabled: false
 
 # Coarse feature switches. A disabled category rejects its whole method
 # group with policy_denied (-32005) before dispatch.
@@ -35,6 +38,12 @@ capabilities:
     rescan: true
     trim: true
     expand: false      # filesystem/LV expansion is opt-in
+  packages:
+    inventory: true    # installed package listing
+    updates: true      # available-update query (security-classified)
+    install: false     # package installation mutates the system; opt-in
+  certificates: true   # X.509 + SSH host-key inventory (read-only)
+  users: true          # local user/session/access inventory (read-only)
 
 # Explicit method allow/deny globs on the wire name. Deny wins.
 # An empty allow list permits everything not denied.

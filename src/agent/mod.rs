@@ -4,7 +4,9 @@
 #[cfg(unix)]
 pub mod agent_call;
 pub mod audit;
+pub mod certificates;
 pub mod cli;
+pub mod customization;
 pub mod daemon;
 pub mod exec;
 pub mod executor;
@@ -17,8 +19,10 @@ pub mod inject;
 pub mod local_client;
 pub mod netintel;
 pub mod nettest;
+pub mod packages;
 pub mod policy;
 pub mod posture;
+pub mod users;
 pub mod state;
 pub mod storage_ops;
 pub mod telemetry;

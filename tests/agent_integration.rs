@@ -157,3 +157,59 @@ fn performance_summary_empty_store_is_well_formed() {
     let result = resp.result.expect("summary");
     assert_eq!(result["tier"], "fine");
 }
+
+// --- Phase 6: enterprise automation ---
+
+#[test]
+fn packages_inventory_via_handler() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.packages.inventory","id":30}"#);
+    let result = resp.result.expect("inventory");
+    assert!(result.get("installed_count").is_some());
+    assert!(result.get("manager").is_some());
+}
+
+#[test]
+fn packages_install_denied_by_default() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.packages.install","params":{"packages":["hello"]},"id":31}"#,
+    );
+    assert_eq!(resp.error.expect("denial").code, -32005);
+}
+
+#[test]
+fn certificates_inventory_via_handler() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.certificates.inventory","id":32}"#);
+    let result = resp.result.expect("certs");
+    assert!(result.get("certificate_count").is_some());
+    assert!(result.get("ssh_host_keys").is_some());
+}
+
+#[test]
+fn users_inventory_via_handler() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.users.inventory","id":33}"#);
+    assert!(resp.result.expect("users").get("user_count").is_some());
+}
+
+#[test]
+fn set_hostname_denied_by_default() {
+    let handler = RequestHandler::new();
+    let resp = handler.handle(
+        br#"{"jsonrpc":"2.0","method":"guestkit.system.setHostname","params":{"hostname":"x"},"id":34}"#,
+    );
+    assert_eq!(resp.error.expect("denial").code, -32005);
+}
+
+#[test]
+fn phase6_dotted_aliases_resolve() {
+    use guestkit_agent_protocol::RpcMethod;
+    assert_eq!(RpcMethod::parse("packages.updates"), RpcMethod::PackagesUpdates);
+    assert_eq!(
+        RpcMethod::parse("certificates.inventory"),
+        RpcMethod::CertificatesInventory
+    );
+    assert_eq!(RpcMethod::parse("customization.hostname"), RpcMethod::SetHostname);
+}

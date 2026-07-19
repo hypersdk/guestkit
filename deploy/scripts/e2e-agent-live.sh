@@ -154,4 +154,34 @@ R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.snapshot.complete","id":18}')"
 expect_contains "$R" "${SNAP_ID}" "snapshot complete"
 expect_contains "$R" '"consistency"' "snapshot complete"
 
+echo "  package inventory + updates (Phase 6)..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.packages.inventory","id":20}')"
+expect_contains "$R" '"installed_count"' "packages inventory"
+expect_contains "$R" '"manager"' "packages inventory"
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.packages.updates","id":21}')"
+expect_contains "$R" '"available_count"' "packages updates"
+expect_contains "$R" '"reboot_required"' "packages updates"
+
+echo "  package install denied by default policy..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.packages.install","params":{"packages":["hello"]},"id":22}')"
+expect_contains "$R" '\-32005' "package install denial"
+
+echo "  certificate + SSH host-key inventory..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.certificates.inventory","id":23}')"
+expect_contains "$R" '"certificate_count"' "certificates"
+expect_contains "$R" '"ssh_host_keys"' "certificates"
+
+echo "  user/access inventory..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.users.inventory","id":24}')"
+expect_contains "$R" '"user_count"' "users"
+
+echo "  customization denied by default policy..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.system.setHostname","params":{"hostname":"nope"},"id":25}')"
+expect_contains "$R" '\-32005' "customization denial"
+
+echo "  capabilities advertise Phase 6 categories..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.getCapabilities","id":26}')"
+expect_contains "$R" 'packages' "capabilities categories"
+expect_contains "$R" 'certificates' "capabilities categories"
+
 echo "  live agent e2e passed"
