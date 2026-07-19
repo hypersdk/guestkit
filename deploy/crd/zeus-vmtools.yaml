@@ -120,6 +120,14 @@ spec:
                 journalHintCount:
                   type: integer
                   minimum: 0
+                agentState:
+                  type: string
+                migrationReady:
+                  type: boolean
+                pendingReboot:
+                  type: boolean
+                fsFrozen:
+                  type: boolean
                 migrationReadiness:
                   type: object
                   properties:

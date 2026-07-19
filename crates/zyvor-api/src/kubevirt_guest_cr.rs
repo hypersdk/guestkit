@@ -46,6 +46,30 @@ pub fn migration_readiness_status(assessment: &Value) -> Option<Value> {
     }))
 }
 
+/// Merge protocol-1.3 heartbeat fields into VMGuestAgent status.
+pub async fn patch_vmguestagent_heartbeat(
+    client: &Client,
+    namespace: &str,
+    vm_name: &str,
+    heartbeat: &Value,
+) {
+    let cr_name = format!("{vm_name}-vmtools");
+    let ar = vmguestagent_resource();
+    let api: Api<kube::api::DynamicObject> = Api::namespaced_with(client.clone(), namespace, &ar);
+    let status = json!({
+        "status": {
+            "agentState": heartbeat.get("agent_state").and_then(|v| v.as_str()).unwrap_or("unknown"),
+            "migrationReady": heartbeat.get("migration_ready").and_then(|v| v.as_bool()).unwrap_or(false),
+            "pendingReboot": heartbeat.get("pending_reboot").and_then(|v| v.as_bool()).unwrap_or(false),
+            "fsFrozen": heartbeat.get("fs_frozen").and_then(|v| v.as_bool()).unwrap_or(false),
+            "lastHeartbeat": chrono::Utc::now().to_rfc3339(),
+        }
+    });
+    let _ = api
+        .patch_status(&cr_name, &PatchParams::default(), &Patch::Merge(&status))
+        .await;
+}
+
 /// Merge a migration assessment into VMGuestAgent status.
 pub async fn patch_vmguestagent_migration(
     client: &Client,

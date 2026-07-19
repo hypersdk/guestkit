@@ -13,7 +13,11 @@ struct SamplerState {
     prev_disk_write: u64,
 }
 
+const PERSIST_EVERY_TICKS: u64 = 300; // 5 minutes
+
 pub async fn run_sampler(store: Arc<TelemetryStore>) {
+    store.load_coarse();
+    let mut tick: u64 = 0;
     let mut state = SamplerState {
         sys: System::new(),
         networks: Networks::new_with_refreshed_list(),
@@ -26,6 +30,12 @@ pub async fn run_sampler(store: Arc<TelemetryStore>) {
         interval.tick().await;
         let sample = tokio::task::block_in_place(|| take_sample(&mut state));
         store.record(sample);
+        tick += 1;
+        if tick % PERSIST_EVERY_TICKS == 0 {
+            if let Err(e) = store.save_coarse() {
+                log::debug!("telemetry persist: {e}");
+            }
+        }
     }
 }
 
