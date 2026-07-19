@@ -47,6 +47,14 @@ impl RequestHandler {
     /// channel-scoped methods (event subscription) can act on it.
     pub fn handle_frame_on(&self, bytes: &[u8], chan: Option<&Arc<ChannelHandle>>) -> Vec<u8> {
         if crate::agent::qga::is_qga_request(bytes) {
+            // Generic passthrough: `guestkit-rpc` carries a full JSON-RPC request,
+            // routed through the complete dispatch so EVERY agent method is
+            // reachable over the QGA channel — not only the bespoke `guestkit-*`
+            // shims. Everything else falls back to the QGA compat handler.
+            if let Some(inner) = crate::agent::qga::extract_rpc_passthrough(bytes) {
+                let resp = self.handle_on(&inner, chan);
+                return crate::agent::qga::wrap_qga_response(&resp);
+            }
             return crate::agent::qga::handle(bytes);
         }
         serde_json::to_vec(&self.handle_on(bytes, chan)).unwrap_or_else(|e| {
