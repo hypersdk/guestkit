@@ -353,6 +353,126 @@ fn collect_fleet_disk_images_recursive(dir: &Path, images: &mut Vec<PathBuf>) ->
     Ok(())
 }
 
+/// Migration readiness assessment: `guestkit migrate-assess`
+pub fn migrate_assess_command(
+    image: &Path,
+    target: &str,
+    output_format: &str,
+    fail_below: Option<f64>,
+    verbose: bool,
+) -> Result<()> {
+    let (_evidence, assessment) =
+        crate::assurance::run_migrate_assess(image, target, verbose)?;
+
+    if output_format == "json" {
+        println!("{}", serde_json::to_string_pretty(&assessment)?);
+    } else {
+        println!("Migration Score: {:.0}/100  ({:?})", assessment.overall_score, assessment.readiness);
+        println!();
+        let s = &assessment.sub_scores;
+        println!("  Boot readiness:        {:>3.0}", s.boot);
+        println!("  Storage readiness:     {:>3.0}", s.storage);
+        println!("  Network readiness:     {:>3.0}", s.network);
+        println!("  Driver readiness:      {:>3.0}", s.driver);
+        println!("  Application readiness: {:>3.0}", s.application);
+        println!("  Security readiness:    {:>3.0}", s.security);
+        if !assessment.critical_blockers.is_empty() {
+            println!("\nCritical blockers:");
+            for b in &assessment.critical_blockers {
+                println!("  - [{}] {}: {}", b.check_id, b.title, b.message);
+            }
+        }
+        if !assessment.recommended_actions.is_empty() {
+            println!("\nRecommended actions:");
+            for (i, action) in assessment.recommended_actions.iter().enumerate() {
+                println!("  {}. {}", i + 1, action);
+            }
+        }
+        // §31 combined assessment: last-known running state from the guest's
+        // on-disk cache (only present when a live agent wrote one).
+        if let Some(oc) = &assessment.online_correlation {
+            println!("\nLast-known running state (from in-guest cache, §31):");
+            if let Some(ts) = oc.get("written_at").and_then(|v| v.as_str()) {
+                println!("  captured (live): {ts}");
+            }
+            if let Some(p) = oc.get("payload") {
+                if let Some(net) = p.get("network") {
+                    println!(
+                        "  listeners: {}  established: {}",
+                        net.get("listening").unwrap_or(&serde_json::json!("?")),
+                        net.get("established").unwrap_or(&serde_json::json!("?"))
+                    );
+                }
+                if let Some(c) = p.get("containers").and_then(|c| c.get("count")) {
+                    println!("  containers running: {c}");
+                }
+                if let Some(hb) = p.get("heartbeat").and_then(|h| h.get("agent_state")) {
+                    println!("  last agent state: {hb}");
+                }
+            }
+        }
+    }
+
+    if let Some(threshold) = fail_below {
+        if assessment.overall_score < threshold {
+            anyhow::bail!(
+                "migration score {:.0} below threshold {threshold}",
+                assessment.overall_score
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Migration repair plan (offline): `guestkit migrate-repair`
+pub fn migrate_repair_command(
+    image: &Path,
+    target: &str,
+    apply: bool,
+    include_destructive: bool,
+    export: Option<&Path>,
+    verbose: bool,
+) -> Result<()> {
+    let (evidence, assessment) =
+        crate::assurance::run_migrate_assess(image, target, verbose)?;
+    let (plan, notes) = crate::migration::MigrationRepairPlanner::from_assessment(
+        &assessment,
+        &evidence,
+        &crate::migration::RepairOptions {
+            include_destructive,
+        },
+    );
+
+    for note in &notes {
+        eprintln!("note: {note}");
+    }
+    if plan.operations.is_empty() {
+        println!("No automated repairs required (score {:.0}).", assessment.overall_score);
+        return Ok(());
+    }
+
+    crate::cli::plan::PlanPreview::display(&plan);
+
+    if let Some(path) = export {
+        std::fs::write(path, serde_json::to_string_pretty(&plan)?)?;
+        println!("Plan exported to {}", path.display());
+    }
+
+    if apply {
+        // Offline apply refuses to run without a successful full-image backup.
+        let applicator =
+            crate::cli::plan::PlanApplicator::new(image.display().to_string(), false);
+        let result = applicator.apply(&plan)?;
+        println!("{}", result.message);
+        if !result.success {
+            anyhow::bail!("repair plan apply failed");
+        }
+    } else {
+        println!("\nDry run only — pass --apply to execute against the image (a backup is taken first).");
+    }
+    Ok(())
+}
+
 /// Migration plan: `guestkit migrate-plan`
 #[cfg(feature = "agent")]
 pub fn migrate_plan_command(

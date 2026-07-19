@@ -164,6 +164,7 @@ impl PlanGenerator {
 
         // Default: create a command execution operation
         Ok(OperationType::CommandExec(CommandExec {
+            interpreter: None,
             command: remediation.to_string(),
             expected_exit: 0,
             timeout: Some(300), // 5 minutes default
@@ -362,6 +363,7 @@ impl PlanGenerator {
         }
 
         Ok(OperationType::CommandExec(CommandExec {
+            interpreter: None,
             command: change.to_string(),
             expected_exit: 0,
             timeout: Some(600),

@@ -28,17 +28,17 @@
 
     <ComponentGroup Id="ProductComponents" Directory="VMTOOLSDIR">
       <Component Id="AgentBinary" Guid="*">
-        <File Id="AgentExe" Source="zyvor-guest-agent.exe" KeyPath="yes" />
+        <File Id="AgentExe" Source="guestkitd.exe" KeyPath="yes" />
         <ServiceInstall Id="AgentServiceInstall"
                         Type="ownProcess"
-                        Name="ZyvorGuestAgent"
-                        DisplayName="Zeus VM Tools Guest Agent"
+                        Name="GuestKitAgent"
+                        DisplayName="Zyvor GuestKit Agent"
                         Description="In-guest agent for Zeus VM Tools on KubeVirt VMs"
                         Start="auto"
                         ErrorControl="normal"
                         Account="LocalSystem" />
         <ServiceControl Id="AgentServiceControl"
-                        Name="ZyvorGuestAgent"
+                        Name="GuestKitAgent"
                         Start="install"
                         Stop="both"
                         Remove="uninstall" />

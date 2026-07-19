@@ -1825,6 +1825,48 @@ enum Commands {
         agent_unit: Option<PathBuf>,
     },
 
+    /// Categorized migration-readiness assessment (sub-scores + blockers)
+    #[command(name = "migrate-assess")]
+    MigrateAssess {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target platform (proxmox, kvm, kubevirt, aws, azure, gcp)
+        #[arg(long, value_name = "TARGET")]
+        target: String,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+
+        /// Exit non-zero when the score is below this threshold (CI gate)
+        #[arg(long, value_name = "SCORE")]
+        fail_below: Option<f64>,
+    },
+
+    /// Generate (and optionally apply) a migration repair plan offline
+    #[command(name = "migrate-repair")]
+    MigrateRepair {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target platform (proxmox, kvm, kubevirt, aws, azure, gcp)
+        #[arg(long, value_name = "TARGET")]
+        target: String,
+
+        /// Apply the plan to the image (full-image backup is taken first)
+        #[arg(long)]
+        apply: bool,
+
+        /// Include destructive repairs (tool uninstall, ghost-NIC removal)
+        #[arg(long)]
+        include_destructive: bool,
+
+        /// Export the plan as JSON
+        #[arg(long, value_name = "FILE")]
+        export: Option<PathBuf>,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -3385,6 +3427,38 @@ pub fn run() -> anyhow::Result<()> {
                     inject_agent,
                 )?;
             }
+        }
+
+        Commands::MigrateAssess {
+            image,
+            target,
+            output,
+            fail_below,
+        } => {
+            crate::cli::commands::assurance::migrate_assess_command(
+                &image,
+                &target,
+                &output,
+                fail_below,
+                cli.verbose,
+            )?;
+        }
+
+        Commands::MigrateRepair {
+            image,
+            target,
+            apply,
+            include_destructive,
+            export,
+        } => {
+            crate::cli::commands::assurance::migrate_repair_command(
+                &image,
+                &target,
+                apply,
+                include_destructive,
+                export.as_deref(),
+                cli.verbose,
+            )?;
         }
 
         Commands::ForensicDiff { old, new, output } => {

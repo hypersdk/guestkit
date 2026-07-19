@@ -120,6 +120,44 @@ spec:
                 journalHintCount:
                   type: integer
                   minimum: 0
+                agentState:
+                  type: string
+                migrationReady:
+                  type: boolean
+                pendingReboot:
+                  type: boolean
+                fsFrozen:
+                  type: boolean
+                migrationReadiness:
+                  type: object
+                  properties:
+                    score:
+                      type: number
+                      minimum: 0
+                      maximum: 100
+                    readiness:
+                      type: string
+                      enum: [ready, ready_with_warnings, blocked]
+                    subScores:
+                      type: object
+                      properties:
+                        boot: { type: number }
+                        storage: { type: number }
+                        network: { type: number }
+                        driver: { type: number }
+                        application: { type: number }
+                        security: { type: number }
+                    blockers:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          checkId: { type: string }
+                          title: { type: string }
+                    target:
+                      type: string
+                    assessedAt:
+                      type: string
       subresources:
         status: {}
 ---

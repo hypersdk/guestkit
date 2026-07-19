@@ -30,7 +30,13 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
     let process = Some(crate::collectors::process::collect_process_evidence());
     let hardware = Some(crate::collectors::hardware::collect_hardware_evidence());
 
-    Ok(EvidenceSnapshot {
+    let linux_migration = if cfg!(target_os = "linux") {
+        Some(collect_linux_migration_live())
+    } else {
+        None
+    };
+
+    let mut snapshot = EvidenceSnapshot {
         schema_version: SCHEMA_VERSION,
         image_path: "live".to_string(),
         collected_at: Utc::now().to_rfc3339(),
@@ -50,7 +56,172 @@ pub fn build_evidence_live() -> Result<EvidenceSnapshot> {
         snapshot_readiness,
         process,
         hardware,
-    })
+        linux_migration,
+        online_cache: None,
+    };
+    enrich_migration_fields_live(&mut snapshot);
+    Ok(snapshot)
+}
+
+/// Live collection of the schema-v4 migration fields.
+fn enrich_migration_fields_live(snapshot: &mut EvidenceSnapshot) {
+    let boot = &mut snapshot.boot;
+    boot.firmware = if std::path::Path::new("/sys/firmware/efi").exists() {
+        "uefi"
+    } else {
+        "bios"
+    }
+    .to_string();
+    boot.secure_boot = detect_secure_boot_live();
+    boot.serial_console_configured = fs::read_to_string("/proc/cmdline")
+        .map(|c| c.contains("console=ttyS"))
+        .unwrap_or(false);
+    boot.initramfs_modules = list_initramfs_modules_live();
+
+    // Root free space via statvfs-equivalent (sysinfo Disks; agent builds).
+    #[cfg(feature = "sysinfo")]
+    {
+        let disks = sysinfo::Disks::new_with_refreshed_list();
+        snapshot.storage.free_space_root_mb = disks
+            .iter()
+            .find(|d| d.mount_point() == std::path::Path::new("/"))
+            .map(|d| d.available_space() / (1024 * 1024));
+    }
+
+    // Routing table for drift comparison.
+    if let Ok(out) = std::process::Command::new("ip").args(["route"]).output() {
+        if out.status.success() {
+            snapshot.network.routes = String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(str::to_string)
+                .collect();
+        }
+    }
+}
+
+fn detect_secure_boot_live() -> Option<bool> {
+    // mokutil is authoritative when present.
+    if let Ok(out) = std::process::Command::new("mokutil")
+        .arg("--sb-state")
+        .output()
+    {
+        if out.status.success() {
+            let text = String::from_utf8_lossy(&out.stdout).to_lowercase();
+            if text.contains("enabled") {
+                return Some(true);
+            }
+            if text.contains("disabled") {
+                return Some(false);
+            }
+        }
+    }
+    // Fallback: SecureBoot efivar's last data byte.
+    let efivars = std::path::Path::new("/sys/firmware/efi/efivars");
+    if efivars.exists() {
+        if let Ok(entries) = fs::read_dir(efivars) {
+            for entry in entries.flatten() {
+                if entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("SecureBoot-")
+                {
+                    if let Ok(data) = fs::read(entry.path()) {
+                        return data.last().map(|b| *b == 1);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Virtio-relevant module names bundled in the running kernel's initramfs.
+fn list_initramfs_modules_live() -> Vec<String> {
+    let release = fs::read_to_string("/proc/sys/kernel/osrelease")
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let candidates = [
+        format!("/boot/initramfs-{release}.img"),
+        format!("/boot/initrd.img-{release}"),
+        format!("/boot/initrd-{release}"),
+    ];
+    let Some(path) = candidates.iter().find(|p| std::path::Path::new(p).exists()) else {
+        return Vec::new();
+    };
+    for lister in ["lsinitrd", "lsinitramfs"] {
+        if let Ok(out) = std::process::Command::new(lister).arg(path).output() {
+            if out.status.success() {
+                let mut modules: Vec<String> = String::from_utf8_lossy(&out.stdout)
+                    .lines()
+                    .filter_map(|line| {
+                        let file = line.rsplit([' ', '/']).next()?;
+                        file.strip_suffix(".ko")
+                            .or_else(|| file.strip_suffix(".ko.xz"))
+                            .or_else(|| file.strip_suffix(".ko.zst"))
+                            .or_else(|| file.strip_suffix(".ko.gz"))
+                            .map(str::to_string)
+                    })
+                    .filter(|m| m.starts_with("virtio") || m.starts_with("nvme"))
+                    .collect();
+                modules.sort();
+                modules.dedup();
+                return modules;
+            }
+        }
+    }
+    Vec::new()
+}
+
+fn collect_linux_migration_live() -> crate::evidence::snapshot::LinuxMigrationEvidence {
+    let cmdline = fs::read_to_string("/proc/cmdline").unwrap_or_default();
+    let hypervisor_modules = fs::read_to_string("/proc/modules")
+        .map(|content| {
+            content
+                .lines()
+                .filter_map(|l| l.split_whitespace().next())
+                .filter(|m| {
+                    m.starts_with("vmw_")
+                        || m.starts_with("vmxnet")
+                        || m.starts_with("hv_")
+                        || m.starts_with("xen")
+                })
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // Files that pin static IP configuration (candidates for migration
+    // network-preservation planning).
+    let mut static_ip_configs = Vec::new();
+    let scan_dirs: [(&str, fn(&str) -> bool); 3] = [
+        ("/etc/sysconfig/network-scripts", |c| {
+            c.contains("BOOTPROTO=none") || c.contains("BOOTPROTO=static")
+        }),
+        ("/etc/netplan", |c| c.contains("addresses:")),
+        ("/etc/NetworkManager/system-connections", |c| {
+            c.contains("method=manual")
+        }),
+    ];
+    for (dir, is_static) in scan_dirs {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if is_static(&content) {
+                            static_ip_configs.push(path.display().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    crate::evidence::snapshot::LinuxMigrationEvidence {
+        predictable_nic_names: Some(!cmdline.contains("net.ifnames=0")),
+        static_ip_configs,
+        hypervisor_modules,
+    }
 }
 
 fn collect_os_live() -> OsEvidence {
