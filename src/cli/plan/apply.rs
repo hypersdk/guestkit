@@ -3,6 +3,7 @@
 
 use super::types::*;
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Applies fix plans to VM disks
@@ -26,6 +27,8 @@ impl PlanApplicator {
                 operations_failed: 0,
                 operations_skipped: plan.operations.len(),
                 message: "Dry run completed - no changes made".to_string(),
+                outcomes: Vec::new(),
+                rollback_dir: None,
             });
         }
 
@@ -37,6 +40,8 @@ impl PlanApplicator {
                 operations_failed: 0,
                 operations_skipped: plan.operations.len(),
                 message: format!("VM disk not found: {}", self.vm_path),
+                outcomes: Vec::new(),
+                rollback_dir: None,
             });
         }
 
@@ -53,6 +58,8 @@ impl PlanApplicator {
                     operations_failed: 1,
                     operations_skipped: plan.operations.len(),
                     message: format!("Failed to create backup, refusing to apply plan: {}", e),
+                    outcomes: Vec::new(),
+                    rollback_dir: None,
                 });
             }
         };
@@ -67,6 +74,8 @@ impl PlanApplicator {
                     operations_failed: 1,
                     operations_skipped: plan.operations.len(),
                     message: format!("Failed to create Guestfs handle: {}", e),
+                    outcomes: Vec::new(),
+                    rollback_dir: None,
                 });
             }
         };
@@ -79,6 +88,8 @@ impl PlanApplicator {
                 operations_failed: 1,
                 operations_skipped: plan.operations.len(),
                 message: format!("Failed to add drive: {}", e),
+                outcomes: Vec::new(),
+                rollback_dir: None,
             });
         }
 
@@ -90,6 +101,8 @@ impl PlanApplicator {
                 operations_failed: 1,
                 operations_skipped: plan.operations.len(),
                 message: format!("Failed to launch Guestfs: {}", e),
+                outcomes: Vec::new(),
+                rollback_dir: None,
             });
         }
 
@@ -118,7 +131,9 @@ impl PlanApplicator {
                 message:
                     "No operating system detected in VM disk. Cannot apply plan without a valid OS."
                         .to_string(),
-            });
+                        outcomes: Vec::new(),
+                        rollback_dir: None,
+                    });
         }
 
         // Topological sort of operations
@@ -168,6 +183,8 @@ impl PlanApplicator {
             operations_failed: failed,
             operations_skipped: skipped,
             message,
+            outcomes: Vec::new(),
+            rollback_dir: None,
         })
     }
 
@@ -302,6 +319,15 @@ impl PlanApplicator {
                 Ok(false)
             }
             OperationType::RegistryEdit(re) => self.apply_registry_edit(g, re),
+            OperationType::DriverInject(di) => {
+                // Offline driver injection (virtio-win extraction into the
+                // image) lands with the migration repair planner.
+                log::warn!(
+                    "Driver injection for {} not yet supported offline; skipping",
+                    di.driver_name
+                );
+                Ok(false)
+            }
         }
     }
 
@@ -588,6 +614,45 @@ impl PlanApplicator {
     }
 }
 
+/// Per-operation execution record (the spec's six repair artifacts).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OperationOutcome {
+    pub op_id: String,
+    pub status: OpStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub before_state: Option<String>,
+    pub planned_change: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub executed_change: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backup_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validation: Option<ValidationOutcome>,
+    pub rollback_procedure: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OpStatus {
+    Applied,
+    Skipped,
+    Failed,
+    RolledBack,
+    DryRun,
+    NotReached,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationOutcome {
+    pub command: String,
+    pub exit_code: Option<i32>,
+    pub passed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
 /// Result of applying a plan
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ApplyResult {
@@ -596,6 +661,12 @@ pub struct ApplyResult {
     pub operations_failed: usize,
     pub operations_skipped: usize,
     pub message: String,
+    /// Per-operation execution records (live executor; empty from the
+    /// offline guestfs applicator, which relies on full-image backup).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcomes: Vec<OperationOutcome>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rollback_dir: Option<String>,
 }
 
 /// Result of validating a plan
@@ -667,6 +738,7 @@ mod tests {
                 command: "echo test".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Test operation".to_string(),
@@ -718,6 +790,7 @@ mod tests {
                 command: "echo test".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Test operation".to_string(),
@@ -746,6 +819,7 @@ mod tests {
                 command: "rm -rf /data".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::High,
             description: "Delete data".to_string(),
@@ -774,6 +848,7 @@ mod tests {
                 command: "echo first".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "First operation".to_string(),
@@ -790,6 +865,7 @@ mod tests {
                 command: "echo second".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Second operation".to_string(),
@@ -813,6 +889,8 @@ mod tests {
             operations_failed: 0,
             operations_skipped: 2,
             message: "All operations completed".to_string(),
+            outcomes: Vec::new(),
+            rollback_dir: None,
         };
 
         assert!(result.success);
@@ -894,6 +972,7 @@ mod tests {
                 command: "test".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Test".to_string(),

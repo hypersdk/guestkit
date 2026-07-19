@@ -24,6 +24,30 @@ pub fn collect_windows_live() -> Option<WindowsEvidence> {
     } else {
         evidence.systemroot = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
     }
+
+    // Schema-v4 migration evidence (live SCM / BitLocker / VSS / pnputil /
+    // NIC config / BCD / licensing probes).
+    use crate::collectors::windows_live as probes;
+    evidence.virtio_drivers = probes::collect_virtio_drivers();
+    evidence.bitlocker = probes::collect_bitlocker_state();
+    if evidence
+        .bitlocker
+        .as_ref()
+        .map(|b| b.any_protected)
+        .unwrap_or(false)
+    {
+        evidence.bitlocker_detected = true;
+    }
+    evidence.vss = probes::collect_vss_health();
+    evidence.ghost_nics = probes::collect_ghost_nics();
+    evidence.static_nic_configs = probes::collect_nic_configs()
+        .into_iter()
+        .filter(|nic| !nic.dhcp)
+        .collect();
+    evidence.driver_signature_enforcement = probes::collect_driver_signature_enforcement();
+    evidence.esp_present = probes::collect_esp_present();
+    evidence.activation = probes::collect_activation_info();
+
     Some(evidence)
 }
 

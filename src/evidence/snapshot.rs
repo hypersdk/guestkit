@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// Normalized evidence collected from an offline disk image.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +35,22 @@ pub struct EvidenceSnapshot {
     pub process: Option<ProcessEvidence>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hardware: Option<HardwareEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linux_migration: Option<LinuxMigrationEvidence>,
+}
+
+/// Linux migration-relevant state that no other section captures.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LinuxMigrationEvidence {
+    /// Predictable interface naming active (systemd .link / no net.ifnames=0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub predictable_nic_names: Option<bool>,
+    /// Config files that pin static IPs (sysconfig/netplan/NetworkManager).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub static_ip_configs: Vec<String>,
+    /// Hypervisor-specific kernel modules currently loaded (vmw_*, hv_*, xen*).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hypervisor_modules: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -55,6 +71,12 @@ pub struct StorageEvidence {
     pub swap_devices: Vec<String>,
     pub root_filesystem: String,
     pub partition_uuids: Vec<PartitionUuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_space_root_mb: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boot_disk: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disk_controller: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,6 +113,17 @@ pub struct BootEvidence {
     pub loaded_modules: Vec<String>,
     pub pending_relabel: bool,
     pub cloud_init_present: bool,
+    /// Modules bundled in the default initramfs (virtio focus).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub initramfs_modules: Vec<String>,
+    /// Secure Boot enabled? None when undetectable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secure_boot: Option<bool>,
+    /// "bios" or "uefi"; empty when unknown.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub firmware: String,
+    #[serde(default)]
+    pub serial_console_configured: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -104,6 +137,9 @@ pub struct NetworkEvidence {
     pub default_gateway: Option<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub network_stack: String,
+    /// Raw routing table lines (`ip route` format) for drift comparison.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -410,6 +446,99 @@ pub struct WindowsEvidence {
     pub persistence: WindowsPersistenceEvidence,
     #[serde(default)]
     pub event_logs: WindowsEventLogSummary,
+    /// VirtIO driver install state (viostor/vioscsi/netkvm/vioser/balloon).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub virtio_drivers: Vec<WindowsDriverEntry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bitlocker: Option<BitLockerState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vss: Option<VssHealth>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ghost_nics: Vec<GhostNicEntry>,
+    /// Static NIC configurations, captured for post-migration IP transfer.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub static_nic_configs: Vec<WindowsNicConfig>,
+    /// True when driver signature enforcement is active (no testsigning /
+    /// nointegritychecks). None when undetectable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_signature_enforcement: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub esp_present: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<ActivationInfo>,
+}
+
+/// One virtio (or otherwise migration-critical) Windows driver.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsDriverEntry {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    /// SCM start type as text ("boot", "system", "auto", "manual", "disabled").
+    #[serde(default)]
+    pub start_type: String,
+    /// Start type Boot (0) — required for boot-critical storage drivers.
+    #[serde(default)]
+    pub boot_critical: bool,
+    #[serde(default)]
+    pub present: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BitLockerState {
+    /// Any volume with protection currently on (not suspended).
+    #[serde(default)]
+    pub any_protected: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub volumes: Vec<BitLockerVolume>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BitLockerVolume {
+    pub mount_point: String,
+    /// "on", "off", or "suspended".
+    pub protection: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct VssHealth {
+    #[serde(default)]
+    pub writers_total: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub writers_failed: Vec<String>,
+    #[serde(default)]
+    pub healthy: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GhostNicEntry {
+    pub instance_id: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsNicConfig {
+    pub name: String,
+    #[serde(default)]
+    pub mac: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ip_addresses: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gateway: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dns: Vec<String>,
+    #[serde(default)]
+    pub dhcp: bool,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ActivationInfo {
+    #[serde(default)]
+    pub licensed: bool,
+    /// "KMS", "MAK", "OEM", "Retail", or empty when unknown.
+    #[serde(default)]
+    pub channel: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

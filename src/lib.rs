@@ -68,6 +68,7 @@ pub mod journal;
 
 #[cfg(feature = "agent")]
 pub mod metrics;
+pub mod migration;
 
 // Optional modules
 #[cfg(feature = "guest-inspect")]

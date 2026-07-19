@@ -9,6 +9,37 @@ use std::time::Duration;
 
 pub const DEFAULT_SOCKET_PATH: &str = "/var/run/zyvor/guest-agent.sock";
 
+/// Socket paths tried in order by local tooling (canonical first).
+pub const CANDIDATE_SOCKETS: &[&str] = &[
+    "/run/guestkit/agent.sock",
+    "/var/run/zyvor/guest-agent.sock",
+];
+
+/// One framed request/response on a fresh connection (the local server
+/// serves a single frame per connection). Tries candidate sockets in order
+/// unless an explicit path is given.
+pub fn call_local(
+    socket_path: Option<&str>,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    let paths: Vec<&str> = match socket_path {
+        Some(p) => vec![p],
+        None => CANDIDATE_SOCKETS.to_vec(),
+    };
+    let mut last_err = None;
+    for path in paths {
+        match UnixStream::connect(path) {
+            Ok(mut stream) => {
+                stream.set_read_timeout(Some(Duration::from_secs(120)))?;
+                return call_method(&mut stream, method, params);
+            }
+            Err(e) => last_err = Some(anyhow::anyhow!("{path}: {e}")),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| anyhow::anyhow!("no agent socket available")))
+}
+
 pub fn print_local_status(socket_path: Option<&str>) -> Result<()> {
     let path = socket_path.unwrap_or(DEFAULT_SOCKET_PATH);
     let mut stream =
