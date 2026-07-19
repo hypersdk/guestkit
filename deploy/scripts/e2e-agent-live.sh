@@ -135,4 +135,23 @@ echo "  file ops denied by default policy..."
 R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.fileRead","params":{"path":"/etc/hostname"},"id":14}')"
 expect_contains "$R" '\-32005' "file_ops denial"
 
+echo "  security posture..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.security.posture","id":15}')"
+expect_contains "$R" '"overall_score"' "posture"
+expect_contains "$R" '"categories"' "posture"
+
+echo "  network connections (process correlation)..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.network.connections","id":16}')"
+expect_contains "$R" '"total_listening"' "connections"
+expect_contains "$R" '"egress"' "connections"
+
+echo "  snapshot prepare/complete (app plugins + watchdog)..."
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.snapshot.prepare","params":{"watchdog_secs":30},"id":17}')"
+expect_contains "$R" '"snapshot_id"' "snapshot prepare"
+expect_contains "$R" '"mechanism"' "snapshot prepare"
+SNAP_ID="$(echo "$R" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["snapshot_id"])')"
+R="$(rpc '{"jsonrpc":"2.0","method":"guestkit.snapshot.complete","id":18}')"
+expect_contains "$R" "${SNAP_ID}" "snapshot complete"
+expect_contains "$R" '"consistency"' "snapshot complete"
+
 echo "  live agent e2e passed"

@@ -54,6 +54,8 @@ pub enum RpcMethod {
     StopUnit,
     GetProcess,
     NetworkTest,
+    NetworkConnections,
+    SecurityPosture,
     StorageRescan,
     StorageTrim,
     StorageExpand,
@@ -66,6 +68,9 @@ pub enum RpcMethod {
     TimeSyncNow,
     Reboot,
     Shutdown,
+    // Protocol 1.3: orchestrated snapshots
+    SnapshotPrepare,
+    SnapshotComplete,
     // Protocol 1.3: migration assurance
     MigrationAssess,
     MigrationPlan,
@@ -126,6 +131,8 @@ impl RpcMethod {
             METHOD_STOP_UNIT => Self::StopUnit,
             METHOD_GET_PROCESS => Self::GetProcess,
             METHOD_NETWORK_TEST => Self::NetworkTest,
+            METHOD_NETWORK_CONNECTIONS => Self::NetworkConnections,
+            METHOD_SECURITY_POSTURE => Self::SecurityPosture,
             METHOD_STORAGE_RESCAN => Self::StorageRescan,
             METHOD_STORAGE_TRIM => Self::StorageTrim,
             METHOD_STORAGE_EXPAND => Self::StorageExpand,
@@ -138,6 +145,8 @@ impl RpcMethod {
             METHOD_TIME_SYNC_NOW => Self::TimeSyncNow,
             METHOD_REBOOT => Self::Reboot,
             METHOD_SHUTDOWN => Self::Shutdown,
+            METHOD_SNAPSHOT_PREPARE => Self::SnapshotPrepare,
+            METHOD_SNAPSHOT_COMPLETE => Self::SnapshotComplete,
             METHOD_MIGRATION_ASSESS => Self::MigrationAssess,
             METHOD_MIGRATION_PLAN => Self::MigrationPlan,
             METHOD_MIGRATION_REPAIR => Self::MigrationRepair,
@@ -173,6 +182,8 @@ impl RpcMethod {
             "service.stop" => Self::StopUnit,
             "service.restart" => Self::RestartUnit,
             "network.test" => Self::NetworkTest,
+            "network.connections" | "network.listeners" => Self::NetworkConnections,
+            "security.posture" => Self::SecurityPosture,
             "storage.rescan" => Self::StorageRescan,
             "storage.trim" => Self::StorageTrim,
             "storage.expand" => Self::StorageExpand,
@@ -185,6 +196,8 @@ impl RpcMethod {
             "system.time.sync" => Self::TimeSyncNow,
             "system.reboot" => Self::Reboot,
             "system.shutdown" => Self::Shutdown,
+            "snapshot.prepare" | "snapshot.preflight" => Self::SnapshotPrepare,
+            "snapshot.complete" => Self::SnapshotComplete,
             "snapshot.freeze" => Self::FreezeFilesystem,
             "snapshot.thaw" => Self::ThawFilesystem,
             "migration.assess" => Self::MigrationAssess,
@@ -221,6 +234,8 @@ impl RpcMethod {
                 | Self::Reboot
                 | Self::Shutdown
                 | Self::MigrationRepair
+                | Self::SnapshotPrepare
+                | Self::SnapshotComplete
                 | Self::MigrationCutoverEnter
                 | Self::MigrationCutoverExit
                 | Self::SubscribeEvents

@@ -99,13 +99,15 @@ impl AgentDaemon {
             self.config.kind
         );
 
-        // Local Unix socket API (read-only + policy-gated writes).
+        // Local API: Unix socket (Linux/macOS) + named pipe (Windows).
         // GUESTKIT_LOCAL_SOCKET overrides the default paths (tests/e2e).
+        #[cfg(unix)]
         crate::agent::transport::unix_listen::spawn_local_socket(
             Arc::clone(&self.handler),
             std::env::var("GUESTKIT_LOCAL_SOCKET").ok(),
         )
         .ok();
+        crate::agent::transport::named_pipe::spawn_pipe_server(Arc::clone(&self.handler));
 
         // Outbound Zeus mTLS push worker.
         task::spawn(async {

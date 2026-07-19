@@ -6,6 +6,7 @@ use guestkit_agent_protocol::{read_frame, write_frame};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::thread;
@@ -28,6 +29,7 @@ pub struct ExecResponse {
     pub error: Option<String>,
 }
 
+#[cfg(unix)]
 pub fn spawn_executor_server() -> Result<()> {
     IN_HELPER.store(true, std::sync::atomic::Ordering::Relaxed);
     let path = std::env::var("ZYVOR_EXEC_SOCKET").unwrap_or_else(|_| EXEC_SOCKET_PATH.to_string());
@@ -72,6 +74,7 @@ fn secure_executor_socket(path: &str) {
 #[cfg(not(unix))]
 fn secure_executor_socket(_path: &str) {}
 
+#[cfg(unix)]
 fn serve_connection(stream: UnixStream) -> Result<()> {
     let mut reader = stream.try_clone()?;
     let mut writer = stream;
@@ -84,6 +87,7 @@ fn serve_connection(stream: UnixStream) -> Result<()> {
     Ok(())
 }
 
+#[cfg(unix)]
 fn dispatch(executor: &crate::agent::executor::Executor, req: &ExecRequest) -> ExecResponse {
     match req.action.as_str() {
         "restart_unit" => {
@@ -299,6 +303,17 @@ pub fn run_time_sync() -> Result<String> {
     anyhow::bail!("no time sync mechanism succeeded (tried chronyc/timedatectl or w32tm)")
 }
 
+#[cfg(not(unix))]
+pub fn call_executor(_action: &str, _params: Value) -> Result<Value> {
+    anyhow::bail!("privileged helper IPC is Unix-only; Windows runs in-process")
+}
+
+#[cfg(not(unix))]
+pub fn spawn_executor_server() -> Result<()> {
+    anyhow::bail!("privileged helper IPC is Unix-only")
+}
+
+#[cfg(unix)]
 pub fn call_executor(action: &str, params: Value) -> Result<Value> {
     let path = std::env::var("ZYVOR_EXEC_SOCKET").unwrap_or_else(|_| EXEC_SOCKET_PATH.to_string());
     if !Path::new(&path).exists() {
@@ -330,6 +345,9 @@ pub fn call_executor(action: &str, params: Value) -> Result<Value> {
 static IN_HELPER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 pub fn executor_available() -> bool {
+    if cfg!(not(unix)) {
+        return false;
+    }
     if IN_HELPER.load(std::sync::atomic::Ordering::Relaxed) {
         return false;
     }

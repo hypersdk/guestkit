@@ -20,7 +20,7 @@ pub const COARSE_CAP: usize = 10080; // 7 d  @ 1 min
 
 /// One telemetry observation. Rate-like fields (`disk_*`, `net_*`) are
 /// deltas over the sample's window; the rest are gauges.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub struct PerfSample {
     pub ts: u64,
     pub cpu_pct: f32,
@@ -133,7 +133,57 @@ impl Default for TelemetryStore {
     }
 }
 
+/// On-disk persistence path for the coarse (7-day) ring.
+pub fn persist_path() -> std::path::PathBuf {
+    let base = std::env::var("GUESTKIT_STATE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            if cfg!(windows) {
+                std::path::PathBuf::from("C:\\ProgramData\\GuestKit")
+            } else {
+                std::path::PathBuf::from("/var/lib/guestkit")
+            }
+        });
+    base.join("telemetry-coarse.bin")
+}
+
 impl TelemetryStore {
+    /// Persist the coarse ring so the 7-day history survives restarts.
+    pub fn save_coarse(&self) -> anyhow::Result<()> {
+        let samples: Vec<PerfSample> = self
+            .coarse
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+            .copied()
+            .collect();
+        let path = persist_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let bytes = bincode::serialize(&samples)?;
+        let tmp = path.with_extension("tmp");
+        std::fs::write(&tmp, &bytes)?;
+        std::fs::rename(&tmp, &path)?;
+        Ok(())
+    }
+
+    /// Restore a previously persisted coarse ring (stale samples beyond
+    /// 7 days are naturally displaced as new ones arrive).
+    pub fn load_coarse(&self) {
+        let Ok(bytes) = std::fs::read(persist_path()) else {
+            return;
+        };
+        let Ok(samples) = bincode::deserialize::<Vec<PerfSample>>(&bytes) else {
+            log::warn!("telemetry persistence file unreadable — starting fresh");
+            return;
+        };
+        let mut coarse = self.coarse.lock().unwrap_or_else(|e| e.into_inner());
+        for sample in samples.into_iter().take(COARSE_CAP) {
+            coarse.push(sample);
+        }
+    }
+
     fn tier_ring(&self, tier: PerfTier) -> &Mutex<Ring<PerfSample>> {
         match tier {
             PerfTier::Fine => &self.fine,

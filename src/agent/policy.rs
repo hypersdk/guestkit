@@ -305,6 +305,9 @@ impl AgentPolicy {
             }
             SubscribeEvents if !self.capabilities.events => denied("events"),
             NetworkTest if !self.capabilities.network_test => denied("network_test"),
+            NetworkConnections | SecurityPosture if !self.capabilities.inventory => {
+                denied("inventory")
+            }
             FileRead | FileWrite | FileStat | FileList | FileChecksum
                 if !self.capabilities.file_ops.enabled =>
             {

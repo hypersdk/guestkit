@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Agent I/O transports.
 
+pub mod named_pipe;
 pub mod stdio;
+#[cfg(unix)]
 pub mod unix_listen;
 pub mod virtio;
 pub mod vsock;
