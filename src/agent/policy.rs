@@ -43,6 +43,13 @@ pub struct CapabilityToggles {
     pub file_ops: FileOpsPolicy,
     #[serde(default)]
     pub storage_ops: StorageOpsPolicy,
+    #[serde(default)]
+    pub packages: PackagePolicy,
+    #[serde(default = "default_true")]
+    pub certificates: bool,
+    /// Read-only user/session/access inventory.
+    #[serde(default = "default_true")]
+    pub users: bool,
 }
 
 impl Default for CapabilityToggles {
@@ -54,6 +61,31 @@ impl Default for CapabilityToggles {
             network_test: true,
             file_ops: FileOpsPolicy::default(),
             storage_ops: StorageOpsPolicy::default(),
+            packages: PackagePolicy::default(),
+            certificates: true,
+            users: true,
+        }
+    }
+}
+
+/// Package/patch management. Inventory and update queries are read-only and
+/// on by default; installation mutates the system and ships disabled.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackagePolicy {
+    #[serde(default = "default_true")]
+    pub inventory: bool,
+    #[serde(default = "default_true")]
+    pub updates: bool,
+    #[serde(default)]
+    pub install: bool,
+}
+
+impl Default for PackagePolicy {
+    fn default() -> Self {
+        Self {
+            inventory: true,
+            updates: true,
+            install: false,
         }
     }
 }
@@ -149,6 +181,16 @@ pub struct PolicyActions {
     pub self_update: SelfUpdatePolicy,
     #[serde(default)]
     pub migration: MigrationPolicy,
+    /// Guest customization (hostname/timezone/DNS): mutates system identity,
+    /// off by default.
+    #[serde(default)]
+    pub customization: CustomizationPolicy,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CustomizationPolicy {
+    #[serde(default)]
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,6 +283,7 @@ impl AgentPolicy {
                     auto_apply: false,
                 },
                 migration: MigrationPolicy::default(),
+                customization: CustomizationPolicy::default(),
             },
             capabilities: CapabilityToggles::default(),
             methods: MethodPolicy::default(),
@@ -326,6 +369,16 @@ impl AgentPolicy {
                 denied("migration assessment")
             }
             MigrationRepair if !self.actions.migration.repair => denied("migration repair"),
+            PackagesInventory if !self.capabilities.packages.inventory => denied("package inventory"),
+            PackagesUpdates if !self.capabilities.packages.updates => denied("package updates"),
+            PackagesInstall if !self.capabilities.packages.install => denied("package install"),
+            CertificatesInventory if !self.capabilities.certificates => {
+                denied("certificate inventory")
+            }
+            UsersInventory if !self.capabilities.users => denied("user inventory"),
+            SetHostname | SetTimezone | SetDns if !self.actions.customization.enabled => {
+                denied("customization")
+            }
             _ => Ok(()),
         }
     }
@@ -345,6 +398,11 @@ impl AgentPolicy {
             (self.actions.run_shell_command.enabled, "shell"),
             (self.actions.migration.assess, "migration"),
             (self.actions.migration.repair, "migration_repair"),
+            (caps.packages.inventory || caps.packages.updates, "packages"),
+            (caps.packages.install, "packages_install"),
+            (caps.certificates, "certificates"),
+            (caps.users, "users"),
+            (self.actions.customization.enabled, "customization"),
         ] {
             if on {
                 cats.push(name.to_string());
@@ -407,6 +465,36 @@ mod tests {
         assert!(p
             .authorize(&RpcMethod::GetCpuStats, "guestkit.getCpuStats")
             .is_err());
+    }
+
+    #[test]
+    fn phase6_defaults() {
+        let p = AgentPolicy::default();
+        // Read-heavy inventory on by default.
+        assert!(p
+            .authorize(&RpcMethod::PackagesInventory, "guestkit.packages.inventory")
+            .is_ok());
+        assert!(p
+            .authorize(&RpcMethod::PackagesUpdates, "guestkit.packages.updates")
+            .is_ok());
+        assert!(p
+            .authorize(&RpcMethod::CertificatesInventory, "guestkit.certificates.inventory")
+            .is_ok());
+        assert!(p
+            .authorize(&RpcMethod::UsersInventory, "guestkit.users.inventory")
+            .is_ok());
+        // Mutating: install and customization off by default.
+        assert!(p
+            .authorize(&RpcMethod::PackagesInstall, "guestkit.packages.install")
+            .is_err());
+        assert!(p
+            .authorize(&RpcMethod::SetHostname, "guestkit.system.setHostname")
+            .is_err());
+        let cats = p.enabled_categories();
+        assert!(cats.contains(&"packages".to_string()));
+        assert!(cats.contains(&"certificates".to_string()));
+        assert!(!cats.contains(&"packages_install".to_string()));
+        assert!(!cats.contains(&"customization".to_string()));
     }
 
     #[test]
