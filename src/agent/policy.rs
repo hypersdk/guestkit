@@ -50,6 +50,9 @@ pub struct CapabilityToggles {
     /// Read-only user/session/access inventory.
     #[serde(default = "default_true")]
     pub users: bool,
+    /// Tamper/integrity baseline + check.
+    #[serde(default = "default_true")]
+    pub integrity: bool,
 }
 
 impl Default for CapabilityToggles {
@@ -64,6 +67,7 @@ impl Default for CapabilityToggles {
             packages: PackagePolicy::default(),
             certificates: true,
             users: true,
+            integrity: true,
         }
     }
 }
@@ -379,6 +383,9 @@ impl AgentPolicy {
             ContainersInventory | InventoryCacheWrite if !self.capabilities.inventory => {
                 denied("inventory")
             }
+            IntegrityBaseline | IntegrityCheck if !self.capabilities.integrity => {
+                denied("integrity monitoring")
+            }
             SetHostname | SetTimezone | SetDns if !self.actions.customization.enabled => {
                 denied("customization")
             }
@@ -405,6 +412,7 @@ impl AgentPolicy {
             (caps.packages.install, "packages_install"),
             (caps.certificates, "certificates"),
             (caps.users, "users"),
+            (caps.integrity, "integrity"),
             (self.actions.customization.enabled, "customization"),
         ] {
             if on {

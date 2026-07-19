@@ -75,6 +75,9 @@ Dotted spec-style aliases are accepted (`service.restart`, `agent.health`,
 | Snapshots | `snapshot.prepare/complete` (app-consistent: PostgreSQL/MySQL/Redis/hooks + fsfreeze/VSS, watchdog auto-thaw) |
 | Observability | `network.connections` (process→unit→socket + egress map), `security.posture` (scored Linux/Windows findings) |
 | Enterprise (Phase 6) | `packages.inventory/updates/install`, `certificates.inventory` (+SSH host keys), `users.inventory`, `system.setHostname/setTimezone/setDns` |
+| Containers (§10) | `containers.inventory` (Docker/Podman/CRI + k8s node identity + migration risks) |
+| Offline correlation (§31) | `inventory.cacheSnapshot` — integrity-hashed running-state cache read back by offline disk inspection |
+| Integrity (§19) | `integrity.baseline` / `integrity.check` — SUID/module/authorized-key/sudoers/cron tamper diff |
 
 ## Heartbeat
 
@@ -145,13 +148,20 @@ security:
 
 Delivered on-agent: security posture (§18 evidence), package/patch
 management (§22), certificate + SSH-key lifecycle (§23 inventory),
-user/access inventory (§13 read), and guest customization (§14 —
-hostname/timezone/DNS). Deliberately **not** on-agent, per the spec's own
-guidance: full eBPF/ETW EDR + tamper streaming (§19 says "avoid turning
-GuestKit into a full EDR initially"), and CIS/compliance *policy
-evaluation* (§18 — the agent collects evidence; the control plane scores
-against versioned policy). Fleet dashboards and interactive remote-support
-sessions (§24/§25) are control-plane/UI concerns.
+user/access inventory (§13 read), guest customization (§14 —
+hostname/timezone/DNS), container/Kubernetes awareness (§10),
+offline+online inventory correlation (§31), and lightweight
+tamper/integrity monitoring (§19) — a baseline-and-diff over the
+security-sensitive surface (SUID/SGID, kernel modules, authorized_keys,
+sudoers, cron/timers, listeners).
+
+Deliberately **not** on-agent, per the spec's own guidance: full eBPF/ETW
+*event streaming* EDR (§19 says "avoid turning GuestKit into a full EDR
+initially" — the baseline-diff above is the "high-value events first"
+subset it recommends), and CIS/compliance *policy evaluation* (§18 — the
+agent collects evidence; the control plane scores against versioned
+policy). Fleet dashboards and interactive remote-support sessions
+(§24/§25) are control-plane/UI concerns.
 
 `getCapabilities` advertises the enabled categories so hosts can adapt.
 

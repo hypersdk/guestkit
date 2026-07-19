@@ -17,6 +17,7 @@ pub mod file_ops;
 pub mod handler;
 pub mod heartbeat;
 pub mod inject;
+pub mod integrity;
 #[cfg(unix)]
 pub mod local_client;
 pub mod netintel;

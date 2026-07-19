@@ -261,3 +261,27 @@ fn phase7_aliases_resolve() {
     );
     assert_eq!(RpcMethod::parse("inventory.cache"), RpcMethod::InventoryCacheWrite);
 }
+
+// --- Phase 8: tamper/integrity monitoring (§19) ---
+
+#[test]
+fn integrity_check_without_baseline() {
+    let handler = RequestHandler::new();
+    // Isolate state so a real baseline on the dev box doesn't interfere.
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("GUESTKIT_STATE_DIR", tmp.path());
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.integrity.check","id":50}"#);
+    let result = resp.result.expect("check");
+    assert_eq!(result["has_baseline"], false);
+    std::env::remove_var("GUESTKIT_STATE_DIR");
+}
+
+#[test]
+fn integrity_aliases_resolve() {
+    use guestkit_agent_protocol::RpcMethod;
+    assert_eq!(RpcMethod::parse("integrity.baseline"), RpcMethod::IntegrityBaseline);
+    assert_eq!(
+        RpcMethod::parse("security.integrity.check"),
+        RpcMethod::IntegrityCheck
+    );
+}
