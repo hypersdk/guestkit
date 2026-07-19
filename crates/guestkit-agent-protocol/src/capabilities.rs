@@ -77,6 +77,8 @@ pub const METHOD_GET_PROCESS: &str = "guestkit.getProcess";
 pub const METHOD_NETWORK_TEST: &str = "guestkit.networkTest";
 pub const METHOD_NETWORK_CONNECTIONS: &str = "guestkit.network.connections";
 pub const METHOD_SECURITY_POSTURE: &str = "guestkit.security.posture";
+pub const METHOD_INTEGRITY_BASELINE: &str = "guestkit.integrity.baseline";
+pub const METHOD_INTEGRITY_CHECK: &str = "guestkit.integrity.check";
 pub const METHOD_STORAGE_RESCAN: &str = "guestkit.storageRescan";
 pub const METHOD_STORAGE_TRIM: &str = "guestkit.storageTrim";
 pub const METHOD_STORAGE_EXPAND: &str = "guestkit.storageExpand";
@@ -212,6 +214,8 @@ impl AgentCapabilities {
                 METHOD_SET_DNS.to_string(),
                 METHOD_CONTAINERS_INVENTORY.to_string(),
                 METHOD_INVENTORY_CACHE_WRITE.to_string(),
+                METHOD_INTEGRITY_BASELINE.to_string(),
+                METHOD_INTEGRITY_CHECK.to_string(),
                 METHOD_FILE_READ.to_string(),
                 METHOD_FILE_WRITE.to_string(),
                 METHOD_FILE_STAT.to_string(),

@@ -44,6 +44,7 @@ capabilities:
     install: false     # package installation mutates the system; opt-in
   certificates: true   # X.509 + SSH host-key inventory (read-only)
   users: true          # local user/session/access inventory (read-only)
+  integrity: true      # tamper/integrity baseline + check (§19)
 
 # Explicit method allow/deny globs on the wire name. Deny wins.
 # An empty allow list permits everything not denied.
