@@ -561,6 +561,7 @@ pub(crate) mod tests_support {
             process: None,
             hardware: None,
             linux_migration: Some(LinuxMigrationEvidence::default()),
+            online_cache: None,
         };
         ev.boot.initramfs_modules = vec!["virtio_blk".into(), "virtio_pci".into()];
         ev.boot.serial_console_configured = true;
