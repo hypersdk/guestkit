@@ -203,3 +203,23 @@ jobs:
           cargo +nightly update -Z minimal-versions
           cargo +nightly update -p ahash@0.8.4 --precise 0.8.11
           cargo +nightly check --all-features
+
+  windows-agent-check:
+    name: Windows Agent Cross-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Install mingw
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Check agent crate for Windows
+        run: |
+          cargo check -p zyvor-guest-agent --target x86_64-pc-windows-gnu

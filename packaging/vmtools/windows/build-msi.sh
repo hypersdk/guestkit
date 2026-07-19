@@ -20,12 +20,12 @@ build_windows_agent() {
   fi
   cargo build --release -p zyvor-guest-agent \
     --target x86_64-pc-windows-gnu
-  cp "target/x86_64-pc-windows-gnu/release/zyvor-guest-agent.exe" "${STAGING}/"
+  cp "target/x86_64-pc-windows-gnu/release/guestkitd.exe" "${STAGING}/"
 }
 
 if command -v cargo >/dev/null 2>&1; then
   build_windows_agent || {
-    echo "Windows cross-compile unavailable — place zyvor-guest-agent.exe in ${STAGING}/ manually."
+    echo "Windows cross-compile unavailable — place guestkitd.exe in ${STAGING}/ manually."
     touch "${STAGING}/.agent-missing"
   }
 else
@@ -37,13 +37,13 @@ cp "${ROOT}/templates/agent/windows/register-updater-task.ps1" "${STAGING}/"
 cp "${TEMPLATES}/guest-agent-windows.toml" "${STAGING}/guest-agent.toml"
 cp "${TEMPLATES}/agent-policy.yaml" "${STAGING}/agent-policy.yaml"
 
-if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
-  cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/"
-  cp "${STAGING}/zyvor-guest-agent.exe" "${DIST}/../windows/" 2>/dev/null || true
+if [[ -f "${STAGING}/guestkitd.exe" ]]; then
+  cp "${STAGING}/guestkitd.exe" "${DIST}/"
+  cp "${STAGING}/guestkitd.exe" "${DIST}/../windows/" 2>/dev/null || true
 fi
 
 ZIP_PATH="${DIST}/zyvor-vm-tools-windows-${VERSION}.zip"
-if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
+if [[ -f "${STAGING}/guestkitd.exe" ]]; then
   (cd "${STAGING}" && zip -r "${ZIP_PATH}" .)
   WINDOWS_ZIP_SHA256="$(sha256sum "${ZIP_PATH}" | awk '{print $1}')"
   echo "${WINDOWS_ZIP_SHA256}" > "${DIST}/zyvor-vm-tools-windows-${VERSION}.sha256"
@@ -54,7 +54,7 @@ if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]]; then
   fi
 fi
 
-if [[ -f "${STAGING}/zyvor-guest-agent.exe" ]] && command -v candle >/dev/null && command -v light >/dev/null; then
+if [[ -f "${STAGING}/guestkitd.exe" ]] && command -v candle >/dev/null && command -v light >/dev/null; then
   WIX_OBJ="${DIST}/zyvor-vm-tools.wixobj"
   cp -a "${STAGING}/"* "${DIST}/"
   sed "s/Version=\"0.1.0.0\"/Version=\"${VERSION}.0\"/" "${WXS}" > "${DIST}/zyvor-guest-agent.wxs"
@@ -67,5 +67,5 @@ else
     (cd "${STAGING}" && zip -r "${ZIP_PATH}" .)
   fi
   echo "Zip: ${ZIP_PATH}"
-  echo "For MSI: install WiX Toolset, ensure zyvor-guest-agent.exe is in staging, re-run."
+  echo "For MSI: install WiX Toolset, ensure guestkitd.exe is in staging, re-run."
 fi

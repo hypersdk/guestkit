@@ -12,7 +12,10 @@ use windows_service::{
     service_dispatcher,
 };
 
-const SERVICE_NAME: &str = "ZyvorGuestAgent";
+const SERVICE_NAME: &str = "GuestKitAgent";
+/// Pre-rebrand service name, removed by the MSI on upgrade.
+#[allow(dead_code)]
+const SERVICE_NAME_LEGACY: &str = "ZyvorGuestAgent";
 
 define_windows_service!(ffi_service_main, service_main);
 

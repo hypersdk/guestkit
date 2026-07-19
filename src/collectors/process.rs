@@ -2,6 +2,7 @@
 //! Process and cgroup intelligence from /proc.
 
 use crate::evidence::snapshot::{ListeningPort, ProcessEvidence, ProcessSummary};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -94,18 +95,56 @@ fn parse_status_field(status: &str, key: &str) -> Option<String> {
 }
 
 fn collect_listening_ports() -> Vec<ListeningPort> {
+    // Build the socket-inode -> PID map in a single pass over /proc, rather
+    // than rescanning every process's fds for each listening socket (which
+    // is O(sockets x processes) and made live evidence take minutes on busy
+    // hosts). Unit lookups are memoized per PID.
+    let inode_map = build_inode_pid_map();
+    let mut unit_cache: HashMap<u32, Option<String>> = HashMap::new();
     let mut out = Vec::new();
     if let Ok(content) = fs::read_to_string("/proc/net/tcp") {
-        parse_proc_net(&content, false, &mut out);
+        parse_proc_net(&content, &inode_map, &mut unit_cache, &mut out);
     }
     if let Ok(content) = fs::read_to_string("/proc/net/tcp6") {
-        parse_proc_net(&content, true, &mut out);
+        parse_proc_net(&content, &inode_map, &mut unit_cache, &mut out);
     }
     out.sort_by_key(|p| p.port);
     out.into_iter().take(50).collect()
 }
 
-fn parse_proc_net(content: &str, _ipv6: bool, out: &mut Vec<ListeningPort>) {
+/// socket:[inode] -> pid, from one walk of /proc/*/fd.
+fn build_inode_pid_map() -> HashMap<String, u32> {
+    let mut map = HashMap::new();
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return map;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        let Ok(pid) = name.parse::<u32>() else { continue };
+        let Ok(fds) = fs::read_dir(format!("/proc/{pid}/fd")) else {
+            continue;
+        };
+        for fd in fds.flatten() {
+            if let Ok(link) = fs::read_link(fd.path()) {
+                let link = link.to_string_lossy();
+                if let Some(inode) = link
+                    .strip_prefix("socket:[")
+                    .and_then(|s| s.strip_suffix(']'))
+                {
+                    map.insert(inode.to_string(), pid);
+                }
+            }
+        }
+    }
+    map
+}
+
+fn parse_proc_net(
+    content: &str,
+    inode_map: &HashMap<String, u32>,
+    unit_cache: &mut HashMap<u32, Option<String>>,
+    out: &mut Vec<ListeningPort>,
+) {
     for line in content.lines().skip(1) {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() < 10 {
@@ -122,7 +161,7 @@ fn parse_proc_net(content: &str, _ipv6: bool, out: &mut Vec<ListeningPort>) {
             continue;
         }
         let inode = parts[9];
-        let pid = inode_to_pid(inode).unwrap_or(0);
+        let pid = inode_map.get(inode).copied().unwrap_or(0);
         let process = if pid > 0 {
             read_proc_pid(pid)
                 .map(|p| p.name)
@@ -131,7 +170,10 @@ fn parse_proc_net(content: &str, _ipv6: bool, out: &mut Vec<ListeningPort>) {
             String::new()
         };
         let unit = if pid > 0 {
-            map_pid_to_unit(pid)
+            unit_cache
+                .entry(pid)
+                .or_insert_with(|| map_pid_to_unit(pid))
+                .clone()
         } else {
             None
         };
@@ -144,32 +186,29 @@ fn parse_proc_net(content: &str, _ipv6: bool, out: &mut Vec<ListeningPort>) {
     }
 }
 
-fn inode_to_pid(inode: &str) -> Option<u32> {
-    let proc_dir = Path::new("/proc");
-    for entry in fs::read_dir(proc_dir).into_iter().flatten().flatten() {
-        let pid_str = entry.file_name().to_string_lossy().to_string();
-        let pid = pid_str.parse::<u32>().ok();
-        if pid.is_none() {
-            continue;
-        }
-        let pid = pid.unwrap();
-        let fd_dir = format!("/proc/{pid}/fd");
-        if let Ok(fds) = fs::read_dir(&fd_dir) {
-            for fd in fds.flatten() {
-                if let Ok(link) = fs::read_link(fd.path()) {
-                    let link_str = link.to_string_lossy();
-                    if link_str.contains(inode) {
-                        return Some(pid);
-                    }
-                }
-            }
+/// Resolve a PID's systemd unit from /proc/<pid>/cgroup — a single cheap
+/// file read, versus a D-Bus round trip per process (which made whole-host
+/// process walks take minutes). Falls back to the D-Bus manager only when
+/// the cgroup line doesn't name a unit.
+#[cfg(target_os = "linux")]
+fn map_pid_to_unit(pid: u32) -> Option<String> {
+    if let Ok(cgroup) = fs::read_to_string(format!("/proc/{pid}/cgroup")) {
+        if let Some(unit) = cgroup
+            .lines()
+            .filter_map(|l| l.rsplit('/').next())
+            .find(|u| u.ends_with(".service") || u.ends_with(".scope"))
+        {
+            return Some(unit.to_string());
         }
     }
     None
 }
 
+/// Available for callers that specifically want the authoritative D-Bus
+/// answer for a single PID (rarely needed after the cgroup fast path).
 #[cfg(target_os = "linux")]
-fn map_pid_to_unit(pid: u32) -> Option<String> {
+#[allow(dead_code)]
+fn map_pid_to_unit_dbus(pid: u32) -> Option<String> {
     get_unit_by_pid(pid)
 }
 

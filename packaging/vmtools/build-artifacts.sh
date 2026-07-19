@@ -8,16 +8,20 @@ DIST="${ROOT}/dist/vmtools"
 ISO_DIR="${DIST}/iso-root"
 DEB_ROOT="${DIST}/deb-root"
 
-echo "Building zyvor-guest-agent (musl)..."
+echo "Building guestkitd (musl)..."
 cd "${ROOT}"
 rustup target add x86_64-unknown-linux-musl 2>/dev/null || true
 cargo build --release -p zyvor-guest-agent \
   --target x86_64-unknown-linux-musl
 
 mkdir -p "${DIST}/linux" "${ISO_DIR}/linux"
-cp "target/x86_64-unknown-linux-musl/release/zyvor-guest-agent" "${DIST}/linux/zyvor-guest-agent"
-cp "target/x86_64-unknown-linux-musl/release/zyvor-guest-agent-exec" "${DIST}/linux/zyvor-guest-agent-exec"
-cp templates/agent/zyvor-guest-agent.service "${DIST}/linux/"
+cp "target/x86_64-unknown-linux-musl/release/guestkitd" "${DIST}/linux/guestkitd"
+cp "target/x86_64-unknown-linux-musl/release/guestkitd-exec" "${DIST}/linux/guestkitd-exec"
+cp "target/x86_64-unknown-linux-musl/release/guestkitctl" "${DIST}/linux/guestkitctl"
+# Compatibility artifact names for pre-rebrand updaters/installers
+cp "${DIST}/linux/guestkitd" "${DIST}/linux/zyvor-guest-agent"
+cp "${DIST}/linux/guestkitd-exec" "${DIST}/linux/zyvor-guest-agent-exec"
+cp templates/agent/guestkit-agent.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-agent-exec.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-updater.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-updater.timer "${DIST}/linux/"
@@ -27,8 +31,8 @@ mkdir -p "${DIST}/linux/hooks/pre-snapshot"
 cp templates/agent/hooks/pre-snapshot/*.sh "${DIST}/linux/hooks/pre-snapshot/"
 chmod 755 "${DIST}/linux/hooks/pre-snapshot/"*.sh
 tar czf "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" \
-  -C "${DIST}/linux" zyvor-guest-agent zyvor-guest-agent-exec \
-  zyvor-guest-agent.service zyvor-guest-agent-exec.service \
+  -C "${DIST}/linux" guestkitd guestkitd-exec \
+  guestkit-agent.service zyvor-guest-agent-exec.service \
   zyvor-guest-updater.service zyvor-guest-updater.timer \
   agent-policy.yaml guest-agent.toml hooks
 LINUX_TAR_SHA256="$(sha256sum "${DIST}/linux/zyvor-vm-tools-linux-amd64.tar.gz" | awk '{print $1}')"
@@ -42,9 +46,9 @@ fi
 echo "Building DEB..."
 rm -rf "${DEB_ROOT}"
 mkdir -p "${DEB_ROOT}/DEBIAN" "${DEB_ROOT}/usr/bin" "${DEB_ROOT}/lib/systemd/system" "${DEB_ROOT}/etc/zyvor"
-cp "${DIST}/linux/zyvor-guest-agent" "${DEB_ROOT}/usr/bin/"
-cp "${DIST}/linux/zyvor-guest-agent-exec" "${DEB_ROOT}/usr/bin/"
-cp "${DIST}/linux/zyvor-guest-agent.service" "${DEB_ROOT}/lib/systemd/system/"
+cp "${DIST}/linux/guestkitd" "${DEB_ROOT}/usr/bin/"
+cp "${DIST}/linux/guestkitd-exec" "${DEB_ROOT}/usr/bin/"
+cp "${DIST}/linux/guestkit-agent.service" "${DEB_ROOT}/lib/systemd/system/"
 cp "${DIST}/linux/zyvor-guest-agent-exec.service" "${DEB_ROOT}/lib/systemd/system/"
 cp "${DIST}/linux/zyvor-guest-updater.service" "${DEB_ROOT}/lib/systemd/system/"
 cp "${DIST}/linux/zyvor-guest-updater.timer" "${DEB_ROOT}/lib/systemd/system/"
@@ -77,7 +81,7 @@ mkdir -p /var/lib/zyvor /etc/zyvor
 chown zyvor-agent:zyvor-agent /var/lib/zyvor 2>/dev/null || true
 chmod 750 /var/lib/zyvor 2>/dev/null || true
 systemctl daemon-reload || true
-systemctl enable zyvor-guest-agent.service || true
+systemctl enable guestkit-agent.service || true
 systemctl enable zyvor-guest-agent-exec.service || true
 systemctl enable zyvor-guest-updater.timer || true
 systemctl start zyvor-guest-agent-exec.service || true
@@ -92,8 +96,12 @@ if command -v rpmbuild >/dev/null; then
   tar czf "${RPM_TOP}/SOURCES/zyvor-vm-tools-${VERSION}.tar.gz" \
     -C "${ROOT}" \
     --transform "s,^,guestkit-${VERSION}/," \
-    templates/agent/zyvor-guest-agent.service \
-    target/x86_64-unknown-linux-musl/release/zyvor-guest-agent
+    templates/agent/guestkit-agent.service \
+    target/x86_64-unknown-linux-musl/release/guestkitd \
+    target/x86_64-unknown-linux-musl/release/guestkitd-exec \
+    target/x86_64-unknown-linux-musl/release/guestkitctl \
+    templates/agent/zyvor-guest-agent-exec.service \
+    templates/agent/agent-policy.yaml
   sed "s/^Version:.*/Version:        ${VERSION}/" "${ROOT}/packaging/vmtools/zyvor-vm-tools.spec" \
     > "${RPM_TOP}/SPECS/zyvor-vm-tools.spec"
   rpmbuild -bb --define "_topdir ${RPM_TOP}" "${RPM_TOP}/SPECS/zyvor-vm-tools.spec" || true
@@ -105,15 +113,17 @@ cat > "${ISO_DIR}/linux/install.sh" <<'EOF'
 set -eu
 ARCH="$(uname -m)"
 if [ -f /etc/redhat-release ]; then
-  rpm -Uvh --force linux/zyvor-vm-tools-*.rpm 2>/dev/null || cp linux/zyvor-guest-agent /usr/bin/zyvor-guest-agent
+  rpm -Uvh --force linux/zyvor-vm-tools-*.rpm 2>/dev/null || cp linux/guestkitd /usr/bin/guestkitd
 elif [ -f /etc/debian_version ]; then
-  dpkg -i linux/zyvor-vm-tools_*.deb 2>/dev/null || cp linux/zyvor-guest-agent /usr/bin/zyvor-guest-agent
+  dpkg -i linux/zyvor-vm-tools_*.deb 2>/dev/null || cp linux/guestkitd /usr/bin/guestkitd
 else
-  cp linux/zyvor-guest-agent /usr/bin/zyvor-guest-agent
+  cp linux/guestkitd /usr/bin/guestkitd
 fi
-chmod 755 /usr/bin/zyvor-guest-agent
-chmod 755 /usr/bin/zyvor-guest-agent-exec
-install -Dm644 linux/zyvor-guest-agent.service /etc/systemd/system/zyvor-guest-agent.service
+chmod 755 /usr/bin/guestkitd
+chmod 755 /usr/bin/guestkitd-exec 2>/dev/null || true
+ln -sf guestkitd /usr/bin/zyvor-guest-agent
+ln -sf guestkitd-exec /usr/bin/zyvor-guest-agent-exec
+install -Dm644 linux/guestkit-agent.service /etc/systemd/system/guestkit-agent.service
 install -Dm644 linux/zyvor-guest-agent-exec.service /etc/systemd/system/zyvor-guest-agent-exec.service
 install -Dm644 linux/zyvor-guest-updater.service /etc/systemd/system/zyvor-guest-updater.service
 install -Dm644 linux/zyvor-guest-updater.timer /etc/systemd/system/zyvor-guest-updater.timer
@@ -138,7 +148,7 @@ systemctl enable --now zyvor-guest-updater.timer
 echo "Zyvor VM Tools installed"
 EOF
 chmod +x "${ISO_DIR}/linux/install.sh"
-cp "${DIST}/linux/zyvor-guest-agent" "${ISO_DIR}/linux/"
+cp "${DIST}/linux/guestkitd" "${ISO_DIR}/linux/"
 cp "${DIST}/linux/zyvor-guest-agent.service" "${ISO_DIR}/linux/"
 cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/dev/null || true
 cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true

@@ -469,6 +469,8 @@ mod tests {
             snapshot_readiness: None,
             process: None,
             hardware: None,
+            linux_migration: None,
+            online_cache: None,
         }
     }
 

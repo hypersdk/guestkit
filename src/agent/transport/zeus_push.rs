@@ -221,9 +221,14 @@ async fn push_heartbeat(
         }
     });
     let recent_events = recent_systemd_events(50);
+    let runtime = crate::agent::state::AgentRuntime::global();
+    let heartbeat = runtime
+        .last_heartbeat()
+        .unwrap_or_else(|| crate::agent::heartbeat::build_heartbeat(&runtime));
     let body = serde_json::json!({
         "status": status,
         "recent_events": recent_events,
+        "heartbeat": heartbeat,
     });
     client
         .post(&url)

@@ -507,6 +507,8 @@ mod tests {
             snapshot_readiness: None,
             process: None,
             hardware: None,
+            linux_migration: None,
+            online_cache: None,
         };
         let health = build_guest_health(&evidence);
         assert_eq!(health.vm_hostname, "test-vm");

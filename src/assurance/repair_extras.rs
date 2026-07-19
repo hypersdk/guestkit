@@ -72,6 +72,7 @@ pub fn append_repair_extras(
         plan.operations.push(Operation {
             id: format!("repair-{op_counter:03}"),
             op_type: OperationType::CommandExec(CommandExec {
+                interpreter: None,
                 command: "grep -q '^network:' /etc/cloud/cloud.cfg 2>/dev/null || echo 'network: {config: disabled}' >> /etc/cloud/cloud.cfg".into(),
                 expected_exit: 0,
                 timeout: Some(60),
@@ -100,6 +101,7 @@ pub fn append_repair_extras(
             plan.operations.push(Operation {
                 id: format!("repair-{op_counter:03}"),
                 op_type: OperationType::CommandExec(CommandExec {
+                interpreter: None,
                     command: "grep -v '^#' /etc/fstab | awk '{print $1,$2,$3}' | head -20".into(),
                     expected_exit: 0,
                     timeout: Some(60),
@@ -120,6 +122,7 @@ pub fn append_repair_extras(
         plan.operations.push(Operation {
             id: format!("repair-{op_counter:03}"),
             op_type: OperationType::CommandExec(CommandExec {
+                interpreter: None,
                 command: "systemctl daemon-reload".into(),
                 expected_exit: 0,
                 timeout: Some(30),

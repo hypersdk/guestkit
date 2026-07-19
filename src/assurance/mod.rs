@@ -188,6 +188,23 @@ pub struct MigratePlanOptions {
 }
 
 /// Generate a hypervisor-aware migration plan for an offline disk image.
+/// Offline migration-readiness assessment (categorized checks + sub-scores)
+/// over a disk image. The live equivalent is the agent's
+/// `guestkit.migration.assess`.
+pub fn run_migrate_assess(
+    image: &Path,
+    target: &str,
+    verbose: bool,
+) -> Result<(
+    crate::evidence::EvidenceSnapshot,
+    crate::migration::MigrationAssessment,
+)> {
+    let boot_target = boot_target_from_str(target);
+    let (evidence, boot_report) = collect_assurance_data(image, boot_target, verbose)?;
+    let assessment = crate::migration::assess_migration(&evidence, &boot_report, target, false);
+    Ok((evidence, assessment))
+}
+
 pub fn run_migrate_plan(
     image: &Path,
     target: &str,

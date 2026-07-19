@@ -159,6 +159,14 @@ impl PlanExporter {
                     )?;
                 }
             }
+            OperationType::DriverInject(di) => {
+                writeln!(
+                    script,
+                    "pnputil /add-driver {} /install  # driver: {}",
+                    shell_escape(&di.inf_path),
+                    shell_escape(&di.driver_name)
+                )?;
+            }
             OperationType::RegistryEdit(re) => {
                 let new_data_str = re.new_data.to_string();
                 writeln!(
@@ -329,6 +337,9 @@ impl PlanExporter {
                 writeln!(playbook, "        name: {}", re.value)?;
                 writeln!(playbook, "        data: {}", re.new_data)?;
                 writeln!(playbook, "        type: {}", re.data_type)?;
+            }
+            OperationType::DriverInject(di) => {
+                writeln!(playbook, "      win_command: pnputil /add-driver {} /install", di.inf_path)?;
             }
         }
 
@@ -564,6 +575,7 @@ mod tests {
                 command: "echo 'test command'".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Low,
             description: "Run command".to_string(),
@@ -666,6 +678,7 @@ mod tests {
                 command: "systemctl start nginx".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Medium,
             description: "Start nginx".to_string(),

@@ -132,6 +132,13 @@ impl PlanPreview {
                     re.new_data.to_string().green()
                 );
             }
+            OperationType::DriverInject(di) => {
+                println!("  Driver: {}", di.driver_name.bright_blue());
+                println!("  INF: {}", di.inf_path);
+                if di.boot_critical {
+                    println!("  {}", "boot-critical".yellow());
+                }
+            }
             OperationType::CommandExec(ce) => {
                 println!("  Command: {}", ce.command.bright_cyan());
             }
@@ -365,6 +372,7 @@ mod tests {
                 command: "echo test".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::Critical,
             description: "Critical operation".to_string(),
@@ -394,6 +402,7 @@ mod tests {
                 command: "echo first".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::High,
             description: "First operation".to_string(),
@@ -410,6 +419,7 @@ mod tests {
                 command: "echo second".to_string(),
                 expected_exit: 0,
                 timeout: None,
+                interpreter: None,
             }),
             priority: Priority::High,
             description: "Second operation".to_string(),

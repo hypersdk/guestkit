@@ -252,6 +252,38 @@ pub async fn guest_agent_heartbeat(
         )
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    // Protocol 1.3 rich heartbeat: reflect agent state and migration
+    // readiness (and, when pushed, the full assessment) into the
+    // VMGuestAgent CR so status flows without a separate proxy call.
+    if body.get("heartbeat").is_some() || body.get("migration_assessment").is_some() {
+        let meta_raw: Option<String> = redis
+            .get(format!("guest-agent:meta:{agent_id}"))
+            .await
+            .unwrap_or(None);
+        if let (Some(meta_str), Some(client)) = (meta_raw, state.kube.clone()) {
+            if let Ok(meta) = serde_json::from_str::<Value>(&meta_str) {
+                if let (Some(ns), Some(vm)) = (
+                    meta.get("namespace").and_then(|v| v.as_str()),
+                    meta.get("vm_name").and_then(|v| v.as_str()),
+                ) {
+                    if let Some(hb) = body.get("heartbeat") {
+                        crate::kubevirt_guest_cr::patch_vmguestagent_heartbeat(
+                            &client, ns, vm, hb,
+                        )
+                        .await;
+                    }
+                    if let Some(assessment) = body.get("migration_assessment") {
+                        crate::kubevirt_guest_cr::patch_vmguestagent_migration(
+                            &client, ns, vm, assessment,
+                        )
+                        .await;
+                    }
+                }
+            }
+        }
+    }
+
     Ok(Json(ApiResponse::ok(json!({ "accepted": true }))))
 }
 
