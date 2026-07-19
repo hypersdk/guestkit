@@ -100,11 +100,15 @@ fn parse_cert(path: &Path) -> Option<CertInfo> {
                 .and_then(|s| s.split_whitespace().next())
                 .and_then(|n| n.parse().ok())
         });
+    // "Public Key Algorithm: id-ecPublicKey" | "rsaEncryption" | ...
+    let key_algorithm = text
+        .lines()
+        .find(|l| l.trim_start().starts_with("Public Key Algorithm:"))
+        .map(|l| l.split(':').nth(1).unwrap_or("").trim().to_string())
+        .unwrap_or_default();
 
     let days = parse_expiry_days(&not_after);
-    let weak = matches!(key_bits, Some(bits) if bits < WEAK_RSA_BITS)
-        || sig_alg.to_lowercase().contains("md5")
-        || sig_alg.to_lowercase().contains("sha1");
+    let weak = is_weak_key(&key_algorithm, key_bits, &sig_alg);
 
     Some(CertInfo {
         path: path.display().to_string(),
@@ -118,6 +122,25 @@ fn parse_cert(path: &Path) -> Option<CertInfo> {
         expired: days.map(|d| d < 0).unwrap_or(false),
         weak,
     })
+}
+
+/// Weak-key heuristic that is algorithm-aware: the 2048-bit floor only
+/// applies to RSA/DSA. ECC/EdDSA keys use far smaller key sizes for
+/// equivalent strength (P-256 ≈ RSA-3072), so a 256-bit ECC key is strong,
+/// not weak. A SHA-1/MD5 signature is weak regardless of key type.
+fn is_weak_key(algorithm: &str, key_bits: Option<u32>, sig_alg: &str) -> bool {
+    let sig = sig_alg.to_lowercase();
+    if sig.contains("md5") || (sig.contains("sha1") && !sig.contains("sha1-")) {
+        return true;
+    }
+    let algo = algorithm.to_lowercase();
+    let is_ecc = algo.contains("ec") || algo.contains("ed25519") || algo.contains("ed448");
+    if is_ecc {
+        // Sub-224-bit ECC curves are considered weak; P-256+ is strong.
+        return matches!(key_bits, Some(bits) if bits < 224);
+    }
+    // RSA/DSA (or unknown): apply the classic 2048-bit floor.
+    matches!(key_bits, Some(bits) if bits < WEAK_RSA_BITS)
 }
 
 /// Days until `notAfter` using `openssl`-formatted dates ("MMM DD HH:MM:SS YYYY GMT").
@@ -174,7 +197,8 @@ fn windows_cert_inventory() -> Vec<CertInfo> {
         Select-Object Subject,Issuer,@{n='NotAfter';e={$_.NotAfter.ToString('o')}},\
         @{n='Days';e={($_.NotAfter - (Get-Date)).Days}},\
         @{n='SigAlg';e={$_.SignatureAlgorithm.FriendlyName}},\
-        @{n='KeyBits';e={$_.PublicKey.Key.KeySize}} | ConvertTo-Json -Compress";
+        @{n='KeyBits';e={$_.PublicKey.Key.KeySize}},\
+        @{n='KeyAlgorithm';e={$_.PublicKey.Oid.FriendlyName}} | ConvertTo-Json -Compress";
     let out = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
         .output();
@@ -194,6 +218,8 @@ fn windows_cert_inventory() -> Vec<CertInfo> {
         sig_alg: Option<String>,
         #[serde(rename = "KeyBits", default)]
         key_bits: Option<u32>,
+        #[serde(rename = "KeyAlgorithm", default)]
+        algorithm: Option<String>,
     }
     let rows: Vec<Row> = if json_text.trim_start().starts_with('[') {
         serde_json::from_str(&json_text).unwrap_or_default()
@@ -212,8 +238,7 @@ fn windows_cert_inventory() -> Vec<CertInfo> {
                 not_after: r.not_after,
                 days_until_expiry: r.days,
                 key_bits: r.key_bits,
-                weak: matches!(r.key_bits, Some(b) if b < WEAK_RSA_BITS)
-                    || sig.to_lowercase().contains("sha1"),
+                weak: is_weak_key(&r.algorithm.clone().unwrap_or_default(), r.key_bits, &sig),
                 signature_algorithm: sig,
                 expiring_soon: r.days >= 0 && r.days <= EXPIRY_WARN_DAYS,
                 expired: r.days < 0,
@@ -289,6 +314,21 @@ mod tests {
         let inv = inventory();
         assert!(inv.get("certificate_count").is_some());
         assert!(inv.get("ssh_host_keys").is_some());
+    }
+
+    #[test]
+    fn weak_key_is_algorithm_aware() {
+        // ECC P-256 (256-bit) is strong, not weak.
+        assert!(!is_weak_key("id-ecPublicKey", Some(256), "ecdsa-with-SHA256"));
+        assert!(!is_weak_key("id-ecPublicKey", Some(384), "ecdsa-with-SHA384"));
+        // RSA below 2048 is weak.
+        assert!(is_weak_key("rsaEncryption", Some(1024), "sha256WithRSAEncryption"));
+        // RSA 2048+ is fine.
+        assert!(!is_weak_key("rsaEncryption", Some(2048), "sha256WithRSAEncryption"));
+        // SHA-1 signatures are weak regardless of key.
+        assert!(is_weak_key("rsaEncryption", Some(4096), "sha1WithRSAEncryption"));
+        // Tiny ECC curve is weak.
+        assert!(is_weak_key("id-ecPublicKey", Some(160), "ecdsa-with-SHA1"));
     }
 
     #[test]
