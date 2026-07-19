@@ -6,7 +6,9 @@
 //! PacketWolf flow data joins on (local port, remote addr:port).
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+#[cfg(target_os = "linux")]
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connection {
