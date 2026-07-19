@@ -48,6 +48,10 @@ pub struct DriftReport {
 }
 
 pub fn baseline_dir() -> PathBuf {
+    // Override for unprivileged runs (tests, e2e).
+    if let Ok(dir) = std::env::var("GUESTKIT_STATE_DIR") {
+        return PathBuf::from(dir).join("migration");
+    }
     if cfg!(windows) {
         PathBuf::from("C:\\ProgramData\\GuestKit\\migration")
     } else {

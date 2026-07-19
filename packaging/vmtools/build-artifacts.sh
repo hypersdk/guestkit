@@ -17,6 +17,10 @@ cargo build --release -p zyvor-guest-agent \
 mkdir -p "${DIST}/linux" "${ISO_DIR}/linux"
 cp "target/x86_64-unknown-linux-musl/release/guestkitd" "${DIST}/linux/guestkitd"
 cp "target/x86_64-unknown-linux-musl/release/guestkitd-exec" "${DIST}/linux/guestkitd-exec"
+cp "target/x86_64-unknown-linux-musl/release/guestkitctl" "${DIST}/linux/guestkitctl"
+# Compatibility artifact names for pre-rebrand updaters/installers
+cp "${DIST}/linux/guestkitd" "${DIST}/linux/zyvor-guest-agent"
+cp "${DIST}/linux/guestkitd-exec" "${DIST}/linux/zyvor-guest-agent-exec"
 cp templates/agent/guestkit-agent.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-agent-exec.service "${DIST}/linux/"
 cp templates/agent/zyvor-guest-updater.service "${DIST}/linux/"
