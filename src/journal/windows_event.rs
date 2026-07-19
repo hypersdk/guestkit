@@ -31,7 +31,8 @@ pub fn collect_event_log_slice(source: &str, limit: usize) -> JournalSlice {
         .output()
     {
         if out.status.success() {
-            let text = String::from_utf8_lossy(&out.stdout).trim();
+            let text_cow = String::from_utf8_lossy(&out.stdout);
+            let text = text_cow.trim();
             if text.starts_with('[') {
                 if let Ok(json) = serde_json::from_str::<Vec<serde_json::Value>>(text) {
                     for row in json {

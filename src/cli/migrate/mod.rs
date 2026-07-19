@@ -6,6 +6,7 @@ pub mod plan;
 pub mod planner;
 pub mod reporter;
 
+#[cfg(not(target_os = "windows"))]
 use crate::Guestfs;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -154,6 +155,7 @@ pub struct MigrationStep {
 }
 
 /// Analyze source system
+#[cfg(not(target_os = "windows"))]
 pub fn analyze_source<P: AsRef<Path>>(image_path: P, verbose: bool) -> Result<SourceSystem> {
     let image_path_str = image_path.as_ref().display().to_string();
 
@@ -240,6 +242,7 @@ pub fn analyze_source<P: AsRef<Path>>(image_path: P, verbose: bool) -> Result<So
     })
 }
 
+#[cfg(not(target_os = "windows"))]
 fn detect_services(g: &mut Guestfs, verbose: bool) -> Vec<Service> {
     let mut services = Vec::new();
 
@@ -272,6 +275,7 @@ fn detect_services(g: &mut Guestfs, verbose: bool) -> Vec<Service> {
     services
 }
 
+#[cfg(not(target_os = "windows"))]
 fn detect_filesystems(g: &mut Guestfs) -> Vec<Filesystem> {
     let mut filesystems = Vec::new();
 

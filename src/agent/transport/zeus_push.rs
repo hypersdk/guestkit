@@ -379,11 +379,13 @@ fn install_mtls_material(data: &BootstrapCertData) -> Result<()> {
 }
 
 fn write_secret_file(path: &Path, contents: &str) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-
     fs::write(path, contents).with_context(|| format!("write {}", path.display()))?;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-        .with_context(|| format!("chmod {}", path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .with_context(|| format!("chmod {}", path.display()))?;
+    }
     Ok(())
 }
 
