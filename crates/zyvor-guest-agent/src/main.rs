@@ -25,21 +25,35 @@ async fn main() -> Result<()> {
             }
         });
         let handler = guestkit::agent::handler::RequestHandler::new();
+        // Fast, self-contained probes first; heavier live-evidence collection
+        // (many PowerShell spawns) last, so a slow/hung probe still leaves the
+        // earlier results on disk. Results are flushed after every method.
         let methods = [
             "guestkit.ping",
             "guestkit.getVersion",
             "guestkit.getCapabilities",
             "guestkit.getAgentHealth",
-            "guestkit.security.posture",
             "guestkit.users.inventory",
-            "guestkit.packages.inventory",
-            "guestkit.certificates.inventory",
-            "guestkit.containers.inventory",
             "guestkit.integrity.baseline",
             "guestkit.integrity.check",
+            "guestkit.containers.inventory",
+            "guestkit.certificates.inventory",
+            "guestkit.packages.inventory",
+            "guestkit.security.posture",
             "guestkit.getEvidence",
         ];
         let mut results = serde_json::Map::new();
+        let flush = |results: &serde_json::Map<String, serde_json::Value>, done: &str| {
+            let doc = serde_json::json!({
+                "platform": std::env::consts::OS,
+                "agent_version": guestkit::VERSION,
+                "last_completed": done,
+                "results": results,
+            });
+            let _ = std::fs::write(&out, serde_json::to_vec_pretty(&doc).unwrap_or_default());
+        };
+        // Start marker so we can tell the exe ran even if the first probe hangs.
+        flush(&results, "starting");
         for m in methods {
             let req = format!(r#"{{"jsonrpc":"2.0","method":"{m}","id":1}}"#);
             let resp = handler.handle(req.as_bytes());
@@ -49,13 +63,8 @@ async fn main() -> Result<()> {
                 serde_json::json!({ "ok": true, "result": resp.result })
             };
             results.insert(m.to_string(), entry);
+            flush(&results, m);
         }
-        let doc = serde_json::json!({
-            "platform": std::env::consts::OS,
-            "agent_version": guestkit::VERSION,
-            "results": results,
-        });
-        std::fs::write(&out, serde_json::to_vec_pretty(&doc)?)?;
         println!("selftest written to {out}");
         return Ok(());
     }
