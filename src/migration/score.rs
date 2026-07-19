@@ -39,6 +39,11 @@ pub struct MigrationAssessment {
     pub critical_blockers: Vec<Finding>,
     pub recommended_actions: Vec<String>,
     pub checks: Vec<MigrationCheckResult>,
+    /// Last-known *running* state read from the guest's on-disk inventory
+    /// cache during offline assessment (§31 combined assessment): present
+    /// only when a live agent previously wrote an integrity-valid cache.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub online_correlation: Option<serde_json::Value>,
     /// Backward-compatible flat report (what `MigrateScore` returns today).
     pub legacy: MigrationScoreReport,
 }
@@ -141,6 +146,7 @@ pub fn assess_migration(
         critical_blockers,
         recommended_actions,
         checks,
+        online_correlation: ev.online_cache.clone(),
         legacy: compute_migration_score(ev, boot_report, target),
     }
 }

@@ -388,6 +388,29 @@ pub fn migrate_assess_command(
                 println!("  {}. {}", i + 1, action);
             }
         }
+        // §31 combined assessment: last-known running state from the guest's
+        // on-disk cache (only present when a live agent wrote one).
+        if let Some(oc) = &assessment.online_correlation {
+            println!("\nLast-known running state (from in-guest cache, §31):");
+            if let Some(ts) = oc.get("written_at").and_then(|v| v.as_str()) {
+                println!("  captured (live): {ts}");
+            }
+            if let Some(p) = oc.get("payload") {
+                if let Some(net) = p.get("network") {
+                    println!(
+                        "  listeners: {}  established: {}",
+                        net.get("listening").unwrap_or(&serde_json::json!("?")),
+                        net.get("established").unwrap_or(&serde_json::json!("?"))
+                    );
+                }
+                if let Some(c) = p.get("containers").and_then(|c| c.get("count")) {
+                    println!("  containers running: {c}");
+                }
+                if let Some(hb) = p.get("heartbeat").and_then(|h| h.get("agent_state")) {
+                    println!("  last agent state: {hb}");
+                }
+            }
+        }
     }
 
     if let Some(threshold) = fail_below {
