@@ -55,6 +55,14 @@ enum Cmd {
     },
     /// Security posture report
     Posture,
+    /// Installed package inventory
+    Packages,
+    /// Available package updates (security-classified)
+    Updates,
+    /// Certificate and SSH host-key inventory
+    Certs,
+    /// Local user and access inventory
+    Users,
     /// Network connections with process/unit correlation
     Connections {
         /// Show only the aggregated egress map
@@ -243,6 +251,59 @@ fn main() -> Result<()> {
                     }
                 }
             }
+        }
+        Cmd::Packages => {
+            let inv = call(&cli, "guestkit.packages.inventory", json!({}))?;
+            if cli.json {
+                print_result(&cli, &inv);
+            } else {
+                println!(
+                    "{} packages via {} (running kernel {})",
+                    inv["installed_count"],
+                    inv["manager"].as_str().unwrap_or("?"),
+                    inv["running_kernel"].as_str().unwrap_or("?")
+                );
+            }
+        }
+        Cmd::Updates => {
+            let up = call(&cli, "guestkit.packages.updates", json!({}))?;
+            if cli.json {
+                print_result(&cli, &up);
+            } else {
+                println!(
+                    "{} update(s) available, {} security, reboot_required={}",
+                    up["available_count"], up["security_count"], up["reboot_required"]
+                );
+            }
+        }
+        Cmd::Certs => {
+            let inv = call(&cli, "guestkit.certificates.inventory", json!({}))?;
+            if cli.json {
+                print_result(&cli, &inv);
+            } else {
+                println!(
+                    "{} certificate(s): {} expiring soon, {} expired, {} weak; {} SSH host key(s)",
+                    inv["certificate_count"],
+                    inv["expiring_soon"],
+                    inv["expired"],
+                    inv["weak"],
+                    inv["ssh_host_keys"].as_array().map(|a| a.len()).unwrap_or(0)
+                );
+                if let Some(certs) = inv["certificates"].as_array() {
+                    for c in certs.iter().filter(|c| c["expiring_soon"] == true || c["expired"] == true || c["weak"] == true) {
+                        println!(
+                            "  ! {} (expires in {}d){}",
+                            c["subject"].as_str().unwrap_or(""),
+                            c["days_until_expiry"],
+                            if c["weak"] == true { " [weak]" } else { "" }
+                        );
+                    }
+                }
+            }
+        }
+        Cmd::Users => {
+            let inv = call(&cli, "guestkit.users.inventory", json!({}))?;
+            print_result(&cli, &inv);
         }
         Cmd::Connections { egress } => {
             let intel = call(&cli, "guestkit.network.connections", json!({}))?;

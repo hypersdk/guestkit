@@ -72,6 +72,9 @@ Dotted spec-style aliases are accepted (`service.restart`, `agent.health`,
 | Files | `fileRead/Write/Stat/List/Checksum` (disabled by default; path allowlist, 1 MiB cap, no symlink escape) |
 | Time/power | `timeSyncNow`, `setTime`, `reboot`, `shutdown` (approval-gated) |
 | Migration | `migration.assess/plan/repair/preCheck/cutoverEnter/cutoverExit/validate`, `baseline.capture/diff` |
+| Snapshots | `snapshot.prepare/complete` (app-consistent: PostgreSQL/MySQL/Redis/hooks + fsfreeze/VSS, watchdog auto-thaw) |
+| Observability | `network.connections` (process→unit→socket + egress map), `security.posture` (scored Linux/Windows findings) |
+| Enterprise (Phase 6) | `packages.inventory/updates/install`, `certificates.inventory` (+SSH host keys), `users.inventory`, `system.setHostname/setTimezone/setDns` |
 
 ## Heartbeat
 
@@ -127,12 +130,28 @@ capabilities:
   storage_ops: { rescan: true, trim: true, expand: false }
 methods:
   deny: ["guestkit.exec"]
+  packages: { inventory: true, updates: true, install: false }
+  certificates: true
+  users: true
 actions:
   migration: { assess: true, repair: false, repair_destructive: false }
+  customization: { enabled: false }   # hostname/timezone/DNS
 security:
   require_request_expiry: false
   max_ttl_ms: 300000
 ```
+
+### Scope note (Phases 5–6)
+
+Delivered on-agent: security posture (§18 evidence), package/patch
+management (§22), certificate + SSH-key lifecycle (§23 inventory),
+user/access inventory (§13 read), and guest customization (§14 —
+hostname/timezone/DNS). Deliberately **not** on-agent, per the spec's own
+guidance: full eBPF/ETW EDR + tamper streaming (§19 says "avoid turning
+GuestKit into a full EDR initially"), and CIS/compliance *policy
+evaluation* (§18 — the agent collects evidence; the control plane scores
+against versioned policy). Fleet dashboards and interactive remote-support
+sessions (§24/§25) are control-plane/UI concerns.
 
 `getCapabilities` advertises the enabled categories so hosts can adapt.
 
