@@ -100,9 +100,10 @@ impl AgentDaemon {
         );
 
         // Local Unix socket API (read-only + policy-gated writes).
+        // GUESTKIT_LOCAL_SOCKET overrides the default paths (tests/e2e).
         crate::agent::transport::unix_listen::spawn_local_socket(
             Arc::clone(&self.handler),
-            None,
+            std::env::var("GUESTKIT_LOCAL_SOCKET").ok(),
         )
         .ok();
 

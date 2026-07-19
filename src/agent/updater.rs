@@ -264,8 +264,9 @@ fn extract_agent_binary_from_tar_gz(tar_gz: &[u8], dest: &Path) -> Result<()> {
     fs::create_dir_all(&temp_dir).context("create extract dir")?;
     archive.unpack(&temp_dir).context("unpack tar.gz")?;
 
-    let candidate = find_file_recursive(&temp_dir, "zyvor-guest-agent")
-        .context("zyvor-guest-agent binary not found in artifact")?;
+    let candidate = find_file_recursive(&temp_dir, "guestkitd")
+        .or_else(|_| find_file_recursive(&temp_dir, "zyvor-guest-agent"))
+        .context("agent binary (guestkitd / zyvor-guest-agent) not found in artifact")?;
     fs::copy(&candidate, dest).with_context(|| format!("copy staged binary to {}", dest.display()))?;
     fs::remove_dir_all(&temp_dir).ok();
     #[cfg(unix)]
@@ -296,9 +297,10 @@ fn extract_agent_exe_from_zip(zip_bytes: &[u8], dest: &Path) -> Result<()> {
     if !status.success() {
         anyhow::bail!("Expand-Archive failed");
     }
-    let candidate = find_file_recursive(&extract_dir, "zyvor-guest-agent.exe")
+    let candidate = find_file_recursive(&extract_dir, "guestkitd.exe")
+        .or_else(|_| find_file_recursive(&extract_dir, "zyvor-guest-agent.exe"))
         .or_else(|_| find_file_recursive(&extract_dir, "zyvor-guest-agent"))
-        .context("zyvor-guest-agent.exe not found in zip")?;
+        .context("agent exe (guestkitd.exe / zyvor-guest-agent.exe) not found in zip")?;
     fs::copy(&candidate, dest).with_context(|| format!("copy staged exe to {}", dest.display()))?;
     fs::remove_dir_all(&extract_dir).ok();
     fs::remove_file(&zip_path).ok();
@@ -357,12 +359,28 @@ pub fn apply_staged_update_privileged() -> Result<String> {
         return apply_staged_update_windows(&meta);
     }
 
+    // Canonical names first; the legacy paths are symlinks to guestkitd on
+    // rebranded installs and real files on pre-rebrand ones.
     let targets = [
+        "/usr/bin/guestkitd",
+        "/usr/local/bin/guestkitd",
         "/usr/bin/zyvor-guest-agent",
         "/usr/local/bin/zyvor-guest-agent",
     ];
     let mut updated = Vec::new();
     for target in targets {
+        // Only overwrite existing installs (or their symlink targets); a
+        // missing canonical path on a legacy install is skipped.
+        let path = Path::new(target);
+        let exists_or_symlink = path.exists() || path.is_symlink();
+        if !exists_or_symlink {
+            continue;
+        }
+        // Writing through a symlink would double-update guestkitd; replace
+        // only real files.
+        if path.is_symlink() {
+            continue;
+        }
         if Path::new(target).parent().map(|p| p.exists()).unwrap_or(false) {
             fs::copy(STAGED_AGENT, target)
                 .with_context(|| format!("install staged binary to {target}"))?;

@@ -76,18 +76,25 @@ curl -sf "${API}/vmtools/policy" | python3 -m json.tool | head -30
 echo "POST /vmtools/policy/reconcile"
 curl -sf -X POST "${API}/vmtools/policy/reconcile" | python3 -m json.tool | head -30
 
-AGENT_URL="${MINIO_BASE}/linux/zyvor-guest-agent"
-echo "Agent binary sanity (${AGENT_URL})..."
-HTTP_CODE="$(curl -sf -o /tmp/zyvor-guest-agent -w '%{http_code}' "${AGENT_URL}" || echo 000)"
-if [[ "${HTTP_CODE}" != "200" ]]; then
-  echo "ERROR: expected 200 from agent binary URL, got ${HTTP_CODE}" >&2
-  exit 1
-fi
-if ! file /tmp/zyvor-guest-agent | grep -qE 'ELF|executable'; then
-  echo "ERROR: agent binary does not look like an ELF executable" >&2
-  file /tmp/zyvor-guest-agent
-  exit 1
-fi
-echo "  agent binary OK ($(wc -c < /tmp/zyvor-guest-agent) bytes)"
+# Both artifact names must be served: canonical for new tooling, legacy
+# for pre-rebrand updaters bootstrapping from this bundle.
+for name in guestkitd zyvor-guest-agent; do
+  AGENT_URL="${MINIO_BASE}/linux/${name}"
+  echo "Agent binary sanity (${AGENT_URL})..."
+  HTTP_CODE="$(curl -sf -o "/tmp/${name}" -w '%{http_code}' "${AGENT_URL}" || echo 000)"
+  if [[ "${HTTP_CODE}" != "200" ]]; then
+    echo "ERROR: expected 200 from agent binary URL ${AGENT_URL}, got ${HTTP_CODE}" >&2
+    exit 1
+  fi
+  if ! file "/tmp/${name}" | grep -qE 'ELF|executable'; then
+    echo "ERROR: ${name} does not look like an ELF executable" >&2
+    file "/tmp/${name}"
+    exit 1
+  fi
+  echo "  ${name} OK ($(wc -c < "/tmp/${name}") bytes)"
+done
+
+echo "Live agent e2e (protocol 1.3) on this host..."
+bash "${ROOT}/deploy/scripts/e2e-agent-live.sh" /tmp/guestkitd
 
 echo "=== ci-k3s-e2e passed ==="
