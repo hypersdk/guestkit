@@ -176,6 +176,146 @@ pub fn inject_agent_into_image(
     Ok(())
 }
 
+/// Windows install directory for the agent (guest path, forward-slash form).
+pub const WIN_AGENT_DIR: &str = "/guestkit";
+/// Windows agent binary destination (guest path).
+pub const WIN_AGENT_DEST: &str = "/guestkit/guestkitd.exe";
+/// Windows service name registered for the agent (matches the service crate).
+pub const WIN_SERVICE_NAME: &str = "GuestKitAgent";
+
+/// Offline-install the GuestKit agent into a **Windows** disk image, entirely
+/// through guestkit's own machinery: copy `guestkitd.exe` into `C:\guestkit\`
+/// and register the `GuestKitAgent` Windows service (auto-start, LocalSystem,
+/// `--service`) by writing the offline `SYSTEM` hive with guestkit's hivex
+/// registry-write. The injected service answers the QEMU guest-agent
+/// virtio-serial channel at boot, so the host can drive it via
+/// `virsh qemu-agent-command … guestkit-rpc` exactly like the Linux agent.
+///
+/// This replaces hand-rolled `virt-win-reg` service registration and, per the
+/// standing rule, keeps offline Windows provisioning inside guestkit (which
+/// also exercises the hivex path on real disks).
+#[cfg(feature = "registry-write")]
+pub fn inject_windows_agent(
+    image: &Path,
+    binary: &Path,
+    dry_run: bool,
+    verbose: bool,
+) -> Result<()> {
+    use serde_json::json;
+
+    if !binary.exists() {
+        anyhow::bail!("agent binary not found: {}", binary.display());
+    }
+    if dry_run {
+        println!("Dry run — would inject Windows agent:");
+        println!("  binary: {} → C:\\guestkit\\guestkitd.exe", binary.display());
+        println!(
+            "  register service {WIN_SERVICE_NAME} (auto-start, LocalSystem, --service)"
+        );
+        return Ok(());
+    }
+
+    if verbose {
+        println!("Injecting GuestKit Windows agent into {}", image.display());
+    }
+
+    let mut g = crate::Guestfs::new().context("create guestfs")?;
+    g.add_drive(
+        image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("invalid image path"))?,
+    )?;
+    g.launch()?;
+
+    let roots = g.inspect_os()?;
+    let root = roots
+        .first()
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("no operating system found in disk image"))?;
+    if g.inspect_get_type(&root)? != "windows" {
+        anyhow::bail!(
+            "inject_windows_agent: image root {root} is not Windows (use inject_agent_into_image)"
+        );
+    }
+    if let Ok(mountpoints) = g.inspect_get_mountpoints(&root) {
+        let mut mounts: Vec<_> = mountpoints.into_iter().collect();
+        mounts.sort_by_key(|(m, _)| m.len());
+        for (mount, device) in &mounts {
+            let _ = g.mount(device, mount);
+        }
+    }
+
+    // 1. Copy the agent binary into C:\guestkit\.
+    let _ = g.mkdir_p(WIN_AGENT_DIR);
+    g.upload(
+        binary
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("binary path"))?,
+        WIN_AGENT_DEST,
+    )?;
+    if verbose {
+        println!("  copied agent → C:\\guestkit\\guestkitd.exe");
+    }
+
+    // 2. Register the service by writing the offline SYSTEM hive with hivex.
+    let hive_guest_path = g.inspect_get_windows_system_hive(&root)?;
+    let hive_tmp = tempfile::NamedTempFile::new()?;
+    let hive_host = hive_tmp
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("temp hive path"))?;
+    g.download_hive(&hive_guest_path, hive_host)?;
+
+    // ControlSet001 is the on-disk control set; the running system aliases it as
+    // CurrentControlSet. Registering there makes the service present at boot.
+    let subpath: Vec<String> = ["ControlSet001", "Services", WIN_SERVICE_NAME]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    // SERVICE_WIN32_OWN_PROCESS (0x10), SERVICE_AUTO_START (2), errorctl NORMAL (1).
+    let values: &[(&str, &str, serde_json::Value)] = &[
+        ("Type", "dword", json!(0x10)),
+        ("Start", "dword", json!(2)),
+        ("ErrorControl", "dword", json!(1)),
+        (
+            "ImagePath",
+            "expand_sz",
+            json!("C:\\guestkit\\guestkitd.exe --service"),
+        ),
+        ("DisplayName", "sz", json!("Zyvor GuestKit Agent")),
+        ("ObjectName", "sz", json!("LocalSystem")),
+        (
+            "Description",
+            "sz",
+            json!("GuestKit in-guest agent (QGA virtio-serial channel)."),
+        ),
+    ];
+    for (name, ty, data) in values {
+        crate::guestfs::hivex_ffi::set_registry_value(
+            hive_tmp.path(),
+            &subpath,
+            name,
+            ty,
+            data,
+        )
+        .map_err(|e| anyhow::anyhow!("set {name}: {e}"))?;
+    }
+    g.upload_hive(hive_host, &hive_guest_path)?;
+    if verbose {
+        println!("  registered service {WIN_SERVICE_NAME} in SYSTEM hive");
+    }
+
+    let _ = g.umount_all();
+    g.shutdown()?;
+
+    if verbose {
+        println!(
+            "Windows agent injected; the {WIN_SERVICE_NAME} service answers the QGA virtio channel at boot."
+        );
+    }
+    Ok(())
+}
+
 /// Resolve agent binary path (explicit or current executable).
 pub fn resolve_agent_binary(explicit: Option<&Path>) -> Result<PathBuf> {
     if let Some(p) = explicit {
