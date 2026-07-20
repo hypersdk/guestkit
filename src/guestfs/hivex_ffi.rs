@@ -58,6 +58,7 @@ extern "C" {
     // array of child handles; `hivex_node_name` returns a malloc'd C string.
     fn hivex_node_children(h: HiveH, node: HiveNodeH) -> *mut HiveNodeH;
     fn hivex_node_name(h: HiveH, node: HiveNodeH) -> *mut c_char;
+    fn hivex_node_delete_child(h: HiveH, node: HiveNodeH) -> c_int;
 }
 
 extern "C" {
@@ -381,6 +382,42 @@ pub fn set_configflags_reinstall(
     }
     hive.commit()?;
     Ok(flagged)
+}
+
+/// Delete every device key under `SYSTEM\<control_set>\Enum\PCI` whose name
+/// contains any of `hwid_needles` (case-insensitive). Removing a device's cached
+/// enumeration forces the PCI bus driver to re-detect it as brand-new on the next
+/// boot and run a full PnP driver install — the strongest offline way to make a
+/// guest install a driver for a device it previously left in a "no driver"
+/// state. Returns how many device keys were deleted.
+pub fn delete_device_nodes(
+    hive_file: &Path,
+    control_set: &str,
+    hwid_needles: &[&str],
+) -> Result<usize> {
+    let needles: Vec<String> = hwid_needles.iter().map(|n| n.to_ascii_uppercase()).collect();
+    let mut hive = Hive::open_write(hive_file)?;
+    let mut deleted = 0usize;
+    // SAFETY: hive.0 stays live; all handles derive from it. We delete by handle
+    // immediately after matching by name, before enumerating further siblings.
+    unsafe {
+        let root = hivex_root(hive.0);
+        if root == 0 {
+            return Err(Error::CommandFailed("hivex_root failed".into()));
+        }
+        let pci = match navigate(hive.0, root, &[control_set, "Enum", "PCI"]) {
+            Some(n) => n,
+            None => return Ok(0),
+        };
+        for dev in node_children(hive.0, pci) {
+            let dev_name = node_name(hive.0, dev).unwrap_or_default().to_ascii_uppercase();
+            if needles.iter().any(|n| dev_name.contains(n.as_str())) && hivex_node_delete_child(hive.0, dev) == 0 {
+                deleted += 1;
+            }
+        }
+    }
+    hive.commit()?;
+    Ok(deleted)
 }
 
 #[cfg(test)]
