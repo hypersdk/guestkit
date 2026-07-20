@@ -189,13 +189,34 @@ fn run_channel(
     handler: Arc<RequestHandler>,
     runtime: Arc<AgentRuntime>,
 ) -> Result<()> {
-    let transport = match FramedTransport::open(&plan.config) {
-        Ok(t) => t,
-        Err(e) if !plan.required => {
-            log::warn!("skipping channel {}: {e}", plan.name);
-            return Ok(());
+    // Open with retry. The channel device can appear late — most notably on
+    // Windows, where the auto-start service can run before the virtio-serial
+    // (vioser) driver has enumerated `\\.\Global\org.qemu.guest_agent.0`. A
+    // single failed open must not permanently kill the channel: keep retrying
+    // so the agent connects as soon as the port is ready. A non-required
+    // channel is still skipped after the first failure.
+    let transport = {
+        let mut attempt: u32 = 0;
+        loop {
+            match FramedTransport::open(&plan.config) {
+                Ok(t) => break t,
+                Err(e) if !plan.required => {
+                    log::warn!("skipping channel {}: {e}", plan.name);
+                    return Ok(());
+                }
+                Err(e) => {
+                    attempt += 1;
+                    if attempt == 1 || attempt % 15 == 0 {
+                        log::warn!(
+                            "channel {} not ready ({e}); retrying (attempt {attempt})",
+                            plan.name
+                        );
+                    }
+                    std::thread::sleep(Duration::from_secs(2));
+                    continue;
+                }
+            }
         }
-        Err(e) => return Err(e),
     };
     let (mut reader, writer) = transport.split();
     let channel = Arc::new(ChannelHandle {

@@ -1931,6 +1931,38 @@ enum Commands {
         #[arg(long, value_name = "JSON", default_value = "{}")]
         params: String,
     },
+
+    /// Offline-inject the GuestKit agent into a disk image (Linux systemd unit
+    /// or, with --windows, the Windows GuestKitAgent service via hivex).
+    #[command(name = "agent-inject")]
+    AgentInject {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Agent binary to install (guestkitd[.exe]); defaults to this binary
+        #[arg(long, value_name = "PATH")]
+        agent_binary: Option<PathBuf>,
+
+        /// Install the Windows GuestKitAgent service (registry-write) instead of
+        /// a Linux systemd unit. Requires a Windows agent_binary (.exe).
+        #[arg(long)]
+        windows: bool,
+
+        /// Windows only: directory holding the virtio-serial driver
+        /// (vioser.inf/.sys/.cat) to preinstall so the QGA channel device
+        /// exists. Without it, an agent-only inject can't be reached over QGA
+        /// unless the guest already has the driver.
+        #[arg(long, value_name = "DIR")]
+        virtio_serial_driver: Option<PathBuf>,
+
+        /// systemd unit file (Linux only; defaults to the built-in template)
+        #[arg(long, value_name = "PATH")]
+        agent_unit: Option<PathBuf>,
+
+        /// Show what would change without writing
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -3538,6 +3570,48 @@ pub fn run() -> anyhow::Result<()> {
             {
                 let _ = (socket, method, params);
                 anyhow::bail!("guestkit agent-call requires rebuilding with --features agent");
+            }
+        }
+
+        Commands::AgentInject {
+            image,
+            agent_binary,
+            windows,
+            virtio_serial_driver,
+            agent_unit,
+            dry_run,
+        } => {
+            #[cfg(feature = "agent")]
+            {
+                use crate::agent::inject;
+                let binary = inject::resolve_agent_binary(agent_binary.as_deref())?;
+                if windows {
+                    #[cfg(feature = "registry-write")]
+                    {
+                        inject::inject_windows_agent(
+                            &image,
+                            &binary,
+                            virtio_serial_driver.as_deref(),
+                            dry_run,
+                            cli.verbose,
+                        )?;
+                    }
+                    #[cfg(not(feature = "registry-write"))]
+                    {
+                        let _ = (agent_unit, dry_run, &binary, &virtio_serial_driver);
+                        anyhow::bail!(
+                            "guestkit agent-inject --windows requires rebuilding with --features registry-write"
+                        );
+                    }
+                } else {
+                    let unit = inject::resolve_agent_unit(agent_unit.as_deref())?;
+                    inject::inject_agent_into_image(&image, &binary, &unit, dry_run, cli.verbose)?;
+                }
+            }
+            #[cfg(not(feature = "agent"))]
+            {
+                let _ = (image, agent_binary, windows, virtio_serial_driver, agent_unit, dry_run);
+                anyhow::bail!("guestkit agent-inject requires rebuilding with --features agent");
             }
         }
     }
