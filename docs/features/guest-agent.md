@@ -116,6 +116,51 @@ guestkit repair /path/to/disk.qcow2 --fix boot --inject-agent \
   --agent-binary ./target/x86_64-unknown-linux-musl/release/guestkit
 ```
 
+A dedicated `agent-inject` subcommand installs the agent directly (Linux systemd
+unit, or the Windows service via hivex):
+
+```bash
+# Linux (systemd unit -> /etc/systemd/system/zyvor-guest-agent.service)
+guestkit agent-inject disk.qcow2 \
+  --agent-binary ./target/x86_64-unknown-linux-musl/release/guestkit
+```
+
+### Windows offline install
+
+`agent-inject --windows` provisions a Windows guest entirely offline through
+guestkit's own hivex registry-write (requires building with
+`--features registry-write`, which links `libhivex`):
+
+```bash
+guestkit agent-inject win.qcow2 --windows \
+  --agent-binary ./target/x86_64-pc-windows-gnu/release/guestkitd.exe \
+  --virtio-serial-driver /path/to/virtio-win/vioserial/w10/amd64
+```
+
+It:
+
+1. Copies `guestkitd.exe` to `C:\guestkit\` and registers the `GuestKitAgent`
+   service (auto-start, LocalSystem, `--service`) in the `SYSTEM` hive. The
+   service answers the QGA virtio-serial channel exactly like the Linux agent.
+2. Installs the **virtio-serial (`vioser`) driver** the QGA channel needs (only
+   the boot-critical block driver ships with `--inject-virtio-win`): copies the
+   driver files, adds them to `DevicePath`, and writes the driver service key +
+   `CriticalDeviceDatabase` entries (parsed from the INF, including the KMDF
+   binding).
+3. On a **converted** image (e.g. VirtualBox eval → qcow2) the virtio-serial
+   devnode is often cached as "no driver", so Windows never re-searches for one.
+   guestkit deletes the stale `SYSTEM\...\Enum\PCI\VEN_1AF4&DEV_1043` device key
+   so the PCI bus re-detects it as new next boot and runs a full INF install.
+
+NTFS left dirty by a force-off is repaired (`ntfsfix`) so the offline writes
+succeed. Verify from the host once booted:
+
+```bash
+virsh qemu-agent-command <domain> \
+  '{"execute":"guestkit-rpc","arguments":{"method":"guestkit.getVersion","params":{}}}'
+# => {"protocol":"1.3","version":"0.3.14"}
+```
+
 ## QGA compatibility
 
 GuestKit implements common QGA commands including `guest-ping`, `guest-exec`, `guest-fsfreeze-freeze/thaw`, `guest-network-get-interfaces`, and `guest-get-host-name` for KubeVirt `AgentConnected`, snapshot freeze, and guest-exec subresources.

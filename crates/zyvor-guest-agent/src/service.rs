@@ -64,8 +64,16 @@ fn run_service_impl() -> Result<()> {
             .enable_all()
             .build()
             .expect("tokio runtime");
+        // Answer the QEMU guest-agent virtio-serial channel by default, so the
+        // Windows service is reachable by host integrations (virsh
+        // qemu-agent-command / KubeVirt) exactly like the Linux agent. Override
+        // with GUESTKIT_AGENT_CHANNEL=stdio|virtio for other transports.
+        let channel = match std::env::var("GUESTKIT_AGENT_CHANNEL").ok().as_deref() {
+            Some("stdio") => guestkit::agent::AgentChannel::Stdio,
+            _ => guestkit::agent::AgentChannel::Virtio,
+        };
         if let Err(e) = rt.block_on(guestkit::agent::run_agent(guestkit::agent::AgentArgs {
-            channel: guestkit::agent::AgentChannel::Stdio,
+            channel,
             device: None,
             socket: None,
             user: None,
