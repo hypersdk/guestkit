@@ -54,6 +54,15 @@ extern "C" {
         flags: c_int,
     ) -> c_int;
     fn hivex_commit(h: HiveH, filename: *const c_char, flags: c_int) -> c_int;
+    // Read/enumerate: `hivex_node_children` returns a malloc'd 0-terminated
+    // array of child handles; `hivex_node_name` returns a malloc'd C string.
+    fn hivex_node_children(h: HiveH, node: HiveNodeH) -> *mut HiveNodeH;
+    fn hivex_node_name(h: HiveH, node: HiveNodeH) -> *mut c_char;
+}
+
+extern "C" {
+    // libhivex returns malloc'd buffers the caller must free (libc, not libhivex).
+    fn free(ptr: *mut std::ffi::c_void);
 }
 
 /// RAII wrapper so the hive is always closed, even on early return.
@@ -277,6 +286,101 @@ fn path_to_cstring(path: &Path) -> Result<CString> {
         .to_str()
         .ok_or_else(|| Error::InvalidOperation("hive path is not valid UTF-8".into()))?;
     CString::new(s).map_err(|_| Error::InvalidOperation("hive path contains NUL byte".into()))
+}
+
+/// Read a hive node's name, or None. SAFETY: `h`/`node` must be live.
+unsafe fn node_name(h: HiveH, node: HiveNodeH) -> Option<String> {
+    let p = hivex_node_name(h, node);
+    if p.is_null() {
+        return None;
+    }
+    let s = std::ffi::CStr::from_ptr(p).to_string_lossy().into_owned();
+    free(p as *mut std::ffi::c_void);
+    Some(s)
+}
+
+/// Enumerate a node's child handles. SAFETY: `h`/`node` must be live.
+unsafe fn node_children(h: HiveH, node: HiveNodeH) -> Vec<HiveNodeH> {
+    let arr = hivex_node_children(h, node);
+    let mut out = Vec::new();
+    if arr.is_null() {
+        return out;
+    }
+    let mut i = 0isize;
+    loop {
+        let val = *arr.offset(i);
+        if val == 0 {
+            break;
+        }
+        out.push(val);
+        i += 1;
+    }
+    free(arr as *mut std::ffi::c_void);
+    out
+}
+
+/// Navigate from `start` down `subpath`, returning the node handle or None.
+/// SAFETY: `h` must be live.
+unsafe fn navigate(h: HiveH, start: HiveNodeH, subpath: &[&str]) -> Option<HiveNodeH> {
+    let mut node = start;
+    for comp in subpath {
+        let name = CString::new(*comp).ok()?;
+        let child = hivex_node_get_child(h, node, name.as_ptr());
+        if child == 0 {
+            return None;
+        }
+        node = child;
+    }
+    Some(node)
+}
+
+/// Set `CONFIGFLAG_REINSTALL` (0x20) on every PnP device instance under
+/// `SYSTEM\<control_set>\Enum\PCI` whose device-key name contains any of
+/// `hwid_needles` (case-insensitive). This asks Windows to re-run driver
+/// installation for the device on next boot — the reliable offline way to make
+/// a guest pick up a newly staged driver (e.g. virtio-serial) when the existing
+/// cached devnode would otherwise never re-search for one. Returns how many
+/// instance nodes were flagged.
+pub fn set_configflags_reinstall(
+    hive_file: &Path,
+    control_set: &str,
+    hwid_needles: &[&str],
+) -> Result<usize> {
+    let needles: Vec<String> = hwid_needles.iter().map(|n| n.to_ascii_uppercase()).collect();
+    let mut hive = Hive::open_write(hive_file)?;
+    let mut flagged = 0usize;
+    // SAFETY: hive.0 stays live for the whole traversal; all handles derive from it.
+    unsafe {
+        let root = hivex_root(hive.0);
+        if root == 0 {
+            return Err(Error::CommandFailed("hivex_root failed".into()));
+        }
+        let pci = match navigate(hive.0, root, &[control_set, "Enum", "PCI"]) {
+            Some(n) => n,
+            None => return Ok(0),
+        };
+        for dev in node_children(hive.0, pci) {
+            let dev_name = node_name(hive.0, dev).unwrap_or_default().to_ascii_uppercase();
+            if !needles.iter().any(|n| dev_name.contains(n.as_str())) {
+                continue;
+            }
+            for inst in node_children(hive.0, dev) {
+                let key = CString::new("ConfigFlags").unwrap();
+                let data = 0x20u32.to_le_bytes();
+                let set = HiveSetValue {
+                    key: key.as_ptr(),
+                    t: REG_DWORD,
+                    len: data.len(),
+                    value: data.as_ptr() as *const c_char,
+                };
+                if hivex_node_set_value(hive.0, inst, &set, 0) == 0 {
+                    flagged += 1;
+                }
+            }
+        }
+    }
+    hive.commit()?;
+    Ok(flagged)
 }
 
 #[cfg(test)]

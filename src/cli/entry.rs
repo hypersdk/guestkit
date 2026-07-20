@@ -1948,6 +1948,13 @@ enum Commands {
         #[arg(long)]
         windows: bool,
 
+        /// Windows only: directory holding the virtio-serial driver
+        /// (vioser.inf/.sys/.cat) to preinstall so the QGA channel device
+        /// exists. Without it, an agent-only inject can't be reached over QGA
+        /// unless the guest already has the driver.
+        #[arg(long, value_name = "DIR")]
+        virtio_serial_driver: Option<PathBuf>,
+
         /// systemd unit file (Linux only; defaults to the built-in template)
         #[arg(long, value_name = "PATH")]
         agent_unit: Option<PathBuf>,
@@ -3570,6 +3577,7 @@ pub fn run() -> anyhow::Result<()> {
             image,
             agent_binary,
             windows,
+            virtio_serial_driver,
             agent_unit,
             dry_run,
         } => {
@@ -3580,11 +3588,17 @@ pub fn run() -> anyhow::Result<()> {
                 if windows {
                     #[cfg(feature = "registry-write")]
                     {
-                        inject::inject_windows_agent(&image, &binary, dry_run, cli.verbose)?;
+                        inject::inject_windows_agent(
+                            &image,
+                            &binary,
+                            virtio_serial_driver.as_deref(),
+                            dry_run,
+                            cli.verbose,
+                        )?;
                     }
                     #[cfg(not(feature = "registry-write"))]
                     {
-                        let _ = (agent_unit, dry_run, &binary);
+                        let _ = (agent_unit, dry_run, &binary, &virtio_serial_driver);
                         anyhow::bail!(
                             "guestkit agent-inject --windows requires rebuilding with --features registry-write"
                         );
@@ -3596,7 +3610,7 @@ pub fn run() -> anyhow::Result<()> {
             }
             #[cfg(not(feature = "agent"))]
             {
-                let _ = (image, agent_binary, windows, agent_unit, dry_run);
+                let _ = (image, agent_binary, windows, virtio_serial_driver, agent_unit, dry_run);
                 anyhow::bail!("guestkit agent-inject requires rebuilding with --features agent");
             }
         }
