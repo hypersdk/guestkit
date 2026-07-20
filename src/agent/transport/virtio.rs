@@ -3,12 +3,19 @@
 
 use super::FramedTransport;
 use anyhow::{Context, Result};
+#[cfg(not(target_os = "windows"))]
 use guestkit_agent_protocol::VIRTIO_DEVICE_PATH;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::path::Path;
 
+/// Default virtio-serial port for the QGA channel. On Linux this is the
+/// `/dev/virtio-ports/...` char device; on Windows the virtio-serial driver
+/// (virtio-win) exposes the same port under the `\\.\Global\` namespace.
+#[cfg(not(target_os = "windows"))]
 pub const DEFAULT_DEVICE: &str = VIRTIO_DEVICE_PATH;
+#[cfg(target_os = "windows")]
+pub const DEFAULT_DEVICE: &str = r"\\.\Global\org.qemu.guest_agent.0";
 
 struct DeviceIo {
     inner: std::fs::File,
