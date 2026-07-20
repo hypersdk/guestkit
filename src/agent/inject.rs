@@ -644,9 +644,20 @@ fn bind_driver_system_hive(
         })
         .collect();
     let needle_refs: Vec<&str> = needles.iter().map(|s| s.as_str()).collect();
-    let reinstalled =
+    // Deleting the cached devnode is the strongest forcing function: the PCI bus
+    // re-detects the device as brand-new next boot and runs a full INF install.
+    // (Additive ConfigFlags on an existing "no driver" devnode was not honored on
+    // converted images — setupapi logged no install attempt.)
+    let deleted =
+        crate::guestfs::hivex_ffi::delete_device_nodes(hive_path, "ControlSet001", &needle_refs)
+            .map_err(|e| anyhow::anyhow!("delete device nodes: {e}"))?;
+    // If nothing was deleted (device key absent), fall back to the reinstall flag.
+    let reinstalled = if deleted == 0 {
         crate::guestfs::hivex_ffi::set_configflags_reinstall(hive_path, "ControlSet001", &needle_refs)
-            .map_err(|e| anyhow::anyhow!("set ConfigFlags reinstall: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("set ConfigFlags reinstall: {e}"))?
+    } else {
+        0
+    };
 
     g.upload_hive(hive_host, &sys_hive)?;
     if verbose {
@@ -654,7 +665,11 @@ fn bind_driver_system_hive(
             "  bound driver service {} for {} HWID(s) via CriticalDeviceDatabase",
             meta.service, cddb_count
         );
-        println!("  flagged {reinstalled} device instance(s) for driver reinstall");
+        if deleted > 0 {
+            println!("  deleted {deleted} cached devnode(s) to force fresh driver install");
+        } else {
+            println!("  flagged {reinstalled} device instance(s) for driver reinstall");
+        }
     }
     Ok(())
 }
