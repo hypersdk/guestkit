@@ -314,9 +314,27 @@ pub fn inject_windows_agent(
         )
         .map_err(|e| anyhow::anyhow!("set {name}: {e}"))?;
     }
+    // The GuestKit agent owns the QGA virtio-serial channel; a stock
+    // qemu-guest-agent would contend for the same port. Disable known stock QGA
+    // services (Start=4 = SERVICE_DISABLED) so GuestKit answers it uncontended.
+    // GuestKit implements the QGA compat commands, so KubeVirt/libvirt stays
+    // connected. Creating the key when the service is absent is harmless.
+    for svc in ["QEMU-GA", "qemu-ga", "QEMUGuestAgent"] {
+        let svc_path: Vec<String> = ["ControlSet001", "Services", svc]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let _ = crate::guestfs::hivex_ffi::set_registry_value(
+            hive_tmp.path(),
+            &svc_path,
+            "Start",
+            "dword",
+            &json!(4),
+        );
+    }
     g.upload_hive(hive_host, &hive_guest_path)?;
     if verbose {
-        println!("  registered service {WIN_SERVICE_NAME} in SYSTEM hive");
+        println!("  registered service {WIN_SERVICE_NAME}; disabled stock qemu-ga in SYSTEM hive");
     }
 
     // 3. Preinstall the virtio-serial driver so the QGA channel device exists.
