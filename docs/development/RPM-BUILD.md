@@ -335,7 +335,7 @@ rpmlint ~/rpmbuild/RPMS/x86_64/guestkit-0.3.1-1.fc39.x86_64.rpm
 
 - **Issues**: https://github.com/ssahani/guestkit/issues
 - **Discussions**: https://github.com/ssahani/guestkit/discussions
-- **Email**: ssahani@redhat.com
+- **Email**: ssahani@zyvor.dev
 
 ---
 
