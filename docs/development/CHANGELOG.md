@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.15] - 2026-07-29
+
+### Added
+- **In-guest Windows agent, fully offline install** — `guestkit agent-inject --windows`
+  provisions a Windows guest with no boot required: registers the `GuestKitAgent`
+  service in the `SYSTEM` hive via hivex, and installs the virtio-serial (`vioser`)
+  driver the QGA channel needs (driver files, `DevicePath`, service key, and
+  `CriticalDeviceDatabase` entries parsed from the INF, including the KMDF binding).
+- **Stock `qemu-guest-agent` takeover** — any `QEMU-GA`/`qemu-ga`/`QEMUGuestAgent`
+  service found during Windows injection is disabled (`Start=4`) so GuestKit answers
+  the virtio-serial channel uncontended, while remaining QGA-compatible so
+  KubeVirt/libvirt see no difference.
+- **Converted-image driver fix** — deletes the stale cached
+  `SYSTEM\...\Enum\PCI\VEN_1AF4&DEV_1043` device key on converted images (e.g.
+  VirtualBox eval → qcow2) so the PCI bus re-detects the virtio-serial device and
+  runs a full driver install on next boot instead of staying stuck on "no driver."
+- **Generic `guestkit-rpc` QGA passthrough** — every in-guest agent RPC method is
+  now reachable through the standard QGA channel, so host automation only needs
+  `virsh qemu-agent-command`.
+- **Windows agent default channel** — the Windows service now defaults to the
+  virtio QGA port, matching the Linux agent's channel selection.
+- Fall back to `systemctl restart` when the D-Bus `RestartUnit` call fails.
+
+### Documentation
+- Page-by-page customer manual (`docs/customer/`) with per-page PDFs, linked from
+  the README.
+- `docs/features/guest-agent.md` documents the Windows offline install path
+  end-to-end, including the stock-QGA disable step.
+- README now surfaces the in-guest agent (previously undocumented at the top
+  level) with a dedicated "What's New" section, plus CI/crates.io/PyPI/license
+  badges.
+
 ## [0.3.14] - 2026-07-11
 
 ### Added
