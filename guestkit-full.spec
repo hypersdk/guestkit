@@ -19,6 +19,7 @@ BuildRequires:  make
 BuildRequires:  pkgconfig
 BuildRequires:  systemd-devel
 BuildRequires:  openssl-devel
+BuildRequires:  hivex-devel
 
 # Python bindings (optional — off by default; enable with --with python)
 %bcond_with python
