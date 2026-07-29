@@ -142,12 +142,17 @@ It:
 1. Copies `guestkitd.exe` to `C:\guestkit\` and registers the `GuestKitAgent`
    service (auto-start, LocalSystem, `--service`) in the `SYSTEM` hive. The
    service answers the QGA virtio-serial channel exactly like the Linux agent.
-2. Installs the **virtio-serial (`vioser`) driver** the QGA channel needs (only
+2. Disables any stock `qemu-guest-agent` service found in the hive (`QEMU-GA`,
+   `qemu-ga`, `QEMUGuestAgent` — set `Start=4`/disabled) so it can't contend
+   with GuestKit for the same virtio-serial channel. GuestKit implements the
+   QGA-compatible commands, so KubeVirt/libvirt stays connected either way;
+   this is a no-op (and harmless) when no stock service is present.
+3. Installs the **virtio-serial (`vioser`) driver** the QGA channel needs (only
    the boot-critical block driver ships with `--inject-virtio-win`): copies the
    driver files, adds them to `DevicePath`, and writes the driver service key +
    `CriticalDeviceDatabase` entries (parsed from the INF, including the KMDF
    binding).
-3. On a **converted** image (e.g. VirtualBox eval → qcow2) the virtio-serial
+4. On a **converted** image (e.g. VirtualBox eval → qcow2) the virtio-serial
    devnode is often cached as "no driver", so Windows never re-searches for one.
    guestkit deletes the stale `SYSTEM\...\Enum\PCI\VEN_1AF4&DEV_1043` device key
    so the PCI bus re-detects it as new next boot and runs a full INF install.
