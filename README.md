@@ -2,10 +2,16 @@
 
 **Offline VM intelligence and migration assurance.**
 
+[![CI](https://github.com/ssahani/guestkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
+[![PyPI](https://img.shields.io/pypi/v/hypersdk-guestkit.svg)](https://pypi.org/project/hypersdk-guestkit/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 ## 📖 Feature Guide
 
 **[GuestKit — Customer Feature Guide](docs/guestkit-customer-feature-guide.md)** — a complete, customer-facing reference covering all **63 features** across **10 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/guestkit-customer-feature-guide.pdf)**.
+
+**[Customer manual (page-by-page)](docs/customer/README.md)** — getting started, admin basics, and a guide for every product surface (PDFs under `docs/customer/pdf/`).
 
 Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot readiness, generate hypervisor-aware fix plans, and explore disks from a carbon-themed TUI — **Rust control plane, no libguestfs appliance** (uses host NBD/loop for mount).
 
@@ -35,12 +41,26 @@ Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot rea
 
 ---
 
+## 🆕 What's New — In-Guest Agent
+
+GuestKit now runs **inside** the guest too, not just offline against the disk — same evidence schema, same fix-plan format, over the existing virtio-serial QGA channel.
+
+- **Offline Windows install, no boot required** — `agent-inject --windows` writes the `GuestKitAgent` service and the virtio-serial (`vioser`) driver straight into the `SYSTEM` hive via hivex.
+- **Stock `qemu-guest-agent` gets out of the way automatically** — any `QEMU-GA`/`qemu-ga`/`QEMUGuestAgent` service found is disabled so GuestKit answers the channel uncontended, while still speaking QGA-compatible commands so KubeVirt/libvirt notice nothing.
+- **Converted-image driver fix** — deletes the stale cached PCI devnode so Windows re-detects the virtio-serial device and runs a full driver install on next boot, instead of staying stuck on "no driver."
+- **Generic QGA passthrough** — `guestkit-rpc` exposes every agent RPC method through the standard QGA channel, so host-side automation needs only `virsh qemu-agent-command`.
+
+Details, protocol reference, and the Linux path: [docs/features/guest-agent.md](docs/features/guest-agent.md) · [Protocol 1.3](docs/features/guestkit-agent-protocol-1.3.md)
+
+---
+
 ## Platform at a Glance
 
 | Layer | What's in the repo |
 |-------|-------------------|
 | **Core** | Rust disk engine + assurance APIs — `crates/`, `src/` |
 | **CLI** | `guestkit` + `guestctl` — doctor, migrate-plan, fleet |
+| **In-guest agent** | Linux + Windows, protocol 1.3 — `agent-inject`, `agent-proxy`, `agent-call` |
 | **TUI** | Carbon-themed multi-view dashboard |
 | **Python** | `hypersdk-guestkit` on PyPI |
 | **K8s** | KubeVirt integration hooks — `k8s/` |
@@ -69,6 +89,7 @@ guestctl tui vm.qcow2
 | Getting started | [docs/user-guides/getting-started.md](docs/user-guides/getting-started.md) |
 | CLI reference | [docs/user-guides/cli-guide.md](docs/user-guides/cli-guide.md) |
 | Migration assurance | [docs/features/migration-assurance.md](docs/features/migration-assurance.md) |
+| In-guest agent (Linux + Windows) | [docs/features/guest-agent.md](docs/features/guest-agent.md) |
 | CE vs Enterprise | [docs/ce-vs-enterprise.md](docs/ce-vs-enterprise.md) |
 
 **Web console:** self-hosted via GHCR or Helm. First-login credentials for packaged installs are documented in [remote deploy](docs/guides/DEPLOY-REMOTE.md#web-console-access) — change defaults before exposing to a network.

@@ -1,0 +1,1426 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Page-by-Page Product Manual — GuestKit</title>
+<style>
+@page{size:A4;margin:15mm 16mm}*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1f2937;line-height:1.58;font-size:10.5pt}
+.cover{height:262mm;margin:-15mm -16mm 0;background:linear-gradient(135deg,#1c1917,#78350f,#0d1b2a);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;page-break-after:always;position:relative}
+.cover .kicker{letter-spacing:5px;text-transform:uppercase;opacity:.72;margin-bottom:1.4em}
+.cover h1{font-size:3.2em;font-weight:800;letter-spacing:-2px}
+.cover h1 span{color:#fbbf24}
+.cover .sub{font-size:1.3em;font-weight:300;opacity:.93;margin:1em 0;max-width:24em}
+.cover .badge{display:inline-block;background:rgba(96,165,250,.2);border:1px solid #fbbf24;padding:8px 22px;border-radius:20px;margin-top:2em}
+.cover .foot{position:absolute;bottom:34px;font-size:.82em;opacity:.6}
+h2{page-break-before:always;margin:0 0 .35em;font-size:1.55em;font-weight:750;color:#12203a;border-bottom:2px solid #e5edfb;padding-bottom:.28em}
+h2:first-of-type{page-break-before:avoid}
+h3{margin:1.1em 0 .4em;font-size:1.12em;font-weight:700}
+p,li{margin:.4em 0}ul,ol{margin:.5em 0 .9em 1.4em}
+a{color:#2563eb;text-decoration:none}
+code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-size:.86em;font-family:ui-monospace,Menlo,monospace}
+pre{background:#0f172a;color:#e2e8f0;padding:12px 15px;border-radius:9px;overflow-x:auto;margin:.8em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
+th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
+hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
+</style></head><body>
+<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<h1>Guest<span>Kit</span></h1>
+<div class="sub">Page-by-Page Product Manual</div>
+<div class="badge">2026-07-26</div>
+<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<main><h2>Page-by-page guides</h2>
+<p>Each guide follows: Purpose → When to use it → How to get there → What you can do → Related pages.</p>
+<p>Every route is also listed in the <a href="../PAGE_INDEX.md">complete page index</a>.</p>
+<h3>Assurance</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="assurance/doctor.md">Doctor</a></td>
+<td>Doctor — Assurance surface.</td>
+</tr>
+<tr>
+<td><a href="assurance/migrate-plan.md">Migration Plan</a></td>
+<td>Migration Plan — Assurance surface.</td>
+</tr>
+<tr>
+<td><a href="assurance/migration-assurance.md">Migration Assurance</a></td>
+<td>Migration Assurance — Assurance surface.</td>
+</tr>
+<tr>
+<td><a href="assurance/policy.md">Policy Gate</a></td>
+<td>Policy Gate — Assurance surface.</td>
+</tr>
+</tbody></table>
+<h3>Export</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="export/export-formats.md">Export Formats</a></td>
+<td>Export Formats — Export surface.</td>
+</tr>
+</tbody></table>
+<h3>Fix Plans</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="fix-plans/fix-plans.md">Fix Plans</a></td>
+<td>Fix Plans — Fix Plans surface.</td>
+</tr>
+<tr>
+<td><a href="fix-plans/repair.md">Repair</a></td>
+<td>Repair — Fix Plans surface.</td>
+</tr>
+</tbody></table>
+<h3>Fleet</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="fleet/fleet.md">Fleet</a></td>
+<td>Fleet — Fleet surface.</td>
+</tr>
+</tbody></table>
+<h3>Forensics</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="forensics/forensic-diff.md">Forensic Diff</a></td>
+<td>Forensic Diff — Forensics surface.</td>
+</tr>
+</tbody></table>
+<h3>Guest Agent</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="guest-agent/guest-agent.md">Guest Agent</a></td>
+<td>Guest Agent — Guest Agent surface.</td>
+</tr>
+</tbody></table>
+<h3>Guest Files</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="guest-files/files.md">Guest Files</a></td>
+<td>Guest Files — Guest Files surface.</td>
+</tr>
+<tr>
+<td><a href="guest-files/guest-control-fabric.md">Guest Control Fabric</a></td>
+<td>Guest Control Fabric — Guest Files surface.</td>
+</tr>
+</tbody></table>
+<h3>Guides</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="guides/vm-migration.md">VM Migration Guide</a></td>
+<td>VM Migration Guide — Guides surface.</td>
+</tr>
+</tbody></table>
+<h3>Inspection</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="inspection/filesystems.md">Filesystems</a></td>
+<td>Filesystems — Inspection surface.</td>
+</tr>
+<tr>
+<td><a href="inspection/inspect.md">Inspect</a></td>
+<td>Inspect — Inspection surface.</td>
+</tr>
+<tr>
+<td><a href="inspection/network.md">Network Inspect</a></td>
+<td>Network Inspect — Inspection surface.</td>
+</tr>
+<tr>
+<td><a href="inspection/packages.md">Packages</a></td>
+<td>Packages — Inspection surface.</td>
+</tr>
+<tr>
+<td><a href="inspection/services-users.md">Services &amp; Users</a></td>
+<td>Services &amp; Users — Inspection surface.</td>
+</tr>
+</tbody></table>
+<h3>Integration</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="integration/kubevirt-integration.md">KubeVirt Integration</a></td>
+<td>KubeVirt Integration — Integration surface.</td>
+</tr>
+<tr>
+<td><a href="integration/zeus-vm-tools.md">Zeus VM Tools</a></td>
+<td>Zeus VM Tools — Integration surface.</td>
+</tr>
+</tbody></table>
+<h3>Interfaces</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="interfaces/python-bindings.md">Python Bindings</a></td>
+<td>Python Bindings — Interfaces surface.</td>
+</tr>
+<tr>
+<td><a href="interfaces/tui.md">TUI (guestctl)</a></td>
+<td>TUI (guestctl) — Interfaces surface.</td>
+</tr>
+</tbody></table>
+<h3>Onboarding</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="onboarding/cli-guide.md">CLI Guide</a></td>
+<td>CLI Guide — Onboarding surface.</td>
+</tr>
+<tr>
+<td><a href="onboarding/getting-started.md">Getting Started</a></td>
+<td>Getting Started — Onboarding surface.</td>
+</tr>
+<tr>
+<td><a href="onboarding/interactive-mode.md">Interactive Mode</a></td>
+<td>Interactive Mode — Onboarding surface.</td>
+</tr>
+<tr>
+<td><a href="onboarding/quick-reference.md">Quick Reference</a></td>
+<td>Quick Reference — Onboarding surface.</td>
+</tr>
+</tbody></table>
+<h3>Profiles</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="profiles/profiles.md">Profiles</a></td>
+<td>Profiles — Profiles surface.</td>
+</tr>
+</tbody></table>
+<h3>Support</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="support/faq.md">FAQ</a></td>
+<td>FAQ — Support surface.</td>
+</tr>
+<tr>
+<td><a href="support/troubleshooting.md">Troubleshooting</a></td>
+<td>Troubleshooting — Support surface.</td>
+</tr>
+</tbody></table>
+<hr>
+<p>29 guides. Regenerate: <code>node scripts/customer-docs/generate-guide-index.mjs</code>.</p>
+<hr>
+<h2>Doctor</h2>
+<h3>Purpose</h3>
+<p>Doctor — Assurance surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>doctor</code></li>
+<li>Nav: <strong>Assurance → Doctor</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>doctor</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Migration Plan</h2>
+<h3>Purpose</h3>
+<p>Migration Plan — Assurance surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>migrate-plan</code></li>
+<li>Nav: <strong>Assurance → Migration Plan</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>migrate-plan</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Migration Assurance</h2>
+<h3>Purpose</h3>
+<p>Migration Assurance — Assurance surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>migration-assurance</code></li>
+<li>Nav: <strong>Assurance → Migration Assurance</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>migration-assurance</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Policy Gate</h2>
+<h3>Purpose</h3>
+<p>Policy Gate — Assurance surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>policy</code></li>
+<li>Nav: <strong>Assurance → Policy Gate</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>policy</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Export Formats</h2>
+<h3>Purpose</h3>
+<p>Export Formats — Export surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>export-formats</code></li>
+<li>Nav: <strong>Export → Export Formats</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>export-formats</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Fix Plans</h2>
+<h3>Purpose</h3>
+<p>Fix Plans — Fix Plans surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>fix-plans</code></li>
+<li>Nav: <strong>Fix Plans → Fix Plans</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>fix-plans</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Repair</h2>
+<h3>Purpose</h3>
+<p>Repair — Fix Plans surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>repair</code></li>
+<li>Nav: <strong>Fix Plans → Repair</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>repair</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Fleet</h2>
+<h3>Purpose</h3>
+<p>Fleet — Fleet surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>fleet</code></li>
+<li>Nav: <strong>Fleet → Fleet</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>fleet</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Forensic Diff</h2>
+<h3>Purpose</h3>
+<p>Forensic Diff — Forensics surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>forensic-diff</code></li>
+<li>Nav: <strong>Forensics → Forensic Diff</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>forensic-diff</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Guest Agent</h2>
+<h3>Purpose</h3>
+<p>Guest Agent — Guest Agent surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>guest-agent</code></li>
+<li>Nav: <strong>Guest Agent → Guest Agent</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>guest-agent</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Guest Files</h2>
+<h3>Purpose</h3>
+<p>Guest Files — Guest Files surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>files</code></li>
+<li>Nav: <strong>Guest Files → Guest Files</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>files</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Guest Control Fabric</h2>
+<h3>Purpose</h3>
+<p>Guest Control Fabric — Guest Files surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>guest-control-fabric</code></li>
+<li>Nav: <strong>Guest Files → Guest Control Fabric</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>guest-control-fabric</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>VM Migration Guide</h2>
+<h3>Purpose</h3>
+<p>VM Migration Guide — Guides surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>vm-migration</code></li>
+<li>Nav: <strong>Guides → VM Migration Guide</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>vm-migration</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Filesystems</h2>
+<h3>Purpose</h3>
+<p>Filesystems — Inspection surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>filesystems</code></li>
+<li>Nav: <strong>Inspection → Filesystems</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>filesystems</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Inspect</h2>
+<h3>Purpose</h3>
+<p>Inspect — Inspection surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>inspect</code></li>
+<li>Nav: <strong>Inspection → Inspect</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>inspect</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Network Inspect</h2>
+<h3>Purpose</h3>
+<p>Network Inspect — Inspection surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>network</code></li>
+<li>Nav: <strong>Inspection → Network Inspect</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>network</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Packages</h2>
+<h3>Purpose</h3>
+<p>Packages — Inspection surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>packages</code></li>
+<li>Nav: <strong>Inspection → Packages</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>packages</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Services &amp; Users</h2>
+<h3>Purpose</h3>
+<p>Services &amp; Users — Inspection surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>services-users</code></li>
+<li>Nav: <strong>Inspection → Services &amp; Users</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>services-users</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>KubeVirt Integration</h2>
+<h3>Purpose</h3>
+<p>KubeVirt Integration — Integration surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>kubevirt-integration</code></li>
+<li>Nav: <strong>Integration → KubeVirt Integration</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>kubevirt-integration</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Zeus VM Tools</h2>
+<h3>Purpose</h3>
+<p>Zeus VM Tools — Integration surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>zeus-vm-tools</code></li>
+<li>Nav: <strong>Integration → Zeus VM Tools</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>zeus-vm-tools</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Python Bindings</h2>
+<h3>Purpose</h3>
+<p>Python Bindings — Interfaces surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>python-bindings</code></li>
+<li>Nav: <strong>Interfaces → Python Bindings</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>python-bindings</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>TUI (guestctl)</h2>
+<h3>Purpose</h3>
+<p>TUI (guestctl) — Interfaces surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>tui</code></li>
+<li>Nav: <strong>Interfaces → TUI (guestctl)</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>tui</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>CLI Guide</h2>
+<h3>Purpose</h3>
+<p>CLI Guide — Onboarding surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>cli-guide</code></li>
+<li>Nav: <strong>Onboarding → CLI Guide</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>cli-guide</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Getting Started</h2>
+<h3>Purpose</h3>
+<p>Getting Started — Onboarding surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>getting-started</code></li>
+<li>Nav: <strong>Onboarding → Getting Started</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>getting-started</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Interactive Mode</h2>
+<h3>Purpose</h3>
+<p>Interactive Mode — Onboarding surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>interactive-mode</code></li>
+<li>Nav: <strong>Onboarding → Interactive Mode</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>interactive-mode</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Purpose</h3>
+<p>Quick Reference — Onboarding surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>quick-reference</code></li>
+<li>Nav: <strong>Onboarding → Quick Reference</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>quick-reference</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Profiles</h2>
+<h3>Purpose</h3>
+<p>Profiles — Profiles surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>profiles</code></li>
+<li>Nav: <strong>Profiles → Profiles</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>profiles</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>FAQ</h2>
+<h3>Purpose</h3>
+<p>FAQ — Support surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>faq</code></li>
+<li>Nav: <strong>Support → FAQ</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>faq</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Purpose</h3>
+<p>Troubleshooting — Support surface.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this surface when the job matches the purpose above</li>
+<li>Start from the product home / dashboard if you are unsure where to begin</li>
+<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Route / id: <code>troubleshooting</code></li>
+<li>Nav: <strong>Support → Troubleshooting</strong> (sidebar, command palette, or desktop nav)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>troubleshooting</code> and wait for live data from GuestKit.</li>
+<li>Use filters and search when the page provides them.</li>
+<li>Drill into a row or card for detail, then jump to related surfaces.</li>
+<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+</ol>
+<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>GuestKit — Complete page index</h2>
+<p>Every primary navigable dashboard route.</p>
+<p><em>Generated: 2026-07-26 · 29 routes</em></p>
+<p>Regenerate: <code>node scripts/customer-docs/generate-page-index.mjs</code></p>
+<h3>Onboarding</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Getting Started</td>
+<td><code>getting-started</code></td>
+<td>Getting Started — Onboarding surface.</td>
+<td><a href="pages/onboarding/getting-started.md">Open</a></td>
+</tr>
+<tr>
+<td>Quick Reference</td>
+<td><code>quick-reference</code></td>
+<td>Quick Reference — Onboarding surface.</td>
+<td><a href="pages/onboarding/quick-reference.md">Open</a></td>
+</tr>
+<tr>
+<td>CLI Guide</td>
+<td><code>cli-guide</code></td>
+<td>CLI Guide — Onboarding surface.</td>
+<td><a href="pages/onboarding/cli-guide.md">Open</a></td>
+</tr>
+<tr>
+<td>Interactive Mode</td>
+<td><code>interactive-mode</code></td>
+<td>Interactive Mode — Onboarding surface.</td>
+<td><a href="pages/onboarding/interactive-mode.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Inspection</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Inspect</td>
+<td><code>inspect</code></td>
+<td>Inspect — Inspection surface.</td>
+<td><a href="pages/inspection/inspect.md">Open</a></td>
+</tr>
+<tr>
+<td>Filesystems</td>
+<td><code>filesystems</code></td>
+<td>Filesystems — Inspection surface.</td>
+<td><a href="pages/inspection/filesystems.md">Open</a></td>
+</tr>
+<tr>
+<td>Packages</td>
+<td><code>packages</code></td>
+<td>Packages — Inspection surface.</td>
+<td><a href="pages/inspection/packages.md">Open</a></td>
+</tr>
+<tr>
+<td>Services &amp; Users</td>
+<td><code>services-users</code></td>
+<td>Services &amp; Users — Inspection surface.</td>
+<td><a href="pages/inspection/services-users.md">Open</a></td>
+</tr>
+<tr>
+<td>Network Inspect</td>
+<td><code>network</code></td>
+<td>Network Inspect — Inspection surface.</td>
+<td><a href="pages/inspection/network.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Guest Files</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Guest Files</td>
+<td><code>files</code></td>
+<td>Guest Files — Guest Files surface.</td>
+<td><a href="pages/guest-files/files.md">Open</a></td>
+</tr>
+<tr>
+<td>Guest Control Fabric</td>
+<td><code>guest-control-fabric</code></td>
+<td>Guest Control Fabric — Guest Files surface.</td>
+<td><a href="pages/guest-files/guest-control-fabric.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Guest Agent</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Guest Agent</td>
+<td><code>guest-agent</code></td>
+<td>Guest Agent — Guest Agent surface.</td>
+<td><a href="pages/guest-agent/guest-agent.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Assurance</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Doctor</td>
+<td><code>doctor</code></td>
+<td>Doctor — Assurance surface.</td>
+<td><a href="pages/assurance/doctor.md">Open</a></td>
+</tr>
+<tr>
+<td>Migration Plan</td>
+<td><code>migrate-plan</code></td>
+<td>Migration Plan — Assurance surface.</td>
+<td><a href="pages/assurance/migrate-plan.md">Open</a></td>
+</tr>
+<tr>
+<td>Migration Assurance</td>
+<td><code>migration-assurance</code></td>
+<td>Migration Assurance — Assurance surface.</td>
+<td><a href="pages/assurance/migration-assurance.md">Open</a></td>
+</tr>
+<tr>
+<td>Policy Gate</td>
+<td><code>policy</code></td>
+<td>Policy Gate — Assurance surface.</td>
+<td><a href="pages/assurance/policy.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Fix Plans</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Fix Plans</td>
+<td><code>fix-plans</code></td>
+<td>Fix Plans — Fix Plans surface.</td>
+<td><a href="pages/fix-plans/fix-plans.md">Open</a></td>
+</tr>
+<tr>
+<td>Repair</td>
+<td><code>repair</code></td>
+<td>Repair — Fix Plans surface.</td>
+<td><a href="pages/fix-plans/repair.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Fleet</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Fleet</td>
+<td><code>fleet</code></td>
+<td>Fleet — Fleet surface.</td>
+<td><a href="pages/fleet/fleet.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Forensics</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Forensic Diff</td>
+<td><code>forensic-diff</code></td>
+<td>Forensic Diff — Forensics surface.</td>
+<td><a href="pages/forensics/forensic-diff.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Profiles</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Profiles</td>
+<td><code>profiles</code></td>
+<td>Profiles — Profiles surface.</td>
+<td><a href="pages/profiles/profiles.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Export</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Export Formats</td>
+<td><code>export-formats</code></td>
+<td>Export Formats — Export surface.</td>
+<td><a href="pages/export/export-formats.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Integration</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KubeVirt Integration</td>
+<td><code>kubevirt-integration</code></td>
+<td>KubeVirt Integration — Integration surface.</td>
+<td><a href="pages/integration/kubevirt-integration.md">Open</a></td>
+</tr>
+<tr>
+<td>Zeus VM Tools</td>
+<td><code>zeus-vm-tools</code></td>
+<td>Zeus VM Tools — Integration surface.</td>
+<td><a href="pages/integration/zeus-vm-tools.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Interfaces</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TUI (guestctl)</td>
+<td><code>tui</code></td>
+<td>TUI (guestctl) — Interfaces surface.</td>
+<td><a href="pages/interfaces/tui.md">Open</a></td>
+</tr>
+<tr>
+<td>Python Bindings</td>
+<td><code>python-bindings</code></td>
+<td>Python Bindings — Interfaces surface.</td>
+<td><a href="pages/interfaces/python-bindings.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Guides</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VM Migration Guide</td>
+<td><code>vm-migration</code></td>
+<td>VM Migration Guide — Guides surface.</td>
+<td><a href="pages/guides/vm-migration.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Support</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Troubleshooting</td>
+<td><code>troubleshooting</code></td>
+<td>Troubleshooting — Support surface.</td>
+<td><a href="pages/support/troubleshooting.md">Open</a></td>
+</tr>
+<tr>
+<td>FAQ</td>
+<td><code>faq</code></td>
+<td>FAQ — Support surface.</td>
+<td><a href="pages/support/faq.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Related</h3>
+<ul>
+<li><a href="README.md">Customer docs home</a></li>
+<li><a href="pages/README.md">Page-by-page guides</a></li>
+</ul>
+</main></body></html>
