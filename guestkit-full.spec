@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.9
+Version:        0.3.15
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -165,23 +165,30 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
-* Fri Jun 13 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.9-1
+* Wed Jul 29 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.15-1
+- Sync spec Version with Cargo.toml (was stuck at 0.3.9, breaking RPM builds
+  since 0.3.10 — Source0 tarball name never matched the built tarball)
+- In-guest Windows agent offline install (service + vioser driver via hivex,
+  stock qemu-ga takeover, converted-image driver fix)
+- Generic guestkit-rpc QGA passthrough
+
+* Fri Jun 13 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.9-1
 - Fix CI formatting, integration tests, RPM verify, and PyPI wheel publish
 
-* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.8-1
+* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.8-1
 - Fix CI clippy and integration copy test; refresh Cargo.lock
 
-* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.7-1
+* Fri Jun 12 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.7-1
 - IronWolf web console theme for GuestKit deploy UI
 - Console Copilot API, system status, fleet overview endpoints
 - zyvor-guest-agent crate and QGA transport improvements
 - Windows forensic EVTX parsing and persistence collectors
 
-* Thu Jun 04 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.6-1
+* Thu Jun 04 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.6-1
 - Add in-guest agent mode for live VM assurance over virtio-serial
 - Sync RPM spec version with Cargo.toml
 
-* Tue Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.1-1
+* Tue Jan 27 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.1-1
 - Initial RPM package for Fedora/RHEL
 - Interactive TUI dashboard with fuzzy jump navigation (Ctrl+P)
 - Security, compliance, hardening, performance profiles
@@ -197,21 +204,21 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Reorganized documentation structure
 - Removed libguestfs references (pure Rust implementation)
 
-* Mon Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.3.0-1
+* Mon Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.0-1
 - Add comprehensive TUI dashboard with multiple views
 - Add security analysis profiles (5 types)
 - Add enhanced inspection APIs
 - Improve documentation with examples
 - Add export formats (JSON, YAML, HTML, PDF)
 
-* Sat Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.2.0-1
+* Sat Jan 24 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.2.0-1
 - Add Python bindings via PyO3
 - Add batch processing support with parallelization
 - Add inspection caching system
 - Improve error handling and reporting
 - Add retry mechanisms for operations
 
-* Fri Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@redhat.com> - 0.1.0-1
+* Fri Jan 23 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.1.0-1
 - Initial release
 - Basic VM disk inspection functionality
 - Support for multiple disk formats (QCOW2, VMDK, etc.)
