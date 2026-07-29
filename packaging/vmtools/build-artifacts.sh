@@ -149,7 +149,7 @@ echo "Zyvor VM Tools installed"
 EOF
 chmod +x "${ISO_DIR}/linux/install.sh"
 cp "${DIST}/linux/guestkitd" "${ISO_DIR}/linux/"
-cp "${DIST}/linux/zyvor-guest-agent.service" "${ISO_DIR}/linux/"
+cp "${DIST}/linux/guestkit-agent.service" "${ISO_DIR}/linux/"
 cp "${DIST}/linux/zyvor-vm-tools_${VERSION}_amd64.deb" "${ISO_DIR}/linux/" 2>/dev/null || true
 cp "${DIST}/linux/zyvor-vm-tools-${VERSION}.rpm" "${ISO_DIR}/linux/" 2>/dev/null || true
 
