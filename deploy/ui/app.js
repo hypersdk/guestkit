@@ -307,25 +307,32 @@ function updateWizardFooter() {
   const action = $('#wizardActionBtn');
   const chain = $('#wizardChainBtn');
 
-  back.disabled = idx <= 0;
+  // These wizard-footer controls only exist in the disk-upload layout — the
+  // KubeVirt cluster-browse view (and other layouts) can render without
+  // them, so every access here must be null-guarded.
+  if (back) back.disabled = idx <= 0;
 
   const stepCfg = WIZARD_ACTIONS[state.wizard.step];
   if (stepCfg && state.selectedVm) {
-    action.textContent = stepCfg.label;
-    action.classList.remove('hidden');
-    action.dataset.action = stepCfg.action;
+    if (action) {
+      action.textContent = stepCfg.label;
+      action.classList.remove('hidden');
+      action.dataset.action = stepCfg.action;
+    }
   } else {
-    action.classList.add('hidden');
+    action?.classList.add('hidden');
   }
 
-  chain.classList.toggle('hidden', !(state.selectedVm && state.wizard.step === 'assure'));
+  chain?.classList.toggle('hidden', !(state.selectedVm && state.wizard.step === 'assure'));
 
-  if (idx >= WIZARD_STEPS.length - 1) {
-    cont.textContent = 'Done';
-    cont.disabled = state.wizard.completed.has('launch');
-  } else {
-    cont.textContent = 'Continue';
-    cont.disabled = !state.wizard.completed.has(state.wizard.step);
+  if (cont) {
+    if (idx >= WIZARD_STEPS.length - 1) {
+      cont.textContent = 'Done';
+      cont.disabled = state.wizard.completed.has('launch');
+    } else {
+      cont.textContent = 'Continue';
+      cont.disabled = !state.wizard.completed.has(state.wizard.step);
+    }
   }
 }
 
