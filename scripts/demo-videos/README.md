@@ -63,3 +63,11 @@ the actual action buttons when browsing a cluster VM.
 Not committed here (binary, and per-run): upload the built MP4s to YouTube
 and copy them locally, following the same convention as prior demo videos
 (public visibility, title cards + captions, copy under `~/Desktop/`).
+
+`thumbnails/` (committed) holds the published YouTube thumbnails for each video:
+
+| Video | YouTube | Thumbnail |
+|---|---|---|
+| CLI/TUI demo | https://youtu.be/lLEBQoFceIs | `thumbnails/guestkit-cli-demo.jpg` |
+| Web dashboard tour | https://youtu.be/usQX2rQIFM8 | `thumbnails/guestkit-web-tour.jpg` |
+| Web dashboard tutorial | https://youtu.be/icTLVko588A | `thumbnails/guestkit-web-tutorial.jpg` |
