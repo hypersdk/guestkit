@@ -304,8 +304,8 @@ fn draw_risk_trends(f: &mut Frame, area: Rect, app: &App) {
     let summary_area = Rect {
         x: area.x + 2,
         y: area.y + 2,
-        width: area.width - 4,
-        height: area.height - 3,
+        width: area.width.saturating_sub(4),
+        height: area.height.saturating_sub(3),
     };
 
     let summary_text = vec![

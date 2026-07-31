@@ -2441,7 +2441,7 @@ fn draw_file_preview(f: &mut Frame, app: &App) {
     // Footer with help
     let footer_area = Rect {
         x: area.x,
-        y: area.y + area.height - 2,
+        y: area.y + area.height.saturating_sub(2),
         width: area.width,
         height: 2,
     };
@@ -2506,7 +2506,7 @@ fn draw_file_info(f: &mut Frame, app: &App) {
     // Footer with help
     let footer_area = Rect {
         x: area.x,
-        y: area.y + area.height - 2,
+        y: area.y + area.height.saturating_sub(2),
         width: area.width,
         height: 2,
     };
