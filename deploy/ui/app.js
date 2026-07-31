@@ -307,25 +307,32 @@ function updateWizardFooter() {
   const action = $('#wizardActionBtn');
   const chain = $('#wizardChainBtn');
 
-  back.disabled = idx <= 0;
+  // These wizard-footer controls only exist in the disk-upload layout — the
+  // KubeVirt cluster-browse view (and other layouts) can render without
+  // them, so every access here must be null-guarded.
+  if (back) back.disabled = idx <= 0;
 
   const stepCfg = WIZARD_ACTIONS[state.wizard.step];
   if (stepCfg && state.selectedVm) {
-    action.textContent = stepCfg.label;
-    action.classList.remove('hidden');
-    action.dataset.action = stepCfg.action;
+    if (action) {
+      action.textContent = stepCfg.label;
+      action.classList.remove('hidden');
+      action.dataset.action = stepCfg.action;
+    }
   } else {
-    action.classList.add('hidden');
+    action?.classList.add('hidden');
   }
 
-  chain.classList.toggle('hidden', !(state.selectedVm && state.wizard.step === 'assure'));
+  chain?.classList.toggle('hidden', !(state.selectedVm && state.wizard.step === 'assure'));
 
-  if (idx >= WIZARD_STEPS.length - 1) {
-    cont.textContent = 'Done';
-    cont.disabled = state.wizard.completed.has('launch');
-  } else {
-    cont.textContent = 'Continue';
-    cont.disabled = !state.wizard.completed.has(state.wizard.step);
+  if (cont) {
+    if (idx >= WIZARD_STEPS.length - 1) {
+      cont.textContent = 'Done';
+      cont.disabled = state.wizard.completed.has('launch');
+    } else {
+      cont.textContent = 'Continue';
+      cont.disabled = !state.wizard.completed.has(state.wizard.step);
+    }
   }
 }
 
@@ -1752,7 +1759,8 @@ function setAgentControlStatus(control) {
 function renderClusterGuestSummary(info, bootInspect) {
   const ph = $('#summaryPlaceholder');
   const content = $('#summaryContent');
-  ph.classList.add('hidden');
+  if (!content) return; // summary panel absent in this layout
+  ph?.classList.add('hidden');
   content.classList.remove('hidden');
   content.innerHTML = '';
   renderGuestControlPanel(content, state.lastGuestControlStatus, state.lastGuestDoctor);
@@ -2228,30 +2236,32 @@ function showJobTracker(op, jobId) {
   clearTimeout(state.jobTrackerHideTimer);
   state.activeJob = { id: jobId, op, start: Date.now() };
   const tracker = $('#jobTracker');
+  const bar = $('#jobBar');
+  if (!tracker || !bar) { window.GuestKitConsole?.syncBrainJobTracker?.(); return; } // job tracker absent in this layout
   tracker.classList.remove('hidden');
   tracker.style.display = '';
   $('#jobOp').textContent = op.replace(/-/g, ' ');
   $('#jobIdDisplay').textContent = jobId;
   $('#jobStatus').textContent = 'pending';
   $('#jobStatus').className = 'job-status';
-  const bar = $('#jobBar');
   bar.className = 'job-bar-fill';
   bar.style.width = '8%';
   $('#jobBadge').textContent = 'running';
   $('#jobBadge').className = 'badge live running';
-  $('#jobRetryBtn').classList.add('hidden');
+  $('#jobRetryBtn')?.classList.add('hidden');
   window.GuestKitConsole?.syncBrainJobTracker?.();
 }
 
 function hideJobTracker(status) {
   const bar = $('#jobBar');
+  state.activeJob = null;
+  if (!bar) { window.GuestKitConsole?.syncBrainJobTracker?.(); return; } // job tracker absent in this layout
   bar.classList.add(status === 'failed' ? 'fail' : 'done');
   if (status === 'completed') bar.style.width = '100%';
   $('#jobStatus').textContent = status;
   $('#jobStatus').className = `job-status ${status}`;
   $('#jobBadge').textContent = status;
   $('#jobBadge').className = `badge live ${status === 'completed' ? 'done' : 'fail'}`;
-  state.activeJob = null;
   window.GuestKitConsole?.syncBrainJobTracker?.();
   const hideMs = status === 'failed' ? 6000 : 3500;
   clearTimeout(state.jobTrackerHideTimer);
@@ -2264,6 +2274,7 @@ function hideJobTracker(status) {
 
 function setJobProgress(pct, message) {
   const bar = $('#jobBar');
+  if (!bar) return; // job tracker absent in this layout
   if (pct != null) {
     bar.classList.add('progress');
     bar.style.width = `${Math.max(8, Math.min(100, pct))}%`;

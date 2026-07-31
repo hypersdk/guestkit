@@ -23,6 +23,13 @@ zyvorApi:
     enabled: true
     vsockPort: 1234
     listen: "127.0.0.1:8765"
+  # mTLS guest-agent push needs auth.agentBootstrapToken set — the base
+  # values.yaml enables agentMtls without one, which makes zyvor-api refuse
+  # to start ("AGENT_MTLS_BIND_ADDR is set but AGENT_BOOTSTRAP_TOKEN is
+  # unset"). Disabled here for a working single-node lab/eval install;
+  # set both agentMtls.enabled and auth.agentBootstrapToken to use it.
+  agentMtls:
+    enabled: false
   service:
     type: NodePort
     nodePort: 30080

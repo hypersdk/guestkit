@@ -7,6 +7,40 @@
 [![PyPI](https://img.shields.io/pypi/v/hypersdk-guestkit.svg)](https://pypi.org/project/hypersdk-guestkit/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+**[🎬 Demos](#-see-it-in-action)** · **[📖 Feature Guide](#-feature-guide)** · **[⚡ Quick Start](#quick-start)** · **[🐳 Run from GHCR](#run-from-ghcr-prebuilt-images)** · **[📚 Docs](#documentation)**
+
+## 🎬 See it in action
+
+<table>
+<tr>
+<td width="33%" align="center">
+<a href="https://www.youtube.com/watch?v=lLEBQoFceIs">
+<img src="https://i.ytimg.com/vi/lLEBQoFceIs/maxresdefault.jpg" alt="GuestKit CLI and TUI demo" width="100%">
+</a>
+<br><b>CLI &amp; TUI</b><br>
+<sub>Offline VM intelligence, explained</sub>
+</td>
+<td width="33%" align="center">
+<a href="https://www.youtube.com/watch?v=usQX2rQIFM8">
+<img src="https://i.ytimg.com/vi/usQX2rQIFM8/maxresdefault.jpg" alt="GuestKit web dashboard tour" width="100%">
+</a>
+<br><b>Web Dashboard Tour</b><br>
+<sub>Server Image Vault, live KubeVirt cluster</sub>
+</td>
+<td width="33%" align="center">
+<a href="https://www.youtube.com/watch?v=icTLVko588A">
+<img src="https://i.ytimg.com/vi/icTLVko588A/maxresdefault.jpg" alt="GuestKit web dashboard tutorial" width="100%">
+</a>
+<br><b>Web Dashboard Tutorial</b><br>
+<sub>Sources, live cluster, one-click intelligence</sub>
+</td>
+</tr>
+</table>
+
+All three recorded live against a real Forge lab deployment — no staged screenshots. Click a thumbnail to watch on YouTube.
+
+---
+
 ## 📖 Feature Guide
 
 **[GuestKit — Customer Feature Guide](docs/guestkit-customer-feature-guide.md)** — a complete, customer-facing reference covering all **63 features** across **10 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/guestkit-customer-feature-guide.pdf)**.
@@ -143,7 +177,7 @@ For clusters, use the [Helm chart](deploy/helm/zyvor). Full details: [docs/guide
 | Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | Full index | [docs/INDEX.md](docs/INDEX.md) |
 
-→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [Demo video](https://www.youtube.com/watch?v=ZYCz6HN7bXE) · [Full Zyvor platform](https://zyvor.dev)
+→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [Demo videos](#-see-it-in-action) · [Full Zyvor platform](https://zyvor.dev)
 
 ---
 
