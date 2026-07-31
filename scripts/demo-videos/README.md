@@ -64,10 +64,11 @@ Not committed here (binary, and per-run): upload the built MP4s to YouTube
 and copy them locally, following the same convention as prior demo videos
 (public visibility, title cards + captions, copy under `~/Desktop/`).
 
-`thumbnails/` (committed) holds the published YouTube thumbnails for each video:
+Published videos (thumbnails served by YouTube — see the top-level README's
+[demo table](../../README.md#-see-it-in-action), no local copies needed):
 
-| Video | YouTube | Thumbnail |
-|---|---|---|
-| CLI/TUI demo | https://youtu.be/lLEBQoFceIs | `thumbnails/guestkit-cli-demo.jpg` |
-| Web dashboard tour | https://youtu.be/usQX2rQIFM8 | `thumbnails/guestkit-web-tour.jpg` |
-| Web dashboard tutorial | https://youtu.be/icTLVko588A | `thumbnails/guestkit-web-tutorial.jpg` |
+| Video | YouTube |
+|---|---|
+| CLI/TUI demo | https://youtu.be/lLEBQoFceIs |
+| Web dashboard tour | https://youtu.be/usQX2rQIFM8 |
+| Web dashboard tutorial | https://youtu.be/icTLVko588A |
