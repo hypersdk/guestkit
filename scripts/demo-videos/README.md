@@ -69,6 +69,12 @@ Published videos (thumbnails served by YouTube — see the top-level README's
 
 | Video | YouTube |
 |---|---|
+| Machina × GuestKit live guest-agent UX | https://youtu.be/LYoqOye3P3I |
 | CLI/TUI demo | https://youtu.be/lLEBQoFceIs |
 | Web dashboard tour | https://youtu.be/usQX2rQIFM8 |
 | Web dashboard tutorial | https://youtu.be/icTLVko588A |
+
+The Machina live-agent reel is recorded from the Machina platform
+(`machina/scripts/demo-videos/seg-gk-agent.mjs` → `build-guestkit.sh`) against
+a real KVM guest with GuestKit/QGA; publish under
+`~/Desktop/PacketWolf-Demo-Videos/machina-guestkit/`.
