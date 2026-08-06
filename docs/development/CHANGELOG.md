@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **System Reserved / ESP detection** — offline Windows evidence probes
+  non-OS NTFS/FAT volumes for `bootmgr` + BCD (legacy System Reserved) or
+  EFI Microsoft Boot (ESP). Surfaces on `windows.system_reserved`, promotes
+  `bcd_store_found` / `bootmgr_found`, fixes `esp_present` (no longer aliased
+  to bootmgr). Boot check **BOOT-014**, migration **MIG-W-010**, Passport
+  flags `system_reserved_layout` + `bcd_store_found`.
+
 ## [0.3.19] - 2026-08-06
 
 ### Added

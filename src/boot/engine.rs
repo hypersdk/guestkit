@@ -142,6 +142,8 @@ fn remediation_for(check_id: &str) -> String {
             .to_string(),
         "BOOT-013" => "Rebuild BCD from WinPE: bcdboot %WINDIR% or bootrec /rebuildbcd"
             .to_string(),
+        "BOOT-014" => "Preserve System Reserved / ESP with the OS disk; do not convert C: alone"
+            .to_string(),
         _ => "Review check output and apply fix plan".to_string(),
     }
 }

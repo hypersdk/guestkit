@@ -444,6 +444,9 @@ pub struct WindowsEvidence {
     pub bcd_store_found: bool,
     #[serde(default)]
     pub bootmgr_found: bool,
+    /// Detected System Reserved / ESP boot volume (separate from Windows OS volume).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_reserved: Option<SystemReservedPartition>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub services: Vec<WindowsServiceEntry>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -472,6 +475,20 @@ pub struct WindowsEvidence {
     pub esp_present: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub activation: Option<ActivationInfo>,
+}
+
+/// Separate boot volume for Windows (legacy System Reserved or UEFI ESP).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemReservedPartition {
+    /// Block device path (e.g. `/dev/sda1`).
+    pub device: String,
+    pub fstype: String,
+    /// `system_reserved` (BIOS/NTFS), `esp` (UEFI/FAT), or `unknown_boot`.
+    pub role: String,
+    pub has_bootmgr: bool,
+    pub has_bcd: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
 }
 
 /// One virtio (or otherwise migration-critical) Windows driver.

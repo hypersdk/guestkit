@@ -72,7 +72,7 @@ guestkit doctor vm.qcow2 --target kvm -o json --fail-below 80
 | `-o json` | Machine-readable `bootability` + optional `root_cause` |
 | `--fail-below` | Exit code `1` if boot score is below threshold (0–100); JSON still printed |
 
-Output includes a **boot assurance score** message, **blockers** (with remediation hints), **warnings**, and per-check pass/fail lines.
+Output includes a **boot assurance score** message, **blockers** (with remediation hints), **warnings**, and per-check pass/fail lines. Windows guests also run **BOOT-012/013/014** (EFI bootmgr, BCD, System Reserved / ESP layout).
 
 #### CI gate example
 

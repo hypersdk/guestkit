@@ -93,6 +93,12 @@ pub struct WindowsPassportFlags {
     /// True when offline day-0 path looks ready (no BitLocker blocker + VirtIO
     /// and/or RDP signals / plan ops).
     pub windows_offline_ready: bool,
+    /// Multi-partition layout: separate System Reserved or ESP boot volume.
+    #[serde(default)]
+    pub system_reserved_layout: bool,
+    /// BCD located (OS volume, System Reserved, or ESP).
+    #[serde(default)]
+    pub bcd_store_found: bool,
 }
 
 /// Optional live agent attestation (Phase 3).
@@ -444,6 +450,8 @@ fn windows_flags(
         rdp_enabled: win.rdp_enabled,
         virtio_driver_count,
         windows_offline_ready,
+        system_reserved_layout: win.system_reserved.is_some(),
+        bcd_store_found: win.bcd_store_found,
     }
 }
 

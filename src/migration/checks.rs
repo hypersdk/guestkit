@@ -370,8 +370,12 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
         });
     }
 
-    // MIG-W-003/004: BCD + boot chain (wrap boot engine results)
-    for (boot_id, mig_id, weight) in [("BOOT-013", "MIG-W-003", 8.0), ("BOOT-012", "MIG-W-004", 6.0)] {
+    // MIG-W-003/004/010: BCD + boot chain + System Reserved layout
+    for (boot_id, mig_id, weight) in [
+        ("BOOT-013", "MIG-W-003", 8.0),
+        ("BOOT-012", "MIG-W-004", 6.0),
+        ("BOOT-014", "MIG-W-010", 4.0),
+    ] {
         if let Some(check) =
             ctx.boot_check(boot_id, mig_id, Cat::Boot, weight, Some(Hint::RepairBootloader))
         {

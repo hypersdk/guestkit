@@ -471,7 +471,7 @@ impl EvidenceBuilder {
             // Windows volume on single-partition installs).
             "/Boot/BCD".to_string(),
         ];
-        let bcd_store_found = bcd_candidates
+        let mut bcd_store_found = bcd_candidates
             .iter()
             .any(|path| g.exists(path).unwrap_or(false));
         let bootmgr_candidates = [
@@ -481,9 +481,29 @@ impl EvidenceBuilder {
             // Legacy BIOS boot manager at the volume root
             "/bootmgr".to_string(),
         ];
-        let bootmgr_found = bootmgr_candidates
+        let mut bootmgr_found = bootmgr_candidates
             .iter()
             .any(|path| g.exists(path).unwrap_or(false));
+
+        let system_reserved = Self::detect_system_reserved_partition(g, root);
+        if let Some(ref sr) = system_reserved {
+            if sr.has_bcd {
+                bcd_store_found = true;
+            }
+            if sr.has_bootmgr {
+                bootmgr_found = true;
+            }
+        }
+
+        let esp_present = system_reserved
+            .as_ref()
+            .map(|s| s.role == "esp")
+            .or_else(|| {
+                Some(
+                    g.exists("/EFI/Microsoft/Boot").unwrap_or(false)
+                        || g.exists("/EFI/BOOT").unwrap_or(false),
+                )
+            });
 
         let details = collect_windows_details(g, root);
 
@@ -506,6 +526,7 @@ impl EvidenceBuilder {
             minidump_count,
             bcd_store_found,
             bootmgr_found,
+            system_reserved,
             services: details.services,
             installed_apps: details.installed_apps,
             persistence: details.persistence,
@@ -516,9 +537,105 @@ impl EvidenceBuilder {
             ghost_nics: Vec::new(),
             static_nic_configs: Vec::new(),
             driver_signature_enforcement: None,
-            esp_present: Some(bootmgr_found),
+            esp_present,
             activation: None,
         }
+    }
+
+    /// Probe non-OS NTFS/FAT volumes for legacy System Reserved or UEFI ESP.
+    ///
+    /// Multi-partition Windows installs keep `bootmgr` + `Boot\BCD` on a small
+    /// volume separate from `%SystemRoot%`. Without this probe, doctor falsely
+    /// reports missing BCD when only C: is mounted as `/`.
+    fn detect_system_reserved_partition(
+        g: &mut Guestfs,
+        windows_root: &str,
+    ) -> Option<crate::evidence::snapshot::SystemReservedPartition> {
+        use crate::evidence::snapshot::SystemReservedPartition;
+
+        let filesystems = g.list_filesystems().ok()?;
+        let probe = "/__gk_sysreserved";
+        let _ = g.mkdir_p(probe);
+
+        let mut best: Option<SystemReservedPartition> = None;
+
+        for (device, fstype) in filesystems {
+            if device == windows_root {
+                continue;
+            }
+            let ft = fstype.to_ascii_lowercase();
+            if !matches!(ft.as_str(), "ntfs" | "vfat" | "fat" | "fat32" | "msdos") {
+                continue;
+            }
+
+            if g.mount_ro(&device, probe).is_err() {
+                continue;
+            }
+
+            let has_windows = g
+                .exists(&format!("{probe}/Windows/System32"))
+                .unwrap_or(false)
+                || g.exists(&format!("{probe}/windows/system32"))
+                    .unwrap_or(false);
+            let has_bootmgr = g.exists(&format!("{probe}/bootmgr")).unwrap_or(false)
+                || g.exists(&format!("{probe}/Boot/bootmgr")).unwrap_or(false)
+                || g.exists(&format!("{probe}/EFI/Microsoft/Boot/bootmgfw.efi"))
+                    .unwrap_or(false);
+            let has_bcd = g.exists(&format!("{probe}/Boot/BCD")).unwrap_or(false)
+                || g.exists(&format!("{probe}/boot/BCD")).unwrap_or(false)
+                || g.exists(&format!("{probe}/EFI/Microsoft/Boot/BCD"))
+                    .unwrap_or(false);
+            let has_efi_ms = g
+                .exists(&format!("{probe}/EFI/Microsoft/Boot"))
+                .unwrap_or(false);
+            let size_bytes = g.statvfs(probe).ok().map(|m| {
+                let blocks = *m.get("blocks").unwrap_or(&0);
+                let bsize = *m.get("bsize").unwrap_or(&4096);
+                (blocks.saturating_mul(bsize)).max(0) as u64
+            });
+
+            // Umount by device — Guestfs tracks host paths, not guest mountpoints.
+            let _ = g.umount(&device);
+
+            if has_windows {
+                continue;
+            }
+            if !has_bootmgr && !has_bcd && !has_efi_ms {
+                continue;
+            }
+
+            let role = if has_efi_ms || ft.contains("fat") {
+                "esp"
+            } else {
+                "system_reserved"
+            };
+
+            let candidate = SystemReservedPartition {
+                device: device.clone(),
+                fstype,
+                role: role.into(),
+                has_bootmgr,
+                has_bcd,
+                size_bytes,
+            };
+
+            // Prefer volumes that carry both bootmgr and BCD; else first match.
+            let replace = match &best {
+                None => true,
+                Some(prev) => {
+                    let prev_score =
+                        i32::from(prev.has_bootmgr) + i32::from(prev.has_bcd);
+                    let new_score =
+                        i32::from(candidate.has_bootmgr) + i32::from(candidate.has_bcd);
+                    new_score > prev_score
+                }
+            };
+            if replace {
+                best = Some(candidate);
+            }
+        }
+
+        best
     }
 
     /// VirtIO driver install state derived from the parsed SYSTEM hive

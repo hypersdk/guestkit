@@ -69,7 +69,7 @@ _Read the full guest OS from a cold disk image - no boot, no agent, no appliance
   - **How:** CLI: `guestkit inspect disk.qcow2` reports OS, distro, version and init system; the same identity shows in the TUI Summary view and Python via `Guestfs.inspect_os()`.
 - **Deep system enumeration** — Extracts packages, kernels, users, SSH config, services, timers, network, DNS, LVM, fstab, runtimes, containers, certificates, and cloud-init state. — _A complete inventory of the machine from bytes on disk._
   - **How:** CLI: run focused subcommands like `guestkit packages|services|users|network disk.qcow2`, or the full `guestkit inspect disk.qcow2` for everything in one pass.
-- **Windows signal parsing** — Reads SAM/SECURITY registry hives to detect BitLocker, domain join, RDP, and driver gaps for Windows guests. — _See the Windows-specific blockers Linux tools miss._
+- **Windows signal parsing** — Reads SAM/SECURITY registry hives to detect BitLocker, domain join, RDP, and driver gaps for Windows guests. Detects System Reserved / ESP boot volumes on multi-partition disks so BCD is not falsely reported missing. — _See the Windows-specific blockers Linux tools miss._
   - **How:** CLI: `guestkit inspect disk.vmdk --profile windows-migration` parses SAM/SECURITY hives for BitLocker, domain join, RDP and driver gaps.
 - **Pure-Rust engine, no libguestfs** — Partition tables, filesystem signatures, and evidence schema are parsed in Rust; only host NBD/loop is used for mount. — _No guestfish appliance, no fragile daemon - fewer moving parts._
   - **How:** Automatic on every command; add `--trace` (e.g. `guestkit inspect disk.qcow2 --trace`) to see the Rust parsers and the host NBD/loop mount that were used.

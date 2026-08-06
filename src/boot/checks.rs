@@ -24,6 +24,7 @@ pub struct VmToolsRemnantsCheck;
 pub struct SystemdStaticCheck;
 pub struct WindowsEfiBootCheck;
 pub struct WindowsBcdCheck;
+pub struct WindowsSystemReservedCheck;
 
 fn is_windows_guest(evidence: &EvidenceSnapshot) -> bool {
     evidence.windows.is_some()
@@ -567,18 +568,34 @@ impl BootCheck for WindowsEfiBootCheck {
         }
 
         let windows = evidence.windows.as_ref();
-        let efi_ready = evidence.boot.efi_present
-            && windows.map(|w| w.bootmgr_found).unwrap_or(false);
-        let passed = efi_ready || !evidence.boot.efi_present;
+        let efi_layout = evidence.boot.efi_present
+            || windows.and_then(|w| w.esp_present).unwrap_or(false)
+            || windows
+                .and_then(|w| w.system_reserved.as_ref())
+                .is_some_and(|s| s.role == "esp");
+        let efi_ready = efi_layout && windows.map(|w| w.bootmgr_found).unwrap_or(false);
+        let esp_ok = windows
+            .and_then(|w| w.esp_present)
+            .unwrap_or(efi_layout);
+        let passed = (efi_ready && esp_ok) || !efi_layout;
         let severity = if passed {
             CheckSeverity::Info
         } else {
             CheckSeverity::Blocker
         };
-        let message = if !evidence.boot.efi_present {
+        let message = if !efi_layout {
             "Legacy BIOS boot — EFI bootmgr check not required".to_string()
-        } else if efi_ready {
-            "EFI system partition and Windows bootmgr present".to_string()
+        } else if efi_ready && esp_ok {
+            match windows.and_then(|w| w.system_reserved.as_ref()) {
+                Some(sr) if sr.role == "esp" => format!(
+                    "EFI system partition on {} with Windows bootmgr",
+                    sr.device
+                ),
+                _ => "EFI system partition and Windows bootmgr present".to_string(),
+            }
+        } else if !esp_ok {
+            "EFI firmware path expected but no ESP / EFI Microsoft Boot volume found"
+                .to_string()
         } else {
             "EFI partition detected but Windows bootmgfw.efi not found".to_string()
         };
@@ -634,11 +651,97 @@ impl BootCheck for WindowsBcdCheck {
         let message = if !systemroot_ok {
             "Windows SYSTEMROOT not detected".to_string()
         } else if !bcd_ok {
-            "BCD store not found (checked /EFI/Microsoft/Boot for UEFI and /Boot/BCD for legacy BIOS)".to_string()
+            "BCD store not found (checked OS volume, EFI Microsoft Boot, and System Reserved)"
+                .to_string()
         } else if pending_reboot {
-            "BCD store present; pending reboot flag set in registry".to_string()
+            match windows.and_then(|w| w.system_reserved.as_ref()) {
+                Some(sr) if sr.has_bcd => format!(
+                    "BCD on {} ({}); pending reboot flag set in registry",
+                    sr.device, sr.role
+                ),
+                _ => "BCD store present; pending reboot flag set in registry".to_string(),
+            }
         } else {
-            "Windows BCD store located".to_string()
+            match windows.and_then(|w| w.system_reserved.as_ref()) {
+                Some(sr) if sr.has_bcd => format!(
+                    "Windows BCD store located on {} ({})",
+                    sr.device, sr.role
+                ),
+                _ => "Windows BCD store located".to_string(),
+            }
+        };
+
+        CheckResult {
+            id: self.id().to_string(),
+            name: self.name().to_string(),
+            passed,
+            severity,
+            message,
+            weight: self.weight(),
+        }
+    }
+}
+
+impl BootCheck for WindowsSystemReservedCheck {
+    fn id(&self) -> &str {
+        "BOOT-014"
+    }
+    fn name(&self) -> &str {
+        "Windows System Reserved / ESP layout"
+    }
+    fn weight(&self) -> f64 {
+        4.0
+    }
+    fn run(&self, evidence: &EvidenceSnapshot, _target: &str) -> CheckResult {
+        if !is_windows_guest(evidence) {
+            return CheckResult {
+                id: self.id().to_string(),
+                name: self.name().to_string(),
+                passed: true,
+                severity: CheckSeverity::Info,
+                message: "Skipped for non-Windows guest".to_string(),
+                weight: 0.0,
+            };
+        }
+
+        let windows = evidence.windows.as_ref();
+        let Some(sr) = windows.and_then(|w| w.system_reserved.as_ref()) else {
+            return CheckResult {
+                id: self.id().to_string(),
+                name: self.name().to_string(),
+                passed: true,
+                severity: CheckSeverity::Info,
+                message: "No separate System Reserved / ESP boot volume (boot files on OS volume or not detected)"
+                    .to_string(),
+                weight: self.weight(),
+            };
+        };
+
+        let healthy = sr.has_bcd && (sr.has_bootmgr || sr.role == "esp");
+        let passed = healthy;
+        let severity = if healthy {
+            CheckSeverity::Info
+        } else {
+            CheckSeverity::Warning
+        };
+        let message = if healthy {
+            format!(
+                "{} on {} ({}, bootmgr={}, BCD={})",
+                if sr.role == "esp" {
+                    "EFI System Partition"
+                } else {
+                    "System Reserved partition"
+                },
+                sr.device,
+                sr.fstype,
+                sr.has_bootmgr,
+                sr.has_bcd
+            )
+        } else {
+            format!(
+                "Boot volume {} ({}) incomplete — bootmgr={} BCD={} (multi-partition layout must ship intact)",
+                sr.device, sr.role, sr.has_bootmgr, sr.has_bcd
+            )
         };
 
         CheckResult {
@@ -667,5 +770,6 @@ pub fn all_checks() -> Vec<Box<dyn BootCheck>> {
         Box::new(SystemdStaticCheck),
         Box::new(WindowsEfiBootCheck),
         Box::new(WindowsBcdCheck),
+        Box::new(WindowsSystemReservedCheck),
     ]
 }
