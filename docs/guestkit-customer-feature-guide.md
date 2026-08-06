@@ -103,13 +103,17 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
 
 _Turn findings into reviewable, reversible, executable remediation - not blind edits._
 
-- **Reviewable fix plans** — Findings become a structured plan of operations (file edits, package installs, service ops, SELinux, registry edits) that you preview before anything runs. — _See every change before it happens._
+- **Reviewable fix plans** — Findings become a structured plan of operations (file edits, package installs, service ops, SELinux, registry edits, Symlink/FileWrite) that you preview before anything runs. — _See every change before it happens._
   - **How:** CLI: `guestkit plan preview` shows every operation before it runs. In the TUI Assurance tab press `p` to preview the generated plan.
+- **Day-0 canned plans** — Offline enablement without a full inspect pass: `windows-rdp`, `windows-hostname` (`--hostname`), `windows-winrm`, `linux-ssh` (optional `--user` + `--key`/`--key-file`). Prefer `--skip-backup` for these low-risk registry/file plans.
+  - **How:** `guestkit plan generate win.qcow2 -p windows-rdp -o rdp.yaml` then `guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup`. Linux: `guestkit plan generate disk.qcow2 -p linux-ssh --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml`.
+- **Linux rescue shortcuts** — Same day-0 jobs without a plan file: `enable-ssh`, `inject-ssh-key`, `set-hostname`, `reset-password`, `fix-fstab`.
+  - **How:** `guestkit rescue disk.qcow2 -o enable-ssh`; `guestkit rescue disk.qcow2 -o inject-ssh-key --user ubuntu --key-file ~/.ssh/id_ed25519.pub`.
 - **Transactional boot repair** — guestkit repair --fix boot converts doctor blockers into a plan, applies it with backups, then re-scores to show the delta. — _Fix boot blockers offline and prove the score improved._
   - **How:** CLI: `guestkit repair vm.qcow2 --fix boot --dry-run` to preview, then `guestkit repair vm.qcow2 --fix boot`; re-run `guestkit doctor` to see the score delta.
 - **Export to bash & Ansible** — Plans export as executable shell scripts, Ansible playbooks, JSON, or YAML for change control and runbooks. — _Hand ops a runbook your CAB can approve._
   - **How:** CLI: `guestkit migrate-plan vm.qcow2 --target kvm --export plan.yaml` (or export as bash/Ansible/JSON) for change control. TUI Assurance `e` exports YAML.
-- **Backup & rollback** — guestkit plan apply creates timestamped backups; plan rollback restores prior state, with dependency ordering and dry-run. — _Every change has an undo button._
+- **Backup & rollback** — guestkit plan apply creates timestamped backups (unless `--skip-backup`); plan rollback restores prior state, with dependency ordering and dry-run. — _Every change has an undo button._
   - **How:** CLI: `guestkit plan apply plan.yaml` writes timestamped backups; `guestkit plan rollback` restores prior state (both support `--dry-run`).
 - **Automated hardening** — guestkit harden generates security-profile fixes for SSH, firewall, SELinux/AppArmor, and account posture. — _Ship hardened images without hand-editing configs._
   - **How:** CLI: `guestkit harden vm.qcow2` generates SSH, firewall, SELinux/AppArmor and account-posture fixes as a reviewable plan.

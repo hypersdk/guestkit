@@ -374,6 +374,7 @@ impl RequestHandler {
                     &evidence,
                     &crate::migration::RepairOptions {
                         include_destructive,
+                        virtio_win_dir: None,
                     },
                 );
                 JsonRpcResponse::success(
@@ -447,6 +448,7 @@ impl RequestHandler {
                         &evidence,
                         &crate::migration::RepairOptions {
                             include_destructive,
+                            virtio_win_dir: None,
                         },
                     )
                     .0

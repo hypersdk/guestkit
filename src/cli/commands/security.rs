@@ -390,6 +390,7 @@ pub fn rescue_command(
     key: Option<String>,
     key_file: Option<PathBuf>,
     hostname: Option<String>,
+    export_plan: Option<PathBuf>,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
     use crate::Guestfs;
@@ -421,10 +422,112 @@ pub fn rescue_command(
         }
     }
 
+    let is_windows = roots
+        .first()
+        .and_then(|r| g.inspect_get_type(r).ok())
+        .map(|t| t.eq_ignore_ascii_case("windows"))
+        .unwrap_or(false);
+
+    let vm_str = image
+        .to_str()
+        .unwrap_or("disk.qcow2")
+        .to_string();
+
+    // Export a reviewable plan instead of applying.
+    if let Some(ref plan_path) = export_plan {
+        progress.finish_and_clear();
+        let plan = build_rescue_export_plan(
+            &mut g,
+            &vm_str,
+            operation,
+            user.as_deref(),
+            password.as_deref(),
+            key.as_deref(),
+            key_file.as_deref(),
+            hostname.as_deref(),
+            force,
+            is_windows,
+        )?;
+        let yaml = serde_yaml::to_string(&plan)
+            .context("Failed to serialize rescue export plan")?;
+        std::fs::write(plan_path, yaml)
+            .with_context(|| format!("Failed to write plan to {}", plan_path.display()))?;
+        println!(
+            "✓ Rescue plan exported: {} ({} operations)",
+            plan_path.display(),
+            plan.operations.len()
+        );
+        println!(
+            "  Apply with: guestkit plan apply {} --vm {} --yes",
+            plan_path.display(),
+            image.display()
+        );
+        let _ = g.umount_all();
+        let _ = g.shutdown();
+        return Ok(());
+    }
+
     match operation {
         "reset-password" => {
             let username =
                 user.ok_or_else(|| anyhow::anyhow!("Username required for password reset"))?;
+
+            if is_windows {
+                #[cfg(feature = "registry-write")]
+                {
+                    progress.set_message(format!(
+                        "Clearing Windows password for '{}' (offline SAM)...",
+                        username
+                    ));
+                    let root = roots
+                        .first()
+                        .ok_or_else(|| anyhow::anyhow!("No Windows root detected"))?;
+                    let systemroot = g
+                        .inspect_get_windows_systemroot(root)
+                        .map_err(|e| anyhow::anyhow!("systemroot: {e}"))?;
+                    let sam_guest = format!("{systemroot}/System32/config/SAM");
+                    if backup {
+                        if let Ok(content) = g.read_file(&sam_guest) {
+                            let backup_file = tempfile::Builder::new()
+                                .prefix("sam-backup-")
+                                .suffix(".bak")
+                                .tempfile()?;
+                            std::fs::write(backup_file.path(), &content)?;
+                            let backup_path = backup_file.into_temp_path().keep().map_err(|e| {
+                                anyhow::anyhow!("Failed to persist SAM backup: {}", e.error)
+                            })?;
+                            println!("Backed up SAM hive to {}", backup_path.display());
+                        }
+                    }
+                    let temp = tempfile::NamedTempFile::new()?;
+                    let host = temp
+                        .path()
+                        .to_str()
+                        .ok_or_else(|| anyhow::anyhow!("temp path UTF-8"))?;
+                    g.download_hive(&sam_guest, host)
+                        .map_err(|e| anyhow::anyhow!("download SAM: {e}"))?;
+                    crate::guestfs::sam_password::clear_windows_password(temp.path(), &username)
+                        .map_err(|e| anyhow::anyhow!("SAM password clear: {e}"))?;
+                    g.upload_hive(host, &sam_guest)
+                        .map_err(|e| anyhow::anyhow!("upload SAM: {e}"))?;
+                    progress.finish_and_clear();
+                    println!("✓ Cleared Windows password for user '{}'", username);
+                    println!(
+                        "  Offline SAM blank (chntpw-style). Log on without a password, then set a new one."
+                    );
+                    if password.is_some() {
+                        println!(
+                            "  Note: --password is ignored on Windows offline (hashes are SYSKEY-encrypted)."
+                        );
+                    }
+                }
+                #[cfg(not(feature = "registry-write"))]
+                {
+                    anyhow::bail!(
+                        "Windows password reset requires `--features registry-write` (libhivex)"
+                    );
+                }
+            } else {
             let new_password = password
                 .ok_or_else(|| anyhow::anyhow!("Password required for reset (use --password)"))?;
 
@@ -595,6 +698,7 @@ pub fn rescue_command(
                 progress.abandon_with_message("Failed to read /etc/shadow");
                 anyhow::bail!("Could not read /etc/shadow");
             }
+            } // end Linux reset-password
         }
 
         "fix-fstab" => {
@@ -667,8 +771,13 @@ pub fn rescue_command(
             }
         }
 
-        "fix-grub" => {
-            progress.set_message("Attempting to fix GRUB configuration...");
+        "check-grub" | "fix-grub" => {
+            if operation == "fix-grub" {
+                println!(
+                    "Note: 'fix-grub' is diagnose-only; prefer -o check-grub (full grub-install needs chroot)."
+                );
+            }
+            progress.set_message("Checking GRUB configuration...");
 
             // Check common GRUB config locations
             let grub_configs = vec![
@@ -752,7 +861,7 @@ pub fn rescue_command(
         _ => {
             progress.abandon_with_message(format!("Unknown operation: {}", operation));
             anyhow::bail!(
-                "Invalid rescue operation. Available: reset-password, fix-fstab, fix-grub, \
+                "Invalid rescue operation. Available: reset-password, fix-fstab, check-grub, \
                  enable-ssh, inject-ssh-key, set-hostname"
             );
         }
@@ -1011,6 +1120,250 @@ fn set_hostname_offline(g: &mut crate::Guestfs, name: &str) -> Result<()> {
             .map_err(|e| anyhow::anyhow!("write /etc/hosts: {e}"))?;
     }
     Ok(())
+}
+
+/// Build a FixPlan for `rescue --export-plan` (reviewable; does not mutate the image).
+fn build_rescue_export_plan(
+    g: &mut crate::Guestfs,
+    vm: &str,
+    operation: &str,
+    user: Option<&str>,
+    password: Option<&str>,
+    key: Option<&str>,
+    key_file: Option<&Path>,
+    hostname: Option<&str>,
+    force: bool,
+    is_windows: bool,
+) -> Result<crate::cli::plan::types::FixPlan> {
+    use crate::cli::plan::generator::PlanGenerator;
+    use crate::cli::plan::types::*;
+
+    let _ = force;
+    let gen = PlanGenerator::new(vm.to_string());
+    match operation {
+        "enable-ssh" => gen.linux_ssh_enable_plan(g, None, None),
+        "inject-ssh-key" | "ssh-inject-key" => {
+            let username = user.ok_or_else(|| anyhow::anyhow!("--user required"))?;
+            let pubkey = if let Some(k) = key {
+                k.to_string()
+            } else if let Some(path) = key_file {
+                std::fs::read_to_string(path)
+                    .with_context(|| format!("read key file {}", path.display()))?
+            } else {
+                anyhow::bail!("--key or --key-file required");
+            };
+            gen.linux_ssh_enable_plan(g, Some(username), Some(pubkey.trim()))
+        }
+        "set-hostname" => {
+            let name = hostname.ok_or_else(|| anyhow::anyhow!("--hostname required"))?;
+            if is_windows {
+                return gen.windows_hostname_plan(name);
+            }
+            let mut plan = FixPlan::new(vm.to_string(), "rescue-set-hostname".into());
+            plan.metadata.description = Some(format!("Set Linux hostname to {name}"));
+            plan.metadata.tags = vec!["rescue".into(), "hostname".into()];
+            plan.add_operation(Operation {
+                id: "hostname".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: "/etc/hostname".into(),
+                    content: format!("{name}\n"),
+                    mode: Some("0644".into()),
+                }),
+                priority: Priority::High,
+                description: format!("Write /etc/hostname = {name}"),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            let mut hosts = String::from("127.0.0.1\tlocalhost\n");
+            if let Ok(content) = g.read_file("/etc/hosts") {
+                hosts = String::from_utf8_lossy(&content).into_owned();
+                let mut out = Vec::new();
+                let mut patched = false;
+                for line in hosts.lines() {
+                    let trimmed = line.trim_start();
+                    if trimmed.starts_with("127.0.1.1") || trimmed.starts_with("10.0.2.3") {
+                        let ip = trimmed.split_whitespace().next().unwrap_or("127.0.1.1");
+                        out.push(format!("{ip}\t{name}"));
+                        patched = true;
+                    } else {
+                        out.push(line.to_string());
+                    }
+                }
+                if !patched {
+                    out.push(format!("127.0.1.1\t{name}"));
+                }
+                hosts = out.join("\n") + "\n";
+            } else {
+                hosts.push_str(&format!("127.0.1.1\t{name}\n"));
+            }
+            plan.add_operation(Operation {
+                id: "hosts".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: "/etc/hosts".into(),
+                    content: hosts,
+                    mode: Some("0644".into()),
+                }),
+                priority: Priority::High,
+                description: "Patch /etc/hosts with hostname".into(),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            Ok(plan)
+        }
+        "reset-password" => {
+            let username = user.ok_or_else(|| anyhow::anyhow!("--user required"))?;
+            if is_windows {
+                let mut plan = FixPlan::new(vm.to_string(), "rescue-reset-password-windows".into());
+                plan.metadata.description = Some(format!(
+                    "Clear Windows SAM password for '{username}' (apply via rescue, not plan apply)"
+                ));
+                plan.metadata.tags = vec!["rescue".into(), "windows".into(), "password".into()];
+                plan.metadata.review_required = true;
+                plan.add_operation(Operation {
+                    id: "sam-clear".into(),
+                    op_type: OperationType::CommandExec(CommandExec {
+                        command: format!(
+                            "guestkit rescue IMAGE -o reset-password --user {username}"
+                        ),
+                        expected_exit: 0,
+                        timeout: Some(120),
+                        interpreter: None,
+                    }),
+                    priority: Priority::Critical,
+                    description: format!("Clear SAM password for {username} (offline blank)"),
+                    risk: Priority::High,
+                    reversible: false,
+                    depends_on: vec![],
+                    validation: None,
+                    undo: None,
+                });
+                return Ok(plan);
+            }
+            let pw = password.ok_or_else(|| anyhow::anyhow!("--password required"))?;
+            let hash = {
+                use rand::Rng;
+                const SALT_CHARS: &[u8] =
+                    b"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+                let mut rng = rand::thread_rng();
+                let salt: String = (0..16)
+                    .map(|_| SALT_CHARS[rng.gen_range(0..SALT_CHARS.len())] as char)
+                    .collect();
+                let mut child = std::process::Command::new("openssl")
+                    .args(["passwd", "-6", "-salt", &salt, "-stdin"])
+                    .stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped())
+                    .spawn()
+                    .context("openssl passwd")?;
+                if let Some(mut stdin) = child.stdin.take() {
+                    use std::io::Write;
+                    stdin.write_all(pw.as_bytes())?;
+                }
+                let output = child.wait_with_output()?;
+                if !output.status.success() {
+                    anyhow::bail!("openssl passwd failed");
+                }
+                String::from_utf8(output.stdout)?.trim().to_string()
+            };
+            let shadow = g
+                .read_file("/etc/shadow")
+                .map_err(|e| anyhow::anyhow!("read /etc/shadow: {e}"))?;
+            let text = String::from_utf8(shadow).context("shadow utf-8")?;
+            let mut new_lines = Vec::new();
+            let mut found = false;
+            for line in text.lines() {
+                if line.starts_with(&format!("{username}:")) {
+                    let parts: Vec<&str> = line.split(':').collect();
+                    if parts.len() >= 3 {
+                        new_lines.push(format!(
+                            "{}:{}:{}",
+                            username,
+                            hash,
+                            parts[2..].join(":")
+                        ));
+                        found = true;
+                    }
+                } else {
+                    new_lines.push(line.to_string());
+                }
+            }
+            if !found {
+                anyhow::bail!("User '{username}' not found in /etc/shadow");
+            }
+            let mut plan = FixPlan::new(vm.to_string(), "rescue-reset-password".into());
+            plan.metadata.tags = vec!["rescue".into(), "password".into()];
+            plan.metadata.review_required = true;
+            plan.add_operation(Operation {
+                id: "shadow".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: "/etc/shadow".into(),
+                    content: format!("{}\n", new_lines.join("\n")),
+                    mode: Some("0640".into()),
+                }),
+                priority: Priority::Critical,
+                description: format!("Rewrite /etc/shadow password hash for {username}"),
+                risk: Priority::High,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            Ok(plan)
+        }
+        "fix-fstab" => {
+            let content = g
+                .read_file("/etc/fstab")
+                .map_err(|e| anyhow::anyhow!("read fstab: {e}"))?;
+            let text = String::from_utf8(content).context("fstab utf-8")?;
+            let mut fixed = Vec::new();
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() || trimmed.starts_with('#') {
+                    fixed.push(line.to_string());
+                    continue;
+                }
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let device = parts[0];
+                    if device.starts_with("/dev/") && !g.exists(device).unwrap_or(false) {
+                        fixed.push(format!("# DISABLED (device not found): {line}"));
+                    } else {
+                        fixed.push(line.to_string());
+                    }
+                } else {
+                    fixed.push(line.to_string());
+                }
+            }
+            let mut plan = FixPlan::new(vm.to_string(), "rescue-fix-fstab".into());
+            plan.metadata.tags = vec!["rescue".into(), "fstab".into()];
+            plan.add_operation(Operation {
+                id: "fstab".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: "/etc/fstab".into(),
+                    content: format!("{}\n", fixed.join("\n")),
+                    mode: Some("0644".into()),
+                }),
+                priority: Priority::High,
+                description: "Rewrite /etc/fstab (comment missing /dev entries)".into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            Ok(plan)
+        }
+        "check-grub" | "fix-grub" => anyhow::bail!(
+            "check-grub is diagnose-only and cannot be exported as an apply plan"
+        ),
+        other => anyhow::bail!("Cannot export plan for rescue operation '{other}'"),
+    }
 }
 
 /// Optimize disk image (cleanup, compact)

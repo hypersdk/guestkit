@@ -262,6 +262,14 @@ impl LivePlanExecutor {
         match &op.op_type {
             OperationType::FileEdit(fe) => file_digest(&self.resolve(&fe.file)),
             OperationType::FileWrite(fw) => file_digest(&self.resolve(&fw.path)),
+            OperationType::Symlink(sl) => Some(format!(
+                "link={} target={}",
+                self.resolve(&sl.link_path).exists(),
+                sl.target
+            )),
+            OperationType::FileDelete(fd) => {
+                Some(format!("exists={}", self.resolve(&fd.path).exists()))
+            }
             OperationType::FileCopy(fc) => file_digest(&self.resolve(&fc.destination)),
             OperationType::FilePermissions(fp) => {
                 let path = self.resolve(&fp.path);
@@ -310,7 +318,10 @@ impl LivePlanExecutor {
                 "driver {} not yet injected (source {})",
                 di.driver_name, di.source
             )),
-            OperationType::PackageInstall(_) | OperationType::CommandExec(_) => None,
+            OperationType::PackageInstall(_)
+            | OperationType::CommandExec(_)
+            | OperationType::Symlink(_)
+            | OperationType::FileDelete(_) => None,
         }
     }
 
@@ -401,6 +412,38 @@ impl LivePlanExecutor {
                         let _ = mode;
                     }
                 }
+                Ok(true)
+            }
+            OperationType::Symlink(sl) => {
+                let link = self.resolve(&sl.link_path);
+                if let Some(parent) = link.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                if link.exists() || link.is_symlink() {
+                    let _ = fs::remove_file(&link);
+                }
+                #[cfg(unix)]
+                {
+                    std::os::unix::fs::symlink(&sl.target, &link)?;
+                }
+                #[cfg(not(unix))]
+                {
+                    anyhow::bail!("Symlink operations require Unix");
+                }
+                Ok(true)
+            }
+            OperationType::FileDelete(fd) => {
+                let path = self.resolve(&fd.path);
+                if !path.exists() && !path.is_symlink() {
+                    if fd.missing_ok {
+                        return Ok(true);
+                    }
+                    anyhow::bail!("File to delete not found: {}", fd.path);
+                }
+                if path.exists() {
+                    self.snapshot_file(&path, rollback_dir)?;
+                }
+                fs::remove_file(&path)?;
                 Ok(true)
             }
             OperationType::CommandExec(ce) => {
@@ -707,6 +750,8 @@ fn describe_change(op: &Operation) -> String {
             format!("edit {} ({} change(s))", fe.file, fe.changes.len())
         }
         OperationType::FileWrite(fw) => format!("write {}", fw.path),
+        OperationType::Symlink(sl) => format!("symlink {} -> {}", sl.link_path, sl.target),
+        OperationType::FileDelete(fd) => format!("delete {}", fd.path),
         OperationType::CommandExec(ce) => format!("run: {}", ce.command),
         OperationType::FilePermissions(fp) => format!("chmod {} {}", fp.mode, fp.path),
         OperationType::DirectoryCreate(dc) => format!("mkdir -p {}", dc.path),
@@ -738,6 +783,7 @@ fn describe_rollback(op: &Operation) -> String {
             | OperationType::FileWrite(_)
             | OperationType::FileCopy(_)
             | OperationType::FilePermissions(_)
+            | OperationType::FileDelete(_)
             | OperationType::SelinuxMode(_) => {
                 "restore file snapshot from rollback directory".to_string()
             }
@@ -751,9 +797,11 @@ fn backup_path_for(op: &Operation, rollback_dir: &Path) -> Option<String> {
     let file = match &op.op_type {
         OperationType::FileEdit(fe) => Some(&fe.file),
         OperationType::FileWrite(fw) => Some(&fw.path),
+        OperationType::FileDelete(fd) => Some(&fd.path),
         OperationType::FileCopy(fc) => Some(&fc.destination),
         OperationType::FilePermissions(fp) => Some(&fp.path),
         OperationType::SelinuxMode(sm) => Some(&sm.file),
+        OperationType::Symlink(sl) => Some(&sl.link_path),
         _ => None,
     }?;
     let backup_name = file

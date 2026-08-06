@@ -814,7 +814,7 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Rescue operation (reset-password, fix-fstab, fix-grub, enable-ssh, inject-ssh-key, set-hostname)
+        /// Rescue operation (reset-password, fix-fstab, check-grub, enable-ssh, inject-ssh-key, set-hostname)
         #[arg(short = 'o', long)]
         operation: String,
 
@@ -822,7 +822,7 @@ enum Commands {
         #[arg(short = 'u', long)]
         user: Option<String>,
 
-        /// New password (for reset-password)
+        /// New password (for reset-password; Linux only — Windows clears SAM blank)
         #[arg(short = 'p', long)]
         password: Option<String>,
 
@@ -845,6 +845,10 @@ enum Commands {
         /// Hostname (for set-hostname)
         #[arg(long)]
         hostname: Option<String>,
+
+        /// Write a reviewable FixPlan YAML instead of applying (enable-ssh, inject-ssh-key, set-hostname, reset-password, fix-fstab)
+        #[arg(long, value_name = "PLAN.yaml")]
+        export_plan: Option<PathBuf>,
     },
 
     /// Optimize disk image (cleanup, compact)
@@ -1874,6 +1878,11 @@ enum Commands {
         #[arg(long)]
         include_destructive: bool,
 
+        /// Host path to a virtio-win tree (or single driver dir) for offline DriverInject.
+        /// Also read from `$GUESTKIT_VIRTIO_WIN`.
+        #[arg(long, value_name = "DIR")]
+        virtio_win: Option<PathBuf>,
+
         /// Export the plan as JSON
         #[arg(long, value_name = "FILE")]
         export: Option<PathBuf>,
@@ -2727,6 +2736,7 @@ pub fn run() -> anyhow::Result<()> {
             key,
             key_file,
             hostname,
+            export_plan,
         } => {
             rescue_command(
                 &image,
@@ -2739,6 +2749,7 @@ pub fn run() -> anyhow::Result<()> {
                 key,
                 key_file,
                 hostname,
+                export_plan,
             )?;
         }
 
@@ -3499,6 +3510,7 @@ pub fn run() -> anyhow::Result<()> {
             target,
             apply,
             include_destructive,
+            virtio_win,
             export,
         } => {
             crate::cli::commands::assurance::migrate_repair_command(
@@ -3506,6 +3518,7 @@ pub fn run() -> anyhow::Result<()> {
                 &target,
                 apply,
                 include_destructive,
+                virtio_win.as_deref(),
                 export.as_deref(),
                 cli.verbose,
             )?;

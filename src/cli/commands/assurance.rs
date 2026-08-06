@@ -430,6 +430,7 @@ pub fn migrate_repair_command(
     target: &str,
     apply: bool,
     include_destructive: bool,
+    virtio_win: Option<&Path>,
     export: Option<&Path>,
     verbose: bool,
 ) -> Result<()> {
@@ -440,6 +441,7 @@ pub fn migrate_repair_command(
         &evidence,
         &crate::migration::RepairOptions {
             include_destructive,
+            virtio_win_dir: virtio_win.map(|p| p.to_path_buf()),
         },
     );
 

@@ -111,7 +111,8 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "compliance" => Some(Box::new(ComplianceProfile)),
         "hardening" => Some(Box::new(HardeningProfile)),
         "windows-migration" | "windows_migration" => Some(Box::new(WindowsMigrationProfile)),
-        // windows-rdp is a generate-only plan profile (see PlanGenerator::windows_rdp_enable_plan)
+        // windows-rdp / windows-hostname / windows-winrm / linux-ssh are
+        // generate-only plan profiles (see PlanGenerator::* in plan/generator.rs)
         _ => None,
     }
 }
@@ -143,11 +144,19 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "windows-rdp",
-            "Offline Windows Remote Desktop enablement (Terminal Server + firewall + TermService)",
+            "Generate-only: offline Windows Remote Desktop enablement (Terminal Server + firewall + TermService)",
+        ),
+        (
+            "windows-hostname",
+            "Generate-only: offline Windows hostname (ComputerName + Tcpip Hostname); requires --hostname",
+        ),
+        (
+            "windows-winrm",
+            "Generate-only: offline Windows WinRM (service Automatic + WINRM-HTTP-In-TCP)",
         ),
         (
             "linux-ssh",
-            "Offline Linux SSH enablement (systemd unit + sshd PubkeyAuthentication drop-in)",
+            "Generate-only: offline Linux SSH enablement (wants symlink + sshd drop-in; optional --user/--key)",
         ),
     ]
 }
@@ -256,7 +265,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 8);
+        assert_eq!(profiles.len(), 10);
     }
 
     #[test]
@@ -271,6 +280,8 @@ mod tests {
         assert!(names.contains(&"hardening"));
         assert!(names.contains(&"windows-migration"));
         assert!(names.contains(&"windows-rdp"));
+        assert!(names.contains(&"windows-hostname"));
+        assert!(names.contains(&"windows-winrm"));
         assert!(names.contains(&"linux-ssh"));
     }
 

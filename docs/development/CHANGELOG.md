@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.18] - 2026-08-06
+
+### Added
+- **`plan generate --profile windows-hostname`** — offline ComputerName + Tcpip
+  Hostname / NV Hostname (`--hostname` required). Apply with `--skip-backup`.
+- **`plan generate --profile windows-winrm`** — WinRM Automatic +
+  `WINRM-HTTP-In-TCP` firewall rule. Apply with `--skip-backup`.
+- **`Symlink` / `FileDelete` plan ops** — offline guestfs `ln_sf` / `rm`
+  (used by hardened `linux-ssh`).
+- **`plan generate -p linux-ssh --user` + `--key` / `--key-file`** — inject
+  `authorized_keys` into the enable plan.
+- **Windows `rescue -o reset-password`** — offline SAM blank (chntpw-style)
+  via `registry-write` / libhivex; clears password so interactive logon works.
+- **`rescue --export-plan PLAN.yaml`** — emit a reviewable FixPlan for
+  enable-ssh / inject-ssh-key / set-hostname / reset-password / fix-fstab.
+- **Offline `DriverInject`** — apply uses `host_dir` / `GUESTKIT_VIRTIO_WIN`
+  + `inject_windows_driver_dir` when built with `registry-write,agent`.
+- **`migrate-repair --virtio-win DIR`** — wires VirtIO host tree into
+  migration repair `DriverInject` (same as `$GUESTKIT_VIRTIO_WIN`).
+- **Heuristic offline remediations** — firewalld enable → `Symlink`, ufw →
+  conf edit, more sshd FileEdits; preview tags live-only ops as offline-skip.
+
+### Fixed
+- **`linux-ssh` plan fidelity** — wants enable via `Symlink` (not `CommandExec
+  ln`), removes `/etc/ssh/sshd_not_to_be_run`, matches rescue enable path.
+- **`from_security_profile` naming** — plan profile/tags follow the inspect
+  profile name (not hardcoded `"security"`).
+- **`rescue check-grub`** — diagnose-only rename (`fix-grub` kept as alias).
 
 ## [0.3.17] - 2026-08-06
 

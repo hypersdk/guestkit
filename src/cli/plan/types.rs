@@ -128,6 +128,12 @@ pub enum OperationType {
 
     /// Write (create or overwrite) a whole file
     FileWrite(FileWrite),
+
+    /// Create a symbolic link (guestfs `ln_sf` — offline-friendly)
+    Symlink(Symlink),
+
+    /// Delete a file (guestfs `rm` — offline-friendly)
+    FileDelete(FileDelete),
 }
 
 /// Create or overwrite a file with exact contents (offline-friendly).
@@ -142,6 +148,27 @@ pub struct FileWrite {
     /// Optional octal mode (e.g. "0644")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<String>,
+}
+
+/// Symbolic link creation (force-replace via guestfs `ln_sf`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Symlink {
+    /// Link target (prefer relative paths under `/etc` to avoid guestfs escape checks)
+    pub target: String,
+
+    /// Path of the symlink to create
+    pub link_path: String,
+}
+
+/// Delete a guest file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileDelete {
+    /// Guest path to remove
+    pub path: String,
+
+    /// If true, missing path is success
+    #[serde(default)]
+    pub missing_ok: bool,
 }
 
 /// Windows driver injection. Kept as a first-class operation (rather than
@@ -163,6 +190,62 @@ pub struct DriverInject {
     /// Where the driver came from (e.g. "virtio-win 0.1.262").
     #[serde(default)]
     pub source: String,
+
+    /// Host directory containing .inf/.sys/.cat for offline injection.
+    /// Falls back to `source` if it is an existing directory, or
+    /// `$GUESTKIT_VIRTIO_WIN/<driver_name>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_dir: Option<String>,
+}
+
+impl DriverInject {
+    /// Resolve a host directory of Windows driver files for offline apply.
+    ///
+    /// Order: explicit `host_dir` → `source` if it is a directory →
+    /// `$GUESTKIT_VIRTIO_WIN/<driver>` (and common amd64 / 2k22 / w10 layouts).
+    pub fn resolve_host_dir(&self) -> Option<std::path::PathBuf> {
+        use std::path::PathBuf;
+        if let Some(ref d) = self.host_dir {
+            let p = PathBuf::from(d);
+            if p.is_dir() {
+                return Some(p);
+            }
+        }
+        let src = PathBuf::from(&self.source);
+        if src.is_dir() {
+            return Some(src);
+        }
+        if let Ok(base) = std::env::var("GUESTKIT_VIRTIO_WIN") {
+            let candidates = [
+                PathBuf::from(&base).join(&self.driver_name),
+                PathBuf::from(&base)
+                    .join(&self.driver_name)
+                    .join("amd64"),
+                PathBuf::from(&base)
+                    .join(&self.driver_name)
+                    .join("2k22")
+                    .join("amd64"),
+                PathBuf::from(&base)
+                    .join(&self.driver_name)
+                    .join("2k19")
+                    .join("amd64"),
+                PathBuf::from(&base)
+                    .join(&self.driver_name)
+                    .join("w10")
+                    .join("amd64"),
+                PathBuf::from(&base)
+                    .join(&self.driver_name)
+                    .join("w11")
+                    .join("amd64"),
+            ];
+            for c in candidates {
+                if c.is_dir() {
+                    return Some(c);
+                }
+            }
+        }
+        None
+    }
 }
 
 /// File editing operation

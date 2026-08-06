@@ -36,7 +36,8 @@ guestctl tui disk.qcow2
 | Inspect | `inspect`, `filesystems`, `packages`, `services`, `users`, `network` |
 | Files | `ls`, `cat`, `cp`, `download`, `upload`, `find` |
 | Assurance | `doctor`, `migrate-plan`, `policy`, `fleet`, `forensic-diff`, `repair --fix boot` |
-| Plans | `plan preview`, `plan apply`, `plan rollback` |
+| Plans | `plan generate`, `plan preview`, `plan apply` (`--skip-backup`), `plan rollback` |
+| Rescue | `rescue -o enable-ssh|inject-ssh-key|set-hostname|reset-password|fix-fstab` |
 | Profiles | `profile security`, `profile windows-migration` |
 | TUI | `guestctl tui`, `guestkit tui` |
 | Shell | `guestkit shell`, `guestkit interactive` |

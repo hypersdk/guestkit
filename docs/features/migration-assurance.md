@@ -87,6 +87,34 @@ Output includes a **boot assurance score** message, **blockers** (with remediati
       > boot-report.json
 ```
 
+### `guestkit migrate-repair` — assessment → FixPlan
+
+Turns failed migration checks into an auditable FixPlan (preview by default; `--apply` runs offline apply).
+
+```bash
+guestkit migrate-repair win.qcow2 --target kvm
+guestkit migrate-repair win.qcow2 --target kvm --export repair.yaml
+guestkit migrate-repair win.qcow2 --target kvm --apply --yes
+
+# Offline VirtIO driver inject: point at an extracted virtio-win tree
+export GUESTKIT_VIRTIO_WIN=/path/to/virtio-win
+guestkit migrate-repair win.qcow2 --target kvm --apply --yes
+
+# Or pass the tree / driver dir explicitly
+guestkit migrate-repair win.qcow2 --target kvm \
+  --virtio-win /path/to/virtio-win --apply --yes
+```
+
+| Flag | Description |
+|------|-------------|
+| `--target` | Target hypervisor (required) |
+| `--export FILE` | Write FixPlan JSON/YAML |
+| `--apply` | Apply offline (requires confirmation / `--yes`) |
+| `--destructive` | Include non-undoable ops (ghost NIC, tools uninstall) |
+| `--virtio-win DIR` | Host path for `DriverInject` (`GUESTKIT_VIRTIO_WIN` also works) |
+
+`DriverInject` resolve order: plan `host_dir` → `--virtio-win` / planner override → `$GUESTKIT_VIRTIO_WIN/<driver>` (common amd64 / 2k22 / w10 layouts). Build with `--features registry-write,agent` for offline inject.
+
 ### `guestkit migrate-plan` — hypervisor-aware migration score
 
 Builds on the same evidence + boot report, then applies target-specific rules (VirtIO drivers, cloud-init, VMware Tools removal, BitLocker, SELinux relabel, etc.).

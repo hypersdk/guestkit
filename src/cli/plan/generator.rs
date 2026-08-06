@@ -149,11 +149,15 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
 
     /// Offline Linux SSH enablement plan (inspect-based).
     ///
-    /// Enables the distro ssh/sshd systemd unit via wants symlink and writes
-    /// an sshd_config.d drop-in with PubkeyAuthentication yes.
+    /// Enables the distro ssh/sshd systemd unit via wants symlink (guestfs
+    /// `ln_sf`, not `CommandExec`), removes Ubuntu's `sshd_not_to_be_run`
+    /// flag, and writes an sshd_config.d drop-in with PubkeyAuthentication
+    /// yes. Optional `user` + `pubkey` injects into `authorized_keys`.
     pub fn linux_ssh_enable_plan(
         &self,
         g: &mut crate::Guestfs,
+        user: Option<&str>,
+        pubkey: Option<&str>,
     ) -> Result<FixPlan> {
         let mut plan = FixPlan::new(self.vm_path.clone(), "linux-ssh".to_string());
         plan.version = "1".to_string();
@@ -163,7 +167,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         plan.metadata.review_required = false;
         plan.metadata.reversible = true;
         plan.metadata.description = Some(
-            "Offline Linux SSH enablement (systemd unit wants symlink + sshd drop-in)"
+            "Offline Linux SSH enablement (systemd wants symlink + sshd drop-in)"
                 .into(),
         );
         plan.metadata.tags = vec![
@@ -182,14 +186,30 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         let (unit, unit_src) = crate::cli::commands::security::detect_ssh_unit(g)
             .ok_or_else(|| anyhow::anyhow!("Could not detect ssh/sshd systemd unit"))?;
 
-        let wants_link = format!("/etc/systemd/system/multi-user.target.wants/{unit}");
-        // Relative target from wants/ (4 levels under /) — absolute targets trip
-        // guestfs symlink-escape checks when the unit file is itself a symlink.
+        // Prefer a real /etc wants dir (not a symlink that guestfs treats as escape).
+        let wants_dir = "/etc/systemd/system/multi-user.target.wants";
+        let wants_link = format!("{wants_dir}/{unit}");
         let relative = format!("../../../../{}", unit_src.trim_start_matches('/'));
+
+        plan.add_operation(Operation {
+            id: "remove-sshd-not-to-be-run".into(),
+            op_type: OperationType::FileDelete(FileDelete {
+                path: "/etc/ssh/sshd_not_to_be_run".into(),
+                missing_ok: true,
+            }),
+            priority: Priority::High,
+            description: "Remove Ubuntu cloud sshd_not_to_be_run flag if present".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
         plan.add_operation(Operation {
             id: "ssh-wants-dir".into(),
             op_type: OperationType::DirectoryCreate(DirectoryCreate {
-                path: "/etc/systemd/system/multi-user.target.wants".into(),
+                path: wants_dir.into(),
                 mode: Some("0755".into()),
             }),
             priority: Priority::High,
@@ -200,16 +220,15 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             validation: None,
             undo: None,
         });
+
         plan.add_operation(Operation {
             id: "enable-ssh-unit".into(),
-            op_type: OperationType::CommandExec(CommandExec {
-                command: format!("ln -sfn {relative} {wants_link}"),
-                expected_exit: 0,
-                timeout: Some(30),
-                interpreter: None,
+            op_type: OperationType::Symlink(Symlink {
+                target: relative,
+                link_path: wants_link,
             }),
             priority: Priority::High,
-            description: format!("Enable systemd unit {unit}"),
+            description: format!("Enable systemd unit {unit} via wants symlink"),
             risk: Priority::Low,
             reversible: true,
             depends_on: vec!["ssh-wants-dir".into()],
@@ -234,13 +253,259 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             undo: None,
         });
 
+        if let (Some(username), Some(key)) = (user, pubkey) {
+            let key = key.trim();
+            if key.is_empty() {
+                anyhow::bail!("SSH public key is empty");
+            }
+            let home = Self::linux_home_for_user(g, username)?;
+            let ssh_dir = format!("{home}/.ssh");
+            let auth_keys = format!("{ssh_dir}/authorized_keys");
+
+            let mut content = String::new();
+            if let Ok(existing) = g.read_file(&auth_keys) {
+                content = String::from_utf8_lossy(&existing).into_owned();
+            }
+            if !content.lines().any(|l| l.trim() == key) {
+                if !content.is_empty() && !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push_str(key);
+                content.push('\n');
+            }
+
+            plan.add_operation(Operation {
+                id: "ssh-dir".into(),
+                op_type: OperationType::DirectoryCreate(DirectoryCreate {
+                    path: ssh_dir,
+                    mode: Some("0700".into()),
+                }),
+                priority: Priority::High,
+                description: format!("Ensure {username} .ssh directory exists"),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            plan.add_operation(Operation {
+                id: "inject-ssh-key".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: auth_keys,
+                    content,
+                    mode: Some("0600".into()),
+                }),
+                priority: Priority::High,
+                description: format!("Inject SSH public key for {username}"),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec!["ssh-dir".into()],
+                validation: None,
+                undo: None,
+            });
+        } else if user.is_some() ^ pubkey.is_some() {
+            anyhow::bail!("Both --user and --key/--key-file are required to inject an SSH key");
+        }
+
         plan.estimated_duration = Self::estimate_duration(plan.operations.len());
         Ok(plan)
     }
 
-    /// Generate a fix plan from a security profile report
+    fn linux_home_for_user(g: &mut crate::Guestfs, username: &str) -> Result<String> {
+        if username == "root" {
+            return Ok("/root".into());
+        }
+        let content = g
+            .read_file("/etc/passwd")
+            .map_err(|e| anyhow::anyhow!("read /etc/passwd: {e}"))?;
+        let text = String::from_utf8_lossy(&content);
+        let home = text.lines().find_map(|line| {
+            let fields: Vec<&str> = line.split(':').collect();
+            if fields.len() >= 6 && fields[0] == username {
+                Some(fields[5].to_string())
+            } else {
+                None
+            }
+        });
+        home.ok_or_else(|| anyhow::anyhow!("User '{username}' not found in /etc/passwd"))
+    }
+
+    /// Offline Windows hostname plan (ComputerName + Tcpip Hostname).
+    ///
+    /// Apply with `plan apply --skip-backup`. Hostname must be a valid NetBIOS-
+    /// friendly label (letters, digits, hyphen; max 15 recommended).
+    pub fn windows_hostname_plan(&self, hostname: &str) -> Result<FixPlan> {
+        let name = hostname.trim();
+        if name.is_empty() {
+            anyhow::bail!("Hostname is required (use --hostname)");
+        }
+        if name.len() > 63
+            || !name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            || name.starts_with('-')
+            || name.ends_with('-')
+        {
+            anyhow::bail!(
+                "Invalid hostname '{name}' (use ASCII letters, digits, hyphen; no leading/trailing hyphen)"
+            );
+        }
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-hostname".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description =
+            Some(format!("Offline Windows hostname set to '{name}'"));
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "hostname".into(),
+            "offline".into(),
+        ];
+
+        let ops = [
+            (
+                "computername",
+                r"HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName",
+                "ComputerName",
+                name,
+                "Set ComputerName",
+            ),
+            (
+                "active-computername",
+                r"HKLM\SYSTEM\ControlSet001\Control\ComputerName\ActiveComputerName",
+                "ComputerName",
+                name,
+                "Set ActiveComputerName",
+            ),
+            (
+                "tcpip-hostname",
+                r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters",
+                "Hostname",
+                name,
+                "Set Tcpip Hostname",
+            ),
+            (
+                "tcpip-nv-hostname",
+                r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters",
+                "NV Hostname",
+                name,
+                "Set Tcpip NV Hostname",
+            ),
+        ];
+
+        for (id, key, value, new_data, desc) in ops {
+            plan.add_operation(Operation {
+                id: id.into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: key.into(),
+                    value: value.into(),
+                    current_data: json!(""),
+                    new_data: json!(new_data),
+                    data_type: "sz".into(),
+                }),
+                priority: Priority::High,
+                description: desc.into(),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        Ok(plan)
+    }
+
+    /// Offline Windows WinRM enablement (service Automatic + HTTP firewall).
+    ///
+    /// Sets WinRM Start=Automatic and enables the stock WINRM-HTTP-In-TCP
+    /// firewall rule. Full listener/auth hardening still requires a live
+    /// `Enable-PSRemoting` on first boot — this unlocks the common day-0 path
+    /// for Packer/automation that expects HTTP/5985 open with the service set
+    /// to start.
+    pub fn windows_winrm_enable_plan(&self) -> FixPlan {
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-winrm".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "medium".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = true;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(
+            "Offline Windows WinRM enablement (WinRM Automatic + WINRM-HTTP-In-TCP). \
+             Review auth/encryption before exposing beyond a lab network."
+                .into(),
+        );
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "winrm".into(),
+            "firewall".into(),
+            "offline".into(),
+        ];
+
+        // Stock Windows firewall rule blob (HTTP-In, Active=TRUE).
+        let fw_http = "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=5985|\
+Profile=Private,Domain|Name=@FirewallAPI.dll,-30253|Desc=@FirewallAPI.dll,-30256|\
+EmbedCtxt=@FirewallAPI.dll,-30252|";
+
+        let ops = [
+            (
+                "winrm-auto",
+                r"HKLM\SYSTEM\ControlSet001\Services\WinRM",
+                "Start",
+                json!(3),
+                json!(2),
+                "dword",
+                Priority::High,
+                "Set WinRM startup type to Automatic",
+            ),
+            (
+                "fw-winrm-http",
+                r"HKLM\SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules",
+                "WINRM-HTTP-In-TCP",
+                json!(""),
+                json!(fw_http),
+                "sz",
+                Priority::High,
+                "Enable WinRM firewall rule (HTTP-In TCP 5985)",
+            ),
+        ];
+
+        for (id, key, value, current, new_data, dtype, priority, desc) in ops {
+            plan.add_operation(Operation {
+                id: id.into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: key.into(),
+                    value: value.into(),
+                    current_data: current,
+                    new_data,
+                    data_type: dtype.into(),
+                }),
+                priority,
+                description: desc.into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        plan
+    }
+
+    /// Generate a fix plan from a profile report (security, compliance, …)
     pub fn from_security_profile(&self, report: &ProfileReport) -> Result<FixPlan> {
-        let mut plan = FixPlan::new(self.vm_path.clone(), "security".to_string());
+        let profile_name = if report.profile_name.is_empty() {
+            "security".to_string()
+        } else {
+            report.profile_name.clone()
+        };
+        let mut plan = FixPlan::new(self.vm_path.clone(), profile_name.clone());
 
         plan.overall_risk = match report.overall_risk {
             Some(RiskLevel::Critical) => "critical".to_string(),
@@ -251,20 +516,24 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             None => "unknown".to_string(),
         };
 
-        plan.metadata.description =
-            Some("Security hardening plan generated from security profile analysis".to_string());
-        plan.metadata.tags = vec!["security".to_string(), "automated".to_string()];
+        plan.metadata.description = Some(format!(
+            "Fix plan generated from {profile_name} profile analysis"
+        ));
+        plan.metadata.tags = vec![profile_name.clone(), "automated".to_string()];
 
         // Convert findings to operations
-        // For now, we use the message as remediation hint
         let mut op_counter = 1;
+        let prefix = profile_name
+            .chars()
+            .take(3)
+            .collect::<String>()
+            .to_ascii_lowercase();
         for section in &report.sections {
             for finding in &section.findings {
-                // Only create operations for findings with risk levels
                 if finding.risk_level.is_some() {
-                    let remediation = &finding.message; // Use message as remediation hint
+                    let remediation = &finding.message;
                     let operation = self.finding_to_operation(
-                        &format!("sec-{:03}", op_counter),
+                        &format!("{prefix}-{:03}", op_counter),
                         finding,
                         remediation,
                     )?;
@@ -274,10 +543,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             }
         }
 
-        // Estimate duration based on operation count
         plan.estimated_duration = Self::estimate_duration(plan.operations.len());
-
-        // Add post-apply actions
         self.add_post_apply_actions(&mut plan);
 
         Ok(plan)
@@ -341,29 +607,120 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             }));
         }
 
-        // Firewall installation/enabling
+        // PubkeyAuthentication — offline drop-in (same shape as linux-ssh plan)
+        if lower.contains("pubkeyauthentication")
+            || (lower.contains("ssh") && lower.contains("public key") && lower.contains("enable"))
+        {
+            return Ok(OperationType::FileWrite(FileWrite {
+                path: "/etc/ssh/sshd_config.d/99-guestkit.conf".into(),
+                content: "# Managed by guestkit plan\nPubkeyAuthentication yes\n".into(),
+                mode: Some("0644".into()),
+            }));
+        }
+
+        // PasswordAuthentication no
+        if lower.contains("passwordauthentication") && lower.contains("no") {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/ssh/sshd_config".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "PasswordAuthentication yes".to_string(),
+                    after: "PasswordAuthentication no".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // Protocol 2 only
+        if lower.contains("protocol") && lower.contains("ssh") && lower.contains("2") {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/ssh/sshd_config".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "Protocol 1".to_string(),
+                    after: "Protocol 2".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // Empty password / PermitEmptyPasswords
+        if lower.contains("permitemptypasswords") {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/ssh/sshd_config".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "PermitEmptyPasswords yes".to_string(),
+                    after: "PermitEmptyPasswords no".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // X11Forwarding disable
+        if lower.contains("x11forwarding") && (lower.contains("disable") || lower.contains("no")) {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/ssh/sshd_config".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "X11Forwarding yes".to_string(),
+                    after: "X11Forwarding no".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // ufw enable via conf (offline) — before generic "firewall" match
+        if lower.contains("ufw") && lower.contains("enable") {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/ufw/ufw.conf".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "ENABLED=no".to_string(),
+                    after: "ENABLED=yes".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // Firewall: prefer offline systemd enable over live ServiceOperation when "enable"
         if lower.contains("firewall") && (lower.contains("enable") || lower.contains("install")) {
             if lower.contains("install") {
                 return Ok(OperationType::PackageInstall(PackageInstall {
                     packages: vec!["firewalld".to_string()],
                     estimated_size: Some("~5MB".to_string()),
                 }));
-            } else {
-                return Ok(OperationType::ServiceOperation(ServiceOperation {
-                    service: "firewalld".to_string(),
-                    state: Some("enabled".to_string()),
-                    start: true,
-                    restart: false,
-                }));
             }
+            // Offline-safe: wants symlink (same pattern as linux-ssh).
+            return Ok(OperationType::Symlink(Symlink {
+                target: "../../../../usr/lib/systemd/system/firewalld.service".into(),
+                link_path: "/etc/systemd/system/multi-user.target.wants/firewalld.service"
+                    .into(),
+            }));
         }
 
         // SELinux mode changes
-        if lower.contains("selinux") && lower.contains("enforcing") {
+        if lower.contains("selinux")
+            && (lower.contains("enforcing")
+                || lower.contains("permissive")
+                || lower.contains("disabled"))
+        {
+            let target = if lower.contains("enforcing") {
+                "enforcing"
+            } else if lower.contains("disabled") {
+                "disabled"
+            } else {
+                "permissive"
+            };
             return Ok(OperationType::SelinuxMode(SELinuxMode {
                 file: "/etc/selinux/config".to_string(),
                 current: "permissive".to_string(),
-                target: "enforcing".to_string(),
+                target: target.to_string(),
                 warning: Some("Requires reboot to take full effect".to_string()),
             }));
         }
@@ -384,7 +741,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             }));
         }
 
-        // Default: create a command execution operation
+        // Default: create a command execution operation (live-only offline)
         Ok(OperationType::CommandExec(CommandExec {
             interpreter: None,
             command: remediation.to_string(),
@@ -406,9 +763,15 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             });
         }
 
-        // Check if we enabled firewall
+        // Check if we enabled firewall (offline Symlink or live ServiceOperation)
         let has_firewall = plan.operations.iter().any(|op| {
-            matches!(&op.op_type, OperationType::ServiceOperation(so) if so.service == "firewalld")
+            matches!(
+                &op.op_type,
+                OperationType::ServiceOperation(so) if so.service == "firewalld"
+            ) || matches!(
+                &op.op_type,
+                OperationType::Symlink(sl) if sl.link_path.contains("firewalld")
+            )
         });
 
         if has_firewall {
@@ -655,12 +1018,75 @@ mod tests {
     }
 
     #[test]
+    fn test_windows_hostname_plan() {
+        let plan = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_hostname_plan("WIN-APP01")
+            .unwrap();
+        assert_eq!(plan.profile, "windows-hostname");
+        assert_eq!(plan.operations.len(), 4);
+        let ids: Vec<_> = plan.operations.iter().map(|o| o.id.as_str()).collect();
+        assert!(ids.contains(&"computername"));
+        assert!(ids.contains(&"tcpip-hostname"));
+        assert!(ids.contains(&"tcpip-nv-hostname"));
+        for op in &plan.operations {
+            match &op.op_type {
+                OperationType::RegistryEdit(re) => {
+                    assert_eq!(re.new_data, json!("WIN-APP01"));
+                    assert_eq!(re.data_type, "sz");
+                }
+                _ => panic!("expected RegistryEdit"),
+            }
+        }
+        assert!(PlanGenerator::new("/images/win.qcow2".into())
+            .windows_hostname_plan("")
+            .is_err());
+        assert!(PlanGenerator::new("/images/win.qcow2".into())
+            .windows_hostname_plan("-bad")
+            .is_err());
+    }
+
+    #[test]
+    fn test_windows_winrm_enable_plan() {
+        let plan = PlanGenerator::new("/images/win.qcow2".into()).windows_winrm_enable_plan();
+        assert_eq!(plan.profile, "windows-winrm");
+        assert_eq!(plan.operations.len(), 2);
+        let ids: Vec<_> = plan.operations.iter().map(|o| o.id.as_str()).collect();
+        assert!(ids.contains(&"winrm-auto"));
+        assert!(ids.contains(&"fw-winrm-http"));
+        assert!(plan.metadata.review_required);
+    }
+
+    #[test]
     fn test_linux_ssh_plan_shape_without_guest() {
         // Shape constants used by Machina / docs — unit ids must stay stable.
-        let expected = ["ssh-wants-dir", "enable-ssh-unit", "sshd-dropin"];
-        assert_eq!(expected.len(), 3);
+        let expected = [
+            "remove-sshd-not-to-be-run",
+            "ssh-wants-dir",
+            "enable-ssh-unit",
+            "sshd-dropin",
+        ];
+        assert_eq!(expected.len(), 4);
         assert!(expected.contains(&"enable-ssh-unit"));
         assert!(expected.contains(&"sshd-dropin"));
+        assert!(expected.contains(&"remove-sshd-not-to-be-run"));
+    }
+
+    #[test]
+    fn test_symlink_and_file_delete_serde() {
+        let sl = OperationType::Symlink(Symlink {
+            target: "../../../../lib/systemd/system/ssh.service".into(),
+            link_path: "/etc/systemd/system/multi-user.target.wants/ssh.service".into(),
+        });
+        let fd = OperationType::FileDelete(FileDelete {
+            path: "/etc/ssh/sshd_not_to_be_run".into(),
+            missing_ok: true,
+        });
+        let sl_json = serde_json::to_string(&sl).unwrap();
+        let fd_json = serde_json::to_string(&fd).unwrap();
+        assert!(sl_json.contains("symlink"));
+        assert!(fd_json.contains("file_delete"));
+        let _sl2: OperationType = serde_json::from_str(&sl_json).unwrap();
+        let _fd2: OperationType = serde_json::from_str(&fd_json).unwrap();
     }
 
     #[test]
@@ -771,12 +1197,38 @@ mod tests {
             .unwrap();
 
         match op_type {
-            OperationType::ServiceOperation(so) => {
-                assert_eq!(so.service, "firewalld");
-                assert_eq!(so.state, Some("enabled".to_string()));
-                assert!(so.start);
+            OperationType::Symlink(sl) => {
+                assert!(sl.link_path.contains("firewalld"));
+                assert!(sl.target.contains("firewalld.service"));
             }
-            _ => panic!("Expected ServiceOperation"),
+            _ => panic!("Expected Symlink for offline firewall enable"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remediation_ufw_enable() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator.parse_remediation("Enable ufw firewall").unwrap();
+        match op_type {
+            OperationType::FileEdit(fe) => {
+                assert!(fe.file.contains("ufw.conf"));
+            }
+            _ => panic!("Expected FileEdit for ufw enable"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remediation_password_auth() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator
+            .parse_remediation("Set PasswordAuthentication no")
+            .unwrap();
+        match op_type {
+            OperationType::FileEdit(fe) => {
+                assert!(fe.file.contains("sshd_config"));
+                assert!(fe.changes.iter().any(|c| c.after.contains("PasswordAuthentication no")));
+            }
+            _ => panic!("Expected FileEdit"),
         }
     }
 
@@ -931,11 +1383,10 @@ mod tests {
 
         plan.add_operation(Operation {
             id: "op-fw".to_string(),
-            op_type: OperationType::ServiceOperation(ServiceOperation {
-                service: "firewalld".to_string(),
-                state: Some("enabled".to_string()),
-                start: true,
-                restart: false,
+            op_type: OperationType::Symlink(Symlink {
+                target: "../../../../usr/lib/systemd/system/firewalld.service".into(),
+                link_path: "/etc/systemd/system/multi-user.target.wants/firewalld.service"
+                    .into(),
             }),
             priority: Priority::High,
             description: "Enable firewall".to_string(),

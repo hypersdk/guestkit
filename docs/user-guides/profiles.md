@@ -18,12 +18,17 @@ Inspection profiles analyze VMs from different perspectives:
 - **Security** - Audit security posture and identify risks
 - **Migration** - Inventory for VM migration planning
 - **Performance** - Identify tuning opportunities
+- **Compliance / Hardening / Windows-migration** - Specialized inspect reports
 
-Each profile:
+Each inspect profile:
 - Reuses existing inspection functions
 - Provides focused, relevant output
 - Supports JSON/YAML output for automation
 - Generates actionable findings
+
+**Generate-only plan profiles** (not inspect reports) live under `plan generate`:
+`windows-rdp`, `windows-hostname`, `windows-winrm`, `linux-ssh`. See
+[fix-plans.md](../features/fix-plans.md).
 
 ## Security Profile
 

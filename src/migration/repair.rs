@@ -18,12 +18,16 @@ pub struct RepairOptions {
     /// Tools uninstall, ghost-NIC removal). Gated by
     /// `migration_repair_destructive` policy on the agent side.
     pub include_destructive: bool,
+    /// Optional host path to a virtio-win tree or a single driver directory.
+    /// Also honored via `$GUESTKIT_VIRTIO_WIN`.
+    pub virtio_win_dir: Option<std::path::PathBuf>,
 }
 
 impl Default for RepairOptions {
     fn default() -> Self {
         Self {
             include_destructive: false,
+            virtio_win_dir: None,
         }
     }
 }
@@ -397,15 +401,38 @@ fn windows_ops(
     notes: &mut Vec<String>,
 ) -> Vec<Operation> {
     match hint {
-        Hint::InjectWindowsDriver { driver } => vec![op(
-            &format!("mig-inject-{driver}"),
-            &format!("Inject virtio driver {driver}"),
-            OperationType::DriverInject(DriverInject {
+        Hint::InjectWindowsDriver { driver } => {
+            let mut inj = DriverInject {
                 inf_path: format!("C:\\GuestKit\\drivers\\{driver}\\{driver}.inf"),
                 driver_name: driver.clone(),
                 boot_critical: driver == "viostor" || driver == "vioscsi",
                 source: "virtio-win".into(),
-            }),
+                host_dir: None,
+            };
+            // Prefer an explicit planner override, then GUESTKIT_VIRTIO_WIN layout.
+            if let Some(dir) = opts.virtio_win_dir.as_ref() {
+                let candidate = dir.join(driver);
+                if candidate.is_dir() {
+                    inj.host_dir = Some(candidate.display().to_string());
+                } else if dir.is_dir() {
+                    // Treat as already pointing at the driver folder.
+                    inj.host_dir = Some(dir.display().to_string());
+                }
+            }
+            if inj.host_dir.is_none() {
+                if let Some(resolved) = inj.resolve_host_dir() {
+                    inj.host_dir = Some(resolved.display().to_string());
+                } else {
+                    notes.push(format!(
+                        "DriverInject '{driver}': set GUESTKIT_VIRTIO_WIN or --virtio-win to a \
+                         virtio-win tree for offline plan apply"
+                    ));
+                }
+            }
+            vec![op(
+            &format!("mig-inject-{driver}"),
+            &format!("Inject virtio driver {driver}"),
+            OperationType::DriverInject(inj),
             Priority::High,
             true,
             Some(UndoInfo::Command {
@@ -417,7 +444,8 @@ fn windows_ops(
                 expected_output: None,
             }),
             vec![],
-        )],
+        )]
+        },
         Hint::RegisterBootCritical { driver } => vec![op(
             &format!("mig-bootcritical-{driver}"),
             &format!("Register {driver} as boot-critical storage driver"),
@@ -601,6 +629,7 @@ mod tests {
             &ev,
             &RepairOptions {
                 include_destructive: true,
+                virtio_win_dir: None,
             },
         );
         assert!(plan2.operations.iter().any(|o| o.id.starts_with("mig-ghost-nic")));

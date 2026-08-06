@@ -37,6 +37,8 @@ pub mod handle;
 #[cfg(feature = "registry-write")]
 pub mod hivex_ffi;
 pub mod hivex_ops;
+#[cfg(feature = "registry-write")]
+pub mod sam_password;
 pub mod inotify_ops;
 pub mod inspect;
 pub mod inspect_enhanced;

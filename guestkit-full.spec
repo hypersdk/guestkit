@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.17
+Version:        0.3.18
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -166,6 +166,11 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.18-1
+- Day-0 windows-hostname / windows-winrm / hardened linux-ssh plans
+- Offline DriverInject via GUESTKIT_VIRTIO_WIN; migrate-repair --virtio-win
+- Windows SAM blank rescue; rescue --export-plan; heuristic offline remediations
+
 * Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.17-1
 - Offline Linux SSH rescue + linux-ssh plan profile
 - Windows RDP plan profile, plan apply --skip-backup, NTFS ntfsfix before apply

@@ -282,6 +282,40 @@ impl PlanApplicator {
                 }
                 Ok(true)
             }
+            OperationType::Symlink(sl) => {
+                let parent = std::path::Path::new(&sl.link_path)
+                    .parent()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or("/");
+                if parent != "/" && !parent.is_empty() {
+                    g.mkdir_p(parent)
+                        .map_err(|e| anyhow::anyhow!("mkdir_p failed for {}: {}", parent, e))?;
+                }
+                // Replace existing link/file so re-apply is idempotent.
+                let _ = g.rm(&sl.link_path);
+                g.ln_sf(&sl.target, &sl.link_path).map_err(|e| {
+                    anyhow::anyhow!(
+                        "ln_sf failed {} -> {}: {}",
+                        sl.target,
+                        sl.link_path,
+                        e
+                    )
+                })?;
+                Ok(true)
+            }
+            OperationType::FileDelete(fd) => {
+                let exists = g.exists(&fd.path).unwrap_or(false)
+                    || g.is_symlink(&fd.path).unwrap_or(false);
+                if !exists {
+                    if fd.missing_ok {
+                        return Ok(true);
+                    }
+                    anyhow::bail!("File to delete not found: {}", fd.path);
+                }
+                g.rm(&fd.path)
+                    .map_err(|e| anyhow::anyhow!("rm failed for {}: {}", fd.path, e))?;
+                Ok(true)
+            }
             OperationType::CommandExec(ce) => {
                 // Parse command string properly, handling quoted arguments
                 let args = Self::parse_shell_words(&ce.command)?;
@@ -317,6 +351,10 @@ impl PlanApplicator {
             OperationType::DirectoryCreate(dc) => {
                 g.mkdir_p(&dc.path)
                     .map_err(|e| anyhow::anyhow!("mkdir_p failed for {}: {}", dc.path, e))?;
+                if let Some(ref mode_str) = dc.mode {
+                    let mode = i32::from_str_radix(mode_str, 8).unwrap_or(0o755);
+                    let _ = g.chmod(mode, &dc.path);
+                }
                 Ok(true)
             }
             OperationType::FileCopy(fc) => {
@@ -373,16 +411,58 @@ impl PlanApplicator {
                 Ok(false)
             }
             OperationType::RegistryEdit(re) => self.apply_registry_edit(g, re),
-            OperationType::DriverInject(di) => {
-                // Offline driver injection (virtio-win extraction into the
-                // image) lands with the migration repair planner.
-                log::warn!(
-                    "Driver injection for {} not yet supported offline; skipping",
-                    di.driver_name
-                );
-                Ok(false)
-            }
+            OperationType::DriverInject(di) => self.apply_driver_inject(g, di),
         }
+    }
+
+    #[cfg(all(feature = "registry-write", feature = "agent"))]
+    fn apply_driver_inject(
+        &self,
+        g: &mut crate::guestfs::Guestfs,
+        di: &crate::cli::plan::types::DriverInject,
+    ) -> Result<bool> {
+        let host_dir = di.resolve_host_dir().ok_or_else(|| {
+            anyhow::anyhow!(
+                "DriverInject '{}': set host_dir, or source to a host directory, \
+                 or GUESTKIT_VIRTIO_WIN pointing at a virtio-win tree",
+                di.driver_name
+            )
+        })?;
+        let roots = g
+            .inspect_os()
+            .map_err(|e| anyhow::anyhow!("inspect_os: {e}"))?;
+        let root = roots
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("no OS root for driver inject"))?;
+        crate::agent::inject::inject_windows_driver_dir(
+            g,
+            root,
+            &host_dir,
+            &di.driver_name,
+            false,
+        )
+        .with_context(|| {
+            format!(
+                "offline DriverInject for {} from {}",
+                di.driver_name,
+                host_dir.display()
+            )
+        })?;
+        Ok(true)
+    }
+
+    #[cfg(not(all(feature = "registry-write", feature = "agent")))]
+    fn apply_driver_inject(
+        &self,
+        _g: &mut crate::guestfs::Guestfs,
+        di: &crate::cli::plan::types::DriverInject,
+    ) -> Result<bool> {
+        eprintln!(
+            "Warning: Driver injection for {} skipped — rebuild with \
+             `--features registry-write,agent` and set host_dir / GUESTKIT_VIRTIO_WIN",
+            di.driver_name
+        );
+        Ok(false)
     }
 
     /// Apply a Windows registry edit to an offline hive via libhivex.
@@ -470,7 +550,9 @@ impl PlanApplicator {
         let subpath: Vec<String> = parts[2..].iter().map(|s| s.to_string()).collect();
         Ok((hive_path, subpath))
     }
+}
 
+impl PlanApplicator {
     /// Parse a command string into arguments, handling single and double quotes.
     /// This is a safe alternative to split_whitespace which doesn't handle quoting.
     fn parse_shell_words(input: &str) -> Result<Vec<String>> {

@@ -113,7 +113,7 @@ pub enum PlanAction {
         #[arg(value_name = "VM_DISK")]
         vm_disk: String,
 
-        /// Profile to use (security, compliance, hardening, etc.)
+        /// Profile to use (security, windows-rdp, linux-ssh, windows-hostname, windows-winrm, …)
         #[arg(short, long, default_value = "security")]
         profile: String,
 
@@ -124,6 +124,22 @@ pub enum PlanAction {
         /// Format (yaml or json)
         #[arg(short, long, value_enum, default_value = "yaml")]
         format: PlanFileFormat,
+
+        /// Linux user for SSH key inject (with linux-ssh + --key/--key-file)
+        #[arg(long)]
+        user: Option<String>,
+
+        /// SSH public key string (with linux-ssh + --user)
+        #[arg(long)]
+        key: Option<String>,
+
+        /// Path to SSH public key file (with linux-ssh + --user)
+        #[arg(long)]
+        key_file: Option<String>,
+
+        /// Hostname for windows-hostname profile
+        #[arg(long)]
+        hostname: Option<String>,
     },
 
     /// Show plan statistics
@@ -189,7 +205,20 @@ impl PlanCommand {
                 profile,
                 output,
                 format,
-            } => self.generate_plan(vm_disk, profile, output, format),
+                user,
+                key,
+                key_file,
+                hostname,
+            } => self.generate_plan(
+                vm_disk,
+                profile,
+                output,
+                format,
+                user.as_deref(),
+                key.as_deref(),
+                key_file.as_deref(),
+                hostname.as_deref(),
+            ),
             PlanAction::Stats { plan_file } => self.show_stats(plan_file),
         }
     }
@@ -432,6 +461,10 @@ impl PlanCommand {
         profile: &str,
         output: &str,
         format: &PlanFileFormat,
+        user: Option<&str>,
+        key: Option<&str>,
+        key_file: Option<&str>,
+        hostname: Option<&str>,
     ) -> Result<()> {
         println!(
             "Generating {} plan for {}...",
@@ -439,33 +472,36 @@ impl PlanCommand {
             vm_disk.bright_blue()
         );
 
-        // windows-rdp is a known-good offline registry plan — no inspect needed.
         let profile_lc = profile.to_lowercase();
+
+        // Registry-only Windows canned plans — no guestfs inspect needed.
         if matches!(
             profile_lc.as_str(),
             "windows-rdp" | "windows_rdp" | "rdp" | "enable-rdp"
+                | "windows-winrm" | "windows_winrm" | "winrm" | "enable-winrm"
+                | "windows-hostname" | "windows_hostname" | "hostname" | "set-hostname"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
             }
-            let plan = PlanGenerator::new(vm_disk.to_string()).windows_rdp_enable_plan();
-            let content = match format {
-                PlanFileFormat::Yaml => {
-                    serde_yaml::to_string(&plan).with_context(|| "Failed to serialize plan to YAML")?
+            let generator = PlanGenerator::new(vm_disk.to_string());
+            let plan = match profile_lc.as_str() {
+                "windows-rdp" | "windows_rdp" | "rdp" | "enable-rdp" => {
+                    generator.windows_rdp_enable_plan()
                 }
-                PlanFileFormat::Json => serde_json::to_string_pretty(&plan)
-                    .with_context(|| "Failed to serialize plan to JSON")?,
+                "windows-winrm" | "windows_winrm" | "winrm" | "enable-winrm" => {
+                    generator.windows_winrm_enable_plan()
+                }
+                "windows-hostname" | "windows_hostname" | "hostname" | "set-hostname" => {
+                    let name = hostname.ok_or_else(|| {
+                        anyhow::anyhow!("--hostname is required for windows-hostname profile")
+                    })?;
+                    generator.windows_hostname_plan(name)?
+                }
+                _ => unreachable!(),
             };
-            fs::write(output, &content)
-                .with_context(|| format!("Failed to write plan to: {}", output))?;
-            println!("{} Plan generated: {}", "✓".green(), output.bright_blue());
-            println!("  Operations: {}", plan.operations.len());
-            println!("  Overall risk: {}", plan.overall_risk);
-            println!(
-                "  Apply with: guestkit plan apply {} --vm {} --yes --skip-backup",
-                output.bright_blue(),
-                vm_disk.bright_blue()
-            );
+            Self::write_plan_file(output, format, &plan)?;
+            Self::print_generate_summary(output, &plan, vm_disk, true);
             return Ok(());
         }
 
@@ -498,12 +534,26 @@ impl PlanCommand {
 
         let generator = PlanGenerator::new(vm_disk.to_string());
 
+        let pubkey = match (key, key_file) {
+            (Some(k), None) => Some(k.to_string()),
+            (None, Some(path)) => Some(
+                fs::read_to_string(path)
+                    .with_context(|| format!("Failed to read key file: {path}"))?
+                    .trim()
+                    .to_string(),
+            ),
+            (Some(_), Some(_)) => {
+                anyhow::bail!("Use either --key or --key-file, not both")
+            }
+            (None, None) => None,
+        };
+
         // linux-ssh builds an inspect-based enable plan (not a finding→op profile).
         let plan = if matches!(
             profile_lc.as_str(),
             "linux-ssh" | "linux_ssh" | "enable-ssh"
         ) {
-            generator.linux_ssh_enable_plan(&mut g)?
+            generator.linux_ssh_enable_plan(&mut g, user, pubkey.as_deref())?
         } else {
             let inspection_profile = crate::cli::profiles::get_profile(profile)
                 .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
@@ -515,35 +565,41 @@ impl PlanCommand {
             generator.from_security_profile(&report)?
         };
 
-        // Serialize to output format
+        Self::write_plan_file(output, format, &plan)?;
+        let _ = g.shutdown();
+        let skip_backup_hint = matches!(
+            profile_lc.as_str(),
+            "linux-ssh" | "linux_ssh" | "enable-ssh"
+        );
+        Self::print_generate_summary(output, &plan, vm_disk, skip_backup_hint);
+
+        Ok(())
+    }
+
+    fn write_plan_file(output: &str, format: &PlanFileFormat, plan: &FixPlan) -> Result<()> {
         let content = match format {
             PlanFileFormat::Yaml => {
-                serde_yaml::to_string(&plan).with_context(|| "Failed to serialize plan to YAML")?
+                serde_yaml::to_string(plan).with_context(|| "Failed to serialize plan to YAML")?
             }
-            PlanFileFormat::Json => serde_json::to_string_pretty(&plan)
+            PlanFileFormat::Json => serde_json::to_string_pretty(plan)
                 .with_context(|| "Failed to serialize plan to JSON")?,
         };
-
         fs::write(output, &content)
             .with_context(|| format!("Failed to write plan to: {}", output))?;
+        Ok(())
+    }
 
-        let _ = g.shutdown();
-
+    fn print_generate_summary(output: &str, plan: &FixPlan, vm_disk: &str, skip_backup_hint: bool) {
         println!("{} Plan generated: {}", "✓".green(), output.bright_blue());
         println!("  Operations: {}", plan.operations.len());
         println!("  Overall risk: {}", plan.overall_risk);
-        if matches!(
-            profile_lc.as_str(),
-            "linux-ssh" | "linux_ssh" | "enable-ssh"
-        ) {
+        if skip_backup_hint {
             println!(
                 "  Apply with: guestkit plan apply {} --vm {} --yes --skip-backup",
                 output.bright_blue(),
                 vm_disk.bright_blue()
             );
         }
-
-        Ok(())
     }
 
     fn show_stats(&self, plan_file: &str) -> Result<()> {

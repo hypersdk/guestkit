@@ -110,6 +110,21 @@ impl PlanExporter {
                     )?;
                 }
             }
+            OperationType::Symlink(sl) => {
+                writeln!(
+                    script,
+                    "ln -sfn {} {}",
+                    shell_escape(&sl.target),
+                    shell_escape(&sl.link_path)
+                )?;
+            }
+            OperationType::FileDelete(fd) => {
+                if fd.missing_ok {
+                    writeln!(script, "rm -f {}", shell_escape(&fd.path))?;
+                } else {
+                    writeln!(script, "rm {}", shell_escape(&fd.path))?;
+                }
+            }
             OperationType::PackageInstall(pi) => {
                 let escaped_pkgs: Vec<String> =
                     pi.packages.iter().map(|p| shell_escape(p)).collect();
@@ -311,6 +326,18 @@ impl PlanExporter {
                 if let Some(mode) = &fw.mode {
                     writeln!(playbook, "        mode: '{}'", mode)?;
                 }
+            }
+            OperationType::Symlink(sl) => {
+                writeln!(playbook, "      file:")?;
+                writeln!(playbook, "        src: {}", sl.target)?;
+                writeln!(playbook, "        dest: {}", sl.link_path)?;
+                writeln!(playbook, "        state: link")?;
+                writeln!(playbook, "        force: yes")?;
+            }
+            OperationType::FileDelete(fd) => {
+                writeln!(playbook, "      file:")?;
+                writeln!(playbook, "        path: {}", fd.path)?;
+                writeln!(playbook, "        state: absent")?;
             }
             OperationType::PackageInstall(pi) => {
                 writeln!(playbook, "      package:")?;

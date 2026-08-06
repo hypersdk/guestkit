@@ -1,14 +1,14 @@
-# 🔧 Offline Patch & Fix Preview Mode
+# Offline Patch & Fix Preview Mode
 
-**Status:** Phase 1 Complete (Foundation)
-**Version:** 0.3.6+
-**Last Updated:** 2026-01-27
+**Status:** Shipped (CLI generate / preview / apply / export)
+**Version:** 0.3.18+
+**Last Updated:** 2026-08-06
 
 ## Overview
 
 The Offline Patch & Fix Preview Mode enables safe, reviewable VM fixes with complete separation of concerns. Instead of directly applying changes, GuestKit generates detailed fix plans that can be previewed, reviewed, exported as scripts, and applied with safety checks.
 
-Part of [GuestKit on zyvor.dev](https://zyvor.dev/guestkit). Pairs with [migration assurance](migration-assurance.md) (`doctor`, `migrate-plan --export`).
+Part of [GuestKit on zyvor.dev](https://zyvor.dev/guestkit). Pairs with [migration assurance](migration-assurance.md) (`doctor`, `migrate-plan --export`) and Linux [`rescue`](#rescue-shortcuts) day-0 ops.
 
 ## Workflow
 
@@ -24,6 +24,64 @@ This workflow matches enterprise change management requirements and provides:
 - **Scriptability**: Export plans as bash/ansible for review
 - **Reversibility**: Backup and rollback capabilities
 - **Collaboration**: Security team generates, ops team applies
+
+## Generate-only day-0 profiles
+
+These profiles skip inspect→finding heuristics and emit a fixed offline-safe plan. Prefer `plan apply --skip-backup` for registry/file-only edits.
+
+| Profile | Flags | What it does |
+|---------|-------|--------------|
+| `windows-rdp` | — | Terminal Server allow, NLA, TermService/UmRdpService Automatic, port 3389, firewall TCP/UDP |
+| `windows-hostname` | `--hostname NAME` | ComputerName + ActiveComputerName + Tcpip Hostname / NV Hostname |
+| `windows-winrm` | — | WinRM Automatic + `WINRM-HTTP-In-TCP` (review auth before exposing) |
+| `linux-ssh` | optional `--user` + `--key` / `--key-file` | Remove `sshd_not_to_be_run`, wants `Symlink`, sshd drop-in, optional `authorized_keys` |
+
+```bash
+guestkit plan generate win.qcow2 -p windows-rdp -o rdp.yaml
+guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup
+
+guestkit plan generate win.qcow2 -p windows-hostname --hostname WIN-APP01 -o host.yaml
+guestkit plan generate win.qcow2 -p windows-winrm -o winrm.yaml
+
+guestkit plan generate linux.qcow2 -p linux-ssh \
+  --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml
+guestkit plan apply ssh.yaml --vm linux.qcow2 --yes --skip-backup
+```
+
+Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`PackageInstall`, `ServiceOperation`, `CommandExec`) as **offline apply: skipped**. Heuristics prefer offline-safe ops where possible (e.g. firewalld enable → `Symlink`, ufw → `FileEdit`, SSH/SELinux edits).
+
+## VirtIO driver inject (offline)
+
+Migration repair and plan apply can inject Windows VirtIO drivers when the host has a virtio-win tree:
+
+```bash
+export GUESTKIT_VIRTIO_WIN=/mnt/virtio-win   # extracted ISO or layout
+guestkit migrate-repair win.qcow2 --target kvm --apply --yes
+# equivalent: --virtio-win /mnt/virtio-win
+```
+
+Requires a build with `registry-write,agent`. See [migration-assurance.md](migration-assurance.md).
+
+## Rescue shortcuts
+
+Linux offline rescue (`guestkit rescue -o …`) for the same day-0 jobs without writing a plan file:
+
+| Operation | Flags |
+|-----------|-------|
+| `enable-ssh` | `--force` (also PermitRootLogin) |
+| `inject-ssh-key` | `--user`, `--key` / `--key-file` |
+| `set-hostname` | `--hostname` |
+| `reset-password` | `--user`, `--password` (Linux `/etc/shadow`); Windows clears SAM blank (`registry-write`) |
+| `fix-fstab` | `--backup` |
+| `check-grub` | diagnose-only (`fix-grub` alias) |
+
+Export a reviewable plan instead of applying:
+
+```bash
+guestkit rescue disk.qcow2 -o enable-ssh --export-plan ssh.yaml
+guestkit rescue disk.qcow2 -o set-hostname --hostname web01 --export-plan host.yaml
+guestkit plan apply ssh.yaml --vm disk.qcow2 --yes --skip-backup
+```
 
 ## Architecture
 
@@ -49,25 +107,29 @@ pub struct FixPlan {
 
 **Operation Types:**
 - `FileEdit` - Line-by-line file modifications
-- `PackageInstall` - Package installation
-- `ServiceOperation` - Service management (enable/start/restart)
+- `FileWrite` - Create/overwrite a whole file (offline-friendly)
+- `FileDelete` - Remove a guest file (`missing_ok` supported)
+- `Symlink` - Force symlink via guestfs `ln_sf` (offline-friendly)
+- `PackageInstall` - Package installation (live / skipped offline)
+- `ServiceOperation` - Service management (live / skipped offline)
 - `SELinuxMode` - SELinux mode changes
-- `RegistryEdit` - Windows registry modifications
+- `RegistryEdit` - Windows registry modifications (`registry-write` feature)
 - `CommandExec` - Arbitrary command execution
 - `FileCopy` - File copy operations
 - `DirectoryCreate` - Directory creation
 - `FilePermissions` - Permission/ownership changes
+- `DriverInject` - Windows driver inject (`host_dir` / `GUESTKIT_VIRTIO_WIN`; needs `registry-write,agent`)
 
 **Priority Levels:**
-- Critical 🔴
-- High 🟠
-- Medium 🟡
-- Low 🟢
-- Info ℹ️
+- Critical
+- High
+- Medium
+- Low
+- Info
 
 #### 2. **Plan Generator** (`generator.rs`)
 
-Converts security profile findings into executable fix plans:
+Converts security profile findings into executable fix plans, plus canned day-0 builders (`windows_rdp_enable_plan`, `linux_ssh_enable_plan`, `windows_hostname_plan`, `windows_winrm_enable_plan`).
 
 ```rust
 let generator = PlanGenerator::new("vm.qcow2".to_string());
@@ -91,81 +153,38 @@ PlanPreview::display_diff(&plan);   // Unified diff view
 PlanPreview::print_summary(&plan);  // Summary statistics
 ```
 
-**Output Modes:**
-- **Formatted Text**: Color-coded, grouped by priority
-- **Unified Diff**: Git-style diffs for file changes
-- **Summary**: Quick statistics overview
+#### 4. **Plan Applicator** (`apply.rs`)
 
-#### 4. **Plan Applicator** (`apply.rs`) - Phase 2
-
-Executes fix plans with safety checks:
-
-```rust
-let applicator = PlanApplicator::new("vm.qcow2".to_string(), false);
-let result = applicator.apply(&plan)?;
-```
-
-**Features (Planned):**
-- Dry-run validation
-- Circular dependency detection
-- Backup before apply
-- Rollback capability
-- Progress tracking
+Executes fix plans offline via guestfs with backup / `--skip-backup`, dry-run, and rollback.
 
 #### 5. **Plan Exporter** (`export.rs`)
 
-Export plans to various formats:
-
-```rust
-// Export as bash script
-let script = PlanExporter::to_bash(&plan)?;
-
-// Export as Ansible playbook
-let playbook = PlanExporter::to_ansible(&plan)?;
-
-// Export as JSON/YAML
-let json = PlanExporter::to_json(&plan)?;
-let yaml = PlanExporter::to_yaml(&plan)?;
-```
-
-**Export Formats:**
-- **Bash**: Executable shell scripts with error handling
-- **Ansible**: Playbooks for configuration management
-- **JSON**: Machine-readable for automation
-- **YAML**: Human-readable configuration
+Export plans to bash, Ansible, JSON, or YAML.
 
 ## Usage Examples
 
-### CLI Usage (Planned - Phase 2)
+### CLI
 
 ```bash
-# Generate fix plan from security profile
-guestkit profile security vm.qcow2 --plan security-fixes.yaml
+# Generate from an inspect profile
+guestkit plan generate vm.qcow2 -p security -o security-fixes.yaml
 
-# Preview the plan
+# Day-0 canned profiles (see table above)
+guestkit plan generate vm.qcow2 -p linux-ssh -o ssh.yaml
+guestkit plan generate vm.qcow2 -p windows-rdp -o rdp.yaml
+
+# Preview / validate / export
 guestkit plan preview security-fixes.yaml
-
-# Show as unified diff
-guestkit plan diff security-fixes.yaml
-
-# Export as executable script
-guestkit plan export security-fixes.yaml --format bash > fixes.sh
-guestkit plan export security-fixes.yaml --format ansible > fixes.yml
-
-# Validate plan (dry-run simulation)
+guestkit plan preview security-fixes.yaml --diff
 guestkit plan validate security-fixes.yaml
+guestkit plan export security-fixes.yaml -o fixes.sh --format bash
 
-# Apply with confirmation prompts
-guestkit plan apply security-fixes.yaml --interactive
+# Apply (default takes a full-image backup first)
+guestkit plan apply security-fixes.yaml --vm vm.qcow2 --yes
+guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup
 
-# Apply automatically (for automation)
-guestkit plan apply security-fixes.yaml --yes
-
-# Apply with backup
-guestkit plan apply security-fixes.yaml --backup /backup/vm-state
-
-# Rollback if needed
-guestkit plan rollback security-fixes.yaml
+# Rollback
+guestkit plan rollback /path/to/backup --vm vm.qcow2
 ```
 
 ### Programmatic Usage
@@ -173,23 +192,18 @@ guestkit plan rollback security-fixes.yaml
 ```rust
 use guestkit::cli::plan::*;
 
-// Generate plan
 let generator = PlanGenerator::new("vm.qcow2".to_string());
 let plan = generator.from_security_profile(&security_report)?;
 
-// Preview
 PlanPreview::display(&plan);
 
-// Export to bash
 let script = PlanExporter::to_bash(&plan)?;
 std::fs::write("fixes.sh", script)?;
 
-// Validate
 let applicator = PlanApplicator::new("vm.qcow2".to_string(), false);
 let validation = applicator.validate(&plan)?;
 
 if validation.valid {
-    // Apply (dry-run)
     let applicator_dry = PlanApplicator::new("vm.qcow2".to_string(), true);
     let result = applicator_dry.apply(&plan)?;
 }

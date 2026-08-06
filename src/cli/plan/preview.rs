@@ -83,9 +83,26 @@ impl PlanPreview {
         }
     }
 
+    /// Ops that `plan apply` (offline guestfs) cannot execute.
+    fn is_live_only(op: &OperationType) -> bool {
+        matches!(
+            op,
+            OperationType::PackageInstall(_)
+                | OperationType::ServiceOperation(_)
+                | OperationType::CommandExec(_)
+        )
+    }
+
     /// Print a single operation
     fn print_operation(op: &Operation) {
         println!("[{}] {}", op.id.yellow(), op.description.bold());
+        if Self::is_live_only(&op.op_type) {
+            println!(
+                "  {}",
+                "offline apply: skipped (needs running guest / live executor)"
+                    .yellow()
+            );
+        }
 
         match &op.op_type {
             OperationType::FileEdit(fe) => {
@@ -104,6 +121,19 @@ impl PlanPreview {
             OperationType::FileWrite(fw) => {
                 println!("  Write: {}", fw.path.bright_blue());
                 println!("  Bytes: {}", fw.content.len());
+            }
+            OperationType::Symlink(sl) => {
+                println!(
+                    "  Symlink: {} → {}",
+                    sl.link_path.bright_blue(),
+                    sl.target.bright_green()
+                );
+            }
+            OperationType::FileDelete(fd) => {
+                println!("  Delete: {}", fd.path.bright_red());
+                if fd.missing_ok {
+                    println!("  {}", "missing_ok".bright_black());
+                }
             }
             OperationType::PackageInstall(pi) => {
                 println!("  Packages: {}", pi.packages.join(", ").bright_cyan());
@@ -141,6 +171,12 @@ impl PlanPreview {
                 println!("  INF: {}", di.inf_path);
                 if di.boot_critical {
                     println!("  {}", "boot-critical".yellow());
+                }
+                if di.resolve_host_dir().is_none() {
+                    println!(
+                        "  {}",
+                        "set host_dir or GUESTKIT_VIRTIO_WIN for offline apply".yellow()
+                    );
                 }
             }
             OperationType::CommandExec(ce) => {
