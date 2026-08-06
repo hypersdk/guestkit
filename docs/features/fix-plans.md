@@ -34,6 +34,9 @@ These profiles skip inspect→finding heuristics and emit a fixed offline-safe p
 | `windows-rdp` | — | Terminal Server allow, NLA, TermService/UmRdpService Automatic, port 3389, firewall TCP/UDP |
 | `windows-hostname` | `--hostname NAME` | ComputerName + ActiveComputerName + Tcpip Hostname / NV Hostname |
 | `windows-winrm` | — | WinRM Automatic + `WINRM-HTTP-In-TCP` (review auth before exposing) |
+| `windows-domain-leave` | `--workgroup NAME` (default `WORKGROUP`) | Clear Tcpip Domain, set NV Domain + Winlogon to workgroup (DC cleanup still live) |
+| `windows-timezone` | `--timezone KEY` | `TimeZoneKeyName` (e.g. `UTC`, `Pacific Standard Time`) |
+| `windows-static-ip` | `--interface-guid` `--ip` `--mask` [`--gateway`] [`--dns`] | Disable DHCP + MULTI_SZ IP/mask/gateway on that interface |
 | `linux-ssh` | optional `--user` + `--key` / `--key-file` | Remove `sshd_not_to_be_run`, wants `Symlink`, sshd drop-in, optional `authorized_keys` |
 
 ```bash
@@ -42,6 +45,13 @@ guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup
 
 guestkit plan generate win.qcow2 -p windows-hostname --hostname WIN-APP01 -o host.yaml
 guestkit plan generate win.qcow2 -p windows-winrm -o winrm.yaml
+
+guestkit plan generate win.qcow2 -p windows-domain-leave --workgroup CORPWG -o leave.yaml
+guestkit plan generate win.qcow2 -p windows-timezone --timezone "UTC" -o tz.yaml
+guestkit plan generate win.qcow2 -p windows-static-ip \
+  --interface-guid a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  --ip 10.0.0.50 --mask 255.255.255.0 --gateway 10.0.0.1 \
+  --dns "1.1.1.1 8.8.8.8" -o ip.yaml
 
 guestkit plan generate linux.qcow2 -p linux-ssh \
   --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml

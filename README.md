@@ -77,6 +77,7 @@ Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot rea
 | "Will it boot?" answered at power-on | Offline doctor score before cutover |
 | guestfish scripts don't scale | Structured assurance APIs + exports |
 | Migration surprises cost weekends | Fix plans with driver injections |
+| Cutover needs an audit trail MTV skips | Cutover Passport → then hyper2kvm / HyperSDK |
 | Fleet drift is invisible | `fleet analyze` and forensic diff |
 | No VM boot for deep inspection | Carbon TUI explores partitions in place |
 

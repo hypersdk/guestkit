@@ -24,9 +24,9 @@ One pipeline from export to operations — **one API, one operating model**:
 
 | Product | Role |
 |---------|------|
+| [GuestKit](https://zyvor.dev/guestkit) | Offline guest disk inspect, repair, Cutover Passport (CI gate before convert) |
+| [hyper2kvm](https://zyvor.dev/hyper2kvm) | Conversion, VirtIO/boot fixes, validation — consumes Passport-ready images |
 | [HyperSDK Platform](https://zyvor.dev/hypersdk) | Multi-cloud VM export (10+ providers), APIs, scheduling |
-| [hyper2kvm](https://zyvor.dev/hyper2kvm) | Conversion, VirtIO/boot fixes, validation |
-| [GuestKit](https://zyvor.dev/guestkit) | Offline guest disk inspect, repair, security profiles |
 | [v9s](https://zyvor.dev/v9s) | KubeVirt & VM fleet operations on Kubernetes |
 | [PacketWolf](https://zyvor.dev/packetwolf) | eBPF network observability |
 | [VMRogue](https://zyvor.dev/vmrogue) | Image & disk build pipeline |

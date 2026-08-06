@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Cutover Passport** — `guestkit passport emit|verify`: versioned CI-gateable
+  assurance artifact (evidence digest, boot/migration scores, FixPlan digest,
+  Windows BitLocker hard-block + `windows_offline_ready`, optional live
+  attestation via agent-proxy, optional Ed25519 sign). Suite handoff points to
+  HyperSDK (export) + hyper2kvm (convert/deploy). Web: `POST /vms/:id/passport`
+  + dock download. Worker op `guestkit.passport`.
+- **`plan generate -p windows-domain-leave`** — offline domain→workgroup
+  markers (`--workgroup`, default `WORKGROUP`).
+- **`plan generate -p windows-timezone`** — offline `TimeZoneKeyName`
+  (`--timezone`).
+- **`plan generate -p windows-static-ip`** — offline static IPv4 on a known
+  interface GUID (`--interface-guid --ip --mask [--gateway] [--dns]`).
+
 ## [0.3.18] - 2026-08-06
 
 ### Added

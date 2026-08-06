@@ -31,7 +31,25 @@ The table below compares products for migration planning — not a dependency li
 | **Visual Output** | Beautiful emojis + colors | Plain text |
 | **Migration** | Built-in fstab/crypttab rewriter | Manual scripting |
 
-**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `run_boot_inspect`, Zyvor HTTP routes). Do not install libguestfs expecting GuestKit to call it.
+**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `passport`, `run_boot_inspect`, Zyvor HTTP routes). Do not install libguestfs expecting GuestKit to call it.
+
+### How does GuestKit compare to Red Hat virt-v2v / MTV?
+
+They solve different jobs:
+
+| Role | Tool |
+|------|------|
+| Discover / export | **HyperSDK** (`hyperctl`) |
+| Convert / deploy to KVM | **hyper2kvm** (`h2kvmctl`) or virt-v2v/MTV |
+| Certify cutover (score → fix → re-score) | **GuestKit Cutover Passport** |
+
+RH virt-v2v and MTV are **convert-first**. GuestKit is **assurance-first**: emit a reviewable Passport, gate CI with `passport verify --fail-below 80`, then hand off to hyper2kvm. MTV cannot skip that gate.
+
+```bash
+guestkit passport emit vm.qcow2 --target kvm -o passport.json
+guestkit passport verify passport.json --fail-below 80
+# then: h2kvmctl migrate … / HyperSDK job pipeline
+```
 
 ### Why does guestkit require sudo?
 

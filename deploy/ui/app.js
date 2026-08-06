@@ -2696,6 +2696,7 @@ function workflowLabel(wf) {
     'migration-plan': 'Run Migrate',
     provision: 'Generate YAML',
     doctor: 'Run Doctor',
+    passport: 'Download Passport',
     'cluster-install-agent': 'Install VM Tools',
     'cluster-guest-info': 'Refresh guest info',
     'cluster-boot-inspect': 'Boot inspect',
@@ -2867,6 +2868,23 @@ function onJobComplete(action, data) {
     patch.status = 'ready';
     markWizardComplete('plan');
     if (!state.wizardChain) setWizardStep('launch');
+  } else if (action === 'passport') {
+    patch.passport = payload?.passport || payload;
+    patch.migrateScore = payload?.passport?.scores?.migration ?? patch.migrateScore;
+    patch.bootScore = payload?.passport?.scores?.boot ?? patch.bootScore;
+    patch.status = payload?.passport?.hard_blocked ? 'failed' : 'ready';
+    markWizardComplete('assure');
+    try {
+      const blob = new Blob([JSON.stringify(payload?.passport || payload, null, 2)], {
+        type: 'application/json',
+      });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(vm.name || 'vm').replace(/[^\w.-]+/g, '_')}-cutover-passport.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Cutover Passport downloaded', 'ok');
+    } catch (_) { /* ignore download errors */ }
   } else if (action === 'repair-plan') {
     patch.repairPlan = payload;
     if (payload?.before_score != null) patch.bootScore = payload.before_score;
@@ -3315,13 +3333,13 @@ async function runActionInner(action) {
 
   let path = `/vms/${vm.id}/${action}`;
   const target = getTarget();
-  if (action === 'doctor' || action === 'migration-plan') {
+  if (action === 'doctor' || action === 'migration-plan' || action === 'passport') {
     path += `?target=${encodeURIComponent(target)}&explain=true`;
   }
 
   feed(`Enqueueing <strong>${escapeHtml(action)}</strong>…`);
 
-  const stepMap = { provision: 'launch', 'migration-plan': 'plan', 'repair-plan': 'plan', doctor: 'assure', inspect: 'assure' };
+  const stepMap = { provision: 'launch', 'migration-plan': 'plan', 'repair-plan': 'plan', passport: 'assure', doctor: 'assure', inspect: 'assure' };
   setWizardStep(stepMap[action] || 'assure');
 
   try {

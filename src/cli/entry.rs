@@ -1888,6 +1888,12 @@ enum Commands {
         export: Option<PathBuf>,
     },
 
+    /// Cutover Passport — CI-gateable assurance artifact (GuestKit certifies; HyperSDK/hyper2kvm convert)
+    Passport {
+        #[command(subcommand)]
+        action: PassportAction,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -2016,6 +2022,61 @@ enum PolicyAction {
         /// Fail on any validation failure
         #[arg(long)]
         strict: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum PassportAction {
+    /// Emit a Cutover Passport from an offline disk image
+    Emit {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target platform (kvm, proxmox, kubevirt, aws, …)
+        #[arg(long, value_name = "TARGET")]
+        target: String,
+
+        /// Output passport JSON path
+        #[arg(short, long, value_name = "FILE")]
+        output: PathBuf,
+
+        /// Also write a directory bundle with passport + fix-plan YAML
+        #[arg(long)]
+        bundle: bool,
+
+        /// Include SHA-256 of image contents (slow for large disks)
+        #[arg(long)]
+        content_hash: bool,
+
+        /// Host virtio-win tree for DriverInject planning
+        #[arg(long, value_name = "DIR")]
+        virtio_win: Option<PathBuf>,
+
+        /// Agent-proxy base URL for live attestation (e.g. http://127.0.0.1:8765)
+        #[arg(long, value_name = "URL")]
+        live_url: Option<String>,
+
+        /// Ed25519 signing key (32 raw bytes or 64 hex chars). Requires --features agent.
+        #[arg(long, value_name = "FILE")]
+        sign_key: Option<PathBuf>,
+    },
+
+    /// Verify a Cutover Passport (CI gate)
+    Verify {
+        /// Passport JSON path
+        passport: PathBuf,
+
+        /// Fail when min(boot, migration) score is below this threshold
+        #[arg(long, value_name = "SCORE")]
+        fail_below: Option<f64>,
+
+        /// Require a valid Ed25519 signature
+        #[arg(long)]
+        require_signature: bool,
+
+        /// Optional public key hex (defaults to key embedded in passport)
+        #[arg(long, value_name = "HEX")]
+        public_key: Option<String>,
     },
 }
 
@@ -3523,6 +3584,44 @@ pub fn run() -> anyhow::Result<()> {
                 cli.verbose,
             )?;
         }
+
+        Commands::Passport { action } => match action {
+            PassportAction::Emit {
+                image,
+                target,
+                output,
+                bundle,
+                content_hash,
+                virtio_win,
+                live_url,
+                sign_key,
+            } => {
+                crate::cli::commands::assurance::passport_emit_command(
+                    &image,
+                    &target,
+                    &output,
+                    bundle,
+                    content_hash,
+                    virtio_win.as_deref(),
+                    live_url.as_deref(),
+                    sign_key.as_deref(),
+                    cli.verbose,
+                )?;
+            }
+            PassportAction::Verify {
+                passport,
+                fail_below,
+                require_signature,
+                public_key,
+            } => {
+                crate::cli::commands::assurance::passport_verify_command(
+                    &passport,
+                    fail_below,
+                    require_signature,
+                    public_key.as_deref(),
+                )?;
+            }
+        },
 
         Commands::ForensicDiff { old, new, output } => {
             forensic_diff_command(&old, &new, &output, cli.verbose)?;

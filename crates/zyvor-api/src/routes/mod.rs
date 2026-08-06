@@ -138,6 +138,7 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/v1/vms/:id/inspect", post(vms::inspect_vm))
         .route("/api/v1/vms/:id/doctor", post(vms::doctor_vm))
         .route("/api/v1/vms/:id/migration-plan", post(vms::migration_plan_vm))
+        .route("/api/v1/vms/:id/passport", post(vms::passport_vm))
         .route("/api/v1/vms/:id/repair-plan", post(vms::repair_plan_vm))
         .route("/api/v1/vms/:id/convert", post(vms::convert_vm))
         .route("/api/v1/vms/:id/readiness-report", post(vms::readiness_report))

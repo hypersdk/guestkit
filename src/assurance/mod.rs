@@ -4,11 +4,16 @@
 //! Used by CLI, worker handlers, and zyvor-api. Does not write to stdout.
 
 mod copilot;
+mod passport;
 mod repair_extras;
 
 pub use copilot::{
     answer_copilot_question, build_evidence_digest, generate_briefing, CopilotAction,
     CopilotInsight, EvidenceDigest, EvidenceHighlight, MigrationBriefing,
+};
+pub use passport::{
+    emit_passport, verify_passport, write_passport_outputs, CutoverPassport, PassportEmitOptions,
+    PassportVerifyOptions, PASSPORT_SCHEMA_VERSION,
 };
 
 use crate::boot::{analyze_bootability, BootTarget, BootabilityReport};

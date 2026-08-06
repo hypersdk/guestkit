@@ -498,6 +498,302 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
         plan
     }
 
+    /// Offline Windows domain-leave markers → workgroup (best-effort).
+    ///
+    /// Clears Tcpip `Domain` / sets `NV Domain` to the workgroup, and resets
+    /// Winlogon domain cache fields. Does **not** delete the computer account
+    /// on a DC — run a live `Remove-Computer` / DC cleanup after cutover if needed.
+    pub fn windows_domain_leave_plan(&self, workgroup: &str) -> Result<FixPlan> {
+        let wg = workgroup.trim();
+        if wg.is_empty() {
+            anyhow::bail!("Workgroup name is required (use --workgroup)");
+        }
+        if wg.len() > 15
+            || !wg
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            anyhow::bail!(
+                "Invalid workgroup '{wg}' (ASCII alnum/hyphen/underscore, max 15 chars)"
+            );
+        }
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-domain-leave".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "medium".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = true;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(format!(
+            "Offline Windows domain-leave markers → workgroup '{wg}'. \
+             DC computer-account cleanup still requires a live step."
+        ));
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "domain".into(),
+            "workgroup".into(),
+            "offline".into(),
+        ];
+
+        let ops = [
+            (
+                "tcpip-clear-domain",
+                r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters",
+                "Domain",
+                json!(""),
+                "sz",
+                "Clear Tcpip Domain (domain DNS suffix)",
+            ),
+            (
+                "tcpip-nv-domain-workgroup",
+                r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters",
+                "NV Domain",
+                json!(wg),
+                "sz",
+                "Set Tcpip NV Domain to workgroup",
+            ),
+            (
+                "winlogon-default-domain",
+                r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+                "DefaultDomainName",
+                json!(wg),
+                "sz",
+                "Set Winlogon DefaultDomainName to workgroup",
+            ),
+            (
+                "winlogon-clear-cache-domain",
+                r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
+                "CachePrimaryDomain",
+                json!(""),
+                "sz",
+                "Clear Winlogon CachePrimaryDomain",
+            ),
+        ];
+
+        for (id, key, value, new_data, dtype, desc) in ops {
+            plan.add_operation(Operation {
+                id: id.into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: key.into(),
+                    value: value.into(),
+                    current_data: json!(""),
+                    new_data,
+                    data_type: dtype.into(),
+                }),
+                priority: Priority::High,
+                description: desc.into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        Ok(plan)
+    }
+
+    /// Offline Windows timezone via `TimeZoneKeyName` (e.g. `UTC`, `Pacific Standard Time`).
+    pub fn windows_timezone_plan(&self, timezone: &str) -> Result<FixPlan> {
+        let tz = timezone.trim();
+        if tz.is_empty() {
+            anyhow::bail!("Timezone is required (use --timezone)");
+        }
+        // Windows TimeZoneKeyName values are path-like keys under zoneinfo names;
+        // reject control chars / path separators that would break the registry value.
+        if tz.len() > 128
+            || tz.contains('\\')
+            || tz.contains('/')
+            || tz.chars().any(|c| c.is_control())
+        {
+            anyhow::bail!(
+                "Invalid timezone '{tz}' (use a Windows TimeZoneKeyName like 'UTC' or 'Pacific Standard Time')"
+            );
+        }
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-timezone".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description =
+            Some(format!("Offline Windows timezone → TimeZoneKeyName '{tz}'"));
+        plan.metadata.tags = vec!["windows".into(), "timezone".into(), "offline".into()];
+
+        plan.add_operation(Operation {
+            id: "timezone-key-name".into(),
+            op_type: OperationType::RegistryEdit(RegistryEdit {
+                key: r"HKLM\SYSTEM\ControlSet001\Control\TimeZoneInformation".into(),
+                value: "TimeZoneKeyName".into(),
+                current_data: json!(""),
+                new_data: json!(tz),
+                data_type: "sz".into(),
+            }),
+            priority: Priority::Medium,
+            description: format!("Set TimeZoneKeyName to {tz}"),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        Ok(plan)
+    }
+
+    /// Offline Windows static IPv4 on a known interface GUID.
+    ///
+    /// Writes `EnableDHCP=0` plus MULTI_SZ IP/mask/gateway under
+    /// `Tcpip\Parameters\Interfaces\{GUID}`. Discover GUIDs with inspect /
+    /// hyper2kvm network snapshot first.
+    pub fn windows_static_ip_plan(
+        &self,
+        interface_guid: &str,
+        ip: &str,
+        mask: &str,
+        gateway: Option<&str>,
+        dns: Option<&str>,
+    ) -> Result<FixPlan> {
+        let guid = interface_guid.trim().trim_matches(|c| c == '{' || c == '}');
+        if guid.len() != 36 || guid.chars().filter(|c| *c == '-').count() != 4 {
+            anyhow::bail!(
+                "Invalid --interface-guid '{interface_guid}' (expected GUID like \
+                 a1b2c3d4-e5f6-7890-abcd-ef1234567890)"
+            );
+        }
+        for (label, v) in [("ip", ip), ("mask", mask)] {
+            let t = v.trim();
+            if t.is_empty() || !t.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                anyhow::bail!("Invalid {label} '{v}' (expected IPv4 dotted quad)");
+            }
+        }
+        if let Some(gw) = gateway {
+            let t = gw.trim();
+            if !t.is_empty() && !t.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                anyhow::bail!("Invalid --gateway '{gw}' (expected IPv4 dotted quad)");
+            }
+        }
+
+        let iface_key = format!(
+            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
+        );
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-static-ip".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "medium".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = true;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(format!(
+            "Offline Windows static IPv4 {ip}/{mask} on interface {{{guid}}}"
+        ));
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "network".into(),
+            "static-ip".into(),
+            "offline".into(),
+        ];
+
+        plan.add_operation(Operation {
+            id: "iface-disable-dhcp".into(),
+            op_type: OperationType::RegistryEdit(RegistryEdit {
+                key: iface_key.clone(),
+                value: "EnableDHCP".into(),
+                current_data: json!(1),
+                new_data: json!(0),
+                data_type: "dword".into(),
+            }),
+            priority: Priority::High,
+            description: "Disable DHCP on interface".into(),
+            risk: Priority::Medium,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        for (id, value, data, desc) in [
+            (
+                "iface-ip",
+                "IPAddress",
+                json!([ip.trim()]),
+                "Set static IPAddress (MULTI_SZ)",
+            ),
+            (
+                "iface-mask",
+                "SubnetMask",
+                json!([mask.trim()]),
+                "Set SubnetMask (MULTI_SZ)",
+            ),
+        ] {
+            plan.add_operation(Operation {
+                id: id.into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: iface_key.clone(),
+                    value: value.into(),
+                    current_data: json!([]),
+                    new_data: data,
+                    data_type: "multi_sz".into(),
+                }),
+                priority: Priority::High,
+                description: desc.into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec!["iface-disable-dhcp".into()],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        if let Some(gw) = gateway.map(str::trim).filter(|s| !s.is_empty()) {
+            plan.add_operation(Operation {
+                id: "iface-gateway".into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: iface_key.clone(),
+                    value: "DefaultGateway".into(),
+                    current_data: json!([]),
+                    new_data: json!([gw]),
+                    data_type: "multi_sz".into(),
+                }),
+                priority: Priority::High,
+                description: "Set DefaultGateway (MULTI_SZ)".into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec!["iface-disable-dhcp".into()],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        if let Some(dns_servers) = dns.map(str::trim).filter(|s| !s.is_empty()) {
+            // NameServer is historically REG_SZ with space-separated IPs.
+            let normalized = dns_servers.replace(',', " ");
+            plan.add_operation(Operation {
+                id: "iface-dns".into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: iface_key,
+                    value: "NameServer".into(),
+                    current_data: json!(""),
+                    new_data: json!(normalized),
+                    data_type: "sz".into(),
+                }),
+                priority: Priority::Medium,
+                description: "Set NameServer (space-separated)".into(),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec!["iface-disable-dhcp".into()],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        Ok(plan)
+    }
+
     /// Generate a fix plan from a profile report (security, compliance, …)
     pub fn from_security_profile(&self, report: &ProfileReport) -> Result<FixPlan> {
         let profile_name = if report.profile_name.is_empty() {
@@ -1054,6 +1350,61 @@ mod tests {
         assert!(ids.contains(&"winrm-auto"));
         assert!(ids.contains(&"fw-winrm-http"));
         assert!(plan.metadata.review_required);
+    }
+
+    #[test]
+    fn test_windows_domain_leave_plan() {
+        let plan = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_domain_leave_plan("WORKGROUP")
+            .unwrap();
+        assert_eq!(plan.profile, "windows-domain-leave");
+        assert_eq!(plan.operations.len(), 4);
+        assert!(plan
+            .operations
+            .iter()
+            .any(|o| o.id == "tcpip-nv-domain-workgroup"));
+    }
+
+    #[test]
+    fn test_windows_timezone_plan() {
+        let plan = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_timezone_plan("UTC")
+            .unwrap();
+        assert_eq!(plan.profile, "windows-timezone");
+        assert_eq!(plan.operations.len(), 1);
+        match &plan.operations[0].op_type {
+            OperationType::RegistryEdit(re) => {
+                assert_eq!(re.value, "TimeZoneKeyName");
+                assert_eq!(re.new_data, json!("UTC"));
+            }
+            _ => panic!("expected RegistryEdit"),
+        }
+        assert!(PlanGenerator::new("/images/win.qcow2".into())
+            .windows_timezone_plan("")
+            .is_err());
+    }
+
+    #[test]
+    fn test_windows_static_ip_plan() {
+        let plan = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_static_ip_plan(
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "10.0.0.50",
+                "255.255.255.0",
+                Some("10.0.0.1"),
+                Some("1.1.1.1,8.8.8.8"),
+            )
+            .unwrap();
+        assert_eq!(plan.profile, "windows-static-ip");
+        assert!(plan.operations.len() >= 4);
+        let ids: Vec<_> = plan.operations.iter().map(|o| o.id.as_str()).collect();
+        assert!(ids.contains(&"iface-disable-dhcp"));
+        assert!(ids.contains(&"iface-ip"));
+        assert!(ids.contains(&"iface-gateway"));
+        assert!(ids.contains(&"iface-dns"));
+        assert!(PlanGenerator::new("/images/win.qcow2".into())
+            .windows_static_ip_plan("bad", "10.0.0.1", "255.255.255.0", None, None)
+            .is_err());
     }
 
     #[test]

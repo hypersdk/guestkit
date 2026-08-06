@@ -475,6 +475,90 @@ pub fn migrate_repair_command(
     Ok(())
 }
 
+/// Emit Cutover Passport: `guestkit passport emit`
+pub fn passport_emit_command(
+    image: &Path,
+    target: &str,
+    output: &Path,
+    bundle: bool,
+    content_hash: bool,
+    virtio_win: Option<&Path>,
+    live_url: Option<&str>,
+    sign_key: Option<&Path>,
+    verbose: bool,
+) -> Result<()> {
+    use crate::assurance::{emit_passport, write_passport_outputs, PassportEmitOptions};
+    use crate::core::ProgressReporter;
+
+    let progress = ProgressReporter::spinner("Emitting Cutover Passport...");
+    let opts = PassportEmitOptions {
+        verbose,
+        content_hash,
+        virtio_win_dir: virtio_win.map(|p| p.to_path_buf()),
+        live_url: live_url.map(|s| s.to_string()),
+        sign_key: sign_key.map(|p| p.to_path_buf()),
+    };
+    let (passport, plan) = emit_passport(image, target, &opts)?;
+    write_passport_outputs(&passport, &plan, output, bundle)?;
+    progress.finish_and_clear();
+
+    println!("{}", "Cutover Passport".bold().cyan());
+    println!(
+        "  boot={:.0}  migration={:.0}  readiness={:?}  hard_blocked={}",
+        passport.scores.boot,
+        passport.scores.migration,
+        passport.scores.readiness,
+        passport.hard_blocked
+    );
+    if passport.windows.is_windows {
+        println!(
+            "  windows_offline_ready={}  bitlocker_blocker={}  virtio_drivers={}",
+            passport.windows.windows_offline_ready,
+            passport.windows.bitlocker_blocker,
+            passport.windows.virtio_driver_count
+        );
+    }
+    if let Some(live) = &passport.live_attestation {
+        println!(
+            "  live_attestation={} score={:?}",
+            live.source, live.readiness_score
+        );
+    }
+    println!("  wrote {}", output.display());
+    println!("  suite: {} → {}", passport.suite.assurance, passport.suite.next_step);
+    Ok(())
+}
+
+/// Verify Cutover Passport: `guestkit passport verify`
+pub fn passport_verify_command(
+    passport_path: &Path,
+    fail_below: Option<f64>,
+    require_signature: bool,
+    public_key: Option<&str>,
+) -> Result<()> {
+    use crate::assurance::{verify_passport, CutoverPassport, PassportVerifyOptions};
+
+    let raw = std::fs::read_to_string(passport_path)
+        .with_context(|| format!("read passport {}", passport_path.display()))?;
+    let passport: CutoverPassport = serde_json::from_str(&raw)
+        .context("parse Cutover Passport JSON")?;
+    verify_passport(
+        &passport,
+        &PassportVerifyOptions {
+            fail_below,
+            require_signature,
+            public_key: public_key.map(|s| s.to_string()),
+        },
+    )?;
+    println!(
+        "{} passport OK (boot={:.0} migration={:.0})",
+        "✓".green(),
+        passport.scores.boot,
+        passport.scores.migration
+    );
+    Ok(())
+}
+
 /// Migration plan: `guestkit migrate-plan`
 #[cfg(feature = "agent")]
 pub fn migrate_plan_command(

@@ -111,7 +111,8 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "compliance" => Some(Box::new(ComplianceProfile)),
         "hardening" => Some(Box::new(HardeningProfile)),
         "windows-migration" | "windows_migration" => Some(Box::new(WindowsMigrationProfile)),
-        // windows-rdp / windows-hostname / windows-winrm / linux-ssh are
+        // windows-rdp / windows-hostname / windows-winrm / windows-domain-leave /
+        // windows-timezone / windows-static-ip / linux-ssh are
         // generate-only plan profiles (see PlanGenerator::* in plan/generator.rs)
         _ => None,
     }
@@ -153,6 +154,18 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         (
             "windows-winrm",
             "Generate-only: offline Windows WinRM (service Automatic + WINRM-HTTP-In-TCP)",
+        ),
+        (
+            "windows-domain-leave",
+            "Generate-only: offline domain→workgroup markers (--workgroup, default WORKGROUP)",
+        ),
+        (
+            "windows-timezone",
+            "Generate-only: offline TimeZoneKeyName (--timezone, e.g. UTC)",
+        ),
+        (
+            "windows-static-ip",
+            "Generate-only: offline static IPv4 (--interface-guid --ip --mask [--gateway] [--dns])",
         ),
         (
             "linux-ssh",
@@ -265,7 +278,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 10);
+        assert_eq!(profiles.len(), 13);
     }
 
     #[test]
@@ -282,6 +295,9 @@ mod tests {
         assert!(names.contains(&"windows-rdp"));
         assert!(names.contains(&"windows-hostname"));
         assert!(names.contains(&"windows-winrm"));
+        assert!(names.contains(&"windows-domain-leave"));
+        assert!(names.contains(&"windows-timezone"));
+        assert!(names.contains(&"windows-static-ip"));
         assert!(names.contains(&"linux-ssh"));
     }
 

@@ -243,6 +243,25 @@ pub async fn migration_plan_vm(
     Ok(Json(ApiResponse::ok(resp)))
 }
 
+pub async fn passport_vm(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(query): Query<DoctorQuery>,
+) -> ApiResult<Json<ApiResponse<JobEnqueueResponse>>> {
+    let vm = load_vm(&state, id).await?;
+    let resp = submit_vm_job(
+        &state,
+        &vm,
+        "guestkit.passport",
+        "guestkit.passport.v1",
+        serde_json::json!({
+            "target": query.target,
+        }),
+    )
+    .await?;
+    Ok(Json(ApiResponse::ok(resp)))
+}
+
 pub async fn repair_plan_vm(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,

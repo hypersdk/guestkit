@@ -115,6 +115,37 @@ guestkit migrate-repair win.qcow2 --target kvm \
 
 `DriverInject` resolve order: plan `host_dir` → `--virtio-win` / planner override → `$GUESTKIT_VIRTIO_WIN/<driver>` (common amd64 / 2k22 / w10 layouts). Build with `--features registry-write,agent` for offline inject.
 
+### `guestkit passport` — Cutover Passport (CI gate)
+
+Packages evidence digest, boot + migration scores, critical blockers, FixPlan digest, Windows offline flags (BitLocker hard-block), optional live agent attestation, and suite handoff (HyperSDK → hyper2kvm). This is the artifact ops/security accept before convert — not a virt-v2v replacement.
+
+```bash
+guestkit passport emit vm.qcow2 --target kvm -o passport.json --bundle
+guestkit passport verify passport.json --fail-below 80
+
+# Optional: live attestation via agent-proxy
+guestkit passport emit vm.qcow2 --target kvm -o p.json \
+  --live-url http://127.0.0.1:8765
+
+# Optional: Ed25519 sign (requires --features agent)
+guestkit passport emit vm.qcow2 --target kvm -o p.json --sign-key ./ed25519.seed
+guestkit passport verify p.json --fail-below 80 --require-signature
+```
+
+| Flag | Description |
+|------|-------------|
+| `emit --target` | Target hypervisor (required) |
+| `emit -o FILE` | Passport JSON path |
+| `emit --bundle` | Also write `<stem>.passport/` with companion FixPlan YAML |
+| `emit --content-hash` | SHA-256 of image bytes (slow) |
+| `emit --virtio-win DIR` | VirtIO tree for DriverInject planning |
+| `emit --live-url URL` | Agent-proxy base for `/doctor` live attestation |
+| `emit --sign-key FILE` | Ed25519 seed (32 bytes or 64 hex); needs `agent` feature |
+| `verify --fail-below N` | Fail if min(boot, migration) score is below N |
+| `verify --require-signature` | Require valid Ed25519 signature |
+
+Web console: dock **Passport** enqueues `POST /api/v1/vms/:id/passport` and downloads the JSON.
+
 ### `guestkit migrate-plan` — hypervisor-aware migration score
 
 Builds on the same evidence + boot report, then applies target-specific rules (VirtIO drivers, cloud-init, VMware Tools removal, BitLocker, SELinux relabel, etc.).

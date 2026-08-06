@@ -140,6 +140,34 @@ pub enum PlanAction {
         /// Hostname for windows-hostname profile
         #[arg(long)]
         hostname: Option<String>,
+
+        /// Workgroup for windows-domain-leave (default WORKGROUP)
+        #[arg(long, default_value = "WORKGROUP")]
+        workgroup: String,
+
+        /// Windows TimeZoneKeyName for windows-timezone (e.g. UTC, Pacific Standard Time)
+        #[arg(long)]
+        timezone: Option<String>,
+
+        /// Interface GUID for windows-static-ip (with or without braces)
+        #[arg(long)]
+        interface_guid: Option<String>,
+
+        /// IPv4 address for windows-static-ip
+        #[arg(long)]
+        ip: Option<String>,
+
+        /// IPv4 subnet mask for windows-static-ip
+        #[arg(long)]
+        mask: Option<String>,
+
+        /// IPv4 gateway for windows-static-ip
+        #[arg(long)]
+        gateway: Option<String>,
+
+        /// DNS servers for windows-static-ip (space or comma separated)
+        #[arg(long)]
+        dns: Option<String>,
     },
 
     /// Show plan statistics
@@ -209,6 +237,13 @@ impl PlanCommand {
                 key,
                 key_file,
                 hostname,
+                workgroup,
+                timezone,
+                interface_guid,
+                ip,
+                mask,
+                gateway,
+                dns,
             } => self.generate_plan(
                 vm_disk,
                 profile,
@@ -218,6 +253,13 @@ impl PlanCommand {
                 key.as_deref(),
                 key_file.as_deref(),
                 hostname.as_deref(),
+                workgroup,
+                timezone.as_deref(),
+                interface_guid.as_deref(),
+                ip.as_deref(),
+                mask.as_deref(),
+                gateway.as_deref(),
+                dns.as_deref(),
             ),
             PlanAction::Stats { plan_file } => self.show_stats(plan_file),
         }
@@ -465,6 +507,13 @@ impl PlanCommand {
         key: Option<&str>,
         key_file: Option<&str>,
         hostname: Option<&str>,
+        workgroup: &str,
+        timezone: Option<&str>,
+        interface_guid: Option<&str>,
+        ip: Option<&str>,
+        mask: Option<&str>,
+        gateway: Option<&str>,
+        dns: Option<&str>,
     ) -> Result<()> {
         println!(
             "Generating {} plan for {}...",
@@ -480,6 +529,9 @@ impl PlanCommand {
             "windows-rdp" | "windows_rdp" | "rdp" | "enable-rdp"
                 | "windows-winrm" | "windows_winrm" | "winrm" | "enable-winrm"
                 | "windows-hostname" | "windows_hostname" | "hostname" | "set-hostname"
+                | "windows-domain-leave" | "windows_domain_leave" | "domain-leave" | "unjoin"
+                | "windows-timezone" | "windows_timezone" | "timezone" | "set-timezone"
+                | "windows-static-ip" | "windows_static_ip" | "static-ip"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -497,6 +549,27 @@ impl PlanCommand {
                         anyhow::anyhow!("--hostname is required for windows-hostname profile")
                     })?;
                     generator.windows_hostname_plan(name)?
+                }
+                "windows-domain-leave" | "windows_domain_leave" | "domain-leave" | "unjoin" => {
+                    generator.windows_domain_leave_plan(workgroup)?
+                }
+                "windows-timezone" | "windows_timezone" | "timezone" | "set-timezone" => {
+                    let tz = timezone.ok_or_else(|| {
+                        anyhow::anyhow!("--timezone is required for windows-timezone profile")
+                    })?;
+                    generator.windows_timezone_plan(tz)?
+                }
+                "windows-static-ip" | "windows_static_ip" | "static-ip" => {
+                    let guid = interface_guid.ok_or_else(|| {
+                        anyhow::anyhow!("--interface-guid is required for windows-static-ip")
+                    })?;
+                    let addr = ip.ok_or_else(|| {
+                        anyhow::anyhow!("--ip is required for windows-static-ip")
+                    })?;
+                    let netmask = mask.ok_or_else(|| {
+                        anyhow::anyhow!("--mask is required for windows-static-ip")
+                    })?;
+                    generator.windows_static_ip_plan(guid, addr, netmask, gateway, dns)?
                 }
                 _ => unreachable!(),
             };

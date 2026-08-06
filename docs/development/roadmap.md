@@ -22,7 +22,8 @@ Phases 0–4 of the optional AI layer are complete — richer systemd/Windows ev
 
 | Area | Goal |
 |------|------|
-| **Day-0 plan/rescue** | Shipped in 0.3.18; further canned profiles / GRUB reinstall remain later |
+| **Cutover Passport** | Shipped in tree — CI gate + HyperSDK/hyper2kvm handoff; deepen signed enterprise workflows |
+| **Day-0 plan/rescue** | 0.3.18 + domain-leave / timezone / static-ip canned Windows profiles |
 | **Guest Control Fabric depth** | Broaden transport ladder coverage and reconciler telemetry for `airgap_live` fleets |
 | **Production Helm** | `values-prod.yaml`: PVCs for postgres/minio (currently `emptyDir`), pinned GHCR image tags, Ingress + TLS (cert-manager), backup/restore job for the image vault |
 | **Windows depth** | System-Reserved partition detection for multi-partition legacy layouts; richer driver/hotfix migration diagnostics |

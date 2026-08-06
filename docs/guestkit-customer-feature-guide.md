@@ -94,6 +94,10 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
   - **How:** CLI: `guestkit migrate-plan vm.vmdk --target proxmox` (add `-o json` to capture the checklist). Targets include kvm, proxmox, qemu, aws, azure, gcp, cloud, hyperv.
 - **CI boot gate** — --fail-below sets an exit-code threshold so pipelines block any image that scores under your bar, JSON still emitted. — _Golden images that regress never reach production._
   - **How:** CLI: `guestkit doctor img.qcow2 --target proxmox -o json --fail-below 80` exits non-zero when the score drops below your bar while still emitting JSON.
+- **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). HyperSDK exports; hyper2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
+  - **How:** CLI: `guestkit passport emit vm.qcow2 --target kvm -o passport.json` then `guestkit passport verify passport.json --fail-below 80`. Web dock: **Passport**.
+- **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
+  - **How:** CLI: `guestkit plan generate win.qcow2 -p windows-domain-leave`, `-p windows-timezone --timezone UTC`, `-p windows-static-ip --interface-guid … --ip … --mask …`.
 - **Policy-as-code** — guestkit policy check evaluates an expression DSL over evidence fields (e.g. bootability.score >= 80) or built-in CIS benchmarks. — _Codify sign-off criteria your whole team can trust._
   - **How:** CLI: `guestkit policy check vm.qcow2` evaluates the evidence DSL (e.g. `bootability.score >= 80`) or a built-in CIS benchmark.
 - **Forensic diff** — guestkit forensic-diff compares two snapshots for config drift, suspicious persistence, and ransomware indicators. — _Prove what changed between golden and drifted._
