@@ -11,6 +11,9 @@ static EXEC_JOBS: LazyLock<Mutex<HashMap<u64, ExecJob>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_PID: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(1000));
 static FS_FROZEN: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
+// Marker shadow created by a Windows guest-fsfreeze-freeze, torn down by the
+// matching thaw. See guest_fsfreeze_freeze/thaw below.
+static VSS_SHADOW_ID: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| Mutex::new(None));
 use std::cell::Cell;
 
 thread_local! {
@@ -483,7 +486,22 @@ fn guest_fsfreeze_status() -> Result<Value, String> {
 
 // QGA `guest-fsfreeze-freeze` returns the NUMBER of frozen filesystems as a bare
 // integer (wrapped by the caller as {"return": N}).
+//
+// Regression: this unconditionally shelled out to the Linux `fsfreeze`
+// binary, which doesn't exist on Windows — confirmed live, every quiesced
+// snapshot of a Windows guest failed with "fsfreeze: program not found".
+// Windows has no filesystem-level freeze syscall; the platform-correct
+// equivalent is a VSS shadow copy, which already exists for guestkit's own
+// orchestrated snapshot flow (snapshot::vss) — reuse it here instead of
+// re-implementing COM VSS from scratch.
 fn guest_fsfreeze_freeze() -> Result<Value, String> {
+    if cfg!(target_os = "windows") {
+        let result = crate::agent::snapshot::vss::create_marker_shadow("C:")
+            .map_err(|e| format!("VSS freeze failed: {e}"))?;
+        *VSS_SHADOW_ID.lock().map_err(|e| e.to_string())? = result.shadow_id;
+        *FS_FROZEN.lock().map_err(|e| e.to_string())? = true;
+        return Ok(json!(1));
+    }
     let status = Command::new("fsfreeze")
         .arg("-f")
         .arg("/")
@@ -497,8 +515,17 @@ fn guest_fsfreeze_freeze() -> Result<Value, String> {
 }
 
 // QGA `guest-fsfreeze-thaw` returns the NUMBER of thawed filesystems as a bare
-// integer.
+// integer. Mirrors guest_fsfreeze_freeze's Windows/Linux split.
 fn guest_fsfreeze_thaw() -> Result<Value, String> {
+    if cfg!(target_os = "windows") {
+        let shadow_id = VSS_SHADOW_ID.lock().map_err(|e| e.to_string())?.take();
+        if let Some(id) = shadow_id {
+            crate::agent::snapshot::vss::delete_marker_shadow(&id)
+                .map_err(|e| format!("VSS cleanup: {e}"))?;
+        }
+        *FS_FROZEN.lock().map_err(|e| e.to_string())? = false;
+        return Ok(json!(1));
+    }
     let status = Command::new("fsfreeze")
         .arg("-u")
         .arg("/")
