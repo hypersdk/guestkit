@@ -1,7 +1,7 @@
 # Offline Patch & Fix Preview Mode
 
 **Status:** Shipped (CLI generate / preview / apply / export)
-**Version:** 0.3.18+
+**Version:** 0.3.19+
 **Last Updated:** 2026-08-06
 
 ## Overview

@@ -4,6 +4,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
+- **v0.3.19** — Cutover Passport (`passport emit|verify`, BitLocker hard-block, live attestation, HyperSDK/hyper2kvm suite handoff); Windows day-0 `windows-domain-leave` / `windows-timezone` / `windows-static-ip`
 - **v0.3.18** — Day-0 plans (`windows-hostname`, `windows-winrm`, hardened `linux-ssh` + key inject), `Symlink`/`FileDelete` ops, Windows SAM blank rescue, `rescue --export-plan`, offline `DriverInject` via `GUESTKIT_VIRTIO_WIN` / `migrate-repair --virtio-win`, heuristic offline remediations + preview live-only tags
 - **Unreleased** — Deep offline inspection panels (partitions/UUIDs, kernels, drivers, systemd units, users, network/DNS/gateway, cloud-init, VM tools, firewall, SSH policy, machine-id); premium web-console UX layer (⌘K palette, cinematic scan/verdict, drag-to-analyze, coach-mark tour, verdict share-card, fleet compare); Windows fixes (Linux-check gating + legacy-BIOS BCD detection); security hardening (fail-closed JWT, DB password via Secret, transactional `delete_vm`, namespace-scoped KubeVirt RBAC); OVA/cloud-image ingest + multi-node CephFS vault. Windows analysis verified end-to-end on a real Win10 VMDK (37→97 boot score after fixes)
 - **v0.3.12** — Offline Windows registry writes in fix-plan apply (`registry-write` feature, libhivex FFI) — `RegistryEdit` operations now mutate SOFTWARE/SYSTEM/SAM/SECURITY hives with backup instead of being skipped
@@ -22,8 +23,8 @@ Phases 0–4 of the optional AI layer are complete — richer systemd/Windows ev
 
 | Area | Goal |
 |------|------|
-| **Cutover Passport** | Shipped in tree — CI gate + HyperSDK/hyper2kvm handoff; deepen signed enterprise workflows |
-| **Day-0 plan/rescue** | 0.3.18 + domain-leave / timezone / static-ip canned Windows profiles |
+| **Cutover Passport** | Shipped in 0.3.19 — deepen signed enterprise workflows |
+| **Day-0 plan/rescue** | Shipped through 0.3.19; GRUB reinstall remains later |
 | **Guest Control Fabric depth** | Broaden transport ladder coverage and reconciler telemetry for `airgap_live` fleets |
 | **Production Helm** | `values-prod.yaml`: PVCs for postgres/minio (currently `emptyDir`), pinned GHCR image tags, Ingress + TLS (cert-manager), backup/restore job for the image vault |
 | **Windows depth** | System-Reserved partition detection for multi-partition legacy layouts; richer driver/hotfix migration diagnostics |

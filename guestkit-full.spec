@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.18
+Version:        0.3.19
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -166,6 +166,10 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.19-1
+- Cutover Passport (emit/verify CI gate; HyperSDK/hyper2kvm handoff)
+- Windows day-0: domain-leave, timezone, static-ip plan profiles
+
 * Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.18-1
 - Day-0 windows-hostname / windows-winrm / hardened linux-ssh plans
 - Offline DriverInject via GUESTKIT_VIRTIO_WIN; migrate-repair --virtio-win
