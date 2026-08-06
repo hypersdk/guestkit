@@ -439,6 +439,36 @@ impl PlanCommand {
             vm_disk.bright_blue()
         );
 
+        // windows-rdp is a known-good offline registry plan — no inspect needed.
+        let profile_lc = profile.to_lowercase();
+        if matches!(
+            profile_lc.as_str(),
+            "windows-rdp" | "windows_rdp" | "rdp" | "enable-rdp"
+        ) {
+            if !Path::new(vm_disk).exists() {
+                anyhow::bail!("VM disk not found: {vm_disk}");
+            }
+            let plan = PlanGenerator::new(vm_disk.to_string()).windows_rdp_enable_plan();
+            let content = match format {
+                PlanFileFormat::Yaml => {
+                    serde_yaml::to_string(&plan).with_context(|| "Failed to serialize plan to YAML")?
+                }
+                PlanFileFormat::Json => serde_json::to_string_pretty(&plan)
+                    .with_context(|| "Failed to serialize plan to JSON")?,
+            };
+            fs::write(output, &content)
+                .with_context(|| format!("Failed to write plan to: {}", output))?;
+            println!("{} Plan generated: {}", "✓".green(), output.bright_blue());
+            println!("  Operations: {}", plan.operations.len());
+            println!("  Overall risk: {}", plan.overall_risk);
+            println!(
+                "  Apply with: guestkit plan apply {} --vm {} --yes --skip-backup",
+                output.bright_blue(),
+                vm_disk.bright_blue()
+            );
+            return Ok(());
+        }
+
         // Open VM with Guestfs
         let mut g = crate::guestfs::Guestfs::new()
             .map_err(|e| anyhow::anyhow!("Failed to create Guestfs handle: {}", e))?;

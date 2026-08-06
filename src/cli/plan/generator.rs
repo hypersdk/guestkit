@@ -4,6 +4,7 @@
 use super::types::*;
 use crate::cli::profiles::{Finding, ProfileReport, ReportSection, RiskLevel};
 use anyhow::Result;
+use serde_json::json;
 
 /// Generates fix plans from profile reports
 pub struct PlanGenerator {
@@ -14,6 +15,136 @@ impl PlanGenerator {
     /// Create a new plan generator
     pub fn new(vm_path: String) -> Self {
         Self { vm_path }
+    }
+
+    /// Offline Windows RDP enablement plan (matches Machina / hyper2kvm firstboot).
+    ///
+    /// Writes Terminal Server allow, NLA, TermService/UmRdpService Automatic,
+    /// port 3389, and stock inbound TCP/UDP firewall Active=TRUE rules — no
+    /// full-disk backup needed when applied with `plan apply --skip-backup`.
+    pub fn windows_rdp_enable_plan(&self) -> FixPlan {
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-rdp".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(
+            "Offline Windows Remote Desktop enablement (Terminal Server + NLA + \
+             TermService/UmRdpService + firewall)"
+                .into(),
+        );
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "rdp".into(),
+            "firewall".into(),
+            "offline".into(),
+        ];
+
+        let fw_tcp = "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=3389|\
+App=%SystemRoot%\\system32\\svchost.exe|Svc=termservice|\
+Name=@FirewallAPI.dll,-28753|Desc=@FirewallAPI.dll,-28756|\
+EmbedCtxt=@FirewallAPI.dll,-28752|";
+        let fw_udp = "v2.29|Action=Allow|Active=TRUE|Dir=In|Protocol=17|LPort=3389|\
+App=%SystemRoot%\\system32\\svchost.exe|Svc=termservice|\
+Name=@FirewallAPI.dll,-28752|Desc=@FirewallAPI.dll,-28756|\
+EmbedCtxt=@FirewallAPI.dll,-28752|";
+
+        let ops = [
+            (
+                "enable-rdp",
+                r"HKLM\SYSTEM\ControlSet001\Control\Terminal Server",
+                "fDenyTSConnections",
+                json!(1),
+                json!(0),
+                "dword",
+                Priority::High,
+                "Allow Remote Desktop connections",
+            ),
+            (
+                "rdp-nla",
+                r"HKLM\SYSTEM\ControlSet001\Control\Terminal Server\WinStations\RDP-Tcp",
+                "UserAuthentication",
+                json!(1),
+                json!(1),
+                "dword",
+                Priority::Low,
+                "Keep Network Level Authentication enabled",
+            ),
+            (
+                "rdp-port",
+                r"HKLM\SYSTEM\ControlSet001\Control\Terminal Server\WinStations\RDP-Tcp",
+                "PortNumber",
+                json!(3389),
+                json!(3389),
+                "dword",
+                Priority::Low,
+                "Ensure RDP listens on TCP 3389",
+            ),
+            (
+                "termservice-auto",
+                r"HKLM\SYSTEM\ControlSet001\Services\TermService",
+                "Start",
+                json!(3),
+                json!(2),
+                "dword",
+                Priority::High,
+                "Set TermService startup type to Automatic",
+            ),
+            (
+                "umrdpservice-auto",
+                r"HKLM\SYSTEM\ControlSet001\Services\UmRdpService",
+                "Start",
+                json!(3),
+                json!(2),
+                "dword",
+                Priority::High,
+                "Set UmRdpService startup type to Automatic",
+            ),
+            (
+                "fw-tcp",
+                r"HKLM\SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules",
+                "RemoteDesktop-UserMode-In-TCP",
+                json!(""),
+                json!(fw_tcp),
+                "sz",
+                Priority::High,
+                "Enable Remote Desktop firewall rule (TCP-In)",
+            ),
+            (
+                "fw-udp",
+                r"HKLM\SYSTEM\ControlSet001\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules",
+                "RemoteDesktop-UserMode-In-UDP",
+                json!(""),
+                json!(fw_udp),
+                "sz",
+                Priority::High,
+                "Enable Remote Desktop firewall rule (UDP-In)",
+            ),
+        ];
+
+        for (id, key, value, current, new_data, dtype, priority, desc) in ops {
+            plan.add_operation(Operation {
+                id: id.into(),
+                op_type: OperationType::RegistryEdit(RegistryEdit {
+                    key: key.into(),
+                    value: value.into(),
+                    current_data: current,
+                    new_data,
+                    data_type: dtype.into(),
+                }),
+                priority,
+                description: desc.into(),
+                risk: Priority::Low,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+        }
+
+        plan
     }
 
     /// Generate a fix plan from a security profile report
@@ -415,6 +546,21 @@ mod tests {
     fn test_generator_creation() {
         let generator = PlanGenerator::new("test.qcow2".to_string());
         assert_eq!(generator.vm_path, "test.qcow2");
+    }
+
+    #[test]
+    fn test_windows_rdp_enable_plan() {
+        let plan = PlanGenerator::new("/var/lib/libvirt/images/win.qcow2".into())
+            .windows_rdp_enable_plan();
+        assert_eq!(plan.profile, "windows-rdp");
+        assert_eq!(plan.operations.len(), 7);
+        let ids: Vec<_> = plan.operations.iter().map(|o| o.id.as_str()).collect();
+        assert!(ids.contains(&"enable-rdp"));
+        assert!(ids.contains(&"termservice-auto"));
+        assert!(ids.contains(&"umrdpservice-auto"));
+        assert!(ids.contains(&"fw-tcp"));
+        assert!(ids.contains(&"fw-udp"));
+        assert!(plan.post_apply.is_empty());
     }
 
     #[test]

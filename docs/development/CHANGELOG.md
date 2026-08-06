@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`plan apply --skip-backup`** — skip the mandatory full-image qcow2/raw copy
   before apply. For low-risk registry-only plans (enable RDP, etc.) a 30–40 GiB
   Windows golden backup is slower than the edit; default remains refuse-without-backup.
+- **`plan generate --profile windows-rdp`** — offline Windows Remote Desktop
+  enablement plan (fDenyTSConnections, NLA, TermService/UmRdpService Automatic,
+  port 3389, inbound TCP/UDP firewall Active=TRUE). Apply with `--skip-backup`.
 
 ### Fixed
 - **`plan apply` dirty NTFS** — run `ntfsfix` on NTFS devices before mount

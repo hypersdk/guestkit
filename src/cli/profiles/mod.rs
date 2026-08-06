@@ -111,6 +111,7 @@ pub fn get_profile(name: &str) -> Option<Box<dyn InspectionProfile>> {
         "compliance" => Some(Box::new(ComplianceProfile)),
         "hardening" => Some(Box::new(HardeningProfile)),
         "windows-migration" | "windows_migration" => Some(Box::new(WindowsMigrationProfile)),
+        // windows-rdp is a generate-only plan profile (see PlanGenerator::windows_rdp_enable_plan)
         _ => None,
     }
 }
@@ -139,6 +140,10 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
         (
             "windows-migration",
             "Windows migration readiness for VMware/KVM exits",
+        ),
+        (
+            "windows-rdp",
+            "Offline Windows Remote Desktop enablement (Terminal Server + firewall + TermService)",
         ),
     ]
 }
@@ -247,7 +252,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 6);
+        assert_eq!(profiles.len(), 7);
     }
 
     #[test]
@@ -260,6 +265,8 @@ mod tests {
         assert!(names.contains(&"performance"));
         assert!(names.contains(&"compliance"));
         assert!(names.contains(&"hardening"));
+        assert!(names.contains(&"windows-migration"));
+        assert!(names.contains(&"windows-rdp"));
     }
 
     #[test]
