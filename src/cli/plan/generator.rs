@@ -183,6 +183,9 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             .ok_or_else(|| anyhow::anyhow!("Could not detect ssh/sshd systemd unit"))?;
 
         let wants_link = format!("/etc/systemd/system/multi-user.target.wants/{unit}");
+        // Relative target from wants/ (4 levels under /) — absolute targets trip
+        // guestfs symlink-escape checks when the unit file is itself a symlink.
+        let relative = format!("../../../../{}", unit_src.trim_start_matches('/'));
         plan.add_operation(Operation {
             id: "ssh-wants-dir".into(),
             op_type: OperationType::DirectoryCreate(DirectoryCreate {
@@ -200,7 +203,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         plan.add_operation(Operation {
             id: "enable-ssh-unit".into(),
             op_type: OperationType::CommandExec(CommandExec {
-                command: format!("ln -sfn {unit_src} {wants_link}"),
+                command: format!("ln -sfn {relative} {wants_link}"),
                 expected_exit: 0,
                 timeout: Some(30),
                 interpreter: None,

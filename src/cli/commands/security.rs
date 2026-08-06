@@ -846,20 +846,14 @@ fn enable_ssh_offline(g: &mut crate::Guestfs, force: bool) -> Result<()> {
         g.mkdir_p(wants_dir)
             .map_err(|e| anyhow::anyhow!("mkdir_p {wants_dir}: {e}"))?;
         let link = format!("{wants_dir}/{unit}");
-        // Prefer shell ln: guestfs ln_sf rejects some absolute unit paths as
-        // "escapes guest root" when the unit file is itself a symlink.
+        // Absolute symlink targets often trip guestfs "escapes guest root" when the
+        // unit file is itself a symlink. Relative from wants/ is safe.
+        // wants = /etc/systemd/system/multi-user.target.wants → 4 levels under /
+        let relative = format!("../../../../{}", unit_src.trim_start_matches('/'));
         let _ = g.rm(&link);
-        match g.command(&["ln", "-sfn", &unit_src, &link]) {
-            Ok(_) => println!("  Enabled systemd unit: {unit} → {unit_src}"),
-            Err(e) => {
-                // Fallback: write a systemd drop-in enable via wants using relative target.
-                let rel = unit_src.rsplit('/').next().unwrap_or(unit.as_str());
-                g.command(&["ln", "-sfn", rel, &link]).map_err(|e2| {
-                    anyhow::anyhow!("ln -sfn failed ({e}); relative fallback also failed: {e2}")
-                })?;
-                println!("  Enabled systemd unit: {unit} → {rel} (relative)");
-            }
-        }
+        g.ln_sf(&relative, &link)
+            .map_err(|e| anyhow::anyhow!("ln_sf {relative} -> {link}: {e}"))?;
+        println!("  Enabled systemd unit: {unit} → {relative} (from {unit_src})");
     }
 
     let mut dropin = String::from("# Managed by guestkit rescue enable-ssh\nPubkeyAuthentication yes\n");
