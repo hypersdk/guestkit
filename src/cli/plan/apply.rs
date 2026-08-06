@@ -11,13 +11,27 @@ use std::path::Path;
 pub struct PlanApplicator {
     vm_path: String,
     dry_run: bool,
+    /// When true, skip the full-image `std::fs::copy` backup. Intended for
+    /// low-risk registry-only plans (e.g. enable RDP) where copying a 30–40 GiB
+    /// Windows golden is slower and riskier than the edit itself.
+    skip_backup: bool,
 }
 
 #[cfg(not(target_os = "windows"))]
 impl PlanApplicator {
-    /// Create a new plan applicator
+    /// Create a new plan applicator (full-image backup before apply).
     pub fn new(vm_path: String, dry_run: bool) -> Self {
-        Self { vm_path, dry_run }
+        Self {
+            vm_path,
+            dry_run,
+            skip_backup: false,
+        }
+    }
+
+    /// Skip the full-disk backup taken before apply.
+    pub fn skip_backup(mut self, skip: bool) -> Self {
+        self.skip_backup = skip;
+        self
     }
 
     /// Apply a fix plan
@@ -47,22 +61,30 @@ impl PlanApplicator {
             });
         }
 
-        // Create backup - refuse to proceed without a successful backup
-        let backup_path = match self.create_backup() {
-            Ok(p) => {
-                eprintln!("Backup created: {}", p);
-                Some(p)
-            }
-            Err(e) => {
-                return Ok(ApplyResult {
-                    success: false,
-                    operations_applied: 0,
-                    operations_failed: 1,
-                    operations_skipped: plan.operations.len(),
-                    message: format!("Failed to create backup, refusing to apply plan: {}", e),
-                    outcomes: Vec::new(),
-                    rollback_dir: None,
-                });
+        // Create backup — or skip when the caller opts in (registry-only / CI).
+        let backup_path = if self.skip_backup {
+            eprintln!("Backup skipped (--skip-backup)");
+            None
+        } else {
+            match self.create_backup() {
+                Ok(p) => {
+                    eprintln!("Backup created: {}", p);
+                    Some(p)
+                }
+                Err(e) => {
+                    return Ok(ApplyResult {
+                        success: false,
+                        operations_applied: 0,
+                        operations_failed: 1,
+                        operations_skipped: plan.operations.len(),
+                        message: format!(
+                            "Failed to create backup, refusing to apply plan: {}",
+                            e
+                        ),
+                        outcomes: Vec::new(),
+                        rollback_dir: None,
+                    });
+                }
             }
         };
 
@@ -117,6 +139,14 @@ impl PlanApplicator {
                 let mut mounts: Vec<_> = mountpoints.into_iter().collect();
                 mounts.sort_by_key(|(mount, _)| mount.len());
                 for (mount, device) in &mounts {
+                    // Force-off / fast-startup leaves NTFS dirty; ntfs-3g then
+                    // mounts RO and hive download/upload silently fails (0 ops).
+                    // Same repair path as agent-inject --windows.
+                    if g.vfs_type(device).ok().as_deref() == Some("ntfs") {
+                        if let Err(e) = g.ntfsfix(device, false) {
+                            log::warn!("ntfsfix {device} before plan apply: {e}");
+                        }
+                    }
                     if let Err(e) = g.mount(device, mount) {
                         log::warn!("Failed to mount {} at {}: {}", device, mount, e);
                     }
@@ -711,6 +741,14 @@ mod tests {
         let applicator = PlanApplicator::new("test.qcow2".to_string(), true);
         assert_eq!(applicator.vm_path, "test.qcow2");
         assert!(applicator.dry_run);
+        assert!(!applicator.skip_backup);
+    }
+
+    #[test]
+    fn test_applicator_skip_backup_builder() {
+        let applicator = PlanApplicator::new("vm.qcow2".to_string(), false).skip_backup(true);
+        assert!(applicator.skip_backup);
+        assert!(!applicator.dry_run);
     }
 
     #[test]

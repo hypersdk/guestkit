@@ -82,6 +82,14 @@ pub enum PlanAction {
         /// Backup directory
         #[arg(short, long)]
         backup: Option<String>,
+
+        /// Skip the full-image qcow2/raw copy taken before apply.
+        ///
+        /// Use for low-risk plans (e.g. registry-only enable-RDP) where a
+        /// 30–40 GiB Windows golden backup is slower than the edit. Default
+        /// remains to refuse apply without a successful full-image backup.
+        #[arg(long)]
+        skip_backup: bool,
     },
 
     /// Rollback to a previous state
@@ -161,12 +169,14 @@ impl PlanCommand {
                 yes,
                 interactive,
                 backup,
+                skip_backup,
             } => self.apply_plan(
                 plan_file,
                 vm.as_deref(),
                 *dry_run,
                 *yes,
                 *interactive,
+                *skip_backup,
                 backup.as_deref(),
             ),
             PlanAction::Rollback {
@@ -297,6 +307,7 @@ impl PlanCommand {
         dry_run: bool,
         yes: bool,
         interactive: bool,
+        skip_backup: bool,
         _backup_dir: Option<&str>,
     ) -> Result<()> {
         let plan = self.load_plan(plan_file)?;
@@ -335,7 +346,8 @@ impl PlanCommand {
         }
 
         // Apply
-        let applicator = PlanApplicator::new(vm_path.to_string(), dry_run);
+        let applicator =
+            PlanApplicator::new(vm_path.to_string(), dry_run).skip_backup(skip_backup);
 
         if dry_run {
             println!();
@@ -344,6 +356,11 @@ impl PlanCommand {
                 "DRY RUN MODE - No changes will be made".yellow().bold()
             );
             println!();
+        } else if skip_backup {
+            println!(
+                "{}",
+                "Skipping full-image backup (--skip-backup)".yellow()
+            );
         }
 
         let result = applicator.apply(&plan)?;

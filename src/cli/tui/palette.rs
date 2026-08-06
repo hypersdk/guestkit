@@ -104,7 +104,7 @@ pub const COMMANDS: &[PaletteCommand] = &[
     },
     PaletteCommand {
         name: "apply plan",
-        description: "Apply fix plan to disk (creates backup first)",
+        description: "Apply fix plan to disk (optional --skip-backup)",
     },
     PaletteCommand {
         name: "apply plan dry-run",

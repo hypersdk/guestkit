@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-08-06
+
+### Added
+- **`plan apply --skip-backup`** — skip the mandatory full-image qcow2/raw copy
+  before apply. For low-risk registry-only plans (enable RDP, etc.) a 30–40 GiB
+  Windows golden backup is slower than the edit; default remains refuse-without-backup.
+
+### Fixed
+- **`plan apply` dirty NTFS** — run `ntfsfix` on NTFS devices before mount
+  (same path as `agent-inject --windows`) so force-off / fast-startup disks
+  mount read-write and hive edits are not silently skipped (0 operations).
+
 ## [0.3.15] - 2026-07-29
 
 ### Added
