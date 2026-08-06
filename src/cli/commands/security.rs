@@ -838,24 +838,7 @@ fn enable_ssh_offline(g: &mut crate::Guestfs, force: bool) -> Result<()> {
         anyhow::bail!("OpenSSH server is not installed (sshd binary missing)");
     }
 
-    let (unit, unit_src) = detect_ssh_unit(g)
-        .ok_or_else(|| anyhow::anyhow!("Could not detect ssh/sshd systemd unit"))?;
-
-    if g.is_dir("/etc/systemd/system").unwrap_or(false) {
-        let wants_dir = "/etc/systemd/system/multi-user.target.wants";
-        g.mkdir_p(wants_dir)
-            .map_err(|e| anyhow::anyhow!("mkdir_p {wants_dir}: {e}"))?;
-        let link = format!("{wants_dir}/{unit}");
-        // Absolute symlink targets often trip guestfs "escapes guest root" when the
-        // unit file is itself a symlink. Relative from wants/ is safe.
-        // wants = /etc/systemd/system/multi-user.target.wants → 4 levels under /
-        let relative = format!("../../../../{}", unit_src.trim_start_matches('/'));
-        let _ = g.rm(&link);
-        g.ln_sf(&relative, &link)
-            .map_err(|e| anyhow::anyhow!("ln_sf {relative} -> {link}: {e}"))?;
-        println!("  Enabled systemd unit: {unit} → {relative} (from {unit_src})");
-    }
-
+    // Drop-in first — always useful and does not require systemd wants symlinks.
     let mut dropin = String::from("# Managed by guestkit rescue enable-ssh\nPubkeyAuthentication yes\n");
     if force {
         dropin.push_str("PermitRootLogin yes\n");
@@ -878,6 +861,66 @@ fn enable_ssh_offline(g: &mut crate::Guestfs, force: bool) -> Result<()> {
         g.write("/etc/ssh/sshd_config", text.as_bytes())
             .map_err(|e| anyhow::anyhow!("write sshd_config: {e}"))?;
         println!("  Updated /etc/ssh/sshd_config");
+    }
+
+    // Ubuntu cloud images disable sshd via this flag file.
+    if g.exists("/etc/ssh/sshd_not_to_be_run").unwrap_or(false) {
+        let _ = g.rm("/etc/ssh/sshd_not_to_be_run");
+        println!("  Removed /etc/ssh/sshd_not_to_be_run");
+    }
+
+    let Some((unit, unit_src)) = detect_ssh_unit(g) else {
+        println!("  Warning: could not detect ssh/sshd unit — drop-in still applied");
+        return Ok(());
+    };
+
+    // Prefer a real directory for wants (not a symlink that guestfs treats as escape).
+    let wants_candidates = [
+        "/etc/systemd/system/multi-user.target.wants",
+        "/lib/systemd/system/multi-user.target.wants",
+        "/usr/lib/systemd/system/multi-user.target.wants",
+    ];
+    let mut enabled = false;
+    for wants_dir in wants_candidates {
+        let is_link = g.is_symlink(wants_dir).unwrap_or(false);
+        let is_dir = g.is_dir(wants_dir).unwrap_or(false);
+        if is_link {
+            continue;
+        }
+        if !is_dir {
+            if wants_dir.starts_with("/etc/") {
+                let _ = g.mkdir_p(wants_dir);
+            } else {
+                continue;
+            }
+        }
+        if !g.is_dir(wants_dir).unwrap_or(false) {
+            continue;
+        }
+        let link = format!("{wants_dir}/{unit}");
+        if g.exists(&link).unwrap_or(false) || g.is_symlink(&link).unwrap_or(false) {
+            println!("  Unit already present: {link}");
+            enabled = true;
+            break;
+        }
+        let relative = format!("../../../../{}", unit_src.trim_start_matches('/'));
+        let _ = g.rm(&link);
+        match g.ln_sf(&relative, &link) {
+            Ok(()) => {
+                println!("  Enabled systemd unit: {unit} → {relative} (in {wants_dir})");
+                enabled = true;
+                break;
+            }
+            Err(e) => {
+                println!("  Warning: ln_sf into {wants_dir} failed: {e}");
+            }
+        }
+    }
+    if !enabled {
+        println!(
+            "  Warning: could not create systemd wants symlink for {unit}; \
+             sshd drop-in is in place — enable the unit inside the guest if sshd does not start"
+        );
     }
 
     Ok(())
