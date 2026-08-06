@@ -147,6 +147,94 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         plan
     }
 
+    /// Offline Linux SSH enablement plan (inspect-based).
+    ///
+    /// Enables the distro ssh/sshd systemd unit via wants symlink and writes
+    /// an sshd_config.d drop-in with PubkeyAuthentication yes.
+    pub fn linux_ssh_enable_plan(
+        &self,
+        g: &mut crate::Guestfs,
+    ) -> Result<FixPlan> {
+        let mut plan = FixPlan::new(self.vm_path.clone(), "linux-ssh".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(
+            "Offline Linux SSH enablement (systemd unit wants symlink + sshd drop-in)"
+                .into(),
+        );
+        plan.metadata.tags = vec![
+            "linux".into(),
+            "ssh".into(),
+            "offline".into(),
+            "guestkit".into(),
+        ];
+
+        if !(g.is_file("/usr/sbin/sshd").unwrap_or(false)
+            || g.is_file("/usr/bin/sshd").unwrap_or(false))
+        {
+            anyhow::bail!("OpenSSH server is not installed (sshd binary missing)");
+        }
+
+        let (unit, unit_src) = crate::cli::commands::security::detect_ssh_unit(g)
+            .ok_or_else(|| anyhow::anyhow!("Could not detect ssh/sshd systemd unit"))?;
+
+        let wants_link = format!("/etc/systemd/system/multi-user.target.wants/{unit}");
+        plan.add_operation(Operation {
+            id: "ssh-wants-dir".into(),
+            op_type: OperationType::DirectoryCreate(DirectoryCreate {
+                path: "/etc/systemd/system/multi-user.target.wants".into(),
+                mode: Some("0755".into()),
+            }),
+            priority: Priority::High,
+            description: "Ensure multi-user.target.wants exists".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+        plan.add_operation(Operation {
+            id: "enable-ssh-unit".into(),
+            op_type: OperationType::CommandExec(CommandExec {
+                command: format!("ln -sfn {unit_src} {wants_link}"),
+                expected_exit: 0,
+                timeout: Some(30),
+                interpreter: None,
+            }),
+            priority: Priority::High,
+            description: format!("Enable systemd unit {unit}"),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec!["ssh-wants-dir".into()],
+            validation: None,
+            undo: None,
+        });
+
+        plan.add_operation(Operation {
+            id: "sshd-dropin".into(),
+            op_type: OperationType::FileWrite(FileWrite {
+                path: "/etc/ssh/sshd_config.d/99-guestkit.conf".into(),
+                content: "# Managed by guestkit plan linux-ssh\nPubkeyAuthentication yes\n"
+                    .into(),
+                mode: Some("0644".into()),
+            }),
+            priority: Priority::High,
+            description: "Write sshd_config.d drop-in (PubkeyAuthentication yes)".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        plan.estimated_duration = Self::estimate_duration(plan.operations.len());
+        Ok(plan)
+    }
+
     /// Generate a fix plan from a security profile report
     pub fn from_security_profile(&self, report: &ProfileReport) -> Result<FixPlan> {
         let mut plan = FixPlan::new(self.vm_path.clone(), "security".to_string());
@@ -561,6 +649,15 @@ mod tests {
         assert!(ids.contains(&"fw-tcp"));
         assert!(ids.contains(&"fw-udp"));
         assert!(plan.post_apply.is_empty());
+    }
+
+    #[test]
+    fn test_linux_ssh_plan_shape_without_guest() {
+        // Shape constants used by Machina / docs — unit ids must stay stable.
+        let expected = ["ssh-wants-dir", "enable-ssh-unit", "sshd-dropin"];
+        assert_eq!(expected.len(), 3);
+        assert!(expected.contains(&"enable-ssh-unit"));
+        assert!(expected.contains(&"sshd-dropin"));
     }
 
     #[test]

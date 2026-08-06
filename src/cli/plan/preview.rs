@@ -101,6 +101,10 @@ impl PlanPreview {
                     }
                 }
             }
+            OperationType::FileWrite(fw) => {
+                println!("  Write: {}", fw.path.bright_blue());
+                println!("  Bytes: {}", fw.content.len());
+            }
             OperationType::PackageInstall(pi) => {
                 println!("  Packages: {}", pi.packages.join(", ").bright_cyan());
                 if let Some(size) = &pi.estimated_size {

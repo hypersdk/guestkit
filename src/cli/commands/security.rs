@@ -387,6 +387,9 @@ pub fn rescue_command(
     force: bool,
     backup: bool,
     verbose: bool,
+    key: Option<String>,
+    key_file: Option<PathBuf>,
+    hostname: Option<String>,
 ) -> Result<()> {
     use crate::core::ProgressReporter;
     use crate::Guestfs;
@@ -560,6 +563,17 @@ pub fn rescue_command(
                         new_lines.push(format!("{}:{}:18000:0:99999:7:::", username, hash));
                     }
 
+                    if !user_found && !force {
+                        progress.abandon_with_message(format!(
+                            "User '{}' not found in /etc/shadow",
+                            username
+                        ));
+                        anyhow::bail!(
+                            "User '{}' not found in /etc/shadow (pass --force to add if in passwd)",
+                            username
+                        );
+                    }
+
                     // Write updated shadow file (ensure trailing newline)
                     let temp_file = tempfile::NamedTempFile::new()?;
                     std::fs::write(temp_file.path(), format!("{}\n", new_lines.join("\n")))?;
@@ -577,6 +591,9 @@ pub fn rescue_command(
                     progress.abandon_with_message("Failed to read /etc/shadow");
                     anyhow::bail!("Could not parse shadow file");
                 }
+            } else {
+                progress.abandon_with_message("Failed to read /etc/shadow");
+                anyhow::bail!("Could not read /etc/shadow");
             }
         }
 
@@ -682,53 +699,62 @@ pub fn rescue_command(
 
         "enable-ssh" => {
             progress.set_message("Enabling SSH access...");
+            enable_ssh_offline(&mut g, force)?;
+            progress.finish_and_clear();
+            println!("✓ SSH enabled offline (unit + sshd drop-in)");
+        }
 
-            // Check if SSH is installed
-            if g.is_file("/usr/sbin/sshd").unwrap_or(false)
-                || g.is_file("/usr/bin/sshd").unwrap_or(false)
-            {
-                // Enable sshd service (systemd)
-                if g.is_dir("/etc/systemd/system").unwrap_or(false) {
-                    let _service_link = "/etc/systemd/system/multi-user.target.wants/sshd.service";
-
-                    // Create symlink to enable service (simplified)
-                    println!("Note: SSH service enablement requires systemctl in guest");
-                    println!("      You may need to manually enable: systemctl enable sshd");
-                }
-
-                // Ensure SSH allows root login if requested
-                if force {
-                    if let Ok(content) = g.read_file("/etc/ssh/sshd_config") {
-                        if let Ok(mut text) = String::from_utf8(content) {
-                            if !text.contains("PermitRootLogin yes") {
-                                text.push_str("\nPermitRootLogin yes\n");
-
-                                let temp_file = tempfile::NamedTempFile::new()?;
-                                std::fs::write(temp_file.path(), text)?;
-                                g.upload(
-                                    temp_file.path().to_str().ok_or_else(|| {
-                                        anyhow::anyhow!("Temp file path contains invalid UTF-8")
-                                    })?,
-                                    "/etc/ssh/sshd_config",
-                                )?;
-
-                                println!("✓ Enabled root SSH login");
-                            }
-                        }
-                    }
-                }
-
-                progress.finish_and_clear();
-                println!("✓ SSH configuration updated");
-            } else {
-                progress.abandon_with_message("SSH server not found");
-                anyhow::bail!("OpenSSH server is not installed");
+        "inject-ssh-key" | "ssh-inject-key" => {
+            let username = user
+                .ok_or_else(|| anyhow::anyhow!("Username required (use --user)"))?;
+            if !rescue_validate_username(&username) {
+                anyhow::bail!(
+                    "Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'"
+                );
             }
+            let pubkey = if let Some(k) = key {
+                k
+            } else if let Some(path) = key_file {
+                std::fs::read_to_string(&path)
+                    .with_context(|| format!("Failed to read key file {}", path.display()))?
+            } else {
+                anyhow::bail!("SSH public key required (use --key or --key-file)");
+            };
+            let pubkey = pubkey.trim();
+            if pubkey.is_empty()
+                || !(pubkey.starts_with("ssh-")
+                    || pubkey.starts_with("ecdsa-")
+                    || pubkey.starts_with("sk-"))
+            {
+                anyhow::bail!("Key does not look like an OpenSSH public key");
+            }
+            progress.set_message(format!("Injecting SSH key for '{}'...", username));
+            inject_ssh_key_offline(&mut g, &username, pubkey)?;
+            progress.finish_and_clear();
+            println!("✓ SSH public key injected for user '{}'", username);
+        }
+
+        "set-hostname" => {
+            let name = hostname
+                .ok_or_else(|| anyhow::anyhow!("Hostname required (use --hostname)"))?;
+            if !rescue_validate_hostname(&name) {
+                anyhow::bail!(
+                    "Invalid hostname '{}': use DNS labels (a-z, 0-9, hyphen), max 253 chars",
+                    name
+                );
+            }
+            progress.set_message(format!("Setting hostname to '{}'...", name));
+            set_hostname_offline(&mut g, &name)?;
+            progress.finish_and_clear();
+            println!("✓ Hostname set to '{}'", name);
         }
 
         _ => {
             progress.abandon_with_message(format!("Unknown operation: {}", operation));
-            anyhow::bail!("Invalid rescue operation. Available: reset-password, fix-fstab, fix-grub, enable-ssh");
+            anyhow::bail!(
+                "Invalid rescue operation. Available: reset-password, fix-fstab, fix-grub, \
+                 enable-ssh, inject-ssh-key, set-hostname"
+            );
         }
     }
 
@@ -737,6 +763,206 @@ pub fn rescue_command(
     }
     if let Err(e) = g.shutdown() {
         log::warn!("Cleanup: shutdown failed: {}", e);
+    }
+    Ok(())
+}
+
+fn rescue_validate_username(username: &str) -> bool {
+    !username.is_empty()
+        && !username.starts_with('-')
+        && username.len() <= 32
+        && username
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.')
+}
+
+fn rescue_validate_hostname(name: &str) -> bool {
+    if name.is_empty() || name.len() > 253 || name.starts_with('-') || name.ends_with('-') {
+        return false;
+    }
+    name.split('.').all(|label| {
+        !label.is_empty()
+            && label.len() <= 63
+            && !label.starts_with('-')
+            && !label.ends_with('-')
+            && label
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    })
+}
+
+/// Detect OpenSSH unit name and on-disk unit path (Debian `ssh` vs RHEL `sshd`).
+pub fn detect_ssh_unit(g: &mut crate::Guestfs) -> Option<(String, String)> {
+    let candidates = [
+        (
+            "ssh.service",
+            [
+                "/lib/systemd/system/ssh.service",
+                "/usr/lib/systemd/system/ssh.service",
+            ],
+        ),
+        (
+            "sshd.service",
+            [
+                "/lib/systemd/system/sshd.service",
+                "/usr/lib/systemd/system/sshd.service",
+            ],
+        ),
+    ];
+    for (unit, paths) in candidates {
+        for path in paths {
+            if g.is_file(path).unwrap_or(false) {
+                return Some((unit.to_string(), path.to_string()));
+            }
+        }
+    }
+    // Fall back to unit name even if path is a symlink we couldn't resolve.
+    if g.is_file("/usr/sbin/sshd").unwrap_or(false) || g.is_file("/usr/bin/sshd").unwrap_or(false) {
+        if g.exists("/etc/debian_version").unwrap_or(false) {
+            return Some((
+                "ssh.service".into(),
+                "/lib/systemd/system/ssh.service".into(),
+            ));
+        }
+        return Some((
+            "sshd.service".into(),
+            "/usr/lib/systemd/system/sshd.service".into(),
+        ));
+    }
+    None
+}
+
+fn enable_ssh_offline(g: &mut crate::Guestfs, force: bool) -> Result<()> {
+    if !(g.is_file("/usr/sbin/sshd").unwrap_or(false) || g.is_file("/usr/bin/sshd").unwrap_or(false))
+    {
+        anyhow::bail!("OpenSSH server is not installed (sshd binary missing)");
+    }
+
+    let (unit, unit_src) = detect_ssh_unit(g)
+        .ok_or_else(|| anyhow::anyhow!("Could not detect ssh/sshd systemd unit"))?;
+
+    if g.is_dir("/etc/systemd/system").unwrap_or(false) {
+        let wants_dir = "/etc/systemd/system/multi-user.target.wants";
+        g.mkdir_p(wants_dir)
+            .map_err(|e| anyhow::anyhow!("mkdir_p {wants_dir}: {e}"))?;
+        let link = format!("{wants_dir}/{unit}");
+        // Remove stale link then create.
+        let _ = g.rm(&link);
+        g.ln_sf(&unit_src, &link)
+            .map_err(|e| anyhow::anyhow!("ln_sf {unit_src} -> {link}: {e}"))?;
+        println!("  Enabled systemd unit: {unit} → {unit_src}");
+    }
+
+    let mut dropin = String::from("# Managed by guestkit rescue enable-ssh\nPubkeyAuthentication yes\n");
+    if force {
+        dropin.push_str("PermitRootLogin yes\n");
+    }
+
+    if g.is_dir("/etc/ssh/sshd_config.d").unwrap_or(false)
+        || g.mkdir_p("/etc/ssh/sshd_config.d").is_ok()
+    {
+        g.write("/etc/ssh/sshd_config.d/99-guestkit.conf", dropin.as_bytes())
+            .map_err(|e| anyhow::anyhow!("write sshd drop-in: {e}"))?;
+        println!("  Wrote /etc/ssh/sshd_config.d/99-guestkit.conf");
+    } else if let Ok(content) = g.read_file("/etc/ssh/sshd_config") {
+        let mut text = String::from_utf8_lossy(&content).into_owned();
+        if !text.contains("PubkeyAuthentication yes") {
+            text.push_str("\nPubkeyAuthentication yes\n");
+        }
+        if force && !text.contains("PermitRootLogin yes") {
+            text.push_str("PermitRootLogin yes\n");
+        }
+        g.write("/etc/ssh/sshd_config", text.as_bytes())
+            .map_err(|e| anyhow::anyhow!("write sshd_config: {e}"))?;
+        println!("  Updated /etc/ssh/sshd_config");
+    }
+
+    Ok(())
+}
+
+fn inject_ssh_key_offline(g: &mut crate::Guestfs, username: &str, pubkey: &str) -> Result<()> {
+    let home = if username == "root" {
+        "/root".to_string()
+    } else if let Ok(content) = g.read_file("/etc/passwd") {
+        String::from_utf8_lossy(&content)
+            .lines()
+            .find_map(|line| {
+                let fields: Vec<&str> = line.split(':').collect();
+                if fields.len() >= 6 && fields[0] == username {
+                    Some(fields[5].to_string())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| format!("/home/{username}"))
+    } else {
+        format!("/home/{username}")
+    };
+
+    // Ensure the user exists in passwd (avoid writing into a missing home ownership mess).
+    let user_exists = g
+        .read_file("/etc/passwd")
+        .ok()
+        .and_then(|c| String::from_utf8(c).ok())
+        .map(|text| text.lines().any(|l| l.starts_with(&format!("{username}:"))))
+        .unwrap_or(false);
+    if !user_exists {
+        anyhow::bail!("User '{username}' not found in /etc/passwd");
+    }
+
+    let ssh_dir = format!("{home}/.ssh");
+    let auth_keys = format!("{ssh_dir}/authorized_keys");
+    g.mkdir_p(&ssh_dir)
+        .map_err(|e| anyhow::anyhow!("mkdir_p {ssh_dir}: {e}"))?;
+    let _ = g.chmod(0o700, &ssh_dir);
+
+    let mut existing = String::new();
+    if let Ok(content) = g.read_file(&auth_keys) {
+        existing = String::from_utf8_lossy(&content).into_owned();
+    }
+    let already = existing.lines().any(|l| l.trim() == pubkey.trim());
+    if !already {
+        if !existing.is_empty() && !existing.ends_with('\n') {
+            existing.push('\n');
+        }
+        existing.push_str(pubkey.trim());
+        existing.push('\n');
+        g.write(&auth_keys, existing.as_bytes())
+            .map_err(|e| anyhow::anyhow!("write {auth_keys}: {e}"))?;
+    }
+    let _ = g.chmod(0o600, &auth_keys);
+    // Best-effort ownership (may fail if user numeric id unknown in appliance).
+    let _ = g.command(&["chown", "-R", username, &ssh_dir]);
+    Ok(())
+}
+
+fn set_hostname_offline(g: &mut crate::Guestfs, name: &str) -> Result<()> {
+    g.write("/etc/hostname", format!("{name}\n").as_bytes())
+        .map_err(|e| anyhow::anyhow!("write /etc/hostname: {e}"))?;
+
+    if let Ok(content) = g.read_file("/etc/hosts") {
+        let text = String::from_utf8_lossy(&content);
+        let mut out = Vec::new();
+        let mut patched = false;
+        for line in text.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("127.0.1.1") || trimmed.starts_with("10.0.2.3") {
+                // Preserve any aliases after the first two fields.
+                let rest: Vec<&str> = trimmed.split_whitespace().collect();
+                if rest.len() >= 1 {
+                    let ip = rest[0];
+                    out.push(format!("{ip}\t{name}"));
+                    patched = true;
+                    continue;
+                }
+            }
+            out.push(line.to_string());
+        }
+        if !patched {
+            out.push(format!("127.0.1.1\t{name}"));
+        }
+        g.write("/etc/hosts", format!("{}\n", out.join("\n")).as_bytes())
+            .map_err(|e| anyhow::anyhow!("write /etc/hosts: {e}"))?;
     }
     Ok(())
 }

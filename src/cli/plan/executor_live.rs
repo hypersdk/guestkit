@@ -261,6 +261,7 @@ impl LivePlanExecutor {
     fn capture_before(&self, op: &Operation) -> Option<String> {
         match &op.op_type {
             OperationType::FileEdit(fe) => file_digest(&self.resolve(&fe.file)),
+            OperationType::FileWrite(fw) => file_digest(&self.resolve(&fw.path)),
             OperationType::FileCopy(fc) => file_digest(&self.resolve(&fc.destination)),
             OperationType::FilePermissions(fp) => {
                 let path = self.resolve(&fp.path);
@@ -370,6 +371,36 @@ impl LivePlanExecutor {
                     }
                 }
                 fs::write(&path, lines.join("\n") + "\n")?;
+                Ok(true)
+            }
+            OperationType::FileWrite(fw) => {
+                let path = self.resolve(&fw.path);
+                if path.exists() {
+                    self.snapshot_file(&path, rollback_dir)?;
+                }
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                let content = if fw.content.ends_with('\n') {
+                    fw.content.clone()
+                } else {
+                    format!("{}\n", fw.content)
+                };
+                fs::write(&path, content)?;
+                if let Some(ref mode_str) = fw.mode {
+                    let mode = u32::from_str_radix(mode_str, 8).unwrap_or(0o644);
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let mut perms = fs::metadata(&path)?.permissions();
+                        perms.set_mode(mode);
+                        fs::set_permissions(&path, perms)?;
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = mode;
+                    }
+                }
                 Ok(true)
             }
             OperationType::CommandExec(ce) => {
@@ -675,6 +706,7 @@ fn describe_change(op: &Operation) -> String {
         OperationType::FileEdit(fe) => {
             format!("edit {} ({} change(s))", fe.file, fe.changes.len())
         }
+        OperationType::FileWrite(fw) => format!("write {}", fw.path),
         OperationType::CommandExec(ce) => format!("run: {}", ce.command),
         OperationType::FilePermissions(fp) => format!("chmod {} {}", fp.mode, fp.path),
         OperationType::DirectoryCreate(dc) => format!("mkdir -p {}", dc.path),
@@ -703,6 +735,7 @@ fn describe_rollback(op: &Operation) -> String {
         Some(UndoInfo::Data(_)) => "apply recorded undo data".to_string(),
         None => match &op.op_type {
             OperationType::FileEdit(_)
+            | OperationType::FileWrite(_)
             | OperationType::FileCopy(_)
             | OperationType::FilePermissions(_)
             | OperationType::SelinuxMode(_) => {
@@ -717,6 +750,7 @@ fn describe_rollback(op: &Operation) -> String {
 fn backup_path_for(op: &Operation, rollback_dir: &Path) -> Option<String> {
     let file = match &op.op_type {
         OperationType::FileEdit(fe) => Some(&fe.file),
+        OperationType::FileWrite(fw) => Some(&fw.path),
         OperationType::FileCopy(fc) => Some(&fc.destination),
         OperationType::FilePermissions(fp) => Some(&fp.path),
         OperationType::SelinuxMode(sm) => Some(&sm.file),

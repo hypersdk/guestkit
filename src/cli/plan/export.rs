@@ -87,6 +87,29 @@ impl PlanExporter {
                     )?;
                 }
             }
+            OperationType::FileWrite(fw) => {
+                let parent = std::path::Path::new(&fw.path)
+                    .parent()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or("/");
+                if parent != "/" && !parent.is_empty() {
+                    writeln!(script, "mkdir -p {}", shell_escape(parent))?;
+                }
+                writeln!(
+                    script,
+                    "cat > {} << 'GUESTKIT_EOF'\n{}\nGUESTKIT_EOF",
+                    shell_escape(&fw.path),
+                    fw.content.trim_end_matches('\n')
+                )?;
+                if let Some(mode) = &fw.mode {
+                    writeln!(
+                        script,
+                        "chmod {} {}",
+                        shell_escape(mode),
+                        shell_escape(&fw.path)
+                    )?;
+                }
+            }
             OperationType::PackageInstall(pi) => {
                 let escaped_pkgs: Vec<String> =
                     pi.packages.iter().map(|p| shell_escape(p)).collect();
@@ -273,6 +296,20 @@ impl PlanExporter {
                     writeln!(playbook, "        regexp: '^{}$'", change.before)?;
                     writeln!(playbook, "        line: '{}'", change.after)?;
                     writeln!(playbook, "        backup: yes")?;
+                }
+            }
+            OperationType::FileWrite(fw) => {
+                writeln!(playbook, "      copy:")?;
+                writeln!(playbook, "        dest: {}", fw.path)?;
+                writeln!(
+                    playbook,
+                    "        content: |"
+                )?;
+                for line in fw.content.lines() {
+                    writeln!(playbook, "          {}", line)?;
+                }
+                if let Some(mode) = &fw.mode {
+                    writeln!(playbook, "        mode: '{}'", mode)?;
                 }
             }
             OperationType::PackageInstall(pi) => {

@@ -125,6 +125,23 @@ pub enum OperationType {
 
     /// Inject a Windows driver (pnputil live; virtio-win extraction offline)
     DriverInject(DriverInject),
+
+    /// Write (create or overwrite) a whole file
+    FileWrite(FileWrite),
+}
+
+/// Create or overwrite a file with exact contents (offline-friendly).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileWrite {
+    /// Guest path
+    pub path: String,
+
+    /// Full file contents
+    pub content: String,
+
+    /// Optional octal mode (e.g. "0644")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
 }
 
 /// Windows driver injection. Kept as a first-class operation (rather than

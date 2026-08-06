@@ -814,11 +814,11 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Rescue operation (reset-password, fix-fstab, fix-grub, enable-ssh)
+        /// Rescue operation (reset-password, fix-fstab, fix-grub, enable-ssh, inject-ssh-key, set-hostname)
         #[arg(short = 'o', long)]
         operation: String,
 
-        /// Username (for reset-password)
+        /// Username (for reset-password / inject-ssh-key)
         #[arg(short = 'u', long)]
         user: Option<String>,
 
@@ -833,6 +833,18 @@ enum Commands {
         /// Backup files before modification
         #[arg(short = 'b', long)]
         backup: bool,
+
+        /// SSH public key string (for inject-ssh-key)
+        #[arg(long)]
+        key: Option<String>,
+
+        /// Path to SSH public key file (for inject-ssh-key)
+        #[arg(long)]
+        key_file: Option<PathBuf>,
+
+        /// Hostname (for set-hostname)
+        #[arg(long)]
+        hostname: Option<String>,
     },
 
     /// Optimize disk image (cleanup, compact)
@@ -2712,6 +2724,9 @@ pub fn run() -> anyhow::Result<()> {
             password,
             force,
             backup,
+            key,
+            key_file,
+            hostname,
         } => {
             rescue_command(
                 &image,
@@ -2721,6 +2736,9 @@ pub fn run() -> anyhow::Result<()> {
                 force,
                 backup,
                 cli.verbose,
+                key,
+                key_file,
+                hostname,
             )?;
         }
 

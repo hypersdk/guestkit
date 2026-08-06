@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.17] - 2026-08-06
+
+### Added
+- **`plan generate --profile linux-ssh`** — offline Linux SSH enablement
+  (systemd `ssh`/`sshd` wants symlink + `/etc/ssh/sshd_config.d/99-guestkit.conf`
+  with `PubkeyAuthentication yes`). Apply with `--skip-backup`.
+- **`plan` `FileWrite` operation** — create/overwrite a guest file offline.
+- **`rescue inject-ssh-key`** — `--user` + `--key` / `--key-file` appends to
+  `authorized_keys`.
+- **`rescue set-hostname`** — `--hostname` writes `/etc/hostname` and patches
+  `/etc/hosts`.
+
+### Fixed
+- **`rescue enable-ssh`** — actually creates the systemd wants symlink and
+  writes an sshd drop-in (previously only printed a manual `systemctl` note).
+
 ## [0.3.16] - 2026-08-06
 
 ### Added

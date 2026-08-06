@@ -496,17 +496,24 @@ impl PlanCommand {
             }
         }
 
-        // Get the profile and run inspection
-        let inspection_profile = crate::cli::profiles::get_profile(profile)
-            .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
-
-        let report = inspection_profile
-            .inspect(&mut g, root)
-            .map_err(|e| anyhow::anyhow!("Profile inspection failed: {}", e))?;
-
-        // Generate plan from report
         let generator = PlanGenerator::new(vm_disk.to_string());
-        let plan = generator.from_security_profile(&report)?;
+
+        // linux-ssh builds an inspect-based enable plan (not a finding→op profile).
+        let plan = if matches!(
+            profile_lc.as_str(),
+            "linux-ssh" | "linux_ssh" | "enable-ssh"
+        ) {
+            generator.linux_ssh_enable_plan(&mut g)?
+        } else {
+            let inspection_profile = crate::cli::profiles::get_profile(profile)
+                .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
+
+            let report = inspection_profile
+                .inspect(&mut g, root)
+                .map_err(|e| anyhow::anyhow!("Profile inspection failed: {}", e))?;
+
+            generator.from_security_profile(&report)?
+        };
 
         // Serialize to output format
         let content = match format {
@@ -525,6 +532,16 @@ impl PlanCommand {
         println!("{} Plan generated: {}", "✓".green(), output.bright_blue());
         println!("  Operations: {}", plan.operations.len());
         println!("  Overall risk: {}", plan.overall_risk);
+        if matches!(
+            profile_lc.as_str(),
+            "linux-ssh" | "linux_ssh" | "enable-ssh"
+        ) {
+            println!(
+                "  Apply with: guestkit plan apply {} --vm {} --yes --skip-backup",
+                output.bright_blue(),
+                vm_disk.bright_blue()
+            );
+        }
 
         Ok(())
     }

@@ -145,6 +145,10 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
             "windows-rdp",
             "Offline Windows Remote Desktop enablement (Terminal Server + firewall + TermService)",
         ),
+        (
+            "linux-ssh",
+            "Offline Linux SSH enablement (systemd unit + sshd PubkeyAuthentication drop-in)",
+        ),
     ]
 }
 
@@ -252,7 +256,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 7);
+        assert_eq!(profiles.len(), 8);
     }
 
     #[test]
@@ -267,6 +271,7 @@ mod tests {
         assert!(names.contains(&"hardening"));
         assert!(names.contains(&"windows-migration"));
         assert!(names.contains(&"windows-rdp"));
+        assert!(names.contains(&"linux-ssh"));
     }
 
     #[test]

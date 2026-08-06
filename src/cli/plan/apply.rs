@@ -260,6 +260,28 @@ impl PlanApplicator {
 
                 Ok(true)
             }
+            OperationType::FileWrite(fw) => {
+                let parent = std::path::Path::new(&fw.path)
+                    .parent()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or("/");
+                if parent != "/" && parent != "" {
+                    g.mkdir_p(parent)
+                        .map_err(|e| anyhow::anyhow!("mkdir_p failed for {}: {}", parent, e))?;
+                }
+                let content = if fw.content.ends_with('\n') {
+                    fw.content.clone()
+                } else {
+                    format!("{}\n", fw.content)
+                };
+                g.write(&fw.path, content.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("write failed for {}: {}", fw.path, e))?;
+                if let Some(ref mode_str) = fw.mode {
+                    let mode = i32::from_str_radix(mode_str, 8).unwrap_or(0o644);
+                    let _ = g.chmod(mode, &fw.path);
+                }
+                Ok(true)
+            }
             OperationType::CommandExec(ce) => {
                 // Parse command string properly, handling quoted arguments
                 let args = Self::parse_shell_words(&ce.command)?;
