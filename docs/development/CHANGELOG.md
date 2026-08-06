@@ -21,7 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`rescue enable-ssh`** — actually creates the systemd wants symlink and
-  writes an sshd drop-in (previously only printed a manual `systemctl` note).
+  writes an sshd drop-in (previously only printed a manual `systemctl` note);
+  write drop-in before unit enable; prefer real wants dirs / relative
+  symlinks / `ln -sfn` when guestfs `ln_sf` rejects unit paths.
+- **Windows `guest-fsfreeze-freeze`/`thaw`** — route to VSS marker shadows
+  instead of the Linux `fsfreeze` binary so KubeVirt quiesced snapshots work
+  on Windows guests.
 
 ## [0.3.16] - 2026-08-06
 

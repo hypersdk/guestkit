@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.15
+Version:        0.3.17
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -166,6 +166,11 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.17-1
+- Offline Linux SSH rescue + linux-ssh plan profile
+- Windows RDP plan profile, plan apply --skip-backup, NTFS ntfsfix before apply
+- Windows guest-fsfreeze-freeze/thaw routes to VSS (KubeVirt freeze)
+
 * Wed Jul 29 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.15-1
 - Sync spec Version with Cargo.toml (was stuck at 0.3.9, breaking RPM builds
   since 0.3.10 — Source0 tarball name never matched the built tarball)
