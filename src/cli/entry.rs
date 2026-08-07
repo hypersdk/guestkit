@@ -814,7 +814,7 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Rescue operation (reset-password, fix-fstab, check-grub, enable-ssh,
+        /// Rescue operation (reset-password, fix-fstab, check-grub, fix-grub, enable-ssh,
         /// inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone)
         #[arg(short = 'o', long)]
         operation: String,

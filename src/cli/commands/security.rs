@@ -814,12 +814,7 @@ pub fn rescue_command(
             }
         }
 
-        "check-grub" | "fix-grub" => {
-            if operation == "fix-grub" {
-                println!(
-                    "Note: 'fix-grub' is diagnose-only; prefer -o check-grub (full grub-install needs chroot)."
-                );
-            }
+        "check-grub" => {
             progress.set_message("Checking GRUB configuration...");
 
             // Check common GRUB config locations
@@ -865,10 +860,51 @@ pub fn rescue_command(
                     );
                 }
                 println!();
-                println!("Note: Full GRUB repair requires running grub-install/grub-mkconfig");
-                println!("      This requires chroot into the guest system");
+                println!("Repair: guestkit rescue <disk> -o fix-grub");
+                println!("         (add --force to also attempt grub-install onto NBD)");
             } else {
                 println!("⚠ No GRUB configuration found");
+                println!("  Try: guestkit rescue <disk> -o fix-grub");
+            }
+        }
+
+        "fix-grub" => {
+            if is_windows {
+                anyhow::bail!("fix-grub is Linux-only");
+            }
+            progress.set_message("Repairing GRUB (chroot mkconfig / first-boot fallback)...");
+            let report = g
+                .repair_grub(force)
+                .map_err(|e| anyhow::anyhow!("GRUB repair failed: {e}"))?;
+            progress.finish_and_clear();
+
+            if report.mkconfig_ok {
+                println!(
+                    "✓ Regenerated GRUB config via {}",
+                    report.mkconfig_tool.as_deref().unwrap_or("grub-mkconfig")
+                );
+            }
+            if report.install_ok {
+                println!(
+                    "✓ grub-install onto {}",
+                    report.install_device.as_deref().unwrap_or("disk")
+                );
+            } else if force && report.install_device.is_none() && !report.install_ok {
+                println!(
+                    "Note: --force requested grub-install but no NBD/block device was available"
+                );
+            }
+            if report.firstboot_staged {
+                println!("✓ Staged guestkit-firstboot-grub.service (runs on next boot)");
+            }
+            for bak in &report.backups {
+                println!("  backup: {bak}");
+            }
+            for note in &report.notes {
+                println!("  · {note}");
+            }
+            if !report.mkconfig_ok && !report.firstboot_staged {
+                anyhow::bail!("GRUB repair did not complete");
             }
         }
 
@@ -963,7 +999,7 @@ pub fn rescue_command(
             progress.abandon_with_message(format!("Unknown operation: {}", operation));
             anyhow::bail!(
                 "Invalid rescue operation. Available: reset-password, fix-fstab, check-grub, \
-                 enable-ssh, inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone"
+                 fix-grub, enable-ssh, inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone"
             );
         }
     }
@@ -1489,9 +1525,69 @@ fn build_rescue_export_plan(
             });
             Ok(plan)
         }
-        "check-grub" | "fix-grub" => anyhow::bail!(
-            "check-grub is diagnose-only and cannot be exported as an apply plan"
+        "check-grub" => anyhow::bail!(
+            "check-grub is diagnose-only and cannot be exported as an apply plan (use fix-grub)"
         ),
+        "fix-grub" => {
+            if is_windows {
+                anyhow::bail!("fix-grub export is Linux-only");
+            }
+            use crate::guestfs::grub_repair::{
+                firstboot_grub_script, firstboot_grub_unit, FIRSTBOOT_SCRIPT, FIRSTBOOT_UNIT,
+                FIRSTBOOT_WANTS,
+            };
+            let mut plan = FixPlan::new(vm.to_string(), "rescue-fix-grub".into());
+            plan.metadata.tags = vec!["rescue".into(), "grub".into()];
+            plan.metadata.description = Some(
+                "Export stages first-boot regenerate only; live `rescue -o fix-grub` also tries chroot grub-mkconfig (and grub-install with --force)."
+                    .into(),
+            );
+            plan.add_operation(Operation {
+                id: "grub-firstboot-script".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: FIRSTBOOT_SCRIPT.into(),
+                    content: firstboot_grub_script(),
+                    mode: Some("0755".into()),
+                }),
+                priority: Priority::High,
+                description: "Stage first-boot GRUB regenerate script".into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec![],
+                validation: None,
+                undo: None,
+            });
+            plan.add_operation(Operation {
+                id: "grub-firstboot-unit".into(),
+                op_type: OperationType::FileWrite(FileWrite {
+                    path: FIRSTBOOT_UNIT.into(),
+                    content: firstboot_grub_unit(),
+                    mode: Some("0644".into()),
+                }),
+                priority: Priority::High,
+                description: "Stage guestkit-firstboot-grub.service".into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec!["grub-firstboot-script".into()],
+                validation: None,
+                undo: None,
+            });
+            plan.add_operation(Operation {
+                id: "grub-firstboot-enable".into(),
+                op_type: OperationType::Symlink(Symlink {
+                    target: "../guestkit-firstboot-grub.service".into(),
+                    link_path: FIRSTBOOT_WANTS.into(),
+                }),
+                priority: Priority::High,
+                description: "Enable first-boot GRUB unit (WantedBy multi-user)".into(),
+                risk: Priority::Medium,
+                reversible: true,
+                depends_on: vec!["grub-firstboot-unit".into()],
+                validation: None,
+                undo: None,
+            });
+            Ok(plan)
+        }
         other => anyhow::bail!("Cannot export plan for rescue operation '{other}'"),
     }
 }

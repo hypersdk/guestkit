@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Offline GRUB repair (`fix-grub`)** — `rescue -o fix-grub` bind-mounts
+  proc/sys/dev and runs chroot `grub2-mkconfig` / `grub-mkconfig` /
+  `update-grub`; `--force` also attempts `grub-install` onto the NBD device;
+  if chroot mkconfig fails, stages `guestkit-firstboot-grub.service`.
+  `--export-plan` writes the first-boot FileWrite/Symlink ops. `check-grub`
+  remains diagnose-only.
 - **System Reserved / ESP detection** — offline Windows evidence probes
   non-OS NTFS/FAT volumes for `bootmgr` + BCD (legacy System Reserved) or
   EFI Microsoft Boot (ESP). Surfaces on `windows.system_reserved`, promotes
@@ -51,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Offline heuristic remediations + linux-grub** — `systemctl enable/disable`
   → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor/sshd enable offline;
   ufw default deny FileEdit; day-0 `linux-grub` (`--grub-timeout` /
-  `--grub-cmdline`) for `/etc/default/grub` (full grub-install still parked).
+  `--grub-cmdline`) for `/etc/default/grub`.
 - **Offline PackageInstall staging** — when `GUESTKIT_PACKAGE_CACHE` (or
   `host_cache`) holds matching `.rpm`/`.deb`, offline `plan apply` stages
   packages + a first-boot systemd oneshot instead of skipping; live install

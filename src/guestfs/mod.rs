@@ -33,6 +33,7 @@ pub mod fstab;
 pub mod fstab_rewriter;
 pub mod glob_ops;
 pub mod grub_ops;
+pub mod grub_repair;
 pub mod handle;
 #[cfg(feature = "registry-write")]
 pub mod hivex_ffi;

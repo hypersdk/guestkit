@@ -40,7 +40,7 @@ These profiles skip inspect→finding heuristics and emit a fixed offline-safe p
 | `windows-dhcp` | `--interface-guid` | Enable DHCP (`EnableDHCP=1`) on that interface |
 | `windows-dns` | `--interface-guid` `--dns` | Set `NameServer` (space/comma-separated) on that interface |
 | `linux-hostname` | `--hostname NAME` | `/etc/hostname` + `/etc/hosts` patch |
-| `linux-grub` | `--grub-timeout N`, `--grub-cmdline TOKEN` | Offline `/etc/default/grub` (not grub-install) |
+| `linux-grub` | `--grub-timeout N`, `--grub-cmdline TOKEN` | Offline `/etc/default/grub`; pair with `rescue -o fix-grub` for mkconfig/install |
 | `linux-ssh` | optional `--user` + `--key` / `--key-file` | Remove `sshd_not_to_be_run`, wants `Symlink`, sshd drop-in, optional `authorized_keys` |
 
 ```bash
@@ -97,7 +97,8 @@ Linux offline rescue (`guestkit rescue -o …`) for the same day-0 jobs without 
 | `set-timezone` | `--timezone` Windows `TimeZoneKeyName` |
 | `reset-password` | `--user`, `--password` (Linux `/etc/shadow`; Windows: SAM blank, or blank+RunOnce `net user` when `--password` is set) |
 | `fix-fstab` | `--backup` |
-| `check-grub` | diagnose-only (`fix-grub` alias) |
+| `check-grub` | diagnose-only |
+| `fix-grub` | chroot `grub-mkconfig`/`update-grub` (+ `grub-install` with `--force`); first-boot oneshot fallback; `--export-plan` stages first-boot unit |
 
 Export a reviewable plan instead of applying:
 

@@ -219,6 +219,37 @@ impl Guestfs {
             "Failed to update GRUB configuration".to_string(),
         ))
     }
+
+    /// Offline GRUB repair: chroot `grub-mkconfig`/`update-grub` with bind mounts,
+    /// optional `grub-install` onto the NBD/block device when `install` is true,
+    /// and first-boot oneshot fallback when chroot mkconfig is unavailable.
+    pub fn repair_grub(
+        &mut self,
+        install: bool,
+    ) -> Result<crate::guestfs::grub_repair::GrubRepairReport> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: repair_grub install={}", install);
+        }
+
+        let root = std::path::PathBuf::from(self.find_root_mountpoint()?);
+        let install_dev = if install {
+            let _ = self.setup_nbd_if_needed();
+            self.nbd_device
+                .as_ref()
+                .map(|nbd| nbd.device_path().to_path_buf())
+                .or_else(|| {
+                    self.drives
+                        .first()
+                        .and_then(|d| crate::guestfs::grub_repair::infer_install_device(&d.path))
+                })
+        } else {
+            None
+        };
+
+        crate::guestfs::grub_repair::repair_grub(&root, install_dev.as_deref(), self.verbose)
+    }
 }
 
 #[cfg(test)]
