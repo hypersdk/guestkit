@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.20] - 2026-08-07
+
 ### Added
+- **DevOps runbooks** — `docs/devops/` Passport CI gate, offline repair worker,
+  air-gap packages/VirtIO, fleet analyze, cutover weekend, failure triage,
+  cloud disk sources (S3/GCS/Azure), forensic IR, SBOM/inventory CI.
+- **GitHub Wiki** — operator cheat sheets (Passport, day-0, packages, env,
+  TUI, KubeVirt/GCF/agent) linked from README / docs INDEX.
 - **`GUESTKIT_PACKAGE_MIRROR`** — HTTP fallback via `curl`/`wget` when host
   `dnf`/`apt-get` is missing or fails (comma-separated bases; optional
   `{name}`/`{ext}` templates). Helps macOS hosts stage PackageInstall.

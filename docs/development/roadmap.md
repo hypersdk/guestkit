@@ -4,6 +4,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
+- **v0.3.20** — DevOps runbooks + wiki; package mirror; Windows AES SAM / domain-leave RunOnce; UEFI fix-grub; host package fetch; worker profiles
 - **v0.3.19** — Cutover Passport (`passport emit|verify`, BitLocker hard-block, live attestation, HyperSDK/hyper2kvm suite handoff); Windows day-0 `windows-domain-leave` / `windows-timezone` / `windows-static-ip`
 - **v0.3.18** — Day-0 plans (`windows-hostname`, `windows-winrm`, hardened `linux-ssh` + key inject), `Symlink`/`FileDelete` ops, Windows SAM blank rescue, `rescue --export-plan`, offline `DriverInject` via `GUESTKIT_VIRTIO_WIN` / `migrate-repair --virtio-win`, heuristic offline remediations + preview live-only tags
 - **Unreleased** — Offline remediations closed out:
