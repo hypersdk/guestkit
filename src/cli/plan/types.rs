@@ -290,7 +290,8 @@ pub struct PackageInstall {
     pub estimated_size: Option<String>,
 
     /// Optional host directory of `.rpm` / `.deb` for offline first-boot staging
-    /// (also reads `GUESTKIT_PACKAGE_CACHE`).
+    /// (also reads `GUESTKIT_PACKAGE_CACHE`; with `GUESTKIT_PACKAGE_FETCH=1`,
+    /// missing packages are downloaded into the cache via host `dnf`/`apt-get`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_cache: Option<String>,
 }

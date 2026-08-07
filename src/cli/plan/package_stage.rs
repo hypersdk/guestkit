@@ -5,11 +5,18 @@
 //! files exist under `GUESTKIT_PACKAGE_CACHE` (or `PackageInstall.host_cache`),
 //! offline apply copies them into the guest and enables a oneshot systemd unit
 //! that installs on first boot.
+//!
+//! With `GUESTKIT_PACKAGE_FETCH=1`, missing packages are downloaded on the host
+//! (`dnf download` / `yumdownloader` / `apt-get download`) into the cache (or
+//! `~/.cache/guestkit/packages`) before staging.
 
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
 
+use crate::cli::plan::package_fetch::{
+    detect_package_kind, ensure_fetch_cache_dirs, fetch_enabled, fetch_packages,
+};
 use crate::cli::plan::types::PackageInstall;
 
 const PENDING_DIR: &str = "/var/cache/guestkit/pending";
@@ -84,15 +91,20 @@ pub fn find_package_file(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
     candidates.into_iter().next()
 }
 
-/// True when every package has a matching file in the cache.
+/// True when packages can be staged offline (cache hit, or host fetch enabled).
 pub fn can_stage_offline(pi: &PackageInstall) -> bool {
     let dirs = package_cache_dirs(pi);
     if dirs.is_empty() {
-        return false;
+        return fetch_enabled();
     }
-    pi.packages
+    if pi
+        .packages
         .iter()
         .all(|pkg| find_package_file(pkg, &dirs).is_some())
+    {
+        return true;
+    }
+    fetch_enabled()
 }
 
 /// Stage packages + first-boot installer into the offline guest.
@@ -100,14 +112,38 @@ pub fn stage_packages_offline(
     g: &mut crate::guestfs::Guestfs,
     pi: &PackageInstall,
 ) -> Result<bool> {
-    let dirs = package_cache_dirs(pi);
+    let mut dirs = ensure_fetch_cache_dirs(package_cache_dirs(pi));
     if dirs.is_empty() {
         eprintln!(
             "Warning: PackageInstall ({}) skipped offline — set GUESTKIT_PACKAGE_CACHE \
-             or host_cache to a directory of .rpm/.deb files for first-boot staging",
+             or host_cache to a directory of .rpm/.deb files, or GUESTKIT_PACKAGE_FETCH=1 \
+             to download on the host",
             pi.packages.join(", ")
         );
         return Ok(false);
+    }
+
+    if fetch_enabled() {
+        let missing: Vec<String> = pi
+            .packages
+            .iter()
+            .filter(|pkg| find_package_file(pkg, &dirs).is_none())
+            .cloned()
+            .collect();
+        if !missing.is_empty() {
+            let dest = dirs[0].clone();
+            let kind = detect_package_kind(g);
+            eprintln!(
+                "GUESTKIT_PACKAGE_FETCH: downloading {} package(s) ({kind:?}) into {}",
+                missing.len(),
+                dest.display()
+            );
+            let _ = fetch_packages(&missing, &dest, kind)?;
+            dirs = ensure_fetch_cache_dirs(package_cache_dirs(pi));
+            if dirs.is_empty() {
+                dirs.push(dest);
+            }
+        }
     }
 
     let mut staged: Vec<String> = Vec::new();
@@ -249,7 +285,11 @@ WantedBy=multi-user.target
 pub fn stage_preview_note(pi: &PackageInstall) -> String {
     let dirs = package_cache_dirs(pi);
     if dirs.is_empty() {
-        return "offline: live-only (set GUESTKIT_PACKAGE_CACHE for first-boot staging)".into();
+        if fetch_enabled() {
+            return "offline: will host-fetch (GUESTKIT_PACKAGE_FETCH) then stage for first-boot"
+                .into();
+        }
+        return "offline: live-only (set GUESTKIT_PACKAGE_CACHE or GUESTKIT_PACKAGE_FETCH=1)".into();
     }
     let mut ok = 0usize;
     let mut miss = Vec::new();
@@ -263,9 +303,21 @@ pub fn stage_preview_note(pi: &PackageInstall) -> String {
     if miss.is_empty() && ok > 0 {
         format!("offline: will stage {ok} package(s) for first-boot install")
     } else if ok > 0 {
+        if fetch_enabled() {
+            format!(
+                "offline: stage {ok}; host-fetch missing: {}",
+                miss.join(", ")
+            )
+        } else {
+            format!(
+                "offline: stage {ok} package(s); missing: {}",
+                miss.join(", ")
+            )
+        }
+    } else if fetch_enabled() {
         format!(
-            "offline: stage {ok} package(s); missing: {}",
-            miss.join(", ")
+            "offline: will host-fetch then stage ({})",
+            pi.packages.join(", ")
         )
     } else {
         format!(
@@ -306,6 +358,7 @@ mod tests {
         let dir = tempdir().unwrap();
         fs::write(dir.path().join("fail2ban-1.rpm"), b"x").unwrap();
         std::env::set_var("GUESTKIT_PACKAGE_CACHE", dir.path());
+        std::env::remove_var("GUESTKIT_PACKAGE_FETCH");
         let pi = PackageInstall {
             packages: vec!["fail2ban".into()],
             estimated_size: None,
@@ -318,6 +371,9 @@ mod tests {
             host_cache: None,
         };
         assert!(!can_stage_offline(&pi2));
+        std::env::set_var("GUESTKIT_PACKAGE_FETCH", "1");
+        assert!(can_stage_offline(&pi2));
         std::env::remove_var("GUESTKIT_PACKAGE_CACHE");
+        std::env::remove_var("GUESTKIT_PACKAGE_FETCH");
     }
 }

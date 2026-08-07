@@ -16,6 +16,7 @@ pub mod command;
 pub mod export;
 #[cfg(not(target_os = "windows"))]
 pub mod generator;
+pub mod package_fetch;
 pub mod package_stage;
 pub mod preview;
 pub mod types;

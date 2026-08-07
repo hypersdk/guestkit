@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PackageInstall host fetch** — with `GUESTKIT_PACKAGE_FETCH=1`, offline
+  `plan apply` downloads missing `.rpm`/`.deb` on the host (`dnf download` /
+  `yumdownloader` / `apt-get download`) into `GUESTKIT_PACKAGE_CACHE` or
+  `~/.cache/guestkit/packages`, then stages the first-boot oneshot as before.
 - **Offline GRUB repair (`fix-grub`)** — `rescue -o fix-grub` bind-mounts
   proc/sys/dev and runs chroot `grub2-mkconfig` / `grub-mkconfig` /
   `update-grub`; `--force` also attempts `grub-install` onto the NBD device;
@@ -60,8 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--grub-cmdline`) for `/etc/default/grub`.
 - **Offline PackageInstall staging** — when `GUESTKIT_PACKAGE_CACHE` (or
   `host_cache`) holds matching `.rpm`/`.deb`, offline `plan apply` stages
-  packages + a first-boot systemd oneshot instead of skipping; live install
-  unchanged.
+  packages + a first-boot systemd oneshot instead of skipping; optional
+  `GUESTKIT_PACKAGE_FETCH=1` downloads missing packages on the host first;
+  live install unchanged.
 - **Windows offline password set** — `rescue -o reset-password --password`
   blanks SAM then stages HKLM RunOnce `net user` for first boot (SYSKEY AES
   hash write still avoided); omit `--password` to blank only.
