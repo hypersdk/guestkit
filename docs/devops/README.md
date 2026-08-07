@@ -11,6 +11,8 @@ Operational docs for platform / migration / SRE teams who gate cutovers with **G
 | [05 — Cutover weekend](05-cutover-weekend.md) | Hour-by-hour ops checklist |
 | [06 — Failure triage](06-failure-triage.md) | Doctor red, BitLocker, GRUB, SAM |
 | [07 — Cloud disk sources](07-cloud-disk-sources.md) | s3:// gs:// azure:// pulls + cache |
+| [08 — Forensic diff & IR](08-forensic-diff-ir.md) | Offline drift / secrets / malware |
+| [09 — SBOM / inventory CI](09-sbom-inventory-ci.md) | SPDX/CycloneDX artifacts |
 
 **Related:** [Wiki](https://github.com/hypersdk/guestkit/wiki) · [Migration assurance](../features/migration-assurance.md) · [DOCKER / GHCR](../guides/DOCKER.md) · Blogs: [integrate pipeline](https://zyvor.dev/blog/guestkit-integrate-migration-pipeline) · [DevOps runbooks](https://zyvor.dev/blog/guestkit-devops-runbooks)
 
