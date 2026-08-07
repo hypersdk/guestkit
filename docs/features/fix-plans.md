@@ -134,7 +134,7 @@ pub struct FixPlan {
 - `FileWrite` - Create/overwrite a whole file (offline-friendly)
 - `FileDelete` - Remove a guest file (`missing_ok` supported)
 - `Symlink` - Force symlink via guestfs `ln_sf` (offline-friendly)
-- `PackageInstall` - Package installation (live / skipped offline)
+- `PackageInstall` - Live install, or offline stage from `GUESTKIT_PACKAGE_CACHE` / `host_cache` (first-boot oneshot)
 - `ServiceOperation` - Service management (live / skipped offline)
 - `SELinuxMode` - SELinux mode changes
 - `RegistryEdit` - Windows registry modifications (`registry-write` feature)
