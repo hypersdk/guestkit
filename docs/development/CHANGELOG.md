@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cutover Passport signed-enterprise workflows** — `passport keygen` (Ed25519
   seed + pubkey); emit `--issuer` / `--expires-hours`; verify `--trust-keys`
   allowlist + `--max-age-hours` freshness gate (signing/verify need `agent`).
+- **Production Helm** — `values-prod.yaml`: PVC-backed Postgres/Redis/MinIO
+  (eval still `emptyDir`); Ingress TLS + cert-manager annotations; pinned
+  GHCR `v0.3.19` images; nightly image-vault backup CronJob + backup PVC.
 
 ## [0.3.19] - 2026-08-06
 

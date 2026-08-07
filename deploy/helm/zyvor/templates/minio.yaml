@@ -1,4 +1,23 @@
 {{- if .Values.minio.enabled }}
+{{- if .Values.persistence.minio.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: minio
+spec:
+  accessModes:
+    - {{ .Values.persistence.minio.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.minio.size }}
+  {{- if .Values.persistence.minio.storageClass }}
+  storageClassName: {{ .Values.persistence.minio.storageClass | quote }}
+  {{- end }}
+---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,6 +25,8 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: minio
@@ -37,7 +58,12 @@ spec:
               mountPath: /data
       volumes:
         - name: data
+          {{- if .Values.persistence.minio.enabled }}
+          persistentVolumeClaim:
+            claimName: minio-data
+          {{- else }}
           emptyDir: {}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service

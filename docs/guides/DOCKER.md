@@ -75,14 +75,15 @@ pointing each image at GHCR:
 ```bash
 helm upgrade --install zyvor deploy/helm/zyvor \
   --create-namespace --namespace zyvor \
-  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:v0.3.13 \
-  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:v0.3.13 \
-  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:v0.3.13
+  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:v0.3.19 \
+  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:v0.3.19 \
+  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:v0.3.19
 ```
 
 The chart also provisions Postgres, Redis, and MinIO. Enable auth via
 `--set zyvorApi.auth.enabled=true` and supply `jwtSecret` and `agentBootstrapToken`
-through a secret. Use `deploy/helm/zyvor/values-prod.yaml` as a starting point.
+through a secret. Use `deploy/helm/zyvor/values-prod.yaml` as a starting point
+(PVC datastores, TLS/cert-manager, pinned tags, nightly image-vault backup).
 
 ### Production checklist
 
@@ -94,7 +95,10 @@ Before exposing the web stack beyond localhost, verify:
 | Agent bootstrap | Open registration | `AGENT_BOOTSTRAP_TOKEN` set (required when auth or mTLS is on) |
 | Redis | No password | `REDIS_PASSWORD` / `redis.password` in Helm |
 | Postgres | `zyvor`/`zyvor` | Strong unique password |
-| Image tags | `:latest` | Pin semver (e.g. `v0.3.14`) |
+| Image tags | `:latest` | Pin semver (e.g. `v0.3.19`) |
+| Datastores | `emptyDir` | Enable `persistence.{postgresql,redis,minio}` PVCs via `values-prod.yaml` |
+| Ingress TLS | Off / `ssl-redirect: false` | `ingress.tls` + cert-manager ClusterIssuer |
+| Image vault backup | Off | `backup.imageVault.enabled` CronJob → backup PVC |
 | Worker | `privileged: true` | Isolate on dedicated nodes; network-policy Redis |
 | Exposure | localhost:8088 | TLS ingress; do not publish eval compose to the internet |
 

@@ -10,6 +10,14 @@ ingress:
     ui: console.zyvor.local
     api: api.zyvor.local
     agentMtls: agent-api.zyvor.local
+  # TLS termination at the ingress (UI + API). Agent mTLS ingress stays passthrough.
+  tls:
+    enabled: false
+    secretName: zyvor-tls
+  certManager:
+    enabled: false
+    # ClusterIssuer / Issuer name when certManager.enabled=true
+    clusterIssuer: letsencrypt-prod
 
 networkPolicy:
   enabled: true
@@ -92,7 +100,7 @@ redis:
 
 minio:
   enabled: true
-  image: minio/minio:latest
+  image: minio/minio:RELEASE.2024-12-18T13-15-44Z
   accessKey: zyvor
   secretKey: zyvor-secret
   service:
@@ -106,6 +114,33 @@ persistence:
     accessMode: ReadWriteOnce
     # Set hostPath on single-node k3s (shared API + worker image store)
     hostPath: ""
+  # Eval/default uses emptyDir. Enable PVCs in values-prod.yaml for durable data.
+  postgresql:
+    enabled: false
+    size: 20Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  redis:
+    enabled: false
+    size: 5Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  minio:
+    enabled: false
+    size: 50Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# Nightly tar of the image vault PVC into a separate backup PVC (retention by count).
+backup:
+  imageVault:
+    enabled: false
+    schedule: "0 2 * * *"
+    retain: 7
+    size: 100Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    image: busybox:1.36
 
 kubevirt:
   enabled: false
