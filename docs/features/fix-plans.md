@@ -95,7 +95,7 @@ Linux offline rescue (`guestkit rescue -o …`) for the same day-0 jobs without 
 | `enable-rdp` | Windows: Terminal Server + firewall (registry-write) |
 | `enable-winrm` | Windows: WinRM Automatic + firewall rule |
 | `set-timezone` | `--timezone` Windows `TimeZoneKeyName` |
-| `reset-password` | `--user`, `--password` (Linux `/etc/shadow`); Windows clears SAM blank (`registry-write`) |
+| `reset-password` | `--user`, `--password` (Linux `/etc/shadow`; Windows: SAM blank, or blank+RunOnce `net user` when `--password` is set) |
 | `fix-fstab` | `--backup` |
 | `check-grub` | diagnose-only (`fix-grub` alias) |
 

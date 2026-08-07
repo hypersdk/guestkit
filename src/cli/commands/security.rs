@@ -482,10 +482,6 @@ pub fn rescue_command(
             if is_windows {
                 #[cfg(feature = "registry-write")]
                 {
-                    progress.set_message(format!(
-                        "Clearing Windows password for '{}' (offline SAM)...",
-                        username
-                    ));
                     let root = roots
                         .first()
                         .ok_or_else(|| anyhow::anyhow!("No Windows root detected"))?;
@@ -493,6 +489,7 @@ pub fn rescue_command(
                         .inspect_get_windows_systemroot(root)
                         .map_err(|e| anyhow::anyhow!("systemroot: {e}"))?;
                     let sam_guest = format!("{systemroot}/System32/config/SAM");
+                    let software_guest = format!("{systemroot}/System32/config/SOFTWARE");
                     if backup {
                         if let Ok(content) = g.read_file(&sam_guest) {
                             let backup_file = tempfile::Builder::new()
@@ -506,25 +503,64 @@ pub fn rescue_command(
                             println!("Backed up SAM hive to {}", backup_path.display());
                         }
                     }
-                    let temp = tempfile::NamedTempFile::new()?;
-                    let host = temp
+                    let sam_temp = tempfile::NamedTempFile::new()?;
+                    let sam_host = sam_temp
                         .path()
                         .to_str()
                         .ok_or_else(|| anyhow::anyhow!("temp path UTF-8"))?;
-                    g.download_hive(&sam_guest, host)
+                    g.download_hive(&sam_guest, sam_host)
                         .map_err(|e| anyhow::anyhow!("download SAM: {e}"))?;
-                    crate::guestfs::sam_password::clear_windows_password(temp.path(), &username)
-                        .map_err(|e| anyhow::anyhow!("SAM password clear: {e}"))?;
-                    g.upload_hive(host, &sam_guest)
-                        .map_err(|e| anyhow::anyhow!("upload SAM: {e}"))?;
-                    progress.finish_and_clear();
-                    println!("✓ Cleared Windows password for user '{}'", username);
-                    println!(
-                        "  Offline SAM blank (chntpw-style). Log on without a password, then set a new one."
-                    );
-                    if password.is_some() {
+
+                    if let Some(new_password) = password {
+                        progress.set_message(format!(
+                            "Setting Windows password for '{}' (SAM blank + first-boot RunOnce)...",
+                            username
+                        ));
+                        let soft_temp = tempfile::NamedTempFile::new()?;
+                        let soft_host = soft_temp
+                            .path()
+                            .to_str()
+                            .ok_or_else(|| anyhow::anyhow!("temp path UTF-8"))?;
+                        g.download_hive(&software_guest, soft_host)
+                            .map_err(|e| anyhow::anyhow!("download SOFTWARE: {e}"))?;
+                        crate::guestfs::sam_password::set_windows_password(
+                            sam_temp.path(),
+                            soft_temp.path(),
+                            &username,
+                            &new_password,
+                        )
+                        .map_err(|e| anyhow::anyhow!("SAM password set: {e}"))?;
+                        g.upload_hive(sam_host, &sam_guest)
+                            .map_err(|e| anyhow::anyhow!("upload SAM: {e}"))?;
+                        g.upload_hive(soft_host, &software_guest)
+                            .map_err(|e| anyhow::anyhow!("upload SOFTWARE: {e}"))?;
+                        progress.finish_and_clear();
+                        println!("✓ Staged Windows password for user '{}'", username);
                         println!(
-                            "  Note: --password is ignored on Windows offline (hashes are SYSKEY-encrypted)."
+                            "  SAM blanked + RunOnce `net user` (applies at next boot as SYSTEM)."
+                        );
+                        println!(
+                            "  After first boot, log on with the password you passed to --password."
+                        );
+                    } else {
+                        progress.set_message(format!(
+                            "Clearing Windows password for '{}' (offline SAM)...",
+                            username
+                        ));
+                        crate::guestfs::sam_password::clear_windows_password(
+                            sam_temp.path(),
+                            &username,
+                        )
+                        .map_err(|e| anyhow::anyhow!("SAM password clear: {e}"))?;
+                        g.upload_hive(sam_host, &sam_guest)
+                            .map_err(|e| anyhow::anyhow!("upload SAM: {e}"))?;
+                        progress.finish_and_clear();
+                        println!("✓ Cleared Windows password for user '{}'", username);
+                        println!(
+                            "  Offline SAM blank (chntpw-style). Log on without a password, then set a new one."
+                        );
+                        println!(
+                            "  Tip: pass --password to also stage a first-boot password set via RunOnce."
                         );
                     }
                 }
@@ -1299,23 +1335,38 @@ fn build_rescue_export_plan(
             let username = user.ok_or_else(|| anyhow::anyhow!("--user required"))?;
             if is_windows {
                 let mut plan = FixPlan::new(vm.to_string(), "rescue-reset-password-windows".into());
-                plan.metadata.description = Some(format!(
-                    "Clear Windows SAM password for '{username}' (apply via rescue, not plan apply)"
-                ));
+                plan.metadata.description = Some(if password.is_some() {
+                    format!(
+                        "Blank SAM for '{username}' + stage RunOnce net user (apply via rescue --password)"
+                    )
+                } else {
+                    format!(
+                        "Clear Windows SAM password for '{username}' (apply via rescue, not plan apply)"
+                    )
+                });
                 plan.metadata.tags = vec!["rescue".into(), "windows".into(), "password".into()];
                 plan.metadata.review_required = true;
+                let cmd = if let Some(pw) = password {
+                    format!(
+                        "guestkit rescue IMAGE -o reset-password --user {username} --password '{pw}'"
+                    )
+                } else {
+                    format!("guestkit rescue IMAGE -o reset-password --user {username}")
+                };
                 plan.add_operation(Operation {
                     id: "sam-clear".into(),
                     op_type: OperationType::CommandExec(CommandExec {
-                        command: format!(
-                            "guestkit rescue IMAGE -o reset-password --user {username}"
-                        ),
+                        command: cmd,
                         expected_exit: 0,
                         timeout: Some(120),
                         interpreter: None,
                     }),
                     priority: Priority::Critical,
-                    description: format!("Clear SAM password for {username} (offline blank)"),
+                    description: if password.is_some() {
+                        format!("Set Windows password for {username} (SAM blank + RunOnce)")
+                    } else {
+                        format!("Clear SAM password for {username} (offline blank)")
+                    },
                     risk: Priority::High,
                     reversible: false,
                     depends_on: vec![],

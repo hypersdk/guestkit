@@ -823,7 +823,7 @@ enum Commands {
         #[arg(short = 'u', long)]
         user: Option<String>,
 
-        /// New password (for reset-password; Linux only — Windows clears SAM blank)
+        /// New password (for reset-password; Linux shadow; Windows SAM blank + optional first-boot RunOnce)
         #[arg(short = 'p', long)]
         password: Option<String>,
 

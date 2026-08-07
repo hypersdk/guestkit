@@ -56,6 +56,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `host_cache`) holds matching `.rpm`/`.deb`, offline `plan apply` stages
   packages + a first-boot systemd oneshot instead of skipping; live install
   unchanged.
+- **Windows offline password set** — `rescue -o reset-password --password`
+  blanks SAM then stages HKLM RunOnce `net user` for first boot (SYSKEY AES
+  hash write still avoided); omit `--password` to blank only.
 
 ## [0.3.19] - 2026-08-06
 

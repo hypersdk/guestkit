@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Offline Windows local-account password clear via SAM hive (chntpw-style).
+//! Offline Windows local-account password clear / set via SAM + first-boot RunOnce.
 //!
 //! Modern Windows (Win10 AU+) encrypts NT hashes with AES keyed from SYSKEY, so
 //! writing a raw MD4 NTLM hash often does not work. The reliable offline unlock
 //! used by chntpw is to set the NT hash *length* field in the `V` blob to 4,
-//! which Windows treats as "no password". The operator then logs on without a
-//! password and sets a new one interactively.
+//! which Windows treats as "no password".
+//!
+//! When a new password is requested, we still blank the SAM (so the account can
+//! log on), then stage an HKLM RunOnce that runs `net user` at first boot as
+//! SYSTEM — that path sets a real password without needing SYSKEY AES writes.
 //!
 //! Requires the `registry-write` feature (libhivex).
 
@@ -36,7 +39,6 @@ extern "C" {
     fn hivex_root(h: HiveH) -> HiveNodeH;
     fn hivex_node_get_child(h: HiveH, node: HiveNodeH, name: *const c_char) -> HiveNodeH;
     fn hivex_node_get_value(h: HiveH, node: HiveNodeH, key: *const c_char) -> HiveValueH;
-    /// Returns malloc'd value bytes; sets `t` and `len`. Caller must `free`.
     fn hivex_value_value(
         h: HiveH,
         val: HiveValueH,
@@ -103,7 +105,6 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
     set_binary_value(guard.0, user_node, "V", &v)?;
 
     // Clear UF_ACCOUNTDISABLE (0x0002) in F if F is present and long enough.
-    // Flags are at offset 0x38 in the classic USER_F structure (chntpw).
     if let Ok(mut f) = get_binary_value(guard.0, user_node, "F") {
         if f.len() >= 0x3C {
             let flags = u32::from_le_bytes(f[0x38..0x3C].try_into().unwrap());
@@ -125,6 +126,92 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
     Ok(())
 }
 
+/// Result of offline Windows password set.
+#[derive(Debug, Clone)]
+pub struct WindowsPasswordSetResult {
+    pub username: String,
+    pub sam_blanked: bool,
+    pub runonce_staged: bool,
+}
+
+/// Blank the SAM password and stage a first-boot `net user` via SOFTWARE RunOnce.
+///
+/// `software_hive` is a host-local copy of the guest SOFTWARE hive (writable).
+pub fn set_windows_password(
+    sam_hive: &Path,
+    software_hive: &Path,
+    username: &str,
+    password: &str,
+) -> Result<WindowsPasswordSetResult> {
+    validate_windows_password(password)?;
+    validate_windows_username(username)?;
+
+    clear_windows_password(sam_hive, username)?;
+
+    let cmd = runonce_net_user_command(username, password);
+    crate::guestfs::hivex_ffi::set_registry_value(
+        software_hive,
+        &[
+            "Microsoft".into(),
+            "Windows".into(),
+            "CurrentVersion".into(),
+            "RunOnce".into(),
+        ],
+        "GuestKitSetPassword",
+        "REG_SZ",
+        &serde_json::Value::String(cmd),
+    )?;
+
+    Ok(WindowsPasswordSetResult {
+        username: username.to_string(),
+        sam_blanked: true,
+        runonce_staged: true,
+    })
+}
+
+/// Build the RunOnce command string (also used by unit tests).
+pub fn runonce_net_user_command(username: &str, password: &str) -> String {
+    let u = quote_cmd_arg(username);
+    let p = quote_cmd_arg(password);
+    format!(
+        "cmd.exe /c net user {u} {p} && reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v GuestKitSetPassword /f"
+    )
+}
+
+fn quote_cmd_arg(s: &str) -> String {
+    // CMD double-quote escaping: embed " as ""
+    format!("\"{}\"", s.replace('"', "\"\""))
+}
+
+fn validate_windows_username(username: &str) -> Result<()> {
+    let u = username.trim();
+    if u.is_empty() || u.len() > 20 {
+        return Err(Error::InvalidOperation(
+            "Windows username must be 1–20 characters".into(),
+        ));
+    }
+    if u.contains(['\\', '/', '[', ']', ':', ';', '|', '=', ',', '+', '*', '?', '<', '>', '@']) {
+        return Err(Error::InvalidOperation(format!(
+            "Windows username contains illegal characters: {u}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_windows_password(password: &str) -> Result<()> {
+    if password.is_empty() {
+        return Err(Error::InvalidOperation(
+            "password must be non-empty (omit --password to only blank the SAM)".into(),
+        ));
+    }
+    if password.len() > 127 {
+        return Err(Error::InvalidOperation(
+            "Windows password must be at most 127 characters".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn lookup_rid(h: HiveH, username: &str) -> Result<u32> {
     let names = navigate(h, &["SAM", "Domains", "Account", "Users", "Names"])?;
     let user_c = CString::new(username).map_err(|_| {
@@ -136,7 +223,6 @@ fn lookup_rid(h: HiveH, username: &str) -> Result<u32> {
             "Windows user '{username}' not found in SAM"
         )));
     }
-    // RID is stored as the *type* of the default value under Names\<user>.
     let empty = CString::new("").unwrap();
     let val = unsafe { hivex_node_get_value(h, node, empty.as_ptr()) };
     if val == 0 {
@@ -225,9 +311,34 @@ fn path_cstring(path: &Path) -> Result<CString> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn rid_hex_format() {
         assert_eq!(format!("{:08X}", 500u32), "000001F4");
         assert_eq!(format!("{:08X}", 1001u32), "000003E9");
+    }
+
+    #[test]
+    fn runonce_command_quotes_and_self_deletes() {
+        let cmd = runonce_net_user_command("Admin", r#"p@ss"word"#);
+        assert!(cmd.contains("net user \"Admin\""));
+        assert!(cmd.contains("\"p@ss\"\"word\""));
+        assert!(cmd.contains("GuestKitSetPassword"));
+        assert!(cmd.contains("RunOnce"));
+    }
+
+    #[test]
+    fn password_validation() {
+        assert!(validate_windows_password("").is_err());
+        assert!(validate_windows_password("ok").is_ok());
+        assert!(validate_windows_password(&"x".repeat(128)).is_err());
+    }
+
+    #[test]
+    fn username_validation() {
+        assert!(validate_windows_username("Administrator").is_ok());
+        assert!(validate_windows_username("bad:name").is_err());
+        assert!(validate_windows_username("").is_err());
     }
 }
