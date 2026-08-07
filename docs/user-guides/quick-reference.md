@@ -71,6 +71,7 @@ Details: [migration-assurance.md](../features/migration-assurance.md)
 guestkit rescue linux.qcow2 -o fix-grub
 guestkit rescue win.qcow2 -o reset-password --user Administrator --password 'S3cret!'
 export GUESTKIT_PACKAGE_CACHE=~/pkgs GUESTKIT_PACKAGE_FETCH=1
+# optional: GUESTKIT_PACKAGE_MIRROR=https://mirror.example/pkgs
 guestkit plan apply plan.yaml --vm linux.qcow2 --yes
 ```
 

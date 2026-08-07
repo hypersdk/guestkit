@@ -4,6 +4,10 @@
 //! When `GUESTKIT_PACKAGE_FETCH` is enabled and cache files are missing,
 //! download `.rpm`/`.deb` onto the host with `dnf download` / `yumdownloader`
 //! / `apt-get download`, then stage into the guest as usual.
+//!
+//! Optional `GUESTKIT_PACKAGE_MIRROR` (comma-separated base URLs) is tried via
+//! `curl`/`wget` when host package tools are missing or fail — useful on macOS
+//! hosts. URL templates may include `{name}` and `{ext}` (`rpm`|`deb`).
 
 use anyhow::{Context, Result};
 use std::fs;
@@ -106,10 +110,11 @@ fn fetch_rpm(name: &str, dest: &Path) -> Result<()> {
         if output.status.success() {
             return Ok(());
         }
-        return Err(anyhow::anyhow!(
-            "dnf download: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+        // Fall through to mirror / yumdownloader
+        eprintln!(
+            "Warning: dnf download failed for '{name}': {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
 
     if which("yumdownloader") {
@@ -120,35 +125,143 @@ fn fetch_rpm(name: &str, dest: &Path) -> Result<()> {
         if output.status.success() {
             return Ok(());
         }
-        return Err(anyhow::anyhow!(
-            "yumdownloader: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+        eprintln!(
+            "Warning: yumdownloader failed for '{name}': {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+
+    if let Some(()) = fetch_from_mirror(name, dest, PackageKind::Rpm)? {
+        return Ok(());
     }
 
     Err(anyhow::anyhow!(
-        "no dnf/yumdownloader on host (install dnf-plugins-core or yum-utils)"
+        "no dnf/yumdownloader on host and no GUESTKIT_PACKAGE_MIRROR hit for '{name}'"
     ))
 }
 
 fn fetch_deb(name: &str, dest: &Path) -> Result<()> {
-    if !which("apt-get") {
-        return Err(anyhow::anyhow!(
-            "no apt-get on host (Debian/Ubuntu host required for .deb fetch)"
-        ));
+    if which("apt-get") {
+        let output = Command::new("apt-get")
+            .args(["download", name])
+            .current_dir(dest)
+            .output()
+            .context("run apt-get download")?;
+        if output.status.success() {
+            return Ok(());
+        }
+        eprintln!(
+            "Warning: apt-get download failed for '{name}': {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
     }
-    let output = Command::new("apt-get")
-        .args(["download", name])
-        .current_dir(dest)
-        .output()
-        .context("run apt-get download")?;
-    if output.status.success() {
+
+    if let Some(()) = fetch_from_mirror(name, dest, PackageKind::Deb)? {
         return Ok(());
     }
+
     Err(anyhow::anyhow!(
-        "apt-get download: {}",
-        String::from_utf8_lossy(&output.stderr)
+        "no apt-get on host and no GUESTKIT_PACKAGE_MIRROR hit for '{name}'"
     ))
+}
+
+/// `GUESTKIT_PACKAGE_MIRROR` — base URL or comma-separated list.
+/// Tries `{mirror}/{name}.rpm`, `{name}.deb`, `{name}-*.rpm` via curl/wget.
+/// Placeholders: `{name}` `{ext}` (rpm|deb).
+fn package_mirrors() -> Vec<String> {
+    match std::env::var("GUESTKIT_PACKAGE_MIRROR") {
+        Ok(v) => v
+            .split(',')
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+fn fetch_from_mirror(name: &str, dest: &Path, kind: PackageKind) -> Result<Option<()>> {
+    let mirrors = package_mirrors();
+    if mirrors.is_empty() {
+        return Ok(None);
+    }
+    let ext = match kind {
+        PackageKind::Rpm => "rpm",
+        PackageKind::Deb => "deb",
+    };
+    let candidates: Vec<String> = mirrors
+        .iter()
+        .flat_map(|m| {
+            if m.contains("{name}") || m.contains("{ext}") {
+                vec![m
+                    .replace("{name}", name)
+                    .replace("{ext}", ext)]
+            } else {
+                vec![
+                    format!("{m}/{name}.{ext}"),
+                    format!("{m}/{name}"),
+                ]
+            }
+        })
+        .collect();
+
+    for url in candidates {
+        match http_download(&url, dest, name, ext) {
+            Ok(()) => {
+                eprintln!("Fetched '{name}' via mirror {url}");
+                return Ok(Some(()));
+            }
+            Err(e) => {
+                eprintln!("Warning: mirror fetch {url}: {e}");
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn http_download(url: &str, dest: &Path, name: &str, ext: &str) -> Result<()> {
+    let out = dest.join(format!("{name}.{ext}"));
+    let out_s = out
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("non-UTF-8 out path"))?;
+
+    if which("curl") {
+        let output = Command::new("curl")
+            .args([
+                "-fsSL",
+                "--connect-timeout",
+                "15",
+                "-o",
+                out_s,
+                url,
+            ])
+            .output()
+            .context("run curl")?;
+        if output.status.success() && out.is_file() && fs::metadata(&out)?.len() > 0 {
+            return Ok(());
+        }
+        let _ = fs::remove_file(&out);
+        return Err(anyhow::anyhow!(
+            "curl: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    if which("wget") {
+        let output = Command::new("wget")
+            .args(["-q", "-O", out_s, url])
+            .output()
+            .context("run wget")?;
+        if output.status.success() && out.is_file() && fs::metadata(&out)?.len() > 0 {
+            return Ok(());
+        }
+        let _ = fs::remove_file(&out);
+        return Err(anyhow::anyhow!(
+            "wget: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    Err(anyhow::anyhow!("no curl/wget on host for mirror fetch"))
 }
 
 fn which(prog: &str) -> bool {
@@ -193,5 +306,20 @@ mod tests {
         let p = default_fetch_cache();
         assert!(p.to_string_lossy().contains("guestkit"));
         assert!(p.to_string_lossy().contains("packages"));
+    }
+
+    #[test]
+    fn package_mirrors_parses_csv() {
+        std::env::remove_var("GUESTKIT_PACKAGE_MIRROR");
+        assert!(package_mirrors().is_empty());
+        std::env::set_var(
+            "GUESTKIT_PACKAGE_MIRROR",
+            "https://mirror.example/pkgs/, https://other/{name}.{ext}",
+        );
+        let m = package_mirrors();
+        assert_eq!(m.len(), 2);
+        assert_eq!(m[0], "https://mirror.example/pkgs");
+        assert_eq!(m[1], "https://other/{name}.{ext}");
+        std::env::remove_var("GUESTKIT_PACKAGE_MIRROR");
     }
 }

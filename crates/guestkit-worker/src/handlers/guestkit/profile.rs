@@ -76,6 +76,38 @@ struct Finding {
     references: Option<Vec<String>>,
 }
 
+fn convert_profile_report(report: &guestkit::cli::profiles::ProfileReport) -> Vec<Finding> {
+    use guestkit::cli::profiles::{FindingStatus, RiskLevel};
+
+    let mut out = Vec::new();
+    for section in &report.sections {
+        for f in &section.findings {
+            if matches!(f.status, FindingStatus::Pass) {
+                continue;
+            }
+            let severity = match (&f.status, f.risk_level) {
+                (FindingStatus::Fail, Some(RiskLevel::Critical)) => Severity::Critical,
+                (FindingStatus::Fail, Some(RiskLevel::High)) => Severity::High,
+                (FindingStatus::Fail, Some(RiskLevel::Medium)) => Severity::Medium,
+                (FindingStatus::Fail, _) => Severity::High,
+                (FindingStatus::Warning, Some(RiskLevel::High) | Some(RiskLevel::Critical)) => {
+                    Severity::High
+                }
+                (FindingStatus::Warning, _) => Severity::Medium,
+                _ => Severity::Info,
+            };
+            out.push(Finding {
+                severity,
+                title: format!("{}: {}", section.title, f.item),
+                description: f.message.clone(),
+                remediation: None,
+                references: Some(vec![report.profile_name.clone()]),
+            });
+        }
+    }
+    out
+}
+
 /// Guestkit profile handler
 pub struct ProfileHandler {
     temp_dir: PathBuf,
@@ -348,6 +380,82 @@ impl ProfileHandler {
         Ok(findings)
     }
 
+    /// Run performance profile using guestkit CLI inspection profiles
+    async fn run_performance_profile(
+        &self,
+        context: &HandlerContext,
+        image_path: String,
+    ) -> WorkerResult<Vec<Finding>> {
+        context
+            .report_progress("performance", Some(60), "Running performance profile")
+            .await?;
+        self.run_cli_inspection_profile(image_path, "performance")
+            .await
+    }
+
+    /// Run migration profile using guestkit CLI inspection profiles
+    async fn run_migration_profile(
+        &self,
+        context: &HandlerContext,
+        image_path: String,
+    ) -> WorkerResult<Vec<Finding>> {
+        context
+            .report_progress("migration", Some(80), "Running migration profile")
+            .await?;
+        self.run_cli_inspection_profile(image_path, "migration")
+            .await
+    }
+
+    /// Mount image and run a named `guestkit::cli::profiles` inspection profile.
+    async fn run_cli_inspection_profile(
+        &self,
+        image_path: String,
+        profile_name: &'static str,
+    ) -> WorkerResult<Vec<Finding>> {
+        let findings = tokio::task::spawn_blocking(move || -> WorkerResult<Vec<Finding>> {
+            use guestkit::cli::profiles::get_profile;
+            use guestkit::Guestfs;
+
+            let profile = get_profile(profile_name).ok_or_else(|| {
+                WorkerError::ExecutionError(format!("unknown profile '{profile_name}'"))
+            })?;
+
+            let mut g = Guestfs::new()
+                .map_err(|e| WorkerError::ExecutionError(format!("Failed to create Guestfs: {e}")))?;
+
+            g.add_drive_ro(&image_path)
+                .map_err(|e| WorkerError::ExecutionError(format!("Failed to add drive: {e}")))?;
+
+            g.launch()
+                .map_err(|e| WorkerError::ExecutionError(format!("Failed to launch: {e}")))?;
+
+            let inspected = g
+                .inspect()
+                .map_err(|e| WorkerError::ExecutionError(format!("Failed to inspect: {e}")))?;
+
+            if inspected.is_empty() {
+                return Ok(Vec::new());
+            }
+
+            let os_info = &inspected[0];
+            g.mount_ro(&os_info.root, "/")
+                .map_err(|e| WorkerError::ExecutionError(format!("Failed to mount: {e}")))?;
+
+            let report = profile
+                .inspect(&mut g, "/")
+                .map_err(|e| WorkerError::ExecutionError(format!("Profile inspect failed: {e}")))?;
+
+            let _ = g.umount_all();
+            let _ = g.shutdown();
+
+            Ok(convert_profile_report(&report))
+        })
+        .await
+        .map_err(|e| WorkerError::ExecutionError(format!("Task join error: {e}")))??;
+
+        Ok(findings)
+    }
+
     /// Generate profile report
     async fn generate_report(
         &self,
@@ -469,16 +577,10 @@ impl OperationHandler for ProfileHandler {
                 ProfileType::Compliance => self.run_compliance_profile(&context, image_path.clone()).await?,
                 ProfileType::Hardening => self.run_hardening_profile(&context, image_path.clone()).await?,
                 ProfileType::Performance => {
-                    context.report_progress("performance", Some(60), "Running performance profile").await?;
-                    return Err(WorkerError::ExecutionError(
-                        "performance profile is not yet implemented in the worker".to_string(),
-                    ));
+                    self.run_performance_profile(&context, image_path.clone()).await?
                 }
                 ProfileType::Migration => {
-                    context.report_progress("migration", Some(80), "Running migration profile").await?;
-                    return Err(WorkerError::ExecutionError(
-                        "migration profile is not yet implemented in the worker".to_string(),
-                    ));
+                    self.run_migration_profile(&context, image_path.clone()).await?
                 }
             };
             all_findings.extend(findings);

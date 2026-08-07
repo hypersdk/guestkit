@@ -34,7 +34,7 @@ These profiles skip inspect→finding heuristics and emit a fixed offline-safe p
 | `windows-rdp` | — | Terminal Server allow, NLA, TermService/UmRdpService Automatic, port 3389, firewall TCP/UDP |
 | `windows-hostname` | `--hostname NAME` | ComputerName + ActiveComputerName + Tcpip Hostname / NV Hostname |
 | `windows-winrm` | — | WinRM Automatic + `WINRM-HTTP-In-TCP` (review auth before exposing) |
-| `windows-domain-leave` | `--workgroup NAME` (default `WORKGROUP`) | Clear Tcpip Domain, set NV Domain + Winlogon to workgroup (DC cleanup still live) |
+| `windows-domain-leave` | `--workgroup NAME` (default `WORKGROUP`) | Clear Tcpip Domain, set NV Domain + Winlogon to workgroup, stage RunOnce `Add-Computer` (DC account delete still needs live AD) |
 | `windows-timezone` | `--timezone KEY` | `TimeZoneKeyName` (e.g. `UTC`, `Pacific Standard Time`) |
 | `windows-static-ip` | `--interface-guid` `--ip` `--mask` [`--gateway`] [`--dns`] | Disable DHCP + MULTI_SZ IP/mask/gateway on that interface |
 | `windows-dhcp` | `--interface-guid` | Enable DHCP (`EnableDHCP=1`) on that interface |
@@ -120,6 +120,7 @@ guestkit plan apply ssh.yaml --vm disk.qcow2 --yes --skip-backup
 |-----|--------|
 | `GUESTKIT_PACKAGE_CACHE` | Colon-separated host dirs of `.rpm`/`.deb` (also `PackageInstall.host_cache`) |
 | `GUESTKIT_PACKAGE_FETCH=1` | Download missing packages on the host (`dnf download` / `yumdownloader` / `apt-get download`) into the cache or `~/.cache/guestkit/packages`, then stage first-boot oneshot |
+| `GUESTKIT_PACKAGE_MIRROR` | Comma-separated HTTP bases (optional `{name}`/`{ext}`) tried via `curl`/`wget` when host package tools are missing or fail |
 
 ```bash
 export GUESTKIT_PACKAGE_CACHE=~/pkg-cache

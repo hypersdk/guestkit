@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`GUESTKIT_PACKAGE_MIRROR`** — HTTP fallback via `curl`/`wget` when host
+  `dnf`/`apt-get` is missing or fails (comma-separated bases; optional
+  `{name}`/`{ext}` templates). Helps macOS hosts stage PackageInstall.
+- **Domain-leave first-boot RunOnce** — `windows-domain-leave` stages
+  `GuestKitDomainLeave` RunOnce (`Add-Computer -WorkGroupName`) in addition
+  to Tcpip/Winlogon markers (DC computer-account delete still needs live AD).
+- **Worker performance + migration profiles** — `guestkit.profile` jobs run
+  the same CLI `InspectionProfile` implementations as `guestkit profile`.
 - **Offline ServiceOperation / CommandExec staging** — enable/disable via
   systemd wants Symlink/FileDelete; start/restart and other commands stage
   `guestkit-firstboot-live.service` when chroot cannot run them.

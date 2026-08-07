@@ -500,9 +500,11 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
 
     /// Offline Windows domain-leave markers → workgroup (best-effort).
     ///
-    /// Clears Tcpip `Domain` / sets `NV Domain` to the workgroup, and resets
-    /// Winlogon domain cache fields. Does **not** delete the computer account
-    /// on a DC — run a live `Remove-Computer` / DC cleanup after cutover if needed.
+    /// Clears Tcpip `Domain` / sets `NV Domain` to the workgroup, resets
+    /// Winlogon domain cache fields, and stages a SOFTWARE `RunOnce` that
+    /// runs `Add-Computer -WorkGroupName` on first boot when still domain-
+    /// joined. Does **not** delete the computer account on a DC — that still
+    /// needs a live AD cleanup with domain credentials after cutover.
     pub fn windows_domain_leave_plan(&self, workgroup: &str) -> Result<FixPlan> {
         let wg = workgroup.trim();
         if wg.is_empty() {
@@ -526,14 +528,15 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
         plan.metadata.review_required = true;
         plan.metadata.reversible = true;
         plan.metadata.description = Some(format!(
-            "Offline Windows domain-leave markers → workgroup '{wg}'. \
-             DC computer-account cleanup still requires a live step."
+            "Offline Windows domain-leave markers → workgroup '{wg}', plus first-boot \
+             RunOnce Add-Computer. DC computer-account delete still needs live AD creds."
         ));
         plan.metadata.tags = vec![
             "windows".into(),
             "domain".into(),
             "workgroup".into(),
             "offline".into(),
+            "runonce".into(),
         ];
 
         let ops = [
@@ -590,6 +593,37 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
                 undo: None,
             });
         }
+
+        // First-boot: leave domain into workgroup when still joined (no DC delete).
+        let runonce = format!(
+            "cmd.exe /c powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \
+\"try {{ if ((Get-CimInstance Win32_ComputerSystem).PartOfDomain) {{ \
+Add-Computer -WorkGroupName '{wg}' -Force -ErrorAction SilentlyContinue }} }} catch {{}}; \
+reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
+/v GuestKitDomainLeave /f\""
+        );
+        plan.add_operation(Operation {
+            id: "runonce-domain-leave".into(),
+            op_type: OperationType::RegistryEdit(RegistryEdit {
+                key: r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce".into(),
+                value: "GuestKitDomainLeave".into(),
+                current_data: json!(""),
+                new_data: json!(runonce),
+                data_type: "sz".into(),
+            }),
+            priority: Priority::High,
+            description: format!(
+                "Stage RunOnce Add-Computer -WorkGroupName '{wg}' (first boot)"
+            ),
+            risk: Priority::Medium,
+            reversible: true,
+            depends_on: vec![
+                "tcpip-nv-domain-workgroup".into(),
+                "winlogon-default-domain".into(),
+            ],
+            validation: None,
+            undo: None,
+        });
 
         Ok(plan)
     }
@@ -1766,11 +1800,25 @@ mod tests {
             .windows_domain_leave_plan("WORKGROUP")
             .unwrap();
         assert_eq!(plan.profile, "windows-domain-leave");
-        assert_eq!(plan.operations.len(), 4);
+        assert_eq!(plan.operations.len(), 5);
         assert!(plan
             .operations
             .iter()
             .any(|o| o.id == "tcpip-nv-domain-workgroup"));
+        let runonce = plan
+            .operations
+            .iter()
+            .find(|o| o.id == "runonce-domain-leave")
+            .expect("runonce");
+        match &runonce.op_type {
+            OperationType::RegistryEdit(re) => {
+                assert_eq!(re.value, "GuestKitDomainLeave");
+                let s = re.new_data.as_str().unwrap();
+                assert!(s.contains("Add-Computer"));
+                assert!(s.contains("WORKGROUP"));
+            }
+            _ => panic!("expected RegistryEdit"),
+        }
     }
 
     #[test]

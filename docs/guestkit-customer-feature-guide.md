@@ -113,7 +113,7 @@ _Turn findings into reviewable, reversible, executable remediation - not blind e
   - **How:** `guestkit plan generate win.qcow2 -p windows-rdp -o rdp.yaml` then `guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup`. Linux: `guestkit plan generate disk.qcow2 -p linux-ssh --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml`.
 - **Rescue shortcuts** — Day-0 jobs without a plan file: Linux `enable-ssh`, `inject-ssh-key`, `set-hostname`, `reset-password`, `fix-fstab`, `check-grub`, `fix-grub`; Windows `enable-rdp`, `enable-winrm`, `set-timezone`, `set-hostname`, `reset-password` (AES/RC4 SAM NT-hash via SYSKEY, RunOnce fallback).
   - **How:** `guestkit rescue disk.qcow2 -o enable-ssh`; `guestkit rescue disk.qcow2 -o fix-grub`; `guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…'` (needs `--features registry-write`).
-- **Offline PackageInstall** — Stage `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` for first-boot install; set `GUESTKIT_PACKAGE_FETCH=1` to download missing packages on the host first.
+- **Offline PackageInstall** — Stage `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` for first-boot install; set `GUESTKIT_PACKAGE_FETCH=1` to download missing packages on the host first; optional `GUESTKIT_PACKAGE_MIRROR` for HTTP fallback (e.g. macOS).
   - **How:** `export GUESTKIT_PACKAGE_CACHE=~/pkgs GUESTKIT_PACKAGE_FETCH=1` then `guestkit plan apply plan.yaml --vm disk.qcow2 --yes`.
 - **Offline service / command ops** — `ServiceOperation` enable/disable writes systemd wants; start/restart and `CommandExec` stage `guestkit-firstboot-live.service` when chroot cannot run them.
   - **How:** Preview shows staging notes; apply with `guestkit plan apply plan.yaml --vm disk.qcow2 --yes`.

@@ -227,6 +227,8 @@ Details: [fix-plans.md](../features/fix-plans.md#rescue-shortcuts).
 ```bash
 export GUESTKIT_PACKAGE_CACHE=~/rpm-cache
 export GUESTKIT_PACKAGE_FETCH=1   # optional: dnf/apt-get download on the host
+# optional on macOS / hosts without dnf|apt:
+# export GUESTKIT_PACKAGE_MIRROR=https://mirror.example/pkgs
 guestkit plan apply plan.yaml --vm linux.qcow2 --yes
 ```
 

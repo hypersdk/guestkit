@@ -51,6 +51,7 @@ List all commands: **`guestkit commands`** (or **`guestkit command-catalog`**).
 |----------|---------|
 | `GUESTKIT_PACKAGE_CACHE` | Host dirs of `.rpm`/`.deb` for offline PackageInstall staging |
 | `GUESTKIT_PACKAGE_FETCH` | `1`/`true` — host-download missing packages before staging |
+| `GUESTKIT_PACKAGE_MIRROR` | HTTP base URL(s) for package fetch fallback (`curl`/`wget`) |
 | `GUESTKIT_VIRTIO_WIN` | VirtIO driver tree for offline Windows DriverInject |
 | `GUESTKIT_FLEET_JOBS` | Parallelism for `fleet analyze` (default min(4, CPUs)) |
 | `GUESTKIT_S3_ENDPOINT` / `AWS_ENDPOINT_URL` | Custom S3-compatible endpoint for cloud disk pulls |
