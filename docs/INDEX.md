@@ -33,6 +33,7 @@
 |-------|-------------|
 | [Run from GHCR](guides/DOCKER.md#published-images-ghcr) | Pull `ghcr.io/hypersdk/*` images, `docker compose up`, or Helm |
 | [Docker](guides/DOCKER.md) | Container usage (web stack + CLI) |
+| [Cloud disk sources](guides/cloud-disk-sources.md) | S3 / GCS / Azure URI pulls + cache + CI recipe |
 | [Remote deploy](guides/DEPLOY-REMOTE.md) | SSH deploy to Linux hosts + web console access |
 | [RPM build](development/RPM-BUILD.md) | Fedora/RHEL packages |
 

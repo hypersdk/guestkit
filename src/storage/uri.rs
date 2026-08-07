@@ -29,7 +29,9 @@ pub fn open_disk_source(uri: &str) -> Result<Box<dyn DiskSource>> {
         #[cfg(not(feature = "cloud-s3"))]
         anyhow::bail!("S3 support not enabled. Rebuild with --features cloud-s3");
     }
-    if uri.starts_with("https://") && uri.contains(".blob.core.windows.net") {
+    if uri.starts_with("azure://")
+        || (uri.starts_with("https://") && uri.contains(".blob.core.windows.net"))
+    {
         #[cfg(feature = "cloud-azure")]
         {
             return Ok(Box::new(crate::storage::azure::AzureDiskSource::open(uri)?));

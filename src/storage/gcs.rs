@@ -1,38 +1,63 @@
 // SPDX-License-Identifier: Apache-2.0
-//! GCS disk source.
+//! GCS disk source (gsutil or gcloud storage, optional local cache).
 
+use super::cloud_cache;
 use super::local::LocalDiskSource;
 use super::uri::{DiskSource, DiskSourceMetadata};
 use anyhow::{Context, Result};
 use std::io::{Read, Seek, SeekFrom};
+use std::path::Path;
 use std::process::Command;
-use tempfile::NamedTempFile;
 
 pub struct GcsDiskSource {
     local: LocalDiskSource,
     uri: String,
+    cached: bool,
 }
 
 impl GcsDiskSource {
     pub fn open(uri: &str) -> Result<Self> {
-        let tmp = NamedTempFile::new().context("Failed to create temp file")?;
-        let tmp_path = tmp.path().to_path_buf();
-        tmp.close()?;
-
-        let status = Command::new("gsutil")
-            .args(["cp", uri, tmp_path.to_str().unwrap()])
-            .status()
-            .context("Failed to run gsutil cp — install Google Cloud SDK")?;
-
-        if !status.success() {
-            anyhow::bail!("gsutil cp failed for {}", uri);
-        }
-
+        let cached = cloud_cache::cache_enabled();
+        let local_path = cloud_cache::ensure_cached(uri, |dest| download_gcs(uri, dest))?;
         Ok(Self {
-            local: LocalDiskSource::open(&tmp_path)?,
+            local: LocalDiskSource::open(&local_path)?,
             uri: uri.to_string(),
+            cached,
         })
     }
+}
+
+fn download_gcs(uri: &str, dest: &Path) -> Result<()> {
+    let dest_s = dest.to_str().unwrap();
+    if Command::new("gsutil")
+        .arg("version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+    {
+        let status = Command::new("gsutil")
+            .args(["cp", uri, dest_s])
+            .status()
+            .context("Failed to run gsutil cp — install Google Cloud SDK")?;
+        if status.success() {
+            return Ok(());
+        }
+        anyhow::bail!("gsutil cp failed for {uri}");
+    }
+
+    // Fallback: `gcloud storage cp` (newer Cloud SDK installs omit gsutil).
+    let status = Command::new("gcloud")
+        .args(["storage", "cp", uri, dest_s])
+        .status()
+        .context(
+            "Failed to run gcloud storage cp — install Google Cloud SDK (gsutil or gcloud)",
+        )?;
+    if !status.success() {
+        anyhow::bail!("gcloud storage cp failed for {uri}");
+    }
+    Ok(())
 }
 
 impl Read for GcsDiskSource {
@@ -56,13 +81,16 @@ impl DiskSource for GcsDiskSource {
         }
     }
 
-    fn local_path(&self) -> Option<&std::path::Path> {
+    fn local_path(&self) -> Option<&Path> {
         self.local.local_path()
     }
 }
 
 impl Drop for GcsDiskSource {
     fn drop(&mut self) {
+        if self.cached {
+            return;
+        }
         if let Some(p) = self.local.local_path() {
             let _ = std::fs::remove_file(p);
         }

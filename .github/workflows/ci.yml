@@ -74,6 +74,9 @@ jobs:
           cargo test --verbose -- --skip test_arch_ --skip test_debian_ \
             --skip test_ubuntu_ --skip test_windows_
 
+      - name: Cloud disk source recipe
+        run: ./scripts/ci-cloud-disk-sources.sh
+
       - name: Build examples
         run: cargo build --examples --verbose
 

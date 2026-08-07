@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Cloud and local disk source abstraction.
 
+pub mod cloud_cache;
 pub mod local;
 pub mod uri;
 
