@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Windows AES/RC4 SAM NT-hash write** — `rescue -o reset-password --password`
+  reconstructs the SYSKEY bootkey from SYSTEM LSA class names, derives the
+  hashed bootkey from SAM `F`, and writes an AES-128-CBC (or legacy RC4)
+  encrypted NT hash into the user `V` blob. Falls back to SAM blank + RunOnce
+  `net user` if SYSTEM/bootkey/crypto fails.
 - **PackageInstall host fetch** — with `GUESTKIT_PACKAGE_FETCH=1`, offline
   `plan apply` downloads missing `.rpm`/`.deb` on the host (`dnf download` /
   `yumdownloader` / `apt-get download`) into `GUESTKIT_PACKAGE_CACHE` or
@@ -68,8 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `GUESTKIT_PACKAGE_FETCH=1` downloads missing packages on the host first;
   live install unchanged.
 - **Windows offline password set** — `rescue -o reset-password --password`
-  blanks SAM then stages HKLM RunOnce `net user` for first boot (SYSKEY AES
-  hash write still avoided); omit `--password` to blank only.
+  prefers AES/RC4 SAM NT-hash write via SYSKEY; falls back to SAM blank +
+  HKLM RunOnce `net user` for first boot; omit `--password` to blank only.
 
 ## [0.3.19] - 2026-08-06
 

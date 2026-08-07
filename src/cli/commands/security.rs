@@ -513,7 +513,7 @@ pub fn rescue_command(
 
                     if let Some(new_password) = password {
                         progress.set_message(format!(
-                            "Setting Windows password for '{}' (SAM blank + first-boot RunOnce)...",
+                            "Setting Windows password for '{}' (AES SAM / RunOnce fallback)...",
                             username
                         ));
                         let soft_temp = tempfile::NamedTempFile::new()?;
@@ -523,25 +523,41 @@ pub fn rescue_command(
                             .ok_or_else(|| anyhow::anyhow!("temp path UTF-8"))?;
                         g.download_hive(&software_guest, soft_host)
                             .map_err(|e| anyhow::anyhow!("download SOFTWARE: {e}"))?;
-                        crate::guestfs::sam_password::set_windows_password(
+                        let system_guest = format!("{systemroot}/System32/config/SYSTEM");
+                        let sys_temp = tempfile::NamedTempFile::new()?;
+                        let sys_host = sys_temp
+                            .path()
+                            .to_str()
+                            .ok_or_else(|| anyhow::anyhow!("temp path UTF-8"))?;
+                        let system_ok = g.download_hive(&system_guest, sys_host).is_ok();
+                        let result = crate::guestfs::sam_password::set_windows_password(
                             sam_temp.path(),
                             soft_temp.path(),
+                            system_ok.then_some(sys_temp.path()),
                             &username,
                             &new_password,
                         )
                         .map_err(|e| anyhow::anyhow!("SAM password set: {e}"))?;
                         g.upload_hive(sam_host, &sam_guest)
                             .map_err(|e| anyhow::anyhow!("upload SAM: {e}"))?;
-                        g.upload_hive(soft_host, &software_guest)
-                            .map_err(|e| anyhow::anyhow!("upload SOFTWARE: {e}"))?;
+                        if result.runonce_staged {
+                            g.upload_hive(soft_host, &software_guest)
+                                .map_err(|e| anyhow::anyhow!("upload SOFTWARE: {e}"))?;
+                        }
                         progress.finish_and_clear();
                         println!("✓ Staged Windows password for user '{}'", username);
-                        println!(
-                            "  SAM blanked + RunOnce `net user` (applies at next boot as SYSTEM)."
-                        );
-                        println!(
-                            "  After first boot, log on with the password you passed to --password."
-                        );
+                        if result.aes_written {
+                            println!(
+                                "  Wrote AES/RC4 NT hash into SAM (SYSKEY); password is active offline."
+                            );
+                        } else if result.runonce_staged {
+                            println!(
+                                "  SAM blanked + RunOnce `net user` (applies at next boot as SYSTEM)."
+                            );
+                            println!(
+                                "  After first boot, log on with the password you passed to --password."
+                            );
+                        }
                     } else {
                         progress.set_message(format!(
                             "Clearing Windows password for '{}' (offline SAM)...",
@@ -1373,7 +1389,7 @@ fn build_rescue_export_plan(
                 let mut plan = FixPlan::new(vm.to_string(), "rescue-reset-password-windows".into());
                 plan.metadata.description = Some(if password.is_some() {
                     format!(
-                        "Blank SAM for '{username}' + stage RunOnce net user (apply via rescue --password)"
+                        "AES/RC4 SAM NT-hash write when SYSTEM hive available; else blank + RunOnce net user (apply via rescue --password)"
                     )
                 } else {
                     format!(
@@ -1399,7 +1415,7 @@ fn build_rescue_export_plan(
                     }),
                     priority: Priority::Critical,
                     description: if password.is_some() {
-                        format!("Set Windows password for {username} (SAM blank + RunOnce)")
+                        format!("Set Windows password for {username} (AES SAM or RunOnce)")
                     } else {
                         format!("Clear SAM password for {username} (offline blank)")
                     },

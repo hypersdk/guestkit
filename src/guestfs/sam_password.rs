@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Offline Windows local-account password clear / set via SAM + first-boot RunOnce.
+//! Offline Windows local-account password clear / set via SAM.
 //!
-//! Modern Windows (Win10 AU+) encrypts NT hashes with AES keyed from SYSKEY, so
-//! writing a raw MD4 NTLM hash often does not work. The reliable offline unlock
-//! used by chntpw is to set the NT hash *length* field in the `V` blob to 4,
-//! which Windows treats as "no password".
-//!
-//! When a new password is requested, we still blank the SAM (so the account can
-//! log on), then stage an HKLM RunOnce that runs `net user` at first boot as
-//! SYSTEM — that path sets a real password without needing SYSKEY AES writes.
+//! Prefer AES/RC4 SYSKEY hash write when a SYSTEM hive is available
+//! ([`set_windows_password`]). Fall back to chntpw-style blank + first-boot
+//! RunOnce `net user` when AES write is unavailable.
 //!
 //! Requires the `registry-write` feature (libhivex).
 
@@ -60,9 +55,6 @@ extern "C" {
 }
 
 /// Clear the NT password for `username` in an offline SAM hive (chntpw blank).
-///
-/// Also clears the account-disabled bit in the `F` value when present so the
-/// account can log on.
 pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
     let path = path_cstring(sam_hive)?;
     let h = unsafe { hivex_open(path.as_ptr(), HIVEX_OPEN_WRITE) };
@@ -85,13 +77,11 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
 
     let rid = lookup_rid(guard.0, username)?;
     let rid_hex = format!("{rid:08X}");
-
     let user_node = navigate(
         guard.0,
         &["SAM", "Domains", "Account", "Users", &rid_hex],
     )?;
 
-    // Patch V: set NT hash length (offset 0xAC) to 4 → "no password".
     let mut v = get_binary_value(guard.0, user_node, "V")?;
     if v.len() < 0xB0 {
         return Err(Error::InvalidOperation(format!(
@@ -99,22 +89,10 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
             v.len()
         )));
     }
-    // LM hash length @ 0xA0, NT hash length @ 0xAC (little-endian u32).
     v[0xA0..0xA4].copy_from_slice(&4u32.to_le_bytes());
     v[0xAC..0xB0].copy_from_slice(&4u32.to_le_bytes());
     set_binary_value(guard.0, user_node, "V", &v)?;
-
-    // Clear UF_ACCOUNTDISABLE (0x0002) in F if F is present and long enough.
-    if let Ok(mut f) = get_binary_value(guard.0, user_node, "F") {
-        if f.len() >= 0x3C {
-            let flags = u32::from_le_bytes(f[0x38..0x3C].try_into().unwrap());
-            let cleared = flags & !0x0002;
-            if cleared != flags {
-                f[0x38..0x3C].copy_from_slice(&cleared.to_le_bytes());
-                set_binary_value(guard.0, user_node, "F", &f)?;
-            }
-        }
-    }
+    clear_account_disabled(guard.0, user_node)?;
 
     let rc = unsafe { hivex_commit(guard.0, std::ptr::null(), 0) };
     if rc != 0 {
@@ -130,21 +108,42 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct WindowsPasswordSetResult {
     pub username: String,
+    pub aes_written: bool,
     pub sam_blanked: bool,
     pub runonce_staged: bool,
 }
 
-/// Blank the SAM password and stage a first-boot `net user` via SOFTWARE RunOnce.
+/// Set a Windows local-account password offline.
 ///
-/// `software_hive` is a host-local copy of the guest SOFTWARE hive (writable).
+/// Tries SYSKEY AES/RC4 NT-hash write when `system_hive` is provided; otherwise
+/// (or on failure) blanks SAM and stages SOFTWARE RunOnce `net user`.
 pub fn set_windows_password(
     sam_hive: &Path,
     software_hive: &Path,
+    system_hive: Option<&Path>,
     username: &str,
     password: &str,
 ) -> Result<WindowsPasswordSetResult> {
     validate_windows_password(password)?;
     validate_windows_username(username)?;
+
+    if let Some(sys) = system_hive {
+        match crate::guestfs::sam_aes::set_password_aes(sam_hive, sys, username, password) {
+            Ok(()) => {
+                return Ok(WindowsPasswordSetResult {
+                    username: username.to_string(),
+                    aes_written: true,
+                    sam_blanked: false,
+                    runonce_staged: false,
+                });
+            }
+            Err(e) => {
+                eprintln!(
+                    "Warning: AES/RC4 SAM hash write failed ({e}); falling back to blank + RunOnce"
+                );
+            }
+        }
+    }
 
     clear_windows_password(sam_hive, username)?;
 
@@ -164,9 +163,67 @@ pub fn set_windows_password(
 
     Ok(WindowsPasswordSetResult {
         username: username.to_string(),
+        aes_written: false,
         sam_blanked: true,
         runonce_staged: true,
     })
+}
+
+/// Encrypt `nt_hash` with the domain hashed bootkey and write into the user's `V`.
+pub fn set_user_nt_hash_encrypted(
+    sam_hive: &Path,
+    username: &str,
+    bootkey: &[u8; 16],
+    nt_hash: &[u8; 16],
+) -> Result<()> {
+    let path = path_cstring(sam_hive)?;
+    let h = unsafe { hivex_open(path.as_ptr(), HIVEX_OPEN_WRITE) };
+    if h.is_null() {
+        return Err(Error::CommandFailed(format!(
+            "hivex_open({}) failed: {}",
+            sam_hive.display(),
+            std::io::Error::last_os_error()
+        )));
+    }
+    struct Guard(HiveH);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe {
+                hivex_close(self.0);
+            }
+        }
+    }
+    let guard = Guard(h);
+
+    let account = navigate(guard.0, &["SAM", "Domains", "Account"])?;
+    let domain_f = get_binary_value(guard.0, account, "F")?;
+    let hboot = crate::guestfs::sam_aes::hashed_bootkey(&domain_f, bootkey)?;
+    let aes_style = crate::guestfs::sam_aes::domain_f_is_aes(&domain_f);
+
+    let rid = lookup_rid(guard.0, username)?;
+    let rid_hex = format!("{rid:08X}");
+    let user_node = navigate(
+        guard.0,
+        &["SAM", "Domains", "Account", "Users", &rid_hex],
+    )?;
+
+    let salt = crate::guestfs::sam_aes::random_salt();
+    let blob =
+        crate::guestfs::sam_aes::encrypt_nt_hash(rid, nt_hash, &hboot, &salt, aes_style)?;
+
+    let mut v = get_binary_value(guard.0, user_node, "V")?;
+    crate::guestfs::sam_aes::patch_v_with_nt_hash(&mut v, &blob)?;
+    set_binary_value(guard.0, user_node, "V", &v)?;
+    clear_account_disabled(guard.0, user_node)?;
+
+    let rc = unsafe { hivex_commit(guard.0, std::ptr::null(), 0) };
+    if rc != 0 {
+        return Err(Error::CommandFailed(format!(
+            "hivex_commit failed: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    Ok(())
 }
 
 /// Build the RunOnce command string (also used by unit tests).
@@ -178,8 +235,21 @@ pub fn runonce_net_user_command(username: &str, password: &str) -> String {
     )
 }
 
+fn clear_account_disabled(h: HiveH, user_node: HiveNodeH) -> Result<()> {
+    if let Ok(mut f) = get_binary_value(h, user_node, "F") {
+        if f.len() >= 0x3C {
+            let flags = u32::from_le_bytes(f[0x38..0x3C].try_into().unwrap());
+            let cleared = flags & !0x0002;
+            if cleared != flags {
+                f[0x38..0x3C].copy_from_slice(&cleared.to_le_bytes());
+                set_binary_value(h, user_node, "F", &f)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn quote_cmd_arg(s: &str) -> String {
-    // CMD double-quote escaping: embed " as ""
     format!("\"{}\"", s.replace('"', "\"\""))
 }
 

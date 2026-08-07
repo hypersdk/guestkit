@@ -89,6 +89,14 @@ printpdf = "0.7"
 # Hashing for cache keys
 sha2 = "0.10"
 
+# Windows SAM AES / RC4 password crypto (bootkey + NT hash)
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+cipher = { version = "0.4", features = ["alloc"] }
+des = "0.8"
+md-5 = "0.10"
+md4 = "0.10"
+
 # Binary serialization for fast caching
 bincode = "1.3"
 
