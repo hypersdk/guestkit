@@ -56,6 +56,8 @@ Response (`data` object):
 | GET | `/api/v1/kubevirt/vms/{namespace}/{name}/guest/health` | Guest health score |
 | POST | `/api/v1/kubevirt/vms/{namespace}/{name}/vmtools/exec` | QGA guest-exec (via virt-launcher pod) |
 | POST | `/api/v1/kubevirt/guest/poll-reconcile` | Poll AirgapLive VMs without push |
+| GET | `/api/v1/kubevirt/guest/poll-telemetry` | Fleet airgap poll rollup |
+| GET | `/api/v1/kubevirt/vms/{ns}/{name}/guest/poll-telemetry` | Per-VM latest poll sample |
 
 Per-VM live pulls use the **Guest Control Fabric** transport ladder: QGA exec RPC first, then push cache for read-only methods, then optional `AGENT_PROXY_URL` fallback. See [guest-control-fabric.md](guest-control-fabric.md).
 

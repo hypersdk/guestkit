@@ -60,6 +60,8 @@ Each pull records `attempts: [{ tier, ok, latencyMs, error }]` for Agent Doctor 
 | POST | `.../guest/file/read` | QGA file read |
 | POST | `.../guest/file/write` | QGA file write (airgap bootstrap) |
 | POST | `/kubevirt/guest/poll-reconcile` | Poll AirgapLive VMs without push |
+| GET | `/kubevirt/guest/poll-telemetry` | Fleet airgap poll rollup |
+| GET | `.../guest/poll-telemetry` | Per-VM latest poll sample (latency + attempts) |
 
 All guest routes return a **GuestControlEnvelope**: `ok`, `transport`, `networkRequired`, `controlState`, `capabilities`, `warnings`, `recommendedActions`, `data`.
 
@@ -75,7 +77,24 @@ Trigger: `POST .../guest/install-agent` with `{ "strategy": "auto" }` (auto-sele
 
 ## Host-mediated polling
 
-Background worker (`GUEST_AIRGAP_POLL_ENABLED`, default on) polls VMs in `airgap_live` without push heartbeat every 30s. Results stored in Redis `guest-agent:vm-poll:{ns}:{name}`.
+Background worker (`GUEST_AIRGAP_POLL_ENABLED`, default on) polls VMs in `airgap_live` without push heartbeat every 30s (`GUEST_AIRGAP_POLL_INTERVAL_SECS`).
+
+Each cycle stores:
+
+| Redis key | Contents |
+|-----------|----------|
+| `guest-agent:vm-poll:{ns}:{name}` | Per-VM sample: method latency, transport attempts, probe ladder |
+| `guest-agent:poll-fleet` | Fleet rollup: scanned/polled/skipped, avg latency, error list, samples |
+
+API:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/kubevirt/guest/poll-reconcile` | Run one reconcile now |
+| GET | `/kubevirt/guest/poll-telemetry` | Fleet rollup |
+| GET | `/kubevirt/vms/{ns}/{name}/guest/poll-telemetry` | Latest VM poll sample |
+
+`GET .../guest/status` includes `lastPoll` + `telemetryMode` (`pull_via_virt_launcher` / `push` / `none`).
 
 UI label: **Telemetry mode: Pull via virt-launcher**.
 

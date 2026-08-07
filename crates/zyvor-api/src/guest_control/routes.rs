@@ -90,6 +90,9 @@ pub async fn get_guest_status(
 ) -> ApiResult<Json<GuestControlEnvelope>> {
     let ctx = probe_guest_context(&state, &namespace, &name).await;
     let caps = context_to_capabilities(&ctx);
+    let last_poll = super::polling::load_poll_result(&mut state.redis.clone(), &namespace, &name)
+        .await
+        .unwrap_or(None);
     let data = json!({
         "namespace": namespace,
         "name": name,
@@ -103,6 +106,16 @@ pub async fn get_guest_status(
         "isWindows": ctx.is_windows,
         "agentVersion": ctx.agent_version,
         "attempts": ctx.attempts,
+        "lastPoll": last_poll,
+        "telemetryMode": if ctx.control_state == super::capabilities::ControlState::AirgapLive
+            && !ctx.push_registered
+        {
+            "pull_via_virt_launcher"
+        } else if ctx.push_registered {
+            "push"
+        } else {
+            "none"
+        },
     });
     Ok(Json(GuestControlEnvelope::success(
         ctx.active_transport,
@@ -372,6 +385,40 @@ pub async fn post_guest_poll_reconcile(
 ) -> ApiResult<Json<ApiResponse<Value>>> {
     let result = super::polling::reconcile_airgap_polls(&state).await?;
     Ok(Json(ApiResponse::ok(result)))
+}
+
+/// Latest airgap poll sample for one VM (`guest-agent:vm-poll:{ns}:{name}`).
+pub async fn get_guest_poll_telemetry(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    let poll = super::polling::load_poll_result(&mut state.redis.clone(), &namespace, &name)
+        .await?
+        .unwrap_or_else(|| {
+            json!({
+                "namespace": namespace,
+                "name": name,
+                "ok": false,
+                "message": "no poll sample yet (VM not airgap_live or worker not run)",
+            })
+        });
+    Ok(Json(ApiResponse::ok(poll)))
+}
+
+/// Fleet rollup from the last reconcile cycle (`guest-agent:poll-fleet`).
+pub async fn get_guest_poll_fleet_telemetry(
+    State(state): State<AppState>,
+) -> ApiResult<Json<ApiResponse<Value>>> {
+    let fleet = super::polling::load_fleet_telemetry(&mut state.redis.clone())
+        .await?
+        .unwrap_or_else(|| {
+            json!({
+                "scanned": 0,
+                "polled": 0,
+                "message": "no fleet telemetry yet",
+            })
+        });
+    Ok(Json(ApiResponse::ok(fleet)))
 }
 
 /// Wrap intel route payloads with guest control envelope metadata.

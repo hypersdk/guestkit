@@ -268,6 +268,14 @@ pub fn api_router() -> Router<AppState> {
             post(crate::guest_control::routes::post_guest_poll_reconcile),
         )
         .route(
+            "/api/v1/kubevirt/guest/poll-telemetry",
+            get(crate::guest_control::routes::get_guest_poll_fleet_telemetry),
+        )
+        .route(
+            "/api/v1/kubevirt/vms/:namespace/:name/guest/poll-telemetry",
+            get(crate::guest_control::routes::get_guest_poll_telemetry),
+        )
+        .route(
             "/api/v1/kubevirt/vms/:namespace/:name/guest-agent",
             get(kubevirt::get_guest_agent_info),
         )
