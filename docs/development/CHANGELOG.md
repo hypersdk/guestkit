@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cloud disk source depth** — persistent `~/.cache/guestkit/cloud` pulls;
   S3 `GUESTKIT_S3_ENDPOINT`/`AWS_ENDPOINT_URL`; `azure://` URIs; GCS
   `gcloud storage` fallback; CI recipe `scripts/ci-cloud-disk-sources.sh`.
+- **Offline heuristic remediations + linux-grub** — `systemctl enable/disable`
+  → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor/sshd enable offline;
+  ufw default deny FileEdit; day-0 `linux-grub` (`--grub-timeout` /
+  `--grub-cmdline`) for `/etc/default/grub` (full grub-install still parked).
 
 ## [0.3.19] - 2026-08-06
 

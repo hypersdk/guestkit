@@ -1163,6 +1163,29 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             }));
         }
 
+        // ufw default deny (offline)
+        if lower.contains("ufw")
+            && (lower.contains("default deny")
+                || lower.contains("deny incoming")
+                || (lower.contains("default") && lower.contains("drop")))
+        {
+            return Ok(OperationType::FileEdit(FileEdit {
+                file: "/etc/default/ufw".to_string(),
+                backup: true,
+                changes: vec![FileChange {
+                    line: 0,
+                    before: "DEFAULT_INPUT_POLICY=\"ACCEPT\"".to_string(),
+                    after: "DEFAULT_INPUT_POLICY=\"DROP\"".to_string(),
+                    context: None,
+                }],
+            }));
+        }
+
+        // Offline systemd enable/disable before package-install heuristics
+        if let Some(op) = Self::parse_systemd_unit_remediation(&lower) {
+            return Ok(op);
+        }
+
         // Firewall: prefer offline systemd enable over live ServiceOperation when "enable"
         if lower.contains("firewall") && (lower.contains("enable") || lower.contains("install")) {
             if lower.contains("install") {
@@ -1171,12 +1194,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
                     estimated_size: Some("~5MB".to_string()),
                 }));
             }
-            // Offline-safe: wants symlink (same pattern as linux-ssh).
-            return Ok(OperationType::Symlink(Symlink {
-                target: "../../../../usr/lib/systemd/system/firewalld.service".into(),
-                link_path: "/etc/systemd/system/multi-user.target.wants/firewalld.service"
-                    .into(),
-            }));
+            return Ok(Self::systemd_enable_symlink("firewalld"));
         }
 
         // SELinux mode changes
@@ -1200,15 +1218,14 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             }));
         }
 
-        // fail2ban installation
-        if lower.contains("fail2ban") {
+        // fail2ban / AIDE installation (still live-only PackageInstall)
+        if lower.contains("fail2ban") && lower.contains("install") {
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["fail2ban".to_string()],
                 estimated_size: Some("~15MB".to_string()),
             }));
         }
 
-        // AIDE installation
         if lower.contains("aide") && lower.contains("install") {
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["aide".to_string()],
@@ -1223,6 +1240,213 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             expected_exit: 0,
             timeout: Some(300), // 5 minutes default
         }))
+    }
+
+    /// Offline `systemctl enable` → multi-user wants Symlink.
+    fn systemd_enable_symlink(unit: &str) -> OperationType {
+        let unit = unit.trim().trim_end_matches(".service");
+        OperationType::Symlink(Symlink {
+            target: format!("../../../../usr/lib/systemd/system/{unit}.service"),
+            link_path: format!("/etc/systemd/system/multi-user.target.wants/{unit}.service"),
+        })
+    }
+
+    /// Offline `systemctl disable` → remove wants Symlink.
+    fn systemd_disable_delete(unit: &str) -> OperationType {
+        let unit = unit.trim().trim_end_matches(".service");
+        OperationType::FileDelete(FileDelete {
+            path: format!("/etc/systemd/system/multi-user.target.wants/{unit}.service"),
+            missing_ok: true,
+        })
+    }
+
+    /// Map common enable/disable remediation text to offline systemd ops.
+    fn parse_systemd_unit_remediation(lower: &str) -> Option<OperationType> {
+        const UNITS: &[(&str, &str)] = &[
+            ("fail2ban", "fail2ban"),
+            ("auditd", "auditd"),
+            ("chronyd", "chronyd"),
+            ("chrony", "chronyd"),
+            ("ntpd", "ntpd"),
+            ("rsyslog", "rsyslog"),
+            ("apparmor", "apparmor"),
+            ("sshd", "sshd"),
+            ("firewalld", "firewalld"),
+        ];
+
+        let wants_enable = lower.contains("enable")
+            || lower.contains("systemctl enable")
+            || lower.contains("start on boot")
+            || lower.contains("start at boot");
+        let wants_disable = lower.contains("disable")
+            || lower.contains("systemctl disable")
+            || lower.contains("stop on boot");
+
+        if lower.contains("systemctl") {
+            for verb in ["enable", "disable"] {
+                if let Some(idx) = lower.find(verb) {
+                    let after = lower[idx + verb.len()..].trim_start();
+                    let unit = after
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .trim_matches(|c: char| {
+                            !c.is_ascii_alphanumeric() && c != '-' && c != '_' && c != '.'
+                        });
+                    if !unit.is_empty() && unit != "and" && unit != "the" {
+                        return Some(if verb == "enable" {
+                            Self::systemd_enable_symlink(unit)
+                        } else {
+                            Self::systemd_disable_delete(unit)
+                        });
+                    }
+                }
+            }
+        }
+
+        for (needle, unit) in UNITS {
+            if !lower.contains(needle) {
+                continue;
+            }
+            if lower.contains("install") {
+                continue;
+            }
+            if wants_disable && !wants_enable {
+                return Some(Self::systemd_disable_delete(unit));
+            }
+            if wants_enable {
+                return Some(Self::systemd_enable_symlink(unit));
+            }
+        }
+        None
+    }
+
+    /// Offline `/etc/default/grub` day-0 plan (timeout / cmdline). Does not run grub-install.
+    pub fn linux_grub_defaults_plan(
+        &self,
+        g: &mut crate::Guestfs,
+        timeout: Option<u32>,
+        cmdline_append: Option<&str>,
+    ) -> Result<FixPlan> {
+        let grub_path = "/etc/default/grub";
+        let current = g
+            .read_file(grub_path)
+            .map(|b| String::from_utf8_lossy(&b).into_owned())
+            .unwrap_or_else(|_| {
+                "GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT=\"\"\nGRUB_CMDLINE_LINUX=\"\"\n"
+                    .into()
+            });
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "linux-grub".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(
+            "Offline GRUB defaults (/etc/default/grub). Regenerate grub.cfg in-guest after boot \
+             (grub2-mkconfig / update-grub); full grub-install still needs chroot."
+                .into(),
+        );
+        plan.metadata.tags = vec![
+            "linux".into(),
+            "grub".into(),
+            "boot".into(),
+            "offline".into(),
+        ];
+
+        if timeout.is_none()
+            && cmdline_append.map(str::trim).filter(|s| !s.is_empty()).is_none()
+        {
+            anyhow::bail!("linux-grub requires --grub-timeout and/or --grub-cmdline");
+        }
+
+        let mut next = current;
+        let mut desc_parts = Vec::new();
+        if let Some(t) = timeout {
+            next = Self::upsert_grub_kv(&next, "GRUB_TIMEOUT", &t.to_string());
+            desc_parts.push(format!("GRUB_TIMEOUT={t}"));
+        }
+        if let Some(extra) = cmdline_append.map(str::trim).filter(|s| !s.is_empty()) {
+            next = Self::append_grub_cmdline(&next, extra);
+            desc_parts.push(format!("cmdline+={extra}"));
+        }
+
+        plan.add_operation(Operation {
+            id: "grub-defaults".into(),
+            op_type: OperationType::FileWrite(FileWrite {
+                path: grub_path.into(),
+                content: if next.ends_with('\n') {
+                    next
+                } else {
+                    format!("{next}\n")
+                },
+                mode: Some("0644".into()),
+            }),
+            priority: Priority::High,
+            description: format!("Write offline /etc/default/grub ({})", desc_parts.join(", ")),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        Ok(plan)
+    }
+
+    fn upsert_grub_kv(content: &str, key: &str, value: &str) -> String {
+        let mut found = false;
+        let mut out = Vec::new();
+        for line in content.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with(key) && trimmed[key.len()..].starts_with('=') {
+                out.push(format!("{key}={value}"));
+                found = true;
+            } else {
+                out.push(line.to_string());
+            }
+        }
+        if !found {
+            out.push(format!("{key}={value}"));
+        }
+        out.join("\n")
+    }
+
+    fn append_grub_cmdline(content: &str, extra: &str) -> String {
+        let key = if content
+            .lines()
+            .any(|l| l.trim_start().starts_with("GRUB_CMDLINE_LINUX="))
+        {
+            "GRUB_CMDLINE_LINUX"
+        } else {
+            "GRUB_CMDLINE_LINUX_DEFAULT"
+        };
+        let mut found = false;
+        let mut out = Vec::new();
+        for line in content.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with(key) && trimmed[key.len()..].starts_with('=') {
+                found = true;
+                let rest = &trimmed[key.len() + 1..];
+                let unquoted = rest.trim().trim_matches('"');
+                let new_val = if unquoted.split_whitespace().any(|t| t == extra) {
+                    unquoted.to_string()
+                } else if unquoted.is_empty() {
+                    extra.to_string()
+                } else {
+                    format!("{unquoted} {extra}")
+                };
+                out.push(format!("{key}=\"{new_val}\""));
+            } else {
+                out.push(line.to_string());
+            }
+        }
+        if !found {
+            out.push(format!("{key}=\"{extra}\""));
+        }
+        out.join("\n")
     }
 
     /// Add common post-apply actions
@@ -1813,6 +2037,72 @@ mod tests {
             }
             _ => panic!("Expected PackageInstall operation"),
         }
+    }
+
+    #[test]
+    fn test_parse_remediation_fail2ban_enable_offline() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator
+            .parse_remediation("Enable fail2ban service")
+            .unwrap();
+        match op_type {
+            OperationType::Symlink(sl) => {
+                assert!(sl.link_path.contains("fail2ban"));
+            }
+            _ => panic!("Expected Symlink for fail2ban enable"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remediation_systemctl_enable() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator
+            .parse_remediation("systemctl enable auditd.service")
+            .unwrap();
+        match op_type {
+            OperationType::Symlink(sl) => {
+                assert!(sl.link_path.contains("auditd"));
+            }
+            _ => panic!("Expected Symlink for systemctl enable"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remediation_systemctl_disable() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator
+            .parse_remediation("systemctl disable chronyd")
+            .unwrap();
+        match op_type {
+            OperationType::FileDelete(fd) => {
+                assert!(fd.path.contains("chronyd"));
+                assert!(fd.missing_ok);
+            }
+            _ => panic!("Expected FileDelete for systemctl disable"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remediation_ufw_default_deny() {
+        let generator = PlanGenerator::new("test.qcow2".to_string());
+        let op_type = generator
+            .parse_remediation("Configure ufw default deny incoming")
+            .unwrap();
+        match op_type {
+            OperationType::FileEdit(fe) => {
+                assert!(fe.file.contains("default/ufw"));
+            }
+            _ => panic!("Expected FileEdit for ufw default deny"),
+        }
+    }
+
+    #[test]
+    fn test_upsert_grub_kv_and_cmdline() {
+        let base = "GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX=\"quiet\"\n";
+        let t = PlanGenerator::upsert_grub_kv(base, "GRUB_TIMEOUT", "1");
+        assert!(t.contains("GRUB_TIMEOUT=1"));
+        let c = PlanGenerator::append_grub_cmdline(&t, "nomodeset");
+        assert!(c.contains("nomodeset"));
     }
 
     #[test]

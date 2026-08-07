@@ -40,6 +40,7 @@ These profiles skip inspect→finding heuristics and emit a fixed offline-safe p
 | `windows-dhcp` | `--interface-guid` | Enable DHCP (`EnableDHCP=1`) on that interface |
 | `windows-dns` | `--interface-guid` `--dns` | Set `NameServer` (space/comma-separated) on that interface |
 | `linux-hostname` | `--hostname NAME` | `/etc/hostname` + `/etc/hosts` patch |
+| `linux-grub` | `--grub-timeout N`, `--grub-cmdline TOKEN` | Offline `/etc/default/grub` (not grub-install) |
 | `linux-ssh` | optional `--user` + `--key` / `--key-file` | Remove `sshd_not_to_be_run`, wants `Symlink`, sshd drop-in, optional `authorized_keys` |
 
 ```bash
@@ -60,13 +61,15 @@ guestkit plan generate win.qcow2 -p windows-dhcp \
 guestkit plan generate win.qcow2 -p windows-dns \
   --interface-guid a1b2c3d4-e5f6-7890-abcd-ef1234567890 --dns "1.1.1.1 8.8.8.8" -o dns.yaml
 guestkit plan generate linux.qcow2 -p linux-hostname --hostname web01 -o lhost.yaml
+guestkit plan generate linux.qcow2 -p linux-grub --grub-timeout 5 \
+  --grub-cmdline nomodeset -o grub.yaml
 
 guestkit plan generate linux.qcow2 -p linux-ssh \
   --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml
 guestkit plan apply ssh.yaml --vm linux.qcow2 --yes --skip-backup
 ```
 
-Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`PackageInstall`, `ServiceOperation`, `CommandExec`) as **offline apply: skipped**. Heuristics prefer offline-safe ops where possible (e.g. firewalld enable → `Symlink`, ufw → `FileEdit`, SSH/SELinux edits).
+Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`PackageInstall`, `ServiceOperation`, `CommandExec`) as **offline apply: skipped**. Heuristics prefer offline-safe ops where possible (firewalld/ufw/SSH/SELinux; `systemctl enable/disable` → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor enable).
 
 ## VirtIO driver inject (offline)
 

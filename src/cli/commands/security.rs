@@ -805,6 +805,29 @@ pub fn rescue_command(
 
             if found {
                 println!("✓ GRUB configuration found");
+                if g.exists("/etc/default/grub").unwrap_or(false) {
+                    if let Ok(bytes) = g.read_file("/etc/default/grub") {
+                        let text = String::from_utf8_lossy(&bytes);
+                        for key in [
+                            "GRUB_TIMEOUT",
+                            "GRUB_CMDLINE_LINUX",
+                            "GRUB_CMDLINE_LINUX_DEFAULT",
+                        ] {
+                            if let Some(line) =
+                                text.lines().find(|l| l.trim_start().starts_with(key))
+                            {
+                                println!("  {}", line.trim());
+                            }
+                        }
+                    }
+                    println!();
+                    println!(
+                        "Offline defaults: guestkit plan generate <disk> -p linux-grub \\"
+                    );
+                    println!(
+                        "  --grub-timeout 5 --grub-cmdline <token> -o grub.yaml"
+                    );
+                }
                 println!();
                 println!("Note: Full GRUB repair requires running grub-install/grub-mkconfig");
                 println!("      This requires chroot into the guest system");

@@ -168,6 +168,14 @@ pub enum PlanAction {
         /// DNS servers for windows-static-ip / windows-dns (space or comma separated)
         #[arg(long)]
         dns: Option<String>,
+
+        /// GRUB_TIMEOUT for linux-grub profile
+        #[arg(long)]
+        grub_timeout: Option<u32>,
+
+        /// Append token to GRUB_CMDLINE_LINUX for linux-grub profile
+        #[arg(long)]
+        grub_cmdline: Option<String>,
     },
 
     /// Show plan statistics
@@ -244,6 +252,8 @@ impl PlanCommand {
                 mask,
                 gateway,
                 dns,
+                grub_timeout,
+                grub_cmdline,
             } => self.generate_plan(
                 vm_disk,
                 profile,
@@ -260,6 +270,8 @@ impl PlanCommand {
                 mask.as_deref(),
                 gateway.as_deref(),
                 dns.as_deref(),
+                *grub_timeout,
+                grub_cmdline.as_deref(),
             ),
             PlanAction::Stats { plan_file } => self.show_stats(plan_file),
         }
@@ -514,6 +526,8 @@ impl PlanCommand {
         mask: Option<&str>,
         gateway: Option<&str>,
         dns: Option<&str>,
+        grub_timeout: Option<u32>,
+        grub_cmdline: Option<&str>,
     ) -> Result<()> {
         println!(
             "Generating {} plan for {}...",
@@ -652,6 +666,11 @@ impl PlanCommand {
                 anyhow::anyhow!("--hostname is required for linux-hostname profile")
             })?;
             generator.linux_hostname_plan(&mut g, name)?
+        } else if matches!(
+            profile_lc.as_str(),
+            "linux-grub" | "linux_grub" | "grub-defaults" | "grub"
+        ) {
+            generator.linux_grub_defaults_plan(&mut g, grub_timeout, grub_cmdline)?
         } else {
             let inspection_profile = crate::cli::profiles::get_profile(profile)
                 .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
@@ -673,6 +692,10 @@ impl PlanCommand {
                 | "linux-hostname"
                 | "linux_hostname"
                 | "set-linux-hostname"
+                | "linux-grub"
+                | "linux_grub"
+                | "grub-defaults"
+                | "grub"
         );
         Self::print_generate_summary(output, &plan, vm_disk, skip_backup_hint);
 
