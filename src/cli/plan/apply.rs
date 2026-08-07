@@ -535,6 +535,7 @@ impl PlanApplicator {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 impl PlanApplicator {
     /// Parse a command string into arguments, handling single and double quotes.
     /// This is a safe alternative to split_whitespace which doesn't handle quoting.

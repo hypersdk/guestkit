@@ -14,11 +14,15 @@ pub mod apply;
 #[cfg(not(target_os = "windows"))]
 pub mod command;
 pub mod export;
+#[cfg(not(target_os = "windows"))]
 pub mod firstboot_stage;
 #[cfg(not(target_os = "windows"))]
 pub mod generator;
+#[cfg(not(target_os = "windows"))]
 pub mod package_fetch;
+#[cfg(not(target_os = "windows"))]
 pub mod package_stage;
+#[cfg(not(target_os = "windows"))]
 pub mod preview;
 pub mod types;
 
@@ -41,4 +45,5 @@ pub use executor_live::LivePlanExecutor;
 pub use export::PlanExporter;
 #[cfg(not(target_os = "windows"))]
 pub use generator::PlanGenerator;
+#[cfg(not(target_os = "windows"))]
 pub use preview::PlanPreview;
