@@ -317,16 +317,7 @@ impl PlanApplicator {
                 Ok(true)
             }
             OperationType::CommandExec(ce) => {
-                // Parse command string properly, handling quoted arguments
-                let args = Self::parse_shell_words(&ce.command)?;
-                if args.is_empty() {
-                    return Ok(false);
-                }
-                let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-                match g.command(&arg_refs) {
-                    Ok(_) => Ok(true),
-                    Err(e) => Err(anyhow::anyhow!("Command '{}' failed: {}", ce.command, e)),
-                }
+                crate::cli::plan::firstboot_stage::apply_or_stage_command(g, ce)
             }
             OperationType::FilePermissions(fp) => {
                 let mode_str = if fp.mode.is_empty() { "0" } else { &fp.mode };
@@ -400,11 +391,7 @@ impl PlanApplicator {
                 crate::cli::plan::package_stage::stage_packages_offline(g, pi)
             }
             OperationType::ServiceOperation(so) => {
-                eprintln!(
-                    "Warning: Service operation ({}) requires a running system, skipping",
-                    so.service
-                );
-                Ok(false)
+                crate::cli::plan::firstboot_stage::stage_service_offline(g, so)
             }
             OperationType::RegistryEdit(re) => self.apply_registry_edit(g, re),
             OperationType::DriverInject(di) => self.apply_driver_inject(g, di),
@@ -551,6 +538,7 @@ impl PlanApplicator {
 impl PlanApplicator {
     /// Parse a command string into arguments, handling single and double quotes.
     /// This is a safe alternative to split_whitespace which doesn't handle quoting.
+    #[allow(dead_code)] // kept for live/export callers and unit tests
     fn parse_shell_words(input: &str) -> Result<Vec<String>> {
         let mut args = Vec::new();
         let mut current = String::new();

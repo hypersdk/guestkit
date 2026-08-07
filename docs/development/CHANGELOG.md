@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Offline ServiceOperation / CommandExec staging** — enable/disable via
+  systemd wants Symlink/FileDelete; start/restart and other commands stage
+  `guestkit-firstboot-live.service` when chroot cannot run them.
+- **UEFI-aware `fix-grub --force`** — detects ESP under the guest root and
+  runs `grub-install --target=x86_64-efi|arm64-efi --efi-directory=…
+  --no-nvram --removable` (BIOS path unchanged).
 - **Windows AES/RC4 SAM NT-hash write** — `rescue -o reset-password --password`
   reconstructs the SYSKEY bootkey from SYSTEM LSA class names, derives the
   hashed bootkey from SAM `F`, and writes an AES-128-CBC (or legacy RC4)
@@ -19,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `~/.cache/guestkit/packages`, then stages the first-boot oneshot as before.
 - **Offline GRUB repair (`fix-grub`)** — `rescue -o fix-grub` bind-mounts
   proc/sys/dev and runs chroot `grub2-mkconfig` / `grub-mkconfig` /
-  `update-grub`; `--force` also attempts `grub-install` onto the NBD device;
+  `update-grub`; `--force` also attempts `grub-install` onto the NBD device
+  (BIOS) or EFI removable path when an ESP is present;
   if chroot mkconfig fails, stages `guestkit-firstboot-grub.service`.
   `--export-plan` writes the first-boot FileWrite/Symlink ops. `check-grub`
   remains diagnose-only.

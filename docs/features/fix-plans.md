@@ -69,7 +69,7 @@ guestkit plan generate linux.qcow2 -p linux-ssh \
 guestkit plan apply ssh.yaml --vm linux.qcow2 --yes --skip-backup
 ```
 
-Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`ServiceOperation`, `CommandExec`) as **offline apply: skipped**. `PackageInstall` stages `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` (or `host_cache`) into the guest for a first-boot oneshot when files match; with `GUESTKIT_PACKAGE_FETCH=1`, missing packages are downloaded on the host (`dnf download` / `yumdownloader` / `apt-get download`) into the cache (default `~/.cache/guestkit/packages`) before staging. Heuristics prefer offline-safe ops where possible (firewalld/ufw/SSH/SELinux; `systemctl enable/disable` → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor enable).
+Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. `PackageInstall` stages `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` (or `host_cache`) for a first-boot oneshot when files match; with `GUESTKIT_PACKAGE_FETCH=1`, missing packages are downloaded on the host before staging. `ServiceOperation` enable/disable applies via systemd wants Symlink/FileDelete; start/restart and other `CommandExec` lines try chroot then stage `guestkit-firstboot-live.service`. Heuristics prefer offline-safe ops where possible (firewalld/ufw/SSH/SELinux; `systemctl enable/disable` → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor enable).
 
 ## VirtIO driver inject (offline)
 
@@ -98,7 +98,7 @@ Offline rescue (`guestkit rescue -o …`) for day-0 jobs without writing a plan 
 | `reset-password` | `--user`, `--password` | Linux `/etc/shadow`; Windows AES/RC4 SAM NT-hash via SYSKEY (needs SYSTEM hive + `registry-write`), else SAM blank + RunOnce `net user`. Omit `--password` on Windows to blank only. |
 | `fix-fstab` | `--backup` | Linux |
 | `check-grub` | — | Diagnose-only |
-| `fix-grub` | `--force` (also `grub-install` on NBD) | Chroot `grub-mkconfig`/`update-grub`; first-boot oneshot fallback; `--export-plan` stages first-boot unit |
+| `fix-grub` | `--force` (BIOS `grub-install` on NBD, or EFI `--target=*-efi --efi-directory --no-nvram --removable`) | Chroot `grub-mkconfig`/`update-grub`; first-boot oneshot fallback; `--export-plan` stages first-boot unit |
 
 ```bash
 guestkit rescue disk.qcow2 -o enable-ssh --export-plan ssh.yaml
@@ -156,10 +156,10 @@ pub struct FixPlan {
 - `FileDelete` - Remove a guest file (`missing_ok` supported)
 - `Symlink` - Force symlink via guestfs `ln_sf` (offline-friendly)
 - `PackageInstall` - Live install, or offline stage from `GUESTKIT_PACKAGE_CACHE` / `host_cache` (first-boot oneshot); optional host fetch via `GUESTKIT_PACKAGE_FETCH=1`
-- `ServiceOperation` - Service management (live / skipped offline)
+- `ServiceOperation` - Offline enable/disable via wants Symlink/FileDelete; start/restart staged to first-boot oneshot
 - `SELinuxMode` - SELinux mode changes
 - `RegistryEdit` - Windows registry modifications (`registry-write` feature)
-- `CommandExec` - Arbitrary command execution
+- `CommandExec` - Try chroot; else stage to `guestkit-firstboot-live.service` (systemctl enable/disable rewritten offline)
 - `FileCopy` - File copy operations
 - `DirectoryCreate` - Directory creation
 - `FilePermissions` - Permission/ownership changes

@@ -115,6 +115,8 @@ _Turn findings into reviewable, reversible, executable remediation - not blind e
   - **How:** `guestkit rescue disk.qcow2 -o enable-ssh`; `guestkit rescue disk.qcow2 -o fix-grub`; `guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…'` (needs `--features registry-write`).
 - **Offline PackageInstall** — Stage `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` for first-boot install; set `GUESTKIT_PACKAGE_FETCH=1` to download missing packages on the host first.
   - **How:** `export GUESTKIT_PACKAGE_CACHE=~/pkgs GUESTKIT_PACKAGE_FETCH=1` then `guestkit plan apply plan.yaml --vm disk.qcow2 --yes`.
+- **Offline service / command ops** — `ServiceOperation` enable/disable writes systemd wants; start/restart and `CommandExec` stage `guestkit-firstboot-live.service` when chroot cannot run them.
+  - **How:** Preview shows staging notes; apply with `guestkit plan apply plan.yaml --vm disk.qcow2 --yes`.
 - **Transactional boot repair** — guestkit repair --fix boot converts doctor blockers into a plan, applies it with backups, then re-scores to show the delta. — _Fix boot blockers offline and prove the score improved._
   - **How:** CLI: `guestkit repair vm.qcow2 --fix boot --dry-run` to preview, then `guestkit repair vm.qcow2 --fix boot`; re-run `guestkit doctor` to see the score delta.
 - **Export to bash & Ansible** — Plans export as executable shell scripts, Ansible playbooks, JSON, or YAML for change control and runbooks. — _Hand ops a runbook your CAB can approve._

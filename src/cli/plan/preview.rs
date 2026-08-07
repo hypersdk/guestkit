@@ -83,13 +83,14 @@ impl PlanPreview {
         }
     }
 
-    /// Ops that `plan apply` (offline guestfs) cannot execute without extras.
+    /// Ops that offline `plan apply` cannot fully execute without extras / first-boot.
     fn is_live_only(op: &OperationType) -> bool {
         match op {
             OperationType::PackageInstall(pi) => {
                 !crate::cli::plan::package_stage::can_stage_offline(pi)
             }
-            OperationType::ServiceOperation(_) | OperationType::CommandExec(_) => true,
+            // Service/Command are offline-capable via wants symlink or first-boot staging.
+            OperationType::ServiceOperation(_) | OperationType::CommandExec(_) => false,
             _ => false,
         }
     }
@@ -101,6 +102,16 @@ impl PlanPreview {
             println!(
                 "  {}",
                 crate::cli::plan::package_stage::stage_preview_note(pi).yellow()
+            );
+        } else if let OperationType::ServiceOperation(so) = &op.op_type {
+            println!(
+                "  {}",
+                crate::cli::plan::firstboot_stage::service_preview_note(so).yellow()
+            );
+        } else if let OperationType::CommandExec(ce) = &op.op_type {
+            println!(
+                "  {}",
+                crate::cli::plan::firstboot_stage::command_preview_note(ce).yellow()
             );
         } else if Self::is_live_only(&op.op_type) {
             println!(

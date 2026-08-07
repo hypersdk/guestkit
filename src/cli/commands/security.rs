@@ -902,12 +902,13 @@ pub fn rescue_command(
             }
             if report.install_ok {
                 println!(
-                    "✓ grub-install onto {}",
-                    report.install_device.as_deref().unwrap_or("disk")
+                    "✓ grub-install onto {}{}",
+                    report.install_device.as_deref().unwrap_or("disk"),
+                    if report.efi { " (EFI --no-nvram --removable)" } else { "" }
                 );
-            } else if force && report.install_device.is_none() && !report.install_ok {
+            } else if force && !report.install_ok {
                 println!(
-                    "Note: --force requested grub-install but no NBD/block device was available"
+                    "Note: --force requested grub-install but it did not succeed (see notes)"
                 );
             }
             if report.firstboot_staged {

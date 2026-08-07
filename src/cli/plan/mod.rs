@@ -14,6 +14,7 @@ pub mod apply;
 #[cfg(not(target_os = "windows"))]
 pub mod command;
 pub mod export;
+pub mod firstboot_stage;
 #[cfg(not(target_os = "windows"))]
 pub mod generator;
 pub mod package_fetch;

@@ -22,6 +22,7 @@ pub struct GrubRepairReport {
     pub mkconfig_tool: Option<String>,
     pub install_ok: bool,
     pub install_device: Option<String>,
+    pub efi: bool,
     pub firstboot_staged: bool,
     pub backups: Vec<String>,
     pub notes: Vec<String>,
@@ -31,7 +32,8 @@ pub struct GrubRepairReport {
 ///
 /// 1. Bind-mount `/proc`, `/sys`, `/dev` into the guest root.
 /// 2. Run `grub2-mkconfig` / `grub-mkconfig` / `update-grub` in chroot.
-/// 3. Optionally run `grub-install` / `grub2-install` onto `install_device`.
+/// 3. Optionally run `grub-install` / `grub2-install` onto `install_device`
+///    (BIOS) or `--target=*-efi --efi-directory=… --no-nvram` when ESP is present.
 /// 4. If mkconfig fails, stage a first-boot oneshot inside the guest tree.
 pub fn repair_grub(
     root_mount: &Path,
@@ -46,6 +48,13 @@ pub fn repair_grub(
     }
 
     let mut report = GrubRepairReport::default();
+    report.efi = detect_efi(root_mount);
+    if report.efi {
+        report.notes.push(format!(
+            "detected EFI System Partition layout (efi-dir={})",
+            efi_directory(root_mount).display()
+        ));
+    }
     backup_grub_cfgs(root_mount, &mut report);
 
     let chroot_ok = mount_binds(root_mount, verbose);
@@ -69,7 +78,7 @@ pub fn repair_grub(
         }
 
         if let Some(dev) = install_device {
-            match run_grub_install(root_mount, dev, verbose) {
+            match run_grub_install(root_mount, dev, report.efi, verbose) {
                 Ok(tool) => {
                     report.install_ok = true;
                     report.install_device = Some(dev.display().to_string());
@@ -180,20 +189,35 @@ fn run_mkconfig(root: &Path, verbose: bool) -> Result<String> {
     Err(Error::CommandFailed(last_err))
 }
 
-fn run_grub_install(root: &Path, device: &Path, verbose: bool) -> Result<String> {
+fn run_grub_install(root: &Path, device: &Path, efi: bool, verbose: bool) -> Result<String> {
+    let root_s = root
+        .to_str()
+        .ok_or_else(|| Error::InvalidFormat("non-UTF-8 root".into()))?;
     let dev = device
         .to_str()
         .ok_or_else(|| Error::InvalidFormat("non-UTF-8 install device".into()))?;
-    // Prefer installing to the host device from outside chroot when possible;
-    // fall back to chrooted grub-install (needs device visible in guest /dev).
+
+    if efi {
+        return run_grub_install_efi(root, root_s, verbose);
+    }
+
+    // BIOS / legacy: install to the disk device.
     for tool in ["grub2-install", "grub-install"] {
         if verbose {
-            eprintln!("grub_repair: {tool} {dev} (host)");
+            eprintln!("grub_repair: {tool} {dev} (host BIOS)");
         }
         let mut cmd = maybe_sudo(tool);
         let output = cmd
-            .args(["--root-directory", root.to_str().unwrap_or("/"), dev])
+            .args(["--root-directory", root_s, "--target=i386-pc", dev])
             .output();
+        if let Ok(out) = output {
+            if out.status.success() {
+                return Ok(format!("{tool} (host BIOS --root-directory)"));
+            }
+        }
+        // Retry without explicit target (distro default).
+        let mut cmd = maybe_sudo(tool);
+        let output = cmd.args(["--root-directory", root_s, dev]).output();
         if let Ok(out) = output {
             if out.status.success() {
                 return Ok(format!("{tool} (host --root-directory)"));
@@ -219,6 +243,140 @@ fn run_grub_install(root: &Path, device: &Path, verbose: bool) -> Result<String>
     Err(Error::CommandFailed(format!(
         "grub-install failed for {dev}"
     )))
+}
+
+fn run_grub_install_efi(root: &Path, root_s: &str, verbose: bool) -> Result<String> {
+    let efi_rel = efi_directory(root);
+    // Path relative to guest root for --efi-directory when using --root-directory.
+    let efi_guest = efi_rel
+        .strip_prefix(root)
+        .unwrap_or(Path::new("/boot/efi"));
+    let efi_guest_s = efi_guest
+        .to_str()
+        .unwrap_or("/boot/efi")
+        .trim_start_matches('/');
+    let efi_guest_abs = format!("/{efi_guest_s}");
+
+    let targets = efi_targets(root);
+    let mut last_err = String::new();
+
+    for tool in ["grub2-install", "grub-install"] {
+        for target in &targets {
+            // --no-nvram: offline images have no firmware vars
+            // --removable: write EFI/BOOT/BOOT*.EFI (boots without NVRAM entry)
+            let args = [
+                "--root-directory",
+                root_s,
+                &format!("--target={target}"),
+                &format!("--efi-directory={efi_guest_abs}"),
+                "--bootloader-id=GuestKit",
+                "--no-nvram",
+                "--removable",
+                "--recheck",
+            ];
+            if verbose {
+                eprintln!("grub_repair: {tool} {}", args.join(" "));
+            }
+            let mut cmd = maybe_sudo(tool);
+            let output = cmd.args(args).output();
+            match output {
+                Ok(out) if out.status.success() => {
+                    return Ok(format!("{tool} (host EFI {target} --no-nvram --removable)"));
+                }
+                Ok(out) => {
+                    last_err = format!(
+                        "{tool} {target}: {}",
+                        String::from_utf8_lossy(&out.stderr).trim()
+                    );
+                }
+                Err(e) => last_err = format!("{tool}: {e}"),
+            }
+        }
+    }
+
+    // Chroot fallback
+    for tool in ["grub2-install", "grub-install"] {
+        for target in &targets {
+            let argv = [
+                tool,
+                &format!("--target={target}"),
+                &format!("--efi-directory={efi_guest_abs}"),
+                "--bootloader-id=GuestKit",
+                "--no-nvram",
+                "--removable",
+            ];
+            if verbose {
+                eprintln!("grub_repair: chroot {}", argv.join(" "));
+            }
+            match chroot_cmd(root, &argv) {
+                Ok(out) if out.status.success() => {
+                    return Ok(format!("{tool} (chroot EFI {target})"));
+                }
+                Ok(out) => {
+                    last_err = format!(
+                        "chroot {tool} {target}: {}",
+                        String::from_utf8_lossy(&out.stderr).trim()
+                    );
+                }
+                Err(e) => last_err = format!("chroot {tool}: {e}"),
+            }
+        }
+    }
+
+    Err(Error::CommandFailed(format!(
+        "EFI grub-install failed: {last_err}"
+    )))
+}
+
+/// True when the guest root looks like a UEFI install (ESP mounted under the tree).
+pub fn detect_efi(root: &Path) -> bool {
+    efi_directory(root).join("EFI").is_dir()
+        || root.join("boot/efi/EFI").is_dir()
+        || root.join("boot/EFI").is_dir()
+        || root.join("efi/EFI").is_dir()
+}
+
+fn efi_directory(root: &Path) -> PathBuf {
+    for rel in ["boot/efi", "boot/EFI", "efi"] {
+        let p = root.join(rel);
+        if p.join("EFI").is_dir() || p.is_dir() {
+            // Prefer the path that already has EFI/
+            if p.join("EFI").is_dir() {
+                return p;
+            }
+        }
+    }
+    root.join("boot/efi")
+}
+
+fn efi_targets(root: &Path) -> Vec<&'static str> {
+    // Prefer guest arch hints, then host, then try both.
+    let mut targets = Vec::new();
+    if root.join("lib/aarch64-linux-gnu").is_dir()
+        || root.join("usr/lib/aarch64-linux-gnu").is_dir()
+        || root.join("lib64/ld-linux-aarch64.so.1").is_file()
+    {
+        targets.push("arm64-efi");
+    }
+    if root.join("lib/x86_64-linux-gnu").is_dir()
+        || root.join("usr/lib64").is_dir()
+        || root.join("lib64/ld-linux-x86-64.so.2").is_file()
+    {
+        targets.push("x86_64-efi");
+    }
+    if targets.is_empty() {
+        #[cfg(target_arch = "aarch64")]
+        {
+            targets.push("arm64-efi");
+            targets.push("x86_64-efi");
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            targets.push("x86_64-efi");
+            targets.push("arm64-efi");
+        }
+    }
+    targets
 }
 
 /// Script body written for first-boot GRUB regenerate.
@@ -363,9 +521,18 @@ mod tests {
     }
 
     #[test]
+    fn detect_efi_from_esp_layout() {
+        let dir = tempdir().unwrap();
+        assert!(!detect_efi(dir.path()));
+        fs::create_dir_all(dir.path().join("boot/efi/EFI/BOOT")).unwrap();
+        assert!(detect_efi(dir.path()));
+        let targets = efi_targets(dir.path());
+        assert!(!targets.is_empty());
+    }
+
+    #[test]
     fn stage_firstboot_writes_unit() {
         let dir = tempdir().unwrap();
-        // Minimal tree
         fs::create_dir_all(dir.path().join("boot")).unwrap();
         stage_firstboot_grub(dir.path()).unwrap();
         assert!(dir
