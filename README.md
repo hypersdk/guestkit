@@ -1,15 +1,34 @@
 # GuestKit
 
-**Offline VM intelligence and migration assurance.**
+### Offline VM intelligence. Migration assurance you can prove.
+
+Score boot readiness **before** power-on. Generate reviewable fix plans. Repair disks offline. Certify cutover with a signed Passport — then hand off to [hyper2kvm](https://github.com/hypersdk/hyper2kvm) / HyperSDK.
 
 [![CI](https://github.com/ssahani/guestkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ssahani/guestkit/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/guestkit.svg)](https://crates.io/crates/guestkit)
 [![PyPI](https://img.shields.io/pypi/v/hypersdk-guestkit.svg)](https://pypi.org/project/hypersdk-guestkit/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![GHCR](https://img.shields.io/badge/GHCR-hypersdk-black?logo=github)](https://github.com/orgs/hypersdk/packages)
 
-**[🎬 Demos](#-see-it-in-action)** · **[📖 Feature Guide](#-feature-guide)** · **[⚡ Quick Start](#quick-start)** · **[🐳 Run from GHCR](#run-from-ghcr-prebuilt-images)** · **[📚 Docs](#documentation)**
+**[Demos](#see-it-in-action)** · **[Feature guide](docs/guestkit-customer-feature-guide.md)** · **[Quick start](#quick-start)** · **[GHCR](#run-from-ghcr)** · **[Docs](#documentation)** · **[zyvor.dev](https://zyvor.dev/guestkit)**
 
-## 🎬 See it in action
+```text
+  disk.qcow2 / .vmdk / .vhdx
+           │
+           ▼
+   ┌───────────────────┐     doctor 0–100     migrate-plan YAML
+   │  Pure-Rust engine │ ──────────────────►  passport emit
+   │  NBD/loop mount   │     rescue / plan apply (offline)
+   └───────────────────┘
+           │
+     CLI · TUI · Python · Web · Agent
+```
+
+**70+** commands · **6** disk formats · **0** libguestfs appliances · **8** migration targets · Apache-2.0
+
+---
+
+## See it in action
 
 <table>
 <tr>
@@ -46,132 +65,135 @@
 </tr>
 </table>
 
-All four recorded live against real deployments (Machina KVM host + Forge lab) — no staged screenshots. Click a thumbnail to watch on YouTube.
+Recorded live against real deployments — no staged screenshots.
 
 ---
 
-## 📖 Feature Guide
+## Why teams use it
 
-**[GuestKit — Customer Feature Guide](docs/guestkit-customer-feature-guide.md)** — a complete, customer-facing reference covering all **63 features** across **10 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/guestkit-customer-feature-guide.pdf)**.
+| Before GuestKit | With GuestKit |
+|-----------------|---------------|
+| “Will it boot?” answered at power-on | Offline **doctor** score + root-cause chain |
+| guestfish scripts and tribal knowledge | Structured plans, JSON/YAML, CI gates |
+| Migration surprises on cutover weekend | Hypervisor-aware **migrate-plan** + day-0 packs |
+| No audit trail MTV / virt-v2v can skip | Signed **Cutover Passport** |
+| Fleet drift invisible until outage | `fleet analyze`, forensic diff, policy-as-code |
+| Deep inspect needs a running guest | Carbon **TUI** + in-guest agent over QGA |
 
-**[Customer manual (page-by-page)](docs/customer/README.md)** — getting started, admin basics, and a guide for every product surface (PDFs under `docs/customer/pdf/`).
-
-Inspect **QCOW2, VMDK, and RAW** images without powering them on. Score boot readiness, generate hypervisor-aware fix plans, and explore disks from a carbon-themed TUI — **Rust control plane, no libguestfs appliance** (uses host NBD/loop for mount).
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  Interfaces   guestkit CLI · guestctl TUI · Python bindings  │
-├──────────────────────────────────────────────────────────────┤
-│  Engine       Rust parsers + boot scoring · NBD/loop mount layer   │
-├──────────────────────────────────────────────────────────────┤
-│  Outputs      JSON · YAML · HTML · PDF · CI gate artifacts   │
-└──────────────────────────────────────────────────────────────┘
-```
+**Pairs with:** [hyper2kvm](https://github.com/hypersdk/hyper2kvm) for VMware → KVM. GuestKit certifies; hyper2kvm converts.
 
 ---
 
-## Why GuestKit
+## What you can do
 
-| Problem | GuestKit answer |
-|---------|-----------------|
-| "Will it boot?" answered at power-on | Offline doctor score before cutover |
-| guestfish scripts don't scale | Structured assurance APIs + exports |
-| Migration surprises cost weekends | Fix plans with driver injections |
-| Cutover needs an audit trail MTV skips | Cutover Passport → then hyper2kvm / HyperSDK |
-| Fleet drift is invisible | `fleet analyze` and forensic diff |
-| No VM boot for deep inspection | Carbon TUI explores partitions in place |
-
-**Pairs with:** [hyper2kvm](https://github.com/hypersdk/hyper2kvm) for VMware → KVM pipelines.
-
----
-
-## 🆕 What's New — In-Guest Agent
-
-GuestKit now runs **inside** the guest too, not just offline against the disk — same evidence schema, same fix-plan format, over the existing virtio-serial QGA channel.
-
-- **Offline Windows install, no boot required** — `agent-inject --windows` writes the `GuestKitAgent` service and the virtio-serial (`vioser`) driver straight into the `SYSTEM` hive via hivex.
-- **Stock `qemu-guest-agent` gets out of the way automatically** — any `QEMU-GA`/`qemu-ga`/`QEMUGuestAgent` service found is disabled so GuestKit answers the channel uncontended, while still speaking QGA-compatible commands so KubeVirt/libvirt notice nothing.
-- **Converted-image driver fix** — deletes the stale cached PCI devnode so Windows re-detects the virtio-serial device and runs a full driver install on next boot, instead of staying stuck on "no driver."
-- **Generic QGA passthrough** — `guestkit-rpc` exposes every agent RPC method through the standard QGA channel, so host-side automation needs only `virsh qemu-agent-command`.
-
-Details, protocol reference, and the Linux path: [docs/features/guest-agent.md](docs/features/guest-agent.md) · [Protocol 1.3](docs/features/guestkit-agent-protocol-1.3.md)
-
----
-
-## Platform at a Glance
-
-| Layer | What's in the repo |
-|-------|-------------------|
-| **Core** | Rust disk engine + assurance APIs — `crates/`, `src/` |
-| **CLI** | `guestkit` + `guestctl` — doctor, migrate-plan, fleet |
-| **In-guest agent** | Linux + Windows, protocol 1.3 — `agent-inject`, `agent-proxy`, `agent-call` |
-| **TUI** | Carbon-themed multi-view dashboard |
-| **Python** | `hypersdk-guestkit` on PyPI |
-| **K8s** | KubeVirt integration hooks — `k8s/` |
-| **Web stack** | Prebuilt GHCR images — `ghcr.io/hypersdk/{zyvor-ui,zyvor-api,guestkit-worker}` |
-| **Deploy** | Docker/Helm, remote deploy scripts — `deploy/` |
-
----
-
-## Quick Start
+### Assurance before cutover
 
 ```bash
-cargo install guestkit   # guestkit + guestctl
-
 guestkit doctor vm.qcow2 --target proxmox --explain
-# → boot assurance score · blockers · root-cause chain
-
 guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml
-# → migration score · driver injections · fix plan
-
-guestctl tui vm.qcow2
-# → carbon TUI · Assurance · fix-plan preview
+guestkit passport emit vm.qcow2 --target kvm -o passport.json
+guestkit passport verify passport.json --fail-below 80
 ```
 
-| Scenario | Path |
-|----------|------|
-| Getting started | [docs/user-guides/getting-started.md](docs/user-guides/getting-started.md) |
-| CLI reference | [docs/user-guides/cli-guide.md](docs/user-guides/cli-guide.md) |
-| Migration assurance | [docs/features/migration-assurance.md](docs/features/migration-assurance.md) |
-| In-guest agent (Linux + Windows) | [docs/features/guest-agent.md](docs/features/guest-agent.md) |
-| CE vs Enterprise | [docs/ce-vs-enterprise.md](docs/ce-vs-enterprise.md) |
+Targets: `kvm` · `proxmox` · `qemu` · `aws` · `azure` · `gcp` · `cloud` · `hyperv`
 
-**Web console:** self-hosted via GHCR or Helm. First-login credentials for packaged installs are documented in [remote deploy](docs/guides/DEPLOY-REMOTE.md#web-console-access) — change defaults before exposing to a network.
+### Offline repair (no boot required)
+
+```bash
+# Day-0 plans
+guestkit plan generate win.qcow2 -p windows-rdp -o rdp.yaml
+guestkit plan generate win.qcow2 -p windows-domain-leave --workgroup WORKGROUP
+guestkit plan generate disk.qcow2 -p linux-ssh --user ubuntu --key-file ~/.ssh/id_ed25519.pub
+
+# Rescue shortcuts
+guestkit rescue disk.qcow2 -o enable-ssh
+guestkit rescue disk.qcow2 -o fix-grub --force          # BIOS or UEFI ESP
+guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…'
+# → AES/RC4 SAM NT-hash when registry-write is built; RunOnce fallback
+
+guestkit plan apply plan.yaml --vm disk.qcow2 --yes     # backups + rollback
+```
+
+PackageInstall can stage from cache, host-fetch (`GUESTKIT_PACKAGE_FETCH=1`), or HTTP mirror (`GUESTKIT_PACKAGE_MIRROR`). Service enable/disable and CommandExec stage first-boot oneshots when chroot can’t run them live.
+
+### Live control + platform
+
+- **In-guest agent** (Linux + Windows) over virtio-serial / QGA — inject offline, then `agent-proxy` / `agent-call`
+- **KubeVirt** boot-inspect hooks and Guest Control Fabric
+- **Web console** + worker on GHCR; Helm chart under `deploy/helm/zyvor`
+- **Python:** `pip install hypersdk-guestkit` → `from guestkit import Guestfs`
+
+Full map: **[Customer Feature Guide](docs/guestkit-customer-feature-guide.md)** ([PDF](docs/guestkit-customer-feature-guide.pdf)) · **[Customer manuals](docs/customer/README.md)**
 
 ---
 
-## Run from GHCR (prebuilt images)
+## Quick start
 
-The web stack is published to the GitHub Container Registry under **`ghcr.io/hypersdk`** — **public images, no `docker login` required.**
+```bash
+cargo install guestkit          # installs guestkit + guestctl
+
+guestkit doctor vm.qcow2 --target proxmox --explain
+guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml
+guestctl tui vm.qcow2           # Assurance · preview · export
+```
+
+| You want… | Go here |
+|-----------|---------|
+| First hour | [Getting started](docs/user-guides/getting-started.md) |
+| Command cheat sheet | [Quick reference](docs/user-guides/quick-reference.md) |
+| CLI depth | [CLI guide](docs/user-guides/cli-guide.md) |
+| Migration story | [Migration assurance](docs/features/migration-assurance.md) |
+| Fix plans / rescue | [Fix plans](docs/features/fix-plans.md) |
+| Guest agent | [Guest agent](docs/features/guest-agent.md) |
+| CE vs Enterprise | [ce-vs-enterprise](docs/ce-vs-enterprise.md) |
+
+Host needs: Linux with `qemu-img`, `losetup`, and `qemu-nbd` (mount/repair may need root).
+
+---
+
+## Run from GHCR
+
+Public images under **`ghcr.io/hypersdk`** — no `docker login` required.
 
 | Image | Role |
 |-------|------|
-| `ghcr.io/hypersdk/zyvor-ui` | Web console + login |
-| `ghcr.io/hypersdk/zyvor-api` | API backend |
+| `ghcr.io/hypersdk/zyvor-ui` | Web console |
+| `ghcr.io/hypersdk/zyvor-api` | API |
 | `ghcr.io/hypersdk/guestkit-worker` | Disk-inspection worker |
-
-Tags: `latest`, `vX.Y.Z` (e.g. `v0.3.13`), per-commit SHA. Bring the whole stack up straight from GHCR:
 
 ```bash
 docker compose -f deploy/docker-compose.ghcr.yml pull
 docker compose -f deploy/docker-compose.ghcr.yml up -d
-open http://localhost:8088          # web console
+open http://localhost:8088
 ```
 
-> **Eval only:** this stack runs without authentication. Do not expose it beyond localhost.
-> For production, use `deploy/docker-compose.prod.example.yml` — see [Docker guide](docs/guides/DOCKER.md#production-checklist).
+> **Eval only** — unauthenticated stack. Do not expose beyond localhost.  
+> Production: `deploy/docker-compose.prod.example.yml` · [Docker guide](docs/guides/DOCKER.md) · [Helm](deploy/helm/zyvor)
 
-For clusters, use the [Helm chart](deploy/helm/zyvor). Full details: [docs/guides/DOCKER.md → Published images](docs/guides/DOCKER.md#published-images-ghcr).
+Default console login for packaged installs is documented in [remote deploy](docs/guides/DEPLOY-REMOTE.md#web-console-access) — change it before any network exposure.
 
 ---
 
-## Three Commands Before Cutover
+## Platform layout
 
-| Command | Outcome |
-|---------|---------|
-| `guestkit doctor` | Boot assurance score + blockers |
-| `guestkit migrate-plan` | Executable fix plan YAML |
-| `guestctl tui` | Interactive assurance workspace |
+| Layer | In this repo |
+|-------|----------------|
+| **Engine** | Pure-Rust parsers + evidence schema · NBD/loop mount (`src/`, `crates/`) |
+| **CLI / TUI** | `guestkit` · `guestctl` — doctor, passport, fleet, rescue, carbon TUI |
+| **Agent** | Linux + Windows · protocol 1.3 · `agent-inject` / `agent-proxy` |
+| **Python** | [hypersdk-guestkit](https://pypi.org/project/hypersdk-guestkit/) |
+| **K8s** | KubeVirt hooks · `k8s/` |
+| **Web / worker** | GHCR images · `deploy/` |
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│  guestkit CLI · guestctl TUI · Python · Web · Agent        │
+├────────────────────────────────────────────────────────────┤
+│  Rust evidence engine · boot scoring · fix-plan apply      │
+├────────────────────────────────────────────────────────────┤
+│  JSON · YAML · HTML · PDF · Passport · CI exit codes       │
+└────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -179,24 +201,29 @@ For clusters, use the [Helm chart](deploy/helm/zyvor). Full details: [docs/guide
 
 | Goal | Document |
 |------|----------|
-| Docs index | [docs/README.md](docs/README.md) |
-| Run from GHCR / Docker | [docs/guides/DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
-| Remote deploy | [docs/guides/DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
-| User stories | [docs/USER_STORIES.md](docs/USER_STORIES.md) |
-| Industry use cases | [docs/INDUSTRY_USE_CASES.md](docs/INDUSTRY_USE_CASES.md) |
-| Architecture | [docs/architecture/overview.md](docs/architecture/overview.md) |
-| Full index | [docs/INDEX.md](docs/INDEX.md) |
+| Docs home | [docs/README.md](docs/README.md) · [INDEX](docs/INDEX.md) |
+| Feature guide (all areas) | [guestkit-customer-feature-guide.md](docs/guestkit-customer-feature-guide.md) |
+| Docker / GHCR | [DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
+| Remote deploy | [DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
+| Architecture | [overview](docs/architecture/overview.md) |
+| User stories / industry | [USER_STORIES](docs/USER_STORIES.md) · [INDUSTRY_USE_CASES](docs/INDUSTRY_USE_CASES.md) |
+| Changelog / roadmap | [CHANGELOG](docs/development/CHANGELOG.md) · [roadmap](docs/development/roadmap.md) |
 
-→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [Demo videos](#-see-it-in-action) · [Full Zyvor platform](https://zyvor.dev)
+→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [Full Zyvor platform](https://zyvor.dev)
 
 ---
 
 ## Development
 
-See project docs for CI, testing, and contribution guidelines. Historical build summaries in the repo root are snapshots — **`docs/` and this README are authoritative.**
+```bash
+cargo build --release
+cargo test
+```
+
+See [CONTRIBUTING](docs/development/CONTRIBUTING.md) and CI under `.github/workflows/`. **`docs/` and this README are authoritative** over any historical build notes in the tree.
 
 ---
 
 ## License
 
-See [LICENSE](LICENSE) or project-specific licensing files in `docs/legal/`.
+[Apache-2.0](LICENSE) · additional notes in `docs/legal/` where applicable.
