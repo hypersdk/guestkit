@@ -1,5 +1,7 @@
 # GuestKit documentation
 
+Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[GitHub Wiki](https://github.com/hypersdk/guestkit/wiki)**.
+
 ## Start here
 
 | Guide | Description |
