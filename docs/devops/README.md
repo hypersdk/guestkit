@@ -10,6 +10,7 @@ Operational docs for platform / migration / SRE teams who gate cutovers with **G
 | [04 — Fleet analyze at scale](04-fleet-analyze.md) | Directory of images, snowflakes |
 | [05 — Cutover weekend](05-cutover-weekend.md) | Hour-by-hour ops checklist |
 | [06 — Failure triage](06-failure-triage.md) | Doctor red, BitLocker, GRUB, SAM |
+| [07 — Cloud disk sources](07-cloud-disk-sources.md) | s3:// gs:// azure:// pulls + cache |
 
 **Related:** [Wiki](https://github.com/hypersdk/guestkit/wiki) · [Migration assurance](../features/migration-assurance.md) · [DOCKER / GHCR](../guides/DOCKER.md) · Blogs: [integrate pipeline](https://zyvor.dev/blog/guestkit-integrate-migration-pipeline) · [DevOps runbooks](https://zyvor.dev/blog/guestkit-devops-runbooks)
 
