@@ -203,6 +203,7 @@ Default console login for packaged installs is documented in [remote deploy](doc
 |------|----------|
 | Operator wiki | [hypersdk/guestkit/wiki](https://github.com/hypersdk/guestkit/wiki) |
 | Docs home | [docs/README.md](docs/README.md) · [INDEX](docs/INDEX.md) |
+| **DevOps runbooks** | [docs/devops](docs/devops/README.md) — Passport CI, workers, air-gap, fleet, cutover, triage |
 | Feature guide (all areas) | [guestkit-customer-feature-guide.md](docs/guestkit-customer-feature-guide.md) |
 | Docker / GHCR | [DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
 | Remote deploy | [DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
