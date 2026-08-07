@@ -22,6 +22,7 @@ pub fn append_repair_extras(
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["qemu-guest-agent".into()],
                 estimated_size: Some("~2MB".into()),
+                host_cache: None,
             }),
             priority: Priority::High,
             description: "Install qemu-guest-agent for KubeVirt QGA channel".into(),
@@ -59,6 +60,7 @@ pub fn append_repair_extras(
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["cloud-init".into()],
                 estimated_size: Some("~5MB".into()),
+                host_cache: None,
             }),
             priority: Priority::Medium,
             description: "Ensure cloud-init is installed for guest network bootstrap".into(),

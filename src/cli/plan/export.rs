@@ -462,6 +462,7 @@ mod tests {
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["fail2ban".to_string(), "aide".to_string()],
                 estimated_size: Some("25MB".to_string()),
+                host_cache: None,
             }),
             priority: Priority::Medium,
             description: "Install security packages".to_string(),
@@ -560,6 +561,7 @@ mod tests {
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["pkg1".to_string(), "pkg2".to_string()],
                 estimated_size: None,
+                host_cache: None,
             }),
             priority: Priority::Medium,
             description: "Install packages".to_string(),
@@ -831,6 +833,7 @@ mod tests {
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["vim".to_string(), "git".to_string()],
                 estimated_size: None,
+                host_cache: None,
             }),
             priority: Priority::Low,
             description: "Install tools".to_string(),

@@ -83,20 +83,26 @@ impl PlanPreview {
         }
     }
 
-    /// Ops that `plan apply` (offline guestfs) cannot execute.
+    /// Ops that `plan apply` (offline guestfs) cannot execute without extras.
     fn is_live_only(op: &OperationType) -> bool {
-        matches!(
-            op,
-            OperationType::PackageInstall(_)
-                | OperationType::ServiceOperation(_)
-                | OperationType::CommandExec(_)
-        )
+        match op {
+            OperationType::PackageInstall(pi) => {
+                !crate::cli::plan::package_stage::can_stage_offline(pi)
+            }
+            OperationType::ServiceOperation(_) | OperationType::CommandExec(_) => true,
+            _ => false,
+        }
     }
 
     /// Print a single operation
     fn print_operation(op: &Operation) {
         println!("[{}] {}", op.id.yellow(), op.description.bold());
-        if Self::is_live_only(&op.op_type) {
+        if let OperationType::PackageInstall(pi) = &op.op_type {
+            println!(
+                "  {}",
+                crate::cli::plan::package_stage::stage_preview_note(pi).yellow()
+            );
+        } else if Self::is_live_only(&op.op_type) {
             println!(
                 "  {}",
                 "offline apply: skipped (needs running guest / live executor)"
@@ -497,6 +503,7 @@ mod tests {
             op_type: OperationType::PackageInstall(PackageInstall {
                 packages: vec!["fail2ban".to_string(), "aide".to_string()],
                 estimated_size: Some("25MB".to_string()),
+                host_cache: None,
             }),
             priority: Priority::Medium,
             description: "Install security packages".to_string(),

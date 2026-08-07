@@ -69,7 +69,7 @@ guestkit plan generate linux.qcow2 -p linux-ssh \
 guestkit plan apply ssh.yaml --vm linux.qcow2 --yes --skip-backup
 ```
 
-Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`PackageInstall`, `ServiceOperation`, `CommandExec`) as **offline apply: skipped**. Heuristics prefer offline-safe ops where possible (firewalld/ufw/SSH/SELinux; `systemctl enable/disable` → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor enable).
+Inspect profiles (`security`, `migration`, `compliance`, `hardening`, `windows-migration`, …) still feed the heuristic generator. Preview marks live-only ops (`ServiceOperation`, `CommandExec`) as **offline apply: skipped**. `PackageInstall` stages `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` (or `host_cache`) into the guest for a first-boot oneshot when files match; otherwise it stays live-only. Heuristics prefer offline-safe ops where possible (firewalld/ufw/SSH/SELinux; `systemctl enable/disable` → Symlink/FileDelete; fail2ban/auditd/chrony/apparmor enable).
 
 ## VirtIO driver inject (offline)
 

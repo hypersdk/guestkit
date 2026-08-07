@@ -280,7 +280,7 @@ pub struct FileChange {
 }
 
 /// Package installation operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PackageInstall {
     /// Packages to install
     pub packages: Vec<String>,
@@ -288,6 +288,11 @@ pub struct PackageInstall {
     /// Estimated total size
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estimated_size: Option<String>,
+
+    /// Optional host directory of `.rpm` / `.deb` for offline first-boot staging
+    /// (also reads `GUESTKIT_PACKAGE_CACHE`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_cache: Option<String>,
 }
 
 /// Service operation
@@ -649,6 +654,7 @@ mod tests {
         let pkg_install = PackageInstall {
             packages: vec!["fail2ban".to_string(), "aide".to_string()],
             estimated_size: Some("10MB".to_string()),
+                host_cache: None,
         };
 
         assert_eq!(pkg_install.packages.len(), 2);

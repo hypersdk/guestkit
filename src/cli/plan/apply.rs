@@ -397,11 +397,7 @@ impl PlanApplicator {
                 }
             }
             OperationType::PackageInstall(pi) => {
-                eprintln!(
-                    "Warning: Package installation ({}) requires a running system, skipping",
-                    pi.packages.join(", ")
-                );
-                Ok(false)
+                crate::cli::plan::package_stage::stage_packages_offline(g, pi)
             }
             OperationType::ServiceOperation(so) => {
                 eprintln!(

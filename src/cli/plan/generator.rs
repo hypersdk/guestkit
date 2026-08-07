@@ -1192,6 +1192,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
                 return Ok(OperationType::PackageInstall(PackageInstall {
                     packages: vec!["firewalld".to_string()],
                     estimated_size: Some("~5MB".to_string()),
+                host_cache: None,
                 }));
             }
             return Ok(Self::systemd_enable_symlink("firewalld"));
@@ -1223,6 +1224,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["fail2ban".to_string()],
                 estimated_size: Some("~15MB".to_string()),
+                host_cache: None,
             }));
         }
 
@@ -1230,6 +1232,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["aide".to_string()],
                 estimated_size: Some("~10MB".to_string()),
+                host_cache: None,
             }));
         }
 
@@ -1632,6 +1635,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["qemu-guest-agent".to_string()],
                 estimated_size: Some("~2MB".to_string()),
+                host_cache: None,
             }));
         }
 
@@ -1639,6 +1643,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
             return Ok(OperationType::PackageInstall(PackageInstall {
                 packages: vec!["cloud-init".to_string()],
                 estimated_size: Some("~5MB".to_string()),
+                host_cache: None,
             }));
         }
 
