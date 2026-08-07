@@ -10,7 +10,7 @@ Offline VM intelligence and migration assurance
 | Run from GHCR (Docker/Helm) | [guides/DOCKER.md](guides/DOCKER.md#published-images-ghcr) |
 | CLI guide | [cli-guide.md](user-guides/cli-guide.md) |
 | Migration assurance | [migration-assurance.md](features/migration-assurance.md) |
-| Architecture | [overview.md](architecture/overview.md) |
+| Roadmap | [roadmap.md](development/roadmap.md) | Shipped Unreleased; issue-driven next |
 | Full index | [INDEX.md](INDEX.md) |
 | **User journeys & acceptance criteria** | [User Stories](USER_STORIES.md) |
 | **Industry use cases & Zyvor stack** | [INDUSTRY_USE_CASES.md](INDUSTRY_USE_CASES.md) |

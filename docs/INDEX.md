@@ -42,7 +42,7 @@
 | Guide | Description |
 |-------|-------------|
 | [Architecture](architecture/overview.md) | How GuestKit is structured |
-| [Roadmap](development/roadmap.md) | Planned work |
+| [Roadmap](development/roadmap.md) | Shipped Unreleased slices; issue-driven next work |
 | [Changelog](development/CHANGELOG.md) | Version history |
 | [Contributing](development/CONTRIBUTING.md) | How to contribute |
 

@@ -211,6 +211,27 @@ sudo guestkit interactive vm.qcow2
 > exit
 ```
 
+### How do I repair GRUB offline?
+
+```bash
+guestkit rescue linux.qcow2 -o check-grub          # diagnose
+guestkit rescue linux.qcow2 -o fix-grub            # chroot mkconfig / first-boot fallback
+guestkit rescue linux.qcow2 -o fix-grub --force    # also try grub-install on NBD
+guestkit plan generate linux.qcow2 -p linux-grub --grub-timeout 5 -o grub.yaml
+```
+
+Details: [fix-plans.md](../features/fix-plans.md#rescue-shortcuts).
+
+### How do I stage packages into an offline guest?
+
+```bash
+export GUESTKIT_PACKAGE_CACHE=~/rpm-cache
+export GUESTKIT_PACKAGE_FETCH=1   # optional: dnf/apt-get download on the host
+guestkit plan apply plan.yaml --vm linux.qcow2 --yes
+```
+
+Matching `.rpm`/`.deb` files are copied into the guest and a first-boot systemd oneshot installs them.
+
 ### Why is guestkit slow on QCOW2 files?
 
 **Reason:** QCOW2 requires NBD (Network Block Device) which is slower than loop devices.
@@ -335,7 +356,7 @@ guestkit reads Windows registry hives directly from disk:
 
 ### Can I modify Windows registry offline?
 
-**Yes:**
+**Yes**, with a build that includes `--features registry-write` (libhivex). Fix-plan `RegistryEdit` ops and rescue Windows day-0 commands mutate SOFTWARE/SYSTEM/SAM/SECURITY hives with backup.
 
 ```bash
 # Interactive modification
@@ -349,6 +370,18 @@ virt-win-reg windows.qcow2 --merge custom.reg
 ```
 
 See [Windows Support Guide](windows-support.md) for details.
+
+### How do I reset a Windows local password offline?
+
+```bash
+# Prefer AES/RC4 SAM NT-hash write (SYSKEY); needs registry-write + SYSTEM hive
+guestkit rescue win.qcow2 -o reset-password --user Administrator --password 'S3cret!'
+
+# Blank only (chntpw-style) — omit --password
+guestkit rescue win.qcow2 -o reset-password --user Administrator
+```
+
+If AES write fails, GuestKit falls back to SAM blank + first-boot RunOnce `net user`. Details: [fix-plans.md](../features/fix-plans.md#rescue-shortcuts).
 
 ### How do I inject VirtIO drivers for Windows?
 

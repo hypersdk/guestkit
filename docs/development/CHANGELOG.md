@@ -76,6 +76,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prefers AES/RC4 SAM NT-hash write via SYSKEY; falls back to SAM blank +
   HKLM RunOnce `net user` for first boot; omit `--password` to blank only.
 
+### Changed
+- **Docs** — Roadmap parked list cleared; CLI / quick-reference / feature guide /
+  fix-plans updated for AES SAM passwords, `fix-grub`, and
+  `GUESTKIT_PACKAGE_FETCH` offline staging.
+
 ## [0.3.19] - 2026-08-06
 
 ### Added

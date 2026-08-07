@@ -2,7 +2,7 @@
 
 **Status:** Shipped (CLI generate / preview / apply / export)
 **Version:** 0.3.19+
-**Last Updated:** 2026-08-06
+**Last Updated:** 2026-08-07
 
 ## Overview
 
@@ -85,27 +85,47 @@ Requires a build with `registry-write,agent`. See [migration-assurance.md](migra
 
 ## Rescue shortcuts
 
-Linux offline rescue (`guestkit rescue -o …`) for the same day-0 jobs without writing a plan file:
+Offline rescue (`guestkit rescue -o …`) for day-0 jobs without writing a plan file first. Use `--export-plan` to review, then `plan apply`.
 
-| Operation | Flags |
-|-----------|-------|
-| `enable-ssh` | `--force` (also PermitRootLogin) |
-| `inject-ssh-key` | `--user`, `--key` / `--key-file` |
-| `set-hostname` | `--hostname` (Linux `/etc/hostname`; Windows registry via day-0 plan) |
-| `enable-rdp` | Windows: Terminal Server + firewall (registry-write) |
-| `enable-winrm` | Windows: WinRM Automatic + firewall rule |
-| `set-timezone` | `--timezone` Windows `TimeZoneKeyName` |
-| `reset-password` | `--user`, `--password` (Linux `/etc/shadow`; Windows: AES/RC4 SAM NT-hash via SYSKEY when SYSTEM hive available, else SAM blank + RunOnce `net user`) |
-| `fix-fstab` | `--backup` |
-| `check-grub` | diagnose-only |
-| `fix-grub` | chroot `grub-mkconfig`/`update-grub` (+ `grub-install` with `--force`); first-boot oneshot fallback; `--export-plan` stages first-boot unit |
-
-Export a reviewable plan instead of applying:
+| Operation | Flags | Notes |
+|-----------|-------|-------|
+| `enable-ssh` | `--force` (also PermitRootLogin) | Linux |
+| `inject-ssh-key` | `--user`, `--key` / `--key-file` | Linux |
+| `set-hostname` | `--hostname` | Linux `/etc/hostname`; Windows registry via day-0 plan |
+| `enable-rdp` | — | Windows Terminal Server + firewall (`registry-write`) |
+| `enable-winrm` | — | Windows WinRM Automatic + firewall |
+| `set-timezone` | `--timezone` | Windows `TimeZoneKeyName` |
+| `reset-password` | `--user`, `--password` | Linux `/etc/shadow`; Windows AES/RC4 SAM NT-hash via SYSKEY (needs SYSTEM hive + `registry-write`), else SAM blank + RunOnce `net user`. Omit `--password` on Windows to blank only. |
+| `fix-fstab` | `--backup` | Linux |
+| `check-grub` | — | Diagnose-only |
+| `fix-grub` | `--force` (also `grub-install` on NBD) | Chroot `grub-mkconfig`/`update-grub`; first-boot oneshot fallback; `--export-plan` stages first-boot unit |
 
 ```bash
 guestkit rescue disk.qcow2 -o enable-ssh --export-plan ssh.yaml
 guestkit rescue disk.qcow2 -o set-hostname --hostname web01 --export-plan host.yaml
+guestkit rescue disk.qcow2 -o fix-grub
+guestkit rescue disk.qcow2 -o fix-grub --force          # also try grub-install
+guestkit rescue disk.qcow2 -o fix-grub --export-plan grub-fb.yaml
+
+# Windows password (AES SAM when SYSTEM available; build with --features registry-write)
+guestkit rescue win.qcow2 -o reset-password --user Administrator --password 'S3cret!'
+guestkit rescue win.qcow2 -o reset-password --user Administrator   # blank only
+
 guestkit plan apply ssh.yaml --vm disk.qcow2 --yes --skip-backup
+```
+
+### PackageInstall offline staging / host fetch
+
+| Env | Effect |
+|-----|--------|
+| `GUESTKIT_PACKAGE_CACHE` | Colon-separated host dirs of `.rpm`/`.deb` (also `PackageInstall.host_cache`) |
+| `GUESTKIT_PACKAGE_FETCH=1` | Download missing packages on the host (`dnf download` / `yumdownloader` / `apt-get download`) into the cache or `~/.cache/guestkit/packages`, then stage first-boot oneshot |
+
+```bash
+export GUESTKIT_PACKAGE_CACHE=~/pkg-cache
+# optional: fetch anything not already in the cache
+export GUESTKIT_PACKAGE_FETCH=1
+guestkit plan apply hardening.yaml --vm linux.qcow2 --yes
 ```
 
 ## Architecture

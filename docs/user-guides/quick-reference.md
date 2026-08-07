@@ -56,6 +56,26 @@ guestkit repair vm.qcow2 --fix boot --dry-run
 
 Details: [migration-assurance.md](../features/migration-assurance.md)
 
+## Rescue & day-0
+
+| Command | Purpose |
+|---------|---------|
+| `guestkit rescue IMAGE -o enable-ssh` | Offline SSH enable (Linux) |
+| `guestkit rescue IMAGE -o fix-grub` | Chroot grub-mkconfig / first-boot fallback |
+| `guestkit rescue IMAGE -o fix-grub --force` | Also attempt grub-install on NBD |
+| `guestkit rescue IMAGE -o reset-password --user U --password P` | Linux shadow; Windows AES SAM (or RunOnce fallback) |
+| `guestkit plan generate IMAGE -p linux-grub --grub-timeout 5` | Offline `/etc/default/grub` |
+| `guestkit plan generate IMAGE -p linux-ssh --user U --key-file KEY` | Offline SSH day-0 plan |
+
+```bash
+guestkit rescue linux.qcow2 -o fix-grub
+guestkit rescue win.qcow2 -o reset-password --user Administrator --password 'S3cret!'
+export GUESTKIT_PACKAGE_CACHE=~/pkgs GUESTKIT_PACKAGE_FETCH=1
+guestkit plan apply plan.yaml --vm linux.qcow2 --yes
+```
+
+Details: [fix-plans.md](../features/fix-plans.md)
+
 ## TUI (`guestctl tui IMAGE`)
 
 | Keys | Action |

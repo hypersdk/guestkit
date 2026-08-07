@@ -1,4 +1,4 @@
-# CLI reference (v0.3.6)
+# CLI reference (v0.3.19+)
 
 `guestkit` and `guestctl` share the same command surface. Use **`guestkit --help`** and **`guestkit <command> --help`** for flags; this page links the curated docs.
 
@@ -21,10 +21,11 @@ guestctl tui disk.qcow2
 | Migration assurance | [migration-assurance.md](../features/migration-assurance.md) |
 | VM migration workflows | [vm-migration.md](vm-migration.md) |
 | TUI keys & Assurance | [tui-enhancements.md](../features/tui-enhancements.md) |
-| Fix plans | [fix-plans.md](../features/fix-plans.md) |
+| Fix plans & rescue | [fix-plans.md](../features/fix-plans.md) |
 | Profiles | [profiles.md](profiles.md) |
 | Interactive REPL | [interactive-mode.md](interactive-mode.md) |
 | File explorer | [EXPLORE-QUICKSTART.md](../features/explore/EXPLORE-QUICKSTART.md) |
+| Cloud disk sources | [cloud-disk-sources.md](../guides/cloud-disk-sources.md) |
 | Python API | [python-bindings.md](python-bindings.md) |
 | FAQ | [faq.md](faq.md) |
 | Troubleshooting | [troubleshooting.md](troubleshooting.md) |
@@ -35,14 +36,26 @@ guestctl tui disk.qcow2
 |-------|----------|
 | Inspect | `inspect`, `filesystems`, `packages`, `services`, `users`, `network` |
 | Files | `ls`, `cat`, `cp`, `download`, `upload`, `find` |
-| Assurance | `doctor`, `migrate-plan`, `policy`, `fleet`, `forensic-diff`, `repair --fix boot` |
+| Assurance | `doctor`, `migrate-plan`, `policy`, `fleet`, `forensic-diff`, `repair --fix boot`, `passport emit\|verify` |
 | Plans | `plan generate`, `plan preview`, `plan apply` (`--skip-backup`), `plan rollback` |
-| Rescue | `rescue -o enable-ssh|inject-ssh-key|set-hostname|reset-password|fix-fstab` |
+| Rescue | `rescue -o enable-ssh\|inject-ssh-key\|set-hostname\|reset-password\|fix-fstab\|check-grub\|fix-grub\|enable-rdp\|enable-winrm\|set-timezone` |
 | Profiles | `profile security`, `profile windows-migration` |
 | TUI | `guestctl tui`, `guestkit tui` |
 | Shell | `guestkit shell`, `guestkit interactive` |
 
 List all commands: **`guestkit commands`** (or **`guestkit command-catalog`**).
+
+## Useful environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `GUESTKIT_PACKAGE_CACHE` | Host dirs of `.rpm`/`.deb` for offline PackageInstall staging |
+| `GUESTKIT_PACKAGE_FETCH` | `1`/`true` — host-download missing packages before staging |
+| `GUESTKIT_VIRTIO_WIN` | VirtIO driver tree for offline Windows DriverInject |
+| `GUESTKIT_FLEET_JOBS` | Parallelism for `fleet analyze` (default min(4, CPUs)) |
+| `GUESTKIT_S3_ENDPOINT` / `AWS_ENDPOINT_URL` | Custom S3-compatible endpoint for cloud disk pulls |
+
+Details: [fix-plans.md](../features/fix-plans.md), [cloud-disk-sources.md](../guides/cloud-disk-sources.md).
 
 ## Disk formats
 
@@ -56,4 +69,5 @@ Most inspect commands accept **`-o json`** or **`--json`** for scripting. See [q
 
 - [Documentation index](../INDEX.md)
 - [Changelog](../development/CHANGELOG.md)
+- [Roadmap](../development/roadmap.md)
 - [zyvor.dev/guestkit](https://zyvor.dev/guestkit)

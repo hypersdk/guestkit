@@ -96,8 +96,8 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
   - **How:** CLI: `guestkit doctor img.qcow2 --target proxmox -o json --fail-below 80` exits non-zero when the score drops below your bar while still emitting JSON.
 - **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). HyperSDK exports; hyper2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
   - **How:** CLI: `guestkit passport emit vm.qcow2 --target kvm -o passport.json` then `guestkit passport verify passport.json --fail-below 80`. Web dock: **Passport**.
-- **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
-  - **How:** CLI: `guestkit plan generate win.qcow2 -p windows-domain-leave`, `-p windows-timezone --timezone UTC`, `-p windows-static-ip --interface-guid … --ip … --mask …`.
+- **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, DHCP/DNS, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
+  - **How:** CLI: `guestkit plan generate win.qcow2 -p windows-domain-leave`, `-p windows-timezone --timezone UTC`, `-p windows-static-ip --interface-guid … --ip … --mask …`, `-p windows-dhcp` / `-p windows-dns`.
 - **Policy-as-code** — guestkit policy check evaluates an expression DSL over evidence fields (e.g. bootability.score >= 80) or built-in CIS benchmarks. — _Codify sign-off criteria your whole team can trust._
   - **How:** CLI: `guestkit policy check vm.qcow2` evaluates the evidence DSL (e.g. `bootability.score >= 80`) or a built-in CIS benchmark.
 - **Forensic diff** — guestkit forensic-diff compares two snapshots for config drift, suspicious persistence, and ransomware indicators. — _Prove what changed between golden and drifted._
@@ -109,10 +109,12 @@ _Turn findings into reviewable, reversible, executable remediation - not blind e
 
 - **Reviewable fix plans** — Findings become a structured plan of operations (file edits, package installs, service ops, SELinux, registry edits, Symlink/FileWrite) that you preview before anything runs. — _See every change before it happens._
   - **How:** CLI: `guestkit plan preview` shows every operation before it runs. In the TUI Assurance tab press `p` to preview the generated plan.
-- **Day-0 canned plans** — Offline enablement without a full inspect pass: `windows-rdp`, `windows-hostname` (`--hostname`), `windows-winrm`, `linux-ssh` (optional `--user` + `--key`/`--key-file`). Prefer `--skip-backup` for these low-risk registry/file plans.
+- **Day-0 canned plans** — Offline enablement without a full inspect pass: `windows-rdp`, `windows-hostname` (`--hostname`), `windows-winrm`, `linux-ssh` (optional `--user` + `--key`/`--key-file`), `linux-hostname`, `linux-grub`. Prefer `--skip-backup` for these low-risk registry/file plans.
   - **How:** `guestkit plan generate win.qcow2 -p windows-rdp -o rdp.yaml` then `guestkit plan apply rdp.yaml --vm win.qcow2 --yes --skip-backup`. Linux: `guestkit plan generate disk.qcow2 -p linux-ssh --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml`.
-- **Linux rescue shortcuts** — Same day-0 jobs without a plan file: `enable-ssh`, `inject-ssh-key`, `set-hostname`, `reset-password`, `fix-fstab`.
-  - **How:** `guestkit rescue disk.qcow2 -o enable-ssh`; `guestkit rescue disk.qcow2 -o inject-ssh-key --user ubuntu --key-file ~/.ssh/id_ed25519.pub`.
+- **Rescue shortcuts** — Day-0 jobs without a plan file: Linux `enable-ssh`, `inject-ssh-key`, `set-hostname`, `reset-password`, `fix-fstab`, `check-grub`, `fix-grub`; Windows `enable-rdp`, `enable-winrm`, `set-timezone`, `set-hostname`, `reset-password` (AES/RC4 SAM NT-hash via SYSKEY, RunOnce fallback).
+  - **How:** `guestkit rescue disk.qcow2 -o enable-ssh`; `guestkit rescue disk.qcow2 -o fix-grub`; `guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…'` (needs `--features registry-write`).
+- **Offline PackageInstall** — Stage `.rpm`/`.deb` from `GUESTKIT_PACKAGE_CACHE` for first-boot install; set `GUESTKIT_PACKAGE_FETCH=1` to download missing packages on the host first.
+  - **How:** `export GUESTKIT_PACKAGE_CACHE=~/pkgs GUESTKIT_PACKAGE_FETCH=1` then `guestkit plan apply plan.yaml --vm disk.qcow2 --yes`.
 - **Transactional boot repair** — guestkit repair --fix boot converts doctor blockers into a plan, applies it with backups, then re-scores to show the delta. — _Fix boot blockers offline and prove the score improved._
   - **How:** CLI: `guestkit repair vm.qcow2 --fix boot --dry-run` to preview, then `guestkit repair vm.qcow2 --fix boot`; re-run `guestkit doctor` to see the score delta.
 - **Export to bash & Ansible** — Plans export as executable shell scripts, Ansible playbooks, JSON, or YAML for change control and runbooks. — _Hand ops a runbook your CAB can approve._
