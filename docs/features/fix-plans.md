@@ -37,6 +37,9 @@ These profiles skip inspect→finding heuristics and emit a fixed offline-safe p
 | `windows-domain-leave` | `--workgroup NAME` (default `WORKGROUP`) | Clear Tcpip Domain, set NV Domain + Winlogon to workgroup (DC cleanup still live) |
 | `windows-timezone` | `--timezone KEY` | `TimeZoneKeyName` (e.g. `UTC`, `Pacific Standard Time`) |
 | `windows-static-ip` | `--interface-guid` `--ip` `--mask` [`--gateway`] [`--dns`] | Disable DHCP + MULTI_SZ IP/mask/gateway on that interface |
+| `windows-dhcp` | `--interface-guid` | Enable DHCP (`EnableDHCP=1`) on that interface |
+| `windows-dns` | `--interface-guid` `--dns` | Set `NameServer` (space/comma-separated) on that interface |
+| `linux-hostname` | `--hostname NAME` | `/etc/hostname` + `/etc/hosts` patch |
 | `linux-ssh` | optional `--user` + `--key` / `--key-file` | Remove `sshd_not_to_be_run`, wants `Symlink`, sshd drop-in, optional `authorized_keys` |
 
 ```bash
@@ -52,6 +55,11 @@ guestkit plan generate win.qcow2 -p windows-static-ip \
   --interface-guid a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
   --ip 10.0.0.50 --mask 255.255.255.0 --gateway 10.0.0.1 \
   --dns "1.1.1.1 8.8.8.8" -o ip.yaml
+guestkit plan generate win.qcow2 -p windows-dhcp \
+  --interface-guid a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o dhcp.yaml
+guestkit plan generate win.qcow2 -p windows-dns \
+  --interface-guid a1b2c3d4-e5f6-7890-abcd-ef1234567890 --dns "1.1.1.1 8.8.8.8" -o dns.yaml
+guestkit plan generate linux.qcow2 -p linux-hostname --hostname web01 -o lhost.yaml
 
 guestkit plan generate linux.qcow2 -p linux-ssh \
   --user ubuntu --key-file ~/.ssh/id_ed25519.pub -o ssh.yaml
@@ -80,7 +88,10 @@ Linux offline rescue (`guestkit rescue -o …`) for the same day-0 jobs without 
 |-----------|-------|
 | `enable-ssh` | `--force` (also PermitRootLogin) |
 | `inject-ssh-key` | `--user`, `--key` / `--key-file` |
-| `set-hostname` | `--hostname` |
+| `set-hostname` | `--hostname` (Linux `/etc/hostname`; Windows registry via day-0 plan) |
+| `enable-rdp` | Windows: Terminal Server + firewall (registry-write) |
+| `enable-winrm` | Windows: WinRM Automatic + firewall rule |
+| `set-timezone` | `--timezone` Windows `TimeZoneKeyName` |
 | `reset-password` | `--user`, `--password` (Linux `/etc/shadow`); Windows clears SAM blank (`registry-write`) |
 | `fix-fstab` | `--backup` |
 | `check-grub` | diagnose-only (`fix-grub` alias) |

@@ -814,7 +814,8 @@ enum Commands {
         /// Disk image path
         image: PathBuf,
 
-        /// Rescue operation (reset-password, fix-fstab, check-grub, enable-ssh, inject-ssh-key, set-hostname)
+        /// Rescue operation (reset-password, fix-fstab, check-grub, enable-ssh,
+        /// inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone)
         #[arg(short = 'o', long)]
         operation: String,
 
@@ -846,7 +847,11 @@ enum Commands {
         #[arg(long)]
         hostname: Option<String>,
 
-        /// Write a reviewable FixPlan YAML instead of applying (enable-ssh, inject-ssh-key, set-hostname, reset-password, fix-fstab)
+        /// Windows TimeZoneKeyName (for set-timezone)
+        #[arg(long)]
+        timezone: Option<String>,
+
+        /// Write a reviewable FixPlan YAML instead of applying (enable-ssh, inject-ssh-key, set-hostname, reset-password, fix-fstab, enable-rdp, enable-winrm, set-timezone)
         #[arg(long, value_name = "PLAN.yaml")]
         export_plan: Option<PathBuf>,
     },
@@ -2797,6 +2802,7 @@ pub fn run() -> anyhow::Result<()> {
             key,
             key_file,
             hostname,
+            timezone,
             export_plan,
         } => {
             rescue_command(
@@ -2810,6 +2816,7 @@ pub fn run() -> anyhow::Result<()> {
                 key,
                 key_file,
                 hostname,
+                timezone,
                 export_plan,
             )?;
         }

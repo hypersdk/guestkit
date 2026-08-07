@@ -272,6 +272,7 @@ fn parse_virtio_driver_json(json: &str) -> Vec<WindowsDriverEntry> {
                         boot_critical: start == "boot",
                         start_type: start,
                         present: true,
+                        sys_present: None,
                     }
                 }
                 None => WindowsDriverEntry {
@@ -317,11 +318,13 @@ fn parse_bitlocker_json(json: &str) -> Option<BitLockerState> {
             BitLockerVolume {
                 mount_point: r.mount_point,
                 protection: protection.to_string(),
+                source: Some("Get-BitLockerVolume".into()),
             }
         })
         .collect();
     Some(BitLockerState {
         any_protected: volumes.iter().any(|v| v.protection == "on"),
+        offline_uncertain: false,
         volumes,
     })
 }
@@ -357,6 +360,7 @@ fn parse_vss_writers(text: &str) -> VssHealth {
         writers_total,
         healthy: writers_failed.is_empty() && writers_total > 0,
         writers_failed,
+        offline_inferred: false,
     }
 }
 
@@ -479,6 +483,8 @@ fn parse_activation_json(json: &str) -> Option<ActivationInfo> {
     Some(ActivationInfo {
         licensed: row.status == 1,
         channel: row.channel.unwrap_or_default(),
+        product_id: None,
+        edition_id: None,
     })
 }
 

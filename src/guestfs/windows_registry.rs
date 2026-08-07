@@ -404,6 +404,343 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
     Ok(adapters)
 }
 
+/// Infer Windows license channel from ProductId / EditionID / ProductName.
+pub fn infer_activation_channel(
+    product_id: &str,
+    edition_id: &str,
+    product_name: &str,
+) -> String {
+    let pid = product_id.to_ascii_uppercase();
+    let ed = edition_id.to_ascii_uppercase();
+    let name = product_name.to_ascii_uppercase();
+
+    if pid.contains("-OEM-") || pid.contains("OEM") || ed.contains("OEM") || name.contains("OEM")
+    {
+        return "OEM".into();
+    }
+    // Volume / enterprise SKUs are usually KMS or MAK activated on fleets.
+    if ed.contains("ENTERPRISE")
+        || ed.contains("EDUCATION")
+        || ed.contains("SERVER")
+        || name.contains("ENTERPRISE")
+        || name.contains("DATACENTER")
+    {
+        return "Volume".into();
+    }
+    if !pid.is_empty() || !ed.is_empty() {
+        return "Retail".into();
+    }
+    String::new()
+}
+
+/// Offline activation markers from SOFTWARE\Microsoft\Windows NT\CurrentVersion.
+pub fn parse_activation_info(
+    hive_path: &Path,
+) -> Option<crate::evidence::snapshot::ActivationInfo> {
+    use crate::evidence::snapshot::ActivationInfo;
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let file = File::open(hive_path).ok()?;
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock).ok()?;
+    let root_key = hive.root_key_node().ok()?;
+
+    let microsoft = root_key.subkey("Microsoft", &mut hive).ok()??;
+    let windows_nt = microsoft.borrow().subkey("Windows NT", &mut hive).ok()??;
+    let current = windows_nt
+        .borrow()
+        .subkey("CurrentVersion", &mut hive)
+        .ok()??;
+
+    let mut product_id = String::new();
+    let mut edition_id = String::new();
+    let mut product_name = String::new();
+    let mut has_digital_pid = false;
+
+    for kv in current.borrow().values() {
+        match kv.name() {
+            "ProductId" => {
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    product_id = data.clone();
+                }
+            }
+            "EditionID" => {
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    edition_id = data.clone();
+                }
+            }
+            "ProductName" => {
+                if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) = kv.value() {
+                    product_name = data.clone();
+                }
+            }
+            "DigitalProductId" | "DigitalProductId4" => {
+                if let RegistryValue::RegBinary(data) = kv.value() {
+                    has_digital_pid = !data.is_empty();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if product_id.is_empty() && edition_id.is_empty() && !has_digital_pid {
+        return None;
+    }
+
+    let channel = infer_activation_channel(&product_id, &edition_id, &product_name);
+    Some(ActivationInfo {
+        // Offline we cannot query SPP; treat a present ProductId as "has license material".
+        licensed: !product_id.is_empty() || has_digital_pid,
+        channel,
+        product_id: (!product_id.is_empty()).then_some(product_id),
+        edition_id: (!edition_id.is_empty()).then_some(edition_id),
+    })
+}
+
+const CONFIGFLAG_REMOVED: u32 = 0x0000_0001;
+const CONFIGFLAG_REINSTALL: u32 = 0x0000_0020;
+const CONFIGFLAG_FAILEDINSTALL: u32 = 0x0000_0040;
+
+/// True when ConfigFlags indicate a removed / failed / reinstall-needed device.
+pub fn config_flags_indicate_ghost(flags: u32) -> bool {
+    flags & (CONFIGFLAG_REMOVED | CONFIGFLAG_REINSTALL | CONFIGFLAG_FAILEDINSTALL) != 0
+}
+
+/// Source-hypervisor NIC signatures that become "ghosts" after KVM cutover.
+pub fn is_source_hypervisor_nic(blob: &str) -> bool {
+    let b = blob.to_ascii_lowercase();
+    b.contains("vmxnet")
+        || b.contains("vmware")
+        || b.contains("ven_15ad")
+        || b.contains("netvsc")
+        || b.contains("hv_netvsc")
+        || b.contains("ven_1414")
+        || (b.contains("xen") && (b.contains("net") || b.contains("vif")))
+}
+
+fn reg_multi_or_sz(kv: &nt_hive2::KeyValue) -> String {
+    use nt_hive2::RegistryValue;
+    match kv.value() {
+        RegistryValue::RegSZ(s) | RegistryValue::RegExpandSZ(s) => s.clone(),
+        RegistryValue::RegMultiSZ(v) => v.join(";"),
+        _ => String::new(),
+    }
+}
+
+/// Offline ghost / remnant NICs from SYSTEM\ControlSet001\Enum\PCI.
+pub fn detect_ghost_nics(
+    hive_path: &Path,
+) -> Vec<crate::evidence::snapshot::GhostNicEntry> {
+    use crate::evidence::snapshot::GhostNicEntry;
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let mut out = Vec::new();
+    let Ok(file) = File::open(hive_path) else {
+        return out;
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return out;
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return out;
+    };
+    let Ok(Some(cs)) = root_key.subkey("ControlSet001", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(enum_key)) = cs.borrow().subkey("Enum", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(pci)) = enum_key.borrow().subkey("PCI", &mut hive) else {
+        return out;
+    };
+
+    let pci_borrowed = pci.borrow();
+    let Ok(devices) = pci_borrowed.subkeys(&mut hive) else {
+        return out;
+    };
+
+    for device in devices.iter() {
+        let device_borrowed = device.borrow();
+        let device_name = device_borrowed.name().to_string();
+        let Ok(instances) = device_borrowed.subkeys(&mut hive) else {
+            continue;
+        };
+        for inst in instances.iter() {
+            let inst_ref = inst.borrow();
+            let instance_name = inst_ref.name().to_string();
+            let mut class = String::new();
+            let mut desc = String::new();
+            let mut service = String::new();
+            let mut hwid = String::new();
+            let mut config_flags: u32 = 0;
+
+            for kv in inst_ref.values() {
+                match kv.name() {
+                    "Class" => class = reg_multi_or_sz(&kv),
+                    "DeviceDesc" => desc = reg_multi_or_sz(&kv),
+                    "Service" => service = reg_multi_or_sz(&kv),
+                    "HardwareID" | "CompatibleIDs" => {
+                        let v = reg_multi_or_sz(&kv);
+                        if !v.is_empty() {
+                            if !hwid.is_empty() {
+                                hwid.push(';');
+                            }
+                            hwid.push_str(&v);
+                        }
+                    }
+                    "ConfigFlags" => {
+                        if let RegistryValue::RegDWord(v) = kv.value() {
+                            config_flags = *v;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let class_net = class.eq_ignore_ascii_case("Net");
+            let blob = format!("{device_name} {desc} {service} {hwid}");
+            let hypervisor = is_source_hypervisor_nic(&blob);
+            let problem = config_flags_indicate_ghost(config_flags);
+
+            if !(class_net || hypervisor) {
+                continue;
+            }
+            if !(problem || hypervisor) {
+                continue;
+            }
+
+            let reason = if hypervisor && problem {
+                "hypervisor remnant + ConfigFlags"
+            } else if hypervisor {
+                "hypervisor remnant NIC"
+            } else {
+                "ConfigFlags problem"
+            };
+            let description = if desc.is_empty() {
+                format!("{device_name} [{reason}]")
+            } else {
+                // DeviceDesc often embeds ";friendly name" from INF.
+                let friendly = desc.split(';').next_back().unwrap_or(&desc).trim();
+                format!("{friendly} [{reason}]")
+            };
+
+            out.push(GhostNicEntry {
+                instance_id: format!("PCI\\{device_name}\\{instance_name}"),
+                description,
+            });
+        }
+    }
+
+    out.sort_by(|a, b| a.instance_id.cmp(&b.instance_id));
+    out.dedup_by(|a, b| a.instance_id == b.instance_id);
+    out
+}
+
+/// Static (non-DHCP) NIC configs from Tcpip Interfaces — for post-cutover IP transfer.
+pub fn parse_static_nic_configs(
+    hive_path: &Path,
+) -> Vec<crate::evidence::snapshot::WindowsNicConfig> {
+    use crate::evidence::snapshot::WindowsNicConfig;
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let mut out = Vec::new();
+    let Ok(file) = File::open(hive_path) else {
+        return out;
+    };
+    let Ok(mut hive) = Hive::new(file, HiveParseMode::NormalWithBaseBlock) else {
+        return out;
+    };
+    let Ok(root_key) = hive.root_key_node() else {
+        return out;
+    };
+    let Ok(Some(cs)) = root_key.subkey("ControlSet001", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(services)) = cs.borrow().subkey("Services", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(tcpip)) = services.borrow().subkey("Tcpip", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(params)) = tcpip.borrow().subkey("Parameters", &mut hive) else {
+        return out;
+    };
+    let Ok(Some(interfaces)) = params.borrow().subkey("Interfaces", &mut hive) else {
+        return out;
+    };
+
+    let ifaces = interfaces.borrow();
+    let Ok(subkeys) = ifaces.subkeys(&mut hive) else {
+        return out;
+    };
+
+    for if_key in subkeys.iter() {
+        let if_ref = if_key.borrow();
+        let guid = if_ref.name().to_string();
+        let mut dhcp = true;
+        let mut ips = Vec::new();
+        let mut gateway = None;
+        let mut dns = Vec::new();
+
+        for kv in if_ref.values() {
+            match kv.name() {
+                "EnableDHCP" => {
+                    if let RegistryValue::RegDWord(v) = kv.value() {
+                        dhcp = *v == 1;
+                    }
+                }
+                "IPAddress" => {
+                    if let RegistryValue::RegMultiSZ(addrs) = kv.value() {
+                        for a in addrs {
+                            if !a.is_empty() && a != "0.0.0.0" {
+                                ips.push(a.clone());
+                            }
+                        }
+                    }
+                }
+                "DefaultGateway" => {
+                    if let RegistryValue::RegMultiSZ(gws) = kv.value() {
+                        gateway = gws
+                            .iter()
+                            .find(|g| !g.is_empty() && g.as_str() != "0.0.0.0")
+                            .cloned();
+                    } else if let RegistryValue::RegSZ(g) = kv.value() {
+                        if !g.is_empty() && g != "0.0.0.0" {
+                            gateway = Some(g.clone());
+                        }
+                    }
+                }
+                "NameServer" => {
+                    if let RegistryValue::RegSZ(servers) = kv.value() {
+                        for s in servers.split([',', ' ']) {
+                            let t = s.trim();
+                            if !t.is_empty() {
+                                dns.push(t.to_string());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if !dhcp && !ips.is_empty() {
+            out.push(WindowsNicConfig {
+                name: guid,
+                mac: String::new(),
+                ip_addresses: ips,
+                gateway,
+                dns,
+                dhcp: false,
+            });
+        }
+    }
+
+    out
+}
+
 /// Get Windows version from SOFTWARE hive
 ///
 /// Returns (product_name, version, edition)
@@ -531,9 +868,12 @@ pub struct WindowsUpdateInfo {
 
 /// Parse installed Windows updates from registry
 ///
-/// Checks SOFTWARE hive for installed updates and hotfixes
+/// Checks SOFTWARE hive for installed updates and hotfixes under
+/// `Microsoft\Windows NT\CurrentVersion\HotFix`.
 pub fn parse_installed_updates(hive_path: &Path) -> Result<Vec<WindowsUpdateInfo>> {
-    // Verify hive exists
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
     if !hive_path.exists() {
         return Err(Error::NotFound(format!(
             "SOFTWARE hive not found: {}",
@@ -541,12 +881,85 @@ pub fn parse_installed_updates(hive_path: &Path) -> Result<Vec<WindowsUpdateInfo
         )));
     }
 
-    // Registry parsing requires nt_hive2 crate for reading Windows registry hives.
-    // Keys to parse:
-    // - SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Packages
-    // - SOFTWARE\Microsoft\Windows NT\CurrentVersion\HotFix
-    // For now, return empty since we cannot parse registry binary format without nt_hive2.
-    Ok(vec![])
+    let file = File::open(hive_path)
+        .map_err(|e| Error::CommandFailed(format!("Failed to open hive: {}", e)))?;
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+        .map_err(|e| Error::CommandFailed(format!("Failed to parse hive: {:?}", e)))?;
+
+    let root_key = hive
+        .root_key_node()
+        .map_err(|e| Error::CommandFailed(format!("Failed to get root key: {:?}", e)))?;
+
+    let mut updates = Vec::new();
+
+    let microsoft = match root_key.subkey("Microsoft", &mut hive) {
+        Ok(Some(k)) => k,
+        _ => return Ok(updates),
+    };
+    let windows_nt = match microsoft.borrow().subkey("Windows NT", &mut hive) {
+        Ok(Some(k)) => k,
+        _ => return Ok(updates),
+    };
+    let current_version = match windows_nt.borrow().subkey("CurrentVersion", &mut hive) {
+        Ok(Some(k)) => k,
+        _ => return Ok(updates),
+    };
+    let hotfix = match current_version.borrow().subkey("HotFix", &mut hive) {
+        Ok(Some(k)) => k,
+        _ => return Ok(updates),
+    };
+
+    let hotfix_borrowed = hotfix.borrow();
+    let Ok(subkeys) = hotfix_borrowed.subkeys(&mut hive) else {
+        return Ok(updates);
+    };
+
+    for kb_key in subkeys.iter() {
+        let kb_ref = kb_key.borrow();
+        let kb_name = kb_ref.name().to_string();
+        if kb_name.is_empty() {
+            continue;
+        }
+        let mut description = String::new();
+        let mut installed_date = String::from("Unknown");
+        for kv in kb_ref.values() {
+            match kv.name() {
+                "Description" | "Fix Description" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
+                        description = data.clone();
+                    }
+                }
+                "Installed" | "InstallDate" => {
+                    if let RegistryValue::RegSZ(data) | RegistryValue::RegExpandSZ(data) =
+                        kv.value()
+                    {
+                        installed_date = data.clone();
+                    }
+                }
+                _ => {}
+            }
+        }
+        let kb_number = if kb_name.to_ascii_uppercase().starts_with("KB") {
+            kb_name.clone()
+        } else {
+            format!("KB{kb_name}")
+        };
+        updates.push(WindowsUpdateInfo {
+            kb_number: kb_number.clone(),
+            title: if description.is_empty() {
+                format!("{kb_number} (HotFix key)")
+            } else {
+                description.clone()
+            },
+            description,
+            installed_date,
+            update_type: "Hotfix".to_string(),
+        });
+    }
+
+    Ok(updates)
 }
 
 /// Parse CBS.log for component-based servicing updates
@@ -648,6 +1061,54 @@ pub fn detect_hotfixes_from_filesystem(windows_dir: &Path) -> Result<Vec<Windows
     }
 
     Ok(hotfixes)
+}
+
+/// Heuristic: scan BCD store bytes for UTF-16LE `testsigning` / `nointegritychecks`
+/// followed nearby by `Yes`. Returns `Some(true)` when enforcement looks intact,
+/// `Some(false)` when weakened, `None` when BCD cannot be read.
+pub fn probe_bcd_signature_enforcement(bcd_bytes: &[u8]) -> Option<bool> {
+    if bcd_bytes.is_empty() {
+        return None;
+    }
+    let as_utf16: String = bcd_bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .filter(|&u| u != 0)
+        .map(|u| char::from_u32(u as u32).unwrap_or('\u{FFFD}'))
+        .collect();
+    let lower = as_utf16.to_ascii_lowercase();
+    let weakened = ["testsigning", "nointegritychecks"].iter().any(|key| {
+        if let Some(idx) = lower.find(key) {
+            let window = &lower[idx..lower.len().min(idx + 64)];
+            window.contains("yes")
+        } else {
+            false
+        }
+    });
+    Some(!weakened)
+}
+
+/// Read the trailing portion of a (possibly huge) CBS.log and parse KBs.
+pub fn parse_cbs_log_tail(path: &Path, max_bytes: u64) -> Vec<WindowsUpdateInfo> {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return Vec::new();
+    };
+    let Ok(meta) = file.metadata() else {
+        return Vec::new();
+    };
+    let len = meta.len();
+    let start = len.saturating_sub(max_bytes);
+    if file.seek(SeekFrom::Start(start)).is_err() {
+        return Vec::new();
+    }
+    let mut buf = Vec::new();
+    if file.read_to_end(&mut buf).is_err() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&buf);
+    parse_cbs_log(&text)
 }
 
 /// Windows event log entry
@@ -1079,6 +1540,145 @@ pub fn parse_bitlocker_status(software_hive: &Path) -> bool {
         .is_some()
 }
 
+/// Read `SYSTEM\ControlSet001\Control\BitLockerStatus\BootStatus`.
+/// `Some(1)` = protection enabled on the OS volume (strong offline signal).
+pub fn parse_bitlocker_boot_status(system_hive: &Path) -> Option<u32> {
+    use nt_hive2::{Hive, HiveParseMode, RegistryValue};
+    use std::fs::File;
+
+    let file = File::open(system_hive).ok()?;
+    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock).ok()?;
+    let root_key = hive.root_key_node().ok()?;
+    let cs = root_key.subkey("ControlSet001", &mut hive).ok()??;
+    let control = cs.borrow().subkey("Control", &mut hive).ok()??;
+    let status = control.borrow().subkey("BitLockerStatus", &mut hive).ok()??;
+    for kv in status.borrow().values() {
+        if kv.name() == "BootStatus" {
+            if let RegistryValue::RegDWord(v) = kv.value() {
+                return Some(*v);
+            }
+        }
+    }
+    None
+}
+
+/// Offline BitLocker state for evidence / MIG-W-005 / Passport.
+///
+/// `BootStatus == 1` → `any_protected` (hard blocker). Otherwise FVE artifacts
+/// set `offline_uncertain` so checks warn without false hard-blocks.
+pub fn collect_bitlocker_offline(
+    software_hive: &Path,
+    system_hive: &Path,
+    dollar_bitlocker: bool,
+    fvevol_sys: bool,
+) -> Option<crate::evidence::snapshot::BitLockerState> {
+    use crate::evidence::snapshot::{BitLockerState, BitLockerVolume};
+
+    let boot_status = parse_bitlocker_boot_status(system_hive);
+    let fve_key = parse_bitlocker_status(software_hive);
+    let fvevol_svc = parse_windows_services(system_hive)
+        .ok()
+        .map(|svcs| {
+            svcs.iter()
+                .any(|s| s.name.eq_ignore_ascii_case("FVEVOL") || s.name.eq_ignore_ascii_case("BDESvc"))
+        })
+        .unwrap_or(false);
+
+    if boot_status.is_none() && !fve_key && !dollar_bitlocker && !fvevol_sys && !fvevol_svc {
+        return None;
+    }
+
+    let any_protected = boot_status == Some(1);
+    let artifacts = fve_key || dollar_bitlocker || fvevol_sys || fvevol_svc || boot_status.is_some();
+    let offline_uncertain = !any_protected && artifacts && boot_status != Some(0);
+
+    let mut sources = Vec::new();
+    if let Some(bs) = boot_status {
+        sources.push(format!("BitLockerStatus.BootStatus={bs}"));
+    }
+    if fve_key {
+        sources.push("SOFTWARE\\Microsoft\\FVE".into());
+    }
+    if dollar_bitlocker {
+        sources.push("$BitLocker".into());
+    }
+    if fvevol_sys {
+        sources.push("fvevol.sys".into());
+    }
+    if fvevol_svc {
+        sources.push("FVEVOL/BDESvc".into());
+    }
+
+    let protection = if any_protected {
+        "on"
+    } else if boot_status == Some(0) && !fve_key && !dollar_bitlocker {
+        "off"
+    } else if artifacts {
+        "artifacts"
+    } else {
+        "unknown"
+    };
+
+    Some(BitLockerState {
+        any_protected,
+        offline_uncertain,
+        volumes: vec![BitLockerVolume {
+            mount_point: "C:".into(),
+            protection: protection.into(),
+            source: Some(sources.join(", ")),
+        }],
+    })
+}
+
+/// Offline VSS stack readiness from services + System Volume Information.
+///
+/// Live writer health requires a running guest; offline we infer whether the
+/// VSS service pair looks usable for consistent cutover snapshots.
+pub fn collect_vss_offline(
+    system_hive: &Path,
+    svi_present: bool,
+) -> Option<crate::evidence::snapshot::VssHealth> {
+    use crate::evidence::snapshot::VssHealth;
+
+    let Ok(services) = parse_windows_services(system_hive) else {
+        return if svi_present {
+            Some(VssHealth {
+                writers_total: 0,
+                writers_failed: vec![],
+                healthy: svi_present,
+                offline_inferred: true,
+            })
+        } else {
+            None
+        };
+    };
+
+    const CRITICAL: &[&str] = &["VSS", "swprv"];
+    let mut found = 0usize;
+    let mut failed = Vec::new();
+    for name in CRITICAL {
+        if let Some(svc) = services.iter().find(|s| s.name.eq_ignore_ascii_case(name)) {
+            found += 1;
+            if svc.start_type.eq_ignore_ascii_case("Disabled") {
+                failed.push(format!("{name} (Disabled)"));
+            }
+        } else {
+            failed.push(format!("{name} (missing)"));
+        }
+    }
+
+    if found == 0 && !svi_present {
+        return None;
+    }
+
+    Some(VssHealth {
+        writers_total: found,
+        writers_failed: failed.clone(),
+        healthy: failed.is_empty() && svi_present,
+        offline_inferred: true,
+    })
+}
+
 /// Run / RunOnce registry value for persistence analysis.
 #[derive(Debug, Clone)]
 pub struct WindowsRunKeyEntry {
@@ -1133,4 +1733,86 @@ pub fn parse_run_keys(hive_path: &Path) -> Result<Vec<WindowsRunKeyEntry>> {
         }
     }
     Ok(out)
+}
+
+
+#[cfg(test)]
+mod hotfix_diag_tests {
+    use super::*;
+
+    #[test]
+    fn cbs_log_extracts_kb() {
+        let log = "2024-01-01 Package KB5034441 was successfully changed to the Installed state.\n";
+        let updates = parse_cbs_log(log);
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].kb_number, "KB5034441");
+    }
+
+    #[test]
+    fn bcd_probe_detects_testsigning_yes() {
+        // UTF-16LE for "testsigning Yes"
+        let mut bytes = Vec::new();
+        for c in "pad testsigning Yes pad".encode_utf16() {
+            bytes.extend_from_slice(&c.to_le_bytes());
+        }
+        assert_eq!(probe_bcd_signature_enforcement(&bytes), Some(false));
+    }
+
+    #[test]
+    fn bcd_probe_enforcement_when_absent() {
+        let mut bytes = Vec::new();
+        for c in "windows boot manager".encode_utf16() {
+            bytes.extend_from_slice(&c.to_le_bytes());
+        }
+        assert_eq!(probe_bcd_signature_enforcement(&bytes), Some(true));
+    }
+
+    #[test]
+    fn oem_product_id_channel() {
+        assert_eq!(
+            infer_activation_channel("00330-80000-00000-AA280", "Professional", "Windows 10 Pro"),
+            "Retail"
+        );
+        assert_eq!(
+            infer_activation_channel("00330-OEM-0000000-00000", "Core", "Windows 10 Home"),
+            "OEM"
+        );
+        assert_eq!(
+            infer_activation_channel("", "Enterprise", "Windows 10 Enterprise"),
+            "Volume"
+        );
+    }
+
+    #[test]
+    fn config_flags_and_hypervisor_nic() {
+        assert!(config_flags_indicate_ghost(0x20));
+        assert!(config_flags_indicate_ghost(0x1));
+        assert!(!config_flags_indicate_ghost(0));
+        assert!(is_source_hypervisor_nic("PCI\\VEN_15AD&DEV_07B0 vmxnet3"));
+        assert!(is_source_hypervisor_nic("netvsc Hyper-V"));
+        assert!(!is_source_hypervisor_nic("PCI\\VEN_1AF4&DEV_1000 virtio"));
+    }
+
+    #[test]
+    fn bitlocker_offline_boot_status_protected() {
+        let state = collect_bitlocker_offline(
+            Path::new("/nonexistent-software"),
+            Path::new("/nonexistent-system"),
+            true,
+            true,
+        );
+        // Without hive BootStatus, artifacts alone → uncertain, not hard-protected.
+        let state = state.expect("artifacts should yield state");
+        assert!(!state.any_protected);
+        assert!(state.offline_uncertain);
+        assert_eq!(state.volumes[0].protection, "artifacts");
+    }
+
+    #[test]
+    fn vss_offline_without_hive_uses_svi() {
+        let health = collect_vss_offline(Path::new("/nonexistent-system"), true)
+            .expect("SVI alone yields inferred health");
+        assert!(health.offline_inferred);
+        assert!(health.healthy);
+    }
 }

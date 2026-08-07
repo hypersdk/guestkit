@@ -657,13 +657,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
         gateway: Option<&str>,
         dns: Option<&str>,
     ) -> Result<FixPlan> {
-        let guid = interface_guid.trim().trim_matches(|c| c == '{' || c == '}');
-        if guid.len() != 36 || guid.chars().filter(|c| *c == '-').count() != 4 {
-            anyhow::bail!(
-                "Invalid --interface-guid '{interface_guid}' (expected GUID like \
-                 a1b2c3d4-e5f6-7890-abcd-ef1234567890)"
-            );
-        }
+        let guid = Self::normalize_interface_guid(interface_guid)?;
         for (label, v) in [("ip", ip), ("mask", mask)] {
             let t = v.trim();
             if t.is_empty() || !t.chars().all(|c| c.is_ascii_digit() || c == '.') {
@@ -790,6 +784,191 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
                 undo: None,
             });
         }
+
+        Ok(plan)
+    }
+
+    fn normalize_interface_guid(interface_guid: &str) -> Result<String> {
+        let guid = interface_guid.trim().trim_matches(|c| c == '{' || c == '}');
+        if guid.len() != 36 || guid.chars().filter(|c| *c == '-').count() != 4 {
+            anyhow::bail!(
+                "Invalid --interface-guid '{interface_guid}' (expected GUID like \
+                 a1b2c3d4-e5f6-7890-abcd-ef1234567890)"
+            );
+        }
+        Ok(guid.to_string())
+    }
+
+    /// Offline Windows DHCP enablement on a known interface GUID.
+    pub fn windows_dhcp_plan(&self, interface_guid: &str) -> Result<FixPlan> {
+        let guid = Self::normalize_interface_guid(interface_guid)?;
+        let iface_key = format!(
+            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
+        );
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-dhcp".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(format!(
+            "Offline Windows DHCP enable on interface {{{guid}}}"
+        ));
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "network".into(),
+            "dhcp".into(),
+            "offline".into(),
+        ];
+
+        plan.add_operation(Operation {
+            id: "iface-enable-dhcp".into(),
+            op_type: OperationType::RegistryEdit(RegistryEdit {
+                key: iface_key,
+                value: "EnableDHCP".into(),
+                current_data: json!(0),
+                new_data: json!(1),
+                data_type: "dword".into(),
+            }),
+            priority: Priority::High,
+            description: "Enable DHCP on interface".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        Ok(plan)
+    }
+
+    /// Offline Windows DNS servers (NameServer) on a known interface GUID.
+    pub fn windows_dns_plan(&self, interface_guid: &str, dns: &str) -> Result<FixPlan> {
+        let guid = Self::normalize_interface_guid(interface_guid)?;
+        let dns_servers = dns.trim();
+        if dns_servers.is_empty() {
+            anyhow::bail!("--dns is required for windows-dns (space or comma separated)");
+        }
+        let normalized = dns_servers.replace(',', " ");
+        let iface_key = format!(
+            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
+        );
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "windows-dns".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(format!(
+            "Offline Windows DNS NameServer on interface {{{guid}}}"
+        ));
+        plan.metadata.tags = vec![
+            "windows".into(),
+            "network".into(),
+            "dns".into(),
+            "offline".into(),
+        ];
+
+        plan.add_operation(Operation {
+            id: "iface-dns".into(),
+            op_type: OperationType::RegistryEdit(RegistryEdit {
+                key: iface_key,
+                value: "NameServer".into(),
+                current_data: json!(""),
+                new_data: json!(normalized),
+                data_type: "sz".into(),
+            }),
+            priority: Priority::Medium,
+            description: "Set NameServer (space-separated)".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        Ok(plan)
+    }
+
+    /// Offline Linux hostname (`/etc/hostname` + `/etc/hosts` patch).
+    pub fn linux_hostname_plan(
+        &self,
+        g: &mut crate::Guestfs,
+        hostname: &str,
+    ) -> Result<FixPlan> {
+        let name = hostname.trim();
+        if name.is_empty() || name.len() > 253 {
+            anyhow::bail!("Invalid --hostname '{hostname}'");
+        }
+
+        let mut plan = FixPlan::new(self.vm_path.clone(), "linux-hostname".to_string());
+        plan.version = "1".to_string();
+        plan.overall_risk = "low".to_string();
+        plan.estimated_duration = "seconds".to_string();
+        plan.metadata.author = "guestkit".to_string();
+        plan.metadata.review_required = false;
+        plan.metadata.reversible = true;
+        plan.metadata.description = Some(format!("Offline Linux hostname → {name}"));
+        plan.metadata.tags = vec!["linux".into(), "hostname".into(), "offline".into()];
+
+        plan.add_operation(Operation {
+            id: "hostname".into(),
+            op_type: OperationType::FileWrite(FileWrite {
+                path: "/etc/hostname".into(),
+                content: format!("{name}\n"),
+                mode: Some("0644".into()),
+            }),
+            priority: Priority::High,
+            description: format!("Write /etc/hostname = {name}"),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
+
+        let mut hosts = String::from("127.0.0.1\tlocalhost\n");
+        if let Ok(content) = g.read_file("/etc/hosts") {
+            hosts = String::from_utf8_lossy(&content).into_owned();
+            let mut out = Vec::new();
+            let mut patched = false;
+            for line in hosts.lines() {
+                let trimmed = line.trim_start();
+                if trimmed.starts_with("127.0.1.1") || trimmed.starts_with("10.0.2.3") {
+                    let ip = trimmed.split_whitespace().next().unwrap_or("127.0.1.1");
+                    out.push(format!("{ip}\t{name}"));
+                    patched = true;
+                } else {
+                    out.push(line.to_string());
+                }
+            }
+            if !patched {
+                out.push(format!("127.0.1.1\t{name}"));
+            }
+            hosts = out.join("\n") + "\n";
+        } else {
+            hosts.push_str(&format!("127.0.1.1\t{name}\n"));
+        }
+
+        plan.add_operation(Operation {
+            id: "hosts".into(),
+            op_type: OperationType::FileWrite(FileWrite {
+                path: "/etc/hosts".into(),
+                content: hosts,
+                mode: Some("0644".into()),
+            }),
+            priority: Priority::High,
+            description: "Patch /etc/hosts with hostname".into(),
+            risk: Priority::Low,
+            reversible: true,
+            depends_on: vec![],
+            validation: None,
+            undo: None,
+        });
 
         Ok(plan)
     }
@@ -1405,6 +1584,27 @@ mod tests {
         assert!(PlanGenerator::new("/images/win.qcow2".into())
             .windows_static_ip_plan("bad", "10.0.0.1", "255.255.255.0", None, None)
             .is_err());
+    }
+
+    #[test]
+    fn test_windows_dhcp_and_dns_plans() {
+        let dhcp = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_dhcp_plan("{a1b2c3d4-e5f6-7890-abcd-ef1234567890}")
+            .unwrap();
+        assert_eq!(dhcp.profile, "windows-dhcp");
+        assert_eq!(dhcp.operations[0].id, "iface-enable-dhcp");
+
+        let dns = PlanGenerator::new("/images/win.qcow2".into())
+            .windows_dns_plan("a1b2c3d4-e5f6-7890-abcd-ef1234567890", "1.1.1.1,8.8.8.8")
+            .unwrap();
+        assert_eq!(dns.profile, "windows-dns");
+        match &dns.operations[0].op_type {
+            OperationType::RegistryEdit(re) => {
+                assert_eq!(re.value, "NameServer");
+                assert_eq!(re.new_data, json!("1.1.1.1 8.8.8.8"));
+            }
+            _ => panic!("expected RegistryEdit"),
+        }
     }
 
     #[test]

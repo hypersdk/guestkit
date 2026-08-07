@@ -370,11 +370,11 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
         });
     }
 
-    // MIG-W-003/004/010: BCD + boot chain + System Reserved layout
+    // MIG-W-003/004/011: BCD + boot chain + System Reserved layout
     for (boot_id, mig_id, weight) in [
         ("BOOT-013", "MIG-W-003", 8.0),
         ("BOOT-012", "MIG-W-004", 6.0),
-        ("BOOT-014", "MIG-W-010", 4.0),
+        ("BOOT-014", "MIG-W-011", 4.0),
     ] {
         if let Some(check) =
             ctx.boot_check(boot_id, mig_id, Cat::Boot, weight, Some(Hint::RepairBootloader))
@@ -391,9 +391,31 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
             Cat::Security,
             10.0,
             CheckSeverity::Blocker,
-            "BitLocker protection is active — hardware change will trigger recovery mode",
+            "BitLocker protection is active (BootStatus/On) — hardware change will trigger recovery mode",
             Some(Hint::SuspendBitLocker),
         )),
+        Some(bl) if bl.offline_uncertain
+            || bl.volumes.iter().any(|v| {
+                matches!(v.protection.as_str(), "artifacts" | "unknown")
+            }) =>
+        {
+            let detail = bl
+                .volumes
+                .first()
+                .and_then(|v| v.source.as_deref())
+                .unwrap_or("FVE artifacts");
+            out.push(Check::fail(
+                "MIG-W-005",
+                "BitLocker",
+                Cat::Security,
+                10.0,
+                CheckSeverity::Warning,
+                format!(
+                    "BitLocker artifacts present offline ({detail}) — confirm ProtectionStatus and escrow the recovery key"
+                ),
+                Some(Hint::SuspendBitLocker),
+            ))
+        }
         Some(_) => out.push(Check::pass(
             "MIG-W-005",
             "BitLocker",
@@ -450,47 +472,73 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
     }
 
     // MIG-W-008: activation channel risk
-    if let Some(act) = &win.activation {
-        let oem = act.channel.to_uppercase().contains("OEM");
-        out.push(if oem {
-            Check::fail(
-                "MIG-W-008",
-                "Windows activation",
-                Cat::Application,
-                3.0,
-                CheckSeverity::Warning,
-                format!(
-                    "OEM-channel license ({}) is tied to source hardware and may deactivate",
-                    act.channel
-                ),
-                Some(Hint::Manual {
-                    instructions: "prepare a KMS/MAK key or plan re-activation after migration".into(),
-                }),
-            )
-        } else {
-            Check::pass(
-                "MIG-W-008",
-                "Windows activation",
-                Cat::Application,
-                3.0,
-                format!(
-                    "licensed={} channel={}",
-                    act.licensed,
-                    if act.channel.is_empty() { "unknown" } else { &act.channel }
-                ),
-            )
-        });
+    match &win.activation {
+        Some(act) => {
+            let oem = act.channel.to_uppercase().contains("OEM");
+            let detail = match (&act.edition_id, &act.product_id) {
+                (Some(ed), Some(pid)) => format!(" edition={ed} product_id={pid}"),
+                (Some(ed), None) => format!(" edition={ed}"),
+                (None, Some(pid)) => format!(" product_id={pid}"),
+                _ => String::new(),
+            };
+            out.push(if oem {
+                Check::fail(
+                    "MIG-W-008",
+                    "Windows activation",
+                    Cat::Application,
+                    3.0,
+                    CheckSeverity::Warning,
+                    format!(
+                        "OEM-channel license ({}){} is tied to source hardware and may deactivate",
+                        act.channel, detail
+                    ),
+                    Some(Hint::Manual {
+                        instructions: "prepare a KMS/MAK key or plan re-activation after migration"
+                            .into(),
+                    }),
+                )
+            } else {
+                Check::pass(
+                    "MIG-W-008",
+                    "Windows activation",
+                    Cat::Application,
+                    3.0,
+                    format!(
+                        "licensed={} channel={}{}",
+                        act.licensed,
+                        if act.channel.is_empty() {
+                            "unknown"
+                        } else {
+                            &act.channel
+                        },
+                        detail
+                    ),
+                )
+            });
+        }
+        None => out.push(Check::pass(
+            "MIG-W-008",
+            "Windows activation",
+            Cat::Application,
+            1.0,
+            "activation markers not present in SOFTWARE hive",
+        )),
     }
 
     // MIG-W-009: VSS health (needed for consistent cutover snapshots)
     if let Some(vss) = &win.vss {
+        let suffix = if vss.offline_inferred {
+            " (offline inference)"
+        } else {
+            ""
+        };
         out.push(if vss.healthy {
             Check::pass(
                 "MIG-W-009",
                 "VSS writers",
                 Cat::Application,
                 4.0,
-                format!("{} writers stable", vss.writers_total),
+                format!("{} writers/services stable{suffix}", vss.writers_total),
             )
         } else {
             Check::fail(
@@ -499,9 +547,18 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
                 Cat::Application,
                 4.0,
                 CheckSeverity::Warning,
-                format!("failed writers: {}", vss.writers_failed.join(", ")),
+                format!(
+                    "VSS not ready{suffix}: {}",
+                    if vss.writers_failed.is_empty() {
+                        "System Volume Information missing or VSS stack incomplete".into()
+                    } else {
+                        vss.writers_failed.join(", ")
+                    }
+                ),
                 Some(Hint::Manual {
-                    instructions: "restart the failed VSS writer services before taking a consistent snapshot".into(),
+                    instructions:
+                        "ensure VSS + Software Shadow Copy Provider are enabled; fix failed writers before consistent snapshot"
+                            .into(),
                 }),
             )
         });
@@ -526,6 +583,114 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
                 Cat::Security,
                 2.0,
                 "signature enforcement active (signed virtio-win drivers required)",
+            ));
+        }
+    }
+
+    // MIG-W-012: hotfix / servicing surface for cutover planning
+    {
+        let sample: Vec<&str> = win.hotfixes.iter().take(5).map(|h| h.kb.as_str()).collect();
+        let sample_txt = if sample.is_empty() {
+            "none sampled".to_string()
+        } else {
+            sample.join(", ")
+        };
+        if win.hf_mig_present {
+            out.push(Check::fail(
+                "MIG-W-012",
+                "Windows hotfixes / servicing",
+                Cat::Application,
+                3.0,
+                CheckSeverity::Warning,
+                format!(
+                    "$hf_mig$ present with {} KB(s) tracked ({}) — incomplete hotfix migration data; reboot/CBS cleanup before cutover",
+                    win.hotfix_count, sample_txt
+                ),
+                Some(Hint::Manual {
+                    instructions:
+                        "complete pending Windows Update / CBS operations and reboot before migration"
+                            .into(),
+                }),
+            ));
+        } else if win.hotfix_count > 0 {
+            out.push(Check::pass(
+                "MIG-W-012",
+                "Windows hotfixes / servicing",
+                Cat::Application,
+                3.0,
+                format!(
+                    "{} hotfix/KB entries tracked (sample: {})",
+                    win.hotfix_count, sample_txt
+                ),
+            ));
+        } else {
+            out.push(Check::pass(
+                "MIG-W-012",
+                "Windows hotfixes / servicing",
+                Cat::Application,
+                2.0,
+                "no hotfix / CBS sample collected (legacy HotFix key empty or not probed)",
+            ));
+        }
+    }
+
+    // MIG-W-013: VirtIO .sys on-disk vs SCM registration
+    if !win.virtio_drivers.is_empty() {
+        let mismatches: Vec<String> = win
+            .virtio_drivers
+            .iter()
+            .filter(|d| {
+                matches!(d.sys_present, Some(false))
+                    && d.present
+                    && matches!(d.name.as_str(), "viostor" | "vioscsi" | "netkvm")
+            })
+            .map(|d| d.name.clone())
+            .collect();
+        let on_disk: Vec<&str> = win
+            .virtio_drivers
+            .iter()
+            .filter(|d| d.sys_present == Some(true))
+            .map(|d| d.name.as_str())
+            .collect();
+        let probed = win.virtio_drivers.iter().any(|d| d.sys_present.is_some());
+
+        if !mismatches.is_empty() {
+            out.push(Check::fail(
+                "MIG-W-013",
+                "VirtIO driver files",
+                Cat::Driver,
+                6.0,
+                CheckSeverity::Blocker,
+                format!(
+                    "SCM lists {} but System32\\drivers\\*.sys is missing — inject virtio-win before cutover",
+                    mismatches.join(", ")
+                ),
+                Some(Hint::InjectWindowsDriver {
+                    driver: mismatches
+                        .first()
+                        .cloned()
+                        .unwrap_or_else(|| "vioscsi".into()),
+                }),
+            ));
+        } else if !on_disk.is_empty() {
+            out.push(Check::pass(
+                "MIG-W-013",
+                "VirtIO driver files",
+                Cat::Driver,
+                4.0,
+                format!("VirtIO .sys on disk: {}", on_disk.join(", ")),
+            ));
+        } else if probed {
+            out.push(Check::fail(
+                "MIG-W-013",
+                "VirtIO driver files",
+                Cat::Driver,
+                6.0,
+                CheckSeverity::Warning,
+                "no VirtIO .sys files found under System32\\drivers — plan DriverInject from virtio-win",
+                Some(Hint::InjectWindowsDriver {
+                    driver: "vioscsi".into(),
+                }),
             ));
         }
     }
@@ -583,6 +748,7 @@ pub(crate) mod tests_support {
                 boot_critical: virtio_boot_critical,
                 present: true,
                 version: None,
+                sys_present: Some(true),
             }],
             ..Default::default()
         });
@@ -670,7 +836,7 @@ mod tests {
         let mut ev = windows_evidence(true);
         ev.windows.as_mut().unwrap().bitlocker = Some(BitLockerState {
             any_protected: true,
-            volumes: vec![],
+            ..Default::default()
         });
         let checks = run_all_checks(&ev, &ctx(&report));
         let w5 = checks.iter().find(|c| c.id == "MIG-W-005").unwrap();

@@ -418,46 +418,64 @@ impl EvidenceBuilder {
             .inspect_get_windows_systemroot(root)
             .unwrap_or_else(|_| "/Windows".to_string());
 
-        let software_hive = format!("{}/System32/config/SOFTWARE", systemroot);
-        let system_hive = format!("{}/System32/config/SYSTEM", systemroot);
+        let software_hive_guest = format!("{}/System32/config/SOFTWARE", systemroot);
+        let system_hive_guest = format!("{}/System32/config/SYSTEM", systemroot);
+        let software_hive = g
+            .resolve_guest_path(&software_hive_guest)
+            .unwrap_or_else(|_| PathBuf::from(&software_hive_guest));
+        let system_hive = g
+            .resolve_guest_path(&system_hive_guest)
+            .unwrap_or_else(|_| PathBuf::from(&system_hive_guest));
 
-        let installed_apps_count =
-            windows_registry::parse_installed_software(PathBuf::from(&software_hive).as_path())
-                .map(|a| a.len())
-                .unwrap_or(0);
+        let installed_apps_count = windows_registry::parse_installed_software(software_hive.as_path())
+            .map(|a| a.len())
+            .unwrap_or(0);
 
-        let services_count =
-            windows_registry::parse_windows_services(PathBuf::from(&system_hive).as_path())
-                .map(|s| s.len())
-                .unwrap_or(0);
+        let services_count = windows_registry::parse_windows_services(system_hive.as_path())
+            .map(|s| s.len())
+            .unwrap_or(0);
 
         let drivers_path = format!("{}/System32/drivers", systemroot);
         let drivers_count = g.ls(&drivers_path).map(|d| d.len()).unwrap_or(0);
 
         let (product_name, version) =
-            windows_registry::get_windows_version(PathBuf::from(&software_hive).as_path())
+            windows_registry::get_windows_version(software_hive.as_path())
                 .map(|(n, v, _)| (n, v))
                 .unwrap_or_else(|_| (String::new(), String::new()));
 
-        let domain_info =
-            windows_registry::parse_domain_info(PathBuf::from(&system_hive).as_path());
-        let rdp_enabled =
-            windows_registry::parse_rdp_enabled(PathBuf::from(&system_hive).as_path());
-        let pending_reboot =
-            windows_registry::parse_pending_reboot(PathBuf::from(&system_hive).as_path());
-        let bitlocker_detected = g.exists("/$BitLocker").unwrap_or(false)
-            || g.exists(&format!("{}/System32/drivers/fvevol.sys", systemroot))
+        let domain_info = windows_registry::parse_domain_info(system_hive.as_path());
+        let rdp_enabled = windows_registry::parse_rdp_enabled(system_hive.as_path());
+        let pending_reboot = windows_registry::parse_pending_reboot(system_hive.as_path());
+        let dollar_bitlocker = g.exists("/$BitLocker").unwrap_or(false);
+        let fvevol_sys = g
+            .exists(&format!("{}/System32/drivers/fvevol.sys", systemroot))
+            .unwrap_or(false);
+        let bitlocker = windows_registry::collect_bitlocker_offline(
+            software_hive.as_path(),
+            system_hive.as_path(),
+            dollar_bitlocker,
+            fvevol_sys,
+        );
+        let bitlocker_detected = bitlocker
+            .as_ref()
+            .map(|b| b.any_protected || b.offline_uncertain || !b.volumes.is_empty())
+            .unwrap_or(false)
+            || dollar_bitlocker
+            || fvevol_sys;
+
+        let svi_present = g
+            .exists("/System Volume Information")
+            .unwrap_or(false)
+            || g.exists(&format!("{}/System Volume Information", systemroot))
                 .unwrap_or(false);
+        let vss = windows_registry::collect_vss_offline(system_hive.as_path(), svi_present);
         let hypervisor_remnants = windows_registry::detect_hypervisor_remnants(
-            PathBuf::from(&system_hive).as_path(),
+            system_hive.as_path(),
             &drivers_path,
             g,
         );
-        let av_edr = windows_registry::detect_av_edr(
-            PathBuf::from(&software_hive).as_path(),
-            g,
-            &systemroot,
-        );
+        let av_edr =
+            windows_registry::detect_av_edr(software_hive.as_path(), g, &systemroot);
         let minidump_path = format!("{}/Minidump", systemroot);
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
 
@@ -507,10 +525,17 @@ impl EvidenceBuilder {
 
         let details = collect_windows_details(g, root);
 
-        let virtio_drivers = Self::derive_virtio_drivers(&details.services);
+        let mut virtio_drivers = Self::derive_virtio_drivers(&details.services);
+        Self::enrich_virtio_sys_presence(g, &systemroot, &mut virtio_drivers);
+
+        let (hotfixes, hotfix_count, hf_mig_present) =
+            Self::collect_windows_hotfixes(g, &systemroot, software_hive.as_path());
+
+        let driver_signature_enforcement =
+            Self::probe_driver_signature_enforcement(g, &bcd_candidates);
 
         WindowsEvidence {
-            systemroot,
+            systemroot: systemroot.clone(),
             product_name,
             version,
             domain_joined: domain_info.0,
@@ -532,14 +557,148 @@ impl EvidenceBuilder {
             persistence: details.persistence,
             event_logs: details.event_logs,
             virtio_drivers,
-            bitlocker: None,
-            vss: None,
-            ghost_nics: Vec::new(),
-            static_nic_configs: Vec::new(),
-            driver_signature_enforcement: None,
+            hotfixes,
+            hotfix_count,
+            hf_mig_present,
+            bitlocker,
+            vss,
+            ghost_nics: windows_registry::detect_ghost_nics(system_hive.as_path()),
+            static_nic_configs: windows_registry::parse_static_nic_configs(system_hive.as_path()),
+            driver_signature_enforcement,
             esp_present,
-            activation: None,
+            activation: {
+                let mut activation =
+                    windows_registry::parse_activation_info(software_hive.as_path());
+                let oeminfo = g
+                    .exists(&format!("{}/System32/oeminfo.ini", systemroot))
+                    .unwrap_or(false);
+                if oeminfo {
+                    match &mut activation {
+                        Some(a)
+                            if a.channel.is_empty()
+                                || a.channel.eq_ignore_ascii_case("Retail") =>
+                        {
+                            a.channel = "OEM".into();
+                        }
+                        None => {
+                            activation = Some(crate::evidence::snapshot::ActivationInfo {
+                                licensed: false,
+                                channel: "OEM".into(),
+                                product_id: None,
+                                edition_id: None,
+                            });
+                        }
+                        _ => {}
+                    }
+                }
+                activation
+            },
         }
+    }
+
+    fn enrich_virtio_sys_presence(
+        g: &mut Guestfs,
+        systemroot: &str,
+        drivers: &mut [crate::evidence::snapshot::WindowsDriverEntry],
+    ) {
+        for d in drivers.iter_mut() {
+            let sys = format!("{}/System32/drivers/{}.sys", systemroot, d.name);
+            d.sys_present = Some(g.exists(&sys).unwrap_or(false));
+            // Service hive + on-disk .sys both count as "present" for diagnostics.
+            if d.sys_present == Some(true) {
+                d.present = true;
+            }
+        }
+    }
+
+    fn collect_windows_hotfixes(
+        g: &mut Guestfs,
+        systemroot: &str,
+        software_hive: &std::path::Path,
+    ) -> (
+        Vec<crate::evidence::snapshot::WindowsHotfixEntry>,
+        usize,
+        bool,
+    ) {
+        use crate::evidence::snapshot::WindowsHotfixEntry;
+        use crate::guestfs::windows_registry;
+        use std::collections::BTreeMap;
+
+        let mut by_kb: BTreeMap<String, WindowsHotfixEntry> = BTreeMap::new();
+
+        if let Ok(reg) = windows_registry::parse_installed_updates(software_hive) {
+            for u in reg {
+                let kb = u.kb_number.to_ascii_uppercase();
+                by_kb.entry(kb.clone()).or_insert(WindowsHotfixEntry {
+                    kb,
+                    source: "registry".into(),
+                    title: Some(u.title),
+                });
+            }
+        }
+
+        if let Ok(host_root) = g.resolve_guest_path(systemroot) {
+            if let Ok(fs) = windows_registry::detect_hotfixes_from_filesystem(host_root.as_path()) {
+                for u in fs {
+                    let kb = u.kb_number.to_ascii_uppercase();
+                    by_kb.entry(kb.clone()).or_insert(WindowsHotfixEntry {
+                        kb,
+                        source: if u.title.contains("migration") {
+                            "hf_mig".into()
+                        } else {
+                            "filesystem".into()
+                        },
+                        title: Some(u.title),
+                    });
+                }
+            }
+        }
+
+        let cbs_guest = format!("{}/Logs/CBS/CBS.log", systemroot);
+        if let Ok(cbs_host) = g.resolve_guest_path(&cbs_guest) {
+            for u in windows_registry::parse_cbs_log_tail(cbs_host.as_path(), 512 * 1024) {
+                let kb = u.kb_number.to_ascii_uppercase();
+                by_kb.entry(kb.clone()).or_insert(WindowsHotfixEntry {
+                    kb,
+                    source: "cbs".into(),
+                    title: Some(u.title),
+                });
+            }
+        }
+
+        let hf_mig_present = g
+            .exists(&format!("{}/$hf_mig$", systemroot))
+            .unwrap_or(false);
+
+        let hotfix_count = by_kb.len();
+        let hotfixes: Vec<_> = by_kb.into_values().take(40).collect();
+        (hotfixes, hotfix_count, hf_mig_present)
+    }
+
+    fn probe_driver_signature_enforcement(
+        g: &mut Guestfs,
+        bcd_candidates: &[String],
+    ) -> Option<bool> {
+        use crate::guestfs::windows_registry;
+        for path in bcd_candidates {
+            if !g.exists(path).unwrap_or(false) {
+                continue;
+            }
+            let Ok(host) = g.resolve_guest_path(path) else {
+                continue;
+            };
+            let Ok(bytes) = std::fs::read(&host) else {
+                continue;
+            };
+            // Cap read already done by fs::read — skip huge unexpected files.
+            if bytes.len() > 8 * 1024 * 1024 {
+                continue;
+            }
+            if let Some(enforced) = windows_registry::probe_bcd_signature_enforcement(&bytes) {
+                return Some(enforced);
+            }
+        }
+        None
     }
 
     /// Probe non-OS NTFS/FAT volumes for legacy System Reserved or UEFI ESP.
@@ -658,6 +817,7 @@ impl EvidenceBuilder {
                         start_type: format!("{:?}", s.start_type).to_lowercase(),
                         boot_critical: s.start_type == WindowsStartType::Boot,
                         present: true,
+                        sys_present: None,
                     },
                     None => WindowsDriverEntry {
                         name: name.to_string(),
@@ -665,6 +825,7 @@ impl EvidenceBuilder {
                         start_type: String::new(),
                         boot_critical: false,
                         present: false,
+                        sys_present: None,
                     },
                 }
             })

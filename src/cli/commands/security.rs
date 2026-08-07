@@ -390,8 +390,11 @@ pub fn rescue_command(
     key: Option<String>,
     key_file: Option<PathBuf>,
     hostname: Option<String>,
+    timezone: Option<String>,
     export_plan: Option<PathBuf>,
 ) -> Result<()> {
+    use crate::cli::plan::generator::PlanGenerator;
+    use crate::cli::plan::types::FixPlan;
     use crate::core::ProgressReporter;
     use crate::Guestfs;
 
@@ -445,6 +448,7 @@ pub fn rescue_command(
             key.as_deref(),
             key_file.as_deref(),
             hostname.as_deref(),
+            timezone.as_deref(),
             force,
             is_windows,
         )?;
@@ -466,6 +470,9 @@ pub fn rescue_command(
         let _ = g.shutdown();
         return Ok(());
     }
+
+    let gen = PlanGenerator::new(vm_str.clone());
+    let mut deferred_windows_plan: Option<FixPlan> = None;
 
     match operation {
         "reset-password" => {
@@ -852,17 +859,52 @@ pub fn rescue_command(
                     name
                 );
             }
-            progress.set_message(format!("Setting hostname to '{}'...", name));
-            set_hostname_offline(&mut g, &name)?;
+            if is_windows {
+                progress.set_message(format!("Queuing Windows hostname → '{}'...", name));
+                deferred_windows_plan = Some(gen.windows_hostname_plan(&name)?);
+                progress.finish_and_clear();
+            } else {
+                progress.set_message(format!("Setting hostname to '{}'...", name));
+                set_hostname_offline(&mut g, &name)?;
+                progress.finish_and_clear();
+                println!("✓ Hostname set to '{}'", name);
+            }
+        }
+
+        "enable-rdp" | "rdp" => {
+            if !is_windows {
+                anyhow::bail!("enable-rdp is Windows-only (use plan generate -p windows-rdp)");
+            }
+            progress.set_message("Queuing Windows RDP enable plan...");
+            deferred_windows_plan = Some(gen.windows_rdp_enable_plan());
             progress.finish_and_clear();
-            println!("✓ Hostname set to '{}'", name);
+        }
+
+        "enable-winrm" | "winrm" => {
+            if !is_windows {
+                anyhow::bail!("enable-winrm is Windows-only (use plan generate -p windows-winrm)");
+            }
+            progress.set_message("Queuing Windows WinRM enable plan...");
+            deferred_windows_plan = Some(gen.windows_winrm_enable_plan());
+            progress.finish_and_clear();
+        }
+
+        "set-timezone" | "timezone" => {
+            if !is_windows {
+                anyhow::bail!("set-timezone is Windows-only (use plan generate -p windows-timezone)");
+            }
+            let tz = timezone
+                .ok_or_else(|| anyhow::anyhow!("Timezone required (use --timezone)"))?;
+            progress.set_message(format!("Queuing Windows timezone → '{tz}'..."));
+            deferred_windows_plan = Some(gen.windows_timezone_plan(&tz)?);
+            progress.finish_and_clear();
         }
 
         _ => {
             progress.abandon_with_message(format!("Unknown operation: {}", operation));
             anyhow::bail!(
                 "Invalid rescue operation. Available: reset-password, fix-fstab, check-grub, \
-                 enable-ssh, inject-ssh-key, set-hostname"
+                 enable-ssh, inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone"
             );
         }
     }
@@ -873,7 +915,55 @@ pub fn rescue_command(
     if let Err(e) = g.shutdown() {
         log::warn!("Cleanup: shutdown failed: {}", e);
     }
+    drop(g);
+
+    if let Some(plan) = deferred_windows_plan {
+        rescue_apply_windows_day0_plan(image, &plan)?;
+    }
     Ok(())
+}
+
+/// Apply a canned Windows day-0 FixPlan after releasing the rescue guestfs handle.
+fn rescue_apply_windows_day0_plan(image: &Path, plan: &crate::cli::plan::types::FixPlan) -> Result<()> {
+    #[cfg(all(unix, feature = "registry-write"))]
+    {
+        use crate::cli::plan::apply::PlanApplicator;
+        let vm = image
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("image path UTF-8"))?
+            .to_string();
+        println!(
+            "Applying Windows day-0 plan '{}' ({} ops, --skip-backup)...",
+            plan.profile,
+            plan.operations.len()
+        );
+        let result = PlanApplicator::new(vm, false).skip_backup(true).apply(plan)?;
+        if !result.success {
+            anyhow::bail!(
+                "Windows day-0 plan apply failed: {}",
+                if result.message.is_empty() {
+                    "unknown error".into()
+                } else {
+                    result.message.clone()
+                }
+            );
+        }
+        println!(
+            "✓ Applied '{}' ({} applied, {} failed, {} skipped)",
+            plan.profile,
+            result.operations_applied,
+            result.operations_failed,
+            result.operations_skipped
+        );
+        Ok(())
+    }
+    #[cfg(not(all(unix, feature = "registry-write")))]
+    {
+        let _ = (image, plan);
+        anyhow::bail!(
+            "Windows day-0 rescue apply requires a Unix host build with `--features registry-write`"
+        );
+    }
 }
 
 fn rescue_validate_username(username: &str) -> bool {
@@ -1132,6 +1222,7 @@ fn build_rescue_export_plan(
     key: Option<&str>,
     key_file: Option<&Path>,
     hostname: Option<&str>,
+    timezone: Option<&str>,
     force: bool,
     is_windows: bool,
 ) -> Result<crate::cli::plan::types::FixPlan> {
@@ -1157,64 +1248,29 @@ fn build_rescue_export_plan(
         "set-hostname" => {
             let name = hostname.ok_or_else(|| anyhow::anyhow!("--hostname required"))?;
             if is_windows {
-                return gen.windows_hostname_plan(name);
-            }
-            let mut plan = FixPlan::new(vm.to_string(), "rescue-set-hostname".into());
-            plan.metadata.description = Some(format!("Set Linux hostname to {name}"));
-            plan.metadata.tags = vec!["rescue".into(), "hostname".into()];
-            plan.add_operation(Operation {
-                id: "hostname".into(),
-                op_type: OperationType::FileWrite(FileWrite {
-                    path: "/etc/hostname".into(),
-                    content: format!("{name}\n"),
-                    mode: Some("0644".into()),
-                }),
-                priority: Priority::High,
-                description: format!("Write /etc/hostname = {name}"),
-                risk: Priority::Low,
-                reversible: true,
-                depends_on: vec![],
-                validation: None,
-                undo: None,
-            });
-            let mut hosts = String::from("127.0.0.1\tlocalhost\n");
-            if let Ok(content) = g.read_file("/etc/hosts") {
-                hosts = String::from_utf8_lossy(&content).into_owned();
-                let mut out = Vec::new();
-                let mut patched = false;
-                for line in hosts.lines() {
-                    let trimmed = line.trim_start();
-                    if trimmed.starts_with("127.0.1.1") || trimmed.starts_with("10.0.2.3") {
-                        let ip = trimmed.split_whitespace().next().unwrap_or("127.0.1.1");
-                        out.push(format!("{ip}\t{name}"));
-                        patched = true;
-                    } else {
-                        out.push(line.to_string());
-                    }
-                }
-                if !patched {
-                    out.push(format!("127.0.1.1\t{name}"));
-                }
-                hosts = out.join("\n") + "\n";
+                gen.windows_hostname_plan(name)
             } else {
-                hosts.push_str(&format!("127.0.1.1\t{name}\n"));
+                gen.linux_hostname_plan(g, name)
             }
-            plan.add_operation(Operation {
-                id: "hosts".into(),
-                op_type: OperationType::FileWrite(FileWrite {
-                    path: "/etc/hosts".into(),
-                    content: hosts,
-                    mode: Some("0644".into()),
-                }),
-                priority: Priority::High,
-                description: "Patch /etc/hosts with hostname".into(),
-                risk: Priority::Low,
-                reversible: true,
-                depends_on: vec![],
-                validation: None,
-                undo: None,
-            });
-            Ok(plan)
+        }
+        "enable-rdp" | "rdp" => {
+            if !is_windows {
+                anyhow::bail!("enable-rdp export is Windows-only");
+            }
+            Ok(gen.windows_rdp_enable_plan())
+        }
+        "enable-winrm" | "winrm" => {
+            if !is_windows {
+                anyhow::bail!("enable-winrm export is Windows-only");
+            }
+            Ok(gen.windows_winrm_enable_plan())
+        }
+        "set-timezone" | "timezone" => {
+            if !is_windows {
+                anyhow::bail!("set-timezone export is Windows-only");
+            }
+            let tz = timezone.ok_or_else(|| anyhow::anyhow!("--timezone required"))?;
+            gen.windows_timezone_plan(tz)
         }
         "reset-password" => {
             let username = user.ok_or_else(|| anyhow::anyhow!("--user required"))?;

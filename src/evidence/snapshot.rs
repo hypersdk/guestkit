@@ -458,6 +458,14 @@ pub struct WindowsEvidence {
     /// VirtIO driver install state (viostor/vioscsi/netkvm/vioser/balloon).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub virtio_drivers: Vec<WindowsDriverEntry>,
+    /// Installed hotfixes / KBs (capped sample for migration diagnostics).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hotfixes: Vec<WindowsHotfixEntry>,
+    #[serde(default)]
+    pub hotfix_count: usize,
+    /// `$hf_mig$` present — incomplete hotfix migration data on disk.
+    #[serde(default)]
+    pub hf_mig_present: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bitlocker: Option<BitLockerState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -505,6 +513,20 @@ pub struct WindowsDriverEntry {
     pub boot_critical: bool,
     #[serde(default)]
     pub present: bool,
+    /// `System32\drivers\<name>.sys` present on disk (None = not probed).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sys_present: Option<bool>,
+}
+
+/// Installed Windows hotfix / update KB for migration diagnostics.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct WindowsHotfixEntry {
+    pub kb: String,
+    /// `registry`, `filesystem`, `cbs`, or `hf_mig`.
+    #[serde(default)]
+    pub source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -512,6 +534,9 @@ pub struct BitLockerState {
     /// Any volume with protection currently on (not suspended).
     #[serde(default)]
     pub any_protected: bool,
+    /// Offline probe found FVE artifacts but could not confirm ProtectionStatus.
+    #[serde(default)]
+    pub offline_uncertain: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub volumes: Vec<BitLockerVolume>,
 }
@@ -519,8 +544,10 @@ pub struct BitLockerState {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BitLockerVolume {
     pub mount_point: String,
-    /// "on", "off", or "suspended".
+    /// "on", "off", "suspended", "artifacts", or "unknown".
     pub protection: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -531,6 +558,9 @@ pub struct VssHealth {
     pub writers_failed: Vec<String>,
     #[serde(default)]
     pub healthy: bool,
+    /// True when health was inferred offline (services / SVI), not live writers.
+    #[serde(default)]
+    pub offline_inferred: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -559,9 +589,13 @@ pub struct WindowsNicConfig {
 pub struct ActivationInfo {
     #[serde(default)]
     pub licensed: bool,
-    /// "KMS", "MAK", "OEM", "Retail", or empty when unknown.
+    /// "KMS", "MAK", "OEM", "Retail", "Volume", or empty when unknown.
     #[serde(default)]
     pub channel: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edition_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

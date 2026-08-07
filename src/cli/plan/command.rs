@@ -137,7 +137,7 @@ pub enum PlanAction {
         #[arg(long)]
         key_file: Option<String>,
 
-        /// Hostname for windows-hostname profile
+        /// Hostname for windows-hostname / linux-hostname profiles
         #[arg(long)]
         hostname: Option<String>,
 
@@ -149,7 +149,7 @@ pub enum PlanAction {
         #[arg(long)]
         timezone: Option<String>,
 
-        /// Interface GUID for windows-static-ip (with or without braces)
+        /// Interface GUID for windows-static-ip / windows-dhcp / windows-dns
         #[arg(long)]
         interface_guid: Option<String>,
 
@@ -165,7 +165,7 @@ pub enum PlanAction {
         #[arg(long)]
         gateway: Option<String>,
 
-        /// DNS servers for windows-static-ip (space or comma separated)
+        /// DNS servers for windows-static-ip / windows-dns (space or comma separated)
         #[arg(long)]
         dns: Option<String>,
     },
@@ -532,6 +532,8 @@ impl PlanCommand {
                 | "windows-domain-leave" | "windows_domain_leave" | "domain-leave" | "unjoin"
                 | "windows-timezone" | "windows_timezone" | "timezone" | "set-timezone"
                 | "windows-static-ip" | "windows_static_ip" | "static-ip"
+                | "windows-dhcp" | "windows_dhcp" | "dhcp" | "enable-dhcp"
+                | "windows-dns" | "windows_dns" | "dns" | "set-dns"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -570,6 +572,21 @@ impl PlanCommand {
                         anyhow::anyhow!("--mask is required for windows-static-ip")
                     })?;
                     generator.windows_static_ip_plan(guid, addr, netmask, gateway, dns)?
+                }
+                "windows-dhcp" | "windows_dhcp" | "dhcp" | "enable-dhcp" => {
+                    let guid = interface_guid.ok_or_else(|| {
+                        anyhow::anyhow!("--interface-guid is required for windows-dhcp")
+                    })?;
+                    generator.windows_dhcp_plan(guid)?
+                }
+                "windows-dns" | "windows_dns" | "dns" | "set-dns" => {
+                    let guid = interface_guid.ok_or_else(|| {
+                        anyhow::anyhow!("--interface-guid is required for windows-dns")
+                    })?;
+                    let servers = dns.ok_or_else(|| {
+                        anyhow::anyhow!("--dns is required for windows-dns")
+                    })?;
+                    generator.windows_dns_plan(guid, servers)?
                 }
                 _ => unreachable!(),
             };
@@ -621,12 +638,20 @@ impl PlanCommand {
             (None, None) => None,
         };
 
-        // linux-ssh builds an inspect-based enable plan (not a finding→op profile).
+        // linux-ssh / linux-hostname build inspect-based enable plans (not finding→op).
         let plan = if matches!(
             profile_lc.as_str(),
             "linux-ssh" | "linux_ssh" | "enable-ssh"
         ) {
             generator.linux_ssh_enable_plan(&mut g, user, pubkey.as_deref())?
+        } else if matches!(
+            profile_lc.as_str(),
+            "linux-hostname" | "linux_hostname" | "set-linux-hostname"
+        ) {
+            let name = hostname.ok_or_else(|| {
+                anyhow::anyhow!("--hostname is required for linux-hostname profile")
+            })?;
+            generator.linux_hostname_plan(&mut g, name)?
         } else {
             let inspection_profile = crate::cli::profiles::get_profile(profile)
                 .ok_or_else(|| anyhow::anyhow!("Unknown profile: {}", profile))?;
@@ -642,7 +667,12 @@ impl PlanCommand {
         let _ = g.shutdown();
         let skip_backup_hint = matches!(
             profile_lc.as_str(),
-            "linux-ssh" | "linux_ssh" | "enable-ssh"
+            "linux-ssh"
+                | "linux_ssh"
+                | "enable-ssh"
+                | "linux-hostname"
+                | "linux_hostname"
+                | "set-linux-hostname"
         );
         Self::print_generate_summary(output, &plan, vm_disk, skip_backup_hint);
 

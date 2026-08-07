@@ -12,8 +12,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-OS NTFS/FAT volumes for `bootmgr` + BCD (legacy System Reserved) or
   EFI Microsoft Boot (ESP). Surfaces on `windows.system_reserved`, promotes
   `bcd_store_found` / `bootmgr_found`, fixes `esp_present` (no longer aliased
-  to bootmgr). Boot check **BOOT-014**, migration **MIG-W-010**, Passport
+  to bootmgr). Boot check **BOOT-014**, migration **MIG-W-011**, Passport
   flags `system_reserved_layout` + `bcd_store_found`.
+- **Windows driver/hotfix migration diagnostics** — offline HotFix registry +
+  `$NtUninstall*` / `$hf_mig$` / CBS.log tail; VirtIO `.sys` presence on
+  `WindowsDriverEntry.sys_present`; BCD UTF-16 probe for testsigning /
+  nointegritychecks. Migration **MIG-W-012** (hotfixes/servicing),
+  **MIG-W-013** (VirtIO files); Passport `hotfix_count` /
+  `hf_mig_present` / `driver_signature_enforcement`. Hive paths resolve via
+  guestfs mount root.
+- **Offline activation / ghost-NIC depth** — SOFTWARE ProductId/EditionID/
+  DigitalProductId + `oeminfo.ini` → `windows.activation` (OEM/Retail/Volume);
+  SYSTEM `Enum\PCI` remnant/problem NICs → `ghost_nics`; Tcpip static
+  interfaces → `static_nic_configs`. Enriches **MIG-W-006/007/008**; Passport
+  `activation_channel`, `ghost_nic_count`, `static_nic_count`.
+- **Offline BitLocker / VSS enrichment** — `BitLockerStatus\BootStatus` (On →
+  hard block), FVE/`$BitLocker`/fvevol artifacts (`offline_uncertain` warning),
+  VSS+swprv services + System Volume Information inference. Fills
+  `windows.bitlocker` / `windows.vss` for **MIG-W-005/009**; Passport
+  `bitlocker_uncertain`.
+- **Day-0 plan/rescue depth** — `windows-dhcp` / `windows-dns` / `linux-hostname`
+  profiles; rescue `enable-rdp` / `enable-winrm` / `set-timezone`; Windows
+  `set-hostname` applies registry day-0 plan (was Linux `/etc/hostname`).
 
 ## [0.3.19] - 2026-08-06
 

@@ -334,6 +334,7 @@ fn minimal_windows_evidence() -> guestkit::evidence::EvidenceSnapshot {
                 start_type: "manual".into(),
                 boot_critical: false,
                 present: true,
+                sys_present: Some(true),
             }],
             ..Default::default()
         }),

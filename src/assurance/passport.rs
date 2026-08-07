@@ -99,6 +99,25 @@ pub struct WindowsPassportFlags {
     /// BCD located (OS volume, System Reserved, or ESP).
     #[serde(default)]
     pub bcd_store_found: bool,
+    /// Count of hotfix/KB entries sampled offline.
+    #[serde(default)]
+    pub hotfix_count: usize,
+    /// Incomplete hotfix migration data (`$hf_mig$`) on disk.
+    #[serde(default)]
+    pub hf_mig_present: bool,
+    /// True when BCD/live probe says signature enforcement is active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub driver_signature_enforcement: Option<bool>,
+    /// License channel when known (OEM / Retail / Volume / …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation_channel: Option<String>,
+    #[serde(default)]
+    pub ghost_nic_count: usize,
+    #[serde(default)]
+    pub static_nic_count: usize,
+    /// Offline FVE artifacts without confirmed BootStatus=On.
+    #[serde(default)]
+    pub bitlocker_uncertain: bool,
 }
 
 /// Optional live agent attestation (Phase 3).
@@ -452,6 +471,21 @@ fn windows_flags(
         windows_offline_ready,
         system_reserved_layout: win.system_reserved.is_some(),
         bcd_store_found: win.bcd_store_found,
+        hotfix_count: win.hotfix_count,
+        hf_mig_present: win.hf_mig_present,
+        driver_signature_enforcement: win.driver_signature_enforcement,
+        activation_channel: win
+            .activation
+            .as_ref()
+            .map(|a| a.channel.clone())
+            .filter(|c| !c.is_empty()),
+        ghost_nic_count: win.ghost_nics.len(),
+        static_nic_count: win.static_nic_configs.len(),
+        bitlocker_uncertain: win
+            .bitlocker
+            .as_ref()
+            .map(|b| b.offline_uncertain)
+            .unwrap_or(false),
     }
 }
 
