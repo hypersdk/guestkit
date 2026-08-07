@@ -83,6 +83,8 @@ impl OperationHandler for PassportHandler {
                     virtio_win_dir: None,
                     live_url,
                     sign_key: None,
+                    issuer: None,
+                    expires_hours: None,
                 },
             )
         })

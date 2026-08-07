@@ -35,6 +35,10 @@ pub struct PassportEmitOptions {
     /// Path to Ed25519 signing key (64-byte seed hex, or raw 32-byte seed file).
     /// Requires `--features agent`.
     pub sign_key: Option<PathBuf>,
+    /// Issuer identity recorded on the passport (CI job, env, team).
+    pub issuer: Option<String>,
+    /// Passport validity window from emit time (hours). Sets `expires_at`.
+    pub expires_hours: Option<u64>,
 }
 
 /// Image identity fingerprint.
@@ -172,6 +176,12 @@ pub struct CutoverPassport {
     pub suite: SuiteHandoff,
     /// True when BitLocker or readiness blocks cutover regardless of score.
     pub hard_blocked: bool,
+    /// Who/what emitted the passport (CI job, env, team).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
+    /// RFC3339 expiry; verify fails after this instant when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<PassportSignature>,
 }
@@ -184,6 +194,10 @@ pub struct PassportVerifyOptions {
     pub require_signature: bool,
     /// Optional public key hex to verify against (otherwise uses embedded pubkey).
     pub public_key: Option<String>,
+    /// Allowlist file: one Ed25519 public key hex per line (`#` comments ok).
+    pub trust_keys_file: Option<PathBuf>,
+    /// Reject passports whose `generated_at` is older than this many hours.
+    pub max_age_hours: Option<u64>,
 }
 
 impl Default for SuiteHandoff {
@@ -229,10 +243,15 @@ pub fn emit_passport(
         None => online_correlation_attestation(&assessment),
     };
 
+    let generated_at = Utc::now();
+    let expires_at = opts.expires_hours.map(|h| {
+        (generated_at + chrono::Duration::hours(h as i64)).to_rfc3339()
+    });
+
     let mut passport = CutoverPassport {
         schema_version: PASSPORT_SCHEMA_VERSION.into(),
         kind: "guestkit.cutover_passport".into(),
-        generated_at: Utc::now().to_rfc3339(),
+        generated_at: generated_at.to_rfc3339(),
         tool_version: VERSION.into(),
         target: target.into(),
         image: fingerprint,
@@ -251,6 +270,12 @@ pub fn emit_passport(
         live_attestation,
         suite: SuiteHandoff::default(),
         hard_blocked,
+        issuer: opts
+            .issuer
+            .as_ref()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty()),
+        expires_at,
         signature: None,
     };
 
@@ -281,6 +306,31 @@ pub fn verify_passport(passport: &CutoverPassport, opts: &PassportVerifyOptions)
         bail!("BitLocker protection is active — suspend/escrow before cutover");
     }
 
+    if let Some(expires) = &passport.expires_at {
+        let exp = chrono::DateTime::parse_from_rfc3339(expires)
+            .with_context(|| format!("parse expires_at '{expires}'"))?
+            .with_timezone(&Utc);
+        if Utc::now() > exp {
+            bail!("passport expired at {expires}");
+        }
+    }
+
+    if let Some(max_age) = opts.max_age_hours {
+        let generated = chrono::DateTime::parse_from_rfc3339(&passport.generated_at)
+            .with_context(|| format!("parse generated_at '{}'", passport.generated_at))?
+            .with_timezone(&Utc);
+        let age = Utc::now()
+            .signed_duration_since(generated)
+            .num_seconds()
+            .max(0) as u64;
+        let limit = max_age.saturating_mul(3600);
+        if age > limit {
+            bail!(
+                "passport generated_at is {age}s old (max-age-hours={max_age} → {limit}s)"
+            );
+        }
+    }
+
     if let Some(threshold) = opts.fail_below {
         let score = passport.scores.boot.min(passport.scores.migration);
         if score < threshold {
@@ -293,11 +343,57 @@ pub fn verify_passport(passport: &CutoverPassport, opts: &PassportVerifyOptions)
         }
     }
 
-    if opts.require_signature || passport.signature.is_some() {
-        verify_signature(passport, opts.public_key.as_deref())?;
+    let trust_keys = match &opts.trust_keys_file {
+        Some(path) => Some(load_trust_keys(path)?),
+        None => None,
+    };
+
+    if opts.require_signature || passport.signature.is_some() || trust_keys.is_some() {
+        if trust_keys.is_some() && passport.signature.is_none() {
+            bail!("--trust-keys requires a signed passport");
+        }
+        verify_signature(
+            passport,
+            opts.public_key.as_deref(),
+            trust_keys.as_deref(),
+        )?;
     }
 
     Ok(())
+}
+
+/// Load allowlisted Ed25519 public key hex strings from a trust file.
+pub fn load_trust_keys(path: &Path) -> Result<Vec<String>> {
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("read trust keys {}", path.display()))?;
+    let mut keys = Vec::new();
+    for (i, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let hex_key = line.split_whitespace().next().unwrap_or(line);
+        if hex_key.len() != 64 || !hex_key.chars().all(|c| c.is_ascii_hexdigit()) {
+            bail!(
+                "trust keys {}:{}: expected 64 hex chars for Ed25519 public key",
+                path.display(),
+                i + 1
+            );
+        }
+        keys.push(hex_key.to_ascii_lowercase());
+    }
+    if keys.is_empty() {
+        bail!("trust keys file {} has no public keys", path.display());
+    }
+    Ok(keys)
+}
+
+/// Generate an Ed25519 seed + public key pair for passport signing.
+///
+/// Writes `seed_path` (32 raw bytes) and `public_path` (64 hex chars + newline).
+/// Requires `--features agent`.
+pub fn generate_passport_signing_key(seed_path: &Path, public_path: &Path) -> Result<String> {
+    generate_passport_signing_key_inner(seed_path, public_path)
 }
 
 /// Write passport JSON (+ optional plan YAML) and optional tar.gz bundle.
@@ -600,7 +696,50 @@ fn sign_passport(_passport: &CutoverPassport, _key_path: &Path) -> Result<Passpo
 }
 
 #[cfg(feature = "agent")]
-fn verify_signature(passport: &CutoverPassport, public_key: Option<&str>) -> Result<()> {
+fn generate_passport_signing_key_inner(seed_path: &Path, public_path: &Path) -> Result<String> {
+    use ed25519_dalek::SigningKey;
+    use rand::RngCore;
+
+    let mut seed = [0u8; 32];
+    rand::rngs::OsRng.fill_bytes(&mut seed);
+    let signing_key = SigningKey::from_bytes(&seed);
+    let pub_hex = hex::encode(signing_key.verifying_key().as_bytes());
+
+    if let Some(parent) = seed_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    if let Some(parent) = public_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    std::fs::write(seed_path, seed)
+        .with_context(|| format!("write seed {}", seed_path.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(seed_path)?.permissions();
+        perms.set_mode(0o600);
+        std::fs::set_permissions(seed_path, perms)?;
+    }
+    std::fs::write(public_path, format!("{pub_hex}\n"))
+        .with_context(|| format!("write public key {}", public_path.display()))?;
+    Ok(pub_hex)
+}
+
+#[cfg(not(feature = "agent"))]
+fn generate_passport_signing_key_inner(_seed_path: &Path, _public_path: &Path) -> Result<String> {
+    bail!("passport keygen requires guestkit built with --features agent (Ed25519)")
+}
+
+#[cfg(feature = "agent")]
+fn verify_signature(
+    passport: &CutoverPassport,
+    public_key: Option<&str>,
+    trust_keys: Option<&[String]>,
+) -> Result<()> {
     use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 
     let sig = passport
@@ -610,8 +749,25 @@ fn verify_signature(passport: &CutoverPassport, public_key: Option<&str>) -> Res
     if sig.algorithm != "ed25519" {
         bail!("unsupported signature algorithm {}", sig.algorithm);
     }
-    let pk_hex = public_key.unwrap_or(&sig.public_key_hex);
-    let pk_bytes = hex::decode(pk_hex).context("decode public key hex")?;
+
+    let embedded = sig.public_key_hex.to_ascii_lowercase();
+    if let Some(keys) = trust_keys {
+        if !keys.iter().any(|k| k == &embedded) {
+            bail!(
+                "passport signing key {}… is not in --trust-keys allowlist",
+                &embedded[..embedded.len().min(16)]
+            );
+        }
+    }
+
+    let pk_hex = public_key
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_else(|| embedded.clone());
+    if public_key.is_some() && pk_hex != embedded {
+        bail!("--public-key does not match signature.public_key_hex embedded in passport");
+    }
+
+    let pk_bytes = hex::decode(&pk_hex).context("decode public key hex")?;
     let pk_arr: [u8; 32] = pk_bytes
         .as_slice()
         .try_into()
@@ -634,7 +790,11 @@ fn verify_signature(passport: &CutoverPassport, public_key: Option<&str>) -> Res
 }
 
 #[cfg(not(feature = "agent"))]
-fn verify_signature(passport: &CutoverPassport, _public_key: Option<&str>) -> Result<()> {
+fn verify_signature(
+    passport: &CutoverPassport,
+    _public_key: Option<&str>,
+    _trust_keys: Option<&[String]>,
+) -> Result<()> {
     if passport.signature.is_some() {
         bail!("passport has a signature but this build lacks --features agent to verify Ed25519");
     }
@@ -803,6 +963,8 @@ mod tests {
             live_attestation: None,
             suite: SuiteHandoff::default(),
             hard_blocked: true,
+            issuer: None,
+            expires_at: None,
             signature: None,
         };
         let err = verify_passport(&passport, &PassportVerifyOptions::default()).unwrap_err();
@@ -852,6 +1014,8 @@ mod tests {
             live_attestation: None,
             suite: SuiteHandoff::default(),
             hard_blocked: false,
+            issuer: None,
+            expires_at: None,
             signature: None,
         };
         let opts = PassportVerifyOptions {
@@ -869,5 +1033,103 @@ mod tests {
         assert!(h.export.contains("HyperSDK"));
         assert!(h.convert_deploy.contains("hyper2kvm"));
         assert!(h.assurance.contains("Passport"));
+    }
+
+    #[test]
+    fn load_trust_keys_parses_hex_and_comments() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("trust.txt");
+        std::fs::write(
+            &path,
+            "# comment\n\
+             aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899\n\
+             \n\
+             AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899 extra\n",
+        )
+        .unwrap();
+        let keys = load_trust_keys(&path).unwrap();
+        assert_eq!(keys.len(), 2);
+        assert_eq!(
+            keys[0],
+            "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
+        );
+        assert_eq!(keys[0], keys[1]);
+    }
+
+    fn sample_passport(generated_at: String, expires_at: Option<String>) -> CutoverPassport {
+        CutoverPassport {
+            schema_version: PASSPORT_SCHEMA_VERSION.into(),
+            kind: "guestkit.cutover_passport".into(),
+            generated_at,
+            tool_version: "0.0.0".into(),
+            target: "kvm".into(),
+            image: ImageFingerprint {
+                path: "x".into(),
+                size_bytes: 1,
+                content_sha256: None,
+            },
+            evidence_schema: "1".into(),
+            evidence_digest: EvidenceDigest {
+                os: "linux".into(),
+                architecture: "x86_64".into(),
+                bootloader: "grub".into(),
+                root_filesystem: "ext4".into(),
+                kernel_count: 1,
+                fstab_entries: 1,
+                virtio_modules_loaded: true,
+                vm_tools: vec![],
+                selinux: "disabled".into(),
+            },
+            scores: PassportScores {
+                boot: 90.0,
+                migration: 90.0,
+                readiness: ReadinessLevel::Ready,
+            },
+            critical_blockers: vec![],
+            recommended_actions: vec![],
+            fix_plan: PlanDigest {
+                profile: "migration-repair".into(),
+                operation_count: 0,
+                sha256: "abc".into(),
+                operation_ids: vec![],
+            },
+            policy: None,
+            windows: WindowsPassportFlags::default(),
+            live_attestation: None,
+            suite: SuiteHandoff::default(),
+            hard_blocked: false,
+            issuer: Some("ci".into()),
+            expires_at,
+            signature: None,
+        }
+    }
+
+    #[test]
+    fn verify_rejects_expired_passport() {
+        let mut passport = sample_passport(
+            Utc::now().to_rfc3339(),
+            Some("2000-01-01T00:00:00Z".into()),
+        );
+        let err = verify_passport(&passport, &PassportVerifyOptions::default()).unwrap_err();
+        assert!(err.to_string().contains("expired"));
+        passport.expires_at = Some((Utc::now() + chrono::Duration::hours(1)).to_rfc3339());
+        assert!(verify_passport(&passport, &PassportVerifyOptions::default()).is_ok());
+    }
+
+    #[test]
+    fn verify_max_age_hours_rejects_stale() {
+        let passport = sample_passport(
+            (Utc::now() - chrono::Duration::hours(48)).to_rfc3339(),
+            None,
+        );
+        let err = verify_passport(
+            &passport,
+            &PassportVerifyOptions {
+                max_age_hours: Some(24),
+                ..Default::default()
+            },
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("max-age"));
     }
 }

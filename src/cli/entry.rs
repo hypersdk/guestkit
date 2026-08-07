@@ -2064,6 +2064,25 @@ enum PassportAction {
         /// Ed25519 signing key (32 raw bytes or 64 hex chars). Requires --features agent.
         #[arg(long, value_name = "FILE")]
         sign_key: Option<PathBuf>,
+
+        /// Issuer identity recorded on the passport (CI job, env, team)
+        #[arg(long, value_name = "NAME")]
+        issuer: Option<String>,
+
+        /// Passport validity window from emit time (hours); sets expires_at
+        #[arg(long, value_name = "HOURS")]
+        expires_hours: Option<u64>,
+    },
+
+    /// Generate an Ed25519 seed + public key for passport signing (requires --features agent)
+    Keygen {
+        /// Output path for 32-byte seed (raw bytes; chmod 0600 on Unix)
+        #[arg(long, value_name = "FILE")]
+        seed: PathBuf,
+
+        /// Output path for public key hex (64 chars + newline)
+        #[arg(long, value_name = "FILE")]
+        public: PathBuf,
     },
 
     /// Verify a Cutover Passport (CI gate)
@@ -2082,6 +2101,14 @@ enum PassportAction {
         /// Optional public key hex (defaults to key embedded in passport)
         #[arg(long, value_name = "HEX")]
         public_key: Option<String>,
+
+        /// Allowlist file: one Ed25519 public key hex per line (# comments ok)
+        #[arg(long, value_name = "FILE")]
+        trust_keys: Option<PathBuf>,
+
+        /// Reject passports whose generated_at is older than this many hours
+        #[arg(long, value_name = "HOURS")]
+        max_age_hours: Option<u64>,
     },
 }
 
@@ -3602,6 +3629,8 @@ pub fn run() -> anyhow::Result<()> {
                 virtio_win,
                 live_url,
                 sign_key,
+                issuer,
+                expires_hours,
             } => {
                 crate::cli::commands::assurance::passport_emit_command(
                     &image,
@@ -3612,20 +3641,29 @@ pub fn run() -> anyhow::Result<()> {
                     virtio_win.as_deref(),
                     live_url.as_deref(),
                     sign_key.as_deref(),
+                    issuer.as_deref(),
+                    expires_hours,
                     cli.verbose,
                 )?;
+            }
+            PassportAction::Keygen { seed, public } => {
+                crate::cli::commands::assurance::passport_keygen_command(&seed, &public)?;
             }
             PassportAction::Verify {
                 passport,
                 fail_below,
                 require_signature,
                 public_key,
+                trust_keys,
+                max_age_hours,
             } => {
                 crate::cli::commands::assurance::passport_verify_command(
                     &passport,
                     fail_below,
                     require_signature,
                     public_key.as_deref(),
+                    trust_keys.as_deref(),
+                    max_age_hours,
                 )?;
             }
         },

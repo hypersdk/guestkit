@@ -485,6 +485,8 @@ pub fn passport_emit_command(
     virtio_win: Option<&Path>,
     live_url: Option<&str>,
     sign_key: Option<&Path>,
+    issuer: Option<&str>,
+    expires_hours: Option<u64>,
     verbose: bool,
 ) -> Result<()> {
     use crate::assurance::{emit_passport, write_passport_outputs, PassportEmitOptions};
@@ -497,6 +499,8 @@ pub fn passport_emit_command(
         virtio_win_dir: virtio_win.map(|p| p.to_path_buf()),
         live_url: live_url.map(|s| s.to_string()),
         sign_key: sign_key.map(|p| p.to_path_buf()),
+        issuer: issuer.map(|s| s.to_string()),
+        expires_hours,
     };
     let (passport, plan) = emit_passport(image, target, &opts)?;
     write_passport_outputs(&passport, &plan, output, bundle)?;
@@ -510,6 +514,12 @@ pub fn passport_emit_command(
         passport.scores.readiness,
         passport.hard_blocked
     );
+    if let Some(issuer) = &passport.issuer {
+        println!("  issuer={}", issuer);
+    }
+    if let Some(exp) = &passport.expires_at {
+        println!("  expires_at={}", exp);
+    }
     if passport.windows.is_windows {
         println!(
             "  windows_offline_ready={}  bitlocker_blocker={}  virtio_drivers={}",
@@ -529,12 +539,26 @@ pub fn passport_emit_command(
     Ok(())
 }
 
+/// Generate Ed25519 keypair: `guestkit passport keygen`
+pub fn passport_keygen_command(seed: &Path, public: &Path) -> Result<()> {
+    use crate::assurance::generate_passport_signing_key;
+
+    let pub_hex = generate_passport_signing_key(seed, public)?;
+    println!("{}", "Passport signing key".bold().cyan());
+    println!("  seed={}", seed.display());
+    println!("  public={}", public.display());
+    println!("  public_key_hex={}", pub_hex);
+    Ok(())
+}
+
 /// Verify Cutover Passport: `guestkit passport verify`
 pub fn passport_verify_command(
     passport_path: &Path,
     fail_below: Option<f64>,
     require_signature: bool,
     public_key: Option<&str>,
+    trust_keys: Option<&Path>,
+    max_age_hours: Option<u64>,
 ) -> Result<()> {
     use crate::assurance::{verify_passport, CutoverPassport, PassportVerifyOptions};
 
@@ -548,6 +572,8 @@ pub fn passport_verify_command(
             fail_below,
             require_signature,
             public_key: public_key.map(|s| s.to_string()),
+            trust_keys_file: trust_keys.map(|p| p.to_path_buf()),
+            max_age_hours,
         },
     )?;
     println!(

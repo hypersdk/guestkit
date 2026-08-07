@@ -12,8 +12,9 @@ pub use copilot::{
     CopilotInsight, EvidenceDigest, EvidenceHighlight, MigrationBriefing,
 };
 pub use passport::{
-    emit_passport, verify_passport, write_passport_outputs, CutoverPassport, PassportEmitOptions,
-    PassportVerifyOptions, PASSPORT_SCHEMA_VERSION,
+    emit_passport, generate_passport_signing_key, load_trust_keys, verify_passport,
+    write_passport_outputs, CutoverPassport, PassportEmitOptions, PassportVerifyOptions,
+    PASSPORT_SCHEMA_VERSION,
 };
 
 use crate::boot::{analyze_bootability, BootTarget, BootabilityReport};

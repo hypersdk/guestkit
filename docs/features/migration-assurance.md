@@ -128,8 +128,11 @@ guestkit passport emit vm.qcow2 --target kvm -o p.json \
   --live-url http://127.0.0.1:8765
 
 # Optional: Ed25519 sign (requires --features agent)
-guestkit passport emit vm.qcow2 --target kvm -o p.json --sign-key ./ed25519.seed
-guestkit passport verify p.json --fail-below 80 --require-signature
+guestkit passport keygen --seed ./ed25519.seed --public ./ed25519.pub
+guestkit passport emit vm.qcow2 --target kvm -o p.json \
+  --sign-key ./ed25519.seed --issuer "ci/prod" --expires-hours 72
+guestkit passport verify p.json --fail-below 80 --require-signature \
+  --trust-keys ./trusted-pubs.txt --max-age-hours 168
 ```
 
 | Flag | Description |
@@ -141,8 +144,13 @@ guestkit passport verify p.json --fail-below 80 --require-signature
 | `emit --virtio-win DIR` | VirtIO tree for DriverInject planning |
 | `emit --live-url URL` | Agent-proxy base for `/doctor` live attestation |
 | `emit --sign-key FILE` | Ed25519 seed (32 bytes or 64 hex); needs `agent` feature |
+| `emit --issuer NAME` | Record issuer identity on the passport |
+| `emit --expires-hours N` | Set `expires_at` to N hours from emit time |
+| `keygen --seed/--public` | Generate Ed25519 seed + public hex (needs `agent` feature) |
 | `verify --fail-below N` | Fail if min(boot, migration) score is below N |
 | `verify --require-signature` | Require valid Ed25519 signature |
+| `verify --trust-keys FILE` | Allowlist of Ed25519 public key hex (one per line) |
+| `verify --max-age-hours N` | Reject passports older than N hours |
 
 Web console: dock **Passport** enqueues `POST /api/v1/vms/:id/passport` and downloads the JSON.
 

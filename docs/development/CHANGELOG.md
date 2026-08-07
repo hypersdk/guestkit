@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Day-0 plan/rescue depth** — `windows-dhcp` / `windows-dns` / `linux-hostname`
   profiles; rescue `enable-rdp` / `enable-winrm` / `set-timezone`; Windows
   `set-hostname` applies registry day-0 plan (was Linux `/etc/hostname`).
+- **Cutover Passport signed-enterprise workflows** — `passport keygen` (Ed25519
+  seed + pubkey); emit `--issuer` / `--expires-hours`; verify `--trust-keys`
+  allowlist + `--max-age-hours` freshness gate (signing/verify need `agent`).
 
 ## [0.3.19] - 2026-08-06
 
