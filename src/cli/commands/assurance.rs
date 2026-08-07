@@ -4,7 +4,6 @@
 use crate::assurance::{
     run_doctor, run_migrate_plan, run_repair_plan, MigratePlanOptions, RepairOptions,
 };
-use crate::boot::BootTarget;
 use crate::fleet::analyze_fleet;
 use anyhow::{Context, Result};
 use colored::Colorize;
@@ -199,10 +198,14 @@ pub fn fleet_analyze_command(
     dir: &Path,
     output_format: &str,
     recursive: bool,
+    jobs: usize,
     verbose: bool,
 ) -> Result<()> {
+    use crate::boot::{analyze_bootability, BootTarget};
+    use crate::cli::cache::EvidenceCache;
     use crate::core::ProgressReporter;
     use crate::fleet::report::FleetFailedVm;
+    use rayon::prelude::*;
 
     let images = collect_fleet_disk_images(dir, recursive)?;
 
@@ -210,28 +213,56 @@ pub fn fleet_analyze_command(
         anyhow::bail!("No disk images found in {}", dir.display());
     }
 
-    let msg = format!("Analyzing {} VMs...", images.len());
+    let jobs = jobs.max(1);
+    let msg = format!("Analyzing {} VMs (jobs={jobs})...", images.len());
     let progress = ProgressReporter::spinner(&msg);
+
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(jobs)
+        .build()
+        .context("build fleet thread pool")?;
+
+    let results: Vec<Result<(String, crate::evidence::EvidenceSnapshot, f64), FleetFailedVm>> =
+        pool.install(|| {
+            images
+                .par_iter()
+                .map(|image| {
+                    if verbose {
+                        eprintln!("  → {}", image.display());
+                    }
+                    // Fast path: reuse evidence cache → boot score without remount.
+                    if let Ok(cache) = EvidenceCache::new() {
+                        if let Ok(Some(evidence)) = cache.get(image) {
+                            let boot = analyze_bootability(&evidence, BootTarget::Kvm);
+                            return Ok((image.display().to_string(), evidence, boot.score));
+                        }
+                    }
+                    match collect_assurance_data(image, BootTarget::Kvm, false) {
+                        Ok((evidence, boot)) => {
+                            if let Ok(cache) = EvidenceCache::new() {
+                                let _ = cache.store(image, &evidence);
+                            }
+                            Ok((image.display().to_string(), evidence, boot.score))
+                        }
+                        Err(e) => Err(FleetFailedVm {
+                            image: image.display().to_string(),
+                            error: e.to_string(),
+                        }),
+                    }
+                })
+                .collect()
+        });
+
+    progress.finish_and_clear();
+
     let mut snapshots = Vec::new();
     let mut failed_vms = Vec::new();
-
-    for image in &images {
-        if verbose {
-            eprintln!("  → {}", image.display());
-        }
-        match collect_assurance_data(image, BootTarget::Kvm, false) {
-            Ok((evidence, boot)) => {
-                snapshots.push((image.display().to_string(), evidence, boot.score));
-            }
-            Err(e) => {
-                failed_vms.push(FleetFailedVm {
-                    image: image.display().to_string(),
-                    error: e.to_string(),
-                });
-            }
+    for r in results {
+        match r {
+            Ok(tuple) => snapshots.push(tuple),
+            Err(f) => failed_vms.push(f),
         }
     }
-    progress.finish_and_clear();
 
     let mut report = analyze_fleet(&snapshots);
     report.total_vms = images.len();
@@ -244,6 +275,7 @@ pub fn fleet_analyze_command(
         println!("{}", "Fleet Analysis".bold().cyan());
         println!("  Total VMs: {}", report.total_vms);
         println!("  Analyzed: {}", snapshots.len());
+        println!("  Jobs: {jobs}");
         if !report.failed_vms.is_empty() {
             println!("  Failed: {}", report.failed_vms.len());
         }

@@ -193,8 +193,12 @@ guestkit policy check vm.qcow2 --benchmark cis -o json
 Scans a directory of disk images, clusters identical OS fingerprints, flags snowflakes and low boot-score blockers.
 
 ```bash
+guestkit fleet analyze ./vms/
+guestkit fleet analyze ./vms/ --recursive -j 4
 guestkit fleet analyze ./vms/ -o json
 ```
+
+Parallelism defaults to `min(4, CPUs)` (override with `-j` / `--jobs` or `GUESTKIT_FLEET_JOBS`). Evidence-cache hits skip remounting.
 
 ### `guestkit forensic-diff` — security drift
 

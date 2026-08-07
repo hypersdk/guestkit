@@ -2126,6 +2126,10 @@ enum FleetAction {
         /// Scan subdirectories for disk images (default: top level only)
         #[arg(long)]
         recursive: bool,
+
+        /// Parallel workers (default: min(4, CPUs); env GUESTKIT_FLEET_JOBS)
+        #[arg(short = 'j', long, value_name = "N")]
+        jobs: Option<usize>,
     },
 }
 
@@ -3538,8 +3542,21 @@ pub fn run() -> anyhow::Result<()> {
                 dir,
                 output,
                 recursive,
+                jobs,
             } => {
-                fleet_analyze_command(&dir, &output, recursive, cli.verbose)?;
+                let jobs = jobs
+                    .or_else(|| {
+                        std::env::var("GUESTKIT_FLEET_JOBS")
+                            .ok()
+                            .and_then(|v| v.parse().ok())
+                    })
+                    .unwrap_or_else(|| {
+                        std::thread::available_parallelism()
+                            .map(|n| n.get())
+                            .unwrap_or(2)
+                            .clamp(1, 4)
+                    });
+                fleet_analyze_command(&dir, &output, recursive, jobs, cli.verbose)?;
             }
         },
 
