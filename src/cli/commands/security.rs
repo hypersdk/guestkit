@@ -414,22 +414,37 @@ pub fn rescue_command(
     // Mount filesystems
     progress.set_message("Mounting filesystems...");
     let roots = g.inspect_os().unwrap_or_default();
-    if !roots.is_empty() {
-        let root = &roots[0];
-        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
-            let mut mounts: Vec<_> = mountpoints.iter().collect();
-            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-            for (mount, device) in mounts {
-                g.mount(device, mount).ok();
-            }
-        }
-    }
 
     let is_windows = roots
         .first()
         .and_then(|r| g.inspect_get_type(r).ok())
         .map(|t| t.eq_ignore_ascii_case("windows"))
         .unwrap_or(false);
+
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                if is_windows {
+                    // Rescue targets are frequently NTFS volumes left "dirty" by
+                    // Windows Fast Startup / hibernation — ntfs-3g silently
+                    // downgrades a plain mount to read-only in that state rather
+                    // than erroring, which breaks every write-mode rescue op
+                    // (reset-password, enable-rdp, ...). remove_hiberfile is the
+                    // standard offline-tooling way to acknowledge that and mount
+                    // read-write anyway (chntpw / other offline SAM editors do
+                    // the same). Fall back to a plain mount if that's rejected.
+                    if g.mount_options("remove_hiberfile", device, mount).is_err() {
+                        g.mount(device, mount).ok();
+                    }
+                } else {
+                    g.mount(device, mount).ok();
+                }
+            }
+        }
+    }
 
     let vm_str = image
         .to_str()
