@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.21] - 2026-08-08
+
+### Fixed
+- **`rescue -o reset-password` SEGV** — `hivex_value_type` FFI declaration was
+  missing its two out-params (`*mut c_int`, `*mut usize`); calling it with the
+  wrong signature corrupted the argument registers and crashed. Fixed the
+  binding and the RID-lookup call site.
+- **`ntfsfix` never actually cleared the NTFS dirty flag** — write-mode
+  Windows rescue ops (`reset-password`, `enable-rdp`, ...) against a VM disk
+  that wasn't cleanly shut down from inside the guest (the norm, not the
+  exception, for a hypervisor-level stop) silently mounted read-only and
+  no-opped until the final write, which then failed deep in the SAM upload
+  step with a confusing "Read-only file system" error. `ntfsfix()` is now
+  `ntfsfix_opts()` with a real `clear_dirty` flag that passes `--clear-dirty`,
+  wired into all three Windows rescue-mount call sites; an interim
+  `remove_hiberfile` mount-option attempt is superseded by this.
+- **Windows cross-compile broken** — offline package/firstboot-stage modules
+  (`cli::plan::{firstboot_stage,package_fetch,package_stage,preview}`)
+  referenced Unix-only `guestfs` types with no `cfg` gate, breaking builds
+  targeting `windows` for the in-guest agent. Gated with
+  `#[cfg(not(target_os = "windows"))]`.
+
 ## [0.3.20] - 2026-08-07
 
 ### Added
