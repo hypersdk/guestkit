@@ -143,7 +143,7 @@ impl PlanApplicator {
                     // mounts RO and hive download/upload silently fails (0 ops).
                     // Same repair path as agent-inject --windows.
                     if g.vfs_type(device).ok().as_deref() == Some("ntfs") {
-                        if let Err(e) = g.ntfsfix(device, false) {
+                        if let Err(e) = g.ntfsfix_opts(device, false, true) {
                             log::warn!("ntfsfix {device} before plan apply: {e}");
                         }
                     }

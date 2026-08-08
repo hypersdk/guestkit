@@ -249,7 +249,7 @@ pub fn inject_windows_agent(
             // NTFS flag; ntfs-3g then mounts read-only and the upload/hive write
             // fails. Clear it with ntfsfix so the volume mounts read-write.
             if g.vfs_type(device).ok().as_deref() == Some("ntfs") {
-                if let Err(e) = g.ntfsfix(device, false) {
+                if let Err(e) = g.ntfsfix_opts(device, false, true) {
                     if verbose {
                         println!("  ntfsfix {device}: {e} (continuing)");
                     }

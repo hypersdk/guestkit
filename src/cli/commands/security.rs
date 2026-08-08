@@ -427,21 +427,21 @@ pub fn rescue_command(
             let mut mounts: Vec<_> = mountpoints.iter().collect();
             mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
             for (mount, device) in mounts {
-                if is_windows {
-                    // Rescue targets are frequently NTFS volumes left "dirty" by
-                    // Windows Fast Startup / hibernation — ntfs-3g silently
-                    // downgrades a plain mount to read-only in that state rather
-                    // than erroring, which breaks every write-mode rescue op
-                    // (reset-password, enable-rdp, ...). remove_hiberfile is the
-                    // standard offline-tooling way to acknowledge that and mount
-                    // read-write anyway (chntpw / other offline SAM editors do
-                    // the same). Fall back to a plain mount if that's rejected.
-                    if g.mount_options("remove_hiberfile", device, mount).is_err() {
-                        g.mount(device, mount).ok();
+                // Rescue targets are frequently NTFS volumes left dirty by a
+                // hypervisor-level power-off or Windows Fast Startup
+                // ("Metadata kept in Windows cache") — ntfs-3g then mounts
+                // read-only, or refuses outright, and every write-mode
+                // rescue op (reset-password, enable-rdp, ...) fails deep in
+                // its final write. ntfsfix --clear-dirty repairs this before
+                // mounting. Same repair path as agent-inject and plan-apply.
+                if is_windows && g.vfs_type(device).ok().as_deref() == Some("ntfs") {
+                    if let Err(e) = g.ntfsfix_opts(device, false, true) {
+                        if verbose {
+                            eprintln!("ntfsfix {device}: {e} (continuing)");
+                        }
                     }
-                } else {
-                    g.mount(device, mount).ok();
                 }
+                g.mount(device, mount).ok();
             }
         }
     }
