@@ -40,7 +40,7 @@ extern "C" {
         t: *mut c_int,
         len: *mut usize,
     ) -> *mut c_char;
-    fn hivex_value_type(h: HiveH, val: HiveValueH) -> c_int;
+    fn hivex_value_type(h: HiveH, val: HiveValueH, t: *mut c_int, len: *mut usize) -> c_int;
     fn hivex_node_set_value(
         h: HiveH,
         node: HiveNodeH,
@@ -300,13 +300,16 @@ fn lookup_rid(h: HiveH, username: &str) -> Result<u32> {
             "SAM Names\\{username} has no default value (RID)"
         )));
     }
-    let rid = unsafe { hivex_value_type(h, val) };
-    if rid <= 0 {
+    let mut rid_type: c_int = 0;
+    let mut rid_len: usize = 0;
+    let rc = unsafe { hivex_value_type(h, val, &mut rid_type, &mut rid_len) };
+    if rc != 0 || rid_type <= 0 {
         return Err(Error::InvalidOperation(format!(
             "SAM Names\\{username} RID lookup failed"
         )));
     }
-    Ok(rid as u32)
+    // chntpw-style quirk: the RID is encoded in the value's *type* field, not its data.
+    Ok(rid_type as u32)
 }
 
 fn navigate(h: HiveH, path: &[&str]) -> Result<HiveNodeH> {
