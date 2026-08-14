@@ -59,6 +59,14 @@ jobs:
         run: |
           sudo modprobe loop max_part=8 || true
           sudo chmod 666 /dev/loop-control 2>/dev/null || true
+          # losetup itself runs via sudo (tests run as the unprivileged
+          # `runner` user), but the resulting /dev/loopN node is created
+          # root:disk 0660 by udev — the test process's plain (non-sudo)
+          # File::open() on it then fails with EACCES, which LoopDevice's
+          # wait_for_device() can't distinguish from "not ready yet" and
+          # just times out. Loop nodes are pre-created at boot, so this
+          # only needs to run once, up front.
+          sudo chmod 666 /dev/loop[0-9]* 2>/dev/null || true
 
       - name: Check formatting
         run: cargo fmt -- --check
