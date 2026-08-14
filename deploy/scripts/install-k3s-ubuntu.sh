@@ -37,7 +37,7 @@ fi
 
 echo "Installing qemu-utils..."
 sudo apt-get update -qq
-sudo apt-get install -y qemu-utils curl
+sudo apt-get install -y qemu-utils curl musl-tools
 
 if ! command -v podman >/dev/null 2>&1 && ! command -v docker >/dev/null 2>&1; then
   echo "Installing podman..."
