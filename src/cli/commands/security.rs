@@ -1327,7 +1327,7 @@ fn set_hostname_offline(g: &mut crate::Guestfs, name: &str) -> Result<()> {
             if trimmed.starts_with("127.0.1.1") || trimmed.starts_with("10.0.2.3") {
                 // Preserve any aliases after the first two fields.
                 let rest: Vec<&str> = trimmed.split_whitespace().collect();
-                if rest.len() >= 1 {
+                if !rest.is_empty() {
                     let ip = rest[0];
                     out.push(format!("{ip}\t{name}"));
                     patched = true;
@@ -1410,9 +1410,7 @@ fn build_rescue_export_plan(
             if is_windows {
                 let mut plan = FixPlan::new(vm.to_string(), "rescue-reset-password-windows".into());
                 plan.metadata.description = Some(if password.is_some() {
-                    format!(
-                        "AES/RC4 SAM NT-hash write when SYSTEM hive available; else blank + RunOnce net user (apply via rescue --password)"
-                    )
+                    "AES/RC4 SAM NT-hash write when SYSTEM hive available; else blank + RunOnce net user (apply via rescue --password)".to_string()
                 } else {
                     format!(
                         "Clear Windows SAM password for '{username}' (apply via rescue, not plan apply)"

@@ -7,7 +7,6 @@
 //! pending updates via PowerShell.
 
 use anyhow::{bail, Result};
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::Path;
 use std::process::Command;

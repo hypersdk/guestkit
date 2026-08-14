@@ -13,6 +13,7 @@ use crate::cli::plan::types::*;
 use crate::evidence::EvidenceSnapshot;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct RepairOptions {
     /// Include operations that cannot be automatically undone (VMware
     /// Tools uninstall, ghost-NIC removal). Gated by
@@ -21,15 +22,6 @@ pub struct RepairOptions {
     /// Optional host path to a virtio-win tree or a single driver directory.
     /// Also honored via `$GUESTKIT_VIRTIO_WIN`.
     pub virtio_win_dir: Option<std::path::PathBuf>,
-}
-
-impl Default for RepairOptions {
-    fn default() -> Self {
-        Self {
-            include_destructive: false,
-            virtio_win_dir: None,
-        }
-    }
 }
 
 pub struct MigrationRepairPlanner;
@@ -89,6 +81,7 @@ impl MigrationRepairPlanner {
     }
 }
 
+#[allow(clippy::too_many_arguments)] // internal Operation-builder helper, one call site per field
 fn op(
     id: &str,
     description: &str,

@@ -244,13 +244,9 @@ enum SysctlAction {
 fn parse_systemctl_enable_disable(cmd: &str) -> Option<SysctlAction> {
     let parts: Vec<&str> = cmd.split_whitespace().collect();
     // systemctl [--…] enable|disable UNIT
-    let mut i = if parts.first().map(|s| *s == "systemctl").unwrap_or(false) {
-        1usize
-    } else if parts.len() >= 2 && parts[0].ends_with("systemctl") {
-        1
-    } else {
-        return None;
-    };
+    let is_systemctl = parts.first().map(|s| *s == "systemctl").unwrap_or(false)
+        || (parts.len() >= 2 && parts[0].ends_with("systemctl"));
+    let mut i = if is_systemctl { 1usize } else { return None };
     while i < parts.len() && parts[i].starts_with('-') {
         i += 1;
     }

@@ -154,7 +154,7 @@ fn hashed_bootkey_aes(key0: &[u8], bootkey: &[u8; 16]) -> Result<Vec<u8>> {
     let data = key0
         .get(32..32 + data_len)
         .ok_or_else(|| Error::InvalidFormat("SAM_KEY_DATA_AES Data truncated".into()))?;
-    Ok(aes_cbc_decrypt(bootkey, salt, data)?)
+    aes_cbc_decrypt(bootkey, salt, data)
 }
 
 /// Encrypt plaintext NT hash for storage in SAM `V` (returns SAM_HASH or SAM_HASH_AES bytes).
@@ -330,7 +330,7 @@ fn aes_cbc_decrypt(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> 
     let iv: [u8; 16] = iv
         .try_into()
         .map_err(|_| Error::InvalidFormat("AES IV must be 16 bytes".into()))?;
-    if ciphertext.len() % 16 != 0 {
+    if !ciphertext.len().is_multiple_of(16) {
         return Err(Error::InvalidFormat(
             "AES ciphertext length not multiple of 16".into(),
         ));
@@ -600,7 +600,7 @@ fn decode_utf16le_lossy(bytes: &[u8]) -> String {
 
 fn decode_hex_ascii(s: &str) -> std::result::Result<Vec<u8>, String> {
     let s = s.trim();
-    if s.len() % 2 != 0 {
+    if !s.len().is_multiple_of(2) {
         return Err("odd length".into());
     }
     let mut out = Vec::with_capacity(s.len() / 2);

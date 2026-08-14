@@ -47,8 +47,10 @@ pub fn repair_grub(
         )));
     }
 
-    let mut report = GrubRepairReport::default();
-    report.efi = detect_efi(root_mount);
+    let mut report = GrubRepairReport {
+        efi: detect_efi(root_mount),
+        ..Default::default()
+    };
     if report.efi {
         report.notes.push(format!(
             "detected EFI System Partition layout (efi-dir={})",

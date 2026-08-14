@@ -319,10 +319,7 @@ impl LivePlanExecutor {
                 "driver {} not yet injected (source {})",
                 di.driver_name, di.source
             )),
-            OperationType::PackageInstall(_)
-            | OperationType::CommandExec(_)
-            | OperationType::Symlink(_)
-            | OperationType::FileDelete(_) => None,
+            OperationType::PackageInstall(_) | OperationType::CommandExec(_) => None,
         }
     }
 

@@ -570,11 +570,11 @@ pub fn detect_ghost_nics(hive_path: &Path) -> Vec<crate::evidence::snapshot::Gho
 
             for kv in inst_ref.values() {
                 match kv.name() {
-                    "Class" => class = reg_multi_or_sz(&kv),
-                    "DeviceDesc" => desc = reg_multi_or_sz(&kv),
-                    "Service" => service = reg_multi_or_sz(&kv),
+                    "Class" => class = reg_multi_or_sz(kv),
+                    "DeviceDesc" => desc = reg_multi_or_sz(kv),
+                    "Service" => service = reg_multi_or_sz(kv),
                     "HardwareID" | "CompatibleIDs" => {
-                        let v = reg_multi_or_sz(&kv);
+                        let v = reg_multi_or_sz(kv);
                         if !v.is_empty() {
                             if !hwid.is_empty() {
                                 hwid.push(';');

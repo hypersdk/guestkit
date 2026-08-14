@@ -262,7 +262,7 @@ impl PlanApplicator {
                     .parent()
                     .and_then(|p| p.to_str())
                     .unwrap_or("/");
-                if parent != "/" && parent != "" {
+                if parent != "/" && !parent.is_empty() {
                     g.mkdir_p(parent)
                         .map_err(|e| anyhow::anyhow!("mkdir_p failed for {}: {}", parent, e))?;
                 }

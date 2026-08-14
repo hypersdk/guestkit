@@ -860,6 +860,10 @@ fn guestkit_get_systemd_unit(args: &Value) -> Result<Value, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "missing unit".to_string())?;
     let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    // NOTE: must stay .or_else (lazy) — the fallback makes a live D-Bus call
+    // (get_unit_detail); .or() would run it on every request even when
+    // build_service_health already found the unit from evidence.
+    #[allow(clippy::unnecessary_lazy_evaluations)]
     let detail = crate::health::build_service_health(unit, &evidence).or_else(|| {
         #[cfg(target_os = "linux")]
         {

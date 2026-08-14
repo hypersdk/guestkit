@@ -1201,6 +1201,10 @@ impl RequestHandler {
         }
         match crate::evidence::build_evidence_live() {
             Ok(evidence) => {
+                // NOTE: must stay .or_else (lazy) — the fallback makes a live D-Bus
+                // call (get_unit_detail); .or() would run it on every request even
+                // when build_service_health already found the unit from evidence.
+                #[allow(clippy::unnecessary_lazy_evaluations)]
                 let detail = crate::health::build_service_health(unit, &evidence).or_else(|| {
                     #[cfg(target_os = "linux")]
                     {

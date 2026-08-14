@@ -14,6 +14,10 @@ pub struct PlanCommand {
     pub action: PlanAction,
 }
 
+// clap Subcommand: variants are constructed once per CLI invocation from
+// parsed args, never in a hot path — boxing fields to shrink the enum
+// isn't worth the added indirection at every call site.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Subcommand)]
 pub enum PlanAction {
     /// Preview a fix plan
@@ -383,6 +387,7 @@ impl PlanCommand {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)] // CLI handler: args pass through from clap-parsed flags
     fn apply_plan(
         &self,
         plan_file: &str,
@@ -505,6 +510,7 @@ impl PlanCommand {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)] // CLI handler: args pass through from clap-parsed flags
     fn generate_plan(
         &self,
         vm_disk: &str,

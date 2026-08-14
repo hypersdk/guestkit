@@ -222,6 +222,7 @@ use crate::evidence::snapshot::{
     WindowsNicConfig,
 };
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 const VIRTIO_DRIVER_NAMES: &[&str] = &[
     "viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng",
 ];
@@ -242,6 +243,7 @@ pub fn collect_virtio_drivers() -> Vec<WindowsDriverEntry> {
     parse_virtio_driver_json(&json)
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_virtio_driver_json(json: &str) -> Vec<WindowsDriverEntry> {
     #[derive(serde::Deserialize)]
     struct Row {
@@ -297,6 +299,7 @@ pub fn collect_bitlocker_state() -> Option<BitLockerState> {
     parse_bitlocker_json(&json)
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_bitlocker_json(json: &str) -> Option<BitLockerState> {
     #[derive(serde::Deserialize)]
     struct Row {
@@ -345,6 +348,7 @@ pub fn collect_vss_health() -> Option<VssHealth> {
     Some(parse_vss_writers(&String::from_utf8_lossy(&out.stdout)))
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_vss_writers(text: &str) -> VssHealth {
     let mut writers_total = 0usize;
     let mut writers_failed = Vec::new();
@@ -382,6 +386,7 @@ pub fn collect_ghost_nics() -> Vec<GhostNicEntry> {
     }
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_pnputil_devices(text: &str) -> Vec<GhostNicEntry> {
     let mut entries = Vec::new();
     let mut instance: Option<String> = None;
@@ -413,6 +418,7 @@ pub fn collect_nic_configs() -> Vec<WindowsNicConfig> {
     parse_nic_config_json(&json)
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_nic_config_json(json: &str) -> Vec<WindowsNicConfig> {
     #[derive(serde::Deserialize)]
     struct Row {
@@ -464,6 +470,7 @@ pub fn collect_driver_signature_enforcement() -> Option<bool> {
     )))
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_signature_enforcement(bcd_text: &str) -> bool {
     let weakened = bcd_text.lines().any(|l| {
         let l = l.to_ascii_lowercase();
@@ -483,6 +490,7 @@ pub fn collect_activation_info() -> Option<ActivationInfo> {
     parse_activation_json(&json)
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn parse_activation_json(json: &str) -> Option<ActivationInfo> {
     #[derive(serde::Deserialize)]
     struct Row {
@@ -498,76 +506,6 @@ fn parse_activation_json(json: &str) -> Option<ActivationInfo> {
         product_id: None,
         edition_id: None,
     })
-}
-
-#[cfg(target_os = "windows")]
-pub fn collect_esp_present() -> Option<bool> {
-    powershell_bool(
-        "[bool](Get-Partition -ErrorAction SilentlyContinue | \
-         Where-Object { $_.GptType -eq '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' })",
-    )
-}
-
-#[cfg(test)]
-mod migration_probe_tests {
-    use super::*;
-
-    #[test]
-    fn virtio_json_marks_missing_and_boot_critical() {
-        let json = r#"[{"Name":"viostor","StartMode":"Boot","State":"Running"},
-                       {"Name":"netkvm","StartMode":"Auto","State":"Running"}]"#;
-        let drivers = parse_virtio_driver_json(json);
-        let by = |n: &str| drivers.iter().find(|d| d.name == n).unwrap();
-        assert!(by("viostor").present && by("viostor").boot_critical);
-        assert!(by("netkvm").present && !by("netkvm").boot_critical);
-        assert!(!by("vioscsi").present);
-    }
-
-    #[test]
-    fn vss_writer_parse() {
-        let text = "\
-Writer name: 'System Writer'\n   State: [1] Stable\n\
-Writer name: 'SqlServerWriter'\n   State: [8] Failed\n";
-        let health = parse_vss_writers(text);
-        assert_eq!(health.writers_total, 2);
-        assert_eq!(health.writers_failed, vec!["SqlServerWriter"]);
-        assert!(!health.healthy);
-    }
-
-    #[test]
-    fn pnputil_ghost_nic_parse() {
-        let text = "\
-Instance ID:  PCI\\VEN_15AD&DEV_07B0\\000000\n\
-Device Description:  vmxnet3 Ethernet Adapter\n\
-Status:  Disconnected\n";
-        let nics = parse_pnputil_devices(text);
-        assert_eq!(nics.len(), 1);
-        assert!(nics[0].description.contains("vmxnet3"));
-    }
-
-    #[test]
-    fn signature_enforcement_parse() {
-        assert!(!parse_signature_enforcement("testsigning             Yes"));
-        assert!(parse_signature_enforcement("description  Windows 10"));
-    }
-
-    #[test]
-    fn bitlocker_parse_single_object() {
-        let state = parse_bitlocker_json(r#"{"MountPoint":"C:","ProtectionStatus":1}"#).unwrap();
-        assert!(state.any_protected);
-        assert_eq!(state.volumes[0].protection, "on");
-    }
-
-    #[test]
-    fn nic_config_parse() {
-        let json = r#"{"Description":"Intel NIC","MACAddress":"00:11:22:33:44:55",
-                       "IPAddress":["10.0.0.5"],"DefaultIPGateway":["10.0.0.1"],
-                       "DNSServerSearchOrder":["10.0.0.2"],"DHCPEnabled":false}"#;
-        let nics = parse_nic_config_json(json);
-        assert_eq!(nics.len(), 1);
-        assert!(!nics[0].dhcp);
-        assert_eq!(nics[0].gateway.as_deref(), Some("10.0.0.1"));
-    }
 }
 
 pub fn build_windows_guest_health(hostname: &str) -> GuestHealth {
@@ -701,5 +639,75 @@ pub fn build_windows_guest_health(hostname: &str) -> GuestHealth {
         reasons,
         components,
         journal_hints,
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub fn collect_esp_present() -> Option<bool> {
+    powershell_bool(
+        "[bool](Get-Partition -ErrorAction SilentlyContinue | \
+         Where-Object { $_.GptType -eq '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}' })",
+    )
+}
+
+#[cfg(test)]
+mod migration_probe_tests {
+    use super::*;
+
+    #[test]
+    fn virtio_json_marks_missing_and_boot_critical() {
+        let json = r#"[{"Name":"viostor","StartMode":"Boot","State":"Running"},
+                       {"Name":"netkvm","StartMode":"Auto","State":"Running"}]"#;
+        let drivers = parse_virtio_driver_json(json);
+        let by = |n: &str| drivers.iter().find(|d| d.name == n).unwrap();
+        assert!(by("viostor").present && by("viostor").boot_critical);
+        assert!(by("netkvm").present && !by("netkvm").boot_critical);
+        assert!(!by("vioscsi").present);
+    }
+
+    #[test]
+    fn vss_writer_parse() {
+        let text = "\
+Writer name: 'System Writer'\n   State: [1] Stable\n\
+Writer name: 'SqlServerWriter'\n   State: [8] Failed\n";
+        let health = parse_vss_writers(text);
+        assert_eq!(health.writers_total, 2);
+        assert_eq!(health.writers_failed, vec!["SqlServerWriter"]);
+        assert!(!health.healthy);
+    }
+
+    #[test]
+    fn pnputil_ghost_nic_parse() {
+        let text = "\
+Instance ID:  PCI\\VEN_15AD&DEV_07B0\\000000\n\
+Device Description:  vmxnet3 Ethernet Adapter\n\
+Status:  Disconnected\n";
+        let nics = parse_pnputil_devices(text);
+        assert_eq!(nics.len(), 1);
+        assert!(nics[0].description.contains("vmxnet3"));
+    }
+
+    #[test]
+    fn signature_enforcement_parse() {
+        assert!(!parse_signature_enforcement("testsigning             Yes"));
+        assert!(parse_signature_enforcement("description  Windows 10"));
+    }
+
+    #[test]
+    fn bitlocker_parse_single_object() {
+        let state = parse_bitlocker_json(r#"{"MountPoint":"C:","ProtectionStatus":1}"#).unwrap();
+        assert!(state.any_protected);
+        assert_eq!(state.volumes[0].protection, "on");
+    }
+
+    #[test]
+    fn nic_config_parse() {
+        let json = r#"{"Description":"Intel NIC","MACAddress":"00:11:22:33:44:55",
+                       "IPAddress":["10.0.0.5"],"DefaultIPGateway":["10.0.0.1"],
+                       "DNSServerSearchOrder":["10.0.0.2"],"DHCPEnabled":false}"#;
+        let nics = parse_nic_config_json(json);
+        assert_eq!(nics.len(), 1);
+        assert!(!nics[0].dhcp);
+        assert_eq!(nics[0].gateway.as_deref(), Some("10.0.0.1"));
     }
 }

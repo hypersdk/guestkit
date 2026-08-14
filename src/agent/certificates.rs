@@ -119,7 +119,7 @@ fn parse_cert(path: &Path) -> Option<CertInfo> {
         key_bits,
         signature_algorithm: sig_alg,
         expiring_soon: days
-            .map(|d| d >= 0 && d <= EXPIRY_WARN_DAYS)
+            .map(|d| (0..=EXPIRY_WARN_DAYS).contains(&d))
             .unwrap_or(false),
         expired: days.map(|d| d < 0).unwrap_or(false),
         weak,

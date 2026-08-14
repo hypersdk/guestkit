@@ -92,6 +92,6 @@ mod tests {
     #[test]
     fn endpoint_env_names_documented() {
         // Smoke: helpers compile; live aws is integration-only.
-        assert!(std::env::var("GUESTKIT_S3_ENDPOINT").is_err() || true);
+        let _ = std::env::var("GUESTKIT_S3_ENDPOINT");
     }
 }
