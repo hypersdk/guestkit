@@ -23,7 +23,7 @@ impl Guestfs {
     /// g.launch()?;
     ///
     /// let inventory = g.build_device_inventory()?;
-    /// println!("Found {} devices", inventory.len());
+    /// println!("Found {} devices", inventory.by_dev.len());
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn build_device_inventory(&mut self) -> Result<Inventory> {

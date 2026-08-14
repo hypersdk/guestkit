@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use crate::cli::parallel::{ParallelInspector, InspectionConfig};
+//! use guestkit::cli::parallel::{ParallelInspector, InspectionConfig};
 //!
 //! let disks = vec!["vm1.qcow2", "vm2.qcow2", "vm3.qcow2"];
 //! let config = InspectionConfig::default();
@@ -27,6 +27,7 @@
 //! for result in results {
 //!     println!("Inspected: {:?}", result);
 //! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 use crate::core::{BinaryCache, CachedInspection, Error, Result};
