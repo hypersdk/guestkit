@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.19
+Version:        0.3.21
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -166,6 +166,17 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Sat Aug 08 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.21-1
+- Fix SEGV in offline Windows password reset (hivex_value_type FFI signature)
+- ntfsfix now actually clears the NTFS dirty flag on Windows rescue writes
+- Fix Windows cross-compile break from ungated Unix-only guestfs modules
+
+* Fri Aug 07 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.20-1
+- DevOps runbooks, GitHub Wiki operator cheat sheets
+- Windows AES/RC4 SAM NT-hash write for offline password reset
+- UEFI-aware fix-grub --force; offline PackageInstall staging + host fetch
+- Cutover Passport signed-enterprise workflows (keygen/issuer/trust-keys)
+
 * Thu Aug 06 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.19-1
 - Cutover Passport (emit/verify CI gate; HyperSDK/hyper2kvm handoff)
 - Windows day-0: domain-leave, timezone, static-ip plan profiles
