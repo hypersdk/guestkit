@@ -1,8 +1,5 @@
 name: 'GuestKit Passport Gate'
-description: >-
-  Score a VM disk image offline with GuestKit doctor, emit a signed-capable
-  Cutover Passport, and fail the job if the score is below a floor — before
-  any conversion/cutover job runs. See docs/devops/01-passport-ci-gate.md.
+description: 'Score a VM disk offline and fail the job if the GuestKit Cutover Passport score is below a floor.'
 author: 'hypersdk'
 
 branding:
@@ -71,8 +68,12 @@ runs:
         set -euo pipefail
         VERSION="${{ inputs.version }}"
         if [[ "${VERSION}" == "latest" ]]; then
-          VERSION="$(curl -fsSL https://api.github.com/repos/hypersdk/guestkit/releases/latest \
-            | grep -m1 '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')"
+          # Capture the full body before parsing — piping straight into
+          # `grep -m1` lets grep close the pipe after its first match,
+          # which kills curl with "Failure writing output to destination"
+          # (exit 23) under `pipefail`.
+          BODY="$(curl -fsSL https://api.github.com/repos/hypersdk/guestkit/releases/latest)"
+          VERSION="$(printf '%s' "${BODY}" | grep -m1 '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')"
         fi
         VERSION="${VERSION#v}"
         if [[ -z "${VERSION}" ]]; then
@@ -97,28 +98,40 @@ runs:
         sha256sum -c "${ASSET}.sha256"
         tar -xzf "${ASSET}"
 
-        chmod +x "${WORKDIR}/guestkit"
-        echo "${WORKDIR}" >> "$GITHUB_PATH"
+        # The customer bundle tarball extracts into a versioned
+        # subdirectory (guestkit-<version>-<arch>/guestkit), not a flat
+        # binary at the tar root — find it rather than assume the path.
+        BIN_PATH="$(find "${WORKDIR}" -mindepth 1 -maxdepth 2 -type f -name guestkit | head -n1)"
+        if [[ -z "${BIN_PATH}" ]]; then
+          echo "::error::guestkit binary not found after extracting ${ASSET}" >&2
+          find "${WORKDIR}" -maxdepth 2 >&2
+          exit 1
+        fi
+        chmod +x "${BIN_PATH}"
+        echo "$(dirname "${BIN_PATH}")" >> "$GITHUB_PATH"
         # doctor/migrate-plan/passport need loop/NBD mount, which needs root;
         # sudo resets PATH (secure_path), so resolve the absolute binary path
         # up front and invoke it explicitly via sudo in the gate step below.
-        echo "GUESTKIT_BIN=${WORKDIR}/guestkit" >> "$GITHUB_ENV"
+        echo "GUESTKIT_BIN=${BIN_PATH}" >> "$GITHUB_ENV"
 
-    - name: Ensure qemu-img / losetup / loop / nbd are available
+    - name: Install host dependencies (qemu-img, nbd, libhivex0, …)
       shell: bash
       run: |
         set -euo pipefail
-        if ! command -v qemu-img >/dev/null 2>&1 || ! command -v losetup >/dev/null 2>&1; then
-          if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y qemu-utils
-          else
-            echo "::error::qemu-img/losetup not found and no apt-get available to install qemu-utils" >&2
-            exit 1
-          fi
+        # The release bundle ships its own installer next to the binary —
+        # same package list (incl. libhivex0, required at runtime by the
+        # glibc build's registry-write feature) used by customers who
+        # download the tarball directly. Reuse it instead of a second,
+        # drifting copy of the dependency list here.
+        INSTALLER="$(dirname "${GUESTKIT_BIN}")/install-client-deps.sh"
+        if [[ -x "${INSTALLER}" ]]; then
+          "${INSTALLER}"
+        else
+          echo "::warning::install-client-deps.sh not found next to guestkit; falling back to qemu-utils only"
+          sudo apt-get update -y
+          sudo apt-get install -y qemu-utils
         fi
         sudo modprobe loop || true
-        sudo modprobe nbd max_part=8 || true
 
     - name: Run passport gate
       id: gate
