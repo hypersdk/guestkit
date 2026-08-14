@@ -81,7 +81,9 @@ pub fn set_timezone(params: &Value) -> Result<Value> {
     let status = if cfg!(target_os = "windows") {
         Command::new("tzutil").args(["/s", tz]).status()
     } else {
-        Command::new("timedatectl").args(["set-timezone", tz]).status()
+        Command::new("timedatectl")
+            .args(["set-timezone", tz])
+            .status()
     }?;
     if !status.success() {
         bail!("set timezone failed: {status}");
@@ -154,7 +156,10 @@ pub fn set_dns(params: &Value) -> Result<Value> {
 
 #[cfg(target_os = "linux")]
 fn default_interface() -> Option<String> {
-    let out = Command::new("ip").args(["route", "show", "default"]).output().ok()?;
+    let out = Command::new("ip")
+        .args(["route", "show", "default"])
+        .output()
+        .ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
     text.split_whitespace()
         .skip_while(|w| *w != "dev")

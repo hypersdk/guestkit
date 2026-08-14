@@ -129,7 +129,10 @@ fn read_cache_file(path: &Path) -> Option<OnlineInventoryCache> {
     let cache: OnlineInventoryCache = serde_json::from_slice(&bytes).ok()?;
     // Reject a tampered/truncated payload.
     if digest(&cache.payload) != cache.integrity_sha256 {
-        log::warn!("inventory cache at {} failed integrity check", path.display());
+        log::warn!(
+            "inventory cache at {} failed integrity check",
+            path.display()
+        );
         return None;
     }
     Some(cache)

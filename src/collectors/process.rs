@@ -26,7 +26,11 @@ pub fn collect_process_evidence() -> ProcessEvidence {
     evidence.d_state_count = procs.iter().filter(|p| p.state == "D").count();
 
     let mut by_cpu: Vec<ProcessSummary> = procs.clone();
-    by_cpu.sort_by(|a, b| b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap_or(std::cmp::Ordering::Equal));
+    by_cpu.sort_by(|a, b| {
+        b.cpu_percent
+            .partial_cmp(&a.cpu_percent)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     evidence.top_cpu = by_cpu.into_iter().take(10).collect();
 
     let mut by_mem: Vec<ProcessSummary> = procs;
@@ -120,7 +124,9 @@ fn build_inode_pid_map() -> HashMap<String, u32> {
     };
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
-        let Ok(pid) = name.parse::<u32>() else { continue };
+        let Ok(pid) = name.parse::<u32>() else {
+            continue;
+        };
         let Ok(fds) = fs::read_dir(format!("/proc/{pid}/fd")) else {
             continue;
         };

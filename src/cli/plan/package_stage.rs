@@ -22,7 +22,8 @@ use crate::cli::plan::types::PackageInstall;
 const PENDING_DIR: &str = "/var/cache/guestkit/pending";
 const INSTALL_SCRIPT: &str = "/usr/lib/guestkit/firstboot-packages.sh";
 const UNIT_PATH: &str = "/etc/systemd/system/guestkit-firstboot-packages.service";
-const WANTS_LINK: &str = "/etc/systemd/system/multi-user.target.wants/guestkit-firstboot-packages.service";
+const WANTS_LINK: &str =
+    "/etc/systemd/system/multi-user.target.wants/guestkit-firstboot-packages.service";
 
 /// Host directories to search for package files.
 pub fn package_cache_dirs(pi: &PackageInstall) -> Vec<PathBuf> {
@@ -161,13 +162,7 @@ pub fn stage_packages_offline(
                     .to_string();
                 let remote = format!("{PENDING_DIR}/{fname}");
                 g.upload(host_path.to_str().unwrap(), &remote)
-                    .with_context(|| {
-                        format!(
-                            "upload {} → {}",
-                            host_path.display(),
-                            remote
-                        )
-                    })?;
+                    .with_context(|| format!("upload {} → {}", host_path.display(), remote))?;
                 staged.push(fname);
             }
             None => missing.push(pkg.clone()),
@@ -201,22 +196,18 @@ pub fn stage_packages_offline(
     // Best-effort executable bit via chmod if available
     let _ = g.chmod(0o755, INSTALL_SCRIPT);
 
-
     let unit = firstboot_unit();
     g.write(UNIT_PATH, unit.as_bytes())
         .map_err(|e| anyhow::anyhow!("write {UNIT_PATH}: {e}"))?;
 
-    g.ln_sf(
-        "../guestkit-firstboot-packages.service",
-        WANTS_LINK,
-    )
-    .or_else(|_| {
-        g.ln_sf(
-            "/etc/systemd/system/guestkit-firstboot-packages.service",
-            WANTS_LINK,
-        )
-    })
-    .map_err(|e| anyhow::anyhow!("enable firstboot unit: {e}"))?;
+    g.ln_sf("../guestkit-firstboot-packages.service", WANTS_LINK)
+        .or_else(|_| {
+            g.ln_sf(
+                "/etc/systemd/system/guestkit-firstboot-packages.service",
+                WANTS_LINK,
+            )
+        })
+        .map_err(|e| anyhow::anyhow!("enable firstboot unit: {e}"))?;
 
     eprintln!(
         "Staged {} package(s) for first-boot install: {}",
@@ -289,7 +280,8 @@ pub fn stage_preview_note(pi: &PackageInstall) -> String {
             return "offline: will host-fetch (GUESTKIT_PACKAGE_FETCH) then stage for first-boot"
                 .into();
         }
-        return "offline: live-only (set GUESTKIT_PACKAGE_CACHE or GUESTKIT_PACKAGE_FETCH=1)".into();
+        return "offline: live-only (set GUESTKIT_PACKAGE_CACHE or GUESTKIT_PACKAGE_FETCH=1)"
+            .into();
     }
     let mut ok = 0usize;
     let mut miss = Vec::new();

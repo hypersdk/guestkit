@@ -101,11 +101,7 @@ pub fn analyze_semantic(evidence: &EvidenceSnapshot) -> SemanticAnalysis {
 
         if let Some(runtime) = &systemd.runtime {
             for unit in runtime.units.iter().filter(|u| u.active_state == "failed") {
-                if out
-                    .runtime_failed_units
-                    .iter()
-                    .any(|n| n == &unit.name)
-                {
+                if out.runtime_failed_units.iter().any(|n| n == &unit.name) {
                     continue;
                 }
                 out.runtime_failed_units.push(unit.name.clone());

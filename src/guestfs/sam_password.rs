@@ -34,12 +34,7 @@ extern "C" {
     fn hivex_root(h: HiveH) -> HiveNodeH;
     fn hivex_node_get_child(h: HiveH, node: HiveNodeH, name: *const c_char) -> HiveNodeH;
     fn hivex_node_get_value(h: HiveH, node: HiveNodeH, key: *const c_char) -> HiveValueH;
-    fn hivex_value_value(
-        h: HiveH,
-        val: HiveValueH,
-        t: *mut c_int,
-        len: *mut usize,
-    ) -> *mut c_char;
+    fn hivex_value_value(h: HiveH, val: HiveValueH, t: *mut c_int, len: *mut usize) -> *mut c_char;
     fn hivex_value_type(h: HiveH, val: HiveValueH, t: *mut c_int, len: *mut usize) -> c_int;
     fn hivex_node_set_value(
         h: HiveH,
@@ -77,10 +72,7 @@ pub fn clear_windows_password(sam_hive: &Path, username: &str) -> Result<()> {
 
     let rid = lookup_rid(guard.0, username)?;
     let rid_hex = format!("{rid:08X}");
-    let user_node = navigate(
-        guard.0,
-        &["SAM", "Domains", "Account", "Users", &rid_hex],
-    )?;
+    let user_node = navigate(guard.0, &["SAM", "Domains", "Account", "Users", &rid_hex])?;
 
     let mut v = get_binary_value(guard.0, user_node, "V")?;
     if v.len() < 0xB0 {
@@ -202,14 +194,10 @@ pub fn set_user_nt_hash_encrypted(
 
     let rid = lookup_rid(guard.0, username)?;
     let rid_hex = format!("{rid:08X}");
-    let user_node = navigate(
-        guard.0,
-        &["SAM", "Domains", "Account", "Users", &rid_hex],
-    )?;
+    let user_node = navigate(guard.0, &["SAM", "Domains", "Account", "Users", &rid_hex])?;
 
     let salt = crate::guestfs::sam_aes::random_salt();
-    let blob =
-        crate::guestfs::sam_aes::encrypt_nt_hash(rid, nt_hash, &hboot, &salt, aes_style)?;
+    let blob = crate::guestfs::sam_aes::encrypt_nt_hash(rid, nt_hash, &hboot, &salt, aes_style)?;
 
     let mut v = get_binary_value(guard.0, user_node, "V")?;
     crate::guestfs::sam_aes::patch_v_with_nt_hash(&mut v, &blob)?;
@@ -260,7 +248,9 @@ fn validate_windows_username(username: &str) -> Result<()> {
             "Windows username must be 1–20 characters".into(),
         ));
     }
-    if u.contains(['\\', '/', '[', ']', ':', ';', '|', '=', ',', '+', '*', '?', '<', '>', '@']) {
+    if u.contains([
+        '\\', '/', '[', ']', ':', ';', '|', '=', ',', '+', '*', '?', '<', '>', '@',
+    ]) {
         return Err(Error::InvalidOperation(format!(
             "Windows username contains illegal characters: {u}"
         )));
@@ -284,9 +274,8 @@ fn validate_windows_password(password: &str) -> Result<()> {
 
 fn lookup_rid(h: HiveH, username: &str) -> Result<u32> {
     let names = navigate(h, &["SAM", "Domains", "Account", "Users", "Names"])?;
-    let user_c = CString::new(username).map_err(|_| {
-        Error::InvalidOperation(format!("username has NUL: {username}"))
-    })?;
+    let user_c = CString::new(username)
+        .map_err(|_| Error::InvalidOperation(format!("username has NUL: {username}")))?;
     let node = unsafe { hivex_node_get_child(h, names, user_c.as_ptr()) };
     if node == 0 {
         return Err(Error::InvalidOperation(format!(
@@ -318,9 +307,8 @@ fn navigate(h: HiveH, path: &[&str]) -> Result<HiveNodeH> {
         return Err(Error::CommandFailed("hivex_root failed".into()));
     }
     for component in path {
-        let name = CString::new(*component).map_err(|_| {
-            Error::InvalidOperation(format!("registry path has NUL: {component}"))
-        })?;
+        let name = CString::new(*component)
+            .map_err(|_| Error::InvalidOperation(format!("registry path has NUL: {component}")))?;
         let child = unsafe { hivex_node_get_child(h, node, name.as_ptr()) };
         if child == 0 {
             return Err(Error::InvalidOperation(format!(

@@ -27,12 +27,7 @@ pub struct WindowsBcdCheck;
 pub struct WindowsSystemReservedCheck;
 
 fn is_windows_guest(evidence: &EvidenceSnapshot) -> bool {
-    evidence.windows.is_some()
-        || evidence
-            .os
-            .os_type
-            .to_lowercase()
-            .contains("windows")
+    evidence.windows.is_some() || evidence.os.os_type.to_lowercase().contains("windows")
 }
 
 /// Neutral "not applicable" result for a Linux-only check running against a
@@ -574,9 +569,7 @@ impl BootCheck for WindowsEfiBootCheck {
                 .and_then(|w| w.system_reserved.as_ref())
                 .is_some_and(|s| s.role == "esp");
         let efi_ready = efi_layout && windows.map(|w| w.bootmgr_found).unwrap_or(false);
-        let esp_ok = windows
-            .and_then(|w| w.esp_present)
-            .unwrap_or(efi_layout);
+        let esp_ok = windows.and_then(|w| w.esp_present).unwrap_or(efi_layout);
         let passed = (efi_ready && esp_ok) || !efi_layout;
         let severity = if passed {
             CheckSeverity::Info
@@ -587,15 +580,13 @@ impl BootCheck for WindowsEfiBootCheck {
             "Legacy BIOS boot — EFI bootmgr check not required".to_string()
         } else if efi_ready && esp_ok {
             match windows.and_then(|w| w.system_reserved.as_ref()) {
-                Some(sr) if sr.role == "esp" => format!(
-                    "EFI system partition on {} with Windows bootmgr",
-                    sr.device
-                ),
+                Some(sr) if sr.role == "esp" => {
+                    format!("EFI system partition on {} with Windows bootmgr", sr.device)
+                }
                 _ => "EFI system partition and Windows bootmgr present".to_string(),
             }
         } else if !esp_ok {
-            "EFI firmware path expected but no ESP / EFI Microsoft Boot volume found"
-                .to_string()
+            "EFI firmware path expected but no ESP / EFI Microsoft Boot volume found".to_string()
         } else {
             "EFI partition detected but Windows bootmgfw.efi not found".to_string()
         };
@@ -663,10 +654,9 @@ impl BootCheck for WindowsBcdCheck {
             }
         } else {
             match windows.and_then(|w| w.system_reserved.as_ref()) {
-                Some(sr) if sr.has_bcd => format!(
-                    "Windows BCD store located on {} ({})",
-                    sr.device, sr.role
-                ),
+                Some(sr) if sr.has_bcd => {
+                    format!("Windows BCD store located on {} ({})", sr.device, sr.role)
+                }
                 _ => "Windows BCD store located".to_string(),
             }
         };

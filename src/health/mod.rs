@@ -19,10 +19,7 @@ use guestkit_agent_protocol::{
 
 pub fn build_guest_health(evidence: &EvidenceSnapshot) -> GuestHealth {
     let semantic = analyze_semantic(evidence);
-    let runtime = evidence
-        .systemd
-        .as_ref()
-        .and_then(|s| s.runtime.as_ref());
+    let runtime = evidence.systemd.as_ref().and_then(|s| s.runtime.as_ref());
 
     let failed_units = runtime
         .map(|r| r.failed_unit_count)
@@ -49,7 +46,8 @@ pub fn build_guest_health(evidence: &EvidenceSnapshot) -> GuestHealth {
         selinux: evidence.security.selinux.clone(),
     };
 
-    let recommendations = build_recommendations(evidence, runtime, &guest_health, &critical_services);
+    let recommendations =
+        build_recommendations(evidence, runtime, &guest_health, &critical_services);
 
     GuestHealth {
         vm_hostname: evidence.os.hostname.clone(),
@@ -91,11 +89,12 @@ fn build_components(
         HealthLevel::Unknown
     };
 
-    let dns_level = if dns.errors.is_empty() && evidence
-        .network_probes
-        .as_ref()
-        .map(|p| p.cluster_dns_reachable)
-        .unwrap_or(true)
+    let dns_level = if dns.errors.is_empty()
+        && evidence
+            .network_probes
+            .as_ref()
+            .map(|p| p.cluster_dns_reachable)
+            .unwrap_or(true)
     {
         HealthLevel::Healthy
     } else if evidence
@@ -219,7 +218,10 @@ fn derive_health_level(
     {
         return HealthLevel::Degraded;
     }
-    if runtime.map(|r| r.manager_state == "degraded").unwrap_or(false) {
+    if runtime
+        .map(|r| r.manager_state == "degraded")
+        .unwrap_or(false)
+    {
         return HealthLevel::Degraded;
     }
     HealthLevel::Healthy
@@ -261,7 +263,10 @@ fn build_critical_services(
     out
 }
 
-fn runtime_unit_to_critical(unit: &SystemdRuntimeUnit, _evidence: &EvidenceSnapshot) -> CriticalService {
+fn runtime_unit_to_critical(
+    unit: &SystemdRuntimeUnit,
+    _evidence: &EvidenceSnapshot,
+) -> CriticalService {
     let journal = crate::journal::live::collect_journal_slice(&unit.name, 30);
     let last_failure = journal
         .last_error
@@ -316,9 +321,7 @@ fn build_network_health(evidence: &EvidenceSnapshot) -> NetworkHealth {
         dns_working,
         dns_error,
         interfaces_up: evidence.network.interfaces.len(),
-        cluster_dns_reachable: probes
-            .map(|p| p.cluster_dns_reachable)
-            .unwrap_or(false),
+        cluster_dns_reachable: probes.map(|p| p.cluster_dns_reachable).unwrap_or(false),
     }
 }
 
@@ -392,7 +395,12 @@ fn df_usage(path: &str) -> u8 {
         .args(["-P", path])
         .output()
         .ok()
-        .and_then(|o| String::from_utf8_lossy(&o.stdout).lines().nth(1).map(String::from))
+        .and_then(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .nth(1)
+                .map(String::from)
+        })
         .and_then(|line| {
             let parts: Vec<&str> = line.split_whitespace().collect();
             parts
@@ -426,7 +434,12 @@ fn build_recommendations(
 
     if *level == HealthLevel::Degraded || *level == HealthLevel::Unhealthy {
         if let Some(rt) = runtime {
-            for unit in rt.units.iter().filter(|u| u.active_state == "failed").take(3) {
+            for unit in rt
+                .units
+                .iter()
+                .filter(|u| u.active_state == "failed")
+                .take(3)
+            {
                 out.push(Recommendation {
                     priority: 1,
                     category: "systemd".into(),

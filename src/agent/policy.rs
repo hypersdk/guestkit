@@ -344,7 +344,10 @@ impl AgentPolicy {
             {
                 denied("inventory")
             }
-            GetMetrics | GetCpuStats | GetMemoryStats | GetPerformanceSummary
+            GetMetrics
+            | GetCpuStats
+            | GetMemoryStats
+            | GetPerformanceSummary
             | GetPerformanceHistory
                 if !self.capabilities.telemetry =>
             {
@@ -373,7 +376,9 @@ impl AgentPolicy {
                 denied("migration assessment")
             }
             MigrationRepair if !self.actions.migration.repair => denied("migration repair"),
-            PackagesInventory if !self.capabilities.packages.inventory => denied("package inventory"),
+            PackagesInventory if !self.capabilities.packages.inventory => {
+                denied("package inventory")
+            }
             PackagesUpdates if !self.capabilities.packages.updates => denied("package updates"),
             PackagesInstall if !self.capabilities.packages.install => denied("package install"),
             CertificatesInventory if !self.capabilities.certificates => {
@@ -403,7 +408,10 @@ impl AgentPolicy {
             (caps.events, "events"),
             (caps.network_test, "network_test"),
             (caps.file_ops.enabled, "file_ops"),
-            (caps.storage_ops.rescan || caps.storage_ops.trim, "storage_ops"),
+            (
+                caps.storage_ops.rescan || caps.storage_ops.trim,
+                "storage_ops",
+            ),
             (self.actions.restart_unit.enabled, "service_control"),
             (self.actions.run_shell_command.enabled, "shell"),
             (self.actions.migration.assess, "migration"),
@@ -442,10 +450,18 @@ mod tests {
         assert!(!p.capabilities.file_ops.enabled);
         assert!(!p.capabilities.storage_ops.expand);
         assert!(!p.security.require_request_expiry);
-        assert!(p.authorize(&RpcMethod::GetCpuStats, "guestkit.getCpuStats").is_ok());
-        assert!(p.authorize(&RpcMethod::FileRead, "guestkit.fileRead").is_err());
-        assert!(p.authorize(&RpcMethod::StorageExpand, "guestkit.storageExpand").is_err());
-        assert!(p.authorize(&RpcMethod::StorageRescan, "guestkit.storageRescan").is_ok());
+        assert!(p
+            .authorize(&RpcMethod::GetCpuStats, "guestkit.getCpuStats")
+            .is_ok());
+        assert!(p
+            .authorize(&RpcMethod::FileRead, "guestkit.fileRead")
+            .is_err());
+        assert!(p
+            .authorize(&RpcMethod::StorageExpand, "guestkit.storageExpand")
+            .is_err());
+        assert!(p
+            .authorize(&RpcMethod::StorageRescan, "guestkit.storageRescan")
+            .is_ok());
     }
 
     #[test]
@@ -489,7 +505,10 @@ mod tests {
             .authorize(&RpcMethod::PackagesUpdates, "guestkit.packages.updates")
             .is_ok());
         assert!(p
-            .authorize(&RpcMethod::CertificatesInventory, "guestkit.certificates.inventory")
+            .authorize(
+                &RpcMethod::CertificatesInventory,
+                "guestkit.certificates.inventory"
+            )
             .is_ok());
         assert!(p
             .authorize(&RpcMethod::UsersInventory, "guestkit.users.inventory")

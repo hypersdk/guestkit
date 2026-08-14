@@ -40,7 +40,8 @@ fn read_until(host: &mut UnixStream, pred: impl Fn(&Value) -> bool) -> Value {
 async fn subscribe_then_heartbeat_push_interleaves_with_requests() {
     let (agent_sock, host_sock) = UnixStream::pair().unwrap();
     let mut host = host_sock;
-    host.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
+    host.set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
 
     let transport = FramedTransport::from_parts(
         Box::new(agent_sock.try_clone().unwrap()),
@@ -100,7 +101,10 @@ async fn subscribe_then_heartbeat_push_interleaves_with_requests() {
     assert!(hb["params"]["agent_state"].as_str().is_some());
 
     // Request/response still works while pushes are flowing.
-    send_request(&mut host, r#"{"jsonrpc":"2.0","method":"guestkit.ping","id":2}"#);
+    send_request(
+        &mut host,
+        r#"{"jsonrpc":"2.0","method":"guestkit.ping","id":2}"#,
+    );
     let pong = tokio::task::spawn_blocking({
         let mut host = host.try_clone().unwrap();
         move || read_until(&mut host, |v| v.get("id") == Some(&Value::from(2)))
@@ -130,9 +134,7 @@ async fn subscribe_then_heartbeat_push_interleaves_with_requests() {
 async fn subscribe_denied_without_push_capable_channel() {
     let handler = RequestHandler::new();
     // No channel context (e.g. local unix socket): subscription refused.
-    let resp = handler.handle(
-        br#"{"jsonrpc":"2.0","method":"guestkit.subscribeEvents","id":1}"#,
-    );
+    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.subscribeEvents","id":1}"#);
     let err = resp.error.expect("expected error");
     assert_eq!(err.code, -32001); // CapabilityDenied
 }

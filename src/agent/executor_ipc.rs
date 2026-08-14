@@ -36,10 +36,13 @@ pub fn spawn_executor_server() -> Result<()> {
     if Path::new(&path).exists() {
         fs::remove_file(&path).ok();
     }
-    let parent = Path::new(&path).parent().unwrap_or(Path::new("/var/run/zyvor"));
+    let parent = Path::new(&path)
+        .parent()
+        .unwrap_or(Path::new("/var/run/zyvor"));
     fs::create_dir_all(parent).ok();
 
-    let listener = UnixListener::bind(&path).with_context(|| format!("bind executor socket {path}"))?;
+    let listener =
+        UnixListener::bind(&path).with_context(|| format!("bind executor socket {path}"))?;
     secure_executor_socket(&path);
     log::info!("Zyvor guest agent executor listening on {path}");
 
@@ -208,7 +211,11 @@ fn dispatch(executor: &crate::agent::executor::Executor, req: &ExecRequest) -> E
                     error: Some(format!("refused expansion command: {command}")),
                 }
             } else {
-                match std::process::Command::new("sh").arg("-c").arg(command).status() {
+                match std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(command)
+                    .status()
+                {
                     Ok(s) if s.success() => ExecResponse {
                         ok: true,
                         result: Some(Value::String(format!("expanded via {command}"))),

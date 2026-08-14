@@ -5,17 +5,15 @@ use guestkit_agent_protocol::{JournalEntrySummary, JournalSlice};
 use regex::Regex;
 use std::collections::HashMap;
 
-static DIGIT_RE: once_cell::sync::Lazy<Regex> =
-    once_cell::sync::Lazy::new(|| Regex::new(r"\b\d+\b").unwrap_or_else(|_| Regex::new("").unwrap()));
+static DIGIT_RE: once_cell::sync::Lazy<Regex> = once_cell::sync::Lazy::new(|| {
+    Regex::new(r"\b\d+\b").unwrap_or_else(|_| Regex::new("").unwrap())
+});
 
 /// Bucket journal messages into normalized patterns and count top-N.
 pub fn analyze_journal(slice: &JournalSlice, top_n: usize) -> JournalSlice {
     let mut out = slice.clone();
-    let error_entries: Vec<&JournalEntrySummary> = slice
-        .entries
-        .iter()
-        .filter(|e| e.priority <= 3)
-        .collect();
+    let error_entries: Vec<&JournalEntrySummary> =
+        slice.entries.iter().filter(|e| e.priority <= 3).collect();
 
     out.error_count = error_entries.len();
 

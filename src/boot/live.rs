@@ -5,14 +5,8 @@ use guestkit_agent_protocol::{BootAnalysis, BootUnitTiming};
 use std::process::Command;
 
 pub fn collect_boot_analysis() -> BootAnalysis {
-    let time_out = Command::new("systemd-analyze")
-        .arg("time")
-        .output()
-        .ok();
-    let blame_out = Command::new("systemd-analyze")
-        .arg("blame")
-        .output()
-        .ok();
+    let time_out = Command::new("systemd-analyze").arg("time").output().ok();
+    let blame_out = Command::new("systemd-analyze").arg("blame").output().ok();
     let chain_out = Command::new("systemd-analyze")
         .arg("critical-chain")
         .output()
@@ -42,10 +36,7 @@ pub fn collect_boot_analysis() -> BootAnalysis {
             if parts.len() >= 2 {
                 let time_ms = parse_time_token(parts[0]).unwrap_or(0);
                 let name = parts[1..].join(" ");
-                analysis.slow_units.push(BootUnitTiming {
-                    name,
-                    time_ms,
-                });
+                analysis.slow_units.push(BootUnitTiming { name, time_ms });
             }
         }
     }

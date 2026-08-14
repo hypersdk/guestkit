@@ -128,8 +128,8 @@ pub fn pre_migration_check(target: &str) -> Result<ReadinessToken> {
     let assessment = super::score::assess_migration(&evidence, &boot_report, target, true);
     let baseline = capture_baseline(BaselinePhase::PreMigration, target)?;
 
-    let expires_at = (chrono::Utc::now() + chrono::Duration::seconds(TOKEN_VALIDITY_SECS))
-        .to_rfc3339();
+    let expires_at =
+        (chrono::Utc::now() + chrono::Duration::seconds(TOKEN_VALIDITY_SECS)).to_rfc3339();
     Ok(ReadinessToken {
         token: sign_token(assessment.overall_score, &baseline.id, &expires_at)?,
         score: assessment.overall_score,

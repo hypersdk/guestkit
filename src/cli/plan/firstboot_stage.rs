@@ -60,10 +60,7 @@ pub fn stage_service_offline(
 }
 
 /// Prefer chroot when it works; otherwise stage the command for first boot.
-pub fn apply_or_stage_command(
-    g: &mut crate::guestfs::Guestfs,
-    ce: &CommandExec,
-) -> Result<bool> {
+pub fn apply_or_stage_command(g: &mut crate::guestfs::Guestfs, ce: &CommandExec) -> Result<bool> {
     // Offline-safe systemctl enable/disable without chroot.
     if let Some(action) = parse_systemctl_enable_disable(&ce.command) {
         match action {

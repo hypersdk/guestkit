@@ -116,8 +116,7 @@ impl PlanPreview {
         } else if Self::is_live_only(&op.op_type) {
             println!(
                 "  {}",
-                "offline apply: skipped (needs running guest / live executor)"
-                    .yellow()
+                "offline apply: skipped (needs running guest / live executor)".yellow()
             );
         }
 

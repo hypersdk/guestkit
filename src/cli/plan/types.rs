@@ -218,9 +218,7 @@ impl DriverInject {
         if let Ok(base) = std::env::var("GUESTKIT_VIRTIO_WIN") {
             let candidates = [
                 PathBuf::from(&base).join(&self.driver_name),
-                PathBuf::from(&base)
-                    .join(&self.driver_name)
-                    .join("amd64"),
+                PathBuf::from(&base).join(&self.driver_name).join("amd64"),
                 PathBuf::from(&base)
                     .join(&self.driver_name)
                     .join("2k22")
@@ -655,7 +653,7 @@ mod tests {
         let pkg_install = PackageInstall {
             packages: vec!["fail2ban".to_string(), "aide".to_string()],
             estimated_size: Some("10MB".to_string()),
-                host_cache: None,
+            host_cache: None,
         };
 
         assert_eq!(pkg_install.packages.len(), 2);
@@ -766,8 +764,8 @@ mod tests {
             command: "apt-get update".to_string(),
             expected_exit: 0,
             timeout: Some(300),
-                interpreter: None,
-            };
+            interpreter: None,
+        };
 
         assert_eq!(cmd.command, "apt-get update");
         assert_eq!(cmd.expected_exit, 0);

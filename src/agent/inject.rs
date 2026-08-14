@@ -209,10 +209,11 @@ pub fn inject_windows_agent(
     }
     if dry_run {
         println!("Dry run — would inject Windows agent:");
-        println!("  binary: {} → C:\\guestkit\\guestkitd.exe", binary.display());
         println!(
-            "  register service {WIN_SERVICE_NAME} (auto-start, LocalSystem, --service)"
+            "  binary: {} → C:\\guestkit\\guestkitd.exe",
+            binary.display()
         );
+        println!("  register service {WIN_SERVICE_NAME} (auto-start, LocalSystem, --service)");
         if let Some(d) = virtio_serial_driver {
             println!("  preinstall virtio-serial driver from {}", d.display());
         }
@@ -305,14 +306,8 @@ pub fn inject_windows_agent(
         ),
     ];
     for (name, ty, data) in values {
-        crate::guestfs::hivex_ffi::set_registry_value(
-            hive_tmp.path(),
-            &subpath,
-            name,
-            ty,
-            data,
-        )
-        .map_err(|e| anyhow::anyhow!("set {name}: {e}"))?;
+        crate::guestfs::hivex_ffi::set_registry_value(hive_tmp.path(), &subpath, name, ty, data)
+            .map_err(|e| anyhow::anyhow!("set {name}: {e}"))?;
     }
     // The GuestKit agent owns the QGA virtio-serial channel; a stock
     // qemu-guest-agent would contend for the same port. Disable known stock QGA
@@ -393,7 +388,9 @@ pub fn inject_windows_driver_dir(
             .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| anyhow::anyhow!("driver filename"))?;
-        let src = path.to_str().ok_or_else(|| anyhow::anyhow!("driver path"))?;
+        let src = path
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("driver path"))?;
         g.upload(src, &format!("{guest_dir}/{name}"))?;
         if ext == "sys" {
             // Kernel driver binary is loaded from System32\drivers.
@@ -405,7 +402,10 @@ pub fn inject_windows_driver_dir(
         }
     }
     if copied == 0 {
-        anyhow::bail!("no .inf/.sys/.cat driver files found in {}", driver_dir.display());
+        anyhow::bail!(
+            "no .inf/.sys/.cat driver files found in {}",
+            driver_dir.display()
+        );
     }
 
     // Add the driver directory to DevicePath so PnP finds the INF on next boot.
@@ -426,7 +426,9 @@ pub fn inject_windows_driver_dir(
         &subpath,
         "DevicePath",
         "expand_sz",
-        &serde_json::json!(format!("%SystemRoot%\\inf;%SystemRoot%\\Drivers\\{dest_name}")),
+        &serde_json::json!(format!(
+            "%SystemRoot%\\inf;%SystemRoot%\\Drivers\\{dest_name}"
+        )),
     )
     .map_err(|e| anyhow::anyhow!("set DevicePath: {e}"))?;
     g.upload_hive(hive_host, &sw_hive)?;
@@ -440,8 +442,8 @@ pub fn inject_windows_driver_dir(
     // parsed from the INF, so Windows loads the driver for the device HWIDs at
     // boot regardless of PnP install state. This is the reliable offline path.
     if let Some(inf) = find_inf(driver_dir)? {
-        let meta = parse_driver_inf(&inf)
-            .with_context(|| format!("parse INF {}", inf.display()))?;
+        let meta =
+            parse_driver_inf(&inf).with_context(|| format!("parse INF {}", inf.display()))?;
         bind_driver_system_hive(g, root, &meta, verbose)?;
     } else if verbose {
         println!("  no .inf found; skipped CriticalDeviceDatabase binding");
@@ -470,7 +472,9 @@ struct DriverInf {
 fn find_inf(dir: &Path) -> Result<Option<PathBuf>> {
     for entry in fs::read_dir(dir).with_context(|| format!("read {}", dir.display()))? {
         let p = entry?.path();
-        if p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("inf"))
+        if p.extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.eq_ignore_ascii_case("inf"))
             == Some(true)
         {
             return Ok(Some(p));
@@ -587,7 +591,9 @@ fn bind_driver_system_hive(
     let sys_hive = g.inspect_get_windows_system_hive(root)?;
     let hive_tmp = tempfile::NamedTempFile::new()?;
     let hive_path = hive_tmp.path();
-    let hive_host = hive_path.to_str().ok_or_else(|| anyhow::anyhow!("temp hive path"))?;
+    let hive_host = hive_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("temp hive path"))?;
     g.download_hive(&sys_hive, hive_host)?;
 
     // 1. Driver service key: HKLM\SYSTEM\ControlSet001\Services\<service>.
@@ -604,7 +610,10 @@ fn bind_driver_system_hive(
         (
             "DisplayName",
             "sz",
-            json!(meta.display_name.clone().unwrap_or_else(|| meta.service.clone())),
+            json!(meta
+                .display_name
+                .clone()
+                .unwrap_or_else(|| meta.service.clone())),
         ),
     ];
     for (n, t, d) in &svc_vals {
@@ -613,10 +622,16 @@ fn bind_driver_system_hive(
     }
     // KMDF binding so a WDF driver actually starts (Parameters\Wdf).
     if let Some(ver) = &meta.kmdf_version {
-        let wdf: Vec<String> = ["ControlSet001", "Services", &meta.service, "Parameters", "Wdf"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let wdf: Vec<String> = [
+            "ControlSet001",
+            "Services",
+            &meta.service,
+            "Parameters",
+            "Wdf",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         set_registry_value(hive_path, &wdf, "KmdfLibraryVersion", "sz", &json!(ver))
             .map_err(|e| anyhow::anyhow!("KmdfLibraryVersion: {e}"))?;
     }
@@ -671,8 +686,12 @@ fn bind_driver_system_hive(
             .map_err(|e| anyhow::anyhow!("delete device nodes: {e}"))?;
     // If nothing was deleted (device key absent), fall back to the reinstall flag.
     let reinstalled = if deleted == 0 {
-        crate::guestfs::hivex_ffi::set_configflags_reinstall(hive_path, "ControlSet001", &needle_refs)
-            .map_err(|e| anyhow::anyhow!("set ConfigFlags reinstall: {e}"))?
+        crate::guestfs::hivex_ffi::set_configflags_reinstall(
+            hive_path,
+            "ControlSet001",
+            &needle_refs,
+        )
+        .map_err(|e| anyhow::anyhow!("set ConfigFlags reinstall: {e}"))?
     } else {
         0
     };

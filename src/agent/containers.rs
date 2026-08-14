@@ -126,9 +126,21 @@ fn cli_containers(cmd: &str) -> Vec<ContainerSummary> {
         let Ok(v) = serde_json::from_str::<Value>(line) else {
             continue;
         };
-        let id = v.get("ID").and_then(Value::as_str).unwrap_or("").to_string();
-        let name = v.get("Names").and_then(Value::as_str).unwrap_or("").to_string();
-        let image = v.get("Image").and_then(Value::as_str).unwrap_or("").to_string();
+        let id = v
+            .get("ID")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let name = v
+            .get("Names")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let image = v
+            .get("Image")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
         let state = v
             .get("State")
             .or_else(|| v.get("Status"))
@@ -137,13 +149,12 @@ fn cli_containers(cmd: &str) -> Vec<ContainerSummary> {
             .to_string();
         // Deep flags require an inspect; do it only for running containers to
         // bound cost.
-        let (privileged, host_network, host_path_mounts) = if state.contains("running")
-            || state.contains("Up")
-        {
-            inspect_flags(cmd, &id)
-        } else {
-            (false, false, Vec::new())
-        };
+        let (privileged, host_network, host_path_mounts) =
+            if state.contains("running") || state.contains("Up") {
+                inspect_flags(cmd, &id)
+            } else {
+                (false, false, Vec::new())
+            };
         containers.push(ContainerSummary {
             id: id.chars().take(12).collect(),
             name,
@@ -198,10 +209,9 @@ fn kubernetes_info() -> Option<Value> {
         return None;
     }
     // crictl talks to the CRI socket; count running pods/containers.
-    let pods = crictl(&["pods", "-q"])
-        .map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
-    let containers = crictl(&["ps", "-q"])
-        .map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
+    let pods = crictl(&["pods", "-q"]).map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
+    let containers =
+        crictl(&["ps", "-q"]).map(|s| s.lines().filter(|l| !l.trim().is_empty()).count());
     let distribution = if Path::new("/var/lib/rancher/k3s").exists() {
         "k3s"
     } else if Path::new("/var/lib/rancher/rke2").exists() {

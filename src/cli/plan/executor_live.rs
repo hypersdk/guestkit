@@ -69,7 +69,9 @@ impl LivePlanExecutor {
         }
         let stripped = path
             .trim_start_matches('/')
-            .trim_start_matches(|c: char| c.is_ascii_alphabetic() && path.len() > 1 && &path[1..2] == ":")
+            .trim_start_matches(|c: char| {
+                c.is_ascii_alphabetic() && path.len() > 1 && &path[1..2] == ":"
+            })
             .trim_start_matches(":")
             .trim_start_matches('\\');
         self.root.join(stripped)
@@ -158,8 +160,7 @@ impl LivePlanExecutor {
             match result {
                 Ok(true) => {
                     let validation = self.run_op_validation(op);
-                    let validation_failed =
-                        validation.as_ref().map(|v| !v.passed).unwrap_or(false);
+                    let validation_failed = validation.as_ref().map(|v| !v.passed).unwrap_or(false);
                     outcome.validation = validation;
                     if validation_failed {
                         outcome.status = OpStatus::Failed;
@@ -282,9 +283,9 @@ impl LivePlanExecutor {
                 }
                 #[cfg(not(unix))]
                 {
-                    fs::metadata(&path).ok().map(|m| {
-                        format!("readonly={}", m.permissions().readonly())
-                    })
+                    fs::metadata(&path)
+                        .ok()
+                        .map(|m| format!("readonly={}", m.permissions().readonly()))
                 }
             }
             OperationType::DirectoryCreate(dc) => {
@@ -450,10 +451,7 @@ impl LivePlanExecutor {
                 let status = if let Some(interp) = &ce.interpreter {
                     let mut parts = interp.split_whitespace();
                     let program = parts.next().unwrap_or("sh");
-                    Command::new(program)
-                        .args(parts)
-                        .arg(&ce.command)
-                        .status()
+                    Command::new(program).args(parts).arg(&ce.command).status()
                 } else if cfg!(windows) {
                     Command::new("powershell")
                         .args(["-NoProfile", "-NonInteractive", "-Command", &ce.command])
@@ -546,7 +544,11 @@ impl LivePlanExecutor {
                         let _ = Command::new("sc.exe").args(["start", &so.service]).status();
                     }
                     if let Some(state) = &so.state {
-                        let start_mode = if state == "enabled" { "auto" } else { "disabled" };
+                        let start_mode = if state == "enabled" {
+                            "auto"
+                        } else {
+                            "disabled"
+                        };
                         let _ = Command::new("sc.exe")
                             .args(["config", &so.service, "start=", start_mode])
                             .status();
@@ -759,7 +761,9 @@ fn describe_change(op: &Operation) -> String {
         OperationType::SelinuxMode(sm) => {
             format!("SELinux {} -> {} in {}", sm.current, sm.target, sm.file)
         }
-        OperationType::PackageInstall(pi) => format!("install packages: {}", pi.packages.join(", ")),
+        OperationType::PackageInstall(pi) => {
+            format!("install packages: {}", pi.packages.join(", "))
+        }
         OperationType::ServiceOperation(so) => format!("service op on {}", so.service),
         OperationType::RegistryEdit(re) => {
             format!("registry set {}\\{} = {}", re.key, re.value, re.new_data)
@@ -804,9 +808,7 @@ fn backup_path_for(op: &Operation, rollback_dir: &Path) -> Option<String> {
         OperationType::Symlink(sl) => Some(&sl.link_path),
         _ => None,
     }?;
-    let backup_name = file
-        .trim_start_matches('/')
-        .replace(['/', '\\', ':'], "_");
+    let backup_name = file.trim_start_matches('/').replace(['/', '\\', ':'], "_");
     Some(rollback_dir.join(backup_name).display().to_string())
 }
 
@@ -917,7 +919,10 @@ mod tests {
         assert!(result.outcomes[0].before_state.is_some());
         assert!(result.outcomes[0].planned_change.contains("/fstab"));
         // Nothing was modified.
-        assert_eq!(fs::read_to_string(tmp.path().join("fstab")).unwrap(), "old-line\n");
+        assert_eq!(
+            fs::read_to_string(tmp.path().join("fstab")).unwrap(),
+            "old-line\n"
+        );
     }
 
     #[test]

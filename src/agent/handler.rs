@@ -348,7 +348,10 @@ impl RequestHandler {
     }
 
     fn migration_assess(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
-        let target = params.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
+        let target = params
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or("kvm");
         match Self::assess_live(target) {
             Ok((_, assessment)) => {
                 JsonRpcResponse::success(id, serde_json::to_value(assessment).unwrap_or(json!({})))
@@ -362,7 +365,10 @@ impl RequestHandler {
     }
 
     fn migration_plan(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
-        let target = params.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
+        let target = params
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or("kvm");
         let include_destructive = params
             .get("include_destructive")
             .and_then(Value::as_bool)
@@ -402,8 +408,14 @@ impl RequestHandler {
     /// `migration.repair_destructive` policy flag.
     fn migration_repair(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
         let policy = crate::agent::policy::AgentPolicy::load();
-        let dry_run = params.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
-        let confirmed = params.get("confirm").and_then(Value::as_bool).unwrap_or(false);
+        let dry_run = params
+            .get("dry_run")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        let confirmed = params
+            .get("confirm")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         let include_destructive = params
             .get("include_destructive")
             .and_then(Value::as_bool)
@@ -440,7 +452,10 @@ impl RequestHandler {
                 }
             }
         } else {
-            let target = params.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
+            let target = params
+                .get("target")
+                .and_then(|v| v.as_str())
+                .unwrap_or("kvm");
             match Self::assess_live(target) {
                 Ok((evidence, assessment)) => {
                     crate::migration::MigrationRepairPlanner::from_assessment(
@@ -496,7 +511,10 @@ impl RequestHandler {
     }
 
     fn migration_pre_check(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
-        let target = params.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
+        let target = params
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or("kvm");
         match crate::migration::workflow::pre_migration_check(target) {
             Ok(token) => {
                 JsonRpcResponse::success(id, serde_json::to_value(token).unwrap_or(json!({})))
@@ -561,7 +579,10 @@ impl RequestHandler {
             Some("post_migration") => crate::migration::baseline::BaselinePhase::PostMigration,
             _ => crate::migration::baseline::BaselinePhase::PreMigration,
         };
-        let target = params.get("target").and_then(|v| v.as_str()).unwrap_or("kvm");
+        let target = params
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or("kvm");
         match crate::migration::baseline::capture_baseline(phase, target) {
             Ok(baseline) => JsonRpcResponse::success(
                 id,
@@ -697,9 +718,7 @@ impl RequestHandler {
 
     fn time_sync_now(&self, id: Option<Value>) -> JsonRpcResponse {
         if crate::agent::executor_ipc::executor_available() {
-            if let Ok(result) =
-                crate::agent::executor_ipc::call_executor("time_sync", json!({}))
-            {
+            if let Ok(result) = crate::agent::executor_ipc::call_executor("time_sync", json!({})) {
                 return JsonRpcResponse::success(id, json!({ "message": result }));
             }
         }
@@ -711,7 +730,10 @@ impl RequestHandler {
 
     fn power_action(&self, id: Option<Value>, params: &Value, action: &str) -> JsonRpcResponse {
         let policy = crate::agent::policy::AgentPolicy::load();
-        let confirmed = params.get("confirm").and_then(Value::as_bool).unwrap_or(false);
+        let confirmed = params
+            .get("confirm")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         if policy.actions.reboot_vm.require_approval && !confirmed {
             return JsonRpcResponse::from_agent_error(
                 id,
@@ -720,7 +742,10 @@ impl RequestHandler {
                 )),
             );
         }
-        let delay_secs = params.get("delay_secs").and_then(Value::as_u64).unwrap_or(1);
+        let delay_secs = params
+            .get("delay_secs")
+            .and_then(Value::as_u64)
+            .unwrap_or(1);
         if crate::agent::executor_ipc::executor_available() {
             if let Ok(result) = crate::agent::executor_ipc::call_executor(
                 "power_action",
@@ -1111,7 +1136,9 @@ impl RequestHandler {
 
     fn get_guest_health(&self, id: Option<Value>) -> JsonRpcResponse {
         match crate::health::build_guest_health_live() {
-            Ok(health) => JsonRpcResponse::success(id, serde_json::to_value(health).unwrap_or(json!({}))),
+            Ok(health) => {
+                JsonRpcResponse::success(id, serde_json::to_value(health).unwrap_or(json!({})))
+            }
             Err(e) => JsonRpcResponse::error(id, RpcErrorCode::InternalError, e.to_string()),
         }
     }
@@ -1147,14 +1174,8 @@ impl RequestHandler {
     }
 
     fn get_journal_slice(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
-        let unit = params
-            .get("unit")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let limit = params
-            .get("limit")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(200) as usize;
+        let unit = params.get("unit").and_then(|v| v.as_str()).unwrap_or("");
+        let limit = params.get("limit").and_then(|v| v.as_u64()).unwrap_or(200) as usize;
         let boot = params
             .get("boot")
             .and_then(|v| v.as_str())
@@ -1174,10 +1195,7 @@ impl RequestHandler {
     }
 
     fn get_systemd_unit(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
-        let unit = params
-            .get("unit")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let unit = params.get("unit").and_then(|v| v.as_str()).unwrap_or("");
         if unit.is_empty() {
             return JsonRpcResponse::error(id, RpcErrorCode::InvalidParams, "unit required");
         }
@@ -1214,14 +1232,8 @@ impl RequestHandler {
     fn get_systemd_events(&self, id: Option<Value>, params: &Value) -> JsonRpcResponse {
         #[cfg(target_os = "linux")]
         {
-            let cursor = params
-                .get("cursor")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            let limit = params
-                .get("limit")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(100) as usize;
+            let cursor = params.get("cursor").and_then(|v| v.as_u64()).unwrap_or(0);
+            let limit = params.get("limit").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
             let (next_cursor, events) = if cursor > 0 {
                 crate::collectors::dbus::systemd_events::get_events_since(cursor)
             } else {

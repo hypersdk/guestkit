@@ -316,7 +316,8 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
             "mig-serial-console",
             "Enable serial console on all kernel entries",
             OperationType::CommandExec(CommandExec {
-                command: "grubby --update-kernel=ALL --args='console=ttyS0,115200 console=tty0'".into(),
+                command: "grubby --update-kernel=ALL --args='console=ttyS0,115200 console=tty0'"
+                    .into(),
                 expected_exit: 0,
                 timeout: Some(60),
                 interpreter: None,
@@ -613,15 +614,17 @@ mod tests {
     fn destructive_ops_skipped_by_default() {
         let report = boot_report();
         let mut ev = crate::migration::checks::tests_support::windows_evidence(true);
-        ev.windows.as_mut().unwrap().ghost_nics =
-            vec![crate::evidence::snapshot::GhostNicEntry {
-                instance_id: "PCI\\VEN_15AD".into(),
-                description: "vmxnet3".into(),
-            }];
+        ev.windows.as_mut().unwrap().ghost_nics = vec![crate::evidence::snapshot::GhostNicEntry {
+            instance_id: "PCI\\VEN_15AD".into(),
+            description: "vmxnet3".into(),
+        }];
         let assessment = assess_migration(&ev, &report, "kvm", false);
         let (plan, notes) =
             MigrationRepairPlanner::from_assessment(&assessment, &ev, &RepairOptions::default());
-        assert!(!plan.operations.iter().any(|o| o.id.starts_with("mig-ghost-nic")));
+        assert!(!plan
+            .operations
+            .iter()
+            .any(|o| o.id.starts_with("mig-ghost-nic")));
         assert!(notes.iter().any(|n| n.contains("ghost-NIC")));
 
         let (plan2, _) = MigrationRepairPlanner::from_assessment(
@@ -632,7 +635,10 @@ mod tests {
                 virtio_win_dir: None,
             },
         );
-        assert!(plan2.operations.iter().any(|o| o.id.starts_with("mig-ghost-nic")));
+        assert!(plan2
+            .operations
+            .iter()
+            .any(|o| o.id.starts_with("mig-ghost-nic")));
     }
 
     #[test]

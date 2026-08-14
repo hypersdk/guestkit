@@ -3,9 +3,7 @@
 
 use crate::agent::policy::AgentPolicy;
 use anyhow::{bail, Context, Result};
-use guestkit_agent_protocol::{
-    RemediationActionResult, RemediationResult,
-};
+use guestkit_agent_protocol::{RemediationActionResult, RemediationResult};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::process::Command;
@@ -101,7 +99,10 @@ impl Executor {
             if success {
                 Ok(format!("{op} {unit} ok"))
             } else {
-                bail!("sc {op} {unit}: {}", String::from_utf8_lossy(&output.stderr))
+                bail!(
+                    "sc {op} {unit}: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )
             }
         }
         #[cfg(not(target_os = "windows"))]
@@ -187,10 +188,7 @@ impl Executor {
                 }
             })
             .map_err(|e| anyhow::anyhow!("{e}"));
-        let success = result
-            .as_ref()
-            .map(|r| r.ends_with(" ok"))
-            .unwrap_or(false);
+        let success = result.as_ref().map(|r| r.ends_with(" ok")).unwrap_or(false);
         self.audit(
             &format!("systemctl_{op}"),
             unit,

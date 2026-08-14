@@ -43,7 +43,10 @@ fn general_checks(ev: &EvidenceSnapshot, _ctx: &AssessContext) -> Vec<Check> {
             "OS identification",
             Cat::Boot,
             8.0,
-            format!("{} {} ({})", ev.os.distribution, ev.os.version, ev.os.os_type),
+            format!(
+                "{} {} ({})",
+                ev.os.distribution, ev.os.version, ev.os.os_type
+            ),
         )
     });
 
@@ -115,12 +118,7 @@ fn general_checks(ev: &EvidenceSnapshot, _ctx: &AssessContext) -> Vec<Check> {
     }
 
     // MIG-G-005: competing hypervisor tooling
-    let mut remnants: Vec<String> = ev
-        .vm_tools
-        .detected
-        .iter()
-        .map(|t| t.to_string())
-        .collect();
+    let mut remnants: Vec<String> = ev.vm_tools.detected.iter().map(|t| t.to_string()).collect();
     if let Some(win) = &ev.windows {
         remnants.extend(win.hypervisor_remnants.iter().cloned());
     }
@@ -130,7 +128,10 @@ fn general_checks(ev: &EvidenceSnapshot, _ctx: &AssessContext) -> Vec<Check> {
         .into_iter()
         .filter(|t| {
             let t = t.to_lowercase();
-            t.contains("vmware") || t.contains("hyper-v") || t.contains("hyperv") || t.contains("xen")
+            t.contains("vmware")
+                || t.contains("hyper-v")
+                || t.contains("hyperv")
+                || t.contains("xen")
         })
         .collect();
     out.push(if foreign.is_empty() {
@@ -165,7 +166,9 @@ fn linux_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
     // BOOT-006, which only proves module availability).
     let ram_mods = &ev.boot.initramfs_modules;
     if !ram_mods.is_empty() {
-        let has_blk = ram_mods.iter().any(|m| m == "virtio_blk" || m == "virtio_scsi");
+        let has_blk = ram_mods
+            .iter()
+            .any(|m| m == "virtio_blk" || m == "virtio_scsi");
         out.push(if has_blk {
             Check::pass(
                 "MIG-L-001",
@@ -185,20 +188,54 @@ fn linux_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
                 Some(Hint::AddVirtioToInitramfs),
             )
         });
-    } else if let Some(wrapped) =
-        ctx.boot_check("BOOT-006", "MIG-L-001", Cat::Driver, 10.0, Some(Hint::AddVirtioToInitramfs))
-    {
+    } else if let Some(wrapped) = ctx.boot_check(
+        "BOOT-006",
+        "MIG-L-001",
+        Cat::Driver,
+        10.0,
+        Some(Hint::AddVirtioToInitramfs),
+    ) {
         // Fall back to module availability when initramfs contents unknown.
         out.push(wrapped);
     }
 
     // Wrapped boot checks (probes already ran; recategorized + repair hints).
     for (boot_id, mig_id, cat, weight, hint) in [
-        ("BOOT-001", "MIG-L-002", Cat::Storage, 8.0, Some(Hint::ConvertFstabToUuid)),
-        ("BOOT-003", "MIG-L-003", Cat::Boot, 8.0, Some(Hint::AddVirtioToInitramfs)),
-        ("BOOT-004", "MIG-L-004", Cat::Boot, 8.0, Some(Hint::RepairBootloader)),
-        ("BOOT-005", "MIG-L-005", Cat::Boot, 5.0, Some(Hint::RepairBootloader)),
-        ("BOOT-009", "MIG-L-006", Cat::Security, 3.0, Some(Hint::ScheduleSelinuxRelabel)),
+        (
+            "BOOT-001",
+            "MIG-L-002",
+            Cat::Storage,
+            8.0,
+            Some(Hint::ConvertFstabToUuid),
+        ),
+        (
+            "BOOT-003",
+            "MIG-L-003",
+            Cat::Boot,
+            8.0,
+            Some(Hint::AddVirtioToInitramfs),
+        ),
+        (
+            "BOOT-004",
+            "MIG-L-004",
+            Cat::Boot,
+            8.0,
+            Some(Hint::RepairBootloader),
+        ),
+        (
+            "BOOT-005",
+            "MIG-L-005",
+            Cat::Boot,
+            5.0,
+            Some(Hint::RepairBootloader),
+        ),
+        (
+            "BOOT-009",
+            "MIG-L-006",
+            Cat::Security,
+            3.0,
+            Some(Hint::ScheduleSelinuxRelabel),
+        ),
     ] {
         if let Some(check) = ctx.boot_check(boot_id, mig_id, cat, weight, hint) {
             out.push(check);
@@ -376,9 +413,13 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
         ("BOOT-012", "MIG-W-004", 6.0),
         ("BOOT-014", "MIG-W-011", 4.0),
     ] {
-        if let Some(check) =
-            ctx.boot_check(boot_id, mig_id, Cat::Boot, weight, Some(Hint::RepairBootloader))
-        {
+        if let Some(check) = ctx.boot_check(
+            boot_id,
+            mig_id,
+            Cat::Boot,
+            weight,
+            Some(Hint::RepairBootloader),
+        ) {
             out.push(check);
         }
     }
@@ -437,7 +478,13 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
 
     // MIG-W-006: ghost NICs
     out.push(if win.ghost_nics.is_empty() {
-        Check::pass("MIG-W-006", "Ghost NICs", Cat::Network, 3.0, "no disconnected NICs")
+        Check::pass(
+            "MIG-W-006",
+            "Ghost NICs",
+            Cat::Network,
+            3.0,
+            "no disconnected NICs",
+        )
     } else {
         Check::fail(
             "MIG-W-006",
@@ -450,7 +497,11 @@ fn windows_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
                 win.ghost_nics.len()
             ),
             Some(Hint::RemoveGhostNics {
-                instance_ids: win.ghost_nics.iter().map(|g| g.instance_id.clone()).collect(),
+                instance_ids: win
+                    .ghost_nics
+                    .iter()
+                    .map(|g| g.instance_id.clone())
+                    .collect(),
             }),
         )
     });
@@ -744,7 +795,12 @@ pub(crate) mod tests_support {
         ev.windows = Some(WindowsEvidence {
             virtio_drivers: vec![WindowsDriverEntry {
                 name: "viostor".into(),
-                start_type: if virtio_boot_critical { "boot" } else { "manual" }.into(),
+                start_type: if virtio_boot_critical {
+                    "boot"
+                } else {
+                    "manual"
+                }
+                .into(),
                 boot_critical: virtio_boot_critical,
                 present: true,
                 version: None,

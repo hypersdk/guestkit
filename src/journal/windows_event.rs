@@ -6,11 +6,7 @@ use guestkit_agent_protocol::{JournalEntrySummary, JournalSlice};
 use std::process::Command;
 
 pub fn collect_event_log_slice(source: &str, limit: usize) -> JournalSlice {
-    let log_name = if source.is_empty() {
-        "System"
-    } else {
-        source
-    };
+    let log_name = if source.is_empty() { "System" } else { source };
     let script = format!(
         "Get-WinEvent -LogName '{log}' -MaxEvents {limit} -ErrorAction SilentlyContinue | \
          Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message | \

@@ -16,9 +16,9 @@ pub mod snapshot_live;
 #[cfg(feature = "agent")]
 pub mod windows_live;
 
-pub use systemd::collect_systemd_live;
 #[cfg(not(target_os = "windows"))]
 pub use systemd::collect_systemd_guest;
+pub use systemd::collect_systemd_live;
 #[cfg(not(target_os = "windows"))]
 pub use windows::collect_windows_details;
 

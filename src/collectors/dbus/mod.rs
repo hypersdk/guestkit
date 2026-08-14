@@ -13,9 +13,9 @@ pub mod systemd_events;
 pub mod timedate1;
 
 #[cfg(target_os = "linux")]
-pub use systemd1::{get_unit_by_pid, get_unit_detail, list_failed_units, restart_unit};
-#[cfg(target_os = "linux")]
 pub use systemd1::collect_systemd_runtime;
+#[cfg(target_os = "linux")]
+pub use systemd1::{get_unit_by_pid, get_unit_detail, list_failed_units, restart_unit};
 
 #[cfg(target_os = "linux")]
 pub use login1::collect_login_state;

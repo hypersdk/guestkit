@@ -38,7 +38,8 @@ pub fn inventory() -> Value {
         let name = f[0].to_string();
         let uid: u32 = f[2].parse().unwrap_or(0);
         let shell = f[6].to_string();
-        let can_login = !shell.ends_with("nologin") && !shell.ends_with("/false") && !shell.is_empty();
+        let can_login =
+            !shell.ends_with("nologin") && !shell.ends_with("/false") && !shell.is_empty();
         if can_login {
             login_shells += 1;
         }
@@ -81,7 +82,12 @@ pub fn inventory() -> Value {
         .lines()
         .filter(|l| l.starts_with("sudo:") || l.starts_with("wheel:"))
         .filter_map(|l| l.split(':').nth(3))
-        .flat_map(|members| members.split(',').filter(|m| !m.is_empty()).map(str::to_string))
+        .flat_map(|members| {
+            members
+                .split(',')
+                .filter(|m| !m.is_empty())
+                .map(str::to_string)
+        })
         .collect();
 
     // Root SSH login policy.
@@ -102,7 +108,10 @@ pub fn inventory() -> Value {
     for user in users.iter().filter(|u| u.uid >= 1000 || u.uid == 0) {
         let ak = format!("{}/.ssh/authorized_keys", user.home);
         if let Ok(content) = fs::read_to_string(&ak) {
-            authorized_keys += content.lines().filter(|l| l.starts_with("ssh-") || l.starts_with("ecdsa-")).count();
+            authorized_keys += content
+                .lines()
+                .filter(|l| l.starts_with("ssh-") || l.starts_with("ecdsa-"))
+                .count();
         }
     }
 
@@ -128,11 +137,10 @@ pub fn inventory() -> Value {
             .filter(|o| o.status.success())
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
     };
-    let users: Vec<String> = ps(
-        "Get-LocalUser -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name",
-    )
-    .map(|s| s.lines().map(str::to_string).collect())
-    .unwrap_or_default();
+    let users: Vec<String> =
+        ps("Get-LocalUser -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name")
+            .map(|s| s.lines().map(str::to_string).collect())
+            .unwrap_or_default();
     let admins: Vec<String> = ps(
         "Get-LocalGroupMember -Group Administrators -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name",
     )
@@ -165,6 +173,10 @@ mod tests {
         let inv = inventory();
         // Every Linux host has at least root.
         assert!(inv["user_count"].as_u64().unwrap_or(0) >= 1);
-        assert!(inv["users"].as_array().unwrap().iter().any(|u| u["name"] == "root"));
+        assert!(inv["users"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|u| u["name"] == "root"));
     }
 }

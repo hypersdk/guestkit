@@ -54,7 +54,12 @@ pub struct PostureReport {
     pub categories: Vec<PostureCategory>,
 }
 
-fn finding(id: &str, severity: Severity, passed: bool, message: impl Into<String>) -> PostureFinding {
+fn finding(
+    id: &str,
+    severity: Severity,
+    passed: bool,
+    message: impl Into<String>,
+) -> PostureFinding {
     PostureFinding {
         id: id.to_string(),
         severity,
@@ -228,7 +233,11 @@ fn linux_categories() -> Vec<PostureCategory> {
         "POS-L-020",
         Severity::Medium,
         auditd,
-        if auditd { "auditd active" } else { "auditd not active" },
+        if auditd {
+            "auditd active"
+        } else {
+            "auditd not active"
+        },
     ));
     let reboot_required = std::path::Path::new("/var/run/reboot-required").exists();
     hygiene.push(finding(
@@ -245,7 +254,11 @@ fn linux_categories() -> Vec<PostureCategory> {
         let failures = out.lines().filter(|l| !l.trim().is_empty()).count();
         hygiene.push(finding(
             "POS-L-022",
-            if failures > 25 { Severity::Medium } else { Severity::Info },
+            if failures > 25 {
+                Severity::Medium
+            } else {
+                Severity::Info
+            },
             failures <= 25,
             format!("{failures} recent failed login attempt(s) in lastb sample"),
         ));
@@ -281,7 +294,9 @@ fn windows_categories() -> Vec<PostureCategory> {
 
     // --- Endpoint protection ---
     let mut endpoint = Vec::new();
-    if let Some(rt) = ps_bool("(Get-MpComputerStatus -ErrorAction SilentlyContinue).RealTimeProtectionEnabled") {
+    if let Some(rt) =
+        ps_bool("(Get-MpComputerStatus -ErrorAction SilentlyContinue).RealTimeProtectionEnabled")
+    {
         endpoint.push(finding(
             "POS-W-001",
             Severity::High,
@@ -289,7 +304,9 @@ fn windows_categories() -> Vec<PostureCategory> {
             format!("Defender real-time protection enabled: {rt}"),
         ));
     }
-    if let Some(tp) = ps_bool("(Get-MpComputerStatus -ErrorAction SilentlyContinue).IsTamperProtected") {
+    if let Some(tp) =
+        ps_bool("(Get-MpComputerStatus -ErrorAction SilentlyContinue).IsTamperProtected")
+    {
         endpoint.push(finding(
             "POS-W-002",
             Severity::Medium,
@@ -316,9 +333,9 @@ fn windows_categories() -> Vec<PostureCategory> {
             format!("{disabled} firewall profile(s) disabled"),
         ));
     }
-    if let Some(smb1) = ps_bool(
-        "(Get-SmbServerConfiguration -ErrorAction SilentlyContinue).EnableSMB1Protocol",
-    ) {
+    if let Some(smb1) =
+        ps_bool("(Get-SmbServerConfiguration -ErrorAction SilentlyContinue).EnableSMB1Protocol")
+    {
         network.push(finding(
             "POS-W-011",
             Severity::High,

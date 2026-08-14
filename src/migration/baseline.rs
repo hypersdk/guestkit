@@ -187,7 +187,12 @@ pub fn diff_baselines(before: &MigrationBaseline, after: &EvidenceSnapshot) -> D
         &b.network.dns_servers,
         &after.network.dns_servers,
     );
-    diff_sets(&mut report.routes, "routes", &b.network.routes, &after.network.routes);
+    diff_sets(
+        &mut report.routes,
+        "routes",
+        &b.network.routes,
+        &after.network.routes,
+    );
 
     // Ports (listening) from process evidence when present
     let ports = |ev: &EvidenceSnapshot| -> Vec<String> {
@@ -201,7 +206,12 @@ pub fn diff_baselines(before: &MigrationBaseline, after: &EvidenceSnapshot) -> D
             })
             .unwrap_or_default()
     };
-    diff_sets(&mut report.ports, "listening_ports", &ports(b), &ports(after));
+    diff_sets(
+        &mut report.ports,
+        "listening_ports",
+        &ports(b),
+        &ports(after),
+    );
 
     // Disks: fstab + root fs
     diff_field(
@@ -233,7 +243,12 @@ pub fn diff_baselines(before: &MigrationBaseline, after: &EvidenceSnapshot) -> D
             })
             .unwrap_or_default()
     };
-    diff_sets(&mut report.services, "failed_units", &failed(b), &failed(after));
+    diff_sets(
+        &mut report.services,
+        "failed_units",
+        &failed(b),
+        &failed(after),
+    );
 
     // Summary + expectation classification
     let counts = [

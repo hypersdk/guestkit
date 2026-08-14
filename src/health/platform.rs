@@ -8,7 +8,9 @@ pub fn build_guest_health_live() -> Result<GuestHealth> {
     #[cfg(target_os = "windows")]
     {
         let hostname = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "windows-host".into());
-        Ok(crate::collectors::windows_live::build_windows_guest_health(&hostname))
+        Ok(crate::collectors::windows_live::build_windows_guest_health(
+            &hostname,
+        ))
     }
     #[cfg(not(target_os = "windows"))]
     {

@@ -45,12 +45,7 @@ pub fn set_password_aes(
     let bootkey = extract_bootkey(system_hive)?;
     let nt_hash = ntlm_hash(password);
 
-    crate::guestfs::sam_password::set_user_nt_hash_encrypted(
-        sam_hive,
-        username,
-        &bootkey,
-        &nt_hash,
-    )
+    crate::guestfs::sam_password::set_user_nt_hash_encrypted(sam_hive, username, &bootkey, &nt_hash)
 }
 
 /// MD4(UTF-16LE(password)) — NTLM hash.
@@ -93,9 +88,7 @@ pub fn extract_bootkey(system_hive: &Path) -> Result<[u8; 16]> {
         scrambled.extend_from_slice(&bytes);
     }
     if scrambled.len() != 16 {
-        return Err(Error::InvalidFormat(
-            "bootkey scramble length != 16".into(),
-        ));
+        return Err(Error::InvalidFormat("bootkey scramble length != 16".into()));
     }
     let mut bootkey = [0u8; 16];
     for (i, &t) in BOOTKEY_TRANSFORM.iter().enumerate() {
@@ -427,11 +420,7 @@ fn read_dword_value(hive: &[u8], path: &[&str], value: &str) -> Result<u32> {
             return Ok(u32::from_le_bytes(data[..4].try_into().unwrap()));
         }
     }
-    Err(Error::NotFound(format!(
-        "{}\\{}",
-        path.join("\\"),
-        value
-    )))
+    Err(Error::NotFound(format!("{}\\{}", path.join("\\"), value)))
 }
 
 fn find_key_cell(hive: &[u8], path: &[&str]) -> Result<usize> {
@@ -445,12 +434,7 @@ fn find_key_cell(hive: &[u8], path: &[&str]) -> Result<usize> {
             .into_iter()
             .find(|(n, _)| n.to_ascii_lowercase() == want)
             .map(|(_, c)| c)
-            .ok_or_else(|| {
-                Error::NotFound(format!(
-                    "SYSTEM path missing '{}'",
-                    path.join("\\")
-                ))
-            })?;
+            .ok_or_else(|| Error::NotFound(format!("SYSTEM path missing '{}'", path.join("\\"))))?;
         cell = next;
     }
     Ok(cell)
@@ -623,7 +607,8 @@ fn decode_hex_ascii(s: &str) -> std::result::Result<Vec<u8>, String> {
     let bytes = s.as_bytes();
     for i in (0..bytes.len()).step_by(2) {
         let hi = from_hex(bytes[i]).ok_or_else(|| format!("bad hex {}", bytes[i] as char))?;
-        let lo = from_hex(bytes[i + 1]).ok_or_else(|| format!("bad hex {}", bytes[i + 1] as char))?;
+        let lo =
+            from_hex(bytes[i + 1]).ok_or_else(|| format!("bad hex {}", bytes[i + 1] as char))?;
         out.push((hi << 4) | lo);
     }
     Ok(out)

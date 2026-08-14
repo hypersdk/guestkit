@@ -17,11 +17,12 @@ pub fn enrich_network_evidence(network: &mut NetworkEvidence) {
 }
 
 fn detect_network_stack() -> String {
-    if fs::metadata("/run/NetworkManager").is_ok() || Command::new("which")
-        .arg("nmcli")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    if fs::metadata("/run/NetworkManager").is_ok()
+        || Command::new("which")
+            .arg("nmcli")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
     {
         return "NetworkManager".into();
     }
@@ -167,7 +168,8 @@ fn collect_ip_json(network: &mut NetworkEvidence) {
                 if let Some(stats) = stats {
                     let rx = stats.get("rx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
                     let tx = stats.get("tx_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-                    if let Some(live) = network.live_interfaces.iter_mut().find(|i| i.name == name) {
+                    if let Some(live) = network.live_interfaces.iter_mut().find(|i| i.name == name)
+                    {
                         if live.rx_bytes.is_none() {
                             live.rx_bytes = Some(rx);
                         }

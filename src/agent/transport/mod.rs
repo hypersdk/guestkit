@@ -13,7 +13,9 @@ pub mod vsock_host;
 pub mod zeus_push;
 
 use anyhow::Result;
-use guestkit_agent_protocol::{read_frame, read_line, write_frame, write_line, JsonRpcNotification};
+use guestkit_agent_protocol::{
+    read_frame, read_line, write_frame, write_line, JsonRpcNotification,
+};
 use std::io::{BufReader, Read, Write};
 use std::sync::{Arc, Mutex};
 

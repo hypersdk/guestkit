@@ -446,10 +446,7 @@ pub fn rescue_command(
         }
     }
 
-    let vm_str = image
-        .to_str()
-        .unwrap_or("disk.qcow2")
-        .to_string();
+    let vm_str = image.to_str().unwrap_or("disk.qcow2").to_string();
 
     // Export a reviewable plan instead of applying.
     if let Some(ref plan_path) = export_plan {
@@ -467,8 +464,8 @@ pub fn rescue_command(
             force,
             is_windows,
         )?;
-        let yaml = serde_yaml::to_string(&plan)
-            .context("Failed to serialize rescue export plan")?;
+        let yaml =
+            serde_yaml::to_string(&plan).context("Failed to serialize rescue export plan")?;
         std::fs::write(plan_path, yaml)
             .with_context(|| format!("Failed to write plan to {}", plan_path.display()))?;
         println!(
@@ -602,176 +599,181 @@ pub fn rescue_command(
                     );
                 }
             } else {
-            let new_password = password
-                .ok_or_else(|| anyhow::anyhow!("Password required for reset (use --password)"))?;
+                let new_password = password.ok_or_else(|| {
+                    anyhow::anyhow!("Password required for reset (use --password)")
+                })?;
 
-            progress.set_message(format!("Resetting password for user '{}'...", username));
+                progress.set_message(format!("Resetting password for user '{}'...", username));
 
-            if backup {
-                // Backup shadow file to a secure temp file
-                if let Ok(content) = g.read_file("/etc/shadow") {
-                    let backup_file = tempfile::Builder::new()
-                        .prefix("shadow-backup-")
-                        .suffix(".bak")
-                        .tempfile()?;
-                    std::fs::write(backup_file.path(), content)?;
-                    let backup_path = backup_file.into_temp_path().keep().map_err(|e| {
-                        anyhow::anyhow!("Failed to persist shadow backup: {}", e.error)
-                    })?;
-                    println!("Backed up /etc/shadow to {}", backup_path.display());
-                }
-            }
-
-            // Generate SHA-512 crypt password hash using openssl
-            let hash = {
-                use rand::Rng;
-
-                // Generate random 16-char salt from ./0-9A-Za-z
-                const SALT_CHARS: &[u8] =
-                    b"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-                let mut rng = rand::thread_rng();
-                let salt: String = (0..16)
-                    .map(|_| SALT_CHARS[rng.gen_range(0..SALT_CHARS.len())] as char)
-                    .collect();
-
-                // Use openssl to generate a proper SHA-512 crypt hash
-                // Pipe password via stdin to avoid leaking it in process arguments
-                let mut child = std::process::Command::new("openssl")
-                    .args(["passwd", "-6", "-salt", &salt, "-stdin"])
-                    .stdin(std::process::Stdio::piped())
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(std::process::Stdio::piped())
-                    .spawn()
-                    .context("Failed to run openssl for password hashing. Is openssl installed?")?;
-
-                if let Some(mut stdin) = child.stdin.take() {
-                    use std::io::Write;
-                    stdin
-                        .write_all(new_password.as_bytes())
-                        .context("Failed to write password to openssl stdin")?;
-                }
-
-                // Timeout: openssl passwd should complete quickly (< 30s)
-                let output = {
-                    use std::time::{Duration, Instant};
-                    let start = Instant::now();
-                    let timeout = Duration::from_secs(30);
-                    loop {
-                        match child.try_wait() {
-                            Ok(Some(_)) => {
-                                break child
-                                    .wait_with_output()
-                                    .context("Failed to read openssl output")?
-                            }
-                            Ok(None) => {
-                                if start.elapsed() > timeout {
-                                    let _ = child.kill();
-                                    anyhow::bail!("openssl passwd timed out after 30 seconds");
-                                }
-                                std::thread::sleep(Duration::from_millis(50));
-                            }
-                            Err(e) => anyhow::bail!("Failed to wait for openssl process: {}", e),
-                        }
+                if backup {
+                    // Backup shadow file to a secure temp file
+                    if let Ok(content) = g.read_file("/etc/shadow") {
+                        let backup_file = tempfile::Builder::new()
+                            .prefix("shadow-backup-")
+                            .suffix(".bak")
+                            .tempfile()?;
+                        std::fs::write(backup_file.path(), content)?;
+                        let backup_path = backup_file.into_temp_path().keep().map_err(|e| {
+                            anyhow::anyhow!("Failed to persist shadow backup: {}", e.error)
+                        })?;
+                        println!("Backed up /etc/shadow to {}", backup_path.display());
                     }
+                }
+
+                // Generate SHA-512 crypt password hash using openssl
+                let hash = {
+                    use rand::Rng;
+
+                    // Generate random 16-char salt from ./0-9A-Za-z
+                    const SALT_CHARS: &[u8] =
+                        b"./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+                    let mut rng = rand::thread_rng();
+                    let salt: String = (0..16)
+                        .map(|_| SALT_CHARS[rng.gen_range(0..SALT_CHARS.len())] as char)
+                        .collect();
+
+                    // Use openssl to generate a proper SHA-512 crypt hash
+                    // Pipe password via stdin to avoid leaking it in process arguments
+                    let mut child = std::process::Command::new("openssl")
+                        .args(["passwd", "-6", "-salt", &salt, "-stdin"])
+                        .stdin(std::process::Stdio::piped())
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .context(
+                            "Failed to run openssl for password hashing. Is openssl installed?",
+                        )?;
+
+                    if let Some(mut stdin) = child.stdin.take() {
+                        use std::io::Write;
+                        stdin
+                            .write_all(new_password.as_bytes())
+                            .context("Failed to write password to openssl stdin")?;
+                    }
+
+                    // Timeout: openssl passwd should complete quickly (< 30s)
+                    let output = {
+                        use std::time::{Duration, Instant};
+                        let start = Instant::now();
+                        let timeout = Duration::from_secs(30);
+                        loop {
+                            match child.try_wait() {
+                                Ok(Some(_)) => {
+                                    break child
+                                        .wait_with_output()
+                                        .context("Failed to read openssl output")?
+                                }
+                                Ok(None) => {
+                                    if start.elapsed() > timeout {
+                                        let _ = child.kill();
+                                        anyhow::bail!("openssl passwd timed out after 30 seconds");
+                                    }
+                                    std::thread::sleep(Duration::from_millis(50));
+                                }
+                                Err(e) => {
+                                    anyhow::bail!("Failed to wait for openssl process: {}", e)
+                                }
+                            }
+                        }
+                    };
+
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        anyhow::bail!("openssl passwd failed: {}", stderr);
+                    }
+
+                    String::from_utf8(output.stdout)
+                        .context("openssl produced invalid UTF-8")?
+                        .trim()
+                        .to_string()
                 };
 
-                if !output.status.success() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    anyhow::bail!("openssl passwd failed: {}", stderr);
-                }
+                // Read current shadow file
+                if let Ok(content) = g.read_file("/etc/shadow") {
+                    if let Ok(text) = String::from_utf8(content) {
+                        let mut new_lines = Vec::new();
+                        let mut user_found = false;
 
-                String::from_utf8(output.stdout)
-                    .context("openssl produced invalid UTF-8")?
-                    .trim()
-                    .to_string()
-            };
-
-            // Read current shadow file
-            if let Ok(content) = g.read_file("/etc/shadow") {
-                if let Ok(text) = String::from_utf8(content) {
-                    let mut new_lines = Vec::new();
-                    let mut user_found = false;
-
-                    for line in text.lines() {
-                        if line.starts_with(&format!("{}:", username)) {
-                            let parts: Vec<&str> = line.split(':').collect();
-                            if parts.len() >= 3 {
-                                new_lines.push(format!(
-                                    "{}:{}:{}",
-                                    username,
-                                    hash,
-                                    parts[2..].join(":")
-                                ));
-                                user_found = true;
+                        for line in text.lines() {
+                            if line.starts_with(&format!("{}:", username)) {
+                                let parts: Vec<&str> = line.split(':').collect();
+                                if parts.len() >= 3 {
+                                    new_lines.push(format!(
+                                        "{}:{}:{}",
+                                        username,
+                                        hash,
+                                        parts[2..].join(":")
+                                    ));
+                                    user_found = true;
+                                }
+                            } else {
+                                new_lines.push(line.to_string());
                             }
-                        } else {
-                            new_lines.push(line.to_string());
                         }
-                    }
 
-                    if !user_found && force {
-                        // Validate username doesn't contain colons (would corrupt shadow format)
-                        if username.contains(':') {
-                            anyhow::bail!(
-                                "Invalid username '{}': contains ':' character",
-                                username
-                            );
-                        }
-                        // Validate user exists in /etc/passwd before force-adding shadow entry
-                        let user_exists_in_passwd = g
-                            .read_file("/etc/passwd")
-                            .ok()
-                            .and_then(|c| String::from_utf8(c).ok())
-                            .map(|text| {
-                                text.lines()
-                                    .any(|l| l.starts_with(&format!("{}:", username)))
-                            })
-                            .unwrap_or(false);
-                        if !user_exists_in_passwd {
-                            progress.abandon_with_message(format!(
-                                "User '{}' not found in /etc/passwd",
-                                username
-                            ));
-                            anyhow::bail!(
+                        if !user_found && force {
+                            // Validate username doesn't contain colons (would corrupt shadow format)
+                            if username.contains(':') {
+                                anyhow::bail!(
+                                    "Invalid username '{}': contains ':' character",
+                                    username
+                                );
+                            }
+                            // Validate user exists in /etc/passwd before force-adding shadow entry
+                            let user_exists_in_passwd = g
+                                .read_file("/etc/passwd")
+                                .ok()
+                                .and_then(|c| String::from_utf8(c).ok())
+                                .map(|text| {
+                                    text.lines()
+                                        .any(|l| l.starts_with(&format!("{}:", username)))
+                                })
+                                .unwrap_or(false);
+                            if !user_exists_in_passwd {
+                                progress.abandon_with_message(format!(
+                                    "User '{}' not found in /etc/passwd",
+                                    username
+                                ));
+                                anyhow::bail!(
                                 "Cannot add shadow entry: user '{}' does not exist in /etc/passwd",
                                 username
                             );
+                            }
+                            new_lines.push(format!("{}:{}:18000:0:99999:7:::", username, hash));
                         }
-                        new_lines.push(format!("{}:{}:18000:0:99999:7:::", username, hash));
-                    }
 
-                    if !user_found && !force {
-                        progress.abandon_with_message(format!(
-                            "User '{}' not found in /etc/shadow",
-                            username
-                        ));
-                        anyhow::bail!(
+                        if !user_found && !force {
+                            progress.abandon_with_message(format!(
+                                "User '{}' not found in /etc/shadow",
+                                username
+                            ));
+                            anyhow::bail!(
                             "User '{}' not found in /etc/shadow (pass --force to add if in passwd)",
                             username
                         );
+                        }
+
+                        // Write updated shadow file (ensure trailing newline)
+                        let temp_file = tempfile::NamedTempFile::new()?;
+                        std::fs::write(temp_file.path(), format!("{}\n", new_lines.join("\n")))?;
+                        g.upload(
+                            temp_file.path().to_str().ok_or_else(|| {
+                                anyhow::anyhow!("Temp file path contains invalid UTF-8")
+                            })?,
+                            "/etc/shadow",
+                        )?;
+
+                        progress.finish_and_clear();
+                        println!("✓ Password reset for user '{}'", username);
+                        println!("  New password: {}", "*".repeat(new_password.len()));
+                    } else {
+                        progress.abandon_with_message("Failed to read /etc/shadow");
+                        anyhow::bail!("Could not parse shadow file");
                     }
-
-                    // Write updated shadow file (ensure trailing newline)
-                    let temp_file = tempfile::NamedTempFile::new()?;
-                    std::fs::write(temp_file.path(), format!("{}\n", new_lines.join("\n")))?;
-                    g.upload(
-                        temp_file.path().to_str().ok_or_else(|| {
-                            anyhow::anyhow!("Temp file path contains invalid UTF-8")
-                        })?,
-                        "/etc/shadow",
-                    )?;
-
-                    progress.finish_and_clear();
-                    println!("✓ Password reset for user '{}'", username);
-                    println!("  New password: {}", "*".repeat(new_password.len()));
                 } else {
                     progress.abandon_with_message("Failed to read /etc/shadow");
-                    anyhow::bail!("Could not parse shadow file");
+                    anyhow::bail!("Could not read /etc/shadow");
                 }
-            } else {
-                progress.abandon_with_message("Failed to read /etc/shadow");
-                anyhow::bail!("Could not read /etc/shadow");
-            }
             } // end Linux reset-password
         }
 
@@ -883,12 +885,8 @@ pub fn rescue_command(
                         }
                     }
                     println!();
-                    println!(
-                        "Offline defaults: guestkit plan generate <disk> -p linux-grub \\"
-                    );
-                    println!(
-                        "  --grub-timeout 5 --grub-cmdline <token> -o grub.yaml"
-                    );
+                    println!("Offline defaults: guestkit plan generate <disk> -p linux-grub \\");
+                    println!("  --grub-timeout 5 --grub-cmdline <token> -o grub.yaml");
                 }
                 println!();
                 println!("Repair: guestkit rescue <disk> -o fix-grub");
@@ -919,12 +917,14 @@ pub fn rescue_command(
                 println!(
                     "✓ grub-install onto {}{}",
                     report.install_device.as_deref().unwrap_or("disk"),
-                    if report.efi { " (EFI --no-nvram --removable)" } else { "" }
+                    if report.efi {
+                        " (EFI --no-nvram --removable)"
+                    } else {
+                        ""
+                    }
                 );
             } else if force && !report.install_ok {
-                println!(
-                    "Note: --force requested grub-install but it did not succeed (see notes)"
-                );
+                println!("Note: --force requested grub-install but it did not succeed (see notes)");
             }
             if report.firstboot_staged {
                 println!("✓ Staged guestkit-firstboot-grub.service (runs on next boot)");
@@ -948,8 +948,7 @@ pub fn rescue_command(
         }
 
         "inject-ssh-key" | "ssh-inject-key" => {
-            let username = user
-                .ok_or_else(|| anyhow::anyhow!("Username required (use --user)"))?;
+            let username = user.ok_or_else(|| anyhow::anyhow!("Username required (use --user)"))?;
             if !rescue_validate_username(&username) {
                 anyhow::bail!(
                     "Invalid username: must be 1-32 chars, alphanumeric/underscore/dash/dot, not starting with '-'"
@@ -978,8 +977,8 @@ pub fn rescue_command(
         }
 
         "set-hostname" => {
-            let name = hostname
-                .ok_or_else(|| anyhow::anyhow!("Hostname required (use --hostname)"))?;
+            let name =
+                hostname.ok_or_else(|| anyhow::anyhow!("Hostname required (use --hostname)"))?;
             if !rescue_validate_hostname(&name) {
                 anyhow::bail!(
                     "Invalid hostname '{}': use DNS labels (a-z, 0-9, hyphen), max 253 chars",
@@ -1018,10 +1017,12 @@ pub fn rescue_command(
 
         "set-timezone" | "timezone" => {
             if !is_windows {
-                anyhow::bail!("set-timezone is Windows-only (use plan generate -p windows-timezone)");
+                anyhow::bail!(
+                    "set-timezone is Windows-only (use plan generate -p windows-timezone)"
+                );
             }
-            let tz = timezone
-                .ok_or_else(|| anyhow::anyhow!("Timezone required (use --timezone)"))?;
+            let tz =
+                timezone.ok_or_else(|| anyhow::anyhow!("Timezone required (use --timezone)"))?;
             progress.set_message(format!("Queuing Windows timezone → '{tz}'..."));
             deferred_windows_plan = Some(gen.windows_timezone_plan(&tz)?);
             progress.finish_and_clear();
@@ -1051,7 +1052,10 @@ pub fn rescue_command(
 }
 
 /// Apply a canned Windows day-0 FixPlan after releasing the rescue guestfs handle.
-fn rescue_apply_windows_day0_plan(image: &Path, plan: &crate::cli::plan::types::FixPlan) -> Result<()> {
+fn rescue_apply_windows_day0_plan(
+    image: &Path,
+    plan: &crate::cli::plan::types::FixPlan,
+) -> Result<()> {
     #[cfg(all(unix, feature = "registry-write"))]
     {
         use crate::cli::plan::apply::PlanApplicator;
@@ -1064,7 +1068,9 @@ fn rescue_apply_windows_day0_plan(image: &Path, plan: &crate::cli::plan::types::
             plan.profile,
             plan.operations.len()
         );
-        let result = PlanApplicator::new(vm, false).skip_backup(true).apply(plan)?;
+        let result = PlanApplicator::new(vm, false)
+            .skip_backup(true)
+            .apply(plan)?;
         if !result.success {
             anyhow::bail!(
                 "Windows day-0 plan apply failed: {}",
@@ -1111,9 +1117,7 @@ fn rescue_validate_hostname(name: &str) -> bool {
             && label.len() <= 63
             && !label.starts_with('-')
             && !label.ends_with('-')
-            && label
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
     })
 }
 
@@ -1159,13 +1163,15 @@ pub fn detect_ssh_unit(g: &mut crate::Guestfs) -> Option<(String, String)> {
 }
 
 fn enable_ssh_offline(g: &mut crate::Guestfs, force: bool) -> Result<()> {
-    if !(g.is_file("/usr/sbin/sshd").unwrap_or(false) || g.is_file("/usr/bin/sshd").unwrap_or(false))
+    if !(g.is_file("/usr/sbin/sshd").unwrap_or(false)
+        || g.is_file("/usr/bin/sshd").unwrap_or(false))
     {
         anyhow::bail!("OpenSSH server is not installed (sshd binary missing)");
     }
 
     // Drop-in first — always useful and does not require systemd wants symlinks.
-    let mut dropin = String::from("# Managed by guestkit rescue enable-ssh\nPubkeyAuthentication yes\n");
+    let mut dropin =
+        String::from("# Managed by guestkit rescue enable-ssh\nPubkeyAuthentication yes\n");
     if force {
         dropin.push_str("PermitRootLogin yes\n");
     }
@@ -1479,12 +1485,7 @@ fn build_rescue_export_plan(
                 if line.starts_with(&format!("{username}:")) {
                     let parts: Vec<&str> = line.split(':').collect();
                     if parts.len() >= 3 {
-                        new_lines.push(format!(
-                            "{}:{}:{}",
-                            username,
-                            hash,
-                            parts[2..].join(":")
-                        ));
+                        new_lines.push(format!("{}:{}:{}", username, hash, parts[2..].join(":")));
                         found = true;
                     }
                 } else {

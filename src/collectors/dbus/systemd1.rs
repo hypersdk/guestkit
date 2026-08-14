@@ -62,9 +62,7 @@ pub fn get_unit_by_pid(pid: u32) -> Option<String> {
     proxy
         .call("GetUnitByPID", &(pid,))
         .ok()
-        .and_then(|path: OwnedObjectPath| {
-            unit_name_from_path(&conn, path.as_str())
-        })
+        .and_then(|path: OwnedObjectPath| unit_name_from_path(&conn, path.as_str()))
 }
 
 fn collect_manager_info(proxy: &zbus::blocking::Proxy<'_>) -> Result<SystemdManagerInfo> {
@@ -107,7 +105,8 @@ fn collect_list_units(conn: &Connection) -> Result<Vec<SystemdRuntimeUnit>> {
 fn list_units_by_patterns(conn: &Connection, patterns: &[&str]) -> Result<Vec<SystemdRuntimeUnit>> {
     let proxy = manager_proxy(conn)?;
     let patterns: Vec<&str> = patterns.to_vec();
-    let units_raw: Vec<OwnedValue> = proxy.call("ListUnitsByPatterns", &(Vec::<&str>::new(), patterns))?;
+    let units_raw: Vec<OwnedValue> =
+        proxy.call("ListUnitsByPatterns", &(Vec::<&str>::new(), patterns))?;
     parse_unit_list(conn, &units_raw)
 }
 
@@ -172,9 +171,7 @@ fn enrich_unit(conn: &Connection, name: &str, unit: &mut SystemdRuntimeUnit) {
         unit.drop_in_paths = unit_proxy
             .get_property::<Vec<String>>("DropInPaths")
             .unwrap_or_default();
-        unit.need_daemon_reload = unit_proxy
-            .get_property("NeedDaemonReload")
-            .unwrap_or(false);
+        unit.need_daemon_reload = unit_proxy.get_property("NeedDaemonReload").unwrap_or(false);
         unit.can_start = unit_proxy.get_property("CanStart").unwrap_or(false);
         unit.can_stop = unit_proxy.get_property("CanStop").unwrap_or(false);
         unit.can_reload = unit_proxy.get_property("CanReload").unwrap_or(false);

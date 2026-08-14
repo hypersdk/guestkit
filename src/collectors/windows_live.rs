@@ -67,7 +67,8 @@ fn collect_windows_live_inner() -> WindowsLiveEvidence {
         "(Get-CimInstance -Namespace root/Microsoft/Windows/WindowsUpdate -ClassName MSFT_WUSettings -ErrorAction SilentlyContinue) -ne $null",
     )
     .unwrap_or(false);
-    let rdp_sessions = powershell_usize("(quser 2>$null | Measure-Object -Line).Lines").unwrap_or(0);
+    let rdp_sessions =
+        powershell_usize("(quser 2>$null | Measure-Object -Line).Lines").unwrap_or(0);
     let rdp_enabled = powershell_bool(
         "(Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server').fDenyTSConnections -eq 0",
     )
@@ -217,12 +218,13 @@ pub fn failed_auto_services() -> Vec<String> {
 // --- Migration-evidence probes (schema v4) ---
 
 use crate::evidence::snapshot::{
-    ActivationInfo, BitLockerState, BitLockerVolume, GhostNicEntry, VssHealth,
-    WindowsDriverEntry, WindowsNicConfig,
+    ActivationInfo, BitLockerState, BitLockerVolume, GhostNicEntry, VssHealth, WindowsDriverEntry,
+    WindowsNicConfig,
 };
 
-const VIRTIO_DRIVER_NAMES: &[&str] =
-    &["viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng"];
+const VIRTIO_DRIVER_NAMES: &[&str] = &[
+    "viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng",
+];
 
 /// VirtIO driver presence + start mode from the live SCM.
 #[cfg(target_os = "windows")]
@@ -253,7 +255,9 @@ fn parse_virtio_driver_json(json: &str) -> Vec<WindowsDriverEntry> {
     } else if json.trim().is_empty() {
         Vec::new()
     } else {
-        serde_json::from_str::<Row>(json).map(|r| vec![r]).unwrap_or_default()
+        serde_json::from_str::<Row>(json)
+            .map(|r| vec![r])
+            .unwrap_or_default()
     };
     VIRTIO_DRIVER_NAMES
         .iter()
@@ -331,7 +335,10 @@ fn parse_bitlocker_json(json: &str) -> Option<BitLockerState> {
 
 #[cfg(target_os = "windows")]
 pub fn collect_vss_health() -> Option<VssHealth> {
-    let out = Command::new("vssadmin").args(["list", "writers"]).output().ok()?;
+    let out = Command::new("vssadmin")
+        .args(["list", "writers"])
+        .output()
+        .ok()?;
     if !out.status.success() {
         return None;
     }
@@ -427,7 +434,9 @@ fn parse_nic_config_json(json: &str) -> Vec<WindowsNicConfig> {
     } else if json.trim().is_empty() {
         Vec::new()
     } else {
-        serde_json::from_str::<Row>(json).map(|r| vec![r]).unwrap_or_default()
+        serde_json::from_str::<Row>(json)
+            .map(|r| vec![r])
+            .unwrap_or_default()
     };
     rows.into_iter()
         .map(|r| WindowsNicConfig {
@@ -443,7 +452,10 @@ fn parse_nic_config_json(json: &str) -> Vec<WindowsNicConfig> {
 
 #[cfg(target_os = "windows")]
 pub fn collect_driver_signature_enforcement() -> Option<bool> {
-    let out = Command::new("bcdedit").args(["/enum", "{current}"]).output().ok()?;
+    let out = Command::new("bcdedit")
+        .args(["/enum", "{current}"])
+        .output()
+        .ok()?;
     if !out.status.success() {
         return None;
     }
@@ -541,8 +553,7 @@ Status:  Disconnected\n";
 
     #[test]
     fn bitlocker_parse_single_object() {
-        let state =
-            parse_bitlocker_json(r#"{"MountPoint":"C:","ProtectionStatus":1}"#).unwrap();
+        let state = parse_bitlocker_json(r#"{"MountPoint":"C:","ProtectionStatus":1}"#).unwrap();
         assert!(state.any_protected);
         assert_eq!(state.volumes[0].protection, "on");
     }

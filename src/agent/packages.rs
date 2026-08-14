@@ -103,24 +103,25 @@ pub fn inventory() -> Value {
         Manager::Zypper => run("rpm", &["-qa"])
             .map(|s| s.lines().filter(|l| !l.trim().is_empty()).count())
             .unwrap_or(0),
-        Manager::Windows => ps(
-            "(Get-HotFix -ErrorAction SilentlyContinue | Measure-Object).Count",
-        )
-        .and_then(|s| s.trim().parse().ok())
-        .unwrap_or(0),
+        Manager::Windows => ps("(Get-HotFix -ErrorAction SilentlyContinue | Measure-Object).Count")
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0),
         Manager::Unknown => 0,
     };
 
     // Installed kernels (Linux) for migration/reboot reasoning.
     let kernels: Vec<String> = match m {
-        Manager::Apt => run("dpkg-query", &["-f", "${binary:Package}\n", "-W", "linux-image-*"])
-            .map(|s| {
-                s.lines()
-                    .filter(|l| l.starts_with("linux-image-") && l.chars().any(|c| c.is_ascii_digit()))
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default(),
+        Manager::Apt => run(
+            "dpkg-query",
+            &["-f", "${binary:Package}\n", "-W", "linux-image-*"],
+        )
+        .map(|s| {
+            s.lines()
+                .filter(|l| l.starts_with("linux-image-") && l.chars().any(|c| c.is_ascii_digit()))
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default(),
         Manager::Dnf | Manager::Yum | Manager::Zypper => run("rpm", &["-q", "kernel"])
             .map(|s| s.lines().map(str::to_string).collect())
             .unwrap_or_default(),
@@ -203,9 +204,12 @@ fn zypper_updates() -> (Vec<String>, usize, bool) {
         .filter_map(|l| l.split('|').nth(2).map(|s| s.trim().to_string()))
         .filter(|s| !s.is_empty() && s != "Name")
         .collect();
-    let security = run("zypper", &["--quiet", "list-patches", "--category", "security"])
-        .map(|s| s.lines().filter(|l| l.contains("security")).count())
-        .unwrap_or(0);
+    let security = run(
+        "zypper",
+        &["--quiet", "list-patches", "--category", "security"],
+    )
+    .map(|s| s.lines().filter(|l| l.contains("security")).count())
+    .unwrap_or(0);
     let reboot = Path::new("/var/run/reboot-required").exists();
     (available, security, reboot)
 }
@@ -216,7 +220,12 @@ fn windows_updates() -> (Vec<String>, usize, bool) {
         $r=$s.CreateUpdateSearcher().Search('IsInstalled=0 and IsHidden=0'); \
         $r.Updates | ForEach-Object { $_.Title }";
     let available: Vec<String> = ps(script)
-        .map(|s| s.lines().filter(|l| !l.trim().is_empty()).map(str::to_string).collect())
+        .map(|s| {
+            s.lines()
+                .filter(|l| !l.trim().is_empty())
+                .map(str::to_string)
+                .collect()
+        })
         .unwrap_or_default();
     let security = available
         .iter()
@@ -250,11 +259,25 @@ pub fn install(params: &Value) -> Result<Value> {
         Manager::Apt => {
             let mut args = vec!["install", "-y"];
             args.extend_from_slice(&refs);
-            Command::new("apt-get").args(&args).env("DEBIAN_FRONTEND", "noninteractive").status()
+            Command::new("apt-get")
+                .args(&args)
+                .env("DEBIAN_FRONTEND", "noninteractive")
+                .status()
         }
-        Manager::Dnf => Command::new("dnf").arg("install").arg("-y").args(&refs).status(),
-        Manager::Yum => Command::new("yum").arg("install").arg("-y").args(&refs).status(),
-        Manager::Zypper => Command::new("zypper").args(["install", "-y"]).args(&refs).status(),
+        Manager::Dnf => Command::new("dnf")
+            .arg("install")
+            .arg("-y")
+            .args(&refs)
+            .status(),
+        Manager::Yum => Command::new("yum")
+            .arg("install")
+            .arg("-y")
+            .args(&refs)
+            .status(),
+        Manager::Zypper => Command::new("zypper")
+            .args(["install", "-y"])
+            .args(&refs)
+            .status(),
         _ => bail!("package installation not supported on {}", manager_name(m)),
     }?;
     if !status.success() {
@@ -276,7 +299,10 @@ mod tests {
 
     #[test]
     fn install_requires_packages() {
-        assert!(install(&json!({})).unwrap_err().to_string().contains("packages"));
+        assert!(install(&json!({}))
+            .unwrap_err()
+            .to_string()
+            .contains("packages"));
     }
 
     #[test]

@@ -245,7 +245,10 @@ impl TelemetryStore {
         metrics: Option<&[String]>,
     ) -> PerfSeries {
         let samples: Vec<PerfSample> = {
-            let ring = self.tier_ring(tier).lock().unwrap_or_else(|e| e.into_inner());
+            let ring = self
+                .tier_ring(tier)
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
             ring.iter()
                 .filter(|s| from_ts.map(|f| s.ts >= f).unwrap_or(true))
                 .filter(|s| to_ts.map(|t| s.ts <= t).unwrap_or(true))
@@ -288,7 +291,10 @@ impl TelemetryStore {
     /// min/avg/max/p95 per metric over the trailing `window_secs`.
     pub fn summary(&self, tier: PerfTier, window_secs: u64) -> PerfSummary {
         let samples: Vec<PerfSample> = {
-            let ring = self.tier_ring(tier).lock().unwrap_or_else(|e| e.into_inner());
+            let ring = self
+                .tier_ring(tier)
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
             let newest = ring.latest().map(|s| s.ts).unwrap_or(0);
             let cutoff = newest.saturating_sub(window_secs);
             ring.iter().filter(|s| s.ts >= cutoff).copied().collect()
