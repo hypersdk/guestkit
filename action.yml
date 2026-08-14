@@ -1,8 +1,5 @@
 name: 'GuestKit Passport Gate'
-description: >-
-  Score a VM disk image offline with GuestKit doctor, emit a signed-capable
-  Cutover Passport, and fail the job if the score is below a floor — before
-  any conversion/cutover job runs. See docs/devops/01-passport-ci-gate.md.
+description: 'Score a VM disk offline and fail the job if the GuestKit Cutover Passport score is below a floor.'
 author: 'hypersdk'
 
 branding:
