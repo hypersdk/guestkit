@@ -98,12 +98,21 @@ runs:
         sha256sum -c "${ASSET}.sha256"
         tar -xzf "${ASSET}"
 
-        chmod +x "${WORKDIR}/guestkit"
-        echo "${WORKDIR}" >> "$GITHUB_PATH"
+        # The customer bundle tarball extracts into a versioned
+        # subdirectory (guestkit-<version>-<arch>/guestkit), not a flat
+        # binary at the tar root — find it rather than assume the path.
+        BIN_PATH="$(find "${WORKDIR}" -mindepth 1 -maxdepth 2 -type f -name guestkit | head -n1)"
+        if [[ -z "${BIN_PATH}" ]]; then
+          echo "::error::guestkit binary not found after extracting ${ASSET}" >&2
+          find "${WORKDIR}" -maxdepth 2 >&2
+          exit 1
+        fi
+        chmod +x "${BIN_PATH}"
+        echo "$(dirname "${BIN_PATH}")" >> "$GITHUB_PATH"
         # doctor/migrate-plan/passport need loop/NBD mount, which needs root;
         # sudo resets PATH (secure_path), so resolve the absolute binary path
         # up front and invoke it explicitly via sudo in the gate step below.
-        echo "GUESTKIT_BIN=${WORKDIR}/guestkit" >> "$GITHUB_ENV"
+        echo "GUESTKIT_BIN=${BIN_PATH}" >> "$GITHUB_ENV"
 
     - name: Ensure qemu-img / losetup / loop / nbd are available
       shell: bash
