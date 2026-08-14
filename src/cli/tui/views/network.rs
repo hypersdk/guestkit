@@ -172,7 +172,7 @@ fn draw_interfaces(f: &mut Frame, area: Rect, app: &App) {
                 iface.name.clone(),
                 ip_addrs,
                 mac_addr,
-                format!("{}", if iface.dhcp { "Yes" } else { "No" }),
+                (if iface.dhcp { "Yes" } else { "No" }).to_string(),
                 dns_count,
             ])
             .style(style),

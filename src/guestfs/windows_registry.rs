@@ -1064,8 +1064,10 @@ pub fn probe_bcd_signature_enforcement(bcd_bytes: &[u8]) -> Option<bool> {
         return None;
     }
     let as_utf16: String = bcd_bytes
-        .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| u16::from_le_bytes(*c))
         .filter(|&u| u != 0)
         .map(|u| char::from_u32(u as u32).unwrap_or('\u{FFFD}'))
         .collect();
