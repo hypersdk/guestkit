@@ -114,21 +114,24 @@ runs:
         # up front and invoke it explicitly via sudo in the gate step below.
         echo "GUESTKIT_BIN=${BIN_PATH}" >> "$GITHUB_ENV"
 
-    - name: Ensure qemu-img / losetup / loop / nbd are available
+    - name: Install host dependencies (qemu-img, nbd, libhivex0, …)
       shell: bash
       run: |
         set -euo pipefail
-        if ! command -v qemu-img >/dev/null 2>&1 || ! command -v losetup >/dev/null 2>&1; then
-          if command -v apt-get >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y qemu-utils
-          else
-            echo "::error::qemu-img/losetup not found and no apt-get available to install qemu-utils" >&2
-            exit 1
-          fi
+        # The release bundle ships its own installer next to the binary —
+        # same package list (incl. libhivex0, required at runtime by the
+        # glibc build's registry-write feature) used by customers who
+        # download the tarball directly. Reuse it instead of a second,
+        # drifting copy of the dependency list here.
+        INSTALLER="$(dirname "${GUESTKIT_BIN}")/install-client-deps.sh"
+        if [[ -x "${INSTALLER}" ]]; then
+          "${INSTALLER}"
+        else
+          echo "::warning::install-client-deps.sh not found next to guestkit; falling back to qemu-utils only"
+          sudo apt-get update -y
+          sudo apt-get install -y qemu-utils
         fi
         sudo modprobe loop || true
-        sudo modprobe nbd max_part=8 || true
 
     - name: Run passport gate
       id: gate
