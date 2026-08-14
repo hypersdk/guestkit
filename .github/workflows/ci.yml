@@ -82,7 +82,13 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo test --verbose -- --skip test_arch_ --skip test_debian_ \
+          # --test-threads=1: integration_basic's loop/NBD device tests share a
+          # small pool of /dev/loopN /dev/nbdN nodes via a check-then-use
+          # find_available_device() that isn't atomic — the default parallel
+          # test runner has multiple threads racing for the same device index
+          # ("qemu-nbd: Failed to set NBD socket" when two threads win the
+          # same nbdN, "Loop device did not become ready" from the loser).
+          cargo test --verbose -- --test-threads=1 --skip test_arch_ --skip test_debian_ \
             --skip test_ubuntu_ --skip test_windows_
 
       - name: Cloud disk source recipe
