@@ -88,8 +88,8 @@ jobs:
           # threads onto the same device index otherwise.
           #
           # NBD-dependent tests (integration_basic + integration_error_handling
-          # + integration_lvm_luks) are skipped here: any operation past
-          # read-only inspection (mkfs,
+          # + integration_lvm_luks + phase3_comprehensive + phase3_windows)
+          # are skipped here: any operation past read-only inspection (mkfs,
           # mount, file writes) routes through guestfs/mount.rs's NBD path
           # regardless of the underlying image being raw — not just the
           # qcow2/vmdk case handle.rs's loop-vs-NBD format detection is
@@ -111,7 +111,10 @@ jobs:
             --skip test_error_invalid_path --skip test_error_large_file_handling \
             --skip test_error_nonexistent_file --skip test_error_special_characters_in_filename \
             --skip test_error_write_to_directory --skip test_error_zero_size_file \
-            --skip test_vg_scan
+            --skip test_vg_scan \
+            --skip test_add_drive_vs_add_drive_ro --skip test_phase3_comprehensive \
+            --skip test_rm_rm_rf_edge_cases --skip test_stat_vs_lstat_behavior \
+            --skip test_phase3_windows_comprehensive
 
       - name: Cloud disk source recipe
         run: ./scripts/ci-cloud-disk-sources.sh
