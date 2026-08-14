@@ -276,6 +276,7 @@ impl Guestfs {
         }
 
         if self.drives.is_empty() {
+            self.state = GuestfsState::Error;
             return Err(Error::InvalidState("No drives added".to_string()));
         }
 
