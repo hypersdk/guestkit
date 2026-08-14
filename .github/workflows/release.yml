@@ -226,3 +226,28 @@ jobs:
           fi
           maturin build --release --bindings pyo3 --features python-bindings --out dist
           maturin upload --username __token__ --password "${PYPI_API_TOKEN}" dist/*.whl --skip-existing
+
+  update-action-major-tag:
+    name: Move v1 tag (GitHub Action)
+    # action.yml is versioned independently of the CLI's v0.x tags — v1 is
+    # the moving major tag downstream `uses: hypersdk/guestkit@v1` consumers
+    # pin to (same convention as actions/checkout@v4). Skip prereleases
+    # (tags containing a `-`, e.g. v0.4.0-rc1) so v1 only ever points at a
+    # stable, fully-built release commit.
+    needs: [create-release, build-and-upload]
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move v1 -> ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa v1 -m "action.yml: point v1 at ${GITHUB_REF_NAME}"
+          git push origin v1 --force

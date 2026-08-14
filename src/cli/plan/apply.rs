@@ -143,7 +143,7 @@ impl PlanApplicator {
                     // mounts RO and hive download/upload silently fails (0 ops).
                     // Same repair path as agent-inject --windows.
                     if g.vfs_type(device).ok().as_deref() == Some("ntfs") {
-                        if let Err(e) = g.ntfsfix(device, false) {
+                        if let Err(e) = g.ntfsfix_opts(device, false, true) {
                             log::warn!("ntfsfix {device} before plan apply: {e}");
                         }
                     }
@@ -535,6 +535,7 @@ impl PlanApplicator {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 impl PlanApplicator {
     /// Parse a command string into arguments, handling single and double quotes.
     /// This is a safe alternative to split_whitespace which doesn't handle quoting.

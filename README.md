@@ -97,6 +97,18 @@ guestkit passport verify passport.json --fail-below 80
 
 Targets: `kvm` · `proxmox` · `qemu` · `aws` · `azure` · `gcp` · `cloud` · `hyperv`
 
+**GitHub Actions:** gate conversion on the same score, no CLI install step —
+see [`action.yml`](action.yml) and the runbook at
+[docs/devops/01-passport-ci-gate.md](docs/devops/01-passport-ci-gate.md).
+
+```yaml
+- uses: hypersdk/guestkit@v1
+  with:
+    disk: vm.qcow2
+    target: kvm
+    fail-below: '80'
+```
+
 ### Offline repair (no boot required)
 
 ```bash

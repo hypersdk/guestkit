@@ -24,7 +24,53 @@ echo $?   # must be 0
 
 ---
 
-## 1. Minimal CI job (container or bare)
+## 1. GitHub Actions — `hypersdk/guestkit` composite Action
+
+The real implementation of this runbook lives at [`action.yml`](../../action.yml)
+in this repo, and is dogfooded on every change by
+[`.github/workflows/passport-gate-demo.yml`](../../.github/workflows/passport-gate-demo.yml) —
+open that workflow for a working, copy-pasteable example.
+
+```yaml
+jobs:
+  assure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hypersdk/guestkit@v1
+        id: gate
+        with:
+          disk: vm.qcow2
+          target: kvm
+          fail-below: '80'
+      - run: echo "score=${{ steps.gate.outputs.score }}"
+
+  convert:
+    needs: [assure]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hyper2kvm convert …"   # only runs if assure passed
+```
+
+| Input | Default | Notes |
+|-------|---------|-------|
+| `disk` | *(required)* | Path to the disk image |
+| `target` | `kvm` | `kvm`, `proxmox`, `qemu`, `aws`, `azure`, `gcp`, `cloud`, `hyperv` |
+| `fail-below` | `80` | Gate floor |
+| `version` | `latest` | Pin a specific `guestkit` release (e.g. `0.3.21`) |
+| `sign-key` / `issuer` / `require-signature` / `trust-keys` | — | Signed-Passport path, see §2 |
+
+Outputs: `score`, `passport-path`, `passed`. The action always uploads
+`doctor.txt` / `plan.yaml` / `passport.json` as a workflow artifact (even on
+failure) — attach that artifact to the change ticket per §4.
+
+Installs a prebuilt `guestkit-<version>-linux-amd64.tar.gz` from GitHub
+Releases (checksum-verified) — no build step. Not on GitHub Actions, or need
+another runner/orchestrator? Use the shell recipe below instead.
+
+---
+
+## 2. Minimal CI job (container or bare, non-GitHub-Actions)
 
 ```bash
 #!/usr/bin/env bash
@@ -59,7 +105,7 @@ jobs:
 
 ---
 
-## 2. Signed Passports (regulated)
+## 3. Signed Passports (regulated)
 
 Build with agent/signing features available; then:
 
@@ -84,7 +130,7 @@ Rotate seeds like any code-signing key. Issuer string should identify pipeline +
 
 ---
 
-## 3. What verify fails on (expected)
+## 4. What verify fails on (expected)
 
 - Score &lt; `--fail-below`  
 - BitLocker / undecryptable volume (hard block offline)  
@@ -95,7 +141,7 @@ These are **stops**, not warnings. Fix offline (runbook 02/03/06) and re-emit.
 
 ---
 
-## 4. Handoff to hyper2kvm
+## 5. Handoff to hyper2kvm
 
 Passport does **not** convert. After verify:
 
@@ -107,7 +153,7 @@ See also: [Passport → hyper2kvm blog](https://zyvor.dev/blog/guestkit-hyper2kv
 
 ---
 
-## 5. Ownership
+## 6. Ownership
 
 | Item | Owner |
 |------|--------|

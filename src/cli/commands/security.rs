@@ -414,22 +414,37 @@ pub fn rescue_command(
     // Mount filesystems
     progress.set_message("Mounting filesystems...");
     let roots = g.inspect_os().unwrap_or_default();
-    if !roots.is_empty() {
-        let root = &roots[0];
-        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
-            let mut mounts: Vec<_> = mountpoints.iter().collect();
-            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
-            for (mount, device) in mounts {
-                g.mount(device, mount).ok();
-            }
-        }
-    }
 
     let is_windows = roots
         .first()
         .and_then(|r| g.inspect_get_type(r).ok())
         .map(|t| t.eq_ignore_ascii_case("windows"))
         .unwrap_or(false);
+
+    if !roots.is_empty() {
+        let root = &roots[0];
+        if let Ok(mountpoints) = g.inspect_get_mountpoints(root) {
+            let mut mounts: Vec<_> = mountpoints.iter().collect();
+            mounts.sort_by_key(|(mount, _)| std::cmp::Reverse(mount.len()));
+            for (mount, device) in mounts {
+                // Rescue targets are frequently NTFS volumes left dirty by a
+                // hypervisor-level power-off or Windows Fast Startup
+                // ("Metadata kept in Windows cache") — ntfs-3g then mounts
+                // read-only, or refuses outright, and every write-mode
+                // rescue op (reset-password, enable-rdp, ...) fails deep in
+                // its final write. ntfsfix --clear-dirty repairs this before
+                // mounting. Same repair path as agent-inject and plan-apply.
+                if is_windows && g.vfs_type(device).ok().as_deref() == Some("ntfs") {
+                    if let Err(e) = g.ntfsfix_opts(device, false, true) {
+                        if verbose {
+                            eprintln!("ntfsfix {device}: {e} (continuing)");
+                        }
+                    }
+                }
+                g.mount(device, mount).ok();
+            }
+        }
+    }
 
     let vm_str = image
         .to_str()

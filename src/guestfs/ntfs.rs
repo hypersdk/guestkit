@@ -113,10 +113,31 @@ impl Guestfs {
     /// Fix NTFS filesystem
     ///
     pub fn ntfsfix(&mut self, device: &str, clearbadsectors: bool) -> Result<()> {
+        self.ntfsfix_opts(device, clearbadsectors, false)
+    }
+
+    /// Fix NTFS filesystem, optionally clearing the volume dirty flag.
+    ///
+    /// `clear_dirty` maps to ntfsfix's `-d`/`--clear-dirty`. Disks left by a
+    /// hypervisor-level power-off or Windows Fast Startup carry a dirty NTFS
+    /// flag ("Metadata kept in Windows cache") that a plain `ntfsfix` does
+    /// *not* clear — ntfs-3g then silently mounts read-only (or refuses
+    /// outright) and any write-mode rescue/inject operation fails. Callers
+    /// that are about to mount a Windows disk read-write for offline
+    /// recovery should pass `true`.
+    pub fn ntfsfix_opts(
+        &mut self,
+        device: &str,
+        clearbadsectors: bool,
+        clear_dirty: bool,
+    ) -> Result<()> {
         self.ensure_ready()?;
 
         if self.verbose {
-            eprintln!("guestfs: ntfsfix {} {}", device, clearbadsectors);
+            eprintln!(
+                "guestfs: ntfsfix {} {} clear_dirty={}",
+                device, clearbadsectors, clear_dirty
+            );
         }
 
         self.setup_nbd_if_needed()?;
@@ -140,6 +161,9 @@ impl Guestfs {
 
         if clearbadsectors {
             cmd.arg("--clear-bad-sectors");
+        }
+        if clear_dirty {
+            cmd.arg("--clear-dirty");
         }
 
         cmd.arg(&nbd_partition);
