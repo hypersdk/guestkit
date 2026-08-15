@@ -103,13 +103,13 @@ echo "Provision YAML..."
 curl_or_die -X POST "${API}/vms/${VM_ID}/provision" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['yaml'][:2000])"
 
 echo "Config endpoint..."
-curl -sf "${API}/config" | json_head 20
+curl_or_die "${API}/config" | json_head 20
 
 if curl -sf "${API}/kubevirt/vms" >/dev/null 2>&1; then
   echo "KubeVirt fleet..."
-  curl -sf "${API}/kubevirt/vms" | python3 -m json.tool | head -40
+  curl_or_die "${API}/kubevirt/vms" | python3 -m json.tool | head -40
   echo "KubeVirt namespaces..."
-  curl -sf "${API}/kubevirt/namespaces" | python3 -m json.tool
+  curl_or_die "${API}/kubevirt/namespaces" | python3 -m json.tool
 
   echo "Live guest deep intelligence (first running VM)..."
   RUNNING=$(curl -sf "${API}/kubevirt/vms" | python3 -c "
@@ -137,11 +137,11 @@ fi
 
 if curl -sf "${API}/vmtools/bundle" >/dev/null 2>&1; then
   echo "VM Tools bundle..."
-  curl -sf "${API}/vmtools/bundle" | json_head 20
+  curl_or_die "${API}/vmtools/bundle" | json_head 20
   echo "VM Tools coverage..."
-  curl -sf "${API}/vmtools/coverage" | python3 -m json.tool
+  curl_or_die "${API}/vmtools/coverage" | python3 -m json.tool
   echo "VM Tools policy..."
-  curl -sf "${API}/vmtools/policy" | python3 -m json.tool
+  curl_or_die "${API}/vmtools/policy" | python3 -m json.tool
   echo "VM Tools reconcile..."
   RECON=$(curl -sf -X POST "${API}/vmtools/policy/reconcile" || echo '{"success":false}')
   echo "${RECON}" | python3 -m json.tool || true
@@ -220,7 +220,7 @@ spec:
 EOF
 
     sleep 3
-    CINS=$(curl -sf -X POST "${API}/kubevirt/vms/${NS}/${VM_NAME}/inspect")
+    CINS=$(curl_or_die -X POST "${API}/kubevirt/vms/${NS}/${VM_NAME}/inspect")
     CINS_JOB=$(echo "${CINS}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['job_id'])")
     CINS_RESULT=$(poll_job "${CINS_JOB}" cluster-inspect)
     python3 -c "import sys,json; d=json.load(sys.stdin); r=d.get('data',{}).get('result',{}); assert r.get('inspect') or r.get('data',{}).get('inspect'), r" <<< "${CINS_RESULT}"
@@ -242,7 +242,7 @@ for v in vms:
     if [[ -n "${STOPPED}" ]]; then
       NS=$(echo "${STOPPED}" | awk '{print $1}')
       NAME=$(echo "${STOPPED}" | awk '{print $2}')
-      CINS=$(curl -sf -X POST "${API}/kubevirt/vms/${NS}/${NAME}/inspect")
+      CINS=$(curl_or_die -X POST "${API}/kubevirt/vms/${NS}/${NAME}/inspect")
       CINS_JOB=$(echo "${CINS}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['job_id'])")
       CINS_RESULT=$(poll_job "${CINS_JOB}" cluster-inspect)
       python3 -c "import sys,json; d=json.load(sys.stdin); r=d.get('data',{}).get('result',{}); assert r.get('inspect') or r.get('data',{}).get('inspect'), r" <<< "${CINS_RESULT}"
@@ -254,7 +254,7 @@ fi
 
 if curl -sf "${API}/storage/roots" >/dev/null 2>&1; then
   echo "Storage roots..."
-  curl -sf "${API}/storage/roots" | json_head 20
+  curl_or_die "${API}/storage/roots" | json_head 20
 fi
 
 echo "Smoke test complete."
