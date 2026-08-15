@@ -1,5 +1,5 @@
 Name:           guestkit
-Version:        1.0.0
+Version:        1.0.1
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -92,6 +92,11 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Sat Aug 15 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 1.0.1-1
+- Fix guestkit-worker's Docker release build: its pinned `guestkit = "0.3.3"`
+  path dependency rejected the workspace's own 1.0.0, breaking GHCR image
+  publishing for every release past the 0.x line
+
 * Sat Aug 15 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 1.0.0-1
 - MCP server for the AI copilot (guestkit mcp-serve), native OpenAI tool-calling, cross-run AI memory
 - Fleet dependency-aware migration waves (fleet wave-plan) and scheduled drift monitoring (fleet watch)

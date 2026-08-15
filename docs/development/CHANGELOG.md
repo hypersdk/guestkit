@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-15
+
+### Fixed
+- **`guestkit-worker`'s Docker release build failed for every release past
+  the `0.x` line** — `crates/guestkit-worker/Cargo.toml` pinned its own
+  `guestkit` path dependency to `version = "0.3.3"`; the worker's
+  `Dockerfile` never copies a `Cargo.lock` in, so each build freshly
+  resolves dependencies and cargo enforces the version requirement even
+  against a `path` dependency — `1.0.0` didn't satisfy `^0.3.3` and the
+  `Publish GHCR Release Images` job in `v1.0.0`'s release run failed.
+  Dropped the version pin (path-only, matching `zyvor-api` and
+  `zyvor-guest-agent`'s existing pattern for the same in-workspace
+  dependency).
+
 ## [1.0.0] - 2026-08-15
 
 ### Added
