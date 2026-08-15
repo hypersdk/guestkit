@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-15
+
 ### Added
 - **GitHub Action for the Passport CI gate** (`action.yml`) — reusable
   composite action wrapping `doctor → migrate-plan → passport emit →

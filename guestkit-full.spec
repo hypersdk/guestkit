@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           guestkit
-Version:        0.3.21
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Pure-Rust VM disk inspection and manipulation toolkit
 
@@ -166,6 +166,12 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 %{_docdir}/%{name}/examples/
 
 %changelog
+* Sat Aug 15 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 1.0.0-1
+- MCP server for the AI copilot (guestkit mcp-serve), native OpenAI tool-calling, cross-run AI memory
+- Fleet dependency-aware migration waves (fleet wave-plan) and scheduled drift monitoring (fleet watch)
+- GitHub Action for the Passport CI gate (action.yml)
+- k3s E2E and CI reliability fixes; Helm chart lint/template CI coverage
+
 * Sat Aug 08 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.21-1
 - Fix SEGV in offline Windows password reset (hivex_value_type FFI signature)
 - ntfsfix now actually clears the NTFS dirty flag on Windows rescue writes

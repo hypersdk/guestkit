@@ -4,7 +4,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
-- **Unreleased** — GitHub Action for the Passport CI gate (`action.yml`,
+- **v1.0.0** — GitHub Action for the Passport CI gate (`action.yml`,
   dogfooded by `passport-gate-demo.yml`); CI reliability pass (missing
   `libsystemd-dev`/`libhivex-dev` on Linux runners, loop/NBD device
   permissions, stale RPM spec version, doc-test compile fixes, k3s E2E
