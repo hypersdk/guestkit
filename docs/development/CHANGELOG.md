@@ -14,6 +14,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release binary, no build step. Dogfooded against a real disk image by
   `.github/workflows/passport-gate-demo.yml` on every change. See
   `docs/devops/01-passport-ci-gate.md`.
+- **Native OpenAI tool-calling for the AI copilot** (`src/ai/rig_tools.rs`)
+  — rig-core `AgentBuilder`/`multi_turn` with real JSON-schema tool
+  definitions, replacing regex/JSON-scraped completion text for OpenAI.
+  xAI/Anthropic/Ollama still use the original text-instructed loop.
+- **Cross-run AI memory** (`src/ai/memory.rs`) — a repeated `doctor --ai`/
+  `migrate-plan --ai` run against the same VM folds a summary of prior
+  findings into the query, capped at the last 20 runs.
+  `GUESTKIT_AI_MEMORY_DIR`/`GUESTKIT_AI_MEMORY=0` to relocate/disable.
+- **MCP server for the AI copilot** (`src/ai/mcp.rs`, `--features mcp`) —
+  `guestkit mcp-serve <disk> [--target <target>]` exposes the same 6
+  read-only evidence tools over stdio to Claude Desktop / other MCP
+  hosts, independent of guestkit's own agent loop.
+- **`guestkit fleet wave-plan`** (`src/fleet/wave.rs`) — orders a fleet's
+  disk images into dependency-aware migration waves (DB-role priority +
+  NFS storage-dependency edges, Kahn's-algorithm topological sort,
+  cycles reported rather than dropped or arbitrarily ordered).
+- **`guestkit fleet watch`** (`src/fleet/baseline.rs`) — scheduled drift
+  monitoring: diffs each VM's current evidence against a stored golden
+  baseline (first run establishes it), `--fail-on-drift` for pipeline
+  gating. Includes a Kubernetes `CronJob` template
+  (`deploy/helm/zyvor/templates/fleet-drift-watch-cronjob.yaml`) as the
+  reference scheduled-invocation path.
+- **Helm chart CI** — `ci.yml`'s new `helm-chart` job runs `helm lint` and
+  `helm template` against `deploy/helm/zyvor`, which previously had zero
+  CI coverage, across default values, every optional PVC-backed feature
+  enabled at once, hostPath-backed persistence, and all three real
+  deployment overlays (`values-ci.yaml`, `values-k3s.yaml`,
+  `values-prod.yaml`).
+- **Manual-dispatch workflow for NBD-dependent tests**
+  (`self-hosted-nbd-tests.yml`) — runs the full test suite with none of
+  `ci.yml`'s NBD skips, for self-hosted runners with working loop/NBD
+  support. `workflow_dispatch` only, deliberately never wired to
+  `pull_request`/`push`.
 
 ### Fixed
 - **k3s E2E's `zyvor-api` pod crash-looped on every run** — the Helm chart's

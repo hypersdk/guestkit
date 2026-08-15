@@ -15,3 +15,5 @@ guestkit timeline suspect.qcow2
 4. Never “just power on to see.”
 
 See [forensic-diff blog](https://zyvor.dev/blog/guestkit-forensic-diff-ir).
+
+**Scheduled, fleet-wide version:** this runbook is for a one-off, reactive diff against a specific suspicious disk. For ongoing drift monitoring across a whole fleet on a schedule, see [`guestkit fleet watch`](../features/migration-assurance.md#guestkit-fleet-watch--scheduled-drift-monitoring) instead.

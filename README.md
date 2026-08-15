@@ -77,7 +77,8 @@ Recorded live against real deployments — no staged screenshots.
 | guestfish scripts and tribal knowledge | Structured plans, JSON/YAML, CI gates |
 | Migration surprises on cutover weekend | Hypervisor-aware **migrate-plan** + day-0 packs |
 | No audit trail MTV / virt-v2v can skip | Signed **Cutover Passport** |
-| Fleet drift invisible until outage | `fleet analyze`, forensic diff, policy-as-code |
+| Fleet drift invisible until outage | `fleet analyze`/`watch`, forensic diff, policy-as-code |
+| Migration order guessed by hand | `fleet wave-plan` — dependency-aware migration waves |
 | Deep inspect needs a running guest | Carbon **TUI** + in-guest agent over QGA |
 
 **Pairs with:** [hyper2kvm](https://github.com/hypersdk/hyper2kvm) for VMware → KVM. GuestKit certifies; hyper2kvm converts.
@@ -131,7 +132,7 @@ PackageInstall can stage from cache, host-fetch (`GUESTKIT_PACKAGE_FETCH=1`), or
 ### Live control + platform
 
 - **In-guest agent** (Linux + Windows) over virtio-serial / QGA — inject offline, then `agent-proxy` / `agent-call`
-- **AI copilot** (optional, `--features ai`) — read-only tool-calling loop over the offline evidence snapshot: `doctor --explain --ai`, `migrate-plan --ai`. OpenAI/xAI/Anthropic/Ollama. Not the in-guest agent above — see [AI Guest Agent roadmap](docs/development/ai-guest-agent-roadmap.md)
+- **AI copilot** (optional, `--features ai`) — read-only tool-calling loop over the offline evidence snapshot: `doctor --explain --ai`, `migrate-plan --ai`. Native tool-calling for OpenAI (rig-core), cross-run memory across repeated runs on the same VM, and an MCP server (`guestkit mcp-serve`, `--features mcp`) for external hosts like Claude Desktop. OpenAI/xAI/Anthropic/Ollama. Not the in-guest agent above — see [AI Guest Agent roadmap](docs/development/ai-guest-agent-roadmap.md)
 - **KubeVirt** boot-inspect hooks and Guest Control Fabric
 - **Web console** + worker on GHCR; Helm chart under `deploy/helm/zyvor`
 - **Python:** `pip install hypersdk-guestkit` → `from guestkit import Guestfs`

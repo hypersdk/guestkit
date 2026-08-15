@@ -12,7 +12,13 @@ guestkit fleet analyze ./images/ | tee fleet.json
 # or path layout your team uses for exports
 ```
 
-Clusters OS fingerprints, flags outliers and low doctor scores. Use output to order waves (easy Linux first, BitLocker/domain Windows later).
+Clusters OS fingerprints, flags outliers and low doctor scores. Use output to order waves (easy Linux first, BitLocker/domain Windows later) — or let `fleet wave-plan` derive the order from real dependency signals (DB role, NFS storage mounts) instead of doing it by hand:
+
+```bash
+guestkit fleet wave-plan ./images/ | tee waves.json
+```
+
+See [migration-assurance.md](../features/migration-assurance.md#guestkit-fleet-wave-plan--dependency-aware-migration-ordering).
 
 TUI:
 

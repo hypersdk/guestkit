@@ -8,7 +8,13 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
   dogfooded by `passport-gate-demo.yml`); CI reliability pass (missing
   `libsystemd-dev`/`libhivex-dev` on Linux runners, loop/NBD device
   permissions, stale RPM spec version, doc-test compile fixes, k3s E2E
-  musl/mingw/MinIO credential fixes)
+  musl/mingw/MinIO credential fixes, `zyvor-api` mTLS bootstrap-token
+  crash-loop); Helm chart CI (`helm lint`/`template` across all real
+  overlays) and a manual-dispatch workflow for the NBD tests hosted
+  runners can't run; native OpenAI tool-calling (rig-core), cross-run AI
+  memory, and an MCP server for the AI copilot (`guestkit mcp-serve`);
+  fleet dependency-aware migration waves (`fleet wave-plan`) and
+  scheduled drift monitoring against a stored baseline (`fleet watch`)
 - **v0.3.21** — Fixed `rescue -o reset-password` SEGV (`hivex_value_type`
   FFI signature); `ntfsfix` now actually clears the NTFS dirty flag;
   fixed Windows cross-compile break from ungated Unix-only guestfs modules
@@ -25,7 +31,7 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ### AI Guest Agent (all phases shipped)
 
-Phases 0–4 of the optional AI layer are complete — richer systemd/Windows evidence, semantic analysis, the agentic loop, local Ollama + what-if simulation, and platform integration (CIS-lite profiles, Machina export, full `.evtx` forensics). See [ai-guest-agent-roadmap.md](ai-guest-agent-roadmap.md).
+Phases 0–4 of the optional AI layer are complete — richer systemd/Windows evidence, semantic analysis, the agentic loop (now with native rig-core tool-calling for OpenAI and cross-run memory), local Ollama + what-if simulation, and platform integration (CIS-lite profiles, Machina export, full `.evtx` forensics, an MCP server for external hosts). See [ai-guest-agent-roadmap.md](ai-guest-agent-roadmap.md).
 
 ## In progress / next
 
