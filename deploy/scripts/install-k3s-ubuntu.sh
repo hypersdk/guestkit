@@ -69,4 +69,35 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 kubectl get nodes -o wide
+
+# values-ci.yaml sets kubevirt.enabled: true (zyvor-api/worker assume the
+# KubeVirt CRDs exist — RBAC, mTLS, the kube-list-virtualmachines calls
+# behind /vmtools/coverage and the fleet endpoints), but nothing installed
+# the KubeVirt operator that actually registers those CRDs with the API
+# server — same install this repo already uses in
+# deploy/scripts/kind-kubevirt-quickstart.sh, just never ported to this
+# script. GitHub-hosted runners have no /dev/kvm (no nested
+# virtualization), so virt-handler won't reach a fully healthy state and
+# actually starting a VirtualMachineInstance won't work here — but the
+# CRDs register, and the kubevirt.io/v1 API group routes real (empty)
+# responses instead of 404 as soon as the operator applies them, which is
+# all this E2E job's default (non-E2E_KUBEVIRT) path needs.
+KUBEVIRT_VERSION="${KUBEVIRT_VERSION:-v1.4.0}"
+if ! kubectl get crd virtualmachines.kubevirt.io >/dev/null 2>&1; then
+  echo "Installing KubeVirt ${KUBEVIRT_VERSION}..."
+  kubectl apply -f "https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-operator.yaml"
+  kubectl apply -f "https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/kubevirt-cr.yaml"
+  echo "Waiting for KubeVirt CRDs to register..."
+  for _ in $(seq 1 60); do
+    if kubectl get crd virtualmachines.kubevirt.io >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+  # Best-effort only: no /dev/kvm here, so virt-handler can't fully come up.
+  kubectl -n kubevirt wait kv kubevirt --for condition=Available --timeout=120s || true
+else
+  echo "KubeVirt CRDs already present"
+fi
+
 echo "=== k3s ready (KUBECONFIG=${KUBECONFIG}) ==="

@@ -167,6 +167,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     OS on exactly the image `doctor`/`inspect` (via `guestkit-worker`,
     which has `cpio`) found one on every time. Added `cpio`/`gzip` to
     `zyvor-api`'s Dockerfile, matching `guestkit-worker`'s package list.
+    Confirmed live afterward: `provision` succeeds, generating a real
+    PVC-referencing manifest — this was the fix. The remaining unguarded
+    `curl -sf | python3` call sites past `provision` (`/config`,
+    `/kubevirt/vms`, `/kubevirt/namespaces`, `/vmtools/coverage`,
+    `/vmtools/policy`, `/storage/roots`, the `E2E_KUBEVIRT` cluster-inspect
+    calls) got the same `curl_or_die` treatment for consistency.
+  - One more layer, different in kind from everything above:
+    `/vmtools/coverage` now fails with a real, visible error —
+    `kube list virtualmachines: ... 404 page not found`. `values-ci.yaml`
+    sets `kubevirt.enabled: true` (zyvor-api/worker assume the KubeVirt
+    CRDs exist), but neither `install-k3s-ubuntu.sh` nor
+    `deploy-remote-k3s.sh` ever installed the KubeVirt operator that
+    registers them — this repo already has that install (pinned
+    `v1.4.0`, operator + CR manifests, tolerant wait) in
+    `deploy/scripts/kind-kubevirt-quickstart.sh`, just never ported to
+    the script this CI workflow actually uses. Ported it. GitHub-hosted
+    runners have no `/dev/kvm` (no nested virtualization), so
+    `virt-handler` won't reach fully healthy and starting a real
+    `VirtualMachineInstance` still won't work here — but the CRDs
+    register and the `kubevirt.io/v1` API group routes real (empty)
+    responses instead of 404 as soon as the operator applies them, which
+    is all this job's default (non-`E2E_KUBEVIRT`) path needs.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs
