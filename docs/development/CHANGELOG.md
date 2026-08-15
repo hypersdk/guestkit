@@ -66,45 +66,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `helm template`s all three real overlays (`values-ci.yaml`,
   `values-k3s.yaml`, `values-prod.yaml`) so a rendering break here is caught
   without needing a live k3s cluster.
-- **k3s E2E's `inspect` step polled for 5 minutes with zero diagnostic
-  output, then timed out** — `poll_job` in `deploy/scripts/e2e-smoke.sh`
-  only recognized `"completed"` as terminal, so a `"failed"` job status
-  looked identical to "still pending" for the full 60-poll budget, and
-  the actual error message the worker had already written (available via
-  the job's `live_status.error` field) was never printed. `poll_job` now
-  treats `failed`/`cancelled`/`timeout` as terminal and prints the job's
-  error immediately. Also added the loop/NBD device setup
-  `install-k3s-ubuntu.sh` never had (`deploy-remote-k3s.sh`'s
-  `guestkit-worker` pod bind-mounts the host's `/dev`, so the same
-  root:disk-0660-node / EACCES-looks-like-timeout issue `ci.yml` hit
-  applies here too) — same fix as `ci.yml`'s "Setup loop and NBD
-  devices" step, which this script never got. Confirmed live: `inspect`
-  and `doctor` both now complete in one poll with a real bootability
-  score, instead of failing — this specific k3s stack path does not hit
-  the deeper NBD-attach limitation `ci.yml`'s plain `cargo test` job
-  still has to skip around. The next step, `provision`, then failed with
-  an opaque `Expecting value: line 1 column 1` — `curl -sf` swallows the
-  response body on any non-2xx status, so a real API error looked
-  identical to an empty body. Added a `curl_or_die` helper (splits HTTP
-  status from body via `-w`, prints both on failure) and used it for the
-  script's critical-path calls (import, inspect, doctor, migration-plan,
-  provision) so the next failure there is diagnosable from CI logs too.
-  That surfaced the real error: `provision` (`POST /vms/{id}/provision`,
-  which mounts the disk *synchronously in zyvor-api's own process*) hit
-  `"No operating system found in disk image"` on the same image `doctor`
-  had just successfully inspected seconds earlier — because the script's
-  prior "Migration plan..." step submits an *async* job that mounts the
-  same disk via `guestkit-worker` and never waits for it, racing
-  provision's own mount. Root cause: `NbdDevice::find_available_device`
-  (`src/disk/nbd.rs`) checks a device's availability and connects as two
-  separate, unlocked steps with no cross-process coordination — two
-  processes mounting different images at the same moment can pick the
-  same device index, and the loser's connect just fails rather than
-  retrying. Fixed the E2E script by polling the migration-plan job to
-  completion before calling provision; left the deeper cross-process race
-  in `find_available_device` itself as a documented, not-fixed-here issue
-  (flagged with a code comment) since there's no NBD-capable test
-  infrastructure available to verify a real locking fix against.
+- **k3s E2E multi-round debugging** — the job was failing on every run;
+  fixing it required peeling through several layers, each masking the
+  next:
+  - `poll_job` (`deploy/scripts/e2e-smoke.sh`) only recognized
+    `"completed"` as terminal, so a `"failed"` job status looked
+    identical to "still pending" for the full 5-minute poll budget, and
+    the worker's own error message (`live_status.error`) was never
+    printed. Now treats `failed`/`cancelled`/`timeout` as terminal and
+    prints the error immediately.
+  - `install-k3s-ubuntu.sh` never got the loop/NBD device setup
+    `ci.yml` needed earlier this session (`guestkit-worker`'s pod
+    bind-mounts the host's `/dev`, so the same root:disk-0660-node /
+    EACCES-looks-like-timeout issue applies here too). Added it —
+    confirmed live afterward: `inspect`/`doctor` both complete in one
+    poll with a real bootability score. This specific k3s stack path
+    does not hit the deeper NBD-attach limitation `ci.yml`'s plain
+    `cargo test` job still has to skip around.
+  - `curl -sf` swallows the response body on any non-2xx status, so the
+    next failure (`provision`) looked like an empty response
+    (`Expecting value: line 1 column 1`) instead of a real API error.
+    Added a `curl_or_die` helper (splits HTTP status from body via
+    curl's `-w`, prints both on failure).
+  - That revealed a real HTTP 500: `"No operating system found in disk
+    image"` from `provision` (`POST /vms/{id}/provision`, which mounts
+    the disk *synchronously in zyvor-api's own process*), on the same
+    image `doctor` had just inspected successfully. Suspected (and
+    partially fixed) an unawaited async `migration-plan` job racing
+    provision's own mount via `NbdDevice::find_available_device`
+    (`src/disk/nbd.rs`) — that function does check device availability
+    and connect as two separate, unlocked steps with no cross-process
+    coordination, a real bug now flagged with a code comment — but
+    serializing migration-plan before provision did **not** fix it,
+    disproving the race as *this* failure's cause.
+  - The actual culprit: `provision_vm`'s `.map_err(|e|
+    ApiError::internal(e.to_string()))` (`crates/zyvor-api/src/routes/vms.rs`).
+    `run_migrate_plan` returns `anyhow::Result`, and anyhow's plain
+    `Display` only shows the outermost `.context()` layer —
+    `collect_assurance_data` wraps *every* `mount_all_ro` failure in
+    "No operating system found in disk image" regardless of the real
+    cause, and `.to_string()` was throwing away everything underneath
+    it. Changed to `format!("{e:#}")` (anyhow's alternate Display,
+    prints the full chain) for `provision_vm`'s three `guestkit`/
+    `export::kubevirt`-derived `map_err` calls specifically — left the
+    ~90 other `.map_err(|e| ApiError::internal(e.to_string()))` sites
+    across the crate alone, since most wrap simple error types
+    (`serde_json`, `std::io`) where `.to_string()` isn't lossy and a
+    blanket rewrite would be unfocused scope creep beyond what this
+    investigation actually found broken.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs

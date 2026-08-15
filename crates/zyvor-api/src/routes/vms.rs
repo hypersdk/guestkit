@@ -299,7 +299,14 @@ pub async fn provision_vm(
             inject_agent: false,
         },
     )
-    .map_err(|e| ApiError::internal(e.to_string()))?;
+    // `{e:#}` (not `e.to_string()`/`{e}`): anyhow's plain Display only
+    // shows the outermost .context() layer. collect_assurance_data wraps
+    // every mount_all_ro failure in "No operating system found in disk
+    // image" regardless of the actual cause (file not found, guestfs
+    // launch failure, device busy, ...) — the alternate-Display chain is
+    // the only way this handler's error response reflects what actually
+    // went wrong instead of that one fixed, possibly-misleading string.
+    .map_err(|e| ApiError::internal(format!("{e:#}")))?;
 
     let mut disk = DiskMetadata::from_image_path(
         &image_path,
@@ -313,8 +320,8 @@ pub async fn provision_vm(
     ));
 
     let manifests = generate_kubevirt_manifests(&plan_result, &disk)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    let yaml = manifests_to_yaml(&manifests).map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("{e:#}")))?;
+    let yaml = manifests_to_yaml(&manifests).map_err(|e| ApiError::internal(format!("{e:#}")))?;
 
     let mut applied = false;
     let mut resources = None;
