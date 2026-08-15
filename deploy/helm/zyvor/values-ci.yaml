@@ -20,6 +20,13 @@ zyvorApi:
     enabled: true
     vsockPort: 1234
     listen: "127.0.0.1:8765"
+  # agentMtls.enabled defaults to true (see values.yaml), which requires a
+  # bootstrap token independent of full UI/API auth being on — without this,
+  # zyvor-api's Config::from_env() refuses to start at all ("AGENT_MTLS_BIND_ADDR
+  # is set but AGENT_BOOTSTRAP_TOKEN is unset"). Ephemeral CI cluster, torn
+  # down after the job — a static placeholder is fine here.
+  auth:
+    agentBootstrapToken: "ci-e2e-bootstrap-token"
   service:
     type: NodePort
     nodePort: 30080

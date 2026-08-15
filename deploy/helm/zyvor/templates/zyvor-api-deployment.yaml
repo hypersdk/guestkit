@@ -77,13 +77,6 @@ spec:
                   name: zyvor-api-auth
                   key: SAML_CERTIFICATE_PEM
             {{- end }}
-            {{- if .Values.zyvorApi.auth.agentBootstrapToken }}
-            - name: AGENT_BOOTSTRAP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: zyvor-api-auth
-                  key: AGENT_BOOTSTRAP_TOKEN
-            {{- end }}
             {{- end }}
             - name: DATABASE_URL
               valueFrom:
@@ -144,6 +137,13 @@ spec:
             {{- end }}
             - name: AGENT_CA_DIR
               value: /var/lib/zyvor/agent-ca
+            {{- if .Values.zyvorApi.auth.agentBootstrapToken }}
+            - name: AGENT_BOOTSTRAP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: zyvor-api-auth
+                  key: AGENT_BOOTSTRAP_TOKEN
+            {{- end }}
             {{- if .Values.zyvorApi.agentMtls.enabled }}
             - name: AGENT_MTLS_BIND_ADDR
               value: {{ .Values.zyvorApi.agentMtls.bindAddr | quote }}

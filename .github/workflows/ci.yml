@@ -309,6 +309,14 @@ jobs:
             --set ingress.certManager.enabled=true \
             > /dev/null
 
+      - name: helm template (real deployment overlays)
+        run: |
+          for values in values-ci.yaml values-k3s.yaml values-prod.yaml; do
+            echo "=== ${values} ==="
+            helm template test-release deploy/helm/zyvor \
+              -f "deploy/helm/zyvor/${values}" > /dev/null
+          done
+
       - name: helm template (hostPath persistence — PVC-only features disabled)
         run: |
           helm template test-release deploy/helm/zyvor \

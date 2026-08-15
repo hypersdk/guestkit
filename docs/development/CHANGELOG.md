@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/devops/01-passport-ci-gate.md`.
 
 ### Fixed
+- **k3s E2E's `zyvor-api` pod crash-looped on every run** — the Helm chart's
+  default `zyvorApi.agentMtls.enabled: true` requires `AGENT_BOOTSTRAP_TOKEN`
+  (zyvor-api refuses to start otherwise: "AGENT_MTLS_BIND_ADDR is set but
+  AGENT_BOOTSTRAP_TOKEN is unset"), but the Deployment template only ever
+  wired that env var — and the Secret holding it — inside the
+  `zyvorApi.auth.enabled` block. `values-ci.yaml` (mTLS on, full auth off)
+  hit exactly that gap; `values-prod.yaml` masked it by having both auth and
+  a token on together, and `values-k3s.yaml` worked around it by disabling
+  mTLS outright (its own comment already described the bug). Decoupled the
+  `zyvor-api-auth` Secret and `AGENT_BOOTSTRAP_TOKEN` env var from
+  `auth.enabled` — gated only on the token itself being set, matching what
+  `zyvor-api`'s own config validation actually requires — and set a
+  CI-only placeholder token in `values-ci.yaml` so the E2E job now exercises
+  the mTLS path instead of crash-looping. `ci.yml`'s Helm Chart job now also
+  `helm template`s all three real overlays (`values-ci.yaml`,
+  `values-k3s.yaml`, `values-prod.yaml`) so a rendering break here is caught
+  without needing a live k3s cluster.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs
