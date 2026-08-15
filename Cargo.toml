@@ -50,6 +50,10 @@ rpassword = "7.3"
 rig-core = { version = "0.29", optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
 
+# MCP server (optional feature) — exposes the read-only evidence tools to
+# external MCP hosts (Claude Desktop, etc.)
+rmcp = { version = "3", optional = true, features = ["server", "transport-io"] }
+
 # TUI
 ratatui = "0.28"
 crossterm = "0.28"
@@ -141,6 +145,7 @@ journal-native = ["dep:libsystemd-sys"]
 python-bindings = ["pyo3"]
 ai = ["rig-core", "reqwest"]
 local-ai = ["ai"]
+mcp = ["dep:rmcp", "ai"]
 # Offline Windows registry writes via libhivex FFI (needs libhivex-dev / hivex-devel)
 registry-write = []
 cloud-s3 = []

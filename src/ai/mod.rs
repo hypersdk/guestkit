@@ -20,6 +20,9 @@ pub mod whatif;
 #[cfg(feature = "ai")]
 #[cfg(not(target_os = "windows"))]
 pub mod agent;
+#[cfg(feature = "mcp")]
+#[cfg(not(target_os = "windows"))]
+pub mod mcp;
 #[cfg(feature = "ai")]
 pub mod memory;
 #[cfg(feature = "ai")]
@@ -45,5 +48,8 @@ pub use whatif::{simulate_unit_disable, WhatIfResult};
 #[cfg(feature = "ai")]
 #[cfg(not(target_os = "windows"))]
 pub use agent::{run_agent_on_evidence, AgentConfig, AgentResult};
+#[cfg(feature = "mcp")]
+#[cfg(not(target_os = "windows"))]
+pub use mcp::GuestkitMcpServer;
 #[cfg(feature = "ai")]
 pub use providers::{completion, Provider, ProviderConfig};

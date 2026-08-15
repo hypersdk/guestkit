@@ -31,7 +31,7 @@ impl SnapshotContext {
         Self { evidence, boot }
     }
 
-    fn call(&self, name: &str, args: &Value) -> Result<Value, ToolCallErr> {
+    pub fn call(&self, name: &str, args: &Value) -> Result<Value, ToolCallErr> {
         let tools = SnapshotTools::new(&self.evidence, self.boot.as_ref().as_ref());
         tools
             .call(name, args)

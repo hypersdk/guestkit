@@ -47,6 +47,7 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** �
 | Native tool-calling (OpenAI) | Shipped (`src/ai/rig_tools.rs`, rig-core `AgentBuilder`/`multi_turn`) — schema-validated, provider-parsed tool calls instead of regex/JSON-scraped completion text. xAI/Anthropic/Ollama still use the original text-instructed loop (no rig client wired up for xAI/Anthropic yet; Ollama has none upstream) |
 | `doctor --explain --ai`, `migrate-plan --explain --ai` | Shipped |
 | Providers: OpenAI, xAI, Anthropic, Ollama | Shipped (`src/ai/providers.rs`) |
+| Cross-run memory | Shipped (`src/ai/memory.rs`) — a re-run against the same VM (keyed by canonicalized image path) folds a short summary of prior findings into the query, capped at the last 20 runs. `GUESTKIT_AI_MEMORY_DIR` / `GUESTKIT_AI_MEMORY=0` to relocate/disable |
 | TUI **AI Insights** panel | Shipped |
 
 ## Phase 3 — Local AI & what-if
@@ -67,6 +68,7 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** �
 | Policy DSL hints from CIS-lite profile | Shipped |
 | CIS-style security profiles | Shipped (`src/ai/security_profiles.rs`) |
 | Full `.evtx` parsing for forensic profiles | Shipped (`evtx` crate + `WindowsForensicProfile`) |
+| MCP server (external hosts) | Shipped (`src/ai/mcp.rs`, `--features mcp`) — `guestkit mcp-serve <disk> [--target <target>]` exposes the same 6 read-only tools over stdio to Claude Desktop / other MCP hosts, independent of guestkit's own AI copilot loop |
 
 ## Module layout
 
@@ -76,6 +78,8 @@ src/ai/
   semantic.rs         — Phase 1 analysis
   tools.rs            — Phase 2 snapshot tool registry (feature ai)
   agent.rs            — Phase 2 agent loop (feature ai)
+  rig_tools.rs        — Phase 2 native rig-core Tool impls (feature ai)
+  memory.rs           — Phase 2 cross-run memory (feature ai)
   prompts.rs          — versioned system prompts
   providers.rs        — OpenAI / xAI / Anthropic / Ollama (feature ai)
   recommendations.rs  — Phase 3 proactive engine
@@ -84,7 +88,10 @@ src/ai/
   reports.rs          — Phase 3 report narratives
   security_profiles.rs— Phase 4 CIS-lite
   platform.rs         — Phase 4 Machina export
+  mcp.rs              — Phase 4 MCP server (feature mcp)
   intelligence.rs     — bundled output for doctor/TUI
+src/cli/commands/
+  mcp.rs              — guestkit mcp-serve CLI command (feature mcp)
 src/evidence/collectors/
   systemd.rs, windows.rs — Phase 0 collectors
 ```
@@ -105,6 +112,10 @@ guestkit doctor disk.qcow2 --explain --ai
 export OLLAMA_HOST=http://127.0.0.1:11434
 export GUESTKIT_AI_PROVIDER=ollama
 guestkit migrate-plan disk.qcow2 --target kvm --ai
+
+# MCP server for external hosts (requires --features mcp)
+cargo build --release --features mcp
+guestkit mcp-serve disk.qcow2 --target kvm   # stdio — point an MCP host at this command
 ```
 
 ## Related docs

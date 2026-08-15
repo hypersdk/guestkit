@@ -10,6 +10,9 @@ pub mod batch;
 pub mod disk_ops;
 pub mod file_ops;
 pub mod inspect;
+#[cfg(feature = "mcp")]
+#[cfg(not(target_os = "windows"))]
+pub mod mcp;
 pub mod security;
 pub mod systemd;
 pub mod tools;
@@ -20,6 +23,9 @@ pub use batch::*;
 pub use disk_ops::*;
 pub use file_ops::*;
 pub use inspect::*;
+#[cfg(feature = "mcp")]
+#[cfg(not(target_os = "windows"))]
+pub use mcp::*;
 pub use security::*;
 pub use systemd::*;
 pub use tools::*;

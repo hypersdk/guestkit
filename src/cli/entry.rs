@@ -1795,6 +1795,19 @@ enum Commands {
         fail_below: Option<u8>,
     },
 
+    /// MCP server over stdio for a single VM — read-only evidence tools,
+    /// same 6 as the AI copilot, for external MCP hosts (requires --features mcp)
+    #[cfg(feature = "mcp")]
+    #[command(name = "mcp-serve")]
+    McpServe {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Target hypervisor (kvm, proxmox, hyperv, cloud)
+        #[arg(long, default_value = "kvm")]
+        target: String,
+    },
+
     /// Policy-as-code compliance check
     Policy {
         #[command(subcommand)]
@@ -3512,6 +3525,11 @@ pub fn run() -> anyhow::Result<()> {
                 fail_below,
                 cli.verbose,
             )?;
+        }
+
+        #[cfg(feature = "mcp")]
+        Commands::McpServe { image, target } => {
+            mcp_serve_command(&image, &target, cli.verbose)?;
         }
 
         Commands::Policy { action } => match action {
