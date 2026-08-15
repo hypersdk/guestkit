@@ -66,6 +66,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `helm template`s all three real overlays (`values-ci.yaml`,
   `values-k3s.yaml`, `values-prod.yaml`) so a rendering break here is caught
   without needing a live k3s cluster.
+- **k3s E2E's `inspect` step polled for 5 minutes with zero diagnostic
+  output, then timed out** — `poll_job` in `deploy/scripts/e2e-smoke.sh`
+  only recognized `"completed"` as terminal, so a `"failed"` job status
+  looked identical to "still pending" for the full 60-poll budget, and
+  the actual error message the worker had already written (available via
+  the job's `live_status.error` field) was never printed. `poll_job` now
+  treats `failed`/`cancelled`/`timeout` as terminal and prints the job's
+  error immediately. Also added the loop/NBD device setup
+  `install-k3s-ubuntu.sh` never had (`deploy-remote-k3s.sh`'s
+  `guestkit-worker` pod bind-mounts the host's `/dev`, so the same
+  root:disk-0660-node / EACCES-looks-like-timeout issue `ci.yml` hit
+  applies here too) — same fix as `ci.yml`'s "Setup loop and NBD
+  devices" step, which this script never got.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs

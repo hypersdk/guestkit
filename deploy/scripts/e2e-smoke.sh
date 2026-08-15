@@ -23,6 +23,18 @@ poll_job() {
       echo "${job}"
       return 0
     fi
+    if [[ "${status}" == "failed" || "${status}" == "cancelled" || "${status}" == "timeout" ]]; then
+      echo "  ${label} FAILED (status=${status}):" >&2
+      echo "${job}" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+live = d.get('data', {}).get('live_status', {})
+err = live.get('error') or d.get('data', {}).get('error')
+print(f'    error: {err}', file=sys.stderr)
+print(json.dumps(d, indent=2), file=sys.stderr)
+" 2>/dev/null || echo "${job}" >&2
+      return 1
+    fi
     sleep 5
   done
   echo "  (${label} timed out)" >&2

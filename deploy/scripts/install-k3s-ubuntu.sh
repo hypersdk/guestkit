@@ -44,6 +44,20 @@ if ! command -v podman >/dev/null 2>&1 && ! command -v docker >/dev/null 2>&1; t
   sudo apt-get install -y podman
 fi
 
+# guestkit-worker's pod bind-mounts the host's /dev (hostPath, HostToContainer
+# propagation), so device node permissions here are what the worker actually
+# sees. /dev/loopN and /dev/nbdN are created root:disk 0660 by udev — the
+# worker's plain (non-root) mount attempt then fails with EACCES, which
+# guestkit's device wait-loop can't distinguish from "not ready yet". Same
+# fix as ci.yml's "Setup loop and NBD devices" step, applied here since this
+# script never got it.
+echo "Setting up loop and NBD devices..."
+sudo modprobe loop max_part=8 || true
+sudo chmod 666 /dev/loop-control 2>/dev/null || true
+sudo chmod 666 /dev/loop[0-9]* 2>/dev/null || true
+sudo modprobe nbd max_part=8 || true
+sudo chmod 666 /dev/nbd[0-9]* 2>/dev/null || true
+
 sudo mkdir -p /var/lib/zyvor/images
 sudo chmod 1777 /var/lib/zyvor/images
 
