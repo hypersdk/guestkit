@@ -88,3 +88,19 @@ jobs:
 
       - name: Run k3s E2E orchestrator
         run: bash deploy/scripts/ci-k3s-e2e.sh
+
+      - name: Dump pod logs on failure
+        if: failure()
+        run: |
+          export KUBECONFIG="${HOME}/.kube/config"
+          for app in zyvor-api guestkit-worker zyvor-ui postgresql redis minio; do
+            echo "::group::kubectl logs -l app=${app}"
+            kubectl -n zyvor logs -l "app=${app}" --all-containers --tail=200 --prefix || true
+            echo "::endgroup::"
+          done
+          echo "::group::kubectl get pods -o wide"
+          kubectl -n zyvor get pods -o wide || true
+          echo "::endgroup::"
+          echo "::group::kubectl describe pods"
+          kubectl -n zyvor describe pods || true
+          echo "::endgroup::"
