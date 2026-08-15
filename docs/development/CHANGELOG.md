@@ -123,14 +123,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     log the real error (`log::warn!`) before discarding it. Didn't widen
     `mount_all_ro`'s `Option<String>` return type to `Result` — it's used
     across 9 files where callers only ever branch on `Some`/`None`, and
-    that ripple is out of scope for this investigation. Since `guestkit`
-    logs through the plain `log` facade while `zyvor-api` only sets up a
-    `tracing` subscriber, added the missing bridge
-    (`tracing_log::LogTracer::init()`, new `tracing-log` dependency) and
-    widened the default `EnvFilter` (was "nothing enabled" without
-    `RUST_LOG` set, now falls back to `warn` globally) so this — and any
-    future `log::*!` from guestkit's dependency graph — actually reaches
-    the pod's logs instead of going to an uninstalled logger.
+    that ripple is out of scope for this investigation. Widened the
+    default `EnvFilter` (was "nothing enabled" without `RUST_LOG` set,
+    now falls back to `warn` globally) so `mount_all_ro`'s new
+    `log::warn!` — and any other `log::*!` from guestkit's dependency
+    graph — actually reaches the pod's logs. First attempt at this also
+    added an explicit `tracing_log::LogTracer::init()` call, reasoning
+    that `zyvor-api` only sets up a `tracing` subscriber and guestkit
+    logs through the plain `log` facade — **wrong, and a real
+    regression**: `tracing-subscriber`'s "tracing-log" feature (on by
+    default) already bridges `log` into the subscriber as part of
+    `.init()`, so the explicit call double-registered the global `log`
+    logger and panicked at startup with `SetLoggerError`, crash-looping
+    `zyvor-api` again. Confirmed via `kubectl logs` from the next E2E
+    run (once the "dump pod logs on failure" step below existed to
+    capture it) and reproduced in an isolated 10-line binary before
+    re-pushing — removed the explicit `LogTracer::init()` call and the
+    now-unneeded direct `tracing-log` dependency; the isolated repro
+    confirmed `log::warn!` still reaches the subscriber correctly
+    without it.
+  - Also: nothing in `k3s-e2e.yml` ever captured pod logs on failure —
+    every fix in this list up to this point was diagnosed purely from
+    HTTP response bodies, each requiring a full ~20-40min re-run just to
+    test. Added a failure-only step dumping `kubectl logs` (all
+    containers, prefixed by pod) for every deployed component, plus
+    `get pods -o wide` and `describe pods`.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs

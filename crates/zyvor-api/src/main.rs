@@ -11,12 +11,12 @@ async fn main() -> Result<()> {
         .install_default()
         .map_err(|_| anyhow::anyhow!("failed to install rustls crypto provider"))?;
 
-    // guestkit (linked in for offline disk operations like provision's
-    // run_migrate_plan) logs through the plain `log` facade, not `tracing`
-    // — without this bridge those records have no installed logger at all
-    // and go nowhere, silently, regardless of RUST_LOG.
-    tracing_log::LogTracer::init()
-        .map_err(|e| anyhow::anyhow!("failed to install log-to-tracing bridge: {e}"))?;
+    // tracing-subscriber's "tracing-log" feature (on by default, not
+    // disabled here) already bridges the plain `log` facade guestkit uses
+    // into this subscriber as part of `.init()` below — a separate,
+    // explicit `tracing_log::LogTracer::init()` call double-registers the
+    // global log logger and panics with `SetLoggerError` at startup. Don't
+    // add one.
 
     // EnvFilter::from_default_env() alone yields "nothing enabled" when
     // RUST_LOG is unset, which combined with the "zyvor_api=info" directive
