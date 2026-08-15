@@ -9,7 +9,9 @@ use crate::assurance::copilot::{build_evidence_digest, EvidenceDigest};
 use crate::boot::BootabilityReport;
 use crate::cli::plan::FixPlan;
 use crate::evidence::EvidenceSnapshot;
-use crate::migration::{MigrationAssessment, MigrationRepairPlanner, RepairOptions, ReadinessLevel};
+use crate::migration::{
+    MigrationAssessment, MigrationRepairPlanner, ReadinessLevel, RepairOptions,
+};
 use crate::VERSION;
 use anyhow::{bail, Context, Result};
 use chrono::Utc;
@@ -219,8 +221,7 @@ pub fn emit_passport(
     target: &str,
     opts: &PassportEmitOptions,
 ) -> Result<(CutoverPassport, FixPlan)> {
-    let (evidence, assessment) =
-        crate::assurance::run_migrate_assess(image, target, opts.verbose)?;
+    let (evidence, assessment) = crate::assurance::run_migrate_assess(image, target, opts.verbose)?;
     let boot = crate::assurance::run_doctor(image, target, false, opts.verbose)?;
 
     let (plan, _notes) = MigrationRepairPlanner::from_assessment(
@@ -244,9 +245,9 @@ pub fn emit_passport(
     };
 
     let generated_at = Utc::now();
-    let expires_at = opts.expires_hours.map(|h| {
-        (generated_at + chrono::Duration::hours(h as i64)).to_rfc3339()
-    });
+    let expires_at = opts
+        .expires_hours
+        .map(|h| (generated_at + chrono::Duration::hours(h as i64)).to_rfc3339());
 
     let mut passport = CutoverPassport {
         schema_version: PASSPORT_SCHEMA_VERSION.into(),
@@ -297,9 +298,7 @@ pub fn verify_passport(passport: &CutoverPassport, opts: &PassportVerifyOptions)
     }
 
     if passport.hard_blocked {
-        bail!(
-            "passport hard-blocked (BitLocker and/or boot/migration blockers) — cutover refused"
-        );
+        bail!("passport hard-blocked (BitLocker and/or boot/migration blockers) — cutover refused");
     }
 
     if passport.windows.bitlocker_blocker {
@@ -325,9 +324,7 @@ pub fn verify_passport(passport: &CutoverPassport, opts: &PassportVerifyOptions)
             .max(0) as u64;
         let limit = max_age.saturating_mul(3600);
         if age > limit {
-            bail!(
-                "passport generated_at is {age}s old (max-age-hours={max_age} → {limit}s)"
-            );
+            bail!("passport generated_at is {age}s old (max-age-hours={max_age} → {limit}s)");
         }
     }
 
@@ -352,11 +349,7 @@ pub fn verify_passport(passport: &CutoverPassport, opts: &PassportVerifyOptions)
         if trust_keys.is_some() && passport.signature.is_none() {
             bail!("--trust-keys requires a signed passport");
         }
-        verify_signature(
-            passport,
-            opts.public_key.as_deref(),
-            trust_keys.as_deref(),
-        )?;
+        verify_signature(passport, opts.public_key.as_deref(), trust_keys.as_deref())?;
     }
 
     Ok(())
@@ -453,8 +446,8 @@ fn write_tar_gz_bundle(bundle_path: &Path, passport: &Path, plan: &Path) -> Resu
 }
 
 fn image_fingerprint(image: &Path, content_hash: bool) -> Result<ImageFingerprint> {
-    let meta = std::fs::metadata(image)
-        .with_context(|| format!("stat image {}", image.display()))?;
+    let meta =
+        std::fs::metadata(image).with_context(|| format!("stat image {}", image.display()))?;
     let content_sha256 = if content_hash {
         Some(hash_file_sha256(image)?)
     } else {
@@ -524,8 +517,8 @@ fn windows_flags(
     plan: &FixPlan,
     assessment: &MigrationAssessment,
 ) -> WindowsPassportFlags {
-    let is_windows = evidence.os.os_type.eq_ignore_ascii_case("windows")
-        || evidence.windows.is_some();
+    let is_windows =
+        evidence.os.os_type.eq_ignore_ascii_case("windows") || evidence.windows.is_some();
 
     let Some(win) = evidence.windows.as_ref() else {
         return WindowsPassportFlags {
@@ -539,7 +532,10 @@ fn windows_flags(
         .as_ref()
         .map(|b| b.any_protected)
         .unwrap_or(false)
-        || assessment.critical_blockers.iter().any(|b| b.check_id == "MIG-W-005");
+        || assessment
+            .critical_blockers
+            .iter()
+            .any(|b| b.check_id == "MIG-W-005");
 
     let virtio_driver_count = win.virtio_drivers.len();
     let plan_has_driver_inject = plan
@@ -561,7 +557,11 @@ fn windows_flags(
         is_windows: true,
         bitlocker_blocker,
         bitlocker_detected: win.bitlocker_detected
-            || win.bitlocker.as_ref().map(|b| b.any_protected).unwrap_or(false),
+            || win
+                .bitlocker
+                .as_ref()
+                .map(|b| b.any_protected)
+                .unwrap_or(false),
         rdp_enabled: win.rdp_enabled,
         virtio_driver_count,
         windows_offline_ready,
@@ -585,9 +585,7 @@ fn windows_flags(
     }
 }
 
-fn online_correlation_attestation(
-    assessment: &MigrationAssessment,
-) -> Option<LiveAttestation> {
+fn online_correlation_attestation(assessment: &MigrationAssessment) -> Option<LiveAttestation> {
     let oc = assessment.online_correlation.as_ref()?;
     let readiness_score = oc
         .pointer("/payload/heartbeat/readiness_score")
@@ -602,10 +600,7 @@ fn online_correlation_attestation(
 }
 
 fn fetch_live_attestation(base_url: &str) -> Result<LiveAttestation> {
-    let url = format!(
-        "{}/doctor",
-        base_url.trim_end_matches('/')
-    );
+    let url = format!("{}/doctor", base_url.trim_end_matches('/'));
     match http_get_json(&url) {
         Ok(detail) => {
             let readiness_score = detail
@@ -1106,10 +1101,8 @@ mod tests {
 
     #[test]
     fn verify_rejects_expired_passport() {
-        let mut passport = sample_passport(
-            Utc::now().to_rfc3339(),
-            Some("2000-01-01T00:00:00Z".into()),
-        );
+        let mut passport =
+            sample_passport(Utc::now().to_rfc3339(), Some("2000-01-01T00:00:00Z".into()));
         let err = verify_passport(&passport, &PassportVerifyOptions::default()).unwrap_err();
         assert!(err.to_string().contains("expired"));
         passport.expires_at = Some((Utc::now() + chrono::Duration::hours(1)).to_rfc3339());

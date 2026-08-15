@@ -214,12 +214,12 @@ impl Guestfs {
             }
         }
 
-        let disk = best
-            .map(|(p, _)| p)
-            .ok_or_else(|| Error::InvalidOperation(format!(
+        let disk = best.map(|(p, _)| p).ok_or_else(|| {
+            Error::InvalidOperation(format!(
                 "OVA archive {} contains no disk image (.vmdk/.img/.raw/.qcow2)",
                 path.display()
-            )))?;
+            ))
+        })?;
 
         if self.verbose {
             eprintln!("guestfs: extracted OVA disk -> {}", disk.display());
@@ -276,6 +276,7 @@ impl Guestfs {
         }
 
         if self.drives.is_empty() {
+            self.state = GuestfsState::Error;
             return Err(Error::InvalidState("No drives added".to_string()));
         }
 

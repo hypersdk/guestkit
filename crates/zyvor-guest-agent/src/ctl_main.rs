@@ -9,11 +9,7 @@ use clap::{Parser, Subcommand};
 use serde_json::{json, Value};
 
 #[derive(Parser)]
-#[command(
-    name = "guestkitctl",
-    about = "Local GuestKit agent control",
-    version
-)]
+#[command(name = "guestkitctl", about = "Local GuestKit agent control", version)]
 struct Cli {
     /// Agent socket path override
     #[arg(long, global = true, value_name = "PATH")]
@@ -145,7 +141,10 @@ fn call(cli: &Cli, method: &str, params: Value) -> Result<Value> {
 
 fn print_result(cli: &Cli, value: &Value) {
     if cli.json {
-        println!("{}", serde_json::to_string_pretty(value).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(value).unwrap_or_default()
+        );
     } else {
         print_human(value, 0);
     }
@@ -211,7 +210,11 @@ fn main() -> Result<()> {
             print_result(&cli, &units);
         }
         Cmd::Assess { target } => {
-            let assessment = call(&cli, "guestkit.migration.assess", json!({ "target": target }))?;
+            let assessment = call(
+                &cli,
+                "guestkit.migration.assess",
+                json!({ "target": target }),
+            )?;
             if cli.json {
                 print_result(&cli, &assessment);
             } else {
@@ -244,7 +247,11 @@ fn main() -> Result<()> {
                 println!("Security Posture: {}/100", report["overall_score"]);
                 if let Some(cats) = report["categories"].as_array() {
                     for cat in cats {
-                        println!("  {:<20} {}", cat["name"].as_str().unwrap_or(""), cat["score"]);
+                        println!(
+                            "  {:<20} {}",
+                            cat["name"].as_str().unwrap_or(""),
+                            cat["score"]
+                        );
                         if let Some(findings) = cat["findings"].as_array() {
                             for f in findings.iter().filter(|f| f["passed"] == false) {
                                 println!(
@@ -293,10 +300,15 @@ fn main() -> Result<()> {
                     inv["expiring_soon"],
                     inv["expired"],
                     inv["weak"],
-                    inv["ssh_host_keys"].as_array().map(|a| a.len()).unwrap_or(0)
+                    inv["ssh_host_keys"]
+                        .as_array()
+                        .map(|a| a.len())
+                        .unwrap_or(0)
                 );
                 if let Some(certs) = inv["certificates"].as_array() {
-                    for c in certs.iter().filter(|c| c["expiring_soon"] == true || c["expired"] == true || c["weak"] == true) {
+                    for c in certs.iter().filter(|c| {
+                        c["expiring_soon"] == true || c["expired"] == true || c["weak"] == true
+                    }) {
                         println!(
                             "  ! {} (expires in {}d){}",
                             c["subject"].as_str().unwrap_or(""),

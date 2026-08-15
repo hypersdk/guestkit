@@ -81,7 +81,13 @@ pub fn assess_migration(
     let cat_score = |cat: ReadinessCategory| -> f64 {
         per_cat
             .get(&cat)
-            .map(|(p, t)| if *t > 0.0 { (p / t * 100.0).round() } else { 100.0 })
+            .map(|(p, t)| {
+                if *t > 0.0 {
+                    (p / t * 100.0).round()
+                } else {
+                    100.0
+                }
+            })
             .unwrap_or(100.0)
     };
     let sub_scores = MigrationSubScores {
@@ -95,9 +101,9 @@ pub fn assess_migration(
 
     // Overall: weight by each category's total check weight so unpopulated
     // categories don't dilute the score.
-    let (weighted_sum, weight_total) = per_cat.values().fold((0.0, 0.0), |(ws, wt), (p, t)| {
-        (ws + p, wt + t)
-    });
+    let (weighted_sum, weight_total) = per_cat
+        .values()
+        .fold((0.0, 0.0), |(ws, wt), (p, t)| (ws + p, wt + t));
     let overall_score = if weight_total > 0.0 {
         (weighted_sum / weight_total * 100.0).round()
     } else {

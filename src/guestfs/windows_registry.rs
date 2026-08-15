@@ -405,17 +405,12 @@ pub fn parse_network_adapters(hive_path: &Path) -> Result<Vec<WindowsNetAdapter>
 }
 
 /// Infer Windows license channel from ProductId / EditionID / ProductName.
-pub fn infer_activation_channel(
-    product_id: &str,
-    edition_id: &str,
-    product_name: &str,
-) -> String {
+pub fn infer_activation_channel(product_id: &str, edition_id: &str, product_name: &str) -> String {
     let pid = product_id.to_ascii_uppercase();
     let ed = edition_id.to_ascii_uppercase();
     let name = product_name.to_ascii_uppercase();
 
-    if pid.contains("-OEM-") || pid.contains("OEM") || ed.contains("OEM") || name.contains("OEM")
-    {
+    if pid.contains("-OEM-") || pid.contains("OEM") || ed.contains("OEM") || name.contains("OEM") {
         return "OEM".into();
     }
     // Volume / enterprise SKUs are usually KMS or MAK activated on fleets.
@@ -528,9 +523,7 @@ fn reg_multi_or_sz(kv: &nt_hive2::KeyValue) -> String {
 }
 
 /// Offline ghost / remnant NICs from SYSTEM\ControlSet001\Enum\PCI.
-pub fn detect_ghost_nics(
-    hive_path: &Path,
-) -> Vec<crate::evidence::snapshot::GhostNicEntry> {
+pub fn detect_ghost_nics(hive_path: &Path) -> Vec<crate::evidence::snapshot::GhostNicEntry> {
     use crate::evidence::snapshot::GhostNicEntry;
     use nt_hive2::{Hive, HiveParseMode, RegistryValue};
     use std::fs::File;
@@ -577,11 +570,11 @@ pub fn detect_ghost_nics(
 
             for kv in inst_ref.values() {
                 match kv.name() {
-                    "Class" => class = reg_multi_or_sz(&kv),
-                    "DeviceDesc" => desc = reg_multi_or_sz(&kv),
-                    "Service" => service = reg_multi_or_sz(&kv),
+                    "Class" => class = reg_multi_or_sz(kv),
+                    "DeviceDesc" => desc = reg_multi_or_sz(kv),
+                    "Service" => service = reg_multi_or_sz(kv),
                     "HardwareID" | "CompatibleIDs" => {
-                        let v = reg_multi_or_sz(&kv);
+                        let v = reg_multi_or_sz(kv);
                         if !v.is_empty() {
                             if !hwid.is_empty() {
                                 hwid.push(';');
@@ -1071,8 +1064,10 @@ pub fn probe_bcd_signature_enforcement(bcd_bytes: &[u8]) -> Option<bool> {
         return None;
     }
     let as_utf16: String = bcd_bytes
-        .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| u16::from_le_bytes(*c))
         .filter(|&u| u != 0)
         .map(|u| char::from_u32(u as u32).unwrap_or('\u{FFFD}'))
         .collect();
@@ -1551,7 +1546,10 @@ pub fn parse_bitlocker_boot_status(system_hive: &Path) -> Option<u32> {
     let root_key = hive.root_key_node().ok()?;
     let cs = root_key.subkey("ControlSet001", &mut hive).ok()??;
     let control = cs.borrow().subkey("Control", &mut hive).ok()??;
-    let status = control.borrow().subkey("BitLockerStatus", &mut hive).ok()??;
+    let status = control
+        .borrow()
+        .subkey("BitLockerStatus", &mut hive)
+        .ok()??;
     for kv in status.borrow().values() {
         if kv.name() == "BootStatus" {
             if let RegistryValue::RegDWord(v) = kv.value() {
@@ -1579,8 +1577,9 @@ pub fn collect_bitlocker_offline(
     let fvevol_svc = parse_windows_services(system_hive)
         .ok()
         .map(|svcs| {
-            svcs.iter()
-                .any(|s| s.name.eq_ignore_ascii_case("FVEVOL") || s.name.eq_ignore_ascii_case("BDESvc"))
+            svcs.iter().any(|s| {
+                s.name.eq_ignore_ascii_case("FVEVOL") || s.name.eq_ignore_ascii_case("BDESvc")
+            })
         })
         .unwrap_or(false);
 
@@ -1589,7 +1588,8 @@ pub fn collect_bitlocker_offline(
     }
 
     let any_protected = boot_status == Some(1);
-    let artifacts = fve_key || dollar_bitlocker || fvevol_sys || fvevol_svc || boot_status.is_some();
+    let artifacts =
+        fve_key || dollar_bitlocker || fvevol_sys || fvevol_svc || boot_status.is_some();
     let offline_uncertain = !any_protected && artifacts && boot_status != Some(0);
 
     let mut sources = Vec::new();
@@ -1734,7 +1734,6 @@ pub fn parse_run_keys(hive_path: &Path) -> Result<Vec<WindowsRunKeyEntry>> {
     }
     Ok(out)
 }
-
 
 #[cfg(test)]
 mod hotfix_diag_tests {

@@ -34,8 +34,8 @@ fn download_s3(s3_uri: &str, dest: &Path) -> Result<()> {
     let mut cmd = Command::new("aws");
     cmd.args(["s3", "cp", s3_uri, dest.to_str().unwrap()]);
     // Prefer GuestKit-specific override, then standard AWS SDK/CLI endpoint (MinIO/localstack).
-    if let Ok(endpoint) = std::env::var("GUESTKIT_S3_ENDPOINT")
-        .or_else(|_| std::env::var("AWS_ENDPOINT_URL"))
+    if let Ok(endpoint) =
+        std::env::var("GUESTKIT_S3_ENDPOINT").or_else(|_| std::env::var("AWS_ENDPOINT_URL"))
     {
         if !endpoint.is_empty() {
             cmd.args(["--endpoint-url", &endpoint]);
@@ -92,6 +92,6 @@ mod tests {
     #[test]
     fn endpoint_env_names_documented() {
         // Smoke: helpers compile; live aws is integration-only.
-        assert!(std::env::var("GUESTKIT_S3_ENDPOINT").is_err() || true);
+        let _ = std::env::var("GUESTKIT_S3_ENDPOINT");
     }
 }

@@ -101,7 +101,9 @@ fn build_inode_pid_map() -> HashMap<String, u32> {
     };
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
-        let Ok(pid) = name.parse::<u32>() else { continue };
+        let Ok(pid) = name.parse::<u32>() else {
+            continue;
+        };
         let Ok(fds) = std::fs::read_dir(format!("/proc/{pid}/fd")) else {
             continue;
         };
@@ -175,7 +177,11 @@ fn parse_table(
             remote_port,
             state,
             pid,
-            process: if pid > 0 { proc_name(pid) } else { String::new() },
+            process: if pid > 0 {
+                proc_name(pid)
+            } else {
+                String::new()
+            },
             unit: if pid > 0 { proc_unit(pid) } else { None },
         });
     }
@@ -204,9 +210,10 @@ pub fn collect() -> NetworkIntelligence {
 }
 
 fn summarize(all: Vec<Connection>) -> NetworkIntelligence {
-    let (listeners, connections): (Vec<Connection>, Vec<Connection>) = all
-        .into_iter()
-        .partition(|c| c.state == "listen" || (c.proto.starts_with("udp") && c.remote_addr.is_none()));
+    let (listeners, connections): (Vec<Connection>, Vec<Connection>) =
+        all.into_iter().partition(|c| {
+            c.state == "listen" || (c.proto.starts_with("udp") && c.remote_addr.is_none())
+        });
 
     // Egress aggregation: only outbound established flows to non-loopback.
     let mut edges: BTreeMap<(String, Option<String>, String), usize> = BTreeMap::new();
@@ -266,8 +273,7 @@ mod tests {
 
     #[test]
     fn hex_addr_v6_loopback() {
-        let (addr, port) =
-            parse_hex_addr("00000000000000000000000001000000:0050").unwrap();
+        let (addr, port) = parse_hex_addr("00000000000000000000000001000000:0050").unwrap();
         assert_eq!(addr, "::1");
         assert_eq!(port, 80);
     }

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GitHub Action for the Passport CI gate** (`action.yml`) — reusable
+  composite action wrapping `doctor → migrate-plan → passport emit →
+  passport verify` as a single CI step; installs a checksum-verified
+  release binary, no build step. Dogfooded against a real disk image by
+  `.github/workflows/passport-gate-demo.yml` on every change. See
+  `docs/devops/01-passport-ci-gate.md`.
+
+### Fixed
+- **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
+  (a *default* feature) needs `libsystemd-dev`, missing from every job
+  except `release.yml`'s; `Code Coverage`'s `--all-features` also needs
+  `libhivex-dev`; the musl release build tried to link glibc's
+  `libsystemd` into a musl target instead of building
+  `--no-default-features`. Loop/NBD device nodes were root:disk 0660 —
+  unreadable by the unprivileged test process, which read that as "not
+  ready" instead of a permissions error; the `nbd` kernel module was
+  never loaded in `ci.yml` at all. `guestkit.spec` / `guestkit-full.spec`
+  were two releases stale, breaking `rpmbuild`. The k3s E2E workflow was
+  missing `musl-tools` / `gcc-mingw-w64-x86-64` for the vmtools
+  cross-builds, and its MinIO upload used `mc`'s default `local` alias
+  credentials instead of this deployment's actual root user/password.
+- **`Guestfs::launch()`** didn't transition to `Error` state when failing
+  on the "no drives added" precondition — only later failures did.
+- **Windows cross-compile regression** in `agent/rdp.rs` — an automated
+  lint pass removed the `json` import as unused (true when checked on a
+  non-Windows host) but it's real, used code behind
+  `#[cfg(target_os = "windows")]`.
+- **6 pre-existing doc-test compile failures** (`mem_optimize.rs`,
+  `cli/parallel.rs`, `fstab_rewriter.rs`) — ambiguous generic return
+  types and stale API usage in doc examples, never caught because CI
+  never previously got far enough to reach the doc-test phase.
+
 ## [0.3.21] - 2026-08-08
 
 ### Fixed

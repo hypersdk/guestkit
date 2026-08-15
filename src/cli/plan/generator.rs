@@ -166,10 +166,8 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         plan.metadata.author = "guestkit".to_string();
         plan.metadata.review_required = false;
         plan.metadata.reversible = true;
-        plan.metadata.description = Some(
-            "Offline Linux SSH enablement (systemd wants symlink + sshd drop-in)"
-                .into(),
-        );
+        plan.metadata.description =
+            Some("Offline Linux SSH enablement (systemd wants symlink + sshd drop-in)".into());
         plan.metadata.tags = vec![
             "linux".into(),
             "ssh".into(),
@@ -240,8 +238,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             id: "sshd-dropin".into(),
             op_type: OperationType::FileWrite(FileWrite {
                 path: "/etc/ssh/sshd_config.d/99-guestkit.conf".into(),
-                content: "# Managed by guestkit plan linux-ssh\nPubkeyAuthentication yes\n"
-                    .into(),
+                content: "# Managed by guestkit plan linux-ssh\nPubkeyAuthentication yes\n".into(),
                 mode: Some("0644".into()),
             }),
             priority: Priority::High,
@@ -340,9 +337,7 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
             anyhow::bail!("Hostname is required (use --hostname)");
         }
         if name.len() > 63
-            || !name
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
             || name.starts_with('-')
             || name.ends_with('-')
         {
@@ -358,13 +353,8 @@ EmbedCtxt=@FirewallAPI.dll,-28752|";
         plan.metadata.author = "guestkit".to_string();
         plan.metadata.review_required = false;
         plan.metadata.reversible = true;
-        plan.metadata.description =
-            Some(format!("Offline Windows hostname set to '{name}'"));
-        plan.metadata.tags = vec![
-            "windows".into(),
-            "hostname".into(),
-            "offline".into(),
-        ];
+        plan.metadata.description = Some(format!("Offline Windows hostname set to '{name}'"));
+        plan.metadata.tags = vec!["windows".into(), "hostname".into(), "offline".into()];
 
         let ops = [
             (
@@ -515,9 +505,7 @@ EmbedCtxt=@FirewallAPI.dll,-30252|";
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         {
-            anyhow::bail!(
-                "Invalid workgroup '{wg}' (ASCII alnum/hyphen/underscore, max 15 chars)"
-            );
+            anyhow::bail!("Invalid workgroup '{wg}' (ASCII alnum/hyphen/underscore, max 15 chars)");
         }
 
         let mut plan = FixPlan::new(self.vm_path.clone(), "windows-domain-leave".to_string());
@@ -612,9 +600,7 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
                 data_type: "sz".into(),
             }),
             priority: Priority::High,
-            description: format!(
-                "Stage RunOnce Add-Computer -WorkGroupName '{wg}' (first boot)"
-            ),
+            description: format!("Stage RunOnce Add-Computer -WorkGroupName '{wg}' (first boot)"),
             risk: Priority::Medium,
             reversible: true,
             depends_on: vec![
@@ -705,9 +691,8 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
             }
         }
 
-        let iface_key = format!(
-            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
-        );
+        let iface_key =
+            format!(r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}");
 
         let mut plan = FixPlan::new(self.vm_path.clone(), "windows-static-ip".to_string());
         plan.version = "1".to_string();
@@ -836,9 +821,8 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
     /// Offline Windows DHCP enablement on a known interface GUID.
     pub fn windows_dhcp_plan(&self, interface_guid: &str) -> Result<FixPlan> {
         let guid = Self::normalize_interface_guid(interface_guid)?;
-        let iface_key = format!(
-            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
-        );
+        let iface_key =
+            format!(r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}");
 
         let mut plan = FixPlan::new(self.vm_path.clone(), "windows-dhcp".to_string());
         plan.version = "1".to_string();
@@ -886,9 +870,8 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
             anyhow::bail!("--dns is required for windows-dns (space or comma separated)");
         }
         let normalized = dns_servers.replace(',', " ");
-        let iface_key = format!(
-            r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}"
-        );
+        let iface_key =
+            format!(r"HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{{{guid}}}");
 
         let mut plan = FixPlan::new(self.vm_path.clone(), "windows-dns".to_string());
         plan.version = "1".to_string();
@@ -929,11 +912,7 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
     }
 
     /// Offline Linux hostname (`/etc/hostname` + `/etc/hosts` patch).
-    pub fn linux_hostname_plan(
-        &self,
-        g: &mut crate::Guestfs,
-        hostname: &str,
-    ) -> Result<FixPlan> {
+    pub fn linux_hostname_plan(&self, g: &mut crate::Guestfs, hostname: &str) -> Result<FixPlan> {
         let name = hostname.trim();
         if name.is_empty() || name.len() > 253 {
             anyhow::bail!("Invalid --hostname '{hostname}'");
@@ -1226,7 +1205,7 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
                 return Ok(OperationType::PackageInstall(PackageInstall {
                     packages: vec!["firewalld".to_string()],
                     estimated_size: Some("~5MB".to_string()),
-                host_cache: None,
+                    host_cache: None,
                 }));
             }
             return Ok(Self::systemd_enable_symlink("firewalld"));
@@ -1323,13 +1302,14 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
             for verb in ["enable", "disable"] {
                 if let Some(idx) = lower.find(verb) {
                     let after = lower[idx + verb.len()..].trim_start();
-                    let unit = after
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or("")
-                        .trim_matches(|c: char| {
-                            !c.is_ascii_alphanumeric() && c != '-' && c != '_' && c != '.'
-                        });
+                    let unit =
+                        after
+                            .split_whitespace()
+                            .next()
+                            .unwrap_or("")
+                            .trim_matches(|c: char| {
+                                !c.is_ascii_alphanumeric() && c != '-' && c != '_' && c != '.'
+                            });
                     if !unit.is_empty() && unit != "and" && unit != "the" {
                         return Some(if verb == "enable" {
                             Self::systemd_enable_symlink(unit)
@@ -1370,8 +1350,7 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
             .read_file(grub_path)
             .map(|b| String::from_utf8_lossy(&b).into_owned())
             .unwrap_or_else(|_| {
-                "GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT=\"\"\nGRUB_CMDLINE_LINUX=\"\"\n"
-                    .into()
+                "GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT=\"\"\nGRUB_CMDLINE_LINUX=\"\"\n".into()
             });
 
         let mut plan = FixPlan::new(self.vm_path.clone(), "linux-grub".to_string());
@@ -1394,7 +1373,10 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
         ];
 
         if timeout.is_none()
-            && cmdline_append.map(str::trim).filter(|s| !s.is_empty()).is_none()
+            && cmdline_append
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .is_none()
         {
             anyhow::bail!("linux-grub requires --grub-timeout and/or --grub-cmdline");
         }
@@ -1422,7 +1404,10 @@ reg delete \\\"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\" \
                 mode: Some("0644".into()),
             }),
             priority: Priority::High,
-            description: format!("Write offline /etc/default/grub ({})", desc_parts.join(", ")),
+            description: format!(
+                "Write offline /etc/default/grub ({})",
+                desc_parts.join(", ")
+            ),
             risk: Priority::Low,
             reversible: true,
             depends_on: vec![],
@@ -2054,7 +2039,10 @@ mod tests {
         match op_type {
             OperationType::FileEdit(fe) => {
                 assert!(fe.file.contains("sshd_config"));
-                assert!(fe.changes.iter().any(|c| c.after.contains("PasswordAuthentication no")));
+                assert!(fe
+                    .changes
+                    .iter()
+                    .any(|c| c.after.contains("PasswordAuthentication no")));
             }
             _ => panic!("Expected FileEdit"),
         }
@@ -2279,8 +2267,7 @@ mod tests {
             id: "op-fw".to_string(),
             op_type: OperationType::Symlink(Symlink {
                 target: "../../../../usr/lib/systemd/system/firewalld.service".into(),
-                link_path: "/etc/systemd/system/multi-user.target.wants/firewalld.service"
-                    .into(),
+                link_path: "/etc/systemd/system/multi-user.target.wants/firewalld.service".into(),
             }),
             priority: Priority::High,
             description: "Enable firewall".to_string(),

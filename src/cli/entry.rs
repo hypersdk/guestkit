@@ -3802,7 +3802,14 @@ pub fn run() -> anyhow::Result<()> {
             }
             #[cfg(not(feature = "agent"))]
             {
-                let _ = (image, agent_binary, windows, virtio_serial_driver, agent_unit, dry_run);
+                let _ = (
+                    image,
+                    agent_binary,
+                    windows,
+                    virtio_serial_driver,
+                    agent_unit,
+                    dry_run,
+                );
                 anyhow::bail!("guestkit agent-inject requires rebuilding with --features agent");
             }
         }

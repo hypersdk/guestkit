@@ -108,11 +108,7 @@ pub fn prepare(watchdog_secs: Option<u64>) -> anyhow::Result<SnapshotPrepareRepo
         match vss::create_marker_shadow("C:") {
             Ok(result) => {
                 let consistent = result.app_consistent;
-                (
-                    "vss".to_string(),
-                    false,
-                    Some((result, consistent)),
-                )
+                ("vss".to_string(), false, Some((result, consistent)))
             }
             Err(e) => {
                 log::warn!("VSS marker shadow failed: {e}");

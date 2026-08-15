@@ -77,10 +77,7 @@ impl PlanApplicator {
                         operations_applied: 0,
                         operations_failed: 1,
                         operations_skipped: plan.operations.len(),
-                        message: format!(
-                            "Failed to create backup, refusing to apply plan: {}",
-                            e
-                        ),
+                        message: format!("Failed to create backup, refusing to apply plan: {}", e),
                         outcomes: Vec::new(),
                         rollback_dir: None,
                     });
@@ -163,9 +160,9 @@ impl PlanApplicator {
                 message:
                     "No operating system detected in VM disk. Cannot apply plan without a valid OS."
                         .to_string(),
-                        outcomes: Vec::new(),
-                        rollback_dir: None,
-                    });
+                outcomes: Vec::new(),
+                rollback_dir: None,
+            });
         }
 
         // Topological sort of operations
@@ -265,7 +262,7 @@ impl PlanApplicator {
                     .parent()
                     .and_then(|p| p.to_str())
                     .unwrap_or("/");
-                if parent != "/" && parent != "" {
+                if parent != "/" && !parent.is_empty() {
                     g.mkdir_p(parent)
                         .map_err(|e| anyhow::anyhow!("mkdir_p failed for {}: {}", parent, e))?;
                 }
@@ -294,18 +291,13 @@ impl PlanApplicator {
                 // Replace existing link/file so re-apply is idempotent.
                 let _ = g.rm(&sl.link_path);
                 g.ln_sf(&sl.target, &sl.link_path).map_err(|e| {
-                    anyhow::anyhow!(
-                        "ln_sf failed {} -> {}: {}",
-                        sl.target,
-                        sl.link_path,
-                        e
-                    )
+                    anyhow::anyhow!("ln_sf failed {} -> {}: {}", sl.target, sl.link_path, e)
                 })?;
                 Ok(true)
             }
             OperationType::FileDelete(fd) => {
-                let exists = g.exists(&fd.path).unwrap_or(false)
-                    || g.is_symlink(&fd.path).unwrap_or(false);
+                let exists =
+                    g.exists(&fd.path).unwrap_or(false) || g.is_symlink(&fd.path).unwrap_or(false);
                 if !exists {
                     if fd.missing_ok {
                         return Ok(true);
@@ -417,20 +409,14 @@ impl PlanApplicator {
         let root = roots
             .first()
             .ok_or_else(|| anyhow::anyhow!("no OS root for driver inject"))?;
-        crate::agent::inject::inject_windows_driver_dir(
-            g,
-            root,
-            &host_dir,
-            &di.driver_name,
-            false,
-        )
-        .with_context(|| {
-            format!(
-                "offline DriverInject for {} from {}",
-                di.driver_name,
-                host_dir.display()
-            )
-        })?;
+        crate::agent::inject::inject_windows_driver_dir(g, root, &host_dir, &di.driver_name, false)
+            .with_context(|| {
+                format!(
+                    "offline DriverInject for {} from {}",
+                    di.driver_name,
+                    host_dir.display()
+                )
+            })?;
         Ok(true)
     }
 
@@ -510,7 +496,10 @@ impl PlanApplicator {
 
         let root_key = parts[0].to_ascii_uppercase();
         if !matches!(root_key.as_str(), "HKLM" | "HKEY_LOCAL_MACHINE") {
-            anyhow::bail!("Offline registry writes only support HKLM keys (got {})", parts[0]);
+            anyhow::bail!(
+                "Offline registry writes only support HKLM keys (got {})",
+                parts[0]
+            );
         }
 
         let roots = g.inspect_os()?;

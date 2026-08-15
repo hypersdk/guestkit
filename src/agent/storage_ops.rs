@@ -86,7 +86,10 @@ pub fn expand(params: &Value) -> Result<Value> {
         .get("mount")
         .and_then(Value::as_str)
         .context("missing required param: mount")?;
-    let dry_run = params.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
+    let dry_run = params
+        .get("dry_run")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
 
     if cfg!(windows) {
         bail!("use Windows Storage APIs / diskpart extend — not yet automated");

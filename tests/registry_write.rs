@@ -46,8 +46,22 @@ fn writes_values_into_a_new_subkey_and_reads_them_back() {
 
     // Creating "GuestkitTest" exercises hivex_node_add_child (key does not exist
     // in the minimal fixture), plus set_value + commit across several types.
-    set_registry_value(hive, &["GuestkitTest".into()], "Mode", "REG_SZ", &json!("Enabled")).unwrap();
-    set_registry_value(hive, &["GuestkitTest".into()], "Level", "REG_DWORD", &json!(7)).unwrap();
+    set_registry_value(
+        hive,
+        &["GuestkitTest".into()],
+        "Mode",
+        "REG_SZ",
+        &json!("Enabled"),
+    )
+    .unwrap();
+    set_registry_value(
+        hive,
+        &["GuestkitTest".into()],
+        "Level",
+        "REG_DWORD",
+        &json!(7),
+    )
+    .unwrap();
     set_registry_value(
         hive,
         &["GuestkitTest".into(), "Sub".into()],

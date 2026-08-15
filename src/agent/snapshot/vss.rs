@@ -80,7 +80,12 @@ pub fn create_marker_shadow(volume: &str) -> anyhow::Result<VssSnapshotResult> {
 pub fn delete_marker_shadow(shadow_id: &str) -> anyhow::Result<String> {
     use std::process::Command;
     let output = Command::new("vssadmin")
-        .args(["delete", "shadows", &format!("/Shadow={shadow_id}"), "/Quiet"])
+        .args([
+            "delete",
+            "shadows",
+            &format!("/Shadow={shadow_id}"),
+            "/Quiet",
+        ])
         .output()?;
     if output.status.success() {
         Ok(format!("shadow {shadow_id} deleted"))

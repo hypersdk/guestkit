@@ -427,9 +427,10 @@ impl EvidenceBuilder {
             .resolve_guest_path(&system_hive_guest)
             .unwrap_or_else(|_| PathBuf::from(&system_hive_guest));
 
-        let installed_apps_count = windows_registry::parse_installed_software(software_hive.as_path())
-            .map(|a| a.len())
-            .unwrap_or(0);
+        let installed_apps_count =
+            windows_registry::parse_installed_software(software_hive.as_path())
+                .map(|a| a.len())
+                .unwrap_or(0);
 
         let services_count = windows_registry::parse_windows_services(system_hive.as_path())
             .map(|s| s.len())
@@ -463,19 +464,13 @@ impl EvidenceBuilder {
             || dollar_bitlocker
             || fvevol_sys;
 
-        let svi_present = g
-            .exists("/System Volume Information")
-            .unwrap_or(false)
+        let svi_present = g.exists("/System Volume Information").unwrap_or(false)
             || g.exists(&format!("{}/System Volume Information", systemroot))
                 .unwrap_or(false);
         let vss = windows_registry::collect_vss_offline(system_hive.as_path(), svi_present);
-        let hypervisor_remnants = windows_registry::detect_hypervisor_remnants(
-            system_hive.as_path(),
-            &drivers_path,
-            g,
-        );
-        let av_edr =
-            windows_registry::detect_av_edr(software_hive.as_path(), g, &systemroot);
+        let hypervisor_remnants =
+            windows_registry::detect_hypervisor_remnants(system_hive.as_path(), &drivers_path, g);
+        let av_edr = windows_registry::detect_av_edr(software_hive.as_path(), g, &systemroot);
         let minidump_path = format!("{}/Minidump", systemroot);
         let minidump_count = g.ls(&minidump_path).map(|d| d.len()).unwrap_or(0);
 
@@ -575,8 +570,7 @@ impl EvidenceBuilder {
                 if oeminfo {
                     match &mut activation {
                         Some(a)
-                            if a.channel.is_empty()
-                                || a.channel.eq_ignore_ascii_case("Retail") =>
+                            if a.channel.is_empty() || a.channel.eq_ignore_ascii_case("Retail") =>
                         {
                             a.channel = "OEM".into();
                         }
@@ -782,10 +776,8 @@ impl EvidenceBuilder {
             let replace = match &best {
                 None => true,
                 Some(prev) => {
-                    let prev_score =
-                        i32::from(prev.has_bootmgr) + i32::from(prev.has_bcd);
-                    let new_score =
-                        i32::from(candidate.has_bootmgr) + i32::from(candidate.has_bcd);
+                    let prev_score = i32::from(prev.has_bootmgr) + i32::from(prev.has_bcd);
+                    let new_score = i32::from(candidate.has_bootmgr) + i32::from(candidate.has_bcd);
                     new_score > prev_score
                 }
             };
@@ -803,7 +795,9 @@ impl EvidenceBuilder {
         services: &[crate::evidence::snapshot::WindowsServiceEntry],
     ) -> Vec<crate::evidence::snapshot::WindowsDriverEntry> {
         use crate::evidence::snapshot::{WindowsDriverEntry, WindowsStartType};
-        const VIRTIO: &[&str] = &["viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng"];
+        const VIRTIO: &[&str] = &[
+            "viostor", "vioscsi", "netkvm", "vioser", "balloon", "viorng",
+        ];
         VIRTIO
             .iter()
             .map(|name| {

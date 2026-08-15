@@ -31,7 +31,7 @@ pub async fn run_sampler(store: Arc<TelemetryStore>) {
         let sample = tokio::task::block_in_place(|| take_sample(&mut state));
         store.record(sample);
         tick += 1;
-        if tick % PERSIST_EVERY_TICKS == 0 {
+        if tick.is_multiple_of(PERSIST_EVERY_TICKS) {
             if let Err(e) = store.save_coarse() {
                 log::debug!("telemetry persist: {e}");
             }

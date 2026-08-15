@@ -47,8 +47,10 @@ pub fn repair_grub(
         )));
     }
 
-    let mut report = GrubRepairReport::default();
-    report.efi = detect_efi(root_mount);
+    let mut report = GrubRepairReport {
+        efi: detect_efi(root_mount),
+        ..Default::default()
+    };
     if report.efi {
         report.notes.push(format!(
             "detected EFI System Partition layout (efi-dir={})",
@@ -59,9 +61,9 @@ pub fn repair_grub(
 
     let chroot_ok = mount_binds(root_mount, verbose);
     if let Err(e) = &chroot_ok {
-        report
-            .notes
-            .push(format!("bind-mount failed ({e}); will stage first-boot fallback"));
+        report.notes.push(format!(
+            "bind-mount failed ({e}); will stage first-boot fallback"
+        ));
     }
 
     if chroot_ok.is_ok() {
@@ -106,8 +108,7 @@ pub fn repair_grub(
 
     if !report.mkconfig_ok && !report.firstboot_staged {
         return Err(Error::CommandFailed(
-            "GRUB repair failed (chroot mkconfig and first-boot staging both unavailable)"
-                .into(),
+            "GRUB repair failed (chroot mkconfig and first-boot staging both unavailable)".into(),
         ));
     }
 
@@ -166,8 +167,14 @@ fn unmount_binds(root: &Path) -> Result<()> {
 
 fn run_mkconfig(root: &Path, verbose: bool) -> Result<String> {
     let attempts: &[(&[&str], &str)] = &[
-        (&["grub2-mkconfig", "-o", "/boot/grub2/grub.cfg"], "grub2-mkconfig"),
-        (&["grub-mkconfig", "-o", "/boot/grub/grub.cfg"], "grub-mkconfig"),
+        (
+            &["grub2-mkconfig", "-o", "/boot/grub2/grub.cfg"],
+            "grub2-mkconfig",
+        ),
+        (
+            &["grub-mkconfig", "-o", "/boot/grub/grub.cfg"],
+            "grub-mkconfig",
+        ),
         (&["update-grub"], "update-grub"),
     ];
     let mut last_err = String::new();
@@ -178,10 +185,7 @@ fn run_mkconfig(root: &Path, verbose: bool) -> Result<String> {
         match chroot_cmd(root, argv) {
             Ok(out) if out.status.success() => return Ok((*name).into()),
             Ok(out) => {
-                last_err = format!(
-                    "{name}: {}",
-                    String::from_utf8_lossy(&out.stderr).trim()
-                );
+                last_err = format!("{name}: {}", String::from_utf8_lossy(&out.stderr).trim());
             }
             Err(e) => last_err = format!("{name}: {e}"),
         }
@@ -248,9 +252,7 @@ fn run_grub_install(root: &Path, device: &Path, efi: bool, verbose: bool) -> Res
 fn run_grub_install_efi(root: &Path, root_s: &str, verbose: bool) -> Result<String> {
     let efi_rel = efi_directory(root);
     // Path relative to guest root for --efi-directory when using --root-directory.
-    let efi_guest = efi_rel
-        .strip_prefix(root)
-        .unwrap_or(Path::new("/boot/efi"));
+    let efi_guest = efi_rel.strip_prefix(root).unwrap_or(Path::new("/boot/efi"));
     let efi_guest_s = efi_guest
         .to_str()
         .unwrap_or("/boot/efi")
@@ -448,9 +450,8 @@ fn stage_firstboot_grub(root: &Path) -> Result<()> {
     let _ = fs::remove_file(&link);
     #[cfg(unix)]
     {
-        std::os::unix::fs::symlink("../guestkit-firstboot-grub.service", &link).map_err(|e| {
-            Error::CommandFailed(format!("symlink firstboot grub unit: {e}"))
-        })?;
+        std::os::unix::fs::symlink("../guestkit-firstboot-grub.service", &link)
+            .map_err(|e| Error::CommandFailed(format!("symlink firstboot grub unit: {e}")))?;
     }
     #[cfg(not(unix))]
     {

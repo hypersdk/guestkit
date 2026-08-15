@@ -8,11 +8,7 @@ use crate::cli::plan::types::{
 
 use super::RepairOptions;
 
-pub fn append_repair_extras(
-    plan: &mut FixPlan,
-    options: &RepairOptions,
-    boot: &BootabilityReport,
-) {
+pub fn append_repair_extras(plan: &mut FixPlan, options: &RepairOptions, boot: &BootabilityReport) {
     let mut op_counter = plan.operations.len();
 
     if options.inject_qga {
@@ -90,20 +86,15 @@ pub fn append_repair_extras(
     }
 
     if options.validate_fstab {
-        let has_fstab_finding = boot
-            .blockers
-            .iter()
-            .chain(boot.warnings.iter())
-            .any(|f| {
-                f.title.to_lowercase().contains("fstab")
-                    || f.message.to_lowercase().contains("fstab")
-            });
+        let has_fstab_finding = boot.blockers.iter().chain(boot.warnings.iter()).any(|f| {
+            f.title.to_lowercase().contains("fstab") || f.message.to_lowercase().contains("fstab")
+        });
         if !has_fstab_finding {
             op_counter += 1;
             plan.operations.push(Operation {
                 id: format!("repair-{op_counter:03}"),
                 op_type: OperationType::CommandExec(CommandExec {
-                interpreter: None,
+                    interpreter: None,
                     command: "grep -v '^#' /etc/fstab | awk '{print $1,$2,$3}' | head -20".into(),
                     expected_exit: 0,
                     timeout: Some(60),

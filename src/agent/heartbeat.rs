@@ -55,8 +55,8 @@ fn probe() -> Probe {
         .find(|d| d.mount_point().to_string_lossy() == root_mount)
         .map(|d| {
             if d.total_space() > 0 {
-                (((d.total_space() - d.available_space()) as f64 / d.total_space() as f64)
-                    * 100.0) as u8
+                (((d.total_space() - d.available_space()) as f64 / d.total_space() as f64) * 100.0)
+                    as u8
             } else {
                 0
             }
@@ -156,7 +156,10 @@ fn service_state() -> (Option<String>, Vec<String>) {
 
 #[cfg(target_os = "windows")]
 fn service_state() -> (Option<String>, Vec<String>) {
-    (None, crate::collectors::windows_live::failed_auto_services())
+    (
+        None,
+        crate::collectors::windows_live::failed_auto_services(),
+    )
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]

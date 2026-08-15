@@ -18,7 +18,9 @@ struct CursorStore {
 
 pub fn collect_journal_slice(unit: &str, limit: usize, boot: BootSelector) -> JournalSlice {
     #[cfg(all(target_os = "linux", feature = "journal-native"))]
-    if let Some(slice) = crate::journal::sd_journal_native::try_collect_journal_slice(unit, limit, boot) {
+    if let Some(slice) =
+        crate::journal::sd_journal_native::try_collect_journal_slice(unit, limit, boot)
+    {
         return slice;
     }
     collect_journal_slice_journalctl(unit, limit, boot)
@@ -31,7 +33,14 @@ fn collect_journal_slice_journalctl(unit: &str, limit: usize, boot: BootSelector
     let after_cursor = store.cursors.get(&cursor_key).cloned();
 
     let mut cmd = Command::new("journalctl");
-    cmd.args(["--no-pager", "-o", "json", "-n", &limit.to_string(), "--show-cursor"]);
+    cmd.args([
+        "--no-pager",
+        "-o",
+        "json",
+        "-n",
+        &limit.to_string(),
+        "--show-cursor",
+    ]);
     match boot {
         BootSelector::Current => {
             cmd.arg("-b");
@@ -124,10 +133,7 @@ fn parse_journal_json(json: &serde_json::Value, default_unit: &str) -> JournalEn
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let priority = json
-        .get("PRIORITY")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(6) as u8;
+    let priority = json.get("PRIORITY").and_then(|v| v.as_u64()).unwrap_or(6) as u8;
     let unit_name = json
         .get("_SYSTEMD_UNIT")
         .and_then(|v| v.as_str())
@@ -166,7 +172,9 @@ fn load_cursors() -> CursorStore {
 
 fn save_cursors(store: &CursorStore) {
     if let Ok(json) = serde_json::to_string(store) {
-        let parent = Path::new(CURSOR_PATH).parent().unwrap_or(Path::new("/var/lib/zyvor"));
+        let parent = Path::new(CURSOR_PATH)
+            .parent()
+            .unwrap_or(Path::new("/var/lib/zyvor"));
         fs::create_dir_all(parent).ok();
         fs::write(CURSOR_PATH, json).ok();
     }

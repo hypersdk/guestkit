@@ -107,7 +107,12 @@ pub async fn stage_update(apply: bool) -> Result<String> {
         .artifact_sha256
         .as_ref()
         .filter(|s| !s.is_empty())
-        .with_context(|| format!("bundle has no {} sha256; refusing unsigned download", check.platform))?;
+        .with_context(|| {
+            format!(
+                "bundle has no {} sha256; refusing unsigned download",
+                check.platform
+            )
+        })?;
 
     let manifest = build_update_manifest(&check, expected_sha);
     if let Some(sig) = check.artifact_signature.as_ref().filter(|s| !s.is_empty()) {
@@ -120,9 +125,7 @@ pub async fn stage_update(apply: bool) -> Result<String> {
     let bytes = download_bytes(url).await?;
     let actual_sha = hex_sha256(&bytes);
     if !actual_sha.eq_ignore_ascii_case(expected_sha) {
-        anyhow::bail!(
-            "artifact sha256 mismatch (expected {expected_sha}, got {actual_sha})"
-        );
+        anyhow::bail!("artifact sha256 mismatch (expected {expected_sha}, got {actual_sha})");
     }
 
     let staged_agent = Path::new(STAGED_AGENT);
@@ -164,19 +167,20 @@ pub async fn stage_update(apply: bool) -> Result<String> {
         }
         return Ok(format!(
             "staged {} to {}; executor unavailable — apply via privileged helper",
-            meta.version,
-            STAGED_AGENT
+            meta.version, STAGED_AGENT
         ));
     }
 
     Ok(format!(
         "staged {} (sha256 verified) at {}",
-        meta.version,
-        STAGED_AGENT
+        meta.version, STAGED_AGENT
     ))
 }
 
-fn build_update_manifest(check: &UpdateCheckResult, expected_sha: &str) -> crate::agent::update_sign::UpdateManifest {
+fn build_update_manifest(
+    check: &UpdateCheckResult,
+    expected_sha: &str,
+) -> crate::agent::update_sign::UpdateManifest {
     let version = check.remote_version.clone().unwrap_or_default();
     let channel = check.channel.clone();
     if check.platform == "windows" {
@@ -247,19 +251,24 @@ async fn download_bytes(url: &str) -> Result<Vec<u8>> {
     if !resp.status().is_success() {
         anyhow::bail!("artifact HTTP {}", resp.status());
     }
-    resp.bytes().await.context("read artifact bytes").map(|b| b.to_vec())
+    resp.bytes()
+        .await
+        .context("read artifact bytes")
+        .map(|b| b.to_vec())
 }
 
 fn extract_agent_binary_from_tar_gz(tar_gz: &[u8], dest: &Path) -> Result<()> {
     use std::io::Cursor;
     let gz = flate2::read::GzDecoder::new(Cursor::new(tar_gz));
     let mut archive = tar::Archive::new(gz);
-    let staged_dir = dest
-        .parent()
-        .unwrap_or(Path::new("/var/lib/zyvor/staged"));
+    let staged_dir = dest.parent().unwrap_or(Path::new("/var/lib/zyvor/staged"));
     let temp_dir = staged_dir.join(format!(
         "extract-{}",
-        uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("tmp")
+        uuid::Uuid::new_v4()
+            .to_string()
+            .split('-')
+            .next()
+            .unwrap_or("tmp")
     ));
     fs::create_dir_all(&temp_dir).context("create extract dir")?;
     archive.unpack(&temp_dir).context("unpack tar.gz")?;
@@ -267,7 +276,8 @@ fn extract_agent_binary_from_tar_gz(tar_gz: &[u8], dest: &Path) -> Result<()> {
     let candidate = find_file_recursive(&temp_dir, "guestkitd")
         .or_else(|_| find_file_recursive(&temp_dir, "zyvor-guest-agent"))
         .context("agent binary (guestkitd / zyvor-guest-agent) not found in artifact")?;
-    fs::copy(&candidate, dest).with_context(|| format!("copy staged binary to {}", dest.display()))?;
+    fs::copy(&candidate, dest)
+        .with_context(|| format!("copy staged binary to {}", dest.display()))?;
     fs::remove_dir_all(&temp_dir).ok();
     #[cfg(unix)]
     fs::set_permissions(dest, fs::Permissions::from_mode(0o755))?;
@@ -277,11 +287,17 @@ fn extract_agent_binary_from_tar_gz(tar_gz: &[u8], dest: &Path) -> Result<()> {
 #[cfg(target_os = "windows")]
 fn extract_agent_exe_from_zip(zip_bytes: &[u8], dest: &Path) -> Result<()> {
     use std::process::Command;
-    let staged_dir = dest.parent().unwrap_or(Path::new("C:\\ProgramData\\zyvor\\staged"));
+    let staged_dir = dest
+        .parent()
+        .unwrap_or(Path::new("C:\\ProgramData\\zyvor\\staged"));
     let zip_path = staged_dir.join("update.zip");
     let extract_dir = staged_dir.join(format!(
         "extract-{}",
-        uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("tmp")
+        uuid::Uuid::new_v4()
+            .to_string()
+            .split('-')
+            .next()
+            .unwrap_or("tmp")
     ));
     fs::write(&zip_path, zip_bytes).context("write update zip")?;
     fs::create_dir_all(&extract_dir).context("create extract dir")?;
@@ -381,7 +397,11 @@ pub fn apply_staged_update_privileged() -> Result<String> {
         if path.is_symlink() {
             continue;
         }
-        if Path::new(target).parent().map(|p| p.exists()).unwrap_or(false) {
+        if Path::new(target)
+            .parent()
+            .map(|p| p.exists())
+            .unwrap_or(false)
+        {
             fs::copy(STAGED_AGENT, target)
                 .with_context(|| format!("install staged binary to {target}"))?;
             #[cfg(unix)]
@@ -408,9 +428,13 @@ fn apply_staged_update_windows(meta: &StagedUpdateMeta) -> Result<String> {
     let install_dir = Path::new(r"C:\Program Files\Zyvor\VM Tools");
     fs::create_dir_all(install_dir).context("create install dir")?;
     let dest = install_dir.join("zyvor-guest-agent.exe");
-    let _ = Command::new("sc.exe").args(["stop", "ZyvorGuestAgent"]).status();
+    let _ = Command::new("sc.exe")
+        .args(["stop", "ZyvorGuestAgent"])
+        .status();
     fs::copy(STAGED_AGENT, &dest).context("install staged exe")?;
-    let _ = Command::new("sc.exe").args(["start", "ZyvorGuestAgent"]).status();
+    let _ = Command::new("sc.exe")
+        .args(["start", "ZyvorGuestAgent"])
+        .status();
     Ok(format!(
         "applied {} to {} (sha256 verified, service restarted)",
         meta.version,
@@ -426,8 +450,13 @@ fn apply_staged_update_windows(_meta: &StagedUpdateMeta) -> Result<String> {
 #[cfg(target_os = "linux")]
 fn restart_agent_services_linux() {
     use std::process::Command;
-    for unit in ["zyvor-guest-agent.service", "zyvor-guest-agent-exec.service"] {
-        let _ = Command::new("systemctl").args(["try-restart", unit]).status();
+    for unit in [
+        "zyvor-guest-agent.service",
+        "zyvor-guest-agent-exec.service",
+    ] {
+        let _ = Command::new("systemctl")
+            .args(["try-restart", unit])
+            .status();
     }
 }
 

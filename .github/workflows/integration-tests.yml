@@ -59,7 +59,10 @@ jobs:
             qemu-kvm \
             qemu-utils \
             libvirt-daemon-system \
-            libvirt-clients
+            libvirt-clients \
+            libssl-dev \
+            libsystemd-dev \
+            pkg-config
 
       - name: Setup block devices
         run: |
@@ -256,7 +259,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils
+          sudo apt-get install -y qemu-utils libssl-dev libsystemd-dev pkg-config
           sudo modprobe nbd max_part=8 || true
 
       - name: Setup Rust
@@ -304,7 +307,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev libsystemd-dev pkg-config
 
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings

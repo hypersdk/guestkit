@@ -196,11 +196,7 @@ pub async fn run_push_worker() -> Result<()> {
     }
 }
 
-async fn push_heartbeat(
-    client: &reqwest::Client,
-    base: &str,
-    agent_id: &str,
-) -> Result<()> {
+async fn push_heartbeat(client: &reqwest::Client, base: &str, agent_id: &str) -> Result<()> {
     let url = format!("{base}/api/v1/guest-agents/{agent_id}/heartbeat");
     let status = crate::evidence::build_agent_status_live().unwrap_or_else(|_| {
         crate::evidence::AgentStatus {
@@ -248,7 +244,12 @@ async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Re
         "recent_events": recent_events,
     });
     let url = format!("{base}/api/v1/guest-agents/{agent_id}/report");
-    client.post(&url).json(&body).send().await.context("report POST")?;
+    client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .context("report POST")?;
     Ok(())
 }
 
@@ -299,13 +300,17 @@ fn build_client(config: &ZeusPushConfig) -> Result<reqwest::Client> {
     if let Some(ca) = ca_path {
         let pem = std::fs::read(&ca).context("read ca")?;
         let cert = reqwest::Certificate::from_pem(&pem).context("parse ca pem")?;
-        builder = builder.tls_built_in_root_certs(false).add_root_certificate(cert);
+        builder = builder
+            .tls_built_in_root_certs(false)
+            .add_root_certificate(cert);
     }
 
     builder.build().context("build reqwest client")
 }
 
-fn resolve_tls_paths(config: &ZeusPushConfig) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
+fn resolve_tls_paths(
+    config: &ZeusPushConfig,
+) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
     let cert = config
         .cert_path
         .as_ref()

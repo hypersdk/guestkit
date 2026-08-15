@@ -860,6 +860,10 @@ fn guestkit_get_systemd_unit(args: &Value) -> Result<Value, String> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| "missing unit".to_string())?;
     let evidence = crate::evidence::build_evidence_live().map_err(|e| e.to_string())?;
+    // NOTE: must stay .or_else (lazy) — the fallback makes a live D-Bus call
+    // (get_unit_detail); .or() would run it on every request even when
+    // build_service_health already found the unit from evidence.
+    #[allow(clippy::unnecessary_lazy_evaluations)]
     let detail = crate::health::build_service_health(unit, &evidence).or_else(|| {
         #[cfg(target_os = "linux")]
         {
@@ -918,7 +922,10 @@ fn guestkit_get_processes() -> Result<Value, String> {
 fn guestkit_get_journal_slice(args: &Value) -> Result<Value, String> {
     let unit = args.get("unit").and_then(|v| v.as_str()).unwrap_or("");
     let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(200) as usize;
-    let boot = args.get("boot").and_then(|v| v.as_str()).unwrap_or("current");
+    let boot = args
+        .get("boot")
+        .and_then(|v| v.as_str())
+        .unwrap_or("current");
     let slice = crate::journal::live::collect_journal_slice_boot(unit, limit, boot);
     serde_json::to_value(slice).map_err(|e| e.to_string())
 }
@@ -999,8 +1006,14 @@ mod tests {
         let out = handler.handle_frame(env);
         let v: Value = serde_json::from_slice(&out).unwrap();
         let ret = v.get("return").expect("QGA return");
-        let methods = ret.get("methods").and_then(|m| m.as_array()).expect("methods array");
-        assert!(methods.len() > 50, "capabilities advertise the full method set");
+        let methods = ret
+            .get("methods")
+            .and_then(|m| m.as_array())
+            .expect("methods array");
+        assert!(
+            methods.len() > 50,
+            "capabilities advertise the full method set"
+        );
     }
 
     #[test]

@@ -55,13 +55,10 @@ pub fn spawn_pipe_server(handler: std::sync::Arc<crate::agent::handler::RequestH
                 if conn.read_exact(&mut frame).await.is_err() {
                     return;
                 }
-                let response =
-                    tokio::task::spawn_blocking(move || handler.handle_frame(&frame))
-                        .await
-                        .unwrap_or_default();
-                let _ = conn
-                    .write_all(&(response.len() as u32).to_be_bytes())
-                    .await;
+                let response = tokio::task::spawn_blocking(move || handler.handle_frame(&frame))
+                    .await
+                    .unwrap_or_default();
+                let _ = conn.write_all(&(response.len() as u32).to_be_bytes()).await;
                 let _ = conn.write_all(&response).await;
                 let _ = conn.flush().await;
             });

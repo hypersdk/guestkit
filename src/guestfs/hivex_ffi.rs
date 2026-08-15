@@ -225,10 +225,7 @@ fn encode_value(data_type: &str, data: &Value) -> Result<(c_int, Vec<u8>)> {
 
 /// UTF-16LE encode with a trailing NUL, as Windows stores REG_SZ.
 fn utf16le_nul(s: &str) -> Vec<u8> {
-    let mut bytes: Vec<u8> = s
-        .encode_utf16()
-        .flat_map(|u| u.to_le_bytes())
-        .collect();
+    let mut bytes: Vec<u8> = s.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
     bytes.extend_from_slice(&[0, 0]);
     bytes
 }
@@ -347,7 +344,10 @@ pub fn set_configflags_reinstall(
     control_set: &str,
     hwid_needles: &[&str],
 ) -> Result<usize> {
-    let needles: Vec<String> = hwid_needles.iter().map(|n| n.to_ascii_uppercase()).collect();
+    let needles: Vec<String> = hwid_needles
+        .iter()
+        .map(|n| n.to_ascii_uppercase())
+        .collect();
     let mut hive = Hive::open_write(hive_file)?;
     let mut flagged = 0usize;
     // SAFETY: hive.0 stays live for the whole traversal; all handles derive from it.
@@ -361,7 +361,9 @@ pub fn set_configflags_reinstall(
             None => return Ok(0),
         };
         for dev in node_children(hive.0, pci) {
-            let dev_name = node_name(hive.0, dev).unwrap_or_default().to_ascii_uppercase();
+            let dev_name = node_name(hive.0, dev)
+                .unwrap_or_default()
+                .to_ascii_uppercase();
             if !needles.iter().any(|n| dev_name.contains(n.as_str())) {
                 continue;
             }
@@ -395,7 +397,10 @@ pub fn delete_device_nodes(
     control_set: &str,
     hwid_needles: &[&str],
 ) -> Result<usize> {
-    let needles: Vec<String> = hwid_needles.iter().map(|n| n.to_ascii_uppercase()).collect();
+    let needles: Vec<String> = hwid_needles
+        .iter()
+        .map(|n| n.to_ascii_uppercase())
+        .collect();
     let mut hive = Hive::open_write(hive_file)?;
     let mut deleted = 0usize;
     // SAFETY: hive.0 stays live; all handles derive from it. We delete by handle
@@ -410,8 +415,12 @@ pub fn delete_device_nodes(
             None => return Ok(0),
         };
         for dev in node_children(hive.0, pci) {
-            let dev_name = node_name(hive.0, dev).unwrap_or_default().to_ascii_uppercase();
-            if needles.iter().any(|n| dev_name.contains(n.as_str())) && hivex_node_delete_child(hive.0, dev) == 0 {
+            let dev_name = node_name(hive.0, dev)
+                .unwrap_or_default()
+                .to_ascii_uppercase();
+            if needles.iter().any(|n| dev_name.contains(n.as_str()))
+                && hivex_node_delete_child(hive.0, dev) == 0
+            {
                 deleted += 1;
             }
         }

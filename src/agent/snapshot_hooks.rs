@@ -70,7 +70,11 @@ fn run_pre_snapshot_hooks() -> Vec<HookResult> {
                     Err(e) => (false, e.to_string()),
                 };
                 results.push(HookResult {
-                    name: path.file_name().unwrap_or_default().to_string_lossy().to_string(),
+                    name: path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
                     success,
                     message,
                 });

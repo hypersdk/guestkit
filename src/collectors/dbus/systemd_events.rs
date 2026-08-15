@@ -41,12 +41,7 @@ impl SystemdEventStore {
     }
 
     fn recent(&self, limit: usize) -> Vec<SystemdEvent> {
-        self.events
-            .iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+        self.events.iter().rev().take(limit).cloned().collect()
     }
 
     fn record_failure(&mut self, unit: &str) -> bool {
@@ -122,7 +117,8 @@ async fn run_subscriber_async() -> anyhow::Result<()> {
         fn unit_removed(&self, id: &str, unit: OwnedObjectPath) -> zbus::Result<()>;
 
         #[zbus(signal)]
-        fn job_new(&self, id: u32, job: OwnedObjectPath, unit: OwnedObjectPath) -> zbus::Result<()>;
+        fn job_new(&self, id: u32, job: OwnedObjectPath, unit: OwnedObjectPath)
+            -> zbus::Result<()>;
 
         #[zbus(signal)]
         fn job_removed(

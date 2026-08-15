@@ -16,10 +16,10 @@
 //! use guestkit::core::mem_optimize;
 //!
 //! // Instead of Vec::new()
-//! let packages = mem_optimize::vec_for_packages();
+//! let packages: Vec<String> = mem_optimize::vec_for_packages();
 //!
 //! // Instead of Vec::with_capacity(arbitrary_number)
-//! let filesystems = mem_optimize::vec_for_filesystems();
+//! let filesystems: Vec<String> = mem_optimize::vec_for_filesystems();
 //! ```
 
 /// Typical capacity estimates based on real-world observations
@@ -87,7 +87,7 @@ pub mod capacity {
 /// # Examples
 ///
 /// ```
-/// let mut partitions = guestkit::core::mem_optimize::vec_for_partitions();
+/// let mut partitions: Vec<String> = guestkit::core::mem_optimize::vec_for_partitions();
 /// // partitions is pre-allocated with capacity for typical partition count
 /// ```
 #[inline]
@@ -181,7 +181,7 @@ pub fn vec_for_cron_jobs<T>() -> Vec<T> {
 ///
 /// ```
 /// let input = vec![1, 2, 3, 4, 5];
-/// let mut output = guestkit::core::mem_optimize::vec_with_estimated_capacity(&input, 1.5);
+/// let mut output: Vec<i32> = guestkit::core::mem_optimize::vec_with_estimated_capacity(&input, 1.5);
 /// // output has capacity of ~7 (5 * 1.5), avoiding reallocation
 /// ```
 #[inline]
@@ -197,7 +197,7 @@ pub fn vec_with_estimated_capacity<T, U>(input: &[U], factor: f32) -> Vec<T> {
 /// # Examples
 ///
 /// ```
-/// let mut vec = Vec::with_capacity(1000);
+/// let mut vec: Vec<i32> = Vec::with_capacity(1000);
 /// // ... add 100 items ...
 /// guestkit::core::mem_optimize::shrink_if_wasteful(&mut vec);
 /// // vec now uses less memory

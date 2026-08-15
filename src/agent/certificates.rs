@@ -118,7 +118,9 @@ fn parse_cert(path: &Path) -> Option<CertInfo> {
         days_until_expiry: days.unwrap_or(0),
         key_bits,
         signature_algorithm: sig_alg,
-        expiring_soon: days.map(|d| d >= 0 && d <= EXPIRY_WARN_DAYS).unwrap_or(false),
+        expiring_soon: days
+            .map(|d| (0..=EXPIRY_WARN_DAYS).contains(&d))
+            .unwrap_or(false),
         expired: days.map(|d| d < 0).unwrap_or(false),
         weak,
     })
@@ -168,7 +170,11 @@ fn collect_ssh_host_keys() -> Vec<SshHostKey> {
             continue;
         }
         // ssh-keygen -l -f <pub>  -> "<bits> SHA256:<fp> <comment> (<type>)"
-        if let Ok(out) = Command::new("ssh-keygen").args(["-l", "-f"]).arg(&path).output() {
+        if let Ok(out) = Command::new("ssh-keygen")
+            .args(["-l", "-f"])
+            .arg(&path)
+            .output()
+        {
             if out.status.success() {
                 let line = String::from_utf8_lossy(&out.stdout);
                 let parts: Vec<&str> = line.split_whitespace().collect();
@@ -226,7 +232,9 @@ fn windows_cert_inventory() -> Vec<CertInfo> {
     } else if json_text.trim().is_empty() {
         Vec::new()
     } else {
-        serde_json::from_str::<Row>(&json_text).map(|r| vec![r]).unwrap_or_default()
+        serde_json::from_str::<Row>(&json_text)
+            .map(|r| vec![r])
+            .unwrap_or_default()
     };
     rows.into_iter()
         .map(|r| {
@@ -319,14 +327,34 @@ mod tests {
     #[test]
     fn weak_key_is_algorithm_aware() {
         // ECC P-256 (256-bit) is strong, not weak.
-        assert!(!is_weak_key("id-ecPublicKey", Some(256), "ecdsa-with-SHA256"));
-        assert!(!is_weak_key("id-ecPublicKey", Some(384), "ecdsa-with-SHA384"));
+        assert!(!is_weak_key(
+            "id-ecPublicKey",
+            Some(256),
+            "ecdsa-with-SHA256"
+        ));
+        assert!(!is_weak_key(
+            "id-ecPublicKey",
+            Some(384),
+            "ecdsa-with-SHA384"
+        ));
         // RSA below 2048 is weak.
-        assert!(is_weak_key("rsaEncryption", Some(1024), "sha256WithRSAEncryption"));
+        assert!(is_weak_key(
+            "rsaEncryption",
+            Some(1024),
+            "sha256WithRSAEncryption"
+        ));
         // RSA 2048+ is fine.
-        assert!(!is_weak_key("rsaEncryption", Some(2048), "sha256WithRSAEncryption"));
+        assert!(!is_weak_key(
+            "rsaEncryption",
+            Some(2048),
+            "sha256WithRSAEncryption"
+        ));
         // SHA-1 signatures are weak regardless of key.
-        assert!(is_weak_key("rsaEncryption", Some(4096), "sha1WithRSAEncryption"));
+        assert!(is_weak_key(
+            "rsaEncryption",
+            Some(4096),
+            "sha1WithRSAEncryption"
+        ));
         // Tiny ECC curve is weak.
         assert!(is_weak_key("id-ecPublicKey", Some(160), "ecdsa-with-SHA1"));
     }

@@ -225,7 +225,13 @@ fn scan_cron() -> Vec<String> {
 fn scan_timers() -> Vec<String> {
     use std::process::Command;
     Command::new("systemctl")
-        .args(["list-timers", "--all", "--no-legend", "--no-pager", "--plain"])
+        .args([
+            "list-timers",
+            "--all",
+            "--no-legend",
+            "--no-pager",
+            "--plain",
+        ])
         .output()
         .ok()
         .map(|o| {
@@ -381,7 +387,14 @@ pub fn check() -> Value {
         &mut changes,
     );
     // sudoers: high (privilege).
-    diff_list(&baseline.sudoers, &current.sudoers, "sudoers", "high", false, &mut changes);
+    diff_list(
+        &baseline.sudoers,
+        &current.sudoers,
+        "sudoers",
+        "high",
+        false,
+        &mut changes,
+    );
     // New listeners: medium.
     diff_map(
         &baseline.listeners,
@@ -391,7 +404,14 @@ pub fn check() -> Value {
         &mut changes,
     );
     // cron / timers: medium (persistence).
-    diff_list(&baseline.cron_jobs, &current.cron_jobs, "cron", "medium", true, &mut changes);
+    diff_list(
+        &baseline.cron_jobs,
+        &current.cron_jobs,
+        "cron",
+        "medium",
+        true,
+        &mut changes,
+    );
     diff_list(
         &baseline.systemd_timers,
         &current.systemd_timers,
@@ -512,16 +532,24 @@ mod tests {
     #[test]
     fn diff_detects_new_suid_and_module() {
         let mut base = IntegrityBaseline::default();
-        base.suid_sgid.insert("/usr/bin/sudo".into(), "hash1".into());
+        base.suid_sgid
+            .insert("/usr/bin/sudo".into(), "hash1".into());
         base.kernel_modules = vec!["ext4".into()];
 
         let mut cur = base.clone();
         cur.suid_sgid.insert("/tmp/rootkit".into(), "hash2".into()); // added
-        cur.suid_sgid.insert("/usr/bin/sudo".into(), "trojaned".into()); // modified
+        cur.suid_sgid
+            .insert("/usr/bin/sudo".into(), "trojaned".into()); // modified
         cur.kernel_modules.push("evil_mod".into()); // added
 
         let mut changes = Vec::new();
-        diff_map(&base.suid_sgid, &cur.suid_sgid, "suid_sgid", "high", &mut changes);
+        diff_map(
+            &base.suid_sgid,
+            &cur.suid_sgid,
+            "suid_sgid",
+            "high",
+            &mut changes,
+        );
         diff_list(
             &base.kernel_modules,
             &cur.kernel_modules,
@@ -530,8 +558,12 @@ mod tests {
             true,
             &mut changes,
         );
-        assert!(changes.iter().any(|c| c.item == "/tmp/rootkit" && c.kind == "added"));
-        assert!(changes.iter().any(|c| c.item == "/usr/bin/sudo" && c.kind == "modified"));
+        assert!(changes
+            .iter()
+            .any(|c| c.item == "/tmp/rootkit" && c.kind == "added"));
+        assert!(changes
+            .iter()
+            .any(|c| c.item == "/usr/bin/sudo" && c.kind == "modified"));
         assert!(changes.iter().any(|c| c.item == "evil_mod"));
     }
 

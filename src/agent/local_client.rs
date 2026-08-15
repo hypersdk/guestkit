@@ -46,7 +46,11 @@ pub fn print_local_status(socket_path: Option<&str>) -> Result<()> {
         UnixStream::connect(path).with_context(|| format!("connect to agent at {path}"))?;
     stream.set_read_timeout(Some(std::time::Duration::from_secs(30)))?;
 
-    let health = call_method(&mut stream, "guestkit.getGuestHealth", serde_json::json!({}))?;
+    let health = call_method(
+        &mut stream,
+        "guestkit.getGuestHealth",
+        serde_json::json!({}),
+    )?;
     let info = call_method(&mut stream, "guestkit.getGuestInfo", serde_json::json!({}))?;
 
     println!("Zyvor GuestAgent status");
@@ -73,7 +77,7 @@ pub fn print_local_status(socket_path: Option<&str>) -> Result<()> {
     if let Some(failed) = health.get("failed_units").and_then(|v| v.as_u64()) {
         println!("Failed units: {failed}");
     }
-  if let Some(services) = health.get("critical_services").and_then(|v| v.as_array()) {
+    if let Some(services) = health.get("critical_services").and_then(|v| v.as_array()) {
         for svc in services.iter().take(5) {
             let name = svc.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let state = svc.get("state").and_then(|v| v.as_str()).unwrap_or("");

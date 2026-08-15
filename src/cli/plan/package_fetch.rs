@@ -75,10 +75,7 @@ pub fn fetch_packages(names: &[String], dest: &Path, kind: PackageKind) -> Resul
     for name in names {
         match fetch_one(name, dest, kind) {
             Ok(()) => {
-                eprintln!(
-                    "Fetched package '{name}' → {}",
-                    dest.display()
-                );
+                eprintln!("Fetched package '{name}' → {}", dest.display());
                 ok.push(name.clone());
             }
             Err(e) => {
@@ -192,14 +189,9 @@ fn fetch_from_mirror(name: &str, dest: &Path, kind: PackageKind) -> Result<Optio
         .iter()
         .flat_map(|m| {
             if m.contains("{name}") || m.contains("{ext}") {
-                vec![m
-                    .replace("{name}", name)
-                    .replace("{ext}", ext)]
+                vec![m.replace("{name}", name).replace("{ext}", ext)]
             } else {
-                vec![
-                    format!("{m}/{name}.{ext}"),
-                    format!("{m}/{name}"),
-                ]
+                vec![format!("{m}/{name}.{ext}"), format!("{m}/{name}")]
             }
         })
         .collect();
@@ -226,14 +218,7 @@ fn http_download(url: &str, dest: &Path, name: &str, ext: &str) -> Result<()> {
 
     if which("curl") {
         let output = Command::new("curl")
-            .args([
-                "-fsSL",
-                "--connect-timeout",
-                "15",
-                "-o",
-                out_s,
-                url,
-            ])
+            .args(["-fsSL", "--connect-timeout", "15", "-o", out_s, url])
             .output()
             .context("run curl")?;
         if output.status.success() && out.is_file() && fs::metadata(&out)?.len() > 0 {

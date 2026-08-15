@@ -14,6 +14,10 @@ pub struct PlanCommand {
     pub action: PlanAction,
 }
 
+// clap Subcommand: variants are constructed once per CLI invocation from
+// parsed args, never in a hot path — boxing fields to shrink the enum
+// isn't worth the added indirection at every call site.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Subcommand)]
 pub enum PlanAction {
     /// Preview a fix plan
@@ -383,6 +387,7 @@ impl PlanCommand {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)] // CLI handler: args pass through from clap-parsed flags
     fn apply_plan(
         &self,
         plan_file: &str,
@@ -429,8 +434,7 @@ impl PlanCommand {
         }
 
         // Apply
-        let applicator =
-            PlanApplicator::new(vm_path.to_string(), dry_run).skip_backup(skip_backup);
+        let applicator = PlanApplicator::new(vm_path.to_string(), dry_run).skip_backup(skip_backup);
 
         if dry_run {
             println!();
@@ -440,10 +444,7 @@ impl PlanCommand {
             );
             println!();
         } else if skip_backup {
-            println!(
-                "{}",
-                "Skipping full-image backup (--skip-backup)".yellow()
-            );
+            println!("{}", "Skipping full-image backup (--skip-backup)".yellow());
         }
 
         let result = applicator.apply(&plan)?;
@@ -509,6 +510,7 @@ impl PlanCommand {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)] // CLI handler: args pass through from clap-parsed flags
     fn generate_plan(
         &self,
         vm_disk: &str,
@@ -540,14 +542,37 @@ impl PlanCommand {
         // Registry-only Windows canned plans — no guestfs inspect needed.
         if matches!(
             profile_lc.as_str(),
-            "windows-rdp" | "windows_rdp" | "rdp" | "enable-rdp"
-                | "windows-winrm" | "windows_winrm" | "winrm" | "enable-winrm"
-                | "windows-hostname" | "windows_hostname" | "hostname" | "set-hostname"
-                | "windows-domain-leave" | "windows_domain_leave" | "domain-leave" | "unjoin"
-                | "windows-timezone" | "windows_timezone" | "timezone" | "set-timezone"
-                | "windows-static-ip" | "windows_static_ip" | "static-ip"
-                | "windows-dhcp" | "windows_dhcp" | "dhcp" | "enable-dhcp"
-                | "windows-dns" | "windows_dns" | "dns" | "set-dns"
+            "windows-rdp"
+                | "windows_rdp"
+                | "rdp"
+                | "enable-rdp"
+                | "windows-winrm"
+                | "windows_winrm"
+                | "winrm"
+                | "enable-winrm"
+                | "windows-hostname"
+                | "windows_hostname"
+                | "hostname"
+                | "set-hostname"
+                | "windows-domain-leave"
+                | "windows_domain_leave"
+                | "domain-leave"
+                | "unjoin"
+                | "windows-timezone"
+                | "windows_timezone"
+                | "timezone"
+                | "set-timezone"
+                | "windows-static-ip"
+                | "windows_static_ip"
+                | "static-ip"
+                | "windows-dhcp"
+                | "windows_dhcp"
+                | "dhcp"
+                | "enable-dhcp"
+                | "windows-dns"
+                | "windows_dns"
+                | "dns"
+                | "set-dns"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -579,9 +604,8 @@ impl PlanCommand {
                     let guid = interface_guid.ok_or_else(|| {
                         anyhow::anyhow!("--interface-guid is required for windows-static-ip")
                     })?;
-                    let addr = ip.ok_or_else(|| {
-                        anyhow::anyhow!("--ip is required for windows-static-ip")
-                    })?;
+                    let addr = ip
+                        .ok_or_else(|| anyhow::anyhow!("--ip is required for windows-static-ip"))?;
                     let netmask = mask.ok_or_else(|| {
                         anyhow::anyhow!("--mask is required for windows-static-ip")
                     })?;
@@ -597,9 +621,8 @@ impl PlanCommand {
                     let guid = interface_guid.ok_or_else(|| {
                         anyhow::anyhow!("--interface-guid is required for windows-dns")
                     })?;
-                    let servers = dns.ok_or_else(|| {
-                        anyhow::anyhow!("--dns is required for windows-dns")
-                    })?;
+                    let servers =
+                        dns.ok_or_else(|| anyhow::anyhow!("--dns is required for windows-dns"))?;
                     generator.windows_dns_plan(guid, servers)?
                 }
                 _ => unreachable!(),

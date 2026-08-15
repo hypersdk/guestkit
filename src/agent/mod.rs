@@ -8,7 +8,6 @@ pub mod certificates;
 pub mod cli;
 pub mod containers;
 pub mod customization;
-pub mod inventory_cache;
 pub mod daemon;
 pub mod exec;
 pub mod executor;
@@ -19,6 +18,7 @@ pub mod heartbeat;
 #[cfg(not(target_os = "windows"))]
 pub mod inject;
 pub mod integrity;
+pub mod inventory_cache;
 #[cfg(unix)]
 pub mod local_client;
 pub mod netintel;
@@ -26,20 +26,20 @@ pub mod nettest;
 pub mod packages;
 pub mod policy;
 pub mod posture;
-pub mod users;
-pub mod state;
-pub mod storage_ops;
-pub mod telemetry;
 #[cfg(not(target_os = "windows"))]
 pub mod proxy;
 pub mod qga;
 pub mod rdp;
 pub mod snapshot;
 pub mod snapshot_hooks;
+pub mod state;
+pub mod storage_ops;
 pub mod support_bundle;
+pub mod telemetry;
 pub mod transport;
 pub mod update_sign;
 pub mod updater;
+pub mod users;
 
 #[cfg(unix)]
 pub use agent_call::call_agent_socket;

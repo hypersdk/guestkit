@@ -271,7 +271,11 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
                 let mut kv = pair.splitn(2, '=');
                 let k = kv.next()?;
                 let v = kv.next().unwrap_or("");
-                if k == "unit" { Some(v) } else { None }
+                if k == "unit" {
+                    Some(v)
+                } else {
+                    None
+                }
             })
             .unwrap_or("");
         let boot = query
@@ -280,7 +284,11 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
                 let mut kv = pair.splitn(2, '=');
                 let k = kv.next()?;
                 let v = kv.next().unwrap_or("");
-                if k == "boot" { Some(v) } else { None }
+                if k == "boot" {
+                    Some(v)
+                } else {
+                    None
+                }
             })
             .unwrap_or("current");
         let limit = query
@@ -289,7 +297,11 @@ async fn handle_http(mut stream: TcpStream, backend: ProxyBackend) -> Result<()>
                 let mut kv = pair.splitn(2, '=');
                 let k = kv.next()?;
                 let v = kv.next().unwrap_or("");
-                if k == "limit" { v.parse().ok() } else { None }
+                if k == "limit" {
+                    v.parse().ok()
+                } else {
+                    None
+                }
             })
             .unwrap_or(200);
         (

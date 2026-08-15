@@ -38,10 +38,7 @@ pub fn doctor_command(
         println!("{}", "Bootability Assessment".bold().cyan());
         println!("{}", "═".repeat(50));
         println!();
-        println!(
-            "  {}",
-            boot_report.assurance_score_message().green().bold()
-        );
+        println!("  {}", boot_report.assurance_score_message().green().bold());
         println!();
 
         if !boot_report.blockers.is_empty() {
@@ -393,13 +390,15 @@ pub fn migrate_assess_command(
     fail_below: Option<f64>,
     verbose: bool,
 ) -> Result<()> {
-    let (_evidence, assessment) =
-        crate::assurance::run_migrate_assess(image, target, verbose)?;
+    let (_evidence, assessment) = crate::assurance::run_migrate_assess(image, target, verbose)?;
 
     if output_format == "json" {
         println!("{}", serde_json::to_string_pretty(&assessment)?);
     } else {
-        println!("Migration Score: {:.0}/100  ({:?})", assessment.overall_score, assessment.readiness);
+        println!(
+            "Migration Score: {:.0}/100  ({:?})",
+            assessment.overall_score, assessment.readiness
+        );
         println!();
         let s = &assessment.sub_scores;
         println!("  Boot readiness:        {:>3.0}", s.boot);
@@ -466,8 +465,7 @@ pub fn migrate_repair_command(
     export: Option<&Path>,
     verbose: bool,
 ) -> Result<()> {
-    let (evidence, assessment) =
-        crate::assurance::run_migrate_assess(image, target, verbose)?;
+    let (evidence, assessment) = crate::assurance::run_migrate_assess(image, target, verbose)?;
     let (plan, notes) = crate::migration::MigrationRepairPlanner::from_assessment(
         &assessment,
         &evidence,
@@ -481,7 +479,10 @@ pub fn migrate_repair_command(
         eprintln!("note: {note}");
     }
     if plan.operations.is_empty() {
-        println!("No automated repairs required (score {:.0}).", assessment.overall_score);
+        println!(
+            "No automated repairs required (score {:.0}).",
+            assessment.overall_score
+        );
         return Ok(());
     }
 
@@ -494,15 +495,16 @@ pub fn migrate_repair_command(
 
     if apply {
         // Offline apply refuses to run without a successful full-image backup.
-        let applicator =
-            crate::cli::plan::PlanApplicator::new(image.display().to_string(), false);
+        let applicator = crate::cli::plan::PlanApplicator::new(image.display().to_string(), false);
         let result = applicator.apply(&plan)?;
         println!("{}", result.message);
         if !result.success {
             anyhow::bail!("repair plan apply failed");
         }
     } else {
-        println!("\nDry run only — pass --apply to execute against the image (a backup is taken first).");
+        println!(
+            "\nDry run only — pass --apply to execute against the image (a backup is taken first)."
+        );
     }
     Ok(())
 }
@@ -567,7 +569,10 @@ pub fn passport_emit_command(
         );
     }
     println!("  wrote {}", output.display());
-    println!("  suite: {} → {}", passport.suite.assurance, passport.suite.next_step);
+    println!(
+        "  suite: {} → {}",
+        passport.suite.assurance, passport.suite.next_step
+    );
     Ok(())
 }
 
@@ -596,8 +601,8 @@ pub fn passport_verify_command(
 
     let raw = std::fs::read_to_string(passport_path)
         .with_context(|| format!("read passport {}", passport_path.display()))?;
-    let passport: CutoverPassport = serde_json::from_str(&raw)
-        .context("parse Cutover Passport JSON")?;
+    let passport: CutoverPassport =
+        serde_json::from_str(&raw).context("parse Cutover Passport JSON")?;
     verify_passport(
         &passport,
         &PassportVerifyOptions {

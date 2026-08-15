@@ -38,9 +38,6 @@ pub mod handle;
 #[cfg(feature = "registry-write")]
 pub mod hivex_ffi;
 pub mod hivex_ops;
-pub mod sam_aes;
-#[cfg(feature = "registry-write")]
-pub mod sam_password;
 pub mod inotify_ops;
 pub mod inspect;
 pub mod inspect_enhanced;
@@ -73,6 +70,9 @@ pub mod partition;
 pub mod pread_ops;
 pub mod reiserfs_ops;
 pub mod rsync_ops;
+pub mod sam_aes;
+#[cfg(feature = "registry-write")]
+pub mod sam_password;
 pub mod security;
 pub mod security_utils;
 pub mod sed_ops;

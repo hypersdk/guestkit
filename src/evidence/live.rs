@@ -192,8 +192,10 @@ fn collect_linux_migration_live() -> crate::evidence::snapshot::LinuxMigrationEv
 
     // Files that pin static IP configuration (candidates for migration
     // network-preservation planning).
+    type ScanDirCheck = (&'static str, fn(&str) -> bool);
+
     let mut static_ip_configs = Vec::new();
-    let scan_dirs: [(&str, fn(&str) -> bool); 3] = [
+    let scan_dirs: [ScanDirCheck; 3] = [
         ("/etc/sysconfig/network-scripts", |c| {
             c.contains("BOOTPROTO=none") || c.contains("BOOTPROTO=static")
         }),

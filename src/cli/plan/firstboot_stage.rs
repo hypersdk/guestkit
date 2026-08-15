@@ -60,10 +60,7 @@ pub fn stage_service_offline(
 }
 
 /// Prefer chroot when it works; otherwise stage the command for first boot.
-pub fn apply_or_stage_command(
-    g: &mut crate::guestfs::Guestfs,
-    ce: &CommandExec,
-) -> Result<bool> {
+pub fn apply_or_stage_command(g: &mut crate::guestfs::Guestfs, ce: &CommandExec) -> Result<bool> {
     // Offline-safe systemctl enable/disable without chroot.
     if let Some(action) = parse_systemctl_enable_disable(&ce.command) {
         match action {
@@ -247,13 +244,9 @@ enum SysctlAction {
 fn parse_systemctl_enable_disable(cmd: &str) -> Option<SysctlAction> {
     let parts: Vec<&str> = cmd.split_whitespace().collect();
     // systemctl [--…] enable|disable UNIT
-    let mut i = if parts.first().map(|s| *s == "systemctl").unwrap_or(false) {
-        1usize
-    } else if parts.len() >= 2 && parts[0].ends_with("systemctl") {
-        1
-    } else {
-        return None;
-    };
+    let is_systemctl = parts.first().map(|s| *s == "systemctl").unwrap_or(false)
+        || (parts.len() >= 2 && parts[0].ends_with("systemctl"));
+    let mut i = if is_systemctl { 1usize } else { return None };
     while i < parts.len() && parts[i].starts_with('-') {
         i += 1;
     }

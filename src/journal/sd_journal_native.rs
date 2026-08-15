@@ -219,7 +219,9 @@ fn load_cursors() -> CursorStore {
 
 fn save_cursors(store: &CursorStore) {
     if let Ok(json) = serde_json::to_string(store) {
-        let parent = Path::new(CURSOR_PATH).parent().unwrap_or(Path::new("/var/lib/zyvor"));
+        let parent = Path::new(CURSOR_PATH)
+            .parent()
+            .unwrap_or(Path::new("/var/lib/zyvor"));
         fs::create_dir_all(parent).ok();
         fs::write(CURSOR_PATH, json).ok();
     }

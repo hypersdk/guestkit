@@ -32,24 +32,32 @@ fn agent_doctor_live() {
         br#"{"jsonrpc":"2.0","method":"guestkit.doctor","params":{"target":"kvm"},"id":4}"#,
     );
     assert!(resp.result.is_some(), "{:?}", resp.error);
-    let semantic = resp
-        .result
-        .as_ref()
-        .and_then(|r| r.get("semantic"));
-    assert!(semantic.is_some(), "doctor should include semantic analysis");
+    let semantic = resp.result.as_ref().and_then(|r| r.get("semantic"));
+    assert!(
+        semantic.is_some(),
+        "doctor should include semantic analysis"
+    );
 }
 
 #[test]
 fn agent_collect_support_bundle() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(
-        br#"{"jsonrpc":"2.0","method":"guestkit.collectSupportBundle","id":5}"#,
-    );
+    let resp =
+        handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.collectSupportBundle","id":5}"#);
     assert!(resp.result.is_some(), "{:?}", resp.error);
     let result = resp.result.as_ref().expect("result");
-    assert_eq!(result.get("format").and_then(|v| v.as_str()), Some("tar.zst"));
-    assert_eq!(result.get("encoding").and_then(|v| v.as_str()), Some("base64"));
-    let data = result.get("data").and_then(|v| v.as_str()).expect("base64 data");
+    assert_eq!(
+        result.get("format").and_then(|v| v.as_str()),
+        Some("tar.zst")
+    );
+    assert_eq!(
+        result.get("encoding").and_then(|v| v.as_str()),
+        Some("base64")
+    );
+    let data = result
+        .get("data")
+        .and_then(|v| v.as_str())
+        .expect("base64 data");
     use base64::{engine::general_purpose::STANDARD, Engine};
     let bytes = STANDARD.decode(data).expect("decode bundle");
     assert!(!bytes.is_empty());
@@ -143,7 +151,8 @@ fn capabilities_report_categories_and_events() {
 #[test]
 fn network_test_gateway_default() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.networkTest","params":{},"id":16}"#);
+    let resp =
+        handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.networkTest","params":{},"id":16}"#);
     let result = resp.result.expect("network test result");
     assert!(result.get("gateway").is_some());
 }
@@ -163,7 +172,8 @@ fn performance_summary_empty_store_is_well_formed() {
 #[test]
 fn packages_inventory_via_handler() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.packages.inventory","id":30}"#);
+    let resp =
+        handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.packages.inventory","id":30}"#);
     let result = resp.result.expect("inventory");
     assert!(result.get("installed_count").is_some());
     assert!(result.get("manager").is_some());
@@ -181,7 +191,8 @@ fn packages_install_denied_by_default() {
 #[test]
 fn certificates_inventory_via_handler() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.certificates.inventory","id":32}"#);
+    let resp =
+        handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.certificates.inventory","id":32}"#);
     let result = resp.result.expect("certs");
     assert!(result.get("certificate_count").is_some());
     assert!(result.get("ssh_host_keys").is_some());
@@ -206,12 +217,18 @@ fn set_hostname_denied_by_default() {
 #[test]
 fn phase6_dotted_aliases_resolve() {
     use guestkit_agent_protocol::RpcMethod;
-    assert_eq!(RpcMethod::parse("packages.updates"), RpcMethod::PackagesUpdates);
+    assert_eq!(
+        RpcMethod::parse("packages.updates"),
+        RpcMethod::PackagesUpdates
+    );
     assert_eq!(
         RpcMethod::parse("certificates.inventory"),
         RpcMethod::CertificatesInventory
     );
-    assert_eq!(RpcMethod::parse("customization.hostname"), RpcMethod::SetHostname);
+    assert_eq!(
+        RpcMethod::parse("customization.hostname"),
+        RpcMethod::SetHostname
+    );
 }
 
 // --- Phase 7: container awareness + offline cache (§10, §31) ---
@@ -219,7 +236,8 @@ fn phase6_dotted_aliases_resolve() {
 #[test]
 fn containers_inventory_via_handler() {
     let handler = RequestHandler::new();
-    let resp = handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.containers.inventory","id":40}"#);
+    let resp =
+        handler.handle(br#"{"jsonrpc":"2.0","method":"guestkit.containers.inventory","id":40}"#);
     let result = resp.result.expect("containers");
     assert!(result.get("runtimes").is_some());
     assert!(result.get("container_count").is_some());
@@ -246,8 +264,8 @@ fn inventory_cache_offline_read_via_public_api() {
     });
     std::fs::write(&dest, serde_json::to_vec(&cache).unwrap()).unwrap();
 
-    let read = guestkit::agent::inventory_cache::read_cache_from_root(root.path())
-        .expect("offline read");
+    let read =
+        guestkit::agent::inventory_cache::read_cache_from_root(root.path()).expect("offline read");
     assert_eq!(read.schema, 1);
     assert!(read.payload.get("heartbeat").is_some());
 }
@@ -259,7 +277,10 @@ fn phase7_aliases_resolve() {
         RpcMethod::parse("containers.inventory"),
         RpcMethod::ContainersInventory
     );
-    assert_eq!(RpcMethod::parse("inventory.cache"), RpcMethod::InventoryCacheWrite);
+    assert_eq!(
+        RpcMethod::parse("inventory.cache"),
+        RpcMethod::InventoryCacheWrite
+    );
 }
 
 // --- Phase 8: tamper/integrity monitoring (§19) ---
@@ -279,7 +300,10 @@ fn integrity_check_without_baseline() {
 #[test]
 fn integrity_aliases_resolve() {
     use guestkit_agent_protocol::RpcMethod;
-    assert_eq!(RpcMethod::parse("integrity.baseline"), RpcMethod::IntegrityBaseline);
+    assert_eq!(
+        RpcMethod::parse("integrity.baseline"),
+        RpcMethod::IntegrityBaseline
+    );
     assert_eq!(
         RpcMethod::parse("security.integrity.check"),
         RpcMethod::IntegrityCheck

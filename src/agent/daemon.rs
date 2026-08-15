@@ -206,7 +206,7 @@ fn run_channel(
                 }
                 Err(e) => {
                     attempt += 1;
-                    if attempt == 1 || attempt % 15 == 0 {
+                    if attempt == 1 || attempt.is_multiple_of(15) {
                         log::warn!(
                             "channel {} not ready ({e}); retrying (attempt {attempt})",
                             plan.name

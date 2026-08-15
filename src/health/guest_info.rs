@@ -46,9 +46,7 @@ pub fn build_guest_info(evidence: &EvidenceSnapshot) -> GuestInfo {
             zyvor_agent_version: crate::VERSION.to_string(),
         },
         identity: GuestIdentity {
-            machine_id: hardware
-                .map(|h| h.machine_id.clone())
-                .unwrap_or_default(),
+            machine_id: hardware.map(|h| h.machine_id.clone()).unwrap_or_default(),
             dmi_uuid: hardware.map(|h| h.dmi_uuid.clone()).unwrap_or_default(),
             zeus_vm_uid: hardware.and_then(|h| h.zeus_vm_uid.clone()),
         },
@@ -56,10 +54,7 @@ pub fn build_guest_info(evidence: &EvidenceSnapshot) -> GuestInfo {
 }
 
 pub fn build_service_health(unit_name: &str, evidence: &EvidenceSnapshot) -> Option<ServiceHealth> {
-    let runtime = evidence
-        .systemd
-        .as_ref()
-        .and_then(|s| s.runtime.as_ref())?;
+    let runtime = evidence.systemd.as_ref().and_then(|s| s.runtime.as_ref())?;
     let unit = runtime.units.iter().find(|u| u.name == unit_name)?;
     let journal = crate::journal::live::collect_journal_slice(&unit.name, 20);
     Some(ServiceHealth {
@@ -69,10 +64,7 @@ pub fn build_service_health(unit_name: &str, evidence: &EvidenceSnapshot) -> Opt
         main_pid: unit.main_pid,
         exit_code: unit.exec_main_status,
         restart_count: unit.n_restarts,
-        last_failure: journal
-            .last_error
-            .as_ref()
-            .map(|e| e.message.clone()),
+        last_failure: journal.last_error.as_ref().map(|e| e.message.clone()),
         journal_cursor: journal.cursor.clone(),
         actions: vec![
             "view_logs".into(),

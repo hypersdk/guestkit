@@ -313,7 +313,12 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
 
     let has_boot_issues = !boot_report.blockers.is_empty() || !boot_report.warnings.is_empty();
 
-    if !has_boot_issues && !options.inject_agent && !options.inject_qga && !options.fix_cloud_init_network && !options.validate_fstab {
+    if !has_boot_issues
+        && !options.inject_agent
+        && !options.inject_qga
+        && !options.fix_cloud_init_network
+        && !options.validate_fstab
+    {
         return Ok(RepairPlanResult {
             dry_run: options.dry_run,
             before_score: boot_report.score,
@@ -421,7 +426,10 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
         before_score,
         after_score: None,
         fix_plan: plan,
-        applied: options.inject_agent || options.inject_qga || options.fix_cloud_init_network || options.validate_fstab,
+        applied: options.inject_agent
+            || options.inject_qga
+            || options.fix_cloud_init_network
+            || options.validate_fstab,
         message: if options.inject_agent {
             "GuestKit agent injected.".to_string()
         } else if options.inject_qga || options.fix_cloud_init_network || options.validate_fstab {

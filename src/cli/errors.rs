@@ -225,9 +225,9 @@ pub mod builders {
         EnhancedError::new(format!("Required dependency not found: {}", dependency))
             .with_suggestion(format!("Install {} to use this feature", dependency))
             .with_examples(vec![
-                format!("# On Ubuntu/Debian:"),
+                "# On Ubuntu/Debian:".to_string(),
                 format!("sudo apt-get install {}", dependency),
-                format!("# On Fedora/RHEL:"),
+                "# On Fedora/RHEL:".to_string(),
                 format!("sudo dnf install {}", dependency),
             ])
     }

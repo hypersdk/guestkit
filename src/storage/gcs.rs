@@ -51,9 +51,7 @@ fn download_gcs(uri: &str, dest: &Path) -> Result<()> {
     let status = Command::new("gcloud")
         .args(["storage", "cp", uri, dest_s])
         .status()
-        .context(
-            "Failed to run gcloud storage cp — install Google Cloud SDK (gsutil or gcloud)",
-        )?;
+        .context("Failed to run gcloud storage cp — install Google Cloud SDK (gsutil or gcloud)")?;
     if !status.success() {
         anyhow::bail!("gcloud storage cp failed for {uri}");
     }

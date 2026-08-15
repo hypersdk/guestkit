@@ -316,10 +316,7 @@ impl PlanExporter {
             OperationType::FileWrite(fw) => {
                 writeln!(playbook, "      copy:")?;
                 writeln!(playbook, "        dest: {}", fw.path)?;
-                writeln!(
-                    playbook,
-                    "        content: |"
-                )?;
+                writeln!(playbook, "        content: |")?;
                 for line in fw.content.lines() {
                     writeln!(playbook, "          {}", line)?;
                 }
@@ -403,7 +400,11 @@ impl PlanExporter {
                 writeln!(playbook, "        type: {}", re.data_type)?;
             }
             OperationType::DriverInject(di) => {
-                writeln!(playbook, "      win_command: pnputil /add-driver {} /install", di.inf_path)?;
+                writeln!(
+                    playbook,
+                    "      win_command: pnputil /add-driver {} /install",
+                    di.inf_path
+                )?;
             }
         }
 

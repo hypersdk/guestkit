@@ -14,8 +14,6 @@ pub mod score;
 #[cfg(feature = "agent")]
 pub mod workflow;
 
-pub use readiness::{
-    AssessContext, MigrationCheckResult, ReadinessCategory, RemediationHint,
-};
+pub use readiness::{AssessContext, MigrationCheckResult, ReadinessCategory, RemediationHint};
 pub use repair::{MigrationRepairPlanner, RepairOptions};
 pub use score::{assess_migration, MigrationAssessment, MigrationSubScores, ReadinessLevel};
