@@ -368,7 +368,18 @@ pub(crate) fn init_guestfs_ro(image: &std::path::Path, verbose: bool) -> Result<
 ///
 /// Returns the root device string if an OS was found, or None.
 pub(crate) fn mount_all_ro(g: &mut Guestfs) -> Option<String> {
-    let roots = g.inspect_os().unwrap_or_default();
+    // inspect_os() failing (guestfs launch issue, mount error, permission
+    // problem, anything) and "genuinely no OS on this image" both collapse
+    // to the same `None` here — callers only ever branch on Some/None, and
+    // widening this to Result<Option<String>> would ripple through every
+    // one of them. Logging the real error before discarding it at least
+    // makes a real failure distinguishable from a clean "no OS" in the
+    // caller's logs, instead of silently becoming the same generic
+    // "No operating system found" message either way.
+    let roots = g.inspect_os().unwrap_or_else(|e| {
+        log::warn!("inspect_os() failed, treating as no OS found: {e:#}");
+        Vec::new()
+    });
     if roots.is_empty() {
         return None;
     }

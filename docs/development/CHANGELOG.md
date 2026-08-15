@@ -99,21 +99,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     coordination, a real bug now flagged with a code comment — but
     serializing migration-plan before provision did **not** fix it,
     disproving the race as *this* failure's cause.
-  - The actual culprit: `provision_vm`'s `.map_err(|e|
-    ApiError::internal(e.to_string()))` (`crates/zyvor-api/src/routes/vms.rs`).
-    `run_migrate_plan` returns `anyhow::Result`, and anyhow's plain
-    `Display` only shows the outermost `.context()` layer —
-    `collect_assurance_data` wraps *every* `mount_all_ro` failure in
-    "No operating system found in disk image" regardless of the real
-    cause, and `.to_string()` was throwing away everything underneath
-    it. Changed to `format!("{e:#}")` (anyhow's alternate Display,
-    prints the full chain) for `provision_vm`'s three `guestkit`/
-    `export::kubevirt`-derived `map_err` calls specifically — left the
-    ~90 other `.map_err(|e| ApiError::internal(e.to_string()))` sites
-    across the crate alone, since most wrap simple error types
-    (`serde_json`, `std::io`) where `.to_string()` isn't lossy and a
-    blanket rewrite would be unfocused scope creep beyond what this
-    investigation actually found broken.
+  - `provision_vm`'s `.map_err(|e| ApiError::internal(e.to_string()))`
+    (`crates/zyvor-api/src/routes/vms.rs`) only shows anyhow's outermost
+    `.context()` layer via plain `Display`. Changed to `format!("{e:#}")`
+    (alternate Display, full chain) for `provision_vm`'s three
+    `guestkit`/`export::kubevirt`-derived `map_err` calls — correct and
+    worth keeping, but the next run's error was *still* byte-identical to
+    before, because there was no chain to reveal: `mount_all_ro`
+    (`src/cli/commands/mod.rs`) returns `Option<String>`, not
+    `Result<String>`, and `.context("No operating system found in disk
+    image")` on a `None` (anyhow's `Context` impl for `Option`) produces
+    an error with *no* wrapped source at all — the context message
+    genuinely is the entire error. Left the other ~90
+    `.map_err(|e| ApiError::internal(e.to_string()))` sites in the crate
+    alone; most wrap simple error types (`serde_json`, `std::io`) where
+    `.to_string()` isn't lossy.
+  - The real swallowed information was one layer further down:
+    `mount_all_ro` calls `g.inspect_os().unwrap_or_default()` —
+    `inspect_os()` failing for *any* reason (guestfs launch issue, mount
+    error, permission problem) collapses to the identical empty-roots
+    `None` as "genuinely no OS found," discarding whatever `inspect_os`'s
+    real error was before it could reach any context message. Changed to
+    log the real error (`log::warn!`) before discarding it. Didn't widen
+    `mount_all_ro`'s `Option<String>` return type to `Result` — it's used
+    across 9 files where callers only ever branch on `Some`/`None`, and
+    that ripple is out of scope for this investigation. Since `guestkit`
+    logs through the plain `log` facade while `zyvor-api` only sets up a
+    `tracing` subscriber, added the missing bridge
+    (`tracing_log::LogTracer::init()`, new `tracing-log` dependency) and
+    widened the default `EnvFilter` (was "nothing enabled" without
+    `RUST_LOG` set, now falls back to `warn` globally) so this — and any
+    future `log::*!` from guestkit's dependency graph — actually reaches
+    the pod's logs instead of going to an uninstalled logger.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs
