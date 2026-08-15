@@ -20,6 +20,12 @@ if command -v mc >/dev/null 2>&1; then
   echo "Published to ${MINIO_ENDPOINT}/${BUCKET}/${PREFIX}"
 elif [[ "${MINIO_VIA_KUBECTL:-}" == "1" ]] && command -v kubectl >/dev/null 2>&1; then
   NS="${MINIO_NAMESPACE:-zyvor}"
+  # `mc`'s built-in "local" alias defaults to the stock minioadmin:minioadmin
+  # credentials, which don't match this deployment's MINIO_ROOT_USER/PASSWORD
+  # (templates/secrets.yaml, from values.yaml's minio.accessKey/secretKey) —
+  # every mc call below fails with "Insufficient permissions" without this.
+  kubectl -n "${NS}" exec deploy/minio -- \
+    mc alias set local "http://localhost:9000" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
   kubectl -n "${NS}" exec deploy/minio -- mc mb "local/${BUCKET}" 2>/dev/null || true
   while IFS= read -r -d '' file; do
     rel="${file#dist/vmtools/}"
