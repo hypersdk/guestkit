@@ -99,7 +99,10 @@ jobs:
           # platform limitation, not a bug reachable from workflow config;
           # needs investigation with actual shell access to a failing
           # runner. Tests that don't reach a real mount (state/precondition
-          # checks, read-only inspection) still run and pass.
+          # checks, read-only inspection) still run and pass. See
+          # self-hosted-nbd-tests.yml (workflow_dispatch, self-hosted
+          # runner) for running this same suite with none of the skips, on
+          # infrastructure where NBD actually works.
           cargo test --verbose -- --test-threads=1 --skip test_arch_ --skip test_debian_ \
             --skip test_ubuntu_ --skip test_windows_ \
             --skip test_archive_operations --skip test_checksums \
