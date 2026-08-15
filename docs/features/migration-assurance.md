@@ -17,6 +17,7 @@ Disk image (QCOW2/VMDK/…)
         ├─► MigrationScoreReport (migrate-plan)
         ├─► Policy validation   (policy check + expression DSL)
         ├─► Fleet clusters      (fleet analyze)
+        ├─► Migration waves     (fleet wave-plan)
         └─► FixPlan             (repair --fix boot)
 ```
 
@@ -26,7 +27,8 @@ Disk image (QCOW2/VMDK/…)
 | `src/boot/` | Weighted bootability checks, blockers, warnings |
 | `src/cli/migrate/plan.rs` | Hypervisor-aware migration scoring |
 | `src/inference/` | Root-cause chain for `--explain` |
-| `src/fleet/` | Cluster identical VMs, snowflakes, blockers |
+| `src/fleet/analyzer.rs` | Cluster identical VMs, snowflakes, blockers |
+| `src/fleet/wave.rs` | Dependency-aware migration wave ordering |
 | `src/cli/plan/` | Fix plans — security profiles **and** boot repair |
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
@@ -199,6 +201,39 @@ guestkit fleet analyze ./vms/ -o json
 ```
 
 Parallelism defaults to `min(4, CPUs)` (override with `-j` / `--jobs` or `GUESTKIT_FLEET_JOBS`). Evidence-cache hits skip remounting.
+
+### `guestkit fleet wave-plan` — dependency-aware migration ordering
+
+Orders a fleet's disk images into migration **waves**: a batch of VMs that
+can safely move together, followed by the next batch, and so on. Two
+signals from the same evidence used by `fleet analyze` decide ordering:
+
+- **Role** — a VM running a database-ish systemd unit (`postgresql`,
+  `mysql`, `mariadb`, `mongod`, `redis`, `cassandra`) is treated as
+  infrastructure other VMs may depend on, and is pulled earlier within its
+  wave.
+- **Storage dependency** — an `/etc/fstab` NFS mount whose server hostname
+  matches another VM in the same fleet becomes a `depends_on` edge; the
+  client VM is placed in a strictly later wave than its NFS server.
+
+Wave assignment is a level-batched topological sort (Kahn's algorithm) over
+those edges — VMs with no dependencies land in wave 0, VMs that depend only
+on wave-0 VMs land in wave 1, and so on. A dependency **cycle** (VM A's NFS
+server is VM B, and B's server is A) can't be topologically ordered, so
+those VMs are reported separately under `cycles` instead of being silently
+dropped or arbitrarily ordered.
+
+```bash
+guestkit fleet wave-plan ./vms/
+guestkit fleet wave-plan ./vms/ --recursive -j 4
+guestkit fleet wave-plan ./vms/ -o json
+```
+
+This only orders *within* the fleet directory scanned — it does not infer
+dependencies on infrastructure outside the given VMs (e.g. an external
+database VM not included in the scan), and it does not attempt
+application-level dependency discovery (no port/socket probing, no config
+file parsing beyond fstab).
 
 ### `guestkit forensic-diff` — security drift
 

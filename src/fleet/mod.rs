@@ -3,6 +3,8 @@
 
 pub mod analyzer;
 pub mod report;
+pub mod wave;
 
 pub use analyzer::analyze_fleet;
 pub use report::FleetAnalysisReport;
+pub use wave::{plan_waves, MigrationWave, VmRole, WaveMember, WavePlan};

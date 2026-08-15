@@ -2144,6 +2144,24 @@ enum FleetAction {
         #[arg(short = 'j', long, value_name = "N")]
         jobs: Option<usize>,
     },
+
+    /// Order a fleet's disk images into dependency-aware migration waves
+    WavePlan {
+        /// Directory containing disk images
+        dir: PathBuf,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+
+        /// Scan subdirectories for disk images (default: top level only)
+        #[arg(long)]
+        recursive: bool,
+
+        /// Parallel workers (default: min(4, CPUs); env GUESTKIT_FLEET_JOBS)
+        #[arg(short = 'j', long, value_name = "N")]
+        jobs: Option<usize>,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -3575,6 +3593,26 @@ pub fn run() -> anyhow::Result<()> {
                             .clamp(1, 4)
                     });
                 fleet_analyze_command(&dir, &output, recursive, jobs, cli.verbose)?;
+            }
+            FleetAction::WavePlan {
+                dir,
+                output,
+                recursive,
+                jobs,
+            } => {
+                let jobs = jobs
+                    .or_else(|| {
+                        std::env::var("GUESTKIT_FLEET_JOBS")
+                            .ok()
+                            .and_then(|v| v.parse().ok())
+                    })
+                    .unwrap_or_else(|| {
+                        std::thread::available_parallelism()
+                            .map(|n| n.get())
+                            .unwrap_or(2)
+                            .clamp(1, 4)
+                    });
+                fleet_wave_plan_command(&dir, &output, recursive, jobs, cli.verbose)?;
             }
         },
 
