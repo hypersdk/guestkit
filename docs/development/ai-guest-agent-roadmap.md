@@ -44,6 +44,7 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** â€
 |-----------|--------|
 | Tool registry over snapshot | Shipped (`src/ai/tools.rs`) |
 | Multi-step agent loop | Shipped (`src/ai/agent.rs`) |
+| Native tool-calling (OpenAI) | Shipped (`src/ai/rig_tools.rs`, rig-core `AgentBuilder`/`multi_turn`) â€” schema-validated, provider-parsed tool calls instead of regex/JSON-scraped completion text. xAI/Anthropic/Ollama still use the original text-instructed loop (no rig client wired up for xAI/Anthropic yet; Ollama has none upstream) |
 | `doctor --explain --ai`, `migrate-plan --explain --ai` | Shipped |
 | Providers: OpenAI, xAI, Anthropic, Ollama | Shipped (`src/ai/providers.rs`) |
 | TUI **AI Insights** panel | Shipped |

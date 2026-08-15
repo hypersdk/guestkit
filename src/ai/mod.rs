@@ -23,6 +23,9 @@ pub mod agent;
 #[cfg(feature = "ai")]
 pub mod providers;
 #[cfg(feature = "ai")]
+#[cfg(not(target_os = "windows"))]
+pub mod rig_tools;
+#[cfg(feature = "ai")]
 pub mod tools;
 
 pub use drift::{explain_fleet_drift, FleetDriftReport};
