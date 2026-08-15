@@ -279,3 +279,35 @@ jobs:
       - name: Check agent crate for Windows
         run: |
           cargo check -p zyvor-guest-agent --target x86_64-pc-windows-gnu
+
+  helm-chart:
+    name: Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: helm lint
+        run: helm lint deploy/helm/zyvor
+
+      - name: helm template (default values)
+        run: helm template test-release deploy/helm/zyvor > /dev/null
+
+      - name: helm template (kubevirt + all scheduled jobs enabled)
+        run: |
+          helm template test-release deploy/helm/zyvor \
+            --set kubevirt.enabled=true \
+            --set vmtools.reconcile.enabled=true \
+            --set backup.imageVault.enabled=true \
+            --set fleetWatch.enabled=true \
+            --set ingress.tls.enabled=true \
+            --set ingress.certManager.enabled=true \
+            > /dev/null
+
+      - name: helm template (hostPath persistence — PVC-only features disabled)
+        run: |
+          helm template test-release deploy/helm/zyvor \
+            --set persistence.vmImages.hostPath=/var/lib/zyvor/images \
+            > /dev/null
