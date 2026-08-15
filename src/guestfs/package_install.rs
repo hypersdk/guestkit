@@ -174,9 +174,15 @@ mod tests {
     #[test]
     fn install_argv_builds_expected_commands() {
         let pkgs = vec!["curl".to_string(), "tcpdump".to_string()];
-        assert!(install_argv("deb", &pkgs).unwrap().contains("apt-get install -y -qq curl tcpdump"));
-        assert!(install_argv("rpm", &pkgs).unwrap().contains("dnf install -y curl tcpdump"));
-        assert!(install_argv("apk", &pkgs).unwrap().contains("apk add -q curl tcpdump"));
+        assert!(install_argv("deb", &pkgs)
+            .unwrap()
+            .contains("apt-get install -y -qq curl tcpdump"));
+        assert!(install_argv("rpm", &pkgs)
+            .unwrap()
+            .contains("dnf install -y curl tcpdump"));
+        assert!(install_argv("apk", &pkgs)
+            .unwrap()
+            .contains("apk add -q curl tcpdump"));
         assert!(install_argv("pacman", &pkgs)
             .unwrap()
             .contains("pacman -Sy --noconfirm curl tcpdump"));
