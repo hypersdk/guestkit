@@ -148,6 +148,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     test. Added a failure-only step dumping `kubectl logs` (all
     containers, prefixed by pod) for every deployed component, plus
     `get pods -o wide` and `describe pods`.
+  - That finally showed it: no panic, no error, no `mount_all_ro`
+    warning — `inspect_os()` genuinely returned an empty root list.
+    `validate_root_partition`/`validate_initrd_boot_partition`
+    (`src/guestfs/inspect.rs`) treat mount/extraction failures as
+    "not a valid root" *by design*, not as errors — a real mount
+    failure and "genuinely no OS" are indistinguishable at that layer
+    on purpose (LVM volumes on read-only NBD devices can legitimately
+    fail to mount for benign reasons). `validate_initrd_boot_partition`
+    is the cirros-cloud-image path — root filesystem lives inside the
+    initrd, not on a directly-mountable partition — and shells out to
+    `zcat <initrd> | cpio -t` to look inside it.
+    `crates/zyvor-api/Dockerfile` never installed `cpio` (or `gzip`),
+    unlike `crates/guestkit-worker/Dockerfile`'s otherwise-identical
+    package list, which does. That shell command silently failing
+    inside `zyvor-api`'s container is why `provision` (`run_migrate_plan`
+    called synchronously in zyvor-api's own process) couldn't find an
+    OS on exactly the image `doctor`/`inspect` (via `guestkit-worker`,
+    which has `cpio`) found one on every time. Added `cpio`/`gzip` to
+    `zyvor-api`'s Dockerfile, matching `guestkit-worker`'s package list.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs

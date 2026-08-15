@@ -13,6 +13,15 @@ RUN cargo build --release --manifest-path crates/zyvor-api/Cargo.toml \
     && cargo build --release --features agent --bin guestkit
 
 FROM debian:bookworm-slim
+# cpio + gzip: validate_initrd_boot_partition (src/guestfs/inspect.rs) shells
+# out to `zcat <initrd> | cpio -t` to identify cirros-style cloud images
+# (root filesystem inside the initrd, not on a directly-mountable
+# partition). Without cpio here, that command silently fails and gets
+# treated as "not a valid root" (by design — mount/extraction failures
+# during inspection aren't supposed to be fatal) rather than as an error,
+# so run_migrate_plan (called synchronously here, unlike guestkit-worker's
+# async jobs) reports "No operating system found" for exactly the images
+# guestkit-worker's identical Dockerfile package list already handles.
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
@@ -21,6 +30,8 @@ RUN apt-get update && apt-get install -y \
     util-linux \
     parted \
     e2fsprogs \
+    cpio \
+    gzip \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /build/crates/zyvor-api/target/release/zyvor-api /usr/local/bin/
 COPY --from=builder /build/target/release/guestkit /usr/local/bin/guestkit
