@@ -19,7 +19,7 @@ inputs:
     required: false
     default: '80'
   version:
-    description: 'GuestKit release version to install (e.g. 0.3.21). Defaults to the latest GitHub release.'
+    description: 'GuestKit release version to install (e.g. 1.0.1). Defaults to the latest GitHub release.'
     required: false
     default: 'latest'
   bundle:

@@ -5,7 +5,7 @@ Ship a **client tarball** (`guestkit` + install/test scripts) without giving cus
 ## What you get
 
 ```
-guestkit-0.3.3-linux-amd64/
+guestkit-1.0.1-linux-amd64/
   guestkit              # CLI binary
   install.sh            # one-command install
   install-client-deps.sh

@@ -39,7 +39,7 @@ bash deploy/scripts/deploy-remote-k3s.sh
 HELM_VALUES_FILE=values-ci.yaml bash deploy/scripts/deploy-remote-k3s.sh
 
 # Pull release images from GHCR instead of local build
-PULL_REGISTRY=ghcr.io/hypersdk IMAGE_TAG=v0.3.3 bash deploy/scripts/deploy-remote-k3s.sh
+PULL_REGISTRY=ghcr.io/hypersdk IMAGE_TAG=v1.0.1 bash deploy/scripts/deploy-remote-k3s.sh
 ```
 
 Override public URLs when the node IP is not the client-facing address:

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Attach artifacts to GitHub release v<version> (e.g. 0.3.10); leave empty for CI artifacts only"
+        description: "Attach artifacts to GitHub release v<version> (e.g. 1.0.1); leave empty for CI artifacts only"
         required: false
         default: ""
 

@@ -20,7 +20,7 @@ The web stack is published to the GitHub Container Registry under
 | `ghcr.io/hypersdk/zyvor-api` | API backend (auto-runs DB migrations) | 8080 |
 | `ghcr.io/hypersdk/guestkit-worker` | Disk-inspection worker (Redis queue) | — |
 
-**Tags:** `latest`, semver `vX.Y.Z` (e.g. `v0.3.13`), and a per-commit short SHA.
+**Tags:** `latest`, semver `vX.Y.Z` (e.g. `v1.0.1`), and a per-commit short SHA.
 Published automatically by CI — `publish-zyvor-images.yml` on every push to `main`
 (tags `:<sha>` + `:latest`) and `release.yml` on a release (tags `:vX.Y.Z` + `:latest`).
 
@@ -54,7 +54,7 @@ open http://localhost:8088          # macOS  (Linux: xdg-open)
 Pin a version or a different registry with env vars:
 
 ```bash
-REGISTRY=ghcr.io/hypersdk TAG=v0.3.13 \
+REGISTRY=ghcr.io/hypersdk TAG=v1.0.1 \
   docker compose -f deploy/docker-compose.ghcr.yml up -d
 ```
 
@@ -75,9 +75,9 @@ pointing each image at GHCR:
 ```bash
 helm upgrade --install zyvor deploy/helm/zyvor \
   --create-namespace --namespace zyvor \
-  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:v0.3.19 \
-  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:v0.3.19 \
-  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:v0.3.19
+  --set guestkitWorker.image=ghcr.io/hypersdk/guestkit-worker:v1.0.1 \
+  --set zyvorApi.image=ghcr.io/hypersdk/zyvor-api:v1.0.1 \
+  --set zyvorUi.image=ghcr.io/hypersdk/zyvor-ui:v1.0.1
 ```
 
 The chart also provisions Postgres, Redis, and MinIO. Enable auth via
@@ -95,7 +95,7 @@ Before exposing the web stack beyond localhost, verify:
 | Agent bootstrap | Open registration | `AGENT_BOOTSTRAP_TOKEN` set (required when auth or mTLS is on) |
 | Redis | No password | `REDIS_PASSWORD` / `redis.password` in Helm |
 | Postgres | `zyvor`/`zyvor` | Strong unique password |
-| Image tags | `:latest` | Pin semver (e.g. `v0.3.19`) |
+| Image tags | `:latest` | Pin semver (e.g. `v1.0.1`) |
 | Datastores | `emptyDir` | Enable `persistence.{postgresql,redis,minio}` PVCs via `values-prod.yaml` |
 | Ingress TLS | Off / `ssl-redirect: false` | `ingress.tls` + cert-manager ClusterIssuer |
 | Image vault backup | Off | `backup.imageVault.enabled` CronJob → backup PVC |

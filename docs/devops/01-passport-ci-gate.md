@@ -57,7 +57,7 @@ jobs:
 | `disk` | *(required)* | Path to the disk image |
 | `target` | `kvm` | `kvm`, `proxmox`, `qemu`, `aws`, `azure`, `gcp`, `cloud`, `hyperv` |
 | `fail-below` | `80` | Gate floor |
-| `version` | `latest` | Pin a specific `guestkit` release (e.g. `0.3.21`) |
+| `version` | `latest` | Pin a specific `guestkit` release (e.g. `1.0.1`) |
 | `sign-key` / `issuer` / `require-signature` / `trust-keys` | — | Signed-Passport path, see §2 |
 
 Outputs: `score`, `passport-path`, `passed`. The action always uploads
