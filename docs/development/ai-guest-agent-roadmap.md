@@ -58,7 +58,7 @@ Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** �
 | What-if simulator (disable unit → boot score delta) | Shipped (`src/ai/whatif.rs`) |
 | AI narrative sections for reports | Shipped (`src/ai/reports.rs`) |
 | Proactive recommendations engine | Shipped (`src/ai/recommendations.rs`) |
-| Fleet semantic drift explanations | Shipped (`src/ai/drift.rs`) |
+| Fleet semantic drift explanations | Shipped (`src/ai/drift.rs`) — wired to `guestkit fleet watch` (`src/fleet/baseline.rs`), a scheduled drift monitor that diffs current evidence against a stored per-VM golden baseline. See [migration-assurance.md](../features/migration-assurance.md#guestkit-fleet-watch--scheduled-drift-monitoring) |
 
 ## Phase 4 — Platform integration
 

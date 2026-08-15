@@ -381,6 +381,158 @@ pub fn fleet_wave_plan_command(
     Ok(())
 }
 
+/// Scheduled drift check against each VM's stored golden baseline:
+/// `guestkit fleet watch`
+#[allow(clippy::too_many_arguments)]
+pub fn fleet_watch_command(
+    dir: &Path,
+    output_format: &str,
+    recursive: bool,
+    jobs: usize,
+    reset_baseline: bool,
+    fail_on_drift: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::ai::explain_fleet_drift;
+    use crate::core::ProgressReporter;
+    use crate::fleet::baseline;
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct VmDriftStatus {
+        image: String,
+        hostname: String,
+        status: &'static str, // "baseline_established" | "baseline_reset" | "no_drift" | "drift"
+        drift: Option<crate::ai::FleetDriftReport>,
+    }
+
+    let images = collect_fleet_disk_images(dir, recursive)?;
+
+    if images.is_empty() {
+        anyhow::bail!("No disk images found in {}", dir.display());
+    }
+
+    let jobs = jobs.max(1);
+    let msg = format!("Checking drift for {} VMs (jobs={jobs})...", images.len());
+    let progress = ProgressReporter::spinner(&msg);
+
+    let (snapshots, failed_vms) = collect_fleet_snapshots(&images, jobs, verbose)?;
+
+    progress.finish_and_clear();
+
+    let mut statuses = Vec::with_capacity(snapshots.len());
+    let mut drifted = 0usize;
+    for (image, evidence, _score) in &snapshots {
+        let image_path = Path::new(image);
+        let prior = if reset_baseline {
+            None
+        } else {
+            baseline::load(image_path)
+        };
+
+        let status = match prior {
+            None => {
+                baseline::store(image_path, &evidence.os.hostname, evidence)?;
+                VmDriftStatus {
+                    image: image.clone(),
+                    hostname: evidence.os.hostname.clone(),
+                    status: if reset_baseline {
+                        "baseline_reset"
+                    } else {
+                        "baseline_established"
+                    },
+                    drift: None,
+                }
+            }
+            Some(base) => {
+                let report = explain_fleet_drift(&base.evidence, evidence);
+                let has_drift = !report.os_drift.is_empty()
+                    || !report.systemd_drift.is_empty()
+                    || !report.security_drift.is_empty()
+                    || !report.package_drift.is_empty();
+                if has_drift {
+                    drifted += 1;
+                }
+                VmDriftStatus {
+                    image: image.clone(),
+                    hostname: evidence.os.hostname.clone(),
+                    status: if has_drift { "drift" } else { "no_drift" },
+                    drift: Some(report),
+                }
+            }
+        };
+        statuses.push(status);
+    }
+
+    if output_format == "json" {
+        println!("{}", serde_json::to_string_pretty(&statuses)?);
+    } else {
+        println!();
+        println!("{}", "Fleet Drift Watch".bold().cyan());
+        println!("  VMs checked: {}", statuses.len());
+        if drifted > 0 {
+            println!("  Drifted: {drifted}");
+        }
+        if !failed_vms.is_empty() {
+            println!("  Failed: {}", failed_vms.len());
+        }
+        println!();
+
+        for s in &statuses {
+            match s.status {
+                "baseline_established" => {
+                    println!("  {} {} — baseline established", "●".cyan(), s.image);
+                }
+                "baseline_reset" => {
+                    println!("  {} {} — baseline reset", "●".cyan(), s.image);
+                }
+                "no_drift" => {
+                    println!("  {} {} — no drift", "✓".green(), s.image);
+                }
+                "drift" => {
+                    println!("  {} {} — drifted", "✗".red().bold(), s.image);
+                    if let Some(report) = &s.drift {
+                        for line in report
+                            .os_drift
+                            .iter()
+                            .chain(&report.systemd_drift)
+                            .chain(&report.security_drift)
+                            .chain(&report.package_drift)
+                        {
+                            println!("      - {line}");
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if !failed_vms.is_empty() {
+            println!();
+            println!("{}", "Failed analyses:".red().bold());
+            for f in &failed_vms {
+                println!("  {} {} — {}", "✗".red(), f.image, f.error);
+            }
+        }
+    }
+
+    if !failed_vms.is_empty() {
+        anyhow::bail!(
+            "{} VM(s) failed evidence collection and were excluded from the drift check",
+            failed_vms.len()
+        );
+    }
+
+    if fail_on_drift && drifted > 0 {
+        anyhow::bail!(
+            "{drifted} of {} VM(s) drifted from baseline",
+            statuses.len()
+        );
+    }
+
+    Ok(())
+}
+
 type FleetSnapshots = Vec<(String, crate::evidence::EvidenceSnapshot, f64)>;
 
 /// Parallel evidence collection shared by `fleet analyze` and `fleet wave-plan`.

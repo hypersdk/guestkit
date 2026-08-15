@@ -18,6 +18,7 @@ Disk image (QCOW2/VMDK/…)
         ├─► Policy validation   (policy check + expression DSL)
         ├─► Fleet clusters      (fleet analyze)
         ├─► Migration waves     (fleet wave-plan)
+        ├─► Drift vs baseline   (fleet watch)
         └─► FixPlan             (repair --fix boot)
 ```
 
@@ -29,6 +30,8 @@ Disk image (QCOW2/VMDK/…)
 | `src/inference/` | Root-cause chain for `--explain` |
 | `src/fleet/analyzer.rs` | Cluster identical VMs, snowflakes, blockers |
 | `src/fleet/wave.rs` | Dependency-aware migration wave ordering |
+| `src/fleet/baseline.rs` | Per-VM golden baseline storage for `fleet watch` |
+| `src/ai/drift.rs` | Semantic drift explanation (baseline vs current) |
 | `src/cli/plan/` | Fix plans — security profiles **and** boot repair |
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
@@ -234,6 +237,35 @@ dependencies on infrastructure outside the given VMs (e.g. an external
 database VM not included in the scan), and it does not attempt
 application-level dependency discovery (no port/socket probing, no config
 file parsing beyond fstab).
+
+### `guestkit fleet watch` — scheduled drift monitoring
+
+Diffs each VM's current evidence against a stored **golden baseline**,
+reusing the same semantic drift explanations `forensic-diff` uses for
+single-VM before/after comparisons (`src/ai/drift.rs`). Unlike
+`fleet analyze`/`wave-plan`, this command has memory across invocations —
+the first run against a given image establishes its baseline (one JSON
+file per VM under `dirs::cache_dir()/guestkit/fleet-baseline`, override
+with `GUESTKIT_FLEET_BASELINE_DIR`); every run after that diffs current
+evidence against the *same* stored baseline instead of silently rolling
+forward to whatever was last seen — a monitor that quietly re-baselines on
+every run would never report the drift it exists to catch.
+
+```bash
+guestkit fleet watch ./vms/                    # first run: establishes baselines
+guestkit fleet watch ./vms/                    # later runs: reports drift, if any
+guestkit fleet watch ./vms/ --reset-baseline    # accept current state as the new baseline
+guestkit fleet watch ./vms/ --fail-on-drift     # non-zero exit if any VM drifted (cron/CI gating)
+guestkit fleet watch ./vms/ -o json
+```
+
+Intended to be invoked on a schedule by an external scheduler (cron,
+systemd timer, or a Kubernetes `CronJob` — see
+`deploy/helm/zyvor/templates/fleet-drift-watch-cronjob.yaml`) rather than
+run its own internal loop, the same way `doctor`/`fleet analyze` are
+scheduler-agnostic, single-shot commands. `--fail-on-drift` makes it
+composable with the same "gate a pipeline on a non-zero exit" pattern
+`passport verify --fail-below` uses.
 
 ### `guestkit forensic-diff` — security drift
 

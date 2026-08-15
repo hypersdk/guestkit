@@ -164,3 +164,18 @@ vmtools:
     schedule: "*/15 * * * *"
     image: curlimages/curl:8.5.0
     preferIso: false
+
+# Scheduled `guestkit fleet watch` run against the image vault: diffs each
+# VM's evidence against its stored golden baseline and reports drift.
+# Requires PVC-backed persistence.vmImages (unset hostPath), same as
+# backup.imageVault.
+fleetWatch:
+  enabled: false
+  schedule: "0 * * * *"
+  image: guestkit-worker:latest
+  recursive: true
+  failOnDrift: true
+  baseline:
+    size: 1Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce

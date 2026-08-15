@@ -2162,6 +2162,34 @@ enum FleetAction {
         #[arg(short = 'j', long, value_name = "N")]
         jobs: Option<usize>,
     },
+
+    /// Scheduled drift check: diff each VM's current evidence against its
+    /// stored golden baseline (first run establishes the baseline)
+    Watch {
+        /// Directory containing disk images
+        dir: PathBuf,
+
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+
+        /// Scan subdirectories for disk images (default: top level only)
+        #[arg(long)]
+        recursive: bool,
+
+        /// Parallel workers (default: min(4, CPUs); env GUESTKIT_FLEET_JOBS)
+        #[arg(short = 'j', long, value_name = "N")]
+        jobs: Option<usize>,
+
+        /// Overwrite each VM's stored baseline with its current evidence
+        /// instead of diffing against it (use after a reviewed, accepted change)
+        #[arg(long)]
+        reset_baseline: bool,
+
+        /// Exit non-zero if any VM has drifted from its baseline (for cron/CI gating)
+        #[arg(long)]
+        fail_on_drift: bool,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -3613,6 +3641,36 @@ pub fn run() -> anyhow::Result<()> {
                             .clamp(1, 4)
                     });
                 fleet_wave_plan_command(&dir, &output, recursive, jobs, cli.verbose)?;
+            }
+            FleetAction::Watch {
+                dir,
+                output,
+                recursive,
+                jobs,
+                reset_baseline,
+                fail_on_drift,
+            } => {
+                let jobs = jobs
+                    .or_else(|| {
+                        std::env::var("GUESTKIT_FLEET_JOBS")
+                            .ok()
+                            .and_then(|v| v.parse().ok())
+                    })
+                    .unwrap_or_else(|| {
+                        std::thread::available_parallelism()
+                            .map(|n| n.get())
+                            .unwrap_or(2)
+                            .clamp(1, 4)
+                    });
+                fleet_watch_command(
+                    &dir,
+                    &output,
+                    recursive,
+                    jobs,
+                    reset_baseline,
+                    fail_on_drift,
+                    cli.verbose,
+                )?;
             }
         },
 
