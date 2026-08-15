@@ -10,6 +10,24 @@ json_head() {
   python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin), indent=2))" | head -n "${1:-80}" || true
 }
 
+# curl -sf swallows the response body on a non-2xx status, so a real API
+# error (bad request, internal error) looks identical to "empty body" —
+# the caller's json parse then dies with an unhelpful "Expecting value:
+# line 1 column 1" instead of the actual error. curl_or_die separates the
+# HTTP status from the body, prints status+body to stderr on failure, and
+# only emits the body to stdout on success.
+curl_or_die() {
+  local resp status body
+  resp=$(curl -s -w '\n%{http_code}' "$@")
+  status="${resp##*$'\n'}"
+  body="${resp%$'\n'*}"
+  if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
+    echo "  HTTP ${status}: ${body}" >&2
+    return 1
+  fi
+  echo "${body}"
+}
+
 poll_job() {
   local job_id="$1"
   local label="${2:-job}"
@@ -47,7 +65,7 @@ if [[ -z "${IMAGE}" ]]; then
 fi
 
 echo "Importing ${IMAGE}..."
-IMPORT=$(curl -sf -F "file=@${IMAGE}" "${API}/vms/import")
+IMPORT=$(curl_or_die -F "file=@${IMAGE}" "${API}/vms/import")
 echo "${IMPORT}" | head -c 500
 VM_ID=$(echo "${IMPORT}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['id'])")
 DISK_PATH=$(echo "${IMPORT}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'].get('path',''))" 2>/dev/null || true)
@@ -56,22 +74,22 @@ echo "VM ID: ${VM_ID}"
 [[ -n "${DISK_PATH}" ]] && echo "Disk path: ${DISK_PATH}"
 
 echo "Inspect..."
-INSPECT=$(curl -sf -X POST "${API}/vms/${VM_ID}/inspect")
+INSPECT=$(curl_or_die -X POST "${API}/vms/${VM_ID}/inspect")
 INS_JOB=$(echo "${INSPECT}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['job_id'])")
 INS_RESULT=$(poll_job "${INS_JOB}" inspect)
 python3 -c "import sys,json; d=json.load(sys.stdin); r=d.get('data',{}).get('result',{}); assert r.get('inspect') or r.get('data',{}).get('inspect'), r" <<< "${INS_RESULT}"
 
 echo "Doctor..."
-DOCTOR=$(curl -sf -X POST "${API}/vms/${VM_ID}/doctor?target=kubevirt&explain=true")
+DOCTOR=$(curl_or_die -X POST "${API}/vms/${VM_ID}/doctor?target=kubevirt&explain=true")
 JOB_ID=$(echo "${DOCTOR}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['job_id'])")
 DOC_RESULT=$(poll_job "${JOB_ID}" doctor)
 echo "${DOC_RESULT}" | json_head 80
 
 echo "Migration plan..."
-curl -sf -X POST "${API}/vms/${VM_ID}/migration-plan?target=kubevirt" | python3 -m json.tool
+curl_or_die -X POST "${API}/vms/${VM_ID}/migration-plan?target=kubevirt" | python3 -m json.tool
 
 echo "Provision YAML..."
-curl -sf -X POST "${API}/vms/${VM_ID}/provision" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['yaml'][:2000])"
+curl_or_die -X POST "${API}/vms/${VM_ID}/provision" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['yaml'][:2000])"
 
 echo "Config endpoint..."
 curl -sf "${API}/config" | json_head 20

@@ -78,7 +78,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `guestkit-worker` pod bind-mounts the host's `/dev`, so the same
   root:disk-0660-node / EACCES-looks-like-timeout issue `ci.yml` hit
   applies here too) — same fix as `ci.yml`'s "Setup loop and NBD
-  devices" step, which this script never got.
+  devices" step, which this script never got. Confirmed live: `inspect`
+  and `doctor` both now complete in one poll with a real bootability
+  score, instead of failing — this specific k3s stack path does not hit
+  the deeper NBD-attach limitation `ci.yml`'s plain `cargo test` job
+  still has to skip around. The next step, `provision`, then failed with
+  an opaque `Expecting value: line 1 column 1` — `curl -sf` swallows the
+  response body on any non-2xx status, so a real API error looked
+  identical to an empty body. Added a `curl_or_die` helper (splits HTTP
+  status from body via `-w`, prints both on failure) and used it for the
+  script's critical-path calls (import, inspect, doctor, migration-plan,
+  provision) so the next failure there is diagnosable from CI logs too.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs
