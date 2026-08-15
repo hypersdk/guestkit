@@ -69,6 +69,23 @@ pub async fn run_agent_on_evidence_with_boot(
         ProviderConfig::from_env()?
     };
 
+    // Cross-run memory: fold a short summary of prior findings on this same
+    // VM (see ai/memory.rs) into the query both tool-calling paths receive,
+    // so a re-run after a fix doesn't start from zero context.
+    let image_path = std::path::Path::new(&evidence.image_path);
+    let prior_memory = crate::ai::memory::load(image_path);
+    let augmented_query = match &prior_memory {
+        Some(mem) => {
+            let summary = crate::ai::memory::context_summary(mem, 5);
+            if summary.is_empty() {
+                query.to_string()
+            } else {
+                format!("{summary}\nCurrent query: {query}")
+            }
+        }
+        None => query.to_string(),
+    };
+
     // Native, schema-validated tool-calling (rig::agent::AgentBuilder +
     // multi_turn) — only for providers rig has a real completion-model
     // client for. Anthropic/xAI have rig clients too but this codebase's
@@ -76,16 +93,40 @@ pub async fn run_agent_on_evidence_with_boot(
     // openai_compatible_http/anthropic_completion raw-HTTP paths); Ollama
     // has no native rig client at all. Both fall back to the original
     // text-instructed parse_tool_call loop below, unchanged.
-    if provider.provider == Provider::OpenAi {
-        match run_native_openai(evidence, boot, query, &provider, config.max_steps).await {
-            Ok(result) => return Ok(result),
+    let result = if provider.provider == Provider::OpenAi {
+        match run_native_openai(
+            evidence,
+            boot,
+            &augmented_query,
+            &provider,
+            config.max_steps,
+        )
+        .await
+        {
+            Ok(result) => Ok(result),
             Err(e) => {
                 log::warn!("native OpenAI tool-calling failed, falling back to text loop: {e}");
+                run_text_tool_loop(evidence, boot, &augmented_query, config, &provider).await
             }
+        }
+    } else {
+        run_text_tool_loop(evidence, boot, &augmented_query, config, &provider).await
+    };
+
+    if let Ok(ref r) = result {
+        let entry = crate::ai::memory::MemoryEntry {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            query: query.to_string(),
+            answer: r.answer.clone(),
+            boot_score: boot.map(|b| b.score),
+            tool_call_count: r.tool_calls.len(),
+        };
+        if let Err(e) = crate::ai::memory::record(image_path, entry) {
+            log::warn!("failed to record AI agent memory: {e}");
         }
     }
 
-    run_text_tool_loop(evidence, boot, query, config, &provider).await
+    result
 }
 
 /// Native tool-calling path for OpenAI via rig's `AgentBuilder` +

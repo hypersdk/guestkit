@@ -21,6 +21,8 @@ pub mod whatif;
 #[cfg(not(target_os = "windows"))]
 pub mod agent;
 #[cfg(feature = "ai")]
+pub mod memory;
+#[cfg(feature = "ai")]
 pub mod providers;
 #[cfg(feature = "ai")]
 #[cfg(not(target_os = "windows"))]
