@@ -167,6 +167,44 @@ impl Guestfs {
 
         Err(Error::NotFound(format!("Package {} not found", package)))
     }
+
+    /// Install packages into the mounted guest via chroot.
+    ///
+    /// Bind-mounts `/proc`, `/sys`, `/dev` for the duration of the install
+    /// (same machinery as [`Guestfs::repair_grub`]). `network`, when true,
+    /// temporarily swaps the guest's `/etc/resolv.conf` for the host's so
+    /// the package manager can resolve real repositories — the guest's
+    /// original file is restored afterward regardless of outcome.
+    pub fn install_packages(
+        &mut self,
+        packages: &[String],
+        network: bool,
+    ) -> Result<crate::guestfs::package_install::PackageInstallReport> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!(
+                "guestfs: install_packages {:?} network={}",
+                packages, network
+            );
+        }
+
+        let roots = self.inspect_os()?;
+        let root_id = roots
+            .first()
+            .ok_or_else(|| Error::NotFound("No operating system found in image".into()))?
+            .clone();
+        let package_format = self.inspect_get_package_format(&root_id)?;
+        let root_mount = std::path::PathBuf::from(self.find_root_mountpoint()?);
+
+        crate::guestfs::package_install::install_packages(
+            &root_mount,
+            packages,
+            &package_format,
+            network,
+            self.verbose,
+        )
+    }
 }
 
 #[cfg(test)]

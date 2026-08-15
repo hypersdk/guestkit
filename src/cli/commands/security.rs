@@ -392,6 +392,8 @@ pub fn rescue_command(
     hostname: Option<String>,
     timezone: Option<String>,
     export_plan: Option<PathBuf>,
+    packages: Vec<String>,
+    network: bool,
 ) -> Result<()> {
     use crate::cli::plan::generator::PlanGenerator;
     use crate::cli::plan::types::FixPlan;
@@ -937,6 +939,37 @@ pub fn rescue_command(
             }
             if !report.mkconfig_ok && !report.firstboot_staged {
                 anyhow::bail!("GRUB repair did not complete");
+            }
+        }
+
+        "install-packages" => {
+            if is_windows {
+                anyhow::bail!("install-packages is Linux-only");
+            }
+            if packages.is_empty() {
+                anyhow::bail!("At least one package required (use --packages pkg1,pkg2)");
+            }
+            progress.set_message(format!(
+                "Installing packages ({}): {}...",
+                if network { "network" } else { "offline" },
+                packages.join(", ")
+            ));
+            let report = g
+                .install_packages(&packages, network)
+                .map_err(|e| anyhow::anyhow!("Package install failed: {e}"))?;
+            progress.finish_and_clear();
+            println!(
+                "✓ Installed via {}: {}",
+                report.package_manager,
+                report.packages.join(", ")
+            );
+            for note in &report.notes {
+                println!("  · {note}");
+            }
+            if !network {
+                println!(
+                    "  Note: ran offline (no --network) — install likely failed to reach a repository."
+                );
             }
         }
 

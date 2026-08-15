@@ -815,7 +815,8 @@ enum Commands {
         image: PathBuf,
 
         /// Rescue operation (reset-password, fix-fstab, check-grub, fix-grub, enable-ssh,
-        /// inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone)
+        /// inject-ssh-key, set-hostname, enable-rdp, enable-winrm, set-timezone,
+        /// install-packages)
         #[arg(short = 'o', long)]
         operation: String,
 
@@ -854,6 +855,15 @@ enum Commands {
         /// Write a reviewable FixPlan YAML instead of applying (enable-ssh, inject-ssh-key, set-hostname, reset-password, fix-fstab, enable-rdp, enable-winrm, set-timezone)
         #[arg(long, value_name = "PLAN.yaml")]
         export_plan: Option<PathBuf>,
+
+        /// Packages to install (for install-packages), comma-delimited
+        #[arg(long, value_delimiter = ',')]
+        packages: Vec<String>,
+
+        /// Allow network access during install-packages (swaps in the
+        /// host's /etc/resolv.conf for DNS, restored afterward)
+        #[arg(long)]
+        network: bool,
     },
 
     /// Optimize disk image (cleanup, compact)
@@ -2894,6 +2904,8 @@ pub fn run() -> anyhow::Result<()> {
             hostname,
             timezone,
             export_plan,
+            packages,
+            network,
         } => {
             rescue_command(
                 &image,
@@ -2908,6 +2920,8 @@ pub fn run() -> anyhow::Result<()> {
                 hostname,
                 timezone,
                 export_plan,
+                packages,
+                network,
             )?;
         }
 

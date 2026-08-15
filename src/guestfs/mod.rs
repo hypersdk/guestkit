@@ -64,6 +64,7 @@ pub mod node_ops;
 pub mod ntfs;
 pub mod owner_ops;
 pub mod package;
+pub mod package_install;
 pub mod part_mgmt;
 pub mod part_type_ops;
 pub mod partition;

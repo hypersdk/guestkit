@@ -127,7 +127,7 @@ fn backup_grub_cfgs(root: &Path, report: &mut GrubRepairReport) {
     }
 }
 
-fn mount_binds(root: &Path, verbose: bool) -> Result<()> {
+pub(crate) fn mount_binds(root: &Path, verbose: bool) -> Result<()> {
     let root_s = root
         .to_str()
         .ok_or_else(|| Error::InvalidFormat("non-UTF-8 root mount".into()))?;
@@ -153,7 +153,7 @@ fn mount_binds(root: &Path, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-fn unmount_binds(root: &Path) -> Result<()> {
+pub(crate) fn unmount_binds(root: &Path) -> Result<()> {
     let root_s = root
         .to_str()
         .ok_or_else(|| Error::InvalidFormat("non-UTF-8 root mount".into()))?;
@@ -463,7 +463,7 @@ fn stage_firstboot_grub(root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn chroot_cmd(root: &Path, argv: &[&str]) -> Result<std::process::Output> {
+pub(crate) fn chroot_cmd(root: &Path, argv: &[&str]) -> Result<std::process::Output> {
     let root_s = root
         .to_str()
         .ok_or_else(|| Error::InvalidFormat("non-UTF-8 root".into()))?;
