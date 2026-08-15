@@ -131,6 +131,7 @@ PackageInstall can stage from cache, host-fetch (`GUESTKIT_PACKAGE_FETCH=1`), or
 ### Live control + platform
 
 - **In-guest agent** (Linux + Windows) over virtio-serial / QGA — inject offline, then `agent-proxy` / `agent-call`
+- **AI copilot** (optional, `--features ai`) — read-only tool-calling loop over the offline evidence snapshot: `doctor --explain --ai`, `migrate-plan --ai`. OpenAI/xAI/Anthropic/Ollama. Not the in-guest agent above — see [AI Guest Agent roadmap](docs/development/ai-guest-agent-roadmap.md)
 - **KubeVirt** boot-inspect hooks and Guest Control Fabric
 - **Web console** + worker on GHCR; Helm chart under `deploy/helm/zyvor`
 - **Python:** `pip install hypersdk-guestkit` → `from guestkit import Guestfs`

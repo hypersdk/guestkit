@@ -5,6 +5,12 @@
 > assurance, cutover assist, and the `guestkitd`/`guestkitctl` naming —
 > see **[GuestKit Agent — Protocol 1.3](guestkit-agent-protocol-1.3.md)**.
 
+> **Not the same thing as the [AI copilot](../development/ai-guest-agent-roadmap.md).**
+> This is `src/agent/` (`guestkitd`) — a live daemon running **inside the
+> guest OS**. The AI copilot (`src/ai/`, `--features ai`) is a separate,
+> optional LLM tool-calling loop that reads an offline `EvidenceSnapshot`
+> and never touches a running guest. Same "agent" word, unrelated code.
+
 GuestKit can run **inside** a Linux guest as an in-guest agent (similar to `qemu-guest-agent`), communicating with the host over virtio-serial while reusing the same evidence schema and fix-plan format as offline assurance.
 
 ## Architecture

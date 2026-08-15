@@ -1,5 +1,13 @@
 # AI Guest Agent Roadmap
 
+> **Not the same thing as the [in-guest agent](../features/guest-agent.md).**
+> This doc is about `src/ai/` — an **LLM copilot that reads a static
+> `EvidenceSnapshot`** and answers questions about it (tool-calling loop,
+> read-only, `--features ai`). The in-guest agent (`src/agent/`,
+> `guestkitd`) is a **live daemon that runs inside the guest OS**,
+> talking to the host over virtio-serial/QGA — no LLM involved. Same
+> "agent" word, unrelated code paths; don't confuse the two.
+
 Evolution of GuestKit's optional AI layer into a **Guest Intelligence Agent** — an offline, evidence-grounded co-pilot for migration, security, and fleet analysis. Core inspection stays deterministic and auditable; AI is additive (`--features ai`).
 
 ## Philosophy
