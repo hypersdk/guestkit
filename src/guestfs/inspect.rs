@@ -116,6 +116,17 @@ impl Guestfs {
         // Use standard device path (most common in VMs)
         let disk_dev = "/dev/sda".to_string();
 
+        // 0) Whole-disk fallback: no partition table at all, filesystem
+        // directly on the block device (e.g. Firecracker-style rootfs
+        // images, which are typically `dd`'d as a bare ext4 filesystem with
+        // no partition table so the guest can use root=/dev/vda directly).
+        // parse_device_name() resolves a bare "/dev/sda" (no trailing
+        // partition number) to the whole NBD/loop device, so mount_ro()
+        // already supports this target; inspect_os() just never tried it.
+        if partitions.is_empty() && self.validate_root_partition(&disk_dev)? {
+            roots.push(disk_dev.clone());
+        }
+
         // 1) Partition candidates
         for p in &partitions {
             let dev = build_partition_path(&disk_dev, p.number);
