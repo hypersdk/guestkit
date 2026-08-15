@@ -89,6 +89,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status from body via `-w`, prints both on failure) and used it for the
   script's critical-path calls (import, inspect, doctor, migration-plan,
   provision) so the next failure there is diagnosable from CI logs too.
+  That surfaced the real error: `provision` (`POST /vms/{id}/provision`,
+  which mounts the disk *synchronously in zyvor-api's own process*) hit
+  `"No operating system found in disk image"` on the same image `doctor`
+  had just successfully inspected seconds earlier — because the script's
+  prior "Migration plan..." step submits an *async* job that mounts the
+  same disk via `guestkit-worker` and never waits for it, racing
+  provision's own mount. Root cause: `NbdDevice::find_available_device`
+  (`src/disk/nbd.rs`) checks a device's availability and connects as two
+  separate, unlocked steps with no cross-process coordination — two
+  processes mounting different images at the same moment can pick the
+  same device index, and the loser's connect just fails rather than
+  retrying. Fixed the E2E script by polling the migration-plan job to
+  completion before calling provision; left the deeper cross-process race
+  in `find_available_device` itself as a documented, not-fixed-here issue
+  (flagged with a code comment) since there's no NBD-capable test
+  infrastructure available to verify a real locking fix against.
 - **Main CI (`ci.yml`) had been broken for a while** — `journal-native`
   (a *default* feature) needs `libsystemd-dev`, missing from every job
   except `release.yml`'s; `Code Coverage`'s `--all-features` also needs

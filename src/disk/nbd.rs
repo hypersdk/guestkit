@@ -201,6 +201,18 @@ impl NbdDevice {
     }
 
     /// Find an available NBD device
+    ///
+    /// KNOWN RACE (not fixed here — no NBD-capable test infra to verify a
+    /// fix against): this checks a device's availability, then the caller
+    /// connects to it, as two separate, unlocked steps — no flock or other
+    /// cross-process coordination. Two processes on the same host racing
+    /// this (e.g. two independent API requests each mounting a different
+    /// disk image at the same moment) can both pick the same device index;
+    /// one side's connect then fails outright rather than retrying a
+    /// different device. Seen in practice: `deploy/scripts/e2e-smoke.sh`
+    /// hit this via an unawaited async migrate-plan job racing a
+    /// synchronous provision call against the same image — worked around
+    /// there by serializing the two calls, not fixed at the source.
     fn find_available_device() -> Result<PathBuf> {
         // First, check if NBD module is loaded
         if !Self::is_nbd_module_loaded() {

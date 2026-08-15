@@ -86,7 +86,18 @@ DOC_RESULT=$(poll_job "${JOB_ID}" doctor)
 echo "${DOC_RESULT}" | json_head 80
 
 echo "Migration plan..."
-curl_or_die -X POST "${API}/vms/${VM_ID}/migration-plan?target=kubevirt" | python3 -m json.tool
+MIGPLAN=$(curl_or_die -X POST "${API}/vms/${VM_ID}/migration-plan?target=kubevirt")
+echo "${MIGPLAN}" | python3 -m json.tool
+MIGPLAN_JOB=$(echo "${MIGPLAN}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['job_id'])")
+# Wait for this to finish before provision: migration-plan mounts the disk
+# asynchronously via guestkit-worker, and provision below mounts the *same*
+# disk synchronously in zyvor-api's own process. Racing them means two
+# processes independently attaching a loop/NBD device for the same image —
+# find_available_device() (src/disk/nbd.rs) checks device availability and
+# connects as two separate, unlocked steps with no cross-process
+# coordination, so a race here can make one side's mount fail outright
+# ("No operating system found in disk image") rather than just being slow.
+poll_job "${MIGPLAN_JOB}" migration-plan >/dev/null
 
 echo "Provision YAML..."
 curl_or_die -X POST "${API}/vms/${VM_ID}/provision" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['yaml'][:2000])"
