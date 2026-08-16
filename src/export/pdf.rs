@@ -130,35 +130,29 @@ impl PdfExporter {
         data: &InspectionData,
     ) -> std::io::Result<()> {
         let (width_mm, height_mm) = self.options.paper_size.to_mm();
-        let width_pt = Mm(width_mm);
-        let height_pt = Mm(height_mm);
 
-        let (doc, page1, layer1) = PdfDocument::new(
-            format!("VM Inspection Report - {}", data.hostname),
-            width_pt,
-            height_pt,
-            "Layer 1",
-        );
+        let mut doc = PdfDocument::new(&format!("VM Inspection Report - {}", data.hostname));
 
-        // Use built-in font (Helvetica)
-        let font = doc
-            .add_builtin_font(BuiltinFont::Helvetica)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
-
-        let bold_font = doc
-            .add_builtin_font(BuiltinFont::HelveticaBold)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
-
-        let current_layer = doc.get_page(page1).get_layer(layer1);
+        let mut ops: Vec<Op> = vec![
+            Op::StartTextSection,
+            Op::SetFillColor {
+                col: Color::Rgb(Rgb {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    icc_profile: None,
+                }),
+            },
+        ];
 
         // Add title
-        let title = "VM Inspection Report".to_string();
-        current_layer.use_text(
-            &title,
+        self.push_text(
+            &mut ops,
+            "VM Inspection Report",
             self.options.font_size + 8.0,
-            Mm(20.0),
-            Mm(height_mm - 30.0),
-            &bold_font,
+            20.0,
+            height_mm - 30.0,
+            true,
         );
 
         let subtitle = format!(
@@ -166,85 +160,65 @@ impl PdfExporter {
             data.hostname,
             chrono::Local::now().format("%Y-%m-%d")
         );
-        current_layer.use_text(
+        self.push_text(
+            &mut ops,
             &subtitle,
             self.options.font_size,
-            Mm(20.0),
-            Mm(height_mm - 40.0),
-            &font,
+            20.0,
+            height_mm - 40.0,
+            false,
         );
 
         // Current Y position for content
         let mut y_pos = height_mm - 60.0;
 
         // System Information Section
-        y_pos = self.add_section_header(&current_layer, "System Information", y_pos, &bold_font);
+        y_pos = self.add_section_header(&mut ops, "System Information", y_pos);
+        y_pos = self.add_text_line(&mut ops, &format!("OS Type: {}", data.os_type), y_pos);
         y_pos = self.add_text_line(
-            &current_layer,
-            &format!("OS Type: {}", data.os_type),
-            y_pos,
-            &font,
-        );
-        y_pos = self.add_text_line(
-            &current_layer,
+            &mut ops,
             &format!("Distribution: {}", data.distribution),
             y_pos,
-            &font,
         );
+        y_pos = self.add_text_line(&mut ops, &format!("Version: {}", data.version), y_pos);
         y_pos = self.add_text_line(
-            &current_layer,
-            &format!("Version: {}", data.version),
-            y_pos,
-            &font,
-        );
-        y_pos = self.add_text_line(
-            &current_layer,
+            &mut ops,
             &format!("Architecture: {}", data.architecture),
             y_pos,
-            &font,
         );
+        y_pos = self.add_text_line(&mut ops, &format!("Product: {}", data.product_name), y_pos);
         y_pos = self.add_text_line(
-            &current_layer,
-            &format!("Product: {}", data.product_name),
-            y_pos,
-            &font,
-        );
-        y_pos = self.add_text_line(
-            &current_layer,
+            &mut ops,
             &format!("Package Format: {}", data.package_format),
             y_pos,
-            &font,
         );
         y_pos = self.add_text_line(
-            &current_layer,
+            &mut ops,
             &format!("Package Manager: {}", data.package_manager),
             y_pos,
-            &font,
         );
 
         if let Some(kernel) = &data.kernel_version {
-            y_pos =
-                self.add_text_line(&current_layer, &format!("Kernel: {}", kernel), y_pos, &font);
+            y_pos = self.add_text_line(&mut ops, &format!("Kernel: {}", kernel), y_pos);
         }
 
         if let Some(mem) = data.total_memory {
             y_pos = self.add_text_line(
-                &current_layer,
+                &mut ops,
                 &format!("Memory: {} GB", mem / 1024 / 1024 / 1024),
                 y_pos,
-                &font,
             );
         }
 
         if let Some(vcpus) = data.vcpus {
-            y_pos = self.add_text_line(&current_layer, &format!("vCPUs: {}", vcpus), y_pos, &font);
+            y_pos = self.add_text_line(&mut ops, &format!("vCPUs: {}", vcpus), y_pos);
         }
 
         y_pos -= 10.0;
 
         // Filesystems Section
         if !data.filesystems.is_empty() {
-            y_pos = self.add_section_header(&current_layer, "Filesystems", y_pos, &bold_font);
+            y_pos = self.add_section_header(&mut ops, "Filesystems", y_pos);
 
             for fs in data.filesystems.iter().take(10) {
                 let fs_text = format!(
@@ -255,7 +229,7 @@ impl PdfExporter {
                     fs.used as f64 / 1024.0 / 1024.0 / 1024.0,
                     fs.size as f64 / 1024.0 / 1024.0 / 1024.0,
                 );
-                y_pos = self.add_text_line(&current_layer, &fs_text, y_pos, &font);
+                y_pos = self.add_text_line(&mut ops, &fs_text, y_pos);
 
                 // Check if we need a new page
                 if y_pos < 30.0 {
@@ -268,20 +242,18 @@ impl PdfExporter {
 
         // Packages Section (show count)
         if !data.packages.is_empty() {
-            y_pos =
-                self.add_section_header(&current_layer, "Installed Packages", y_pos, &bold_font);
+            y_pos = self.add_section_header(&mut ops, "Installed Packages", y_pos);
             y_pos = self.add_text_line(
-                &current_layer,
+                &mut ops,
                 &format!("Total packages: {}", data.packages.len()),
                 y_pos,
-                &font,
             );
 
             // Show first 20 packages
             let packages_to_show = data.packages.iter().take(20);
             for pkg in packages_to_show {
                 let pkg_text = format!("{} - {} ({})", pkg.name, pkg.version, pkg.arch);
-                y_pos = self.add_text_line(&current_layer, &pkg_text, y_pos, &font);
+                y_pos = self.add_text_line(&mut ops, &pkg_text, y_pos);
 
                 if y_pos < 30.0 {
                     break;
@@ -290,10 +262,9 @@ impl PdfExporter {
 
             if data.packages.len() > 20 {
                 y_pos = self.add_text_line(
-                    &current_layer,
+                    &mut ops,
                     &format!("... and {} more packages", data.packages.len() - 20),
                     y_pos,
-                    &font,
                 );
             }
 
@@ -302,14 +273,14 @@ impl PdfExporter {
 
         // Users Section
         if !data.users.is_empty() {
-            y_pos = self.add_section_header(&current_layer, "User Accounts", y_pos, &bold_font);
+            y_pos = self.add_section_header(&mut ops, "User Accounts", y_pos);
 
             for user in data.users.iter().take(15) {
                 let user_text = format!(
                     "{} (UID: {}) - {} [{}]",
                     user.username, user.uid, user.home, user.shell,
                 );
-                y_pos = self.add_text_line(&current_layer, &user_text, y_pos, &font);
+                y_pos = self.add_text_line(&mut ops, &user_text, y_pos);
 
                 if y_pos < 30.0 {
                     break;
@@ -321,8 +292,7 @@ impl PdfExporter {
 
         // Network Interfaces Section
         if !data.interfaces.is_empty() {
-            y_pos =
-                self.add_section_header(&current_layer, "Network Interfaces", y_pos, &bold_font);
+            y_pos = self.add_section_header(&mut ops, "Network Interfaces", y_pos);
 
             for iface in &data.interfaces {
                 let iface_text = format!(
@@ -332,7 +302,7 @@ impl PdfExporter {
                     iface.ip_addresses.join(", "),
                     iface.state,
                 );
-                y_pos = self.add_text_line(&current_layer, &iface_text, y_pos, &font);
+                y_pos = self.add_text_line(&mut ops, &iface_text, y_pos);
 
                 if y_pos < 30.0 {
                     break;
@@ -342,49 +312,59 @@ impl PdfExporter {
 
         // Add footer with page number if enabled
         if self.options.include_page_numbers {
-            current_layer.use_text(
+            self.push_text(
+                &mut ops,
                 "Page 1",
                 self.options.font_size - 2.0,
-                Mm(width_mm / 2.0 - 10.0),
-                Mm(15.0),
-                &font,
+                width_mm / 2.0 - 10.0,
+                15.0,
+                false,
             );
         }
 
-        // Save the PDF
-        doc.save(&mut BufWriter::new(File::create(output_path)?))
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        ops.push(Op::EndTextSection);
+
+        let page = PdfPage::new(Mm(width_mm), Mm(height_mm), ops);
+        doc.with_pages(vec![page]);
+
+        let mut warnings = Vec::new();
+        doc.save_writer(
+            &mut BufWriter::new(File::create(output_path)?),
+            &PdfSaveOptions::default(),
+            &mut warnings,
+        );
 
         Ok(())
     }
 
+    /// Push a `SetFont` + `SetTextCursor` + `ShowText` op sequence for one line of text,
+    /// positioned absolutely (mirrors the old `PdfLayerReference::use_text` API).
+    fn push_text(&self, ops: &mut Vec<Op>, text: &str, size: f32, x_mm: f32, y_mm: f32, bold: bool) {
+        ops.push(Op::SetFont {
+            font: PdfFontHandle::Builtin(if bold {
+                BuiltinFont::HelveticaBold
+            } else {
+                BuiltinFont::Helvetica
+            }),
+            size: Pt(size),
+        });
+        ops.push(Op::SetTextCursor {
+            pos: Point::new(Mm(x_mm), Mm(y_mm)),
+        });
+        ops.push(Op::ShowText {
+            items: vec![TextItem::Text(text.to_string())],
+        });
+    }
+
     /// Add a section header
-    fn add_section_header(
-        &self,
-        layer: &PdfLayerReference,
-        text: &str,
-        y_pos: f32,
-        font: &IndirectFontRef,
-    ) -> f32 {
-        layer.use_text(
-            text,
-            self.options.font_size + 4.0,
-            Mm(20.0),
-            Mm(y_pos),
-            font,
-        );
+    fn add_section_header(&self, ops: &mut Vec<Op>, text: &str, y_pos: f32) -> f32 {
+        self.push_text(ops, text, self.options.font_size + 4.0, 20.0, y_pos, true);
         y_pos - 10.0
     }
 
     /// Add a text line
-    fn add_text_line(
-        &self,
-        layer: &PdfLayerReference,
-        text: &str,
-        y_pos: f32,
-        font: &IndirectFontRef,
-    ) -> f32 {
-        layer.use_text(text, self.options.font_size, Mm(25.0), Mm(y_pos), font);
+    fn add_text_line(&self, ops: &mut Vec<Op>, text: &str, y_pos: f32) -> f32 {
+        self.push_text(ops, text, self.options.font_size, 25.0, y_pos, false);
         y_pos - 6.0
     }
 }
@@ -442,5 +422,73 @@ mod tests {
 
         assert_eq!(data.hostname, "test-vm");
         assert_eq!(data.os_type, "linux");
+    }
+}
+
+#[cfg(test)]
+mod sanity_pdf_output {
+    use super::*;
+
+    #[test]
+    fn generate_writes_valid_nonempty_pdf() {
+        let dir = std::env::temp_dir();
+        let out_path = dir.join("guestkit_pdf_sanity_check.pdf");
+
+        let data = InspectionData {
+            hostname: "sanity-vm".to_string(),
+            os_type: "linux".to_string(),
+            distribution: "ubuntu".to_string(),
+            version: "22.04".to_string(),
+            architecture: "x86_64".to_string(),
+            product_name: "Ubuntu".to_string(),
+            package_format: "deb".to_string(),
+            package_manager: "apt".to_string(),
+            kernel_version: Some("5.15.0-generic".to_string()),
+            total_memory: Some(8589934592),
+            vcpus: Some(4),
+            filesystems: vec![FilesystemInfo {
+                device: "/dev/sda1".to_string(),
+                mountpoint: "/".to_string(),
+                fstype: "ext4".to_string(),
+                size: 107374182400,
+                used: 53687091200,
+                available: 53687091200,
+            }],
+            packages: vec![PackageInfo {
+                name: "openssh-server".to_string(),
+                version: "1:8.9p1".to_string(),
+                arch: "amd64".to_string(),
+            }],
+            users: vec![UserInfo {
+                username: "ubuntu".to_string(),
+                uid: "1000".to_string(),
+                home: "/home/ubuntu".to_string(),
+                shell: "/bin/bash".to_string(),
+            }],
+            interfaces: vec![NetworkInterface {
+                name: "eth0".to_string(),
+                mac_address: "52:54:00:12:34:56".to_string(),
+                ip_addresses: vec!["10.0.0.5".to_string()],
+                state: "up".to_string(),
+            }],
+        };
+
+        let exporter = PdfExporter::new(PdfExportOptions::default());
+        exporter
+            .generate(&out_path, &data)
+            .expect("PDF generation should succeed");
+
+        let bytes = std::fs::read(&out_path).expect("PDF file should exist");
+        assert!(bytes.len() > 500, "PDF output suspiciously small: {} bytes", bytes.len());
+        assert!(
+            bytes.starts_with(b"%PDF-"),
+            "output does not start with a PDF header"
+        );
+        assert!(
+            bytes.windows(5).any(|w| w == b"%%EOF"),
+            "output missing PDF trailer (%%EOF)"
+        );
+
+        std::fs::remove_file(&out_path).ok();
     }
 }

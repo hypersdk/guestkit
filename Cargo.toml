@@ -85,10 +85,10 @@ libc = "0.2"
 nt_hive2 = "4.2"
 
 # Windows event log parsing (pure Rust)
-evtx = { version = "0.8", default-features = false, optional = true }
+evtx = { version = "0.12", default-features = false, optional = true }
 
 # Report generation and export
-printpdf = "0.7"
+printpdf = "0.12"
 
 # Hashing for cache keys
 sha2 = "0.10"

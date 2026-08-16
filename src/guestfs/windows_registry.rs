@@ -1184,7 +1184,7 @@ fn parse_evtx_with_crate(evtx_path: &Path, limit: usize) -> Result<Vec<WindowsEv
             level,
             source,
             message,
-            time_created: record.timestamp.to_rfc3339(),
+            time_created: record.timestamp.to_string(),
             computer,
             channel,
         });
