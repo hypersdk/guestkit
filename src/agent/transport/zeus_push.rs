@@ -198,29 +198,37 @@ pub async fn run_push_worker() -> Result<()> {
 
 async fn push_heartbeat(client: &reqwest::Client, base: &str, agent_id: &str) -> Result<()> {
     let url = format!("{base}/api/v1/guest-agents/{agent_id}/heartbeat");
-    let status = crate::evidence::build_agent_status_live().unwrap_or_else(|_| {
-        crate::evidence::AgentStatus {
-            hostname: "unknown".into(),
-            os_name: String::new(),
-            os_version: String::new(),
-            kernel: String::new(),
-            architecture: String::new(),
-            ips: vec![],
-            boot_mode: String::new(),
-            cloud_init_present: false,
-            qga_ready: false,
-            zyvor_agent_ready: true,
-            virtio_modules_loaded: false,
-            agent_version: crate::VERSION.to_string(),
-            uptime_secs: 0,
-            last_heartbeat: chrono::Utc::now().to_rfc3339(),
-        }
+    // `build_agent_status_live`/`recent_systemd_events` touch zbus::blocking (systemd D-Bus),
+    // which spins up its own Tokio runtime internally -- calling it directly from this async
+    // task (already running on a multi-thread runtime worker) panics with "Cannot start a
+    // runtime from within a runtime". `block_in_place` is Tokio's documented escape hatch:
+    // it hands this worker thread off so the wrapped sync code can safely block/nest-block.
+    let (status, recent_events, heartbeat) = tokio::task::block_in_place(|| {
+        let status = crate::evidence::build_agent_status_live().unwrap_or_else(|_| {
+            crate::evidence::AgentStatus {
+                hostname: "unknown".into(),
+                os_name: String::new(),
+                os_version: String::new(),
+                kernel: String::new(),
+                architecture: String::new(),
+                ips: vec![],
+                boot_mode: String::new(),
+                cloud_init_present: false,
+                qga_ready: false,
+                zyvor_agent_ready: true,
+                virtio_modules_loaded: false,
+                agent_version: crate::VERSION.to_string(),
+                uptime_secs: 0,
+                last_heartbeat: chrono::Utc::now().to_rfc3339(),
+            }
+        });
+        let recent_events = recent_systemd_events(50);
+        let runtime = crate::agent::state::AgentRuntime::global();
+        let heartbeat = runtime
+            .last_heartbeat()
+            .unwrap_or_else(|| crate::agent::heartbeat::build_heartbeat(&runtime));
+        (status, recent_events, heartbeat)
     });
-    let recent_events = recent_systemd_events(50);
-    let runtime = crate::agent::state::AgentRuntime::global();
-    let heartbeat = runtime
-        .last_heartbeat()
-        .unwrap_or_else(|| crate::agent::heartbeat::build_heartbeat(&runtime));
     let body = serde_json::json!({
         "status": status,
         "recent_events": recent_events,
@@ -236,8 +244,12 @@ async fn push_heartbeat(client: &reqwest::Client, base: &str, agent_id: &str) ->
 }
 
 async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Result<()> {
-    let recent_events = recent_systemd_events(100);
-    let (health, metrics) = build_push_health()?;
+    // See push_heartbeat: build_push_health touches zbus::blocking (systemd D-Bus) and must
+    // not run directly on this async task's worker thread.
+    let (recent_events, health_result) = tokio::task::block_in_place(|| {
+        (recent_systemd_events(100), build_push_health())
+    });
+    let (health, metrics) = health_result?;
     let body = serde_json::json!({
         "guest_health": health,
         "metrics": metrics,
