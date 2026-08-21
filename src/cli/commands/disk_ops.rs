@@ -4,7 +4,7 @@
 //! Functions: create_disk, check_filesystem, show_disk_usage, execute_command,
 //! backup_files, clone_command, lvm_clone_command, diff_images, compare_images,
 //! list_filesystems, list_packages, benchmark_command, snapshot_command,
-//! diff_command, find_large_command, disk_usage_command
+//! diff_command, find_large_command, disk_usage_command, shrink_command
 #![allow(clippy::too_many_arguments)]
 
 use crate::core::ProgressReporter;
@@ -1045,6 +1045,113 @@ pub fn find_large_command(
     if let Err(e) = g.shutdown() {
         log::warn!("Cleanup: shutdown failed: {}", e);
     }
+    Ok(())
+}
+
+/// Shrink an oversized-but-mostly-empty disk to its real footprint.
+///
+/// Only shrinks when virtual/actual >= `min_ratio` and the layout is a
+/// supported single/last ext2/3/4 partition (MBR or GPT, no LVM/LUKS) —
+/// anything else is reported and left untouched, never a hard error.
+pub fn shrink_command(
+    image: &Path,
+    dry_run: bool,
+    min_ratio: f64,
+    headroom_pct: u32,
+    json: bool,
+    verbose: bool,
+) -> Result<()> {
+    use crate::guestfs::shrink::{analyze_shrink_potential, shrink_disk, ShrinkOutcome};
+
+    let progress = ProgressReporter::spinner(&format!("Analyzing {}...", image.display()));
+    let analysis = analyze_shrink_potential(image, verbose)?;
+    progress.finish_and_clear();
+
+    let analysis = match analysis {
+        Some(a) => a,
+        None => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({"shrunk": false, "reason": "not an eligible shrink candidate (unsupported layout, filesystem, or partition scheme)"})
+                );
+            } else {
+                println!("Not shrinking: not an eligible candidate (unsupported layout, filesystem, or partition scheme).");
+            }
+            return Ok(());
+        }
+    };
+
+    let ratio = if analysis.actual_bytes > 0 {
+        analysis.virtual_bytes as f64 / analysis.actual_bytes as f64
+    } else {
+        f64::INFINITY
+    };
+
+    if !json {
+        println!(
+            "Virtual: {}  Actual: {}  Ratio: {:.1}x  Filesystem: {} (partition {})",
+            format_size(analysis.virtual_bytes),
+            format_size(analysis.actual_bytes),
+            ratio,
+            analysis.fs_type,
+            analysis.last_partition,
+        );
+    }
+
+    if ratio < min_ratio {
+        let reason = format!(
+            "virtual/actual ratio {ratio:.1}x is below --min-ratio {min_ratio:.1}x — not worth shrinking"
+        );
+        if json {
+            println!("{}", serde_json::json!({"shrunk": false, "reason": reason}));
+        } else {
+            println!("Not shrinking: {reason}");
+        }
+        return Ok(());
+    }
+
+    if dry_run {
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({"shrunk": false, "dry_run": true, "would_shrink": true, "virtual_bytes": analysis.virtual_bytes, "actual_bytes": analysis.actual_bytes, "min_fs_bytes": analysis.min_fs_bytes})
+            );
+        } else {
+            println!("Dry-run: would shrink (min filesystem size: {}).", format_size(analysis.min_fs_bytes));
+        }
+        return Ok(());
+    }
+
+    let progress = ProgressReporter::spinner(&format!("Shrinking {}...", image.display()));
+    let outcome = shrink_disk(image, verbose, headroom_pct)?;
+    progress.finish_and_clear();
+
+    match outcome {
+        ShrinkOutcome::Shrunk { old_virtual, new_virtual } => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({"shrunk": true, "old_virtual_bytes": old_virtual, "new_virtual_bytes": new_virtual})
+                );
+            } else {
+                println!(
+                    "✓ Shrunk {} -> {} ({:.1}x smaller)",
+                    format_size(old_virtual),
+                    format_size(new_virtual),
+                    old_virtual as f64 / new_virtual as f64
+                );
+            }
+        }
+        ShrinkOutcome::Skipped { reason } => {
+            if json {
+                println!("{}", serde_json::json!({"shrunk": false, "reason": reason}));
+            } else {
+                println!("Not shrunk: {reason}");
+            }
+        }
+    }
+
     Ok(())
 }
 

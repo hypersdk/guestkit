@@ -337,6 +337,29 @@ enum Commands {
         image: PathBuf,
     },
 
+    /// Shrink an oversized-but-mostly-empty disk to its real footprint
+    /// (single/last ext2/3/4 partition, MBR or GPT, no LVM/LUKS)
+    Shrink {
+        /// Disk image path
+        image: PathBuf,
+
+        /// Only analyze and report; don't modify anything
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Minimum virtual/actual size ratio to consider shrinking worthwhile
+        #[arg(long, default_value = "3.0")]
+        min_ratio: f64,
+
+        /// Extra headroom over the filesystem's true minimum size, as a percentage
+        #[arg(long, default_value = "20")]
+        headroom_pct: u32,
+
+        /// Emit machine-readable JSON instead of text
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Detect disk image format
     Detect {
         /// Disk image path
@@ -2515,6 +2538,16 @@ pub fn run() -> anyhow::Result<()> {
 
         Commands::Usage { image } => {
             show_disk_usage(&image, cli.verbose)?;
+        }
+
+        Commands::Shrink {
+            image,
+            dry_run,
+            min_ratio,
+            headroom_pct,
+            json,
+        } => {
+            shrink_command(&image, dry_run, min_ratio, headroom_pct, json, cli.verbose)?;
         }
 
         Commands::Convert {

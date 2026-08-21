@@ -11,6 +11,7 @@ use crate::guestfs::Guestfs;
 use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Check if we need sudo (i.e., not running as root).
 ///
@@ -20,11 +21,20 @@ pub(crate) fn need_sudo() -> bool {
     unsafe { libc::geteuid() != 0 }
 }
 
+/// Per-process counter distinguishing mount roots for multiple `Guestfs`
+/// handles created within the same process (e.g. shrink's simultaneous
+/// source + destination handles) — PID alone collides in that case,
+/// since `fs::create_dir_all` on an already-existing directory succeeds
+/// silently, so a second handle would silently reuse the first handle's
+/// mount root and mount over it instead of getting its own.
+static MOUNT_ROOT_COUNTER: AtomicU64 = AtomicU64::new(0);
+
 impl Guestfs {
     fn create_mount_root() -> Result<std::path::PathBuf> {
         let pid = std::process::id();
+        let n = MOUNT_ROOT_COUNTER.fetch_add(1, Ordering::Relaxed);
         for base in ["/run", "/tmp"] {
-            let mount_dir = std::path::PathBuf::from(base).join(format!("guestkit-{pid}"));
+            let mount_dir = std::path::PathBuf::from(base).join(format!("guestkit-{pid}-{n}"));
             if fs::create_dir_all(&mount_dir).is_ok() {
                 return Ok(mount_dir);
             }

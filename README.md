@@ -125,6 +125,10 @@ guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…
 # → AES/RC4 SAM NT-hash when registry-write is built; RunOnce fallback
 
 guestkit plan apply plan.yaml --vm disk.qcow2 --yes     # backups + rollback
+
+# Shrink an oversized-but-mostly-empty disk to its real footprint before import
+guestkit shrink disk.qcow2 --dry-run                     # report only
+guestkit shrink disk.qcow2 --min-ratio 3 --headroom-pct 20
 ```
 
 PackageInstall can stage from cache, host-fetch (`GUESTKIT_PACKAGE_FETCH=1`), or HTTP mirror (`GUESTKIT_PACKAGE_MIRROR`). Service enable/disable and CommandExec stage first-boot oneshots when chroot can’t run them live.
