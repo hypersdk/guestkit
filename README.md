@@ -28,6 +28,21 @@ Score boot readiness **before** power-on. Generate reviewable fix plans. Repair 
 
 ---
 
+## Table of contents
+
+- [See it in action](#see-it-in-action)
+- [Why teams use it](#why-teams-use-it)
+- [What you can do](#what-you-can-do)
+- [Quick start](#quick-start)
+- [Run from GHCR](#run-from-ghcr)
+- [Platform layout](#platform-layout)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Enterprise & support](#enterprise--support)
+- [License](#license)
+
+---
+
 ## See it in action
 
 <table>
@@ -237,6 +252,12 @@ cargo test
 ```
 
 See [CONTRIBUTING](docs/development/CONTRIBUTING.md) and CI under `.github/workflows/`. **`docs/` and this README are authoritative** over any historical build notes in the tree.
+
+---
+
+## Enterprise & support
+
+Looking for enterprise support, managed deployments, or additional features on top of the community edition? Visit **[zyvor.dev](https://zyvor.dev)** — see [docs/zyvor-enterprise.md](docs/zyvor-enterprise.md) for what's included and how to get in touch.
 
 ---
 
