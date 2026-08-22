@@ -10,7 +10,7 @@ Score boot readiness **before** power-on. Generate reviewable fix plans. Repair 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![GHCR](https://img.shields.io/badge/GHCR-hypersdk-black?logo=github)](https://github.com/orgs/hypersdk/packages)
 
-**[Demos](#see-it-in-action)** · **[Wiki](https://github.com/hypersdk/guestkit/wiki)** · **[Feature guide](docs/guestkit-customer-feature-guide.md)** · **[Quick start](#quick-start)** · **[GHCR](#run-from-ghcr)** · **[Docs](#documentation)** · **[zyvor.dev](https://zyvor.dev/guestkit)**
+**[Demos](#see-it-in-action)** · **[Wiki](https://github.com/hypersdk/guestkit/wiki)** · **[Feature guide](docs/guestkit-customer-feature-guide.md)** · **[Quick start](#quick-start)** · **[GHCR](#run-from-ghcr)** · **[Docs](#documentation)** · **[zyvor.dev](https://zyvor.dev/guestkit)** · **[Blog](https://zyvor.dev/blog?utm_source=github&utm_medium=guestkit)**
 
 ```text
   disk.qcow2 / .vmdk / .vhdx
@@ -240,7 +240,7 @@ Default console login for packaged installs is documented in [remote deploy](doc
 | User stories / industry | [USER_STORIES](docs/USER_STORIES.md) · [INDUSTRY_USE_CASES](docs/INDUSTRY_USE_CASES.md) |
 | Changelog / roadmap | [CHANGELOG](docs/development/CHANGELOG.md) · [roadmap](docs/development/roadmap.md) |
 
-→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [Full Zyvor platform](https://zyvor.dev)
+→ [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · [zyvor.dev/docs](https://zyvor.dev/docs?utm_source=github&utm_medium=guestkit) · [zyvor.dev/blog](https://zyvor.dev/blog?utm_source=github&utm_medium=guestkit) · [Full Zyvor platform](https://zyvor.dev)
 
 ---
 
