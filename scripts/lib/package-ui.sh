@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # shellcheck shell=bash
 # Shared UI helpers for VMRogue-family client packaging scripts.
 # Source from scripts/lib/*.sh or .package-lib/package-ui.sh inside tarballs.

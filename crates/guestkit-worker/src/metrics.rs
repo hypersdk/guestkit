@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Prometheus metrics collection and export
 //!
 //! This module provides comprehensive metrics for monitoring worker performance,

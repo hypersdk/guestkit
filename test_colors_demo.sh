@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Demo script to show colorized output functions
 
 cat << 'EOF' > /tmp/test_colors.rs

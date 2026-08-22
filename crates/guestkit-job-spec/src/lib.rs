@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! VM Operations Job Protocol - Type definitions and validation
 //!
 //! This crate provides the type definitions for the VM Operations Job Protocol v1.

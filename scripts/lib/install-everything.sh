@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Zyvor — one-shot customer install (run inside extracted tarball directory).
 # Does everything ./install.sh does, plus host tests and production setup when bundled.
 set -euo pipefail

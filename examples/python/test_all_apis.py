@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """
 Comprehensive GuestKit API Testing
 Tests all major APIs against various disk image formats

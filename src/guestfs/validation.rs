@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Input validation utilities for safe operations
 
 use crate::core::error::{Error, Result};

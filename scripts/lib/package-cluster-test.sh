@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Verify Kubernetes cluster prerequisites for VMRogue / v9s client bundles.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"

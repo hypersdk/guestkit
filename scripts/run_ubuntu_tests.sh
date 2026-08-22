@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Run Ubuntu realistic disk image tests
 #
 # This script tests guestkit with production-quality Ubuntu images

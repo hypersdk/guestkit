@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Capabilities command handler
 
 use anyhow::Result;

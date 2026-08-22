@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build guestkit release binary on Linux (used by deploy-remote.sh on remote hosts).
 # Usage: ./scripts/build-linux-release.sh
 # Env: GUESTKIT_BUILD_FEATURES (default: agent) — cargo --features

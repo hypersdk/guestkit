@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Job executor - orchestrates job execution using handlers
 
 use guestkit_job_spec::{JobDocument, JobValidator};

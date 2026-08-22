@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Test script for PyPI package building and installation
 # This script verifies that the package can be built and installed correctly
 

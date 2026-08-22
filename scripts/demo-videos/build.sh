@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build the GuestKit CLI/TUI demo video from 4 separate VHS recordings
 # (rec-inspect.tape, rec-doctor.tape, rec-migrate.tape, rec-tui.tape) +
 # title/caption cards (render-cards.mjs).

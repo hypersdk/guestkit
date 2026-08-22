@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build the GuestKit Windows agent, MSI installer, and a bootable-media ISO
 # that bundles everything — for download and integration with Zeus OS /
 # Veyron / Machina (attach the ISO as a CD-ROM to a Windows VM).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Echo handler - simple test handler that echoes back payload
 
 use async_trait::async_trait;

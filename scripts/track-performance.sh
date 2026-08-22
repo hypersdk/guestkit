@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Performance tracking script for guestkit
 # Runs benchmarks and tracks performance metrics over time
 

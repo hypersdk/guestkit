@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Integration test: lvm_clone_podman with a real RHEL VM
 use guestkit::guestfs::lvm_clone::{lvm_clone_podman, IsolationLevel, LvmCloneConfig};
 

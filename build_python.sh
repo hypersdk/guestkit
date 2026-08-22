@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Build script for GuestKit Python bindings
 #
 # This script helps build and install the Python bindings for GuestKit.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Redis Streams job transport
 
 use async_trait::async_trait;

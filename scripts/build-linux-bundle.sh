@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build the GuestKit Linux in-guest agent and assemble a self-contained
 # bundle tarball — the Linux counterpart of scripts/build-windows-bundle.sh.
 # For download and integration with Zeus OS / Veyron / Machina (drop the

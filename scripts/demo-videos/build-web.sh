@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build the GuestKit web-dashboard tour + tutorial videos from Playwright
 # recordings (rec-web-tour.mjs, rec-web-tutorial.mjs) + title/caption cards
 # (render-cards-web.mjs).

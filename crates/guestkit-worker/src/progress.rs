@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Progress tracking and reporting
 
 use guestkit_job_spec::ProgressEvent;

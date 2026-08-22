@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Pre-snapshot hook: flush PostgreSQL if local postgres service is active.
 set -eu
 if systemctl is-active --quiet postgresql.service 2>/dev/null \

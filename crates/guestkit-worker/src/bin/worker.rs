@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Guestkit Worker CLI
 //!
 //! Command-line interface for the guestkit-worker distributed job processing system.

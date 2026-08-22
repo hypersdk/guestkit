@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Security test suite for GuestKit
 //!
 //! Tests for path traversal, command injection, symlink attacks,

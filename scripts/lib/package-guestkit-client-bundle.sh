@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # shellcheck shell=bash
 # Assemble GuestKit customer tarball layout (shared by remote pack and GitHub release).
 #

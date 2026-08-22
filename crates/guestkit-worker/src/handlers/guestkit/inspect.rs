@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Guestkit inspect handler - VM disk inspection
 
 use async_trait::async_trait;

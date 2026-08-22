@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Job transport layer - pluggable job sources
 
 use async_trait::async_trait;
