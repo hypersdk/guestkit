@@ -48,34 +48,34 @@ Score boot readiness **before** power-on. Generate reviewable fix plans. Repair 
 <table>
 <tr>
 <td width="50%" align="center">
-<a href="https://www.youtube.com/watch?v=LYoqOye3P3I">
-<img src="docs/img/machina-guestkit-demo-thumb.jpg" alt="Machina × GuestKit live guest-agent UX" width="100%">
-</a>
-<br><b>Machina × GuestKit</b><br>
-<sub>Live Linux guest agent — health, TRIM, netplan, services</sub>
-</td>
-<td width="50%" align="center">
 <a href="https://www.youtube.com/watch?v=lLEBQoFceIs">
 <img src="https://i.ytimg.com/vi/lLEBQoFceIs/maxresdefault.jpg" alt="GuestKit CLI and TUI demo" width="100%">
+<br><b>▶ CLI &amp; TUI</b>
 </a>
-<br><b>CLI &amp; TUI</b><br>
-<sub>Offline VM intelligence, explained</sub>
+<br><sub>Offline VM intelligence, explained</sub>
+</td>
+<td width="50%" align="center">
+<a href="https://www.youtube.com/watch?v=usQX2rQIFM8">
+<img src="https://i.ytimg.com/vi/usQX2rQIFM8/maxresdefault.jpg" alt="GuestKit web dashboard overview" width="100%">
+<br><b>▶ Web Dashboard — Overview</b>
+</a>
+<br><sub>Server Image Vault, live KubeVirt cluster</sub>
 </td>
 </tr>
 <tr>
 <td width="50%" align="center">
-<a href="https://www.youtube.com/watch?v=usQX2rQIFM8">
-<img src="https://i.ytimg.com/vi/usQX2rQIFM8/maxresdefault.jpg" alt="GuestKit web dashboard tour" width="100%">
+<a href="https://www.youtube.com/watch?v=icTLVko588A">
+<img src="https://i.ytimg.com/vi/icTLVko588A/maxresdefault.jpg" alt="GuestKit web dashboard deep dive" width="100%">
+<br><b>▶ Web Dashboard — Deep Dive</b>
 </a>
-<br><b>Web Dashboard Tour</b><br>
-<sub>Server Image Vault, live KubeVirt cluster</sub>
+<br><sub>Sources, live cluster, one-click intelligence</sub>
 </td>
 <td width="50%" align="center">
-<a href="https://www.youtube.com/watch?v=icTLVko588A">
-<img src="https://i.ytimg.com/vi/icTLVko588A/maxresdefault.jpg" alt="GuestKit web dashboard tutorial" width="100%">
+<a href="https://www.youtube.com/watch?v=LYoqOye3P3I">
+<img src="docs/img/machina-guestkit-demo-thumb.jpg" alt="Machina × GuestKit live guest-agent UX" width="100%">
+<br><b>▶ Machina × GuestKit</b>
 </a>
-<br><b>Web Dashboard Tutorial</b><br>
-<sub>Sources, live cluster, one-click intelligence</sub>
+<br><sub>Live Linux guest agent — health, TRIM, netplan, services</sub>
 </td>
 </tr>
 </table>
