@@ -257,7 +257,18 @@ See [CONTRIBUTING](docs/development/CONTRIBUTING.md) and CI under `.github/workf
 
 ## Enterprise & support
 
-Looking for enterprise support, managed deployments, or additional features on top of the community edition? Visit **[zyvor.dev](https://zyvor.dev)** — see [docs/zyvor-enterprise.md](docs/zyvor-enterprise.md) for what's included and how to get in touch.
+GuestKit ships as a **full open-source stack** — CLI, TUI, Python bindings, and a self-hosted web platform. Enterprise is about support, scale programs, and hardened deployments, not withholding features from this repo.
+
+| | Open source (this repo) | Enterprise ([zyvor.dev](https://zyvor.dev/?utm_source=github&utm_medium=guestkit)) |
+|---|------------------------|-------------------------------------------------------------------------------------|
+| **Support** | GitHub Issues & Discussions | SLA, migration workshops, professional services |
+| **Typical use** | Lab, CI gates, single-VM / small-fleet assurance | VMware exit programs, 100+ VM migrations, regulated / air-gapped rollouts |
+| **CLI / TUI / Python / Web console** | ✅ full stack, self-hosted | Same codebase + priority fixes, hardened reference architectures |
+| **KubeVirt / Zeus / platform pipeline** | ✅ API routes, guest agent, use alongside [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | Fleet-scale Zeus OS programs, full managed pipeline (HyperSDK → hyper2kvm → GuestKit → v9s → PacketWolf) |
+
+Enterprise adds contractual SLA/escalation, air-gapped deployment packages, and partner/MSP programs — not missing OSS features. Full comparison: [docs/ce-vs-enterprise.md](docs/ce-vs-enterprise.md) · what's included: [docs/zyvor-enterprise.md](docs/zyvor-enterprise.md).
+
+Looking for enterprise support, managed deployments, or additional features on top of the community edition? Visit **[zyvor.dev](https://zyvor.dev)**.
 
 ---
 
