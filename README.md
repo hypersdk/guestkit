@@ -205,6 +205,7 @@ open http://localhost:8088
 - Full offline **doctor**, migrate-plan, repair, fleet, policy  
 - CLI · TUI · Python · self-hosted web/workers  
 - GitHub Action Passport gate  
+- Free `zyvor-ui` Image Vault dock  
 - Best for labs, CI, and small fleets  
 
 </td>
@@ -214,8 +215,12 @@ open http://localhost:8088
 **[zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)**
 
 - Same engine — **not** a locked doctor  
-- **Command Center** · Image Vault · Migration Factory  
-- **Passport Authority** · reports · SSO / RBAC / audit  
+- **Command Center** · Portfolio · Assurance  
+- **Image Vault** (inspect/doctor/repair/migrate-plan, sources, batch, launch YAML, agent)  
+- **Migration Factory** · **Passport Authority** (+ JSON download)  
+- Dependencies · Policies · Compliance · **Reports** (JSON/CSV)  
+- **Sites & Workers** · **KubeVirt** · Integrations · **Copilot** · Admin  
+- OIDC / RBAC / audit · mobile console · command palette  
 - SLA · air-gap · **hypervisor exit** workshops  
 - Pipeline: HyperSDK → hyper2kvm → GuestKit → **Zeus OS** → PacketWolf  
 
@@ -226,7 +231,7 @@ open http://localhost:8088
 > **One failed first-boot weekend costs more than the license.**  
 > Enterprise turns offline scores into shared, gated decisions your board can fund.
 
-**[Full compare →](docs/ce-vs-enterprise.md)** · **[What Zyvor sells →](docs/zyvor-enterprise.md)** · **[Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo)** · **[Pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit)** · [sales@zyvor.dev](mailto:sales@zyvor.dev)
+**[Full feature matrix (every screen) →](docs/ce-vs-enterprise.md)** · **[What Zyvor sells →](docs/zyvor-enterprise.md)** · **[Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo)** · **[Pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit)** · [sales@zyvor.dev](mailto:sales@zyvor.dev)
 
 ---
 

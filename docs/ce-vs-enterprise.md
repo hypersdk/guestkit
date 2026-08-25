@@ -1,76 +1,100 @@
 # Open source vs Enterprise (Zyvor)
 
-**GuestKit (this repo)** is the full Apache-2.0 **offline disk engine** — CLI, TUI, Python, Passport emit, CI Action, and a self-hosted web/worker stack. It answers *will this disk boot?* and *what must change before cutover?* without powering on the guest.
+**GuestKit (this repo)** is the full Apache-2.0 **offline disk engine**.  
+**GuestKit Enterprise** is Zyvor’s commercial **migration control plane** — every Command Center screen below — calling the **same** `guestkit doctor` evidence. Not a forked binary. Not a feature hostage.
 
-**GuestKit Enterprise** is Zyvor’s commercial **migration control plane**: Command Center, portfolio, Image Vault (with free UX parity), Migration Factory, Passport Authority, OIDC/RBAC/audit, reports, KubeVirt inventory, and worker fabric. It calls **this** engine through the same `guestkit doctor` / job boundary — it does **not** fork the binary or withhold OSS features.
+Product: [zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit) · [Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo) · [sales@zyvor.dev](mailto:sales@zyvor.dev)
 
-| | Open source (this repo) | GuestKit Enterprise |
+---
+
+## Full capability matrix
+
+### Positioning
+
+| Capability | Open source (this repo) | GuestKit Enterprise |
 | --- | --- | --- |
-| **Buy when…** | You need proven offline assurance & CI gates | You run a **migration program** (waves, SSO, audit, shared Command Center) |
-| **Support** | GitHub Issues & Discussions | SLA · [sales@zyvor.dev](mailto:sales@zyvor.dev) · workshops · professional services |
-| **Typical scale** | Lab, CI, single-VM / small fleet | hypervisor exit, 50–10,000+ VMs, multi-site ops |
-| **CLI / TUI / Python** | ✅ Full | ✅ Same engine + priority fixes |
-| **doctor / migrate-plan / repair / Passport emit** | ✅ | ✅ Same evidence via workers / adapter |
-| **Free web (`zyvor-ui`) + workers** | ✅ Self-hosted GHCR / Helm | Enterprise **Command Center** (includes vault dock + program screens) |
-| **Program ops** | Scripts / fleet helpers | ✅ Portfolio · waves · Passport Authority · Copilot · reports |
-| **Auth** | Configure JWT / OIDC yourself | ✅ Reference Keycloak OIDC · RBAC · audit stream |
-| **Deploy** | Containers / Helm | ✅ Hardened reference + k3s / air-gap packs |
-| **Platform pipeline** | Pair with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | Full Zyvor pipeline: HyperSDK → hyper2kvm → GuestKit → Zeus OS → PacketWolf |
+| What you get | Offline disk engine | Migration **operating system** on that engine |
+| Who it is for | Engineers, CI, labs, small fleets | Platform / SRE / migration leads · 50–10,000+ VMs |
+| Success metric | Disk score & Passport JSON | Estate readiness % · wave completion · audit |
+| Support | GitHub Issues | **SLA** · workshops · hypervisor exit programs |
+| Platform pipeline | Pair with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | HyperSDK → hyper2kvm → GuestKit → **Zeus OS** → PacketWolf |
+
+### Offline engine (shared)
+
+| Capability | Open source | Enterprise |
+| --- | --- | --- |
+| `doctor` / `migrate-plan` / repair / harden | ✅ CLI · TUI · Python · zyvor-ui | ✅ Same engine via workers / adapter |
+| Disk formats · boot score 0–100 | ✅ | ✅ Surfaced in Command Center & Image Vault |
+| Passport emit (CLI / `hypersdk/guestkit@v1`) | ✅ | ✅ Keep using + in-product Authority |
+| Fleet / policy-as-code | ✅ | ✅ + control-plane waves & Policies UI |
+| In-guest agent (Linux + Windows) | ✅ | ✅ Online agent doctor / repair in Vault |
+
+### Command Center console (Enterprise)
+
+| Capability | Open source | Enterprise |
+| --- | --- | --- |
+| **Command Center** (KPIs, readiness, velocity, run assessment) | — | ✅ |
+| **Portfolio** (risk-ranked workloads, remediate) | Spreadsheets | ✅ |
+| **Assurance** (blocker workflow) | CLI repair | ✅ |
+| **Migration Factory** (waves, owners, risk, windows) | `fleet wave-plan` | ✅ |
+| **Passport Authority** (issue, certify, score gates, JSON download) | CLI emit | ✅ |
+| **Dependencies** map | Fleet helpers | ✅ |
+| **Policies** catalog | Policy files | ✅ |
+| **Compliance** posture | — | ✅ |
+| **Reports** export (estate JSON + CSV) | CLI exports | ✅ |
+| **Sites & Workers** fabric view | Self-host DIY | ✅ |
+| **KubeVirt** cluster inventory | Free Cluster tab | ✅ |
+| **Integrations** catalog | DIY | ✅ |
+| **Migration Copilot** | Optional CLI AI | ✅ In-console |
+| **Administration** (identity, roles, license) | — | ✅ |
+| Command palette / search | — | ✅ |
+| Mobile console (iOS / Android) | — | ✅ Expo |
+| Light / dark theme | zyvor-ui themes | ✅ |
+
+### Image Vault (disk dock)
+
+| Capability | Open source (`zyvor-ui`) | Enterprise Image Vault |
+| --- | --- | --- |
+| Vault screen under SSO / RBAC | Lab / self-secured | ✅ |
+| Inspect · doctor · repair-plan · migration-plan | ✅ | ✅ + evidence pane |
+| Attach / register `disk_path` (sources) | ✅ | ✅ |
+| Batch doctor | ✅ | ✅ Multi-select + API |
+| Launch / provision YAML (KubeVirt) | ✅ | ✅ |
+| Online agent doctor / repair | ✅ | ✅ |
+| Evidence JSON + plan/YAML panes | ✅ | ✅ |
+
+### Identity · audit · ops
+
+| Capability | Open source | Enterprise |
+| --- | --- | --- |
+| OIDC / SSO (Keycloak reference) | Configure yourself | ✅ Productized |
+| RBAC role gates | DIY | ✅ |
+| Audit stream (assessments, Passports, disk actions) | Limited / DIY | ✅ |
+| Estate assessment job (one-click) | CLI / fleet batch | ✅ |
+| Control-plane API (bootstrap, waves, vault, reports) | OSS API for free UI | ✅ Enterprise API |
+| k3s / customer packaging / hardening docs | GHCR · Helm | ✅ |
+| Air-gapped / disconnected packs | Build yourself | ✅ |
 
 ---
 
-## Why teams upgrade to Enterprise
+## Why teams upgrade
 
-1. **Spreadsheets stop working** — waves, owners, and Passport status need a shared system of record.  
-2. **Security review blocks DIY dashboards** — SSO, RBAC, and audit must be productized.  
-3. **Executives need one readiness number** — Command Center KPIs and exportable reports.  
-4. **Cutover risk is commercial** — SLA and migration workshops put Zyvor on the critical path with you.  
-5. **Engineers keep the tools they trust** — Image Vault still runs inspect / doctor / repair / launch YAML / agent; Enterprise adds program screens around them.
-
-Buyer brief: why upgrade — [zyvor.dev/docs/guestkit#community-vs-enterprise](https://zyvor.dev/docs/guestkit#community-vs-enterprise) · Product: [zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit)
-
----
-
-## Capability depth
-
-### Included in open source (you already have this)
-
-- Pure-Rust offline inspection (no libguestfs appliance)  
-- Boot assurance `doctor` with weighted blockers and `--explain`  
-- Migration plans, repair, harden, fleet analyze / wave-plan helpers  
-- Cutover Passport emit for CI (`hypersdk/guestkit@v1`)  
-- `guestctl` TUI, Python bindings, in-guest agent  
-- Self-hosted `zyvor-ui` / API / worker images  
-
-### Added by GuestKit Enterprise (what you buy)
-
-| Area | Enterprise value |
-| --- | --- |
-| **Command Center** | Estate readiness, blockers, velocity for sponsors |
-| **Image Vault** | Free-dock parity under Enterprise login (sources, batch doctor, evidence pane, launch YAML, online agent) |
-| **Migration Factory** | Named waves, risk, windows, owners |
-| **Passport Authority** | In-product issue / certify + JSON evidence download |
-| **Reports** | Control-plane JSON / CSV export |
-| **KubeVirt screen** | Target cluster inventory for operators |
-| **Identity** | Keycloak OIDC reference, role gates, audit stream |
-| **Worker fabric** | Sites / workers posture; control plane stays out of disk I/O |
-| **Services** | SLA, air-gapped packages, hypervisor exit playbooks, partner/MSP programs |
+1. Spreadsheets stop working for waves and Passports  
+2. Security blocks DIY dashboards — need SSO + audit  
+3. Executives need one readiness number and exportable reports  
+4. Cutover risk is commercial — SLA and workshops  
+5. Engineers keep doctor / vault — Enterprise wraps them in program ops  
 
 ---
 
 ## When to stay on open source
 
-- Proving `doctor` quality on a handful of disks  
-- CI / golden-image gates only  
-- Lab and personal tooling  
+CI / golden-image gates · lab evaluation · small fleets owned by one engineer.
 
 ## When to contact Zyvor
 
-- Hypervisor exit with program governance  
-- Regulated environments needing SSO + audit  
-- Multi-site cutovers with shared deadlines  
-- You want contractual accountability, not only GitHub Issues  
+Hypervisor exit with program governance · regulated SSO/audit · multi-site cutovers · contractual accountability.
 
-**→ [Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo)** · **[sales@zyvor.dev](mailto:sales@zyvor.dev)** · **[zyvor.dev/pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit)**
+**→ [Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo)** · **[Pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit)** · **[sales@zyvor.dev](mailto:sales@zyvor.dev)**
 
-See also: [zyvor-enterprise.md](zyvor-enterprise.md) · [Production checklist](guides/DOCKER.md#production-checklist)
+See also: [zyvor-enterprise.md](zyvor-enterprise.md) · live table on [zyvor.dev/guestkit#enterprise](https://zyvor.dev/guestkit#enterprise)
