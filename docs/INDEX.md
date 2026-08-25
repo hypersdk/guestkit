@@ -53,7 +53,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 
 | Guide | Description |
 |-------|-------------|
-| [Open source vs Enterprise](ce-vs-enterprise.md) | GitHub vs production platform |
+| [Open source vs Enterprise](ce-vs-enterprise.md) | OSS engine vs GuestKit Enterprise control plane |
 | [Enterprise guide](zyvor-enterprise.md) | Sales, SLAs, full HyperSDK suite |
 
 ## Examples

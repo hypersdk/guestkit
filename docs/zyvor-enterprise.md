@@ -39,6 +39,7 @@ One pipeline from export to operations — **one API, one operating model**:
 
 ## Enterprise features (via Zyvor)
 
+- **GuestKit Enterprise control plane** — Command Center UX, multi-site portfolio, Migration Factory, Passport Authority, OIDC/RBAC/audit (calls this OSS engine; does not fork it)  
 - VMware exit & multi-cloud migration programs  
 - Air-gapped / disconnected deployments  
 - SOC2-ready controls, RBAC/SSO, audit logging  
@@ -49,9 +50,11 @@ One pipeline from export to operations — **one API, one operating model**:
 
 Contact **sales@zyvor.dev** or [zyvor.dev/contact](https://zyvor.dev/contact) when you need:
 
-- Enterprise licensing or support contracts (not GitHub Issues)  
+- GuestKit Enterprise control plane or support contracts (not GitHub Issues)  
 - 100+ VM migrations or regulated-environment rollouts  
 - Integrated platform features (dashboard, multi-tenant ops, full provider matrix)  
 - Demos, architecture reviews, or migration planning workshops  
+
+Product overview: **[zyvor.dev/guestkit](https://zyvor.dev/guestkit)** · comparison: [ce-vs-enterprise.md](ce-vs-enterprise.md)
 
 Community bugs and contributions stay on [GitHub Issues](https://github.com/hypersdk/guestkit/issues).
