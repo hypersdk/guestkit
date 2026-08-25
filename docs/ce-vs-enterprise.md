@@ -8,14 +8,14 @@
 | --- | --- | --- |
 | **Buy when…** | You need proven offline assurance & CI gates | You run a **migration program** (waves, SSO, audit, shared Command Center) |
 | **Support** | GitHub Issues & Discussions | SLA · [sales@zyvor.dev](mailto:sales@zyvor.dev) · workshops · professional services |
-| **Typical scale** | Lab, CI, single-VM / small fleet | VMware exit, 50–10,000+ VMs, multi-site ops |
+| **Typical scale** | Lab, CI, single-VM / small fleet | hypervisor exit, 50–10,000+ VMs, multi-site ops |
 | **CLI / TUI / Python** | ✅ Full | ✅ Same engine + priority fixes |
 | **doctor / migrate-plan / repair / Passport emit** | ✅ | ✅ Same evidence via workers / adapter |
 | **Free web (`zyvor-ui`) + workers** | ✅ Self-hosted GHCR / Helm | Enterprise **Command Center** (includes vault dock + program screens) |
 | **Program ops** | Scripts / fleet helpers | ✅ Portfolio · waves · Passport Authority · Copilot · reports |
 | **Auth** | Configure JWT / OIDC yourself | ✅ Reference Keycloak OIDC · RBAC · audit stream |
 | **Deploy** | Containers / Helm | ✅ Hardened reference + k3s / air-gap packs |
-| **Platform pipeline** | Pair with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | Full Zyvor pipeline: HyperSDK → hyper2kvm → GuestKit → v9s → PacketWolf |
+| **Platform pipeline** | Pair with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) | Full Zyvor pipeline: HyperSDK → hyper2kvm → GuestKit → Zeus OS → PacketWolf |
 
 ---
 
@@ -54,7 +54,7 @@ Buyer brief: why upgrade — [zyvor.dev/docs/guestkit#community-vs-enterprise](h
 | **KubeVirt screen** | Target cluster inventory for operators |
 | **Identity** | Keycloak OIDC reference, role gates, audit stream |
 | **Worker fabric** | Sites / workers posture; control plane stays out of disk I/O |
-| **Services** | SLA, air-gapped packages, VMware exit playbooks, partner/MSP programs |
+| **Services** | SLA, air-gapped packages, hypervisor exit playbooks, partner/MSP programs |
 
 ---
 

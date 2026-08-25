@@ -25,7 +25,7 @@ This repository ships the open-source **GuestKit** toolkit — the offline disk 
 | --- | --- | --- |
 | Prove a disk will boot offline | ✅ `doctor` | ✅ same scores in Command Center / Image Vault |
 | Gate CI with Passports | ✅ Action + CLI | ✅ same evidence + in-product Passport Authority |
-| Run a multi-wave VMware exit | Scripts / Excel | ✅ Migration Factory + portfolio |
+| Run a multi-wave hypervisor exit | Scripts / Excel | ✅ Migration Factory + portfolio |
 | SSO / RBAC / audit for change boards | DIY | ✅ Keycloak reference + audit stream |
 | One console for execs and operators | Free `zyvor-ui` (lab) | ✅ Command Center + free-dock parity |
 | Vendor SLA on cutover programs | Community Issues | ✅ Zyvor SLA, workshops, air-gap packs |
@@ -42,7 +42,7 @@ One pipeline from export to operations — **one API, one operating model**:
 | [GuestKit Enterprise](https://zyvor.dev/guestkit#enterprise) | Migration control plane: Command Center, waves, Passport Authority, OIDC |
 | [hyper2kvm](https://zyvor.dev/hyper2kvm) | Conversion, VirtIO/boot fixes, validation — consumes Passport-ready images |
 | [HyperSDK Platform](https://zyvor.dev/hypersdk) | Multi-cloud VM export (10+ providers), APIs, scheduling |
-| [v9s](https://zyvor.dev/v9s) | KubeVirt & VM fleet operations on Kubernetes |
+| [Zeus OS](https://zyvor.dev/zeus-os) | Visual infrastructure OS — KubeVirt fleet & day-2 ops |
 | [PacketWolf](https://zyvor.dev/packetwolf) | eBPF network observability |
 | [VMRogue](https://zyvor.dev/vmrogue) | Image & disk build pipeline |
 | [Aether](https://zyvor.dev/aether) | Deploy & workload runtime |
@@ -55,7 +55,7 @@ One pipeline from export to operations — **one API, one operating model**:
 ## Enterprise features (via Zyvor)
 
 - **GuestKit Enterprise control plane** — Command Center, multi-site portfolio, Image Vault (free UX parity), Migration Factory, Passport Authority, reports export, KubeVirt inventory, OIDC/RBAC/audit  
-- VMware exit & multi-cloud migration programs  
+- hypervisor exit & multi-cloud migration programs  
 - Air-gapped / disconnected deployments  
 - SOC2-ready controls, RBAC/SSO, audit logging  
 - SLA options, professional services, partner/MSP programs  
