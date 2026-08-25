@@ -5,6 +5,8 @@
 
 Product: [zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit) · [Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo) · [sales@zyvor.dev](mailto:sales@zyvor.dev)
 
+**30-day Enterprise trial (binary):** [v1.0.0-enterprise-trial](https://github.com/hypersdk/guestkit/releases/tag/v1.0.0-enterprise-trial) · [install guide](enterprise-trial-install.md)
+
 ---
 
 ## Full capability matrix
