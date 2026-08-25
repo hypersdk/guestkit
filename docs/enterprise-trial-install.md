@@ -3,7 +3,7 @@
 Try the **commercial control plane** (Command Center, Migration Factory, Passport Authority, Image Vault, SSO/RBAC) before you buy.
 
 This is **not** the Apache-2.0 offline CLI in this repo (`cargo install guestkit` stays free forever).  
-The evaluation package is a signed binary release attached to this repository.
+The evaluation package is a self-contained compiled binary attached to this repository — no source, no Node.js required.
 
 **Download:** [Latest Enterprise trial release](https://github.com/hypersdk/guestkit/releases?q=enterprise-trial) · tag `v*-enterprise-trial`
 
@@ -14,8 +14,8 @@ The evaluation package is a signed binary release attached to this repository.
 | Requirement | Notes |
 |---|---|
 | OS / arch | Linux x86_64 (amd64) |
-| Node.js | **22.13+** (install.sh can provision via nvm) |
-| Disk | ~500 MB free for deps |
+| Node.js | Not required — `bin/guestkit-enterprise-api` is a self-contained executable |
+| Disk | ~100 MB |
 | Docker | Optional — only for Keycloak SSO |
 
 ---
@@ -55,7 +55,7 @@ curl -s -X POST http://127.0.0.1:4000/api/v1/auth/local \
   -d '{"username":"demo","password":"demo"}'
 ```
 
-Console (dev): `npm run dev` → http://HOST:8081
+Console: `cd console && python3 -m http.server 8081` → http://HOST:8081
 
 ---
 
@@ -63,11 +63,12 @@ Console (dev): `npm run dev` → http://HOST:8081
 
 | File | Purpose |
 |---|---|
-| `install.sh` | Install Node deps and start the API |
+| `install.sh` | Start the API (no deps to install) |
 | `trial.token` | Signed 30-day evaluation license |
 | `INSTALL.md` / `QUICKSTART.txt` | In-archive copy of these steps |
 | `AFTER-TRIAL.md` | What happens after expiry |
-| `apps/` · `services/api/` | Enterprise console + control-plane API |
+| `bin/guestkit-enterprise-api` | Compiled control-plane API (self-contained) |
+| `console/` | Static console build (`expo export --platform web`) |
 | `uninstall.sh` | Clean removal |
 
 ---
