@@ -19,6 +19,7 @@
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="https://github.com/hypersdk/guestkit/wiki"><b>Wiki</b></a> ·
   <a href="docs/ce-vs-enterprise.md"><b>Open source vs Enterprise</b></a> ·
+  <a href="docs/enterprise-trial-install.md"><b>30-day Enterprise trial</b></a> ·
   <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo"><b>Book a demo</b></a>
 </p>
 
@@ -230,6 +231,16 @@ open http://localhost:8088
 
 > **One failed first-boot weekend costs more than the license.**  
 > Enterprise turns offline scores into shared, gated decisions your board can fund.
+
+### 30-day Enterprise trial (binary)
+
+Try the control plane before you buy — same packaging pattern as Veyron:
+
+1. Download the **trial** asset from [GitHub Releases](https://github.com/hypersdk/guestkit/releases?q=enterprise-trial) (`guestkit-enterprise-*-trial-linux-amd64.tar.gz`)
+2. Verify the `.sha256`, extract, run `./install.sh`
+3. Keep bundled `trial.token` next to the install — after 30 days email **sales@zyvor.dev**
+
+**[Full install instructions →](docs/enterprise-trial-install.md)**
 
 **[Full feature matrix (every screen) →](docs/ce-vs-enterprise.md)** · **[What Zyvor sells →](docs/zyvor-enterprise.md)** · **[Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo)** · **[Pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=guestkit)** · [sales@zyvor.dev](mailto:sales@zyvor.dev)
 
