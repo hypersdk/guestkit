@@ -257,7 +257,7 @@ _Install in one command; run the full open-source stack; scale with Enterprise s
 - **Helm & remote deploy** — A Helm chart for clusters plus scripted remote deploy for Docker hosts. — _Ship it where your fleet already lives._
   - **How:** Cluster: `helm install` the chart (provisions Postgres/Redis/MinIO); for Docker hosts use the scripted remote deploy under `scripts/`.
 - **Full open-source stack** — CLI, TUI, Python bindings, assurance APIs, web console, and KubeVirt hooks are all Apache-2.0 in the repo - Enterprise adds support, not features. — _Nothing core is withheld from the open source._
-  - **How:** Clone the repo (`git clone https://github.com/ssahani/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
+  - **How:** Clone the repo (`git clone https://github.com/hypersdk/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
 - **Enterprise programs** — SLA, air-gapped deployment packages, guided playbooks, and fleet automation for 100+ VM and regulated migrations. — _Backed help for VMware-exit programs at scale._
   - **How:** Contact the account team at info@zyvor.dev for SLA, air-gapped packages, guided playbooks and fleet automation.
 

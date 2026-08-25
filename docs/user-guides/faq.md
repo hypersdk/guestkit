@@ -104,7 +104,7 @@ cargo install guestkit
 
 **From source:**
 ```bash
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 cargo build --release
 sudo cp target/release/guestkit /usr/local/bin/
@@ -502,7 +502,7 @@ See [API Reference](../api/rust-reference.md) for complete list.
 
 ```bash
 # 1. Fork repository
-gh repo fork ssahani/guestkit
+gh repo fork hypersdk/guestkit
 
 # 2. Clone your fork
 git clone https://github.com/YOUR_USERNAME/guestkit
@@ -630,8 +630,8 @@ sudo guestkit inspect vm.qcow2
 ### Is there commercial support?
 
 **Community support:**
-- GitHub Issues: https://github.com/ssahani/guestkit/issues
-- GitHub Discussions: https://github.com/ssahani/guestkit/discussions
+- GitHub Issues: https://github.com/hypersdk/guestkit/issues
+- GitHub Discussions: https://github.com/hypersdk/guestkit/discussions
 
 **Commercial support:** Contact ssahani@vmware.com for enterprise support options.
 
@@ -683,8 +683,8 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 1. **Documentation:** Start with [Getting Started Guide](getting-started.md)
 2. **FAQ:** This document
-3. **GitHub Discussions:** https://github.com/ssahani/guestkit/discussions
-4. **GitHub Issues:** https://github.com/ssahani/guestkit/issues (for bugs)
+3. **GitHub Discussions:** https://github.com/hypersdk/guestkit/discussions
+4. **GitHub Issues:** https://github.com/hypersdk/guestkit/issues (for bugs)
 5. **Email:** ssahani@vmware.com (for private inquiries)
 
 ### How do I report a bug?
@@ -718,7 +718,7 @@ Documentation contributions welcome!
 
 ```bash
 # Clone repo
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit/docs
 
 # Edit documentation
@@ -736,15 +736,15 @@ gh pr create --title "Docs: Improve my-guide"
 - [Windows Support](windows-support.md) - Windows-specific features
 - [Best Practices](best-practices.md) - Expert recommendations
 - [Troubleshooting](troubleshooting.md) - Problem resolution
-- [GitHub Repository](https://github.com/ssahani/guestkit)
-- [Issue Tracker](https://github.com/ssahani/guestkit/issues)
+- [GitHub Repository](https://github.com/hypersdk/guestkit)
+- [Issue Tracker](https://github.com/hypersdk/guestkit/issues)
 
 ## Still Have Questions?
 
 If your question isn't answered here:
-1. Search [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
-2. Search [GitHub Issues](https://github.com/ssahani/guestkit/issues)
-3. Ask in [new Discussion](https://github.com/ssahani/guestkit/discussions/new)
-4. For bugs, [create Issue](https://github.com/ssahani/guestkit/issues/new)
+1. Search [GitHub Discussions](https://github.com/hypersdk/guestkit/discussions)
+2. Search [GitHub Issues](https://github.com/hypersdk/guestkit/issues)
+3. Ask in [new Discussion](https://github.com/hypersdk/guestkit/discussions/new)
+4. For bugs, [create Issue](https://github.com/hypersdk/guestkit/issues/new)
 
 We're here to help! 🚀

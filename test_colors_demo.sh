@@ -48,7 +48,7 @@ fn main() {
     emphasis("All features working!");
 
     thick_separator();
-    dimmed("GuestKit v0.3.0 - https://github.com/ssahani/guestkit");
+    dimmed("GuestKit v0.3.0 - https://github.com/hypersdk/guestkit");
 }
 EOF
 

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ssahani/guestkit/actions/workflows/ci.yml"><img src="https://github.com/ssahani/guestkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml"><img src="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://crates.io/crates/guestkit"><img src="https://img.shields.io/crates/v/guestkit.svg" alt="crates.io"></a>
   <a href="https://pypi.org/project/hypersdk-guestkit/"><img src="https://img.shields.io/pypi/v/hypersdk-guestkit.svg" alt="PyPI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache-2.0"></a>
