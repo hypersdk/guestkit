@@ -73,38 +73,76 @@ guestkit version
 <li><a href="pages/README.md">Page guides</a></li>
 </ul>
 <hr>
-<p>GuestKit is organized by navigation groups (sidebar, desktop nav, or CLI command groups). Use search / command palette when available.</p>
+<p>GuestKit is primarily <strong>CLI + TUI</strong>, with an optional web Image Vault.</p>
 <h2>Surfaces</h2>
 <table>
 <thead>
 <tr>
-<th>Need</th>
 <th>Surface</th>
+<th>How to open</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Inspect</td>
-<td><code>guestkit inspect</code></td>
+<td><strong>CLI</strong></td>
+<td><code>guestkit &lt;cmd&gt;</code> / <code>guestctl &lt;cmd&gt;</code></td>
 </tr>
 <tr>
+<td><strong>TUI</strong></td>
+<td><code>guestctl tui IMAGE</code> (aliases: <code>guestkit tui</code>, <code>guestkit ui</code>)</td>
+</tr>
+<tr>
+<td><strong>Interactive REPL</strong></td>
+<td><code>guestkit interactive IMAGE</code></td>
+</tr>
+<tr>
+<td><strong>File explorer</strong></td>
+<td><code>guestkit explore IMAGE [/path]</code></td>
+</tr>
+<tr>
+<td><strong>Optional web</strong></td>
+<td>GHCR compose → <code>http://&lt;host&gt;:8088</code></td>
+</tr>
+</tbody></table>
+<h2>TUI keys (Assurance)</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>d</code></td>
 <td>Doctor</td>
-<td><code>guestkit doctor</code></td>
 </tr>
 <tr>
-<td>Fix plans</td>
-<td>fix-plans / repair</td>
+<td><code>t</code></td>
+<td>Cycle migration target</td>
 </tr>
 <tr>
-<td>TUI</td>
-<td><code>guestctl</code></td>
+<td><code>p</code></td>
+<td>Preview plan</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td>Export plan</td>
+</tr>
+<tr>
+<td><code>:</code></td>
+<td>Command palette</td>
+</tr>
+<tr>
+<td><code>h</code> / <code>?</code></td>
+<td>Help</td>
 </tr>
 </tbody></table>
 <h2>Browse vs act</h2>
-<p>Inventory and status views are safe to explore. Mutating actions (deploy, migrate, sign, remediate) follow role gates and confirmation dialogs — review impact first.</p>
+<p>Inspect / doctor / export are safe. <strong>Repair</strong>, <strong>plan apply</strong>, and <strong>rescue</strong> mutate disks — shut down the guest, dry-run first, keep a backup.</p>
 <h2>Related</h2>
 <ul>
 <li><a href="getting-started.md">Getting Started</a></li>
-<li><a href="pages/README.md">Page-by-page guides</a></li>
+<li><a href="pages/interfaces/tui.md">TUI</a></li>
+<li><a href="workflows.md">Common workflows</a></li>
 </ul>
 <hr>
 <p>End-to-end GuestKit jobs. Prefer CLI; optional TUI / web where noted.</p>
