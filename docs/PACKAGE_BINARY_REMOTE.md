@@ -32,8 +32,8 @@ See [deploy/README.md](../deploy/README.md) for k3s deploy and CI E2E.
 **Remote Linux host:**
 
 ```bash
-./scripts/package-binary-remote.sh 212.8.252.194 sus --fetch
-./scripts/package-binary-remote.sh 212.8.252.194 sus --reuse-build --skip-deps
+./scripts/package-binary-remote.sh <ephemeral-ip> operator --fetch
+./scripts/package-binary-remote.sh <ephemeral-ip> operator --reuse-build --skip-deps
 ```
 
 **Local / CI** (after `cargo build --release` on Linux):
