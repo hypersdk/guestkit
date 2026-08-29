@@ -6,25 +6,33 @@ Profiles — Profiles surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Profiles** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `profiles`
-- Nav: **Profiles → Profiles** (sidebar, command palette, or desktop nav)
+- Doc id: `profiles`
+- Nav: **Profiles → Profiles**
+- Primary interface: `guestkit inspect IMAGE --profile NAME` · `plan generate -p …`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `profiles` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit inspect IMAGE --profile NAME` · `plan generate -p …`.
+2. Inspect profiles: security, migration, performance, compliance, hardening, windows-migration.
+3. `-o json` / `--export html|markdown`.
+4. Day-0: `plan generate` with windows-rdp / linux-ssh.
+5. Automate over fleet with shell loop.
+6. `--cache-refresh` when needed.
+7. **Empty / fail:** Unknown profile name.
+8. **Success:** Profile sections + risk_level / inventory.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Inspect](../inspection/inspect.md)
+- [Fix Plans](../fix-plans/fix-plans.md)
+- [Export Formats](../export/export-formats.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -6,25 +6,35 @@ VM Migration Guide — Guides surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **VM Migration Guide** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `vm-migration`
-- Nav: **Guides → VM Migration Guide** (sidebar, command palette, or desktop nav)
+- Doc id: `vm-migration`
+- Nav: **Guides → VM Migration Guide**
+- Primary interface: CLI assurance-first workflow (+ hyper2kvm convert)
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `vm-migration` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. CLI assurance-first workflow (+ hyper2kvm convert).
+2. Convert if needed: `guestkit convert` / `qemu-img`.
+3. `doctor --target … --explain`.
+4. `migrate-plan --export`.
+5. `repair --fix boot` / `migrate-repair --apply`.
+6. Windows VirtIO via `GUESTKIT_VIRTIO_WIN`.
+7. `passport emit/verify` then convert/boot on target.
+8. **Empty / fail:** Boot fail post-cutover → fstab/GRUB/VirtIO; never write while guest running.
+9. **Success:** Doctor high enough; passport verifies; first boot on target.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Migration Assurance](../assurance/migration-assurance.md)
+- [Doctor](../assurance/doctor.md)
+- [Migration Plan](../assurance/migrate-plan.md)
+- [Repair](../fix-plans/repair.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

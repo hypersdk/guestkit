@@ -6,25 +6,33 @@ Fleet — Fleet surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Fleet** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `fleet`
-- Nav: **Fleet → Fleet** (sidebar, command palette, or desktop nav)
+- Doc id: `fleet`
+- Nav: **Fleet → Fleet**
+- Primary interface: `guestkit fleet analyze|wave-plan|watch DIR` · TUI `--fleet DIR`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `fleet` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit fleet analyze|wave-plan|watch DIR` · TUI `--fleet DIR`.
+2. `fleet analyze ./vms/ [--recursive -j 4]`.
+3. `fleet wave-plan ./vms/ -o json`.
+4. `fleet watch ./vms/` (first run = baseline).
+5. Later: `watch --fail-on-drift` in cron.
+6. TUI: `guestctl tui one.qcow2 --fleet ./vms/`.
+7. **Empty / fail:** Empty dir / no disk formats.
+8. **Success:** Clusters/snowflakes/blockers; waves; watch reports drift or clean.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Doctor](../assurance/doctor.md)
+- [Forensic Diff](../forensics/forensic-diff.md)
+- [Migration Assurance](../assurance/migration-assurance.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

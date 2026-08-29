@@ -24,7 +24,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
 <h1>Guest<span>Kit</span></h1>
 <div class="sub">Page-by-Page Product Manual</div>
-<div class="badge">2026-07-26</div>
+<div class="badge">2026-08-29</div>
 <div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
 <main><h2>Page-by-page guides</h2>
 <p>Each guide follows: Purpose → When to use it → How to get there → What you can do → Related pages.</p>
@@ -279,25 +279,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Doctor — Assurance surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Doctor</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>doctor</code></li>
-<li>Nav: <strong>Assurance → Doctor</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>doctor</code></li>
+<li>Nav: <strong>Assurance → Doctor</strong></li>
+<li>Primary interface: <code>guestkit doctor IMAGE</code> · TUI Assurance <code>d</code> · web Passport</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>doctor</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit doctor IMAGE</code> · TUI Assurance <code>d</code> · web Passport.</li>
+<li><code>guestkit doctor vm.qcow2 --target kvm|proxmox|kubevirt|aws…</code>.</li>
+<li><code>--explain</code> for root-cause.</li>
+<li><code>-o json --fail-below 80</code> for CI.</li>
+<li>TUI: Assurance or <code>: doctor</code>.</li>
+<li>Fix blockers → re-run doctor.</li>
+<li><strong>Empty / fail:</strong> Low score + blockers until repaired; mount failures abort.</li>
+<li><strong>Success:</strong> Score 0–100; exit 0 if above <code>--fail-below</code>.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="migrate-plan.md">Migration Plan</a></li>
+<li><a href="../fix-plans/repair.md">Repair</a></li>
+<li><a href="migration-assurance.md">Migration Assurance</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -307,25 +315,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Migration Plan — Assurance surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Migration Plan</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>migrate-plan</code></li>
-<li>Nav: <strong>Assurance → Migration Plan</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>migrate-plan</code></li>
+<li>Nav: <strong>Assurance → Migration Plan</strong></li>
+<li>Primary interface: <code>guestkit migrate-plan IMAGE --target …</code> · TUI <code>e</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>migrate-plan</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit migrate-plan IMAGE --target …</code> · TUI <code>e</code>.</li>
+<li><code>guestkit migrate-plan IMAGE --target proxmox</code>.</li>
+<li><code>--explain</code> / <code>-o json</code>.</li>
+<li><code>--export plan.yaml</code> for FixPlan.</li>
+<li>Optional <code>--inject-agent</code>.</li>
+<li>Follow with migrate-assess / migrate-repair; TUI: <code>t</code>/<code>p</code>/<code>e</code>.</li>
+<li><strong>Empty / fail:</strong> Missing <code>--target</code>; Windows VirtIO gaps need <code>GUESTKIT_VIRTIO_WIN</code>.</li>
+<li><strong>Success:</strong> Migration score + checklist; YAML plan if exported.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="doctor.md">Doctor</a></li>
+<li><a href="../fix-plans/fix-plans.md">Fix Plans</a></li>
+<li><a href="../guides/vm-migration.md">VM Migration Guide</a></li>
+<li><a href="migration-assurance.md">Migration Assurance</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -335,25 +352,36 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Migration Assurance — Assurance surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Migration Assurance</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>migration-assurance</code></li>
-<li>Nav: <strong>Assurance → Migration Assurance</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>migration-assurance</code></li>
+<li>Nav: <strong>Assurance → Migration Assurance</strong></li>
+<li>Primary interface: doctor → plan → policy → passport → fleet</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>migration-assurance</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>doctor → plan → policy → passport → fleet.</li>
+<li><code>doctor --explain</code>.</li>
+<li><code>migrate-plan --export</code>.</li>
+<li><code>inspect --profile windows-migration</code> if Windows.</li>
+<li><code>policy check</code>.</li>
+<li><code>passport emit … -o passport.json</code> then <code>passport verify --fail-below 80</code>.</li>
+<li>Fleet: <code>fleet analyze</code> / <code>wave-plan</code>.</li>
+<li><strong>Empty / fail:</strong> Verify fails below threshold → repair then re-emit; BitLocker hard-block.</li>
+<li><strong>Success:</strong> Passport verify exit 0; doctor score acceptable for target.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="doctor.md">Doctor</a></li>
+<li><a href="migrate-plan.md">Migration Plan</a></li>
+<li><a href="policy.md">Policy Gate</a></li>
+<li><a href="../fleet/fleet.md">Fleet</a></li>
+<li><a href="../guides/vm-migration.md">VM Migration Guide</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -363,25 +391,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Policy Gate — Assurance surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Policy Gate</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>policy</code></li>
-<li>Nav: <strong>Assurance → Policy Gate</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>policy</code></li>
+<li>Nav: <strong>Assurance → Policy Gate</strong></li>
+<li>Primary interface: <code>guestkit policy check IMAGE</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>policy</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit policy check IMAGE</code>.</li>
+<li><code>policy check IMAGE --example-policy</code>.</li>
+<li><code>policy check IMAGE --policy FILE.yaml</code>.</li>
+<li>Or <code>--benchmark cis</code>.</li>
+<li><code>-f json -o report.json</code>.</li>
+<li>Gate pipelines on non-zero / <code>--strict</code>; pair with passport verify.</li>
+<li><strong>Empty / fail:</strong> Missing policy file; expressions fail if evidence fields absent.</li>
+<li><strong>Success:</strong> Pass/fail per rule; JSON report written.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="doctor.md">Doctor</a></li>
+<li><a href="migration-assurance.md">Migration Assurance</a></li>
+<li><a href="../fleet/fleet.md">Fleet</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -391,25 +427,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Export Formats — Export surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Export Formats</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>export-formats</code></li>
-<li>Nav: <strong>Export → Export Formats</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>export-formats</code></li>
+<li>Nav: <strong>Export → Export Formats</strong></li>
+<li>Primary interface: <code>--output</code> vs <code>--export</code> on inspect; plan export; passport JSON</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>export-formats</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>--output</code> vs <code>--export</code> on inspect; plan export; passport JSON.</li>
+<li>Data: <code>inspect -o json|yaml|csv</code>.</li>
+<li>Docs: <code>--export html|markdown|pdf --export-output PATH</code>.</li>
+<li>Plans: <code>plan export plan.yaml -f bash -o fix.sh</code>.</li>
+<li>Assurance: <code>migrate-plan --export</code>, <code>passport emit -o</code>.</li>
+<li>TUI view export / web Passport download.</li>
+<li><strong>Empty / fail:</strong> Missing <code>--export-output</code>; PDF may need Chrome/wkhtmltopdf.</li>
+<li><strong>Success:</strong> File opens (HTML) or validates (JSON/YAML).</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../profiles/profiles.md">Profiles</a></li>
+<li><a href="../fix-plans/fix-plans.md">Fix Plans</a></li>
+<li><a href="../assurance/migration-assurance.md">Migration Assurance</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -419,25 +464,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Fix Plans — Fix Plans surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Fix Plans</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>fix-plans</code></li>
-<li>Nav: <strong>Fix Plans → Fix Plans</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>fix-plans</code></li>
+<li>Nav: <strong>Fix Plans → Fix Plans</strong></li>
+<li>Primary interface: <code>guestkit plan …</code> · export from migrate-plan/repair</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>fix-plans</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit plan …</code> · export from migrate-plan/repair.</li>
+<li><code>plan generate IMAGE -p linux-ssh|windows-rdp|… -o plan.yaml</code>.</li>
+<li><code>plan preview plan.yaml</code> (<code>--diff</code>).</li>
+<li><code>plan validate plan.yaml --vm IMAGE</code>.</li>
+<li><code>plan apply plan.yaml --vm IMAGE --yes</code>.</li>
+<li><code>plan export</code> to bash/ansible; <code>plan rollback</code> if needed.</li>
+<li><strong>Empty / fail:</strong> Apply refused without backup unless <code>--skip-backup</code>.</li>
+<li><strong>Success:</strong> Preview lists ops; apply reports success; doctor improves.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="repair.md">Repair</a></li>
+<li><a href="../assurance/migrate-plan.md">Migration Plan</a></li>
+<li><a href="../profiles/profiles.md">Profiles</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -447,25 +500,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Repair — Fix Plans surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Repair</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>repair</code></li>
-<li>Nav: <strong>Fix Plans → Repair</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>repair</code></li>
+<li>Nav: <strong>Fix Plans → Repair</strong></li>
+<li>Primary interface: <code>guestkit repair</code> · <code>rescue</code> · <code>migrate-repair</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>repair</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit repair</code> · <code>rescue</code> · <code>migrate-repair</code>.</li>
+<li><code>repair IMAGE --fix boot --dry-run</code>.</li>
+<li><code>repair IMAGE --fix boot</code> (apply + re-doctor).</li>
+<li>Day-0: <code>rescue IMAGE -o enable-ssh|fix-grub|reset-password…</code>.</li>
+<li>Migration: <code>migrate-repair IMAGE --target kvm [--apply --yes]</code>.</li>
+<li>Prefer dry-run → backup → apply.</li>
+<li><strong>Empty / fail:</strong> Dry-run only = no disk change; NTFS dirty → ntfsfix first.</li>
+<li><strong>Success:</strong> Doctor score rises; rescue op applied.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="fix-plans.md">Fix Plans</a></li>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -475,25 +536,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Fleet — Fleet surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Fleet</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>fleet</code></li>
-<li>Nav: <strong>Fleet → Fleet</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>fleet</code></li>
+<li>Nav: <strong>Fleet → Fleet</strong></li>
+<li>Primary interface: <code>guestkit fleet analyze|wave-plan|watch DIR</code> · TUI <code>--fleet DIR</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>fleet</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit fleet analyze|wave-plan|watch DIR</code> · TUI <code>--fleet DIR</code>.</li>
+<li><code>fleet analyze ./vms/ [--recursive -j 4]</code>.</li>
+<li><code>fleet wave-plan ./vms/ -o json</code>.</li>
+<li><code>fleet watch ./vms/</code> (first run = baseline).</li>
+<li>Later: <code>watch --fail-on-drift</code> in cron.</li>
+<li>TUI: <code>guestctl tui one.qcow2 --fleet ./vms/</code>.</li>
+<li><strong>Empty / fail:</strong> Empty dir / no disk formats.</li>
+<li><strong>Success:</strong> Clusters/snowflakes/blockers; waves; watch reports drift or clean.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../forensics/forensic-diff.md">Forensic Diff</a></li>
+<li><a href="../assurance/migration-assurance.md">Migration Assurance</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -503,25 +572,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Forensic Diff — Forensics surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Forensic Diff</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>forensic-diff</code></li>
-<li>Nav: <strong>Forensics → Forensic Diff</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>forensic-diff</code></li>
+<li>Nav: <strong>Forensics → Forensic Diff</strong></li>
+<li>Primary interface: <code>guestkit forensic-diff OLD NEW</code> · <code>diff</code> / <code>compare</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>forensic-diff</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit forensic-diff OLD NEW</code> · <code>diff</code> / <code>compare</code>.</li>
+<li>Snapshot before/after.</li>
+<li><code>forensic-diff before.qcow2 after.qcow2</code>.</li>
+<li><code>-o json</code> for drift score.</li>
+<li>Lighter: <code>guestkit diff a b</code>.</li>
+<li>Fleet continuous: <code>fleet watch</code>.</li>
+<li><strong>Empty / fail:</strong> Identical images → low drift; mount fail on either side.</li>
+<li><strong>Success:</strong> Drift findings / security indicators JSON.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../fleet/fleet.md">Fleet</a></li>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../profiles/profiles.md">Profiles</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -531,25 +608,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Guest Agent — Guest Agent surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Guest Agent</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>guest-agent</code></li>
-<li>Nav: <strong>Guest Agent → Guest Agent</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>guest-agent</code></li>
+<li>Nav: <strong>Guest Agent → Guest Agent</strong></li>
+<li>Primary interface: Build <code>--features agent</code>; inject offline; proxy on host</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>guest-agent</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Build <code>--features agent</code>; inject offline; proxy on host.</li>
+<li><code>cargo build --release --features agent --target x86_64-unknown-linux-musl</code>.</li>
+<li><code>guestkit agent-inject IMAGE --agent-binary …</code>.</li>
+<li>Boot guest; <code>guestkit agent-proxy --socket … --listen 127.0.0.1:8765</code>.</li>
+<li><code>curl /ping</code> <code>/doctor</code> <code>/evidence</code>.</li>
+<li>Or <code>guestkit agent-call --socket … --method guestkit.getEvidence</code>.</li>
+<li><strong>Empty / fail:</strong> No channel → missing virtio-serial/QGA; Windows needs virtio-serial driver.</li>
+<li><strong>Success:</strong> <code>/ping</code> OK; RPC returns doctor JSON.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../guest-files/guest-control-fabric.md">Guest Control Fabric</a></li>
+<li><a href="../integration/kubevirt-integration.md">KubeVirt Integration</a></li>
+<li><a href="../fix-plans/repair.md">Repair</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -559,25 +644,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Guest Files — Guest Files surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Guest Files</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>files</code></li>
-<li>Nav: <strong>Guest Files → Guest Files</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>files</code></li>
+<li>Nav: <strong>Guest Files → Guest Files</strong></li>
+<li>Primary interface: <code>list|ls</code>, <code>cat</code>, <code>extract|get</code>, <code>search|find</code>, <code>explore</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>files</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>list|ls</code>, <code>cat</code>, <code>extract|get</code>, <code>search|find</code>, <code>explore</code>.</li>
+<li><code>guestkit ls disk.qcow2 /etc</code>.</li>
+<li><code>guestkit cat disk.qcow2 /etc/fstab</code>.</li>
+<li><code>guestkit extract disk.qcow2 /etc/hostname ./hostname.txt</code>.</li>
+<li><code>guestkit find disk.qcow2 &#39;*.conf&#39;</code>.</li>
+<li>Multi-step: <code>interactive</code> or <code>explore</code>; backup: <code>guestkit backup IMAGE -o out.tar.gz</code>.</li>
+<li><strong>Empty / fail:</strong> Path missing → wrong mount/root; permission → sudo/NBD.</li>
+<li><strong>Success:</strong> Listing/content/extracted file on host.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../onboarding/interactive-mode.md">Interactive Mode</a></li>
+<li><a href="../interfaces/tui.md">TUI (guestctl)</a></li>
+<li><a href="../inspection/filesystems.md">Filesystems</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -587,25 +680,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Guest Control Fabric — Guest Files surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Guest Control Fabric</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>guest-control-fabric</code></li>
-<li>Nav: <strong>Guest Files → Guest Control Fabric</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>guest-control-fabric</code></li>
+<li>Nav: <strong>Guest Files → Guest Control Fabric</strong></li>
+<li>Primary interface: Web/API via zyvor-api KubeVirt guest routes</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>guest-control-fabric</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Web/API via zyvor-api KubeVirt guest routes.</li>
+<li>Deploy API+UI (compose/Helm).</li>
+<li><code>GET .../guest/status</code> → control state.</li>
+<li><code>GET .../guest/capabilities</code> → transport.</li>
+<li>Live: <code>POST .../guest/doctor</code> or agent-proxy.</li>
+<li>Airgap: <code>POST .../guest/install-agent</code>; halted VM: <code>POST .../guest/repair-plan</code>.</li>
+<li><strong>Empty / fail:</strong> <code>console_only</code>/<code>blind_vm</code> → install QGA/agent or stop VM for offline path.</li>
+<li><strong>Success:</strong> Envelope with transport, controlState, ok:true.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
+<li><a href="../integration/kubevirt-integration.md">KubeVirt Integration</a></li>
+<li><a href="../integration/zeus-vm-tools.md">Zeus VM Tools</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -615,25 +716,35 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>VM Migration Guide — Guides surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>VM Migration Guide</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>vm-migration</code></li>
-<li>Nav: <strong>Guides → VM Migration Guide</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>vm-migration</code></li>
+<li>Nav: <strong>Guides → VM Migration Guide</strong></li>
+<li>Primary interface: CLI assurance-first workflow (+ hyper2kvm convert)</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>vm-migration</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>CLI assurance-first workflow (+ hyper2kvm convert).</li>
+<li>Convert if needed: <code>guestkit convert</code> / <code>qemu-img</code>.</li>
+<li><code>doctor --target … --explain</code>.</li>
+<li><code>migrate-plan --export</code>.</li>
+<li><code>repair --fix boot</code> / <code>migrate-repair --apply</code>.</li>
+<li>Windows VirtIO via <code>GUESTKIT_VIRTIO_WIN</code>.</li>
+<li><code>passport emit/verify</code> then convert/boot on target.</li>
+<li><strong>Empty / fail:</strong> Boot fail post-cutover → fstab/GRUB/VirtIO; never write while guest running.</li>
+<li><strong>Success:</strong> Doctor high enough; passport verifies; first boot on target.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../assurance/migration-assurance.md">Migration Assurance</a></li>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../assurance/migrate-plan.md">Migration Plan</a></li>
+<li><a href="../fix-plans/repair.md">Repair</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -643,25 +754,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Filesystems — Inspection surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Filesystems</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>filesystems</code></li>
-<li>Nav: <strong>Inspection → Filesystems</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>filesystems</code></li>
+<li>Nav: <strong>Inspection → Filesystems</strong></li>
+<li>Primary interface: <code>guestkit filesystems|fs IMAGE</code> · REPL · TUI Storage</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>filesystems</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit filesystems|fs IMAGE</code> · REPL · TUI Storage.</li>
+<li><code>guestkit filesystems disk.qcow2</code>.</li>
+<li><code>--detailed</code> for types/labels.</li>
+<li>Cross-check <code>guestkit usage|df</code> and <code>check|fsck</code>.</li>
+<li>In REPL: <code>mount</code> root then <code>ls /</code>.</li>
+<li>LVM clues via <code>inspect --profile migration</code>.</li>
+<li><strong>Empty / fail:</strong> Empty partition list → wrong image / need NBD; LUKS needs cryptsetup.</li>
+<li><strong>Success:</strong> Partition/FS list (ext4/xfs + swap).</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="inspect.md">Inspect</a></li>
+<li><a href="../guest-files/files.md">Guest Files</a></li>
+<li><a href="../fix-plans/repair.md">Repair</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -671,25 +790,35 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Inspect — Inspection surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Inspect</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>inspect</code></li>
-<li>Nav: <strong>Inspection → Inspect</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>inspect</code></li>
+<li>Nav: <strong>Inspection → Inspect</strong></li>
+<li>Primary interface: <code>guestkit inspect IMAGE</code> · TUI Overview · web Image Vault</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>inspect</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit inspect IMAGE</code> · TUI Overview · web Image Vault.</li>
+<li><code>guestkit inspect disk.qcow2</code>.</li>
+<li>Add <code>-o json</code> or <code>--summary</code>.</li>
+<li>Depth: <code>--depth quick|standard|deep</code>.</li>
+<li>Flags: <code>--include-packages|--include-services|--include-network</code>.</li>
+<li>Profile: <code>--profile security|migration|performance|windows-migration</code>.</li>
+<li>Batch: <code>inspect-batch *.qcow2 -p 4</code>.</li>
+<li><strong>Empty / fail:</strong> No OS → encrypted/corrupt/empty disk; use filesystems + interactive mount.</li>
+<li><strong>Success:</strong> OS type/distro/hostname + sections (or JSON).</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="filesystems.md">Filesystems</a></li>
+<li><a href="packages.md">Packages</a></li>
+<li><a href="../profiles/profiles.md">Profiles</a></li>
+<li><a href="../export/export-formats.md">Export Formats</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -699,25 +828,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Network Inspect — Inspection surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Network Inspect</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>network</code></li>
-<li>Nav: <strong>Inspection → Network Inspect</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>network</code></li>
+<li>Nav: <strong>Inspection → Network Inspect</strong></li>
+<li>Primary interface: <code>guestkit network IMAGE</code> · REPL · TUI Network</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>network</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit network IMAGE</code> · REPL · TUI Network.</li>
+<li><code>guestkit network disk.qcow2</code>.</li>
+<li><code>--show-interfaces</code> / <code>--show-dns</code> / <code>--show-routes</code>.</li>
+<li><code>--export-json</code>.</li>
+<li>Or <code>inspect --include-network</code>.</li>
+<li>Live: agent-proxy <code>/evidence</code> or KubeVirt guest/network.</li>
+<li><strong>Empty / fail:</strong> No ifaces → cloud-init-only / netplan not parsed.</li>
+<li><strong>Success:</strong> Interfaces + IP/MAC/DHCP + DNS.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="inspect.md">Inspect</a></li>
+<li><a href="../assurance/migrate-plan.md">Migration Plan</a></li>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -727,25 +864,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Packages — Inspection surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Packages</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>packages</code></li>
-<li>Nav: <strong>Inspection → Packages</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>packages</code></li>
+<li>Nav: <strong>Inspection → Packages</strong></li>
+<li>Primary interface: <code>guestkit packages|pkg IMAGE</code> · REPL · TUI Packages</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>packages</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit packages|pkg IMAGE</code> · REPL · TUI Packages.</li>
+<li><code>guestkit packages disk.qcow2</code>.</li>
+<li><code>--filter nginx</code> / <code>--limit 50</code>.</li>
+<li><code>--json</code> for automation.</li>
+<li>Or <code>inspect --include-packages</code>.</li>
+<li>Offline install staging: <code>GUESTKIT_PACKAGE_CACHE</code> + <code>plan apply</code>.</li>
+<li><strong>Empty / fail:</strong> Empty = no package DB / Windows guest / mount failed.</li>
+<li><strong>Success:</strong> Manager + package rows.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="inspect.md">Inspect</a></li>
+<li><a href="../fix-plans/fix-plans.md">Fix Plans</a></li>
+<li><a href="../profiles/profiles.md">Profiles</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -755,25 +900,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Services &amp; Users — Inspection surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Services &amp; Users</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>services-users</code></li>
-<li>Nav: <strong>Inspection → Services &amp; Users</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>services-users</code></li>
+<li>Nav: <strong>Inspection → Services &amp; Users</strong></li>
+<li>Primary interface: <code>guestkit systemd-services IMAGE</code>; users via REPL/inspect; TUI</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>services-users</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit systemd-services IMAGE</code>; users via REPL/inspect; TUI.</li>
+<li><code>guestkit systemd-services disk.qcow2</code> (<code>--failed</code>, <code>--service UNIT</code>).</li>
+<li><code>guestkit systemd-journal</code> / <code>systemd-boot</code> as needed.</li>
+<li>Users: interactive → <code>users</code>, or inspect User Accounts.</li>
+<li>TUI → Services / Users tabs.</li>
+<li><code>inspect --include-services</code>.</li>
+<li><strong>Empty / fail:</strong> Non-systemd OS → sparse services; Windows users via registry inspect.</li>
+<li><strong>Success:</strong> Enabled units listed; users show uid/shell.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="inspect.md">Inspect</a></li>
+<li><a href="../onboarding/interactive-mode.md">Interactive Mode</a></li>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -783,25 +937,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>KubeVirt Integration — Integration surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>KubeVirt Integration</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>kubevirt-integration</code></li>
-<li>Nav: <strong>Integration → KubeVirt Integration</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>kubevirt-integration</code></li>
+<li>Nav: <strong>Integration → KubeVirt Integration</strong></li>
+<li>Primary interface: zyvor-api HTTP + CLI offline on PVC path</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>kubevirt-integration</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>zyvor-api HTTP + CLI offline on PVC path.</li>
+<li>Deploy API with KubeVirt RBAC.</li>
+<li>Stopped VM: <code>GET/POST /api/v1/kubevirt/vms/{ns}/{name}/boot-inspect</code>.</li>
+<li>Or CLI: <code>doctor PVC_PATH --target kubevirt</code>.</li>
+<li>Live: guest/status, guest/doctor, guest/evidence.</li>
+<li>Install agent via guest/install-agent or vmtools.</li>
+<li><strong>Empty / fail:</strong> Running VM → offline inspect skipped; missing PVC path.</li>
+<li><strong>Success:</strong> available:true, source:guestkit, boot fields populated.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../guest-files/guest-control-fabric.md">Guest Control Fabric</a></li>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
+<li><a href="zeus-vm-tools.md">Zeus VM Tools</a></li>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -811,25 +974,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Zeus VM Tools — Integration surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Zeus VM Tools</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>zeus-vm-tools</code></li>
-<li>Nav: <strong>Integration → Zeus VM Tools</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>zeus-vm-tools</code></li>
+<li>Nav: <strong>Integration → Zeus VM Tools</strong></li>
+<li>Primary interface: Package zyvor-vm-tools / zyvor-guest-agent; API <code>/api/v1/vmtools/*</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>zeus-vm-tools</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Package zyvor-vm-tools / zyvor-guest-agent; API <code>/api/v1/vmtools/*</code>.</li>
+<li>Build packages.</li>
+<li><code>POST .../vmtools/install?method=auto|cloud-init|qga|iso</code>.</li>
+<li>Check <code>GET /api/v1/vmtools/coverage</code>.</li>
+<li>Quiesce: <code>.../vmtools/quiesce</code> / unquiesce.</li>
+<li>Exec: <code>.../vmtools/exec</code>; offline: <code>agent-inject</code>.</li>
+<li><strong>Empty / fail:</strong> Coverage 0 → QGA down / no network → use qga file bootstrap.</li>
+<li><strong>Success:</strong> Agent connected; coverage chip; freeze/thaw works.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../guest-agent/guest-agent.md">Guest Agent</a></li>
+<li><a href="kubevirt-integration.md">KubeVirt Integration</a></li>
+<li><a href="../guest-files/guest-control-fabric.md">Guest Control Fabric</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -839,25 +1010,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Python Bindings — Interfaces surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Python Bindings</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>python-bindings</code></li>
-<li>Nav: <strong>Interfaces → Python Bindings</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>python-bindings</code></li>
+<li>Nav: <strong>Interfaces → Python Bindings</strong></li>
+<li>Primary interface: <code>pip install hypersdk-guestkit</code> or <code>maturin develop --features python-bindings</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>python-bindings</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>pip install hypersdk-guestkit</code> or <code>maturin develop --features python-bindings</code>.</li>
+<li><code>from guestkit import Guestfs</code>.</li>
+<li><code>add_drive_ro</code> → <code>launch</code> → <code>inspect_os</code>.</li>
+<li>Mount via <code>inspect_get_mountpoints</code> + <code>mount_ro</code>.</li>
+<li><code>cat</code>/<code>ls</code> as needed.</li>
+<li><code>umount_all</code> + <code>shutdown</code>; see <code>examples/python/</code>.</li>
+<li><strong>Empty / fail:</strong> Import error → wrong package/feature; launch fail → NBD/sudo.</li>
+<li><strong>Success:</strong> Distro/hostname printed; clean shutdown.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../onboarding/cli-guide.md">CLI Guide</a></li>
+<li><a href="../guest-files/files.md">Guest Files</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -867,25 +1046,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>TUI (guestctl) — Interfaces surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>TUI (guestctl)</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>tui</code></li>
-<li>Nav: <strong>Interfaces → TUI (guestctl)</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>tui</code></li>
+<li>Nav: <strong>Interfaces → TUI (guestctl)</strong></li>
+<li>Primary interface: <code>guestctl tui IMAGE</code> · <code>guestkit tui|ui IMAGE</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>tui</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestctl tui IMAGE</code> · <code>guestkit tui|ui IMAGE</code>.</li>
+<li>Open TUI (optional <code>--fleet DIR</code>, <code>--compare OTHER</code>).</li>
+<li><code>{</code>/<code>}</code> groups; Tab views; Ctrl+P jump; <code>:</code> palette.</li>
+<li>Assurance: <code>d</code> doctor, <code>t</code> target, <code>p</code> preview, <code>e</code> export.</li>
+<li>Browse Packages/Services/Users/Network.</li>
+<li>Config <code>~/.config/guestkit/tui.toml</code>; <code>h</code>/<code>?</code> help.</li>
+<li><strong>Empty / fail:</strong> Blank panes → inspect failed (permissions/format); check footer.</li>
+<li><strong>Success:</strong> Dashboard populated; doctor score on Assurance.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../assurance/migrate-plan.md">Migration Plan</a></li>
+<li><a href="../onboarding/interactive-mode.md">Interactive Mode</a></li>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -895,25 +1083,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>CLI Guide — Onboarding surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>CLI Guide</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>cli-guide</code></li>
-<li>Nav: <strong>Onboarding → CLI Guide</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>cli-guide</code></li>
+<li>Nav: <strong>Onboarding → CLI Guide</strong></li>
+<li>Primary interface: <code>guestkit --help</code>; <code>guestkit commands</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>cli-guide</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit --help</code>; <code>guestkit commands</code>.</li>
+<li><code>guestkit commands</code> for catalog.</li>
+<li>Inspect group: inspect, filesystems, packages, network.</li>
+<li>Assurance: doctor, migrate-plan, passport, policy, fleet.</li>
+<li>Plans: <code>plan generate|preview|apply|rollback</code>.</li>
+<li>Rescue: <code>rescue -o …</code>; prefer <code>-o json</code> / <code>--fail-below</code> for CI.</li>
+<li><strong>Empty / fail:</strong> Unknown subcommand → <code>guestkit commands</code>; feature-gated cmds need <code>--features agent|ai|mcp</code>.</li>
+<li><strong>Success:</strong> Help lists groups; sample inspect returns text/JSON.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="quick-reference.md">Quick Reference</a></li>
+<li><a href="interactive-mode.md">Interactive Mode</a></li>
+<li><a href="../export/export-formats.md">Export Formats</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -923,25 +1119,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Getting Started — Onboarding surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Getting Started</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>getting-started</code></li>
-<li>Nav: <strong>Onboarding → Getting Started</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>getting-started</code></li>
+<li>Nav: <strong>Onboarding → Getting Started</strong></li>
+<li>Primary interface: CLI first-hour; optional web <code>:8088</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>getting-started</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>CLI first-hour; optional web <code>:8088</code>.</li>
+<li>Install: <code>cargo install guestkit</code> or release binary.</li>
+<li>Confirm deps: <code>qemu-img --version</code>.</li>
+<li><code>guestkit doctor vm.qcow2 --target kvm --explain</code>.</li>
+<li><code>guestkit migrate-plan vm.vmdk --target kvm --export plan.yaml</code>.</li>
+<li>Optional: <code>guestctl tui vm.qcow2</code> or GHCR compose → <code>:8088</code>.</li>
+<li><strong>Empty / fail:</strong> Missing qemu-img/NBD → install qemu-utils; permission denied → sudo or <code>modprobe nbd</code>.</li>
+<li><strong>Success:</strong> Doctor prints 0–100 score + blockers; <code>guestkit version</code> works.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="quick-reference.md">Quick Reference</a></li>
+<li><a href="cli-guide.md">CLI Guide</a></li>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../interfaces/tui.md">TUI (guestctl)</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -951,25 +1156,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Interactive Mode — Onboarding surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Interactive Mode</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>interactive-mode</code></li>
-<li>Nav: <strong>Onboarding → Interactive Mode</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>interactive-mode</code></li>
+<li>Nav: <strong>Onboarding → Interactive Mode</strong></li>
+<li>Primary interface: <code>guestkit interactive|repl|shell IMAGE</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>interactive-mode</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit interactive|repl|shell IMAGE</code>.</li>
+<li>Launch REPL (one mount).</li>
+<li><code>info</code> → <code>filesystems</code> → <code>mount /dev/… /</code>.</li>
+<li><code>ls</code> / <code>cat</code> / <code>find</code> / <code>download</code>.</li>
+<li><code>packages</code> / <code>services</code> / <code>users</code> / <code>network</code>.</li>
+<li>Optional <code>explore</code>; then <code>exit</code>.</li>
+<li><strong>Empty / fail:</strong> <code>ls /etc</code> empty usually means unmounted — run <code>mount</code>; launch fail → NBD/loop/permissions.</li>
+<li><strong>Success:</strong> Welcome shows detected OS; packages/users return lists.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../guest-files/files.md">Guest Files</a></li>
+<li><a href="../interfaces/tui.md">TUI (guestctl)</a></li>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../inspection/packages.md">Packages</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -979,25 +1193,34 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Quick Reference — Onboarding surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Quick Reference</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>quick-reference</code></li>
-<li>Nav: <strong>Onboarding → Quick Reference</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>quick-reference</code></li>
+<li>Nav: <strong>Onboarding → Quick Reference</strong></li>
+<li>Primary interface: Cheat sheet — CLI / TUI keys</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>quick-reference</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Cheat sheet — CLI / TUI keys.</li>
+<li><code>guestkit inspect disk.qcow2</code>.</li>
+<li><code>guestkit doctor IMAGE --target kvm</code>.</li>
+<li><code>guestkit migrate-plan IMAGE --target proxmox --export plan.yaml</code>.</li>
+<li><code>guestkit rescue IMAGE -o enable-ssh</code> / <code>fix-grub</code>.</li>
+<li><code>guestctl tui IMAGE</code> → <code>d</code>/<code>t</code>/<code>p</code>/<code>e</code>.</li>
+<li><strong>Empty / fail:</strong> No OS found → check filesystems; wrong format → detect/info.</li>
+<li><strong>Success:</strong> Inspect shows OS/hostname; doctor score present.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="cli-guide.md">CLI Guide</a></li>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../assurance/doctor.md">Doctor</a></li>
+<li><a href="../interfaces/tui.md">TUI (guestctl)</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -1007,25 +1230,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Profiles — Profiles surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Profiles</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>profiles</code></li>
-<li>Nav: <strong>Profiles → Profiles</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>profiles</code></li>
+<li>Nav: <strong>Profiles → Profiles</strong></li>
+<li>Primary interface: <code>guestkit inspect IMAGE --profile NAME</code> · <code>plan generate -p …</code></li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>profiles</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li><code>guestkit inspect IMAGE --profile NAME</code> · <code>plan generate -p …</code>.</li>
+<li>Inspect profiles: security, migration, performance, compliance, hardening, windows-migration.</li>
+<li><code>-o json</code> / <code>--export html|markdown</code>.</li>
+<li>Day-0: <code>plan generate</code> with windows-rdp / linux-ssh.</li>
+<li>Automate over fleet with shell loop.</li>
+<li><code>--cache-refresh</code> when needed.</li>
+<li><strong>Empty / fail:</strong> Unknown profile name.</li>
+<li><strong>Success:</strong> Profile sections + risk_level / inventory.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="../inspection/inspect.md">Inspect</a></li>
+<li><a href="../fix-plans/fix-plans.md">Fix Plans</a></li>
+<li><a href="../export/export-formats.md">Export Formats</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -1035,25 +1266,33 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>FAQ — Support surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>FAQ</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>faq</code></li>
-<li>Nav: <strong>Support → FAQ</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>faq</code></li>
+<li>Nav: <strong>Support → FAQ</strong></li>
+<li>Primary interface: Reference answers; commands embedded</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>faq</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Reference answers; commands embedded.</li>
+<li>Install: <code>cargo install guestkit</code>.</li>
+<li>Not libguestfs — use GuestKit stack.</li>
+<li>Passport vs virt-v2v: certify then convert.</li>
+<li>Extract/list/rescue examples as in FAQ.</li>
+<li>Cache under <code>~/.cache/guestkit/</code>; escalate with version + repro.</li>
+<li><strong>Empty / fail:</strong> N/A (doc); point to troubleshooting for runtime.</li>
+<li><strong>Success:</strong> Reader can run cited command successfully.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="troubleshooting.md">Troubleshooting</a></li>
+<li><a href="../onboarding/getting-started.md">Getting Started</a></li>
+<li><a href="../guides/vm-migration.md">VM Migration Guide</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
@@ -1063,32 +1302,40 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <p>Troubleshooting — Support surface.</p>
 <h3>When to use it</h3>
 <ul>
-<li>Open this surface when the job matches the purpose above</li>
-<li>Start from the product home / dashboard if you are unsure where to begin</li>
-<li>Confirm auth and that required backends/operators are reachable if data looks empty</li>
+<li>Operate <strong>Troubleshooting</strong> when your job matches this surface</li>
+<li>Prefer dry-run / doctor before mutating repairs on disks</li>
+<li>Shut down the guest before write operations</li>
 </ul>
 <h3>How to get there</h3>
 <ul>
-<li>Route / id: <code>troubleshooting</code></li>
-<li>Nav: <strong>Support → Troubleshooting</strong> (sidebar, command palette, or desktop nav)</li>
+<li>Doc id: <code>troubleshooting</code></li>
+<li>Nav: <strong>Support → Troubleshooting</strong></li>
+<li>Primary interface: Ops runbook — CLI diagnostics</li>
 </ul>
-<h3>What you can do</h3>
+<h3>Operate from CLI / TUI (UX)</h3>
 <ol>
-<li>Open <code>troubleshooting</code> and wait for live data from GuestKit.</li>
-<li>Use filters and search when the page provides them.</li>
-<li>Drill into a row or card for detail, then jump to related surfaces.</li>
-<li>For mutating actions: review impact, role gates, and confirmation dialogs first.</li>
+<li>Ops runbook — CLI diagnostics.</li>
+<li><code>guestkit -v inspect …</code> / <code>RUST_LOG=debug</code>.</li>
+<li>NBD: <code>modprobe nbd</code>; <code>qemu-nbd --disconnect</code>.</li>
+<li>Loop: <code>losetup -D</code>.</li>
+<li><code>qemu-img check IMAGE</code>.</li>
+<li>Container: privileged + <code>/dev/nbd*</code>; gather version + uname + lsmod.</li>
+<li><strong>Empty / fail:</strong> Persistent device busy → disconnect all nbd / reboot.</li>
+<li><strong>Success:</strong> Same failing command succeeds after fix.</li>
 </ol>
-<p>If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.</p>
+<p>Host needs Linux + <code>qemu-img</code> / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.</p>
 <h3>Related pages</h3>
 <ul>
+<li><a href="faq.md">FAQ</a></li>
+<li><a href="../onboarding/getting-started.md">Getting Started</a></li>
+<li><a href="../inspection/filesystems.md">Filesystems</a></li>
 <li><a href="../../getting-started.md">Getting Started</a></li>
 <li><a href="../../PAGE_INDEX.md">Page index</a></li>
 </ul>
 <hr>
 <h2>GuestKit — Complete page index</h2>
 <p>Every primary navigable dashboard route.</p>
-<p><em>Generated: 2026-07-26 · 29 routes</em></p>
+<p><em>Generated: 2026-08-29 · 29 routes</em></p>
 <p>Regenerate: <code>node scripts/customer-docs/generate-page-index.mjs</code></p>
 <h3>Onboarding</h3>
 <table>

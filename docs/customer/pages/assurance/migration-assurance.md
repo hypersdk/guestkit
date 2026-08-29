@@ -6,25 +6,36 @@ Migration Assurance — Assurance surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Migration Assurance** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `migration-assurance`
-- Nav: **Assurance → Migration Assurance** (sidebar, command palette, or desktop nav)
+- Doc id: `migration-assurance`
+- Nav: **Assurance → Migration Assurance**
+- Primary interface: doctor → plan → policy → passport → fleet
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `migration-assurance` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. doctor → plan → policy → passport → fleet.
+2. `doctor --explain`.
+3. `migrate-plan --export`.
+4. `inspect --profile windows-migration` if Windows.
+5. `policy check`.
+6. `passport emit … -o passport.json` then `passport verify --fail-below 80`.
+7. Fleet: `fleet analyze` / `wave-plan`.
+8. **Empty / fail:** Verify fails below threshold → repair then re-emit; BitLocker hard-block.
+9. **Success:** Passport verify exit 0; doctor score acceptable for target.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Doctor](doctor.md)
+- [Migration Plan](migrate-plan.md)
+- [Policy Gate](policy.md)
+- [Fleet](../fleet/fleet.md)
+- [VM Migration Guide](../guides/vm-migration.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -6,25 +6,33 @@ Python Bindings — Interfaces surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Python Bindings** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `python-bindings`
-- Nav: **Interfaces → Python Bindings** (sidebar, command palette, or desktop nav)
+- Doc id: `python-bindings`
+- Nav: **Interfaces → Python Bindings**
+- Primary interface: `pip install hypersdk-guestkit` or `maturin develop --features python-bindings`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `python-bindings` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `pip install hypersdk-guestkit` or `maturin develop --features python-bindings`.
+2. `from guestkit import Guestfs`.
+3. `add_drive_ro` → `launch` → `inspect_os`.
+4. Mount via `inspect_get_mountpoints` + `mount_ro`.
+5. `cat`/`ls` as needed.
+6. `umount_all` + `shutdown`; see `examples/python/`.
+7. **Empty / fail:** Import error → wrong package/feature; launch fail → NBD/sudo.
+8. **Success:** Distro/hostname printed; clean shutdown.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Inspect](../inspection/inspect.md)
+- [CLI Guide](../onboarding/cli-guide.md)
+- [Guest Files](../guest-files/files.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -6,25 +6,34 @@ Interactive Mode — Onboarding surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Interactive Mode** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `interactive-mode`
-- Nav: **Onboarding → Interactive Mode** (sidebar, command palette, or desktop nav)
+- Doc id: `interactive-mode`
+- Nav: **Onboarding → Interactive Mode**
+- Primary interface: `guestkit interactive|repl|shell IMAGE`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `interactive-mode` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit interactive|repl|shell IMAGE`.
+2. Launch REPL (one mount).
+3. `info` → `filesystems` → `mount /dev/… /`.
+4. `ls` / `cat` / `find` / `download`.
+5. `packages` / `services` / `users` / `network`.
+6. Optional `explore`; then `exit`.
+7. **Empty / fail:** `ls /etc` empty usually means unmounted — run `mount`; launch fail → NBD/loop/permissions.
+8. **Success:** Welcome shows detected OS; packages/users return lists.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Guest Files](../guest-files/files.md)
+- [TUI (guestctl)](../interfaces/tui.md)
+- [Inspect](../inspection/inspect.md)
+- [Packages](../inspection/packages.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

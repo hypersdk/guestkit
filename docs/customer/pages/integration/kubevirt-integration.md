@@ -6,25 +6,34 @@ KubeVirt Integration — Integration surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **KubeVirt Integration** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `kubevirt-integration`
-- Nav: **Integration → KubeVirt Integration** (sidebar, command palette, or desktop nav)
+- Doc id: `kubevirt-integration`
+- Nav: **Integration → KubeVirt Integration**
+- Primary interface: zyvor-api HTTP + CLI offline on PVC path
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `kubevirt-integration` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. zyvor-api HTTP + CLI offline on PVC path.
+2. Deploy API with KubeVirt RBAC.
+3. Stopped VM: `GET/POST /api/v1/kubevirt/vms/{ns}/{name}/boot-inspect`.
+4. Or CLI: `doctor PVC_PATH --target kubevirt`.
+5. Live: guest/status, guest/doctor, guest/evidence.
+6. Install agent via guest/install-agent or vmtools.
+7. **Empty / fail:** Running VM → offline inspect skipped; missing PVC path.
+8. **Success:** available:true, source:guestkit, boot fields populated.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Guest Control Fabric](../guest-files/guest-control-fabric.md)
+- [Guest Agent](../guest-agent/guest-agent.md)
+- [Zeus VM Tools](zeus-vm-tools.md)
+- [Doctor](../assurance/doctor.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

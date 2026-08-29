@@ -6,25 +6,34 @@ Export Formats — Export surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Export Formats** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `export-formats`
-- Nav: **Export → Export Formats** (sidebar, command palette, or desktop nav)
+- Doc id: `export-formats`
+- Nav: **Export → Export Formats**
+- Primary interface: `--output` vs `--export` on inspect; plan export; passport JSON
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `export-formats` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `--output` vs `--export` on inspect; plan export; passport JSON.
+2. Data: `inspect -o json|yaml|csv`.
+3. Docs: `--export html|markdown|pdf --export-output PATH`.
+4. Plans: `plan export plan.yaml -f bash -o fix.sh`.
+5. Assurance: `migrate-plan --export`, `passport emit -o`.
+6. TUI view export / web Passport download.
+7. **Empty / fail:** Missing `--export-output`; PDF may need Chrome/wkhtmltopdf.
+8. **Success:** File opens (HTML) or validates (JSON/YAML).
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Inspect](../inspection/inspect.md)
+- [Profiles](../profiles/profiles.md)
+- [Fix Plans](../fix-plans/fix-plans.md)
+- [Migration Assurance](../assurance/migration-assurance.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

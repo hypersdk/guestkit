@@ -6,25 +6,34 @@ Getting Started — Onboarding surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Getting Started** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `getting-started`
-- Nav: **Onboarding → Getting Started** (sidebar, command palette, or desktop nav)
+- Doc id: `getting-started`
+- Nav: **Onboarding → Getting Started**
+- Primary interface: CLI first-hour; optional web `:8088`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `getting-started` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. CLI first-hour; optional web `:8088`.
+2. Install: `cargo install guestkit` or release binary.
+3. Confirm deps: `qemu-img --version`.
+4. `guestkit doctor vm.qcow2 --target kvm --explain`.
+5. `guestkit migrate-plan vm.vmdk --target kvm --export plan.yaml`.
+6. Optional: `guestctl tui vm.qcow2` or GHCR compose → `:8088`.
+7. **Empty / fail:** Missing qemu-img/NBD → install qemu-utils; permission denied → sudo or `modprobe nbd`.
+8. **Success:** Doctor prints 0–100 score + blockers; `guestkit version` works.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Quick Reference](quick-reference.md)
+- [CLI Guide](cli-guide.md)
+- [Doctor](../assurance/doctor.md)
+- [TUI (guestctl)](../interfaces/tui.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)
