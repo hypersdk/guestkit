@@ -2,12 +2,12 @@
 
 <p align="center">
   <a href="https://zyvor.dev/">
-    <img src="img/zyvor-logo.webp" alt="Zyvor AI Labs" width="220">
+    <img src="img/zyvor-logo.webp" alt="Zyvor" width="220">
   </a>
 </p>
 
 This repository ships the open-source **GuestKit** toolkit — the offline disk engine buyers evaluate first.  
-**GuestKit Enterprise** is the commercial **migration control plane** that runs the program on top of this engine. For production migrations, SLAs, and the full platform, contact **[Zyvor AI Labs](https://zyvor.dev/)**.
+**GuestKit Enterprise** is the commercial **migration control plane** that runs the program on top of this engine. For production migrations, SLAs, and the full platform, contact **[Zyvor](https://zyvor.dev/)**.
 
 ## Contact Zyvor
 
