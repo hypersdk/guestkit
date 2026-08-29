@@ -94,7 +94,7 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
   - **How:** CLI: `guestkit migrate-plan vm.vmdk --target proxmox` (add `-o json` to capture the checklist). Targets include kvm, proxmox, qemu, aws, azure, gcp, cloud, hyperv.
 - **CI boot gate** — --fail-below sets an exit-code threshold so pipelines block any image that scores under your bar, JSON still emitted. — _Golden images that regress never reach production._
   - **How:** CLI: `guestkit doctor img.qcow2 --target proxmox -o json --fail-below 80` exits non-zero when the score drops below your bar while still emitting JSON.
-- **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). HyperSDK exports; hyper2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
+- **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). Transiva exports; h2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
   - **How:** CLI: `guestkit passport emit vm.qcow2 --target kvm -o passport.json` then `guestkit passport verify passport.json --fail-below 80`. Web dock: **Passport**.
 - **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, DHCP/DNS, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
   - **How:** CLI: `guestkit plan generate win.qcow2 -p windows-domain-leave`, `-p windows-timezone --timezone UTC`, `-p windows-static-ip --interface-guid … --ip … --mask …`, `-p windows-dhcp` / `-p windows-dns`.
@@ -233,10 +233,10 @@ _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web con
   - **How:** Apply a `VMToolsPolicy` resource (or enable it from the web console) to auto-install/upgrade the KubeVirt guest agent via cloud-init, QGA, ISO or airgap path.
 - **Web console** — Self-hosted zyvor-ui + zyvor-api + guestkit-worker ship as public GHCR images and a Helm chart, backed by a Redis job queue. — _A team-facing UI over the same engine._
   - **How:** Browse to http://localhost:8088 and sign in with `admin` / `Admin@321` (change immediately). The nginx front-end proxies `/api/` to zyvor-api.
-- **Python bindings** — hypersdk-guestkit on PyPI exposes a libguestfs-style Guestfs API (100+ methods) for programmatic inspection. — _Automate disk inspection from Python._
+- **Python bindings** — zyvorai-guestkit on PyPI exposes a libguestfs-style Guestfs API (100+ methods) for programmatic inspection. — _Automate disk inspection from Python._
   - **How:** Python: `from guestkit import Guestfs` then `g = Guestfs(); g.add_drive("vm.qcow2"); g.launch(); g.inspect_os()` — a libguestfs-style API with 100+ methods.
-- **hyper2kvm pipeline** — Pairs with hyper2kvm for VMware-to-KVM conversion, sitting in the wider HyperSDK to GuestKit to v9s to PacketWolf flow. — _One assurance gate inside a full migration pipeline._
-  - **How:** Run hyper2kvm for the VMware-to-KVM conversion and call `guestkit doctor`/`migrate-plan` as the assurance gate in the same pipeline.
+- **h2kvm pipeline** — Pairs with h2kvm for VMware-to-KVM conversion, sitting in the wider Transiva to GuestKit to v9s to PacketWolf flow. — _One assurance gate inside a full migration pipeline._
+  - **How:** Run h2kvm for the VMware-to-KVM conversion and call `guestkit doctor`/`migrate-plan` as the assurance gate in the same pipeline.
 - **Pluggable auth** — The web stack supports JWT, local login, and OIDC/SAML hooks with JWKS-verified ID tokens. — _Wire the console into your existing identity._
   - **How:** Web console: go to **Settings** to enable OIDC/SAML (JWKS-verified ID tokens) or keep JWT/local login; rotate the seeded password and `JWT_SECRET` first.
 - **KubeVirt manifest generation** — Emits ready-to-apply DataVolume and VirtualMachine YAML with CDI import URLs, storage class, and CPU/memory sized from the migration plan. — _From disk image to running KubeVirt VM in one manifest._
@@ -257,7 +257,7 @@ _Install in one command; run the full open-source stack; scale with Enterprise s
 - **Helm & remote deploy** — A Helm chart for clusters plus scripted remote deploy for Docker hosts. — _Ship it where your fleet already lives._
   - **How:** Cluster: `helm install` the chart (provisions Postgres/Redis/MinIO); for Docker hosts use the scripted remote deploy under `scripts/`.
 - **Full open-source stack** — CLI, TUI, Python bindings, assurance APIs, web console, and KubeVirt hooks are all Apache-2.0 in the repo - Enterprise adds support, not features. — _Nothing core is withheld from the open source._
-  - **How:** Clone the repo (`git clone https://github.com/hypersdk/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
+  - **How:** Clone the repo (`git clone https://github.com/zyvorai/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
 - **Enterprise programs** — SLA, air-gapped deployment packages, guided playbooks, and fleet automation for 100+ VM and regulated migrations. — _Backed help for VMware-exit programs at scale._
   - **How:** Contact the account team at info@zyvor.dev for SLA, air-gapped packages, guided playbooks and fleet automation.
 
@@ -265,7 +265,7 @@ _Install in one command; run the full open-source stack; scale with Enterprise s
 
 ## Getting started
 
-1. **Install** — Run cargo install guestkit to get the guestkit CLI and guestctl TUI, or pull the web stack from ghcr.io/hypersdk.
+1. **Install** — Run cargo install guestkit to get the guestkit CLI and guestctl TUI, or pull the web stack from ghcr.io/zyvorai.
 2. **Score boot readiness** — guestkit doctor vm.qcow2 --target proxmox --explain returns a 0-100 boot assurance score with ranked blockers and root-cause chains.
 3. **Export a fix plan** — guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml writes an executable, reviewable migration fix plan.
 4. **Explore interactively** — guestctl tui vm.qcow2 opens the carbon TUI with the Assurance workspace and fix-plan preview.

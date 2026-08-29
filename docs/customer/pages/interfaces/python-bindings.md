@@ -14,11 +14,11 @@ Python Bindings — Interfaces surface.
 
 - Doc id: `python-bindings`
 - Nav: **Interfaces → Python Bindings**
-- Primary interface: `pip install hypersdk-guestkit` or `maturin develop --features python-bindings`
+- Primary interface: `pip install zyvorai-guestkit` or `maturin develop --features python-bindings`
 
 ## Operate from CLI / TUI (UX)
 
-1. `pip install hypersdk-guestkit` or `maturin develop --features python-bindings`.
+1. `pip install zyvorai-guestkit` or `maturin develop --features python-bindings`.
 2. `from guestkit import Guestfs`.
 3. `add_drive_ro` → `launch` → `inspect_os`.
 4. Mount via `inspect_get_mountpoints` + `mount_ro`.

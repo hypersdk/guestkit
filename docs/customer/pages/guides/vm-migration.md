@@ -14,11 +14,11 @@ VM Migration Guide — Guides surface.
 
 - Doc id: `vm-migration`
 - Nav: **Guides → VM Migration Guide**
-- Primary interface: CLI assurance-first workflow (+ hyper2kvm convert)
+- Primary interface: CLI assurance-first workflow (+ h2kvm convert)
 
 ## Operate from CLI / TUI (UX)
 
-1. CLI assurance-first workflow (+ hyper2kvm convert).
+1. CLI assurance-first workflow (+ h2kvm convert).
 2. Convert if needed: `guestkit convert` / `qemu-img`.
 3. `doctor --target … --explain`.
 4. `migrate-plan --export`.
