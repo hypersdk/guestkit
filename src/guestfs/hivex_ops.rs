@@ -322,7 +322,7 @@ impl Guestfs {
         }
 
         // Verify hive is open and valid
-        let _ = self.with_key_node(handle, &[], |_| Ok(()))?;
+        self.with_key_node(handle, &[], |_| Ok(()))?;
         // Root node is always represented as 0
         Ok(0)
     }
