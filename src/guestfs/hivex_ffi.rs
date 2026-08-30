@@ -67,6 +67,11 @@ extern "C" {
     // `*t_rtn`/`*len_rtn` to the REG_* type and byte length.
     fn hivex_node_get_value(h: HiveH, node: HiveNodeH, key: *const c_char) -> HiveValueH;
     fn hivex_value_value(h: HiveH, value: HiveValueH, t_rtn: *mut c_int, len_rtn: *mut usize) -> *mut c_char;
+    // Value enumeration: `hivex_node_values` returns a malloc'd 0-terminated
+    // array of value handles under a node; `hivex_value_key` returns the
+    // malloc'd C string name of a single value.
+    fn hivex_node_values(h: HiveH, node: HiveNodeH) -> *mut HiveValueH;
+    fn hivex_value_key(h: HiveH, value: HiveValueH) -> *mut c_char;
 }
 
 extern "C" {
@@ -429,6 +434,60 @@ unsafe fn node_children(h: HiveH, node: HiveNodeH) -> Vec<HiveNodeH> {
     out
 }
 
+/// Enumerate a node's value handles. SAFETY: `h`/`node` must be live.
+unsafe fn node_values(h: HiveH, node: HiveNodeH) -> Vec<HiveValueH> {
+    let arr = hivex_node_values(h, node);
+    let mut out = Vec::new();
+    if arr.is_null() {
+        return out;
+    }
+    let mut i = 0isize;
+    loop {
+        let val = *arr.offset(i);
+        if val == 0 {
+            break;
+        }
+        out.push(val);
+        i += 1;
+    }
+    free(arr as *mut std::ffi::c_void);
+    out
+}
+
+/// Read a value's name, or None. SAFETY: `h`/`value` must be live.
+unsafe fn value_key(h: HiveH, value: HiveValueH) -> Option<String> {
+    let p = hivex_value_key(h, value);
+    if p.is_null() {
+        return None;
+    }
+    let s = std::ffi::CStr::from_ptr(p).to_string_lossy().into_owned();
+    free(p as *mut std::ffi::c_void);
+    Some(s)
+}
+
+/// List the names of every value directly under the key at `subpath`
+/// (not the empty-string "default" value, which libhivex represents the
+/// same way as a named value - callers checking for it should look for
+/// `""` in the result). Returns an empty vector if the key doesn't
+/// exist. Matches the enumeration that `python-hivex`'s
+/// `h.node_values(node)` combined with `h.value_key(v)` performs (e.g.
+/// to find "any Run-key value whose name contains a marker string").
+pub fn list_registry_value_names(hive_file: &Path, subpath: &[String]) -> Result<Vec<String>> {
+    let hive = Hive::open_write(hive_file)?;
+    let subpath_refs: Vec<&str> = subpath.iter().map(String::as_str).collect();
+    // SAFETY: hive.0 stays live for the whole call.
+    unsafe {
+        let root = hivex_root(hive.0);
+        if root == 0 {
+            return Err(Error::CommandFailed("hivex_root failed".into()));
+        }
+        let Some(node) = navigate(hive.0, root, &subpath_refs) else {
+            return Ok(Vec::new());
+        };
+        Ok(node_values(hive.0, node).into_iter().filter_map(|v| value_key(hive.0, v)).collect())
+    }
+}
+
 /// Navigate from `start` down `subpath`, returning the node handle or None.
 /// SAFETY: `h` must be live.
 unsafe fn navigate(h: HiveH, start: HiveNodeH, subpath: &[&str]) -> Option<HiveNodeH> {
@@ -691,6 +750,28 @@ mod tests {
 
             // Deleting again is a no-op, not an error.
             assert!(!delete_registry_key(hive, &subpath).unwrap());
+        });
+    }
+
+    #[test]
+    fn list_registry_value_names_reflects_real_state() {
+        with_writable_copy(|hive| {
+            let subpath = vec!["ListValuesTest".to_string()];
+            set_registry_value(hive, &subpath, "vmware-tools", "REG_SZ", &json!("x")).unwrap();
+            set_registry_value(hive, &subpath, "OtherApp", "REG_SZ", &json!("y")).unwrap();
+
+            let mut names = list_registry_value_names(hive, &subpath).unwrap();
+            names.sort();
+            assert_eq!(names, vec!["OtherApp".to_string(), "vmware-tools".to_string()]);
+
+            assert!(names.iter().any(|n| n.to_lowercase().contains("vmware")));
+        });
+    }
+
+    #[test]
+    fn list_registry_value_names_is_empty_for_missing_key() {
+        with_writable_copy(|hive| {
+            assert!(list_registry_value_names(hive, &["DoesNotExist".to_string()]).unwrap().is_empty());
         });
     }
 }
