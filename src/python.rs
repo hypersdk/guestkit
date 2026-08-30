@@ -2273,6 +2273,163 @@ impl Guestfs {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
+    // === GuestKit APIs used by hyper2kvm ===
+
+    /// Expand a guest path glob.
+    fn glob_expand(&mut self, pattern: String) -> PyResult<Vec<String>> {
+        self.handle
+            .glob_expand(&pattern)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// LVM scan + optional activate.
+    fn lvm_scan(&mut self, activate: bool) -> PyResult<()> {
+        self.handle
+            .lvm_scan(activate)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Command wrapper (quiet variant).
+    fn command_quiet(&mut self, arguments: Vec<String>) -> PyResult<String> {
+        let args: Vec<&str> = arguments.iter().map(|s| s.as_str()).collect();
+        self.handle
+            .command_quiet(&args)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Command with guest mounts available.
+    fn command_with_mounts(&mut self, arguments: Vec<String>) -> PyResult<String> {
+        let args: Vec<&str> = arguments.iter().map(|s| s.as_str()).collect();
+        self.handle
+            .command_with_mounts(&args)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Bind-mount guest tree to a host path.
+    fn mount_local(&mut self, mountpoint: String) -> PyResult<()> {
+        self.handle
+            .mount_local(&mountpoint)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn mount_local_run(&mut self) -> PyResult<()> {
+        self.handle
+            .mount_local_run()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn umount_local(&mut self) -> PyResult<()> {
+        self.handle
+            .umount_local()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    // --- Hivex (Windows registry) ---
+
+    #[pyo3(signature = (filename, write=false))]
+    fn hivex_open(&mut self, filename: String, write: bool) -> PyResult<i64> {
+        self.handle
+            .hivex_open(&filename, write)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_close(&mut self, handle: i64) -> PyResult<()> {
+        self.handle
+            .hivex_close(handle)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_root(&mut self, handle: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_root(handle)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_name(&mut self, handle: i64, node: i64) -> PyResult<String> {
+        self.handle
+            .hivex_node_name(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_children(&mut self, handle: i64, node: i64) -> PyResult<Vec<i64>> {
+        self.handle
+            .hivex_node_children(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_get_child(&mut self, handle: i64, node: i64, name: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_get_child(handle, node, &name)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_values(&mut self, handle: i64, node: i64) -> PyResult<Vec<i64>> {
+        self.handle
+            .hivex_node_values(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_get_value(&mut self, handle: i64, node: i64, key: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_get_value(handle, node, &key)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_key(&mut self, handle: i64, value: i64) -> PyResult<String> {
+        self.handle
+            .hivex_value_key(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_type(&mut self, handle: i64, value: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_value_type(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_string(&mut self, handle: i64, value: i64) -> PyResult<String> {
+        self.handle
+            .hivex_value_string(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_dword(&mut self, handle: i64, value: i64) -> PyResult<i32> {
+        self.handle
+            .hivex_value_dword(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_uint32(&mut self, handle: i64, value: i64) -> PyResult<u32> {
+        self.handle
+            .hivex_value_uint32(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_integer(&mut self, handle: i64, value: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_value_integer(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_value(&mut self, handle: i64, value: i64) -> PyResult<Vec<u8>> {
+        self.handle
+            .hivex_value_value(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    #[pyo3(signature = (handle, filename=None))]
+    fn hivex_commit(&mut self, handle: i64, filename: Option<String>) -> PyResult<()> {
+        self.handle
+            .hivex_commit(handle, filename.as_deref())
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_add_child(&mut self, handle: i64, parent: i64, name: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_add_child(handle, parent, &name)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
     /// Add LUKS key
     fn luks_add_key(
         &mut self,

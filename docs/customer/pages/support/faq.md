@@ -20,7 +20,7 @@ FAQ — Support surface.
 
 1. Reference answers; commands embedded.
 2. Install: `cargo install guestkit`.
-3. Not libguestfs — use GuestKit stack.
+3. Not legacy appliance tooling — use GuestKit stack.
 4. Passport vs virt-v2v: certify then convert.
 5. Extract/list/rescue examples as in FAQ.
 6. Cache under `~/.cache/guestkit/`; escalate with version + repro.

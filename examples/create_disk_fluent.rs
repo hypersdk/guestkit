@@ -133,7 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Partitions: GPT with EFI + Root");
     println!("  Filesystems: VFAT (EFI) + BTRFS (root)");
     println!("\nYou can inspect it with:");
-    println!("  sudo guestfish -a {} -i", disk_path);
+    println!("  guestkit inspect {}", disk_path);
 
     Ok(())
 }

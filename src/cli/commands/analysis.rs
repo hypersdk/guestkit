@@ -50,7 +50,8 @@ pub fn timeline_command(
     }
 
     // Source 2: Package installations (if 'packages' in sources)
-    // Note: skipped because libguestfs does not provide package install timestamps;
+    // Note: skipped because package install timestamps are not always available offline;
+
     // adding packages with epoch 0 would produce misleading forensic timeline data.
 
     // Source 3: Log entries (if 'logs' in sources)

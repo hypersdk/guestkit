@@ -2,9 +2,9 @@
 
 > **Offline VM intelligence and migration assurance.**
 
-GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no libguestfs appliance to install.
+GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no appliance daemon to install.
 
-**70+** CLI subcommands · **6** disk formats read · **0** libguestfs appliances needed · **8** migration targets scored · **0-100** boot assurance score · **5** inspection profiles
+**70+** CLI subcommands · **6** disk formats read · ****0** appliance daemons needed · **8** migration targets scored · **0-100** boot assurance score · **5** inspection profiles
 
 This is the customer-facing onboarding guide — how to access the product, your first workflows, and how to use every feature. A print-ready PDF of the same content sits alongside this file.
 
@@ -71,7 +71,7 @@ _Read the full guest OS from a cold disk image - no boot, no agent, no appliance
   - **How:** CLI: run focused subcommands like `guestkit packages|services|users|network disk.qcow2`, or the full `guestkit inspect disk.qcow2` for everything in one pass.
 - **Windows signal parsing** — Reads SAM/SECURITY registry hives to detect BitLocker, domain join, RDP, and driver gaps for Windows guests. Detects System Reserved / ESP boot volumes on multi-partition disks so BCD is not falsely reported missing. Samples hotfixes (HotFix key, `$NtUninstall*`, CBS.log) and VirtIO `.sys` presence for cutover planning. Offline OEM/Volume activation markers, remnant/ghost NICs, and static Tcpip configs feed migration warnings. Offline BitLocker `BootStatus` / FVE artifacts and VSS service inference feed Passport hard-blocks and snapshot readiness. — _See the Windows-specific blockers Linux tools miss._
   - **How:** CLI: `guestkit inspect disk.vmdk --profile windows-migration` parses SAM/SECURITY hives for BitLocker, domain join, RDP and driver gaps.
-- **Pure-Rust engine, no libguestfs** — Partition tables, filesystem signatures, and evidence schema are parsed in Rust; only host NBD/loop is used for mount. — _No guestfish appliance, no fragile daemon - fewer moving parts._
+- **Pure-Rust engine, no legacy appliance tooling** — Partition tables, filesystem signatures, and evidence schema are parsed in Rust; only host NBD/loop is used for mount. — _No guestkit appliance, no fragile daemon - fewer moving parts._
   - **How:** Automatic on every command; add `--trace` (e.g. `guestkit inspect disk.qcow2 --trace`) to see the Rust parsers and the host NBD/loop mount that were used.
 
 > Inspection is always read-only: your source image is never modified.
@@ -233,8 +233,8 @@ _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web con
   - **How:** Apply a `VMToolsPolicy` resource (or enable it from the web console) to auto-install/upgrade the KubeVirt guest agent via cloud-init, QGA, ISO or airgap path.
 - **Web console** — Self-hosted zyvor-ui + zyvor-api + guestkit-worker ship as public GHCR images and a Helm chart, backed by a Redis job queue. — _A team-facing UI over the same engine._
   - **How:** Browse to http://localhost:8088 and sign in with `admin` / `Admin@321` (change immediately). The nginx front-end proxies `/api/` to zyvor-api.
-- **Python bindings** — zyvorai-guestkit on PyPI exposes a libguestfs-style Guestfs API (100+ methods) for programmatic inspection. — _Automate disk inspection from Python._
-  - **How:** Python: `from guestkit import Guestfs` then `g = Guestfs(); g.add_drive("vm.qcow2"); g.launch(); g.inspect_os()` — a libguestfs-style API with 100+ methods.
+- **Python bindings** — zyvorai-guestkit on PyPI exposes a GuestKit-style Guestfs API (100+ methods) for programmatic inspection. — _Automate disk inspection from Python._
+  - **How:** Python: `from guestkit import Guestfs` then `g = Guestfs(); g.add_drive("vm.qcow2"); g.launch(); g.inspect_os()` — a GuestKit-style API with 100+ methods.
 - **h2kvm pipeline** — Pairs with h2kvm for VMware-to-KVM conversion, sitting in the wider Transiva to GuestKit to v9s to PacketWolf flow. — _One assurance gate inside a full migration pipeline._
   - **How:** Run h2kvm for the VMware-to-KVM conversion and call `guestkit doctor`/`migrate-plan` as the assurance gate in the same pipeline.
 - **Pluggable auth** — The web stack supports JWT, local login, and OIDC/SAML hooks with JWKS-verified ID tokens. — _Wire the console into your existing identity._

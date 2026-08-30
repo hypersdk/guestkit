@@ -29,7 +29,7 @@
 
 Every hypervisor exit fails the same way: you discover the disk was broken **at 2am**, in the cutover window, after power-on.
 
-GuestKit reads the disk **while the guest is off**, scores first-boot probability 0–100, and emits a reviewable fix plan — no libguestfs appliance, no “just try it and hope.”
+GuestKit reads the disk **while the guest is off**, scores first-boot probability 0–100, and emits a reviewable fix plan — no appliance daemon, no “just try it and hope.”
 
 ```text
   disk.qcow2 / .vmdk / .vhdx / .vhd / .vdi / .raw
@@ -46,7 +46,7 @@ GuestKit reads the disk **while the guest is off**, scores first-boot probabilit
 | | |
 |---|---|
 | **70+** commands | **6** disk formats |
-| **0** libguestfs appliances | **8** migration targets |
+| ****0** appliance daemons | **8** migration targets |
 | **Apache-2.0** | Used in CI, labs, and hypervisor-exit programs |
 
 **Certify with GuestKit → convert with [hyper2kvm](https://github.com/hypersdk/hyper2kvm) → operate on [Zeus OS](https://zyvor.dev/zeus-os).**
@@ -99,7 +99,7 @@ Recorded live against real deployments — no staged screenshots.
 | Before GuestKit | With GuestKit |
 |-----------------|---------------|
 | “Will it boot?” answered at power-on | Offline **doctor** score + root-cause chain |
-| guestfish scripts and tribal knowledge | Structured plans, JSON/YAML, CI gates |
+| guestkit scripts and tribal knowledge | Structured plans, JSON/YAML, CI gates |
 | Surprises on cutover weekend | Hypervisor-aware **migrate-plan** + day-0 packs |
 | No audit trail MTV / virt-v2v can skip | Signed **Cutover Passport** |
 | Fleet drift invisible until outage | `fleet analyze` / `watch`, forensic diff, policy-as-code |

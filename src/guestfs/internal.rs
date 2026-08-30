@@ -124,14 +124,14 @@ impl Guestfs {
             eprintln!("guestfs: parse_environment");
         }
 
-        // Check for LIBGUESTFS_* environment variables
-        if let Ok(debug) = std::env::var("LIBGUESTFS_DEBUG") {
+        // Check for GUESTKIT_* environment variables
+        if let Ok(debug) = std::env::var("GUESTKIT_DEBUG") {
             if debug == "1" {
                 self.verbose = true;
             }
         }
 
-        if let Ok(trace) = std::env::var("LIBGUESTFS_TRACE") {
+        if let Ok(trace) = std::env::var("GUESTKIT_TRACE") {
             if trace == "1" {
                 self.trace = true;
             }
@@ -150,8 +150,8 @@ impl Guestfs {
         for env in environment {
             if let Some((key, value)) = env.split_once('=') {
                 match key {
-                    "LIBGUESTFS_DEBUG" if value == "1" => self.verbose = true,
-                    "LIBGUESTFS_TRACE" if value == "1" => self.trace = true,
+                    "GUESTKIT_DEBUG" if value == "1" => self.verbose = true,
+                    "GUESTKIT_TRACE" if value == "1" => self.trace = true,
                     _ => {}
                 }
             }

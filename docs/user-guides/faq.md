@@ -14,13 +14,13 @@ guestkit is a pure Rust toolkit for VM disk inspection and manipulation without 
 - Python bindings for automation
 - 578 disk image manipulation functions
 
-### How is GuestKit different from libguestfs?
+### How is GuestKit different from legacy appliance tooling?
 
-**GuestKit does not use libguestfs.** It is a pure Rust alternative with its own disk, partition, and filesystem stack (`guestkit::guestfs`, loop/NBD, assurance APIs). You do not need `libguestfs-tools`, `guestfish`, or `virt-inspector` to run GuestKit.
+**GuestKit does not use legacy appliance tooling.** It is a pure Rust alternative with its own disk, partition, and filesystem stack (`guestkit::guestfs`, loop/NBD, assurance APIs). You do not need `legacy guest tools`, or `virt-inspector` to run GuestKit.
 
 The table below compares products for migration planning — not a dependency list:
 
-| Feature | guestkit | libguestfs (legacy tooling) |
+| Feature | guestkit | legacy appliance tooling |
 |---------|----------|----------------------------|
 | **Language** | Pure Rust | C + bindings |
 | **Dependencies** | Minimal (qemu-img, nbd for some formats) | Many C libraries |
@@ -31,7 +31,7 @@ The table below compares products for migration planning — not a dependency li
 | **Visual Output** | Beautiful emojis + colors | Plain text |
 | **Migration** | Built-in fstab/crypttab rewriter | Manual scripting |
 
-**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `passport`, `run_boot_inspect`, Zyvor HTTP routes). Do not install libguestfs expecting GuestKit to call it.
+**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `passport`, `run_boot_inspect`, Zyvor HTTP routes). Do not install legacy appliance tooling expecting GuestKit to call it.
 
 ### How does GuestKit compare to Red Hat virt-v2v / MTV?
 

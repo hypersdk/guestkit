@@ -36,7 +36,7 @@ Disk image (QCOW2/VMDK/…)
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
 
-> **Not libguestfs:** Assurance uses GuestKit's pure Rust disk stack. No `libguestfs-tools` or `guestfish` required.
+> **Not legacy appliance tooling:** Assurance uses GuestKit's pure Rust disk stack. No `legacy guest tools` or `guestkit` required.
 
 ### `run_boot_inspect` / Zyvor HTTP API
 

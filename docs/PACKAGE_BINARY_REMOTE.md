@@ -70,7 +70,7 @@ tar xzf guestkit-*-linux-amd64.tar.gz && cd guestkit-*-linux-amd64
 
 ## Host requirements (not Kubernetes)
 
-GuestKit uses **pure Rust** disk access — **libguestfs is not required**.
+GuestKit uses **pure Rust** disk access — **legacy appliance tooling is not required**.
 
 - `qemu-img` (and optionally `qemu-nbd` for QCOW2)
 - `nbd` kernel module (`modprobe nbd max_part=16`)

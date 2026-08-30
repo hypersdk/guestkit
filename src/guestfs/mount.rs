@@ -820,6 +820,76 @@ impl Guestfs {
 
         Ok(())
     }
+
+    /// Expose the already-mounted guest tree at `mountpoint` via bind-mount
+    /// (GuestKit `mount_local`).
+    pub fn mount_local(&mut self, mountpoint: &str) -> Result<()> {
+        self.ensure_ready()?;
+        let root = self.mount_root.as_ref().ok_or_else(|| {
+            Error::InvalidState("No filesystem mounted — call mount/mount_ro first".into())
+        })?;
+        let dest = std::path::Path::new(mountpoint);
+        if !dest.exists() {
+            std::fs::create_dir_all(dest).map_err(Error::Io)?;
+        }
+        if self.verbose {
+            eprintln!(
+                "guestfs: mount_local {} -> {}",
+                root.display(),
+                dest.display()
+            );
+        }
+        let need_sudo = need_sudo();
+        let mut cmd = if need_sudo {
+            let mut c = Command::new("sudo");
+            c.arg("mount");
+            c
+        } else {
+            Command::new("mount")
+        };
+        let output = cmd
+            .args(["--bind", &root.to_string_lossy(), mountpoint])
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("mount_local bind failed: {e}")))?;
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "mount_local failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+        self.local_mountpoint = Some(mountpoint.to_string());
+        Ok(())
+    }
+
+    /// GuestKit: after mount_local, run until umount_local.
+    /// Guestkit bind-mounts stay active without a FUSE loop; return immediately.
+    pub fn mount_local_run(&mut self) -> Result<()> {
+        if self.local_mountpoint.is_none() {
+            return Err(Error::InvalidState(
+                "mount_local_run called before mount_local".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Undo [`mount_local`].
+    pub fn umount_local(&mut self) -> Result<()> {
+        if let Some(mp) = self.local_mountpoint.take() {
+            if self.verbose {
+                eprintln!("guestfs: umount_local {}", mp);
+            }
+            let need = need_sudo();
+            let mut cmd = if need {
+                let mut c = Command::new("sudo");
+                c.arg("umount");
+                c
+            } else {
+                Command::new("umount")
+            };
+            let _ = cmd.arg(&mp).output();
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -829,6 +899,5 @@ mod tests {
     #[test]
     fn test_mount_tracking() {
         let _g = Guestfs::new().unwrap();
-        // Setup would be needed here
     }
 }

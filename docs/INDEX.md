@@ -26,7 +26,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
 | [Python bindings](user-guides/python-bindings.md) | PyO3 API |
 | [VM migration](user-guides/vm-migration.md) | hyper2kvm integration |
-| [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not libguestfs) |
+| [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
 
 ## Deployment

@@ -6,7 +6,7 @@ Offline VM intelligence and migration assurance — **Rust control plane** with 
 
 | Claim | Reality |
 |-------|---------|
-| **No libguestfs appliance** | ✅ No libguestfs daemon or guestfish workflow |
+| **no appliance daemon** | ✅ No legacy appliance tooling daemon workflow |
 | **Pure Rust parsing** | ✅ Partition tables, FS signatures, evidence schema, boot engine, assurance APIs |
 | **In-process QCOW2 file read** | Partial — format detection + selective reads; full cluster walk defers to **qemu-nbd** |
 | **File access inside guests** | Via **loop devices / qemu-nbd** + host mount (`src/guestfs/`), not in-process ext4/NTFS parsers |

@@ -10,7 +10,7 @@ HOST (Linux inspector — not Kubernetes)
   [ ] ./test-selftest.sh passes (recommended)
   [ ] Disk image path readable (qcow2/vmdk/raw)
 
-NOT required: libguestfs-tools, guestfish, virt-inspector
+NOT required: legacy guest tools, virt-inspector
 
 CLIENT BUNDLE (this directory)
   [ ] ./guestkit executable

@@ -4,7 +4,7 @@ GuestKit — Host setup (offline VM disk inspection)
 GuestKit inspects QCOW2/VMDK/RAW images while VMs are powered off.
 It does NOT require Kubernetes — only Linux + qemu/nbd on this host.
 
-GuestKit is pure Rust. It does NOT use or require libguestfs, guestfish, or virt-inspector.
+GuestKit is pure Rust. It does NOT use or require legacy appliance tooling, or virt-inspector.
 
 WHAT MUST EXIST FOR GUESTKIT TO WORK
 ------------------------------------
@@ -24,7 +24,7 @@ ORDER OF OPERATIONS
 
 STEP A — install.sh
 -------------------
-  Installs: qemu-img, nbd client, lvm2, parted (not libguestfs-tools)
+  Installs: qemu-img, nbd client, lvm2, parted (not legacy guest tools)
   Loads nbd module when possible.
 
 SKIP FLAGS (install-client-deps / source deploy-remote)

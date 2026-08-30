@@ -560,6 +560,15 @@ impl Guestfs {
 
         Ok(pvs)
     }
+
+    /// GuestKit: LVM scan (`vgscan` + optional activate).
+    pub fn lvm_scan(&mut self, activate: bool) -> Result<()> {
+        self.vgscan()?;
+        if activate {
+            self.vg_activate_all(true)?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

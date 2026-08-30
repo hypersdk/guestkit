@@ -48,7 +48,7 @@ Usage:
   $0 --fleet hosts.txt
 
 Profiles:
-  🏗️  (default)     Full remote build + system deps (qemu, nbd — not libguestfs)
+  🏗️  (default)     Full remote build + system deps (qemu, nbd — not legacy appliance tooling)
   ⚡  --quick       Rsync + cargo build on remote (skip dep install)
   ⚡  --quick --build-local   Install locally built target/release/guestkit (Linux only)
 

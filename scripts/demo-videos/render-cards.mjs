@@ -48,7 +48,7 @@ const cards = [
   { file: "title-doctor", kicker: "2", line1: "Doctor — Will It Survive First Boot?" },
   { file: "title-migrate", kicker: "3", line1: "Migrate-Plan — What KVM Needs to Boot It" },
   { file: "title-tui", kicker: "4", line1: "The Carbon TUI" },
-  { file: "outro", kicker: "", line1: "One Rust binary. No libguestfs appliance. No boot required.", line2: "zyvor.dev/guestkit" },
+  { file: "outro", kicker: "", line1: "One Rust binary. No legacy-appliance-tooling appliance. No boot required.", line2: "zyvor.dev/guestkit" },
 ];
 
 const captions = [
