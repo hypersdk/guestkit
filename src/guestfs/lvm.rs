@@ -202,6 +202,13 @@ impl Guestfs {
         Ok(())
     }
 
+    /// Activate all LVM volume groups (alias of `vg_activate_all`, kept for
+    /// callers migrating off libguestfs-style backends where this operation
+    /// is named `vgchange_activate_all`).
+    pub fn vgchange_activate_all(&mut self, activate: bool) -> Result<()> {
+        self.vg_activate_all(activate)
+    }
+
     /// Activate a specific volume group
     ///
     pub fn vg_activate(&mut self, activate: bool, volgroups: &[&str]) -> Result<()> {

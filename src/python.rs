@@ -2273,7 +2273,7 @@ impl Guestfs {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
-    // === GuestKit APIs used by hyper2kvm ===
+    // === Additional filesystem/device/LUKS operations ===
 
     /// Expand a guest path glob.
     fn glob_expand(&mut self, pattern: String) -> PyResult<Vec<String>> {
@@ -2287,6 +2287,124 @@ impl Guestfs {
         self.handle
             .lvm_scan(activate)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// blkid key/value map for a device.
+    fn blkid(&mut self, device: String) -> PyResult<Py<PyAny>> {
+        let map = self
+            .handle
+            .blkid(&device)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (k, v) in map {
+                dict.set_item(k, v)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    fn findfs_uuid(&mut self, uuid: String) -> PyResult<String> {
+        self.handle
+            .findfs_uuid(&uuid)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn findfs_label(&mut self, label: String) -> PyResult<String> {
+        self.handle
+            .findfs_label(&label)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn list_dm_devices(&mut self) -> PyResult<Vec<String>> {
+        self.handle
+            .list_dm_devices()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn rm_f(&mut self, path: String) -> PyResult<()> {
+        self.handle
+            .rm_f(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn rename(&mut self, src: String, dest: String) -> PyResult<()> {
+        self.handle
+            .rename(&src, &dest)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn vgchange_activate_all(&mut self, activate: bool) -> PyResult<()> {
+        self.handle
+            .vgchange_activate_all(activate)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// libguestfs-compatible alias for luks_open(device, key, mapname).
+    fn cryptsetup_open(&mut self, device: String, key: String, mapname: String) -> PyResult<()> {
+        self.handle
+            .cryptsetup_open(&device, &key, &mapname)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn available_all_groups(&mut self) -> PyResult<Vec<String>> {
+        self.handle
+            .available_all_groups()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn device_index(&self, device: String) -> PyResult<i32> {
+        self.handle
+            .device_index(&device)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Assemble/activate MD RAID arrays (all discoverable if `devices` is
+    /// empty), returning aggregate stats for whatever is active afterward.
+    fn md_stat(&mut self, devices: Vec<String>) -> PyResult<Py<PyAny>> {
+        let stats = self
+            .handle
+            .md_activate_all(&devices)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in stats {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    fn is_link(&mut self, path: String) -> PyResult<bool> {
+        self.handle
+            .is_link(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Get file stat information with nanosecond-resolution timestamps.
+    fn statns(&mut self, path: String) -> PyResult<Py<PyAny>> {
+        let stat = self.handle.statns(&path).map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            dict.set_item("dev", stat.dev)?;
+            dict.set_item("ino", stat.ino)?;
+            dict.set_item("mode", stat.mode)?;
+            dict.set_item("nlink", stat.nlink)?;
+            dict.set_item("uid", stat.uid)?;
+            dict.set_item("gid", stat.gid)?;
+            dict.set_item("rdev", stat.rdev)?;
+            dict.set_item("size", stat.size)?;
+            dict.set_item("blksize", stat.blksize)?;
+            dict.set_item("blocks", stat.blocks)?;
+            dict.set_item("atime", stat.atime)?;
+            dict.set_item("mtime", stat.mtime)?;
+            dict.set_item("ctime", stat.ctime)?;
+            dict.set_item("atime_nsec", stat.atime_nsec)?;
+            dict.set_item("mtime_nsec", stat.mtime_nsec)?;
+            dict.set_item("ctime_nsec", stat.ctime_nsec)?;
+            Ok(dict.into())
+        })
     }
 
     /// Command wrapper (quiet variant).
@@ -3494,6 +3612,35 @@ impl Guestfs {
     /// Get trace mode
     fn get_trace(&self) -> bool {
         self.handle.get_trace()
+    }
+
+    // === Additional compatibility operations ===
+
+    /// Diagnostic info about this backend instance (implementation, version,
+    /// attach mode, readonly)
+    fn get_backend_info(&self) -> PyResult<Py<PyAny>> {
+        let info = self.handle.get_backend_info().map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in info {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    /// Measured performance counters for the most recent launch() call
+    fn get_performance_metrics(&self) -> PyResult<Py<PyAny>> {
+        let metrics = self.handle.get_performance_metrics().map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in metrics {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
     }
 
     /// Close the handle

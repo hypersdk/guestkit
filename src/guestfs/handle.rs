@@ -84,6 +84,8 @@ pub struct Guestfs {
     /// Bind-mount target for mount_local / umount_local.
     pub(crate) local_mountpoint: Option<String>,
     pub(crate) ova_temp: Vec<tempfile::TempDir>, // Keeps VMDKs extracted from OVA archives alive for the handle's lifetime
+    /// Wall-clock time spent in the most recent `launch()` call, success or failure.
+    pub(crate) launch_duration: Option<Duration>,
 }
 
 /// Drive configuration
@@ -132,6 +134,7 @@ impl Guestfs {
             hive_next_ids: HashMap::new(),
             local_mountpoint: None,
             ova_temp: Vec::new(),
+            launch_duration: None,
         })
     }
 
@@ -294,6 +297,7 @@ impl Guestfs {
 
         // Transition to Launching state
         self.state = GuestfsState::Launching;
+        let launch_started = std::time::Instant::now();
 
         // Open the first drive (multi-drive not yet supported)
         let drive = &self.drives[0];
@@ -369,6 +373,8 @@ impl Guestfs {
 
             Ok(())
         })();
+
+        self.launch_duration = Some(launch_started.elapsed());
 
         match result {
             Ok(_) => {
