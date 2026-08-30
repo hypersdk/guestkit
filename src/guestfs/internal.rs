@@ -83,8 +83,12 @@ impl Guestfs {
             }
         }
 
-        info.insert("bsize".to_string(), 4096); // Standard block size
-        info.insert("frsize".to_string(), 4096);
+        // "blocks"/"bfree"/"bavail" above are already byte counts (from
+        // `df -B1`), so the block size callers multiply by must be 1, not
+        // a real filesystem block size - the values above are NOT actual
+        // 4096-byte-block counts.
+        info.insert("bsize".to_string(), 1);
+        info.insert("frsize".to_string(), 1);
         info.insert("files".to_string(), 0);
         info.insert("ffree".to_string(), 0);
         info.insert("favail".to_string(), 0);
@@ -226,5 +230,14 @@ mod tests {
     fn test_internal_api_exists() {
         let _g = Guestfs::new().unwrap();
         // API structure tests
+    }
+
+    #[test]
+    fn statvfs_errors_cleanly_before_launch() {
+        // Real end-to-end: no mounted root to resolve a guest path against,
+        // so this must return an error rather than panicking - matches the
+        // pre-launch graceful-degradation pattern used throughout the crate.
+        let mut g = Guestfs::new().unwrap();
+        assert!(g.statvfs("/").is_err());
     }
 }
