@@ -29,6 +29,8 @@ pub mod posture;
 #[cfg(not(target_os = "windows"))]
 pub mod proxy;
 pub mod qga;
+#[cfg(unix)]
+pub mod qga_client;
 pub mod rdp;
 pub mod snapshot;
 pub mod snapshot_hooks;

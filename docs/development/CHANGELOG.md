@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Safe argv construction (no shell), VirtIO block/SCSI/net/balloon/rng/vsock/GPU,
   OVMF/AAVMF, user/TAP/bridge networking (host TAP/bridge provisioning stays
   outside GuestKit). Docs: [qemu-runtime.md](../features/qemu-runtime.md).
+- **`guestkit qga`** — drop-in for `virsh qemu-agent-command`; speaks the QGA
+  unix socket directly (auto-discovers libvirt / KubeVirt sockets). Docs:
+  [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
+
+### Changed
+- **Dump `virsh` from the live GuestKit path.** `zyvor-api` no longer
+  `kubectl exec`s `virsh qemu-agent-command` inside virt-launcher. It
+  discovers the QGA unix socket and speaks the QGA wire format through
+  `guestkit qga` / python / perl / socat / nc. `virsh` is an explicit
+  opt-in via `GUESTKIT_ALLOW_VIRSH=1`.
+- Docs and MIG-L-009 no longer tell operators to use `virsh console`
+  or `virsh qemu-agent-command`.
 
 ## [1.1.0] - 2026-08-31
 

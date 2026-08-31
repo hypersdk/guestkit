@@ -167,8 +167,14 @@ NTFS left dirty by a force-off is repaired (`ntfsfix`) so the offline writes
 succeed. Verify from the host once booted:
 
 ```bash
-virsh qemu-agent-command <domain> \
-  '{"execute":"guestkit-rpc","arguments":{"method":"guestkit.getVersion","params":{}}}'
+# Preferred — GuestKit talks the QGA socket directly (no virsh)
+guestkit qga --socket /var/lib/libvirt/qemu/channel/target/$VM/org.qemu.guest_agent.0 \
+  --raw '{"execute":"guestkit-rpc","arguments":{"method":"guestkit.getVersion","params":{}}}'
+
+# Same thing via GuestKit JSON-RPC
+guestkit agent-call \
+  --socket /var/lib/libvirt/qemu/channel/target/$VM/org.qemu.guest_agent.0 \
+  --method guestkit.getVersion
 # => {"protocol":"1.3","version":"0.3.14"}
 ```
 

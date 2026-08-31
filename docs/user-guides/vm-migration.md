@@ -217,8 +217,12 @@ virt-install \
   --graphics vnc \
   --boot hd
 
-# Monitor boot process
-virsh console migrated-vm
+# Monitor first-boot readiness *before* power-on
+guestkit doctor vm.qcow2 --target kvm --explain
+
+# After the guest is running, use the GuestKit agent (not virsh console)
+guestkit agent-call --socket /var/lib/libvirt/qemu/channel/target/migrated-vm/org.qemu.guest_agent.0 \
+  --method guestkit.getBootAnalysis
 ```
 
 ### 2. VMware to KVM Migration

@@ -67,6 +67,54 @@ pub struct AgentCallArgs {
     pub params: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct QgaArgs {
+    pub socket: Option<String>,
+    pub execute: Option<String>,
+    pub arguments: Option<String>,
+    pub raw: Option<String>,
+}
+
+/// Drop-in replacement for `virsh qemu-agent-command`.
+#[cfg(unix)]
+pub async fn run_qga(args: QgaArgs) -> Result<()> {
+    let socket = match args.socket {
+        Some(s) if !s.is_empty() => s,
+        _ => crate::agent::qga_client::discover_qga_socket(&[])
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "no QGA socket found; pass --socket (typical libvirt path: \
+                     /var/lib/libvirt/qemu/channel/target/<domain>/org.qemu.guest_agent.0)"
+                )
+            })?
+            .to_string_lossy()
+            .into_owned(),
+    };
+
+    let timeout = std::time::Duration::from_secs(30);
+    let result = tokio::task::spawn_blocking(move || {
+        if let Some(raw) = args.raw.as_deref().filter(|s| !s.trim().is_empty()) {
+            crate::agent::qga_client::call_qga_socket_raw(&socket, raw, timeout)
+        } else {
+            let execute = args
+                .execute
+                .as_deref()
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| anyhow::anyhow!("pass --execute CMD or --raw JSON"))?;
+            let arguments = match args.arguments.as_deref() {
+                Some(raw) if !raw.trim().is_empty() => {
+                    Some(serde_json::from_str(raw).context("parse --arguments JSON")?)
+                }
+                _ => None,
+            };
+            crate::agent::qga_client::call_qga_socket(&socket, execute, arguments, timeout)
+        }
+    })
+    .await??;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
 #[cfg(unix)]
 pub async fn run_agent_call(args: AgentCallArgs) -> Result<()> {
     let params = match args.params.as_deref() {

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! QEMU guest-agent commands via virt-launcher (KubeVirt has no guest-exec subresource).
+//!
+//! Transport talks the QGA unix socket inside the virt-launcher pod. It does
+//! **not** invoke `virsh` unless `GUESTKIT_ALLOW_VIRSH=1`.
 
 use base64::Engine;
 use k8s_openapi::api::core::v1::Pod;
@@ -178,12 +181,12 @@ async fn virsh_qga_json(
     domain: &str,
     body: Value,
 ) -> ApiResult<Value> {
-    let json_cmd = serde_json::to_string(&body)
+    let json_cmd = crate::qga_socket::encode_request(&body)
         .map_err(|e| ApiError::internal(format!("serialize QGA command: {e}")))?;
     let stdout = virsh_qga_raw(client, namespace, pod, domain, &json_cmd).await?;
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
-        return Err(ApiError::internal("empty response from qemu-agent-command"));
+        return Err(ApiError::internal("empty response from QGA socket"));
     }
     serde_json::from_str(trimmed)
         .map_err(|e| ApiError::internal(format!("parse QGA response {trimmed}: {e}")))
@@ -203,32 +206,27 @@ async fn virsh_qga_raw(
         stderr: true,
         ..Default::default()
     };
-    let cmd = vec![
-        "virsh".to_string(),
-        "--quiet".to_string(),
-        "qemu-agent-command".to_string(),
-        domain.to_string(),
-        json_cmd.to_string(),
-    ];
+    let mut cmd = crate::qga_socket::qga_exec_argv(domain, crate::qga_socket::allow_virsh_fallback());
+    cmd.push(json_cmd.to_string());
     let mut attached = pods
         .exec(pod, cmd, &ap)
         .await
-        .map_err(|e| ApiError::internal(format!("exec virsh in {pod}: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("exec QGA client in {pod}: {e}")))?;
     let mut stdout = Vec::new();
     if let Some(mut out) = attached.stdout() {
         out.read_to_end(&mut stdout)
             .await
-            .map_err(|e| ApiError::internal(format!("read qemu-agent stdout: {e}")))?;
+            .map_err(|e| ApiError::internal(format!("read QGA stdout: {e}")))?;
     }
     let mut stderr = Vec::new();
     if let Some(mut err) = attached.stderr() {
         err.read_to_end(&mut stderr)
             .await
-            .map_err(|e| ApiError::internal(format!("read qemu-agent stderr: {e}")))?;
+            .map_err(|e| ApiError::internal(format!("read QGA stderr: {e}")))?;
     }
     if !stderr.is_empty() && stdout.is_empty() {
         return Err(ApiError::internal(format!(
-            "qemu-agent-command failed: {}",
+            "QGA command failed: {}",
             String::from_utf8_lossy(&stderr)
         )));
     }
