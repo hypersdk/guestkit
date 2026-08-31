@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **QEMU/VirtIO runtime** (`src/qemu/`, `guestkit-qemu` binary) — turns GuestKit
+  evidence + boot assurance into a declarative `QemuVm` plan and launches QEMU
+  only when blockers/score/UEFI firmware gates pass (`plan` / `run` / `qmp`).
+  Safe argv construction (no shell), VirtIO block/SCSI/net/balloon/rng/vsock/GPU,
+  OVMF/AAVMF, user/TAP/bridge networking (host TAP/bridge provisioning stays
+  outside GuestKit). Docs: [qemu-runtime.md](../features/qemu-runtime.md).
+
 ## [1.1.0] - 2026-08-31
 
 ### Added

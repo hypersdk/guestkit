@@ -107,13 +107,22 @@ cargo install guestkit
 git clone https://github.com/hypersdk/guestkit
 cd guestkit
 cargo build --release
-sudo cp target/release/guestkit /usr/local/bin/
+sudo cp target/release/guestkit target/release/guestctl \
+  target/release/guestkit-qemu /usr/local/bin/
 ```
 
 **Python bindings:**
 ```bash
-pip install guestkit
+pip install hypersdk-guestkit
 ```
+
+### What binaries does GuestKit install?
+
+| Binary | Role |
+|--------|------|
+| `guestkit` | Scriptable CLI (inspect, doctor, migrate-plan, rescue, …) |
+| `guestctl` | Carbon TUI dashboard |
+| `guestkit-qemu` | Assured QEMU plan / run / QMP ([qemu-runtime.md](../features/qemu-runtime.md)) |
 
 ### What are the system requirements?
 
@@ -126,6 +135,7 @@ pip install guestkit
 - **Required:** Rust 1.70+ (for building)
 - **Optional:** qemu-img (for format conversion)
 - **Runtime:** Linux kernel with loop device support (built-in)
+- **QEMU launch:** `qemu-system-x86_64` / `qemu-system-aarch64` on `PATH` for `guestkit-qemu run`
 
 **Hardware:**
 - KVM support recommended for performance

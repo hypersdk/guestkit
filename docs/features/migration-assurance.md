@@ -19,7 +19,8 @@ Disk image (QCOW2/VMDK/…)
         ├─► Fleet clusters      (fleet analyze)
         ├─► Migration waves     (fleet wave-plan)
         ├─► Drift vs baseline   (fleet watch)
-        └─► FixPlan             (repair --fix boot)
+        ├─► FixPlan             (repair --fix boot)
+        └─► GuestKitQemuPlan    (guestkit-qemu plan / run)
 ```
 
 | Module | Role |
@@ -33,6 +34,7 @@ Disk image (QCOW2/VMDK/…)
 | `src/fleet/baseline.rs` | Per-VM golden baseline storage for `fleet watch` |
 | `src/ai/drift.rs` | Semantic drift explanation (baseline vs current) |
 | `src/cli/plan/` | Fix plans — security profiles **and** boot repair |
+| `src/qemu/` | Declarative QEMU/VirtIO config + assurance-gated launcher |
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
 
@@ -52,6 +54,19 @@ curl "$ZYVOR/api/v1/kubevirt/vms/default/my-vm/boot-inspect"
 ```
 
 See [kubevirt-integration.md](kubevirt-integration.md).
+
+### Assured QEMU launch
+
+`guestkit-qemu` consumes the same `EvidenceSnapshot` + `BootabilityReport` and
+refuses to start when blockers remain, the score is below `--min-boot-score`, or
+a UEFI guest has no pflash firmware (unless `--allow-unready`).
+
+```bash
+guestkit-qemu plan vm.qcow2 --json
+guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp
+```
+
+See [qemu-runtime.md](qemu-runtime.md).
 
 ### TUI parity
 

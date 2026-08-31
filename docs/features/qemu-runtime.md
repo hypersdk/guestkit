@@ -99,3 +99,25 @@ println!("{}", vm.command_spec()?.render_shell());
 
 Runtime execution uses `std::process::Command` with an argument vector. The shell
 string is only for logs/copy-paste and is never used to launch the process.
+
+## Capacity matrix
+
+| Area | Supported |
+|------|-----------|
+| Arch | x86_64, AArch64 |
+| Machines | Q35, PC, ARM `virt` |
+| Accel | KVM, TCG (`-cpu host` rejected under TCG) |
+| Disk | VirtIO-blk, VirtIO-SCSI (shared controller), NVMe, SATA |
+| Formats | QCOW2, RAW, VMDK, VDI, VHD |
+| Net | user (SSH → `127.0.0.1`), TAP (`vhost=on`), bridge |
+| Devices | balloon, RNG, vsock, VirtIO GPU, serial |
+| Firmware | OVMF / AAVMF pflash |
+| Console | serial, VNC, SPICE |
+| Control | QMP Unix socket, PID file / daemonize |
+
+## See also
+
+- [Migration assurance](migration-assurance.md)
+- [h2kvm integration](hyper2kvm-integration.md)
+- [CLI quick reference](../user-guides/quick-reference.md)
+- [Architecture overview](../architecture/overview.md)

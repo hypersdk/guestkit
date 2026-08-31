@@ -6,6 +6,7 @@
 
 - 🩺 **Doctor / migrate-plan** - Boot probability and hypervisor-aware migration scoring before cutover
 - 🖥️ **TUI Assurance** - Same scoring in `guestctl tui` (Security group · `d`/`t`/`p`/`e` keys)
+- ▶️ **Assured QEMU launch** - `guestkit-qemu` turns evidence into a gated QEMU/VirtIO runtime
 - 🎯 **Killer Summary View** - See OS, version, architecture at a glance
 - 🪟 **Windows Registry Parsing** - Full Windows version detection (incl. `windows-migration` profile)
 - 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter + fix plans
@@ -125,6 +126,19 @@ guestctl tui vm.qcow2 --compare other.qcow2
 **Assurance** (Security group): offline `doctor` + `migrate-plan` parity with CLI — `d` run doctor, `t` cycle target (kvm/proxmox/aws), `p` preview fix plan, `e` export YAML. Dashboard **`a`** jumps to Assurance.
 
 See [TUI enhancements](../features/tui-enhancements.md) and [migration assurance](../features/migration-assurance.md).
+
+## Assured QEMU launch
+
+After doctor/migrate-plan, launch under the same assurance gate:
+
+```bash
+cargo run --bin guestkit-qemu -- plan vm.qcow2 --json
+cargo run --bin guestkit-qemu -- run vm.qcow2 --min-boot-score 80 \
+  --qmp-socket /tmp/vm.qmp
+```
+
+UEFI guests need explicit firmware paths (`--uefi-code` / `--uefi-vars`).
+Full guide: [qemu-runtime.md](../features/qemu-runtime.md).
 
 ## Web console login
 

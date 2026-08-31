@@ -4,6 +4,11 @@ High-level direction for GuestKit / GuestCtl. Full release notes are in [CHANGEL
 
 ## Shipped (recent)
 
+- **Unreleased** — GuestKit-assured QEMU/VirtIO runtime (`guestkit-qemu plan|run|qmp`,
+  `src/qemu/`) — evidence → boot gate → QEMU argv + QMP day-2 control; see
+  [qemu-runtime.md](../features/qemu-runtime.md)
+- **v1.1.0** — Python assurance bindings (`run_doctor` / `run_migrate_repair`,
+  PyPI `hypersdk-guestkit`), h2kvm offline fixer integration
 - **v1.0.0** — GitHub Action for the Passport CI gate (`action.yml`,
   dogfooded by `passport-gate-demo.yml`); CI reliability pass (missing
   `libsystemd-dev`/`libhivex-dev` on Linux runners, loop/NBD device
@@ -54,5 +59,6 @@ Pick an item from [GitHub Issues](https://github.com/hypersdk/guestkit/issues) o
 
 - User guides: [docs/INDEX.md](../INDEX.md)
 - Fix plans / rescue: [fix-plans.md](../features/fix-plans.md)
+- QEMU runtime: [qemu-runtime.md](../features/qemu-runtime.md)
 - CLI cheat sheet: [quick-reference.md](../user-guides/quick-reference.md)
 - TUI: [tui-enhancements.md](../features/tui-enhancements.md)

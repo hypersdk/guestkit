@@ -116,8 +116,25 @@ The `integration/python/guestkit_wrapper.py` subprocess wrapper remains for olde
 3. GuestKit `run_migrate_repair` applies 4+ operations during offline fix
 4. Output qcow2 → libvirt domain `ubuntu-test` (credentials: osboxes / osboxes.org)
 
+## Assured local QEMU smoke-test
+
+After convert + repair, smoke-test the qcow2 with GuestKit's assurance gate
+before handing off to libvirt/KubeVirt:
+
+```bash
+guestkit doctor out.qcow2 --target kvm --fail-below 80
+guestkit-qemu run out.qcow2 \
+  --min-boot-score 80 \
+  --qmp-socket /tmp/out.qmp \
+  --ssh-forward 2222
+```
+
+GuestKit does not create TAP/bridges; use libvirt or your orchestrator for
+production networking. Details: [qemu-runtime.md](qemu-runtime.md).
+
 ## See also
 
 - [migration-assurance.md](migration-assurance.md)
+- [qemu-runtime.md](qemu-runtime.md)
 - [python-bindings.md](../user-guides/python-bindings.md)
 - [h2kvm GUESTKIT.md](https://github.com/zyvorai/h2kvm/blob/main/docs/architecture/GUESTKIT.md)

@@ -10,6 +10,7 @@ Offline VM intelligence and migration assurance
 | Run from GHCR (Docker/Helm) | [guides/DOCKER.md](guides/DOCKER.md#published-images-ghcr) |
 | CLI guide | [cli-guide.md](user-guides/cli-guide.md) |
 | Migration assurance | [migration-assurance.md](features/migration-assurance.md) |
+| **QEMU / VirtIO runtime** | [qemu-runtime.md](features/qemu-runtime.md) |
 | **h2kvm integration** | [hyper2kvm-integration.md](features/hyper2kvm-integration.md) |
 | Python bindings | [python-bindings.md](user-guides/python-bindings.md) |
 | Roadmap | [roadmap.md](development/roadmap.md) | Shipped Unreleased; issue-driven next |

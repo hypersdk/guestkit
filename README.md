@@ -40,8 +40,8 @@ GuestKit reads the disk **while the guest is off**, scores first-boot probabilit
          │  Pure-Rust engine    │──►  doctor 0–100 + blockers
          │  NBD / loop mount    │──►  migrate-plan YAML
          └──────────────────────┘──►  Passport · repair · CI gate
-                    │
-      CLI · TUI · Python · Web · Agent · GitHub Action
+                    │                 guestkit-qemu (assured launch)
+      CLI · TUI · QEMU · Python · Web · Agent · GitHub Action
 ```
 
 | | |
@@ -106,6 +106,7 @@ Recorded live against real deployments — no staged screenshots.
 | Fleet drift invisible until outage | `fleet analyze` / `watch`, forensic diff, policy-as-code |
 | Migration order guessed by hand | `fleet wave-plan` — dependency-aware waves |
 | Deep inspect needs a running guest | Carbon **TUI** + in-guest agent over QGA |
+| Assured first boot still means hand-built QEMU argv | **`guestkit-qemu`** plans/runs from the same evidence gate |
 
 ---
 
@@ -114,12 +115,13 @@ Recorded live against real deployments — no staged screenshots.
 <a id="quick-start"></a>
 
 ```bash
-cargo install guestkit          # guestkit + guestctl
+cargo install guestkit          # guestkit + guestctl + guestkit-qemu
 
 guestkit doctor vm.qcow2 --target proxmox --explain
 guestkit migrate-plan vm.vmdk --target kvm --export plan.yaml
 guestkit passport emit vm.qcow2 --target kvm -o passport.json
 guestctl tui vm.qcow2           # Assurance · preview · export
+guestkit-qemu plan vm.qcow2 --json   # assurance → QEMU definition
 ```
 
 **CI gate** — same score, no CLI install step:
@@ -158,6 +160,7 @@ See [python-bindings.md](docs/user-guides/python-bindings.md) and [examples/pyth
 |-----------|---------|
 | First hour | [Getting started](docs/user-guides/getting-started.md) |
 | Python assurance APIs | [python-bindings.md](docs/user-guides/python-bindings.md) |
+| **Assured QEMU launch** | [qemu-runtime.md](docs/features/qemu-runtime.md) |
 | **h2kvm pipeline** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) |
 | Remote SSH deploy | [DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
 | Cheat sheet | [Quick reference](docs/user-guides/quick-reference.md) |
@@ -202,13 +205,14 @@ Full guide: **[hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md)
 
 ## What you can do
 
-### Assure · plan · certify
+### Assure · plan · certify · launch
 
 ```bash
 guestkit doctor vm.qcow2 --target proxmox --explain
 guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml
 guestkit passport emit vm.qcow2 --target kvm -o passport.json
 guestkit passport verify passport.json --fail-below 80
+guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp
 ```
 
 ### Repair offline (no boot required)
@@ -308,9 +312,9 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│  guestkit CLI · guestctl TUI · Python · Web · Agent        │
+│  guestkit CLI · guestctl TUI · guestkit-qemu · Python · Web │
 ├────────────────────────────────────────────────────────────┤
-│  Rust evidence engine · boot scoring · fix-plan apply      │
+│  Rust evidence · boot scoring · fix-plan · QEMU/VirtIO plan │
 ├────────────────────────────────────────────────────────────┤
 │  JSON · YAML · HTML · PDF · Passport · CI exit codes       │
 └────────────────────────────────────────────────────────────┘
@@ -320,6 +324,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 |-------|----------------|
 | **Engine** | Pure-Rust parsers + evidence schema · NBD/loop (`src/`, `crates/`) |
 | **CLI / TUI** | `guestkit` · `guestctl` — doctor, passport, fleet, rescue |
+| **QEMU runtime** | `guestkit-qemu` — assured plan/run + QMP ([qemu-runtime.md](docs/features/qemu-runtime.md)) |
 | **Agent** | Linux + Windows · protocol 1.3 · `agent-inject` / `agent-proxy` |
 | **Python** | [hypersdk-guestkit](https://pypi.org/project/hypersdk-guestkit/) — `run_doctor`, `run_migrate_repair` (v1.1.0+) |
 | **h2kvm** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) — convert/deploy partner |
@@ -339,6 +344,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 | Docker / GHCR | [DOCKER.md](docs/guides/DOCKER.md#published-images-ghcr) |
 | Remote deploy | [DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
 | **h2kvm integration** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) |
+| **QEMU / VirtIO runtime** | [qemu-runtime.md](docs/features/qemu-runtime.md) |
 | Architecture | [overview](docs/architecture/overview.md) |
 | Changelog / roadmap | [CHANGELOG](docs/development/CHANGELOG.md) · [roadmap](docs/development/roadmap.md) |
 

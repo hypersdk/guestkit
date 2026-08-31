@@ -2,7 +2,7 @@
 
 > **Offline VM intelligence and migration assurance.**
 
-GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no appliance daemon to install.
+GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), an assured QEMU launcher (guestkit-qemu), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no appliance daemon to install.
 
 **70+** CLI subcommands · **6** disk formats read · ****0** appliance daemons needed · **8** migration targets scored · **0-100** boot assurance score · **5** inspection profiles
 
@@ -20,22 +20,23 @@ This is the customer-facing onboarding guide — how to access the product, your
 7. [Interactive Workspaces](#7-interactive-workspaces)
 8. [Guest Agent & Live Control](#8-guest-agent-live-control)
 9. [KubeVirt & Platform](#9-kubevirt-platform)
-10. [Deployment & Editions](#10-deployment-editions)
+10. [QEMU / VirtIO runtime](#10-qemu-virtio-runtime)
+11. [Deployment & Editions](#11-deployment-editions)
 
 ## Getting started
 
 **How to access it**
 
 - **Web:** Self-hosted web console at http://localhost:8088 (nginx front-end proxies `/api/` to the zyvor-api backend). Start it with `docker compose -f deploy/docker-compose.ghcr.yml up -d`.
-- **CLI:** Two binaries share one command surface: `guestkit` (scriptable CLI) and `guestctl`. Install both with `cargo install guestkit`; run `guestkit --help` or `guestkit commands` to list all subcommands. Launch the TUI with `guestctl tui vm.qcow2`.
+- **CLI:** Three host binaries: `guestkit` (scriptable CLI), `guestctl` (TUI), and `guestkit-qemu` (assured QEMU plan/run/QMP). Install with `cargo install guestkit`; run `guestkit --help` or `guestkit commands` to list subcommands. Launch the TUI with `guestctl tui vm.qcow2`.
 - **API:** REST API served by zyvor-api behind the console's `/api/` path (e.g. `http://localhost:8088/api/`); it enqueues inspect/boot-inspect jobs onto the Redis-backed worker. Live guests are reachable host-side via `guestkit agent-proxy --listen 127.0.0.1:8765` (e.g. `curl http://127.0.0.1:8765/doctor`). Python bindings expose the engine in-process via `from guestkit import Guestfs`.
 - **Login:** Packaged/web installs seed a default administrator: username `admin`, password `Admin@321` (also the default API key where applicable). Change the password, API key and `JWT_SECRET` immediately after first login and enable SSO/SAML from Settings before any network exposure.
-- **Needs:** A Linux host with qemu-img, losetup and qemu-nbd installed; mount and in-cluster boot-inspect need root or a privileged pod.
+- **Needs:** A Linux host with qemu-img, losetup and qemu-nbd installed; mount and in-cluster boot-inspect need root or a privileged pod. `guestkit-qemu run` also needs a QEMU system binary on `PATH`.
 
 **Your first workflows**
 
 - **Pre-flight environment check**
-  1. Install the tools: `cargo install guestkit` (installs `guestkit` and `guestctl`).
+  1. Install the tools: `cargo install guestkit` (installs `guestkit`, `guestctl`, and `guestkit-qemu`).
   1. Verify host tooling is present: `guestkit doctor --help` and confirm qemu-img/losetup/qemu-nbd are installed.
   1. Confirm the disk opens and its format is detected: `guestkit detect vm.qcow2`.
 - **Assurance-first migration (recommended)**
@@ -94,6 +95,8 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
   - **How:** CLI: `guestkit migrate-plan vm.vmdk --target proxmox` (add `-o json` to capture the checklist). Targets include kvm, proxmox, qemu, aws, azure, gcp, cloud, hyperv.
 - **CI boot gate** — --fail-below sets an exit-code threshold so pipelines block any image that scores under your bar, JSON still emitted. — _Golden images that regress never reach production._
   - **How:** CLI: `guestkit doctor img.qcow2 --target proxmox -o json --fail-below 80` exits non-zero when the score drops below your bar while still emitting JSON.
+- **Assured QEMU launch** — `guestkit-qemu` turns the same evidence + boot score into a VirtIO-aware QEMU definition and refuses to start on blockers, low scores, or missing UEFI firmware. — _Prove the disk boots under KVM before cutover weekend._
+  - **How:** CLI: `guestkit-qemu plan vm.qcow2 --json` then `guestkit-qemu run vm.qcow2 --min-boot-score 80`. See [qemu-runtime.md](features/qemu-runtime.md).
 - **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). Transiva exports; h2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
   - **How:** CLI: `guestkit passport emit vm.qcow2 --target kvm -o passport.json` then `guestkit passport verify passport.json --fail-below 80`. Web dock: **Passport**.
 - **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, DHCP/DNS, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
@@ -246,12 +249,26 @@ _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web con
 
 > In-cluster boot-inspect needs a privileged pod or node disk access plus get/list RBAC on VMs, VMIs, PVCs, and PVs. A running VM returns VM-spec heuristics - offline disk access is for stopped VMs.
 
-## 10. Deployment & Editions
+## 10. QEMU / VirtIO runtime
+
+_Turn migration evidence into an executable, assurance-gated QEMU definition._
+
+- **Evidence → QEMU plan** — `guestkit-qemu plan` reuses `collect_assurance_data` to pick architecture, machine type, disk format, VirtIO devices, firmware needs, and a safe argv vector. — _One inspection path for score and launch config._
+  - **How:** CLI: `guestkit-qemu plan vm.qcow2 --memory-mb 8192 --vcpus 4 --json`.
+- **Gated run** — Launch refuses boot blockers, scores below `--min-boot-score`, or UEFI without pflash unless `--allow-unready`. — _No silent start of unready cutovers._
+  - **How:** CLI: `guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp`.
+- **QMP day-2** — status / pause / resume / balloon / powerdown over a Unix QMP socket. — _Control the VM after assured start._
+  - **How:** CLI: `guestkit-qemu qmp --socket /run/guestkit/vm.qmp status`.
+- **Host networking stays outside** — User-mode (SSH on loopback) by default; TAP/bridge attach only to already-provisioned host devices. — _GuestKit inspects; the platform owns host net._
+
+Full guide: [qemu-runtime.md](features/qemu-runtime.md).
+
+## 11. Deployment & Editions
 
 _Install in one command; run the full open-source stack; scale with Enterprise support._
 
-- **cargo install** — cargo install guestkit installs both the guestkit CLI and guestctl TUI binaries. — _From zero to inspecting in one line._
-  - **How:** CLI: `cargo install guestkit` installs both the `guestkit` CLI and `guestctl` TUI binaries.
+- **cargo install** — cargo install guestkit installs `guestkit`, `guestctl`, and `guestkit-qemu`. — _From zero to inspecting in one line._
+  - **How:** CLI: `cargo install guestkit` installs the CLI, TUI, and QEMU runtime binaries.
 - **Run from GHCR** — Prebuilt public images (zyvor-ui, zyvor-api, guestkit-worker) come up via docker compose with no docker login. — _Stand up the whole console in minutes._
   - **How:** Docker: `docker compose -f deploy/docker-compose.ghcr.yml up -d` brings up zyvor-ui/zyvor-api/guestkit-worker at http://localhost:8088 with no docker login.
 - **Helm & remote deploy** — A Helm chart for clusters plus scripted remote deploy for Docker hosts. — _Ship it where your fleet already lives._
