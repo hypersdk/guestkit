@@ -868,12 +868,21 @@ impl Guestfs {
     /// Get mountpoints for the root device.
     ///
     /// Parses /etc/fstab to discover additional mountpoints beyond root.
+    /// Mounts `root` read-only first when needed so fstab is readable — without
+    /// that, callers only see `/` and miss separate `/boot` / `/boot/efi`
+    /// partitions (common on Ubuntu cloud images).
     pub fn inspect_get_mountpoints(&mut self, root: &str) -> Result<HashMap<String, String>> {
         self.ensure_ready()?;
 
         let mut mountpoints = HashMap::new();
         // Always include root
         mountpoints.insert("/".to_string(), root.to_string());
+
+        // Root must be mounted to read /etc/fstab. Leave it mounted so the
+        // caller's subsequent mount loop can skip `/` via already_mounted.
+        if !self.mounted.contains_key(root) {
+            self.mount_ro(root, "/")?;
+        }
 
         // Try to parse /etc/fstab for additional mountpoints
         if let Ok(fstab_content) = self.cat("/etc/fstab") {

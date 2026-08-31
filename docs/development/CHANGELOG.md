@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
 
 ### Fixed
+- **BOOT-003 false positive on Ubuntu cloud images** — mount `/boot` and
+  `/boot/efi` from fstab (`LABEL=`/`UUID=`/`PARTUUID=`). Previously only the
+  rootfs was mounted, so a separate BOOT partition looked empty and passport
+  handoff hard-blocked a bootable disk.
 - **`guestkit gate --image`** — when the disk directory is not writable (e.g.
   `/var/lib/libvirt/images`), write the temporary passport under `$TMPDIR`
   instead of failing with Permission denied.
