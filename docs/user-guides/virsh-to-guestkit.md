@@ -2,9 +2,10 @@
 
 GuestKit is the offline + live *guest* tool. It inspects disks, scores
 boot readiness, repairs guests, and speaks the QEMU guest-agent socket.
-For **host-local QEMU**, `guestkit vm` also owns define / plan / start /
-shutdown without libvirt. KubeVirt / cluster domain objects still stay
-with the hypervisor control plane: `virtctl` / `kubectl`, or Machina.
+For **host-local run + network**, use **[Ephemera](https://github.com/zyvorai/ephemera)**
+as the libvirt/virsh replacement (`create` / `get` / `delete`, TAP/netns/DHCP).
+`guestkit vm` remains a lab-only smoke path (user-mode). KubeVirt / cluster
+domains stay with `virtctl` / Machina.
 
 This page is the cut-over map so scripts can delete every `virsh`
 invocation.
@@ -44,16 +45,21 @@ KubeVirt virt-launcher (inside the `compute` container):
 
 | Old virsh | Replacement |
 |---|---|
-| `virsh list --all` (local QEMU) | `guestkit vm list` |
-| `virsh define` / `start` / `shutdown` / `destroy` (local QEMU) | `guestkit vm define\|start\|shutdown\|destroy` |
+| `virsh list --all` (local QEMU) | **Ephemera** `ephemera list` ([zyvorai/ephemera](https://github.com/zyvorai/ephemera)); lab-only: `guestkit vm list` |
+| `virsh define` / `start` / `shutdown` / `destroy` (local QEMU) | **Ephemera** `create` / `delete` (TTL); lab-only: `guestkit vm …` |
+| Guest IP / libvirt NAT (`virbr0`) | Ephemera `user` / `tap`+bridge / `netns` (`ephemera get` → `guest_ip`) |
 | `virsh list --all` (KubeVirt) | `virtctl get vmi -A` / `kubectl get vmi -A` or Machina |
 | `virsh start` / `shutdown` / `destroy` (KubeVirt) | `virtctl start\|stop\|restart` |
 | `virsh console` | `virtctl console` or SPICE/VNC via Machina |
 | `virsh define` / `undefine` / `dumpxml` (cluster) | KubeVirt VMI/VM YAML, or Machina domain API |
 | `virsh migrate --live` | KubeVirt live migration / Machina |
-| `virsh net-*` / `pool-*` | CNI + storage control plane (Atlas), not GuestKit |
+| `virsh net-*` / `pool-*` | Ephemera network modes (host-local) or CNI + Atlas (cluster) |
 
-See [VM lifecycle](../features/vm-runtime.md) for the local QEMU path.
+**Suite rule:** GuestKit certifies the disk; Ephemera replaces libvirt for
+host-local run + network; KubeVirt keeps `virtctl`.
+
+See [VM lifecycle](../features/vm-runtime.md) and the Ephemera README
+“Libvirt / virsh replacement” section.
 
 ## zyvor-api behaviour
 
@@ -85,8 +91,11 @@ virsh start web01 && virsh console web01
 
 # after
 guestkit doctor /var/lib/libvirt/images/web01.qcow2 --target kvm --explain
-# local QEMU:
-guestkit vm define web01 /var/lib/libvirt/images/web01.qcow2 && guestkit vm start web01
+guestkit passport emit /var/lib/libvirt/images/web01.qcow2 --target kvm -o passport.json
+# Then run with Ephemera (libvirt replacement):
+#   ephemera create --spec examples/guestkit-handoff.json
+# Lab-only without Ephemera:
+guestkit vm define web01 /var/lib/libvirt/images/web01.qcow2 && guestkit vm start web01 --force
 # or KubeVirt/Machina domain, then:
 guestkit agent-call --method guestkit.getBootAnalysis
 ```

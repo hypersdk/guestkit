@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Suite positioning** — GuestKit certifies/repairs disks; **Ephemera** runs and
-  manages VMs (network, cloud-init, TTL). `guestkit vm` stays a minimal lab/CI
-  smoke path (user-mode / pre-created TAP only). Docs:
-  [vm-runtime.md](../features/vm-runtime.md).
+  manages VMs (network, cloud-init, TTL) and is the host-local **libvirt/virsh
+  replacement**. `guestkit vm` stays a minimal lab/CI smoke path. Docs:
+  [vm-runtime.md](../features/vm-runtime.md),
+  [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
 
 ### Fixed
 - **`guestkit gate --image`** — when the disk directory is not writable (e.g.
