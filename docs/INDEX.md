@@ -38,6 +38,8 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Rescue / SBOM CI](devops/10-rescue-sbom-ci.md) | Rescue dry-run Action, `sbom-diff`, forensic-diff SBOM attach |
 | [Cloud profiles / Rego](user-guides/cloud-policy-rego.md) | AWS/Azure/GCP/OpenStack policy packs + `policy rego` |
 | [Cloud-init datasource](user-guides/cloud-init.md) | Offline Ec2/Azure/GCE/NoCloud pin + seed |
+| [Cutover bundle](user-guides/cutover-bundle.md) | gate + sysprep/SELinux/BitLocker + cloud-profile/rego + virtctl resolve |
+| [SELinux / sysprep / BitLocker](user-guides/cutover-prep.md) | Offline relabel, Windows generalize prep, recovery-key escrow |
 
 ## Deployment
 

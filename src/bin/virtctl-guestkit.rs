@@ -38,6 +38,26 @@ enum PluginCmd {
         #[arg(long)]
         explain: bool,
     },
+    /// Resolve hostDisk / PVC name from a VM/VMI (does not mount PVCs)
+    Resolve {
+        vm: String,
+        #[arg(short, long)]
+        namespace: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run `guestkit gate` against --image or a resolved hostDisk
+    Gate {
+        vm: Option<String>,
+        #[arg(short, long)]
+        namespace: Option<String>,
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long)]
+        passport: Option<PathBuf>,
+        #[arg(long, default_value_t = 80.0)]
+        fail_below: f64,
+    },
     /// Run `guestkit passport emit`
     Passport {
         vm: Option<String>,
@@ -76,12 +96,7 @@ fn run() -> Result<()> {
             target,
             explain,
         } => {
-            if let Some(name) = vm.as_deref() {
-                hint_vm(name, namespace.as_deref());
-            }
-            let image = image.ok_or_else(|| {
-                anyhow::anyhow!("pass --image PATH (virtctl does not expose PVC contents)")
-            })?;
+            let image = resolve_image(image, vm.as_deref(), namespace.as_deref())?;
             let mut args = vec![
                 "doctor".into(),
                 image.display().to_string(),
@@ -132,12 +147,137 @@ fn run() -> Result<()> {
             }
             exec_guestkit(&args)
         }
+        PluginCmd::Resolve { vm, namespace, json } => {
+            let info = inspect_vm(&vm, namespace.as_deref())?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&info)?);
+            } else {
+                println!("kind={} name={}", info.kind, info.name);
+                for d in &info.disks {
+                    println!("  {} {:?}", d.kind, d.path);
+                }
+            }
+            Ok(())
+        }
+        PluginCmd::Gate {
+            vm,
+            namespace,
+            image,
+            passport,
+            fail_below,
+        } => {
+            let mut args = vec!["gate".into(), "--fail-below".into(), fail_below.to_string()];
+            if let Some(p) = passport {
+                args.push("--passport".into());
+                args.push(p.display().to_string());
+            } else {
+                let img = resolve_image(image, vm.as_deref(), namespace.as_deref())?;
+                args.push("--image".into());
+                args.push(img.display().to_string());
+            }
+            exec_guestkit(&args)
+        }
     }
 }
 
 fn hint_vm(name: &str, namespace: Option<&str>) {
     let ns = namespace.unwrap_or("default");
     eprintln!("# VM {ns}/{name} — fetch YAML with: kubectl get vm {name} -n {ns} -o yaml");
+}
+
+#[derive(serde::Serialize)]
+struct VmDisks {
+    kind: String,
+    name: String,
+    disks: Vec<ResolvedDisk>,
+}
+
+#[derive(serde::Serialize)]
+struct ResolvedDisk {
+    kind: String,
+    path: Option<String>,
+}
+
+fn resolve_image(
+    explicit: Option<PathBuf>,
+    vm: Option<&str>,
+    namespace: Option<&str>,
+) -> Result<PathBuf> {
+    if let Some(p) = explicit {
+        return Ok(p);
+    }
+    let name = vm.ok_or_else(|| anyhow::anyhow!("pass --image PATH or a VM name"))?;
+    let info = inspect_vm(name, namespace)?;
+    if let Some(p) = info
+        .disks
+        .iter()
+        .find(|d| d.kind == "hostDisk" && d.path.is_some())
+        .and_then(|d| d.path.clone())
+    {
+        return Ok(PathBuf::from(p));
+    }
+    let pvcs: Vec<_> = info
+        .disks
+        .iter()
+        .filter(|d| d.kind == "pvc")
+        .filter_map(|d| d.path.clone())
+        .collect();
+    anyhow::bail!(
+        "no hostDisk on {name}; PVCs {:?} are not mounted by this plugin — copy out or pass --image",
+        pvcs
+    )
+}
+
+fn inspect_vm(name: &str, namespace: Option<&str>) -> Result<VmDisks> {
+    let ns = namespace.unwrap_or("default");
+    let raw = kubectl_json(&["get", "vm", name, "-n", ns, "-o", "json"])
+        .or_else(|_| kubectl_json(&["get", "vmi", name, "-n", ns, "-o", "json"]))?;
+    let v: serde_json::Value = serde_json::from_str(&raw)?;
+    let kind = v
+        .get("kind")
+        .and_then(|k| k.as_str())
+        .unwrap_or("VirtualMachine")
+        .to_string();
+    let volumes = v
+        .pointer("/spec/template/spec/volumes")
+        .or_else(|| v.pointer("/spec/volumes"))
+        .and_then(|x| x.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let mut disks = Vec::new();
+    for vol in volumes {
+        if let Some(p) = vol.pointer("/hostDisk/path").and_then(|x| x.as_str()) {
+            disks.push(ResolvedDisk {
+                kind: "hostDisk".into(),
+                path: Some(p.to_string()),
+            });
+        } else if let Some(c) = vol
+            .pointer("/persistentVolumeClaim/claimName")
+            .and_then(|x| x.as_str())
+        {
+            disks.push(ResolvedDisk {
+                kind: "pvc".into(),
+                path: Some(c.to_string()),
+            });
+        }
+    }
+    Ok(VmDisks {
+        kind,
+        name: name.into(),
+        disks,
+    })
+}
+
+fn kubectl_json(args: &[&str]) -> Result<String> {
+    let out = Command::new("kubectl").args(args).output()?;
+    if !out.status.success() {
+        anyhow::bail!(
+            "kubectl {} failed: {}",
+            args.join(" "),
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    Ok(String::from_utf8(out.stdout)?)
 }
 
 fn exec_guestkit(args: &[String]) -> Result<()> {

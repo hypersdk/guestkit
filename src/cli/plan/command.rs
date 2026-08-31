@@ -580,6 +580,13 @@ impl PlanCommand {
                 | "cloud-init-gce"
                 | "cloud-init-openstack"
                 | "cloud-init-nocloud"
+                | "selinux-relabel"
+                | "selinux_relabel"
+                | "sysprep"
+                | "windows-sysprep"
+                | "windows_sysprep"
+                | "virtio-initramfs"
+                | "virtio_initramfs"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -686,6 +693,15 @@ impl PlanCommand {
                         instance_id: hostname,
                     },
                 ),
+                "selinux-relabel" | "selinux_relabel" => {
+                    crate::cli::plan::cutover_prep::selinux_relabel_plan(vm_disk)
+                }
+                "sysprep" | "windows-sysprep" | "windows_sysprep" => {
+                    crate::cli::plan::cutover_prep::windows_sysprep_plan(vm_disk, hostname, true)
+                }
+                "virtio-initramfs" | "virtio_initramfs" => {
+                    crate::cli::plan::linux_boot::virtio_initramfs_plan(vm_disk, true)
+                }
                 _ => unreachable!(),
             };
             Self::write_plan_file(output, format, &plan)?;
