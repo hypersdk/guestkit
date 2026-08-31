@@ -2,9 +2,9 @@
 
 GuestKit is the offline + live *guest* tool. It inspects disks, scores
 boot readiness, repairs guests, and speaks the QEMU guest-agent socket.
-It is **not** a libvirt replacement. Domain lifecycle (define / start /
-destroy / migrate the hypervisor object) stays with the hypervisor
-control plane: KubeVirt `virtctl` / `kubectl`, or Machina.
+For **host-local QEMU**, `guestkit vm` also owns define / plan / start /
+shutdown without libvirt. KubeVirt / cluster domain objects still stay
+with the hypervisor control plane: `virtctl` / `kubectl`, or Machina.
 
 This page is the cut-over map so scripts can delete every `virsh`
 invocation.
@@ -40,16 +40,20 @@ KubeVirt virt-launcher (inside the `compute` container):
 
 `guestkit qga` auto-discovers those paths when `--socket` is omitted.
 
-## Hypervisor object lifecycle (do **not** pretend GuestKit does this)
+## Hypervisor object lifecycle
 
 | Old virsh | Replacement |
 |---|---|
-| `virsh list --all` | `virtctl get vmi -A` / `kubectl get vmi -A` (KubeVirt) or Machina |
-| `virsh start` / `shutdown` / `destroy` | `virtctl start\|stop\|restart` |
+| `virsh list --all` (local QEMU) | `guestkit vm list` |
+| `virsh define` / `start` / `shutdown` / `destroy` (local QEMU) | `guestkit vm define\|start\|shutdown\|destroy` |
+| `virsh list --all` (KubeVirt) | `virtctl get vmi -A` / `kubectl get vmi -A` or Machina |
+| `virsh start` / `shutdown` / `destroy` (KubeVirt) | `virtctl start\|stop\|restart` |
 | `virsh console` | `virtctl console` or SPICE/VNC via Machina |
-| `virsh define` / `undefine` / `dumpxml` | KubeVirt VMI/VM YAML, or Machina domain API |
+| `virsh define` / `undefine` / `dumpxml` (cluster) | KubeVirt VMI/VM YAML, or Machina domain API |
 | `virsh migrate --live` | KubeVirt live migration / Machina |
 | `virsh net-*` / `pool-*` | CNI + storage control plane (Atlas), not GuestKit |
+
+See [VM lifecycle](../features/vm-runtime.md) for the local QEMU path.
 
 ## zyvor-api behaviour
 
@@ -81,7 +85,9 @@ virsh start web01 && virsh console web01
 
 # after
 guestkit doctor /var/lib/libvirt/images/web01.qcow2 --target kvm --explain
-# start the domain with virtctl/Machina, then:
+# local QEMU:
+guestkit vm define web01 /var/lib/libvirt/images/web01.qcow2 && guestkit vm start web01
+# or KubeVirt/Machina domain, then:
 guestkit agent-call --method guestkit.getBootAnalysis
 ```
 
@@ -91,4 +97,5 @@ guestkit agent-call --method guestkit.getBootAnalysis
 - [Guest Control Fabric](../features/guest-control-fabric.md)
 - [CLI quick reference](quick-reference.md)
 - [QEMU / VirtIO runtime](../features/qemu-runtime.md)
+- [VM lifecycle](../features/vm-runtime.md)
 - [Architecture overview](../architecture/overview.md)

@@ -23,6 +23,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Security profiles](user-guides/profiles.md) | Security, compliance, migration profiles |
 | [Migration assurance](features/migration-assurance.md) | Doctor, migrate-plan, fleet, policy, forensic diff |
 | [QEMU / VirtIO runtime](features/qemu-runtime.md) | Assured `guestkit-qemu plan|run|qmp` from evidence |
+| [VM lifecycle](features/vm-runtime.md) | `guestkit vm` define/plan/start — local QEMU, no libvirt |
 | [Industry use cases](INDUSTRY_USE_CASES.md) | Real-world scenarios, PM/TA view, Zyvor product stack |
 | [Fix plans](features/fix-plans.md) | Offline patch workflow |
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |

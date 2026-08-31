@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`guestkit vm`** — GuestKit-native local QEMU lifecycle (`define` / `plan` /
+  `start` / `list` / `status` / `shutdown` / `destroy` / `undefine`) with
+  assurance gate and QMP day-2 ops. No libvirt XML. Docs:
+  [vm-runtime.md](../features/vm-runtime.md).
 - **`virtctl-guestkit guestfs`** — drop-in for `virtctl guestfs`. Creates a
   short-lived GuestKit pod on a PVC (`/disk` or `/dev/vda`), no libguestfs
   appliance. Also `inspect` / `doctor --vm` / `rescue`. Uses `kubectl` (no new

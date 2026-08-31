@@ -96,7 +96,7 @@ pub fn inspect_tree(root: &Path) -> VirtioWinTree {
             });
         }
     }
-    drivers.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    drivers.sort_by_key(|a| a.name.to_lowercase());
     VirtioWinTree {
         root: root.display().to_string(),
         drivers,

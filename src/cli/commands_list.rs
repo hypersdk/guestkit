@@ -103,6 +103,7 @@ const GROUPS: &[(&str, &[&str])] = &[
             "agent-proxy",
             "agent-call",
             "qga",
+            "vm",
         ],
     ),
     (

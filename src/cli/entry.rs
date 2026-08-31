@@ -2175,6 +2175,12 @@ enum Commands {
         raw: Option<String>,
     },
 
+    /// GuestKit-native local QEMU lifecycle (define/plan/start — no libvirt)
+    Vm {
+        #[command(subcommand)]
+        action: crate::vm::VmAction,
+    },
+
     /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
     #[command(name = "agent-call")]
     AgentCall {
@@ -4380,11 +4386,11 @@ pub fn run() -> anyhow::Result<()> {
             })?;
             let ud = user_data
                 .as_ref()
-                .map(|p| std::fs::read_to_string(p))
+                .map(std::fs::read_to_string)
                 .transpose()?;
             let md = meta_data
                 .as_ref()
-                .map(|p| std::fs::read_to_string(p))
+                .map(std::fs::read_to_string)
                 .transpose()?;
             let plan = crate::cli::plan::cloud_init::cloud_init_plan(
                 crate::cli::plan::cloud_init::CloudInitOpts {
@@ -4617,6 +4623,8 @@ pub fn run() -> anyhow::Result<()> {
                 anyhow::bail!("guestkit qga requires rebuilding with --features agent on Unix");
             }
         }
+
+        Commands::Vm { action } => crate::vm::run_cli(action, cli.verbose)?,
 
         Commands::AgentCall {
             socket,
