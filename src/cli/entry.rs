@@ -2007,6 +2007,28 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+
+        /// Optional SPDX / CycloneDX / inventory JSON (before)
+        #[arg(long, value_name = "FILE")]
+        sbom_old: Option<PathBuf>,
+
+        /// Optional SPDX / CycloneDX / inventory JSON (after)
+        #[arg(long, value_name = "FILE")]
+        sbom_new: Option<PathBuf>,
+    },
+
+    /// Diff two SBOMs (SPDX, CycloneDX, or GuestKit inventory JSON)
+    #[command(name = "sbom-diff")]
+    SbomDiff {
+        /// Before SBOM JSON
+        old: PathBuf,
+        /// After SBOM JSON
+        new: PathBuf,
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+        /// Exit 1 when any package was added, removed, or version-bumped
+        #[arg(long)]
+        fail_on_drift: bool,
     },
 
     /// Run GuestKit in-guest agent daemon (requires --features agent)
@@ -4148,8 +4170,43 @@ pub fn run() -> anyhow::Result<()> {
             verbose: cli.verbose,
         })?,
 
-        Commands::ForensicDiff { old, new, output } => {
-            forensic_diff_command(&old, &new, &output, cli.verbose)?;
+        Commands::ForensicDiff {
+            old,
+            new,
+            output,
+            sbom_old,
+            sbom_new,
+        } => {
+            forensic_diff_command(
+                &old,
+                &new,
+                &output,
+                cli.verbose,
+                sbom_old.as_deref(),
+                sbom_new.as_deref(),
+            )?;
+        }
+
+        Commands::SbomDiff {
+            old,
+            new,
+            output,
+            fail_on_drift,
+        } => {
+            let report = crate::cli::sbom_diff::diff_files(&old, &new)?;
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                crate::cli::sbom_diff::print_text(&report);
+            }
+            if fail_on_drift && report.dirty() {
+                anyhow::bail!(
+                    "SBOM drift: +{} -{} ~{}",
+                    report.added.len(),
+                    report.removed.len(),
+                    report.updated.len()
+                );
+            }
         }
 
         Commands::Agent {

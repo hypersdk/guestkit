@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`guestkit sbom-diff`** — compare SPDX, CycloneDX, or GuestKit inventory
+  JSON; `--fail-on-drift` for CI. `forensic-diff` accepts `--sbom-old/--sbom-new`.
+- **Passport Action extras** — optional rescue dry-run (`--export-plan`), SPDX
+  emit, and `passport handoff` in the composite `action.yml`. New
+  `.github/actions/rescue-dry-run`.
 - **`guestkit img`** — qemu-img info/check/snapshot/resize/rebase/commit with
   GuestKit JSON errors (`GUESTKIT_QEMU_IMG` override).
 - **`guestkit domain-disks`** — parse libvirt XML or KubeVirt VM/VMI YAML for
