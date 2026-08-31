@@ -43,7 +43,13 @@ sudo ln -sf virtctl-guestkit /usr/local/bin/kubectl-guestkit
 
 virtctl guestkit doctor --image disk.qcow2 --target kubevirt
 kubectl guestkit handoff --passport passport.json
+
+# replaces `virtctl guestfs` (VM must be stopped)
+virtctl-guestkit guestfs -n default disk-pvc
+virtctl-guestkit guestfs --vm my-vm -n default
+virtctl-guestkit inspect --vm my-vm -n default
+virtctl-guestkit doctor --vm my-vm -n default
 ```
 
-PVCs are not mounted by the plugin. Pass `--image` to a host path or a
-volume you already copied out.
+Local `--image` still works without a cluster. PVC attach uses `kubectl` and
+the GuestKit image (`$GUESTKIT_IMAGE` or `ghcr.io/hypersdk/guestkit:latest`).

@@ -31,6 +31,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Handoff / quarantine](user-guides/handoff-quarantine.md) | Passport → h2kvmctl job, fleet quarantine, virtctl plugin |
 | [VM migration](user-guides/vm-migration.md) | End-to-end migration handoff |
 | [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
+| [Replace virtctl guestfs](features/virtctl-guestkit.md) | `virtctl-guestkit guestfs` on a PVC — GuestKit, not libguestfs |
 | [Guest agent](features/guest-agent.md) | In-guest agent + host `guestkit qga` / `agent-call` |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
 | [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
