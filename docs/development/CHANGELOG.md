@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-31
+
+### Added
+- **Python assurance bindings** (`guestkit.pyi`, `src/python.rs`) — native PyO3 wrappers for the migration assurance engine:
+  - `run_doctor(image, target="kvm")` — bootability score, blockers, evidence
+  - `run_boot_inspect(image, target="kvm")` — OS release, fstab, bootloader summary
+  - `run_migrate_plan(image, target="kvm")` — hypervisor-aware fix plan
+  - `run_repair_plan(image, dry_run=True)` — repair plan with before/after scores
+  - `run_migrate_repair(image, apply=False)` — primary offline fix path used by **h2kvm**
+- **h2kvm integration** — `h2kvm.core.guestkit_client` delegates to these APIs; VMCraft removed from h2kvm
+- Documentation: [python-bindings.md](../user-guides/python-bindings.md), [hyper2kvm-integration.md](../features/hyper2kvm-integration.md)
+
+### Changed
+- Python package remains **`hypersdk-guestkit`** on PyPI; wheel artifact: `hypersdk_guestkit-*.whl`
+- Assurance APIs return structured `dict` results matching CLI JSON output
+
+### Fixed
+- Python 3.13+ builds: document `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` for maturin when needed
+
 ## [1.0.1] - 2026-08-15
 
 ### Fixed

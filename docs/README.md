@@ -10,6 +10,8 @@ Offline VM intelligence and migration assurance
 | Run from GHCR (Docker/Helm) | [guides/DOCKER.md](guides/DOCKER.md#published-images-ghcr) |
 | CLI guide | [cli-guide.md](user-guides/cli-guide.md) |
 | Migration assurance | [migration-assurance.md](features/migration-assurance.md) |
+| **h2kvm integration** | [hyper2kvm-integration.md](features/hyper2kvm-integration.md) |
+| Python bindings | [python-bindings.md](user-guides/python-bindings.md) |
 | Roadmap | [roadmap.md](development/roadmap.md) | Shipped Unreleased; issue-driven next |
 | Full index | [INDEX.md](INDEX.md) |
 | **User journeys & acceptance criteria** | [User Stories](USER_STORIES.md) |
@@ -32,7 +34,7 @@ Part of the [Zyvor / HyperSDK platform stack](https://zyvor.dev) — **15 produc
 | Product | Role |
 |---------|------|
 | **HyperSDK Platform** | Multi-cloud VM export & APIs |
-| **hyper2kvm** | Hypervisor → KVM conversion |
+| **h2kvm** | Hypervisor → KVM conversion + deploy |
 | **guestkit** | Offline VM migration assurance |
 | **Veyron** | KubeVirt VM command center |
 | **Aether** | Universal runtime portability |

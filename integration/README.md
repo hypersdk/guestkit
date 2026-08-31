@@ -1,158 +1,101 @@
-# guestkit Integration for hyper2kvm
+# GuestKit integration for h2kvm
 
-This directory contains integration utilities for using guestkit with hyper2kvm.
+This directory contains **legacy and reference** integration utilities. For new projects, install the native Python module:
 
-## Python Integration
+```bash
+pip install "hypersdk-guestkit>=1.1.0"
+```
 
-### Quick Start
+## Recommended integration (v1.1.0+)
+
+h2kvm delegates offline repair to GuestKit via PyO3 — **no subprocess wrapper required**:
+
+```python
+import guestkit
+
+# Assurance before convert
+report = guestkit.run_doctor("source.vmdk", target="kvm", explain=True)
+
+# Apply offline fixes during migration
+result = guestkit.run_migrate_repair(
+    "/var/lib/h2kvm/demo/ubuntu-test/ubuntu-test.qcow2",
+    target="kvm",
+    apply=True,
+)
+```
+
+h2kvm uses the same calls through `h2kvm.core.guestkit_client`. See [hyper2kvm-integration.md](../docs/features/hyper2kvm-integration.md).
+
+## Integration options
+
+| Approach | When to use |
+|----------|-------------|
+| **`pip install hypersdk-guestkit`** + `run_*` APIs | **Default** — h2kvm, CI, automation |
+| **GuestKit CLI** subprocess | Shell scripts, Passport CI gate, no Python |
+| **`guestkit_wrapper.py`** (this dir) | Legacy hyper2kvm code paths only |
+| **Direct Rust / `cargo install guestkit`** | Ops workstations, TUI, fleet tools |
+
+### Option 1: Native Python (recommended)
+
+```python
+import guestkit
+
+plan = guestkit.run_migrate_plan("vm.vmdk", target="kvm", export_fix_plan=True)
+guestkit.run_migrate_repair("vm.qcow2", target="kvm", apply=True)
+```
+
+### Option 2: CLI subprocess
+
+```python
+import subprocess
+
+subprocess.run([
+    "guestkit", "migrate-repair", "vm.qcow2",
+    "--target", "kvm", "--apply",
+], check=True)
+```
+
+### Option 3: Legacy wrapper (subprocess to `guestkit convert`)
 
 ```python
 from guestkit_wrapper import GuestkitWrapper
 
-# Initialize
 wrapper = GuestkitWrapper(guestkit_path="guestkit")
-
-# Convert disk
 result = wrapper.convert(
     source_path="/path/to/vm.vmdk",
     output_path="/path/to/vm.qcow2",
-    compress=True
+    compress=True,
 )
-
-if result.success:
-    print(f"✓ Converted {result.source_format} -> {result.output_format}")
-    print(f"  Size: {result.output_size:,} bytes")
-else:
-    print(f"✗ Failed: {result.error}")
 ```
 
-### Integration with hyper2kvm
+Prefer `import guestkit` for new code. The wrapper remains for backward compatibility.
 
-#### Option 1: Subprocess (Simple)
+## Deploy both to a migration host
 
-```python
-# In hyper2kvm/converters/qemu/converter.py
-import subprocess
+```bash
+# GuestKit CLI
+GUESTKIT_ZYVOR_ACCEPT=1 ./scripts/deploy-remote.sh HOST user --quick --key
 
-def convert_with_guestkit(source, output, compress=True):
-    """Use guestkit for high-performance conversion"""
-    cmd = ["guestkit", "convert",
-           "--source", source,
-           "--output", output,
-           "--compress" if compress else ""]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.returncode == 0
-```
-
-#### Option 2: Python Wrapper (Recommended)
-
-```python
-# In hyper2kvm
-from guestkit_wrapper import GuestkitWrapper
-
-class DiskProcessor:
-    def __init__(self):
-        self.guestkit = GuestkitWrapper()
-
-    def process_disk(self, source_path, output_path, compress=True):
-        # Use guestkit for conversion
-        result = self.guestkit.convert(
-            source_path=source_path,
-            output_path=output_path,
-            compress=compress
-        )
-        return result
-```
-
-#### Option 3: PyO3 Bindings (Future)
-
-Create native Python module using PyO3:
-
-```rust
-use pyo3::prelude::*;
-use guestkit::converters::DiskConverter;
-
-#[pyfunction]
-fn convert(source: String, output: String, compress: bool) -> PyResult<bool> {
-    let converter = DiskConverter::new();
-    let result = converter.convert(
-        Path::new(&source),
-        Path::new(&output),
-        "qcow2",
-        compress,
-        true
-    )?;
-    Ok(result.success)
-}
-
-#[pymodule]
-fn guestkit_py(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(convert, m)?)?;
-    Ok(())
-}
+# h2kvm (installs hypersdk-guestkit when on PyPI)
+cd /path/to/h2kvm
+./scripts/deploy-remote.sh HOST user --keep-sources
 ```
 
 ## Testing
 
 ```bash
-# Build guestkit
-cd ~/tt/guestkit
 cargo build --release
+cargo test
 
-# Test Python wrapper
+# Python bindings
+pip install maturin
+maturin develop --features python-bindings
+python3 -c "import guestkit; print(guestkit.__version__)"
+
+# Legacy wrapper smoke test
 cd integration/python
 python3 guestkit_wrapper.py
-
-# Run integration tests
-python3 ../tests/test_integration.py
 ```
-
-## Performance Comparison
-
-### guestkit (Rust) vs qemu-img (Python subprocess)
-
-```
-Operation: VMDK (10GB) -> qcow2 compressed
-
-Python subprocess (qemu-img):
-  Time: ~45s
-  Memory: ~150MB
-
-guestkit (Rust binary):
-  Time: ~43s
-  Memory: ~120MB
-
-guestkit (PyO3 native):
-  Time: ~42s (no subprocess overhead)
-  Memory: ~100MB
-```
-
-## Benefits for hyper2kvm
-
-1. **Memory Safety** - No segfaults from Rust code
-2. **Performance** - Native code, no Python overhead
-3. **Type Safety** - Compile-time guarantees
-4. **Better Error Handling** - Result types propagated correctly
-5. **Async Support** - Built-in tokio for concurrent operations
-6. **Easy Distribution** - Single binary, no C dependencies
-
-## Migration Path
-
-### Phase 1: Drop-in Replacement (Current)
-- Use guestkit as subprocess
-- No code changes in hyper2kvm
-- Immediate performance benefits
-
-### Phase 2: Python Wrapper (Recommended)
-- Use guestkit_wrapper.py
-- Better error handling
-- Structured data types
-
-### Phase 3: Native Module (Future)
-- Build PyO3 bindings
-- Zero-copy data transfer
-- Maximum performance
 
 ## Files
 
@@ -160,24 +103,14 @@ guestkit (PyO3 native):
 integration/
 ├── README.md                   # This file
 ├── python/
-│   └── guestkit_wrapper.py     # Python wrapper for guestkit
+│   └── guestkit_wrapper.py     # Legacy subprocess wrapper
 └── tests/
-    ├── test_integration.py     # Integration tests
-    └── test_performance.py     # Performance benchmarks
+    ├── test_integration.py
+    └── test_performance.py
 ```
 
-## Requirements
+## See also
 
-### System
-- guestkit binary (cargo build --release)
-- qemu-img (for fallback)
-- Python 3.10+ (for hyper2kvm)
-
-### Python
-```bash
-pip install subprocess  # Built-in
-```
-
-## Examples
-
-See `python/guestkit_wrapper.py` for complete examples.
+- [docs/features/hyper2kvm-integration.md](../docs/features/hyper2kvm-integration.md)
+- [docs/user-guides/python-bindings.md](../docs/user-guides/python-bindings.md)
+- [h2kvm deploy-remote](https://github.com/zyvorai/h2kvm/blob/main/docs/deployment/deploy-remote.md)

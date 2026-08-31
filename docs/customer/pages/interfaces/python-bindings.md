@@ -2,35 +2,38 @@
 
 ## Purpose
 
-Python Bindings — Interfaces surface.
+Programmatic access to GuestKit offline disk intelligence — assurance scoring and repair from Python.
 
 ## When to use it
 
-- Operate **Python Bindings** when your job matches this surface
-- Prefer dry-run / doctor before mutating repairs on disks
-- Shut down the guest before write operations
+- Automate **doctor / migrate-repair** in CI or migration pipelines
+- Integrate with **h2kvm** (`h2kvm.core.guestkit_client`)
+- Custom inspection scripts via the `Guestfs` handle
 
 ## How to get there
 
 - Doc id: `python-bindings`
 - Nav: **Interfaces → Python Bindings**
-- Primary interface: `pip install zyvorai-guestkit` or `maturin develop --features python-bindings`
+- Primary interface: `pip install hypersdk-guestkit` (PyPI) or `maturin develop --features python-bindings`
 
-## Operate from CLI / TUI (UX)
+## Operate from Python (v1.1.0+)
 
-1. `pip install zyvorai-guestkit` or `maturin develop --features python-bindings`.
-2. `from guestkit import Guestfs`.
-3. `add_drive_ro` → `launch` → `inspect_os`.
-4. Mount via `inspect_get_mountpoints` + `mount_ro`.
-5. `cat`/`ls` as needed.
-6. `umount_all` + `shutdown`; see `examples/python/`.
-7. **Empty / fail:** Import error → wrong package/feature; launch fail → NBD/sudo.
-8. **Success:** Distro/hostname printed; clean shutdown.
+1. `pip install "hypersdk-guestkit>=1.1.0"` or build wheel: `maturin build --release --features python-bindings`.
+2. `import guestkit`.
+3. **Assurance:** `guestkit.run_doctor("disk.qcow2", target="kvm", explain=True)`.
+4. **Repair (dry-run):** `guestkit.run_migrate_repair("disk.qcow2", apply=False)`.
+5. **Repair (apply):** `guestkit.run_migrate_repair("disk.qcow2", apply=True)`.
+6. **Low-level inspect:** `from guestkit import Guestfs` → `add_drive_ro` → `launch` → `inspect_os`.
+7. **Empty / fail:** Import error → wrong package or missing wheel; launch fail → NBD/sudo.
+8. **Success:** Bootability score + fix plan JSON; or distro/hostname from Guestfs handle.
 
-Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
+Host needs Linux + `qemu-img` / `losetup` / `qemu-nbd`; mount/repair often need root.
+
+See also: [examples/python/assurance_doctor.py](../../../../examples/python/assurance_doctor.py)
 
 ## Related pages
 
+- [h2kvm integration](../../../features/hyper2kvm-integration.md)
 - [Inspect](../inspection/inspect.md)
 - [CLI Guide](../onboarding/cli-guide.md)
 - [Guest Files](../guest-files/files.md)

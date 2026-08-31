@@ -318,8 +318,23 @@ guestkit repair source.vmdk --fix boot --dry-run
 guestkit repair source.vmdk --fix boot
 guestkit doctor source.vmdk --target proxmox
 
-# 7. Hand off to hyper2kvm / hypervisor import
+# 7. Hand off to h2kvm / hypervisor import
+h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 --backend guestkit
 ```
+
+## Python API (v1.1.0+)
+
+Same assurance engine as CLI — used by **h2kvm** offline fixer:
+
+```python
+import guestkit
+
+report = guestkit.run_doctor("source.vmdk", target="kvm", explain=True)
+plan = guestkit.run_migrate_plan("source.vmdk", target="kvm", export_fix_plan=True)
+guestkit.run_migrate_repair("source.qcow2", target="kvm", apply=True)
+```
+
+See [python-bindings.md](../user-guides/python-bindings.md) and [hyper2kvm-integration.md](hyper2kvm-integration.md).
 
 ## Relationship to fix plans
 
@@ -345,7 +360,7 @@ use guestkit::cli::migrate::plan::compute_migration_score;
 
 - [Guest agent](guest-agent.md) — live in-guest assurance via virtio-serial
 - [Zyvor GuestKit](https://zyvor.dev/guestkit) — platform overview
-- [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, hyper2kvm handoff
+- [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, h2kvm handoff
 - [Fix plans](fix-plans.md) — preview, export, apply
 - [Security profiles](../user-guides/profiles.md) — migration and windows-migration profiles
 - [Changelog](../development/CHANGELOG.md) — v0.3.5+ assurance CLI; v0.3.6 TUI parity

@@ -40,10 +40,10 @@ They solve different jobs:
 | Role | Tool |
 |------|------|
 | Discover / export | **HyperSDK** (`hyperctl`) |
-| Convert / deploy to KVM | **hyper2kvm** (`h2kvmctl`) or virt-v2v/MTV |
+| Convert / deploy to KVM | **[h2kvm](https://github.com/zyvorai/h2kvm)** (`h2kvmctl`) or virt-v2v/MTV |
 | Certify cutover (score → fix → re-score) | **GuestKit Cutover Passport** |
 
-RH virt-v2v and MTV are **convert-first**. GuestKit is **assurance-first**: emit a reviewable Passport, gate CI with `passport verify --fail-below 80`, then hand off to hyper2kvm. MTV cannot skip that gate.
+RH virt-v2v and MTV are **convert-first**. GuestKit is **assurance-first**: emit a reviewable Passport, gate CI with `passport verify --fail-below 80`, then hand off to h2kvm. MTV cannot skip that gate.
 
 ```bash
 guestkit passport emit vm.qcow2 --target kvm -o passport.json
@@ -70,10 +70,10 @@ guestkit inspect vm.qcow2 --cache
 
 ### Is guestkit production-ready?
 
-**Yes!** guestkit v0.3.1+ is production-ready with:
-- 97.4% API implementation coverage (578 functions)
+**Yes!** GuestKit v1.1.0+ is production-ready with:
+- Python assurance bindings (`run_doctor`, `run_migrate_repair`) for h2kvm integration
 - Comprehensive test suite with CI/CD
-- Used in [hyper2kvm](https://github.com/ssahani/hyper2kvm) for production VM migrations
+- Used in [h2kvm](https://github.com/zyvorai/h2kvm) for production VM migrations
 - Pure Rust for memory safety
 - Extensive documentation and examples
 
