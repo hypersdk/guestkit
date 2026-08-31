@@ -188,7 +188,7 @@ Host needs: Linux with `qemu-img`, `losetup`, and `qemu-nbd` (mount/repair may n
 
 ### Python (v1.1.0+)
 
-Same assurance engine as CLI — used by **h2kvm** offline fixer:
+Same assurance engine as the CLI — on **[PyPI](https://pypi.org/project/hypersdk-guestkit/1.1.0/)** and used by **h2kvm** offline fixer:
 
 ```bash
 pip install "hypersdk-guestkit>=1.1.0"
@@ -219,7 +219,7 @@ See [python-bindings.md](docs/user-guides/python-bindings.md) and [examples/pyth
 
 ## h2kvm integration
 
-GuestKit provides **offline disk intelligence**; [h2kvm](https://github.com/zyvorai/h2kvm) provides **hypervisor-to-KVM conversion and deploy**. Together:
+GuestKit provides **offline disk intelligence**; [h2kvm](https://github.com/zyvorai/h2kvm) provides **hypervisor-to-KVM conversion and deploy**.
 
 ```text
   guestkit doctor / migrate-plan     ← pre-flight score + fix plan
@@ -232,12 +232,15 @@ GuestKit provides **offline disk intelligence**; [h2kvm](https://github.com/zyvo
 ```
 
 ```bash
+# GuestKit from PyPI; h2kvm from GitHub Release
+pip install "hypersdk-guestkit>=1.1.0"
+pip install https://github.com/zyvorai/h2kvm/releases/download/v1.1.0/h2kvm-1.1.0-py3-none-any.whl
+
 # Pre-flight
 guestkit doctor source.vmdk --target kvm --explain
-guestkit migrate-repair source.vmdk --target kvm --apply
 
-# Convert + deploy
-h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 --backend guestkit --libvirt-import
+# Convert + offline repair
+h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 --backend guestkit
 ```
 
 Deploy both to a lab host:
@@ -247,7 +250,7 @@ GUESTKIT_ZYVOR_ACCEPT=1 ./scripts/deploy-remote.sh HOST user --quick --key   # G
 cd /path/to/h2kvm && ./scripts/deploy-remote.sh HOST user --keep-sources      # h2kvm
 ```
 
-Full guide: **[hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md)**
+Full guide: **[hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md)** · **[h2kvm README](https://github.com/zyvorai/h2kvm#readme)**
 
 ---
 
