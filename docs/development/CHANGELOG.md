@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cutover bundle** — `gate`, `selinux-relabel`, `sysprep`, `bitlocker`,
+  `cloud-profile`, `policy rego`, `virtio-initramfs`, `agent-sign`;
+  virtctl `resolve`/`gate` (hostDisk only).
 - **Cloud cutover profiles** — `guestkit cloud-profile aws|azure|gcp|openstack`
   and `policy check -b aws`. cloud-init + boot-score rules, no cloud API calls.
 - **`guestkit policy rego`** — in-process `deny[msg]` subset (+ optional `opa eval`).

@@ -16,6 +16,12 @@ pub mod commands_list;
 #[cfg(not(target_os = "windows"))]
 pub mod cost;
 #[cfg(not(target_os = "windows"))]
+pub mod cutover_cmd;
+#[cfg(not(target_os = "windows"))]
+pub mod gate;
+#[cfg(not(target_os = "windows"))]
+pub mod agent_sign;
+#[cfg(not(target_os = "windows"))]
 pub mod dependencies;
 #[cfg(not(target_os = "windows"))]
 pub mod diff;

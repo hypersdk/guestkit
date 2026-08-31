@@ -121,11 +121,10 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
                     op(
                         "mig-virtio-initramfs-conf",
                         "Persist virtio modules in dracut configuration",
-                        OperationType::CommandExec(CommandExec {
-                            command: "printf 'add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\\n' > /etc/dracut.conf.d/99-guestkit-virtio.conf".into(),
-                            expected_exit: 0,
-                            timeout: Some(30),
-                            interpreter: None,
+                        OperationType::FileWrite(FileWrite {
+                            path: "/etc/dracut.conf.d/99-guestkit-virtio.conf".into(),
+                            content: "add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\n".into(),
+                            mode: Some("0644".into()),
                         }),
                         Priority::Medium,
                         true,
@@ -160,11 +159,10 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
                     op(
                         "mig-virtio-initramfs-conf",
                         "Persist virtio modules in initramfs-tools configuration",
-                        OperationType::CommandExec(CommandExec {
-                            command: "printf 'virtio_blk\\nvirtio_scsi\\nvirtio_net\\nvirtio_pci\\n' >> /etc/initramfs-tools/modules".into(),
-                            expected_exit: 0,
-                            timeout: Some(30),
-                            interpreter: None,
+                        OperationType::FileWrite(FileWrite {
+                            path: "/etc/initramfs-tools/modules.d/guestkit-virtio".into(),
+                            content: "virtio_blk\nvirtio_scsi\nvirtio_net\nvirtio_pci\n".into(),
+                            mode: Some("0644".into()),
                         }),
                         Priority::Medium,
                         true,
@@ -360,11 +358,10 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
         Hint::ScheduleSelinuxRelabel => vec![op(
             "mig-selinux-relabel",
             "Schedule SELinux relabel on next boot",
-            OperationType::CommandExec(CommandExec {
-                command: "touch /.autorelabel".into(),
-                expected_exit: 0,
-                timeout: Some(10),
-                interpreter: None,
+            OperationType::FileWrite(FileWrite {
+                path: "/.autorelabel".into(),
+                content: String::new(),
+                mode: Some("0644".into()),
             }),
             Priority::Low,
             true,

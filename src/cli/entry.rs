@@ -2029,6 +2029,61 @@ enum Commands {
         export: Option<PathBuf>,
     },
 
+    #[command(name = "selinux-relabel")]
+    SelinuxRelabel {
+        image: PathBuf,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+    Sysprep {
+        image: PathBuf,
+        #[arg(long)]
+        hostname: Option<String>,
+        #[arg(long)]
+        no_firstboot: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+    Bitlocker {
+        #[command(subcommand)]
+        action: BitlockerAction,
+    },
+    /// Combined passport + SBOM + BitLocker + score gate
+    Gate {
+        #[arg(long)]
+        passport: Option<PathBuf>,
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long, default_value = "kvm")]
+        target: String,
+        #[arg(long, default_value_t = 80.0)]
+        fail_below: f64,
+        #[arg(long)]
+        sbom_old: Option<PathBuf>,
+        #[arg(long)]
+        sbom_new: Option<PathBuf>,
+        #[arg(long)]
+        rego: Option<PathBuf>,
+        #[arg(long, default_value_t = true)]
+        fail: bool,
+        #[arg(short, long, default_value = "text")]
+        output: String,
+    },
+    /// Sign/verify agent update manifests (`--features agent`)
+    #[command(name = "agent-sign")]
+    AgentSign {
+        #[command(subcommand)]
+        action: AgentSignAction,
+    },
+    #[command(name = "virtio-initramfs")]
+    VirtioInitramfs {
+        image: PathBuf,
+        #[arg(long)]
+        dracut: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -2214,6 +2269,42 @@ enum PolicyAction {
         /// Exit 1 when any deny fired
         #[arg(long)]
         fail: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum BitlockerAction {
+    Status { image: PathBuf },
+    Escrow {
+        image: PathBuf,
+        #[arg(long)]
+        key_file: PathBuf,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        include_secret: bool,
+        #[arg(long)]
+        export_plan: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+enum AgentSignAction {
+    Keygen {
+        #[arg(long)]
+        seed: PathBuf,
+        #[arg(long)]
+        public: PathBuf,
+    },
+    Sign {
+        manifest: PathBuf,
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+    Verify {
+        manifest: PathBuf,
+        #[arg(long)]
+        signature: PathBuf,
     },
 }
 
@@ -4314,6 +4405,100 @@ pub fn run() -> anyhow::Result<()> {
                 dest.display(),
                 image.display()
             );
+        }
+
+        Commands::SelinuxRelabel { image, export } => {
+            crate::cli::cutover_cmd::selinux_relabel(&image, export.as_deref())?;
+        }
+        Commands::Sysprep {
+            image,
+            hostname,
+            no_firstboot,
+            export,
+        } => {
+            crate::cli::cutover_cmd::sysprep(
+                &image,
+                hostname.as_deref(),
+                !no_firstboot,
+                export.as_deref(),
+            )?;
+        }
+        Commands::Bitlocker { action } => match action {
+            BitlockerAction::Status { image } => {
+                crate::cli::cutover_cmd::bitlocker_status(&image, cli.verbose)?;
+            }
+            BitlockerAction::Escrow {
+                image,
+                key_file,
+                output,
+                include_secret,
+                export_plan,
+            } => {
+                crate::cli::cutover_cmd::bitlocker_escrow_cmd(
+                    &image,
+                    &key_file,
+                    output.as_deref(),
+                    include_secret,
+                    export_plan.as_deref(),
+                )?;
+            }
+        },
+        Commands::Gate {
+            passport,
+            image,
+            target,
+            fail_below,
+            sbom_old,
+            sbom_new,
+            rego,
+            fail,
+            output,
+        } => {
+            let report = crate::cli::gate::run(crate::cli::gate::GateArgs {
+                passport,
+                image,
+                target,
+                fail_below,
+                sbom_old,
+                sbom_new,
+                rego,
+                fail,
+            })?;
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                crate::cli::gate::print(&report);
+            }
+            if fail && !report.allowed {
+                anyhow::bail!("gate denied");
+            }
+        }
+        Commands::AgentSign { action } => match action {
+            AgentSignAction::Keygen { seed, public } => {
+                crate::cli::agent_sign::keygen(&seed, &public)?;
+            }
+            AgentSignAction::Sign { manifest, output } => {
+                crate::cli::agent_sign::sign(&manifest, &output)?;
+            }
+            AgentSignAction::Verify {
+                manifest,
+                signature,
+            } => {
+                crate::cli::agent_sign::verify(&manifest, &signature)?;
+            }
+        },
+        Commands::VirtioInitramfs {
+            image,
+            dracut,
+            export,
+        } => {
+            let plan = crate::cli::plan::linux_boot::virtio_initramfs_plan(
+                &image.display().to_string(),
+                dracut,
+            );
+            let dest = export.unwrap_or_else(|| image.with_extension("virtio-initramfs.yaml"));
+            std::fs::write(&dest, serde_yaml::to_string(&plan)?)?;
+            println!("wrote {}", dest.display());
         }
 
         Commands::ForensicDiff {

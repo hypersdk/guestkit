@@ -171,6 +171,18 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
             "linux-ssh",
             "Generate-only: offline Linux SSH enablement (wants symlink + sshd drop-in; optional --user/--key)",
         ),
+        (
+            "selinux-relabel",
+            "Generate-only: offline FileWrite /.autorelabel (next boot restorecon)",
+        ),
+        (
+            "sysprep",
+            "Generate-only: offline Windows unattend + optional first-boot generalize flag",
+        ),
+        (
+            "virtio-initramfs",
+            "Generate-only: virtio modules drop-in + /GuestKit/rebuild-initramfs.flag (first-boot rebuild)",
+        ),
     ]
 }
 
@@ -278,7 +290,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 13);
+        assert_eq!(profiles.len(), 16);
     }
 
     #[test]
@@ -299,6 +311,9 @@ mod tests {
         assert!(names.contains(&"windows-timezone"));
         assert!(names.contains(&"windows-static-ip"));
         assert!(names.contains(&"linux-ssh"));
+        assert!(names.contains(&"selinux-relabel"));
+        assert!(names.contains(&"sysprep"));
+        assert!(names.contains(&"virtio-initramfs"));
     }
 
     #[test]

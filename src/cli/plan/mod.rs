@@ -14,6 +14,10 @@ pub mod apply;
 #[cfg(not(target_os = "windows"))]
 pub mod cloud_init;
 #[cfg(not(target_os = "windows"))]
+pub mod cutover_prep;
+#[cfg(not(target_os = "windows"))]
+pub mod linux_boot;
+#[cfg(not(target_os = "windows"))]
 pub mod command;
 pub mod export;
 #[cfg(not(target_os = "windows"))]
