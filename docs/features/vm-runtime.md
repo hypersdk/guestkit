@@ -1,25 +1,46 @@
 # GuestKit VM lifecycle (`guestkit vm`)
 
-GuestKit-native local QEMU lifecycle — a deliberately small virsh/libvirt
-replacement for **host-local** VMs. GuestKit owns inspection and boot
+GuestKit-native **lab / CI** QEMU helpers — a deliberately small virsh/libvirt
+replacement for host-local smoke boots. GuestKit owns inspection and boot
 assurance; QEMU owns execution; QMP owns day-2 power/pause ops.
 
 There is no libvirt XML and no virsh dependency on this path.
 
+## Suite goal (Zyvor)
+
+| Product | Owns |
+|---------|------|
+| **GuestKit** | Certify + repair the disk: doctor, passport, gate, offline plans (SELinux, cloud-init, virtio, sysprep, …) |
+| **[Ephemera](https://github.com/zyvorai/ephemera)** | Run + manage the VM: QEMU/CH/Firecracker, TAP/netns/DHCP, cloud-init seed, TTL, pause/resume, fleets/CRD |
+
+**Do not** grow GuestKit into a second disposable-compute plane. Host networking
+(create TAP/bridge, netns+dnsmasq, known guest IP) and production lifecycle
+belong in Ephemera. GuestKit may keep minimal `guestkit vm` / `guestkit-qemu`
+for convert-and-boot smoke tests with **user-mode** (or a pre-created TAP).
+
+Recommended pipeline:
+
+```text
+guestkit doctor / plan apply / passport emit
+        │
+        ▼  (passport verify passes)
+ephemera create --spec …   # qcow2 + network + cloud-init + TTL
+```
+
 KubeVirt / OpenShift domain objects still stay with `virtctl` / Machina.
-Use `guestkit vm` when you are launching a disk on the host with QEMU
-directly (lab, CI, convert-and-boot).
+Use `guestkit vm` only when you need a host-local QEMU smoke boot without
+Ephemera installed.
 
 ## Commands
 
 ```bash
 export GUESTKIT_VM_DIR=/var/lib/guestkit/vms
-export GUESTKIT_VM_RUN_DIR=/run/guestkit
+export GUESTKIT_VM_RUN_DIR=/run/guestkit/vms
 
 guestkit vm define demo /path/to/demo.qcow2 --memory-mb 4096 --vcpus 2
 guestkit vm plan demo
 guestkit vm list
-guestkit vm start demo
+guestkit vm start demo          # may need --force + UEFI for converted disks
 guestkit vm status demo
 guestkit vm shutdown demo
 guestkit vm reboot demo
@@ -35,11 +56,18 @@ guestkit vm undefine demo
 `start` refuses by default when the boot score is below `--min-boot-score`
 (or when blockers are present). Pass `--force` to override.
 
-## Networking
+For customer cutover, prefer raising the score with offline plans and emitting
+a passport — then hand off to Ephemera — instead of relying on `--force`.
 
-Default is user-mode networking. Optional `--ssh-port` forwards
+## Networking (intentionally minimal)
+
+Default is QEMU **user-mode** networking. Optional `--ssh-port` forwards
 `127.0.0.1:PORT → guest:22` only (loopback). `--tap IFACE` uses a
-pre-created host TAP; GuestKit does not create bridges.
+**pre-created** host TAP.
+
+GuestKit does **not** create bridges, TAP devices, netns, or DHCP servers.
+For LAN DHCP, known guest IPs, macvtap, or netns isolation, use **Ephemera**
+(`network.mode: tap|user|macvtap`, optional `netns: true`).
 
 ## UEFI
 
@@ -47,22 +75,25 @@ Pass host firmware explicitly:
 
 ```bash
 guestkit vm define uefi-demo disk.qcow2 \
-  --uefi-code /usr/share/OVMF/OVMF_CODE.fd \
+  --uefi-code /usr/share/OVMF/OVMF_CODE_4M.fd \
   --uefi-vars /var/lib/guestkit/vms/uefi-demo_VARS.fd
 ```
 
-## Relation to `guestkit-qemu`
+## Relation to `guestkit-qemu` and Ephemera
 
 | Tool | Role |
 |------|------|
-| `guestkit-qemu plan\|run` | One-shot argv from an image path (no persisted definition) |
-| `guestkit vm` | Named definitions under `$GUESTKIT_VM_DIR` + QMP lifecycle |
+| `guestkit doctor` / `passport` / `plan` | Certify and repair |
+| `guestkit-qemu plan\|run` | One-shot assurance → QEMU argv (lab) |
+| `guestkit vm` | Named lab definitions + QMP lifecycle |
+| **Ephemera** | Production/disposable run: overlay, network, cloud-init, TTL |
 
-Prefer `guestkit vm` for repeated start/stop of the same guest; prefer
-`guestkit-qemu` for a disposable assurance → argv plan.
+Prefer Ephemera for any customer-facing “boot and manage this qcow2.” Prefer
+`guestkit vm` / `guestkit-qemu` for assurance smoke without the Ephemera daemon.
 
 ## See also
 
 - [QEMU / VirtIO runtime](qemu-runtime.md)
 - [Dump virsh](../user-guides/virsh-to-guestkit.md)
 - [Handoff / quarantine](../user-guides/handoff-quarantine.md)
+- [Ephemera](https://github.com/zyvorai/ephemera) — create/run/network/TTL

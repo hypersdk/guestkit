@@ -60,7 +60,9 @@ guestkit-qemu run app01.qcow2 --bridge br0
 ```
 
 GuestKit does not create TAP devices, bridges, firewall rules, or host routes in
-this module. Those remain orchestration responsibilities.
+this module. Those remain orchestration responsibilities — for production run +
+network + TTL, use **[Ephemera](https://github.com/zyvorai/ephemera)** (see
+[vm-runtime.md](vm-runtime.md) suite goal).
 
 ## QMP day-2 control
 
