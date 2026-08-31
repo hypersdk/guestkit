@@ -103,9 +103,7 @@ fn value_as_dword(value: &RegistryValue) -> Option<u32> {
 
 fn find_value_by_name<'a>(values: &'a [KeyValue], key: &str) -> Option<&'a KeyValue> {
     let needle = key.to_lowercase();
-    values
-        .iter()
-        .find(|v| v.name().to_lowercase() == needle)
+    values.iter().find(|v| v.name().to_lowercase() == needle)
 }
 
 impl Guestfs {
@@ -189,10 +187,10 @@ impl Guestfs {
         let joined = path.join("\\");
         let node = root
             .subpath(joined.as_str(), &mut hive)
-            .map_err(|e| Error::CommandFailed(format!("Failed to navigate registry path: {:?}", e)))?
-            .ok_or_else(|| {
-                Error::NotFound(format!("Registry key not found: {}", joined))
-            })?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to navigate registry path: {:?}", e))
+            })?
+            .ok_or_else(|| Error::NotFound(format!("Registry key not found: {}", joined)))?;
         let borrowed = node.borrow();
         f(&borrowed)
     }
@@ -215,10 +213,10 @@ impl Guestfs {
         let joined = path.join("\\");
         let node = root
             .subpath(joined.as_str(), &mut hive)
-            .map_err(|e| Error::CommandFailed(format!("Failed to navigate registry path: {:?}", e)))?
-            .ok_or_else(|| {
-                Error::NotFound(format!("Registry key not found: {}", joined))
-            })?;
+            .map_err(|e| {
+                Error::CommandFailed(format!("Failed to navigate registry path: {:?}", e))
+            })?
+            .ok_or_else(|| Error::NotFound(format!("Registry key not found: {}", joined)))?;
         // Clone the Rc so we can borrow the key while still using hive.
         let node_rc: Rc<RefCell<KeyNode>> = Rc::clone(&node);
         let borrowed = node_rc.borrow();
@@ -233,7 +231,9 @@ impl Guestfs {
             .hive_values
             .get(&(handle, value))
             .cloned()
-            .ok_or_else(|| Error::NotFound(format!("Value {} not found for hive {}", value, handle)))?;
+            .ok_or_else(|| {
+                Error::NotFound(format!("Value {} not found for hive {}", value, handle))
+            })?;
 
         self.with_key_node(handle, &path, |key| {
             let values = key.values();
@@ -399,16 +399,15 @@ impl Guestfs {
         }
 
         let path = self.hive_node_path(handle, node)?;
-        let found_name: String = self.with_key_node_mut(handle, &path, |key, hive| {
-            match key.subkey(name, hive) {
+        let found_name: String =
+            self.with_key_node_mut(handle, &path, |key, hive| match key.subkey(name, hive) {
                 Ok(Some(child)) => Ok(child.borrow().name().to_string()),
                 Ok(None) => Err(Error::NotFound(format!("Child node not found: {}", name))),
                 Err(e) => Err(Error::CommandFailed(format!(
                     "Failed to get child: {:?}",
                     e
                 ))),
-            }
-        })?;
+            })?;
 
         let mut child_path = path;
         child_path.push(found_name);

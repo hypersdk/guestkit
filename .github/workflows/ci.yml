@@ -348,7 +348,8 @@ jobs:
         env:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
         run: |
-          maturin develop --release --features python-bindings
+          maturin build --release --features python-bindings --out dist
+          pip install dist/hypersdk_guestkit-*.whl
 
       - name: Run Python binding tests
         run: pytest tests/test_python_bindings.py -m "not requires_image"

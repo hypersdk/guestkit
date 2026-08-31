@@ -4208,13 +4208,8 @@ fn run_doctor(
     explain: bool,
     verbose: bool,
 ) -> PyResult<Py<PyAny>> {
-    let result = crate::assurance::run_doctor(
-        Path::new(&image),
-        target,
-        explain,
-        verbose,
-    )
-    .map_err(to_pyerr_generic)?;
+    let result = crate::assurance::run_doctor(Path::new(&image), target, explain, verbose)
+        .map_err(to_pyerr_generic)?;
     serde_to_py(py, &result)
 }
 
@@ -4222,7 +4217,12 @@ fn run_doctor(
 #[cfg(feature = "python-bindings")]
 #[pyfunction]
 #[pyo3(signature = (image, target = "kvm", verbose = false))]
-fn run_boot_inspect(py: Python<'_>, image: String, target: &str, verbose: bool) -> PyResult<Py<PyAny>> {
+fn run_boot_inspect(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
     let result = crate::assurance::run_boot_inspect(Path::new(&image), target, verbose)
         .map_err(to_pyerr_generic)?;
     serde_to_py(py, &result)
@@ -4280,8 +4280,8 @@ fn run_repair_plan(
         #[cfg(feature = "agent")]
         agent_unit: None,
     };
-    let result = crate::assurance::run_repair_plan(Path::new(&image), &options)
-        .map_err(to_pyerr_generic)?;
+    let result =
+        crate::assurance::run_repair_plan(Path::new(&image), &options).map_err(to_pyerr_generic)?;
     serde_to_py(py, &result)
 }
 

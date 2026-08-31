@@ -396,7 +396,10 @@ impl Guestfs {
         self.ensure_ready()?;
         let uuid = uuid.trim();
         for (dev, tags) in self.blkid_candidates()? {
-            if tags.get("UUID").is_some_and(|v| v.eq_ignore_ascii_case(uuid)) {
+            if tags
+                .get("UUID")
+                .is_some_and(|v| v.eq_ignore_ascii_case(uuid))
+            {
                 return Ok(dev);
             }
         }

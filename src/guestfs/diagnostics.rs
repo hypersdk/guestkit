@@ -44,8 +44,12 @@ mod tests {
     #[test]
     fn test_backend_info_before_launch() {
         let g = Guestfs::new().unwrap();
-        let info: std::collections::HashMap<_, _> = g.get_backend_info().unwrap().into_iter().collect();
-        assert_eq!(info.get("implementation").map(String::as_str), Some("guestkit"));
+        let info: std::collections::HashMap<_, _> =
+            g.get_backend_info().unwrap().into_iter().collect();
+        assert_eq!(
+            info.get("implementation").map(String::as_str),
+            Some("guestkit")
+        );
         assert_eq!(info.get("attach_mode").map(String::as_str), Some("none"));
     }
 

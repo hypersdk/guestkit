@@ -66,7 +66,12 @@ extern "C" {
     // handle; `hivex_value_value` returns the malloc'd raw bytes and sets
     // `*t_rtn`/`*len_rtn` to the REG_* type and byte length.
     fn hivex_node_get_value(h: HiveH, node: HiveNodeH, key: *const c_char) -> HiveValueH;
-    fn hivex_value_value(h: HiveH, value: HiveValueH, t_rtn: *mut c_int, len_rtn: *mut usize) -> *mut c_char;
+    fn hivex_value_value(
+        h: HiveH,
+        value: HiveValueH,
+        t_rtn: *mut c_int,
+        len_rtn: *mut usize,
+    ) -> *mut c_char;
     // Value enumeration: `hivex_node_values` returns a malloc'd 0-terminated
     // array of value handles under a node; `hivex_value_key` returns the
     // malloc'd C string name of a single value.
@@ -205,7 +210,11 @@ pub struct RawRegistryValue {
 /// `HIVEX_OPEN_WRITE` regardless, matching every other function in this
 /// module - libhivex permits reads on a write-mode handle, and this keeps
 /// the module to one open mode rather than adding a second).
-pub fn get_registry_value(hive_file: &Path, subpath: &[String], value_name: &str) -> Result<Option<RawRegistryValue>> {
+pub fn get_registry_value(
+    hive_file: &Path,
+    subpath: &[String],
+    value_name: &str,
+) -> Result<Option<RawRegistryValue>> {
     let hive = Hive::open_write(hive_file)?;
     let subpath_refs: Vec<&str> = subpath.iter().map(String::as_str).collect();
 
@@ -260,7 +269,9 @@ pub fn registry_key_exists(hive_file: &Path, subpath: &[String]) -> Result<bool>
 /// which has no such operation either).
 pub fn delete_registry_key(hive_file: &Path, subpath: &[String]) -> Result<bool> {
     let Some((leaf, parent_path)) = subpath.split_last() else {
-        return Err(Error::InvalidOperation("delete_registry_key: subpath must be non-empty".into()));
+        return Err(Error::InvalidOperation(
+            "delete_registry_key: subpath must be non-empty".into(),
+        ));
     };
 
     let mut hive = Hive::open_write(hive_file)?;
@@ -484,7 +495,10 @@ pub fn list_registry_value_names(hive_file: &Path, subpath: &[String]) -> Result
         let Some(node) = navigate(hive.0, root, &subpath_refs) else {
             return Ok(Vec::new());
         };
-        Ok(node_values(hive.0, node).into_iter().filter_map(|v| value_key(hive.0, v)).collect())
+        Ok(node_values(hive.0, node)
+            .into_iter()
+            .filter_map(|v| value_key(hive.0, v))
+            .collect())
     }
 }
 
@@ -687,7 +701,9 @@ mod tests {
 
     fn with_writable_copy(f: impl FnOnce(&std::path::Path)) {
         let Some(src) = find_test_hive() else {
-            eprintln!("skipping: no libhivex test fixture found (set HIVEX_TEST_HIVE to point at one)");
+            eprintln!(
+                "skipping: no libhivex test fixture found (set HIVEX_TEST_HIVE to point at one)"
+            );
             return;
         };
         let dir = tempfile::tempdir().unwrap();
@@ -702,7 +718,9 @@ mod tests {
             let subpath = vec!["A".to_string()];
             set_registry_value(hive, &subpath, "MyValue", "REG_SZ", &json!("hello")).unwrap();
 
-            let got = get_registry_value(hive, &subpath, "MyValue").unwrap().unwrap();
+            let got = get_registry_value(hive, &subpath, "MyValue")
+                .unwrap()
+                .unwrap();
             assert_eq!(got.reg_type, REG_SZ);
             // REG_SZ is UTF-16LE with a trailing NUL.
             assert_eq!(got.data, utf16le_nul("hello"));
@@ -712,8 +730,12 @@ mod tests {
     #[test]
     fn get_registry_value_is_none_for_missing_key_or_value() {
         with_writable_copy(|hive| {
-            assert!(get_registry_value(hive, &["DoesNotExist".to_string()], "X").unwrap().is_none());
-            assert!(get_registry_value(hive, &["A".to_string()], "NoSuchValue").unwrap().is_none());
+            assert!(get_registry_value(hive, &["DoesNotExist".to_string()], "X")
+                .unwrap()
+                .is_none());
+            assert!(get_registry_value(hive, &["A".to_string()], "NoSuchValue")
+                .unwrap()
+                .is_none());
         });
     }
 
@@ -762,7 +784,10 @@ mod tests {
 
             let mut names = list_registry_value_names(hive, &subpath).unwrap();
             names.sort();
-            assert_eq!(names, vec!["OtherApp".to_string(), "vmware-tools".to_string()]);
+            assert_eq!(
+                names,
+                vec!["OtherApp".to_string(), "vmware-tools".to_string()]
+            );
 
             assert!(names.iter().any(|n| n.to_lowercase().contains("vmware")));
         });
@@ -771,7 +796,11 @@ mod tests {
     #[test]
     fn list_registry_value_names_is_empty_for_missing_key() {
         with_writable_copy(|hive| {
-            assert!(list_registry_value_names(hive, &["DoesNotExist".to_string()]).unwrap().is_empty());
+            assert!(
+                list_registry_value_names(hive, &["DoesNotExist".to_string()])
+                    .unwrap()
+                    .is_empty()
+            );
         });
     }
 }
