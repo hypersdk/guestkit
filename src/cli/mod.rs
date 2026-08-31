@@ -51,6 +51,8 @@ pub mod plan;
 #[cfg(not(target_os = "windows"))]
 pub mod profiles;
 #[cfg(not(target_os = "windows"))]
+pub mod sbom_diff;
+#[cfg(not(target_os = "windows"))]
 pub mod shell;
 #[cfg(not(target_os = "windows"))]
 pub mod tui;
