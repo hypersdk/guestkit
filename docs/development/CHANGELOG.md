@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Suite positioning** — GuestKit certifies/repairs disks; **Ephemera** runs and
+  manages VMs (network, cloud-init, TTL). `guestkit vm` stays a minimal lab/CI
+  smoke path (user-mode / pre-created TAP only). Docs:
+  [vm-runtime.md](../features/vm-runtime.md).
+
 ### Fixed
 - **`guestkit gate --image`** — when the disk directory is not writable (e.g.
   `/var/lib/libvirt/images`), write the temporary passport under `$TMPDIR`
