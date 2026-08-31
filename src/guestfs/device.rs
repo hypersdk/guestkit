@@ -418,6 +418,60 @@ impl Guestfs {
         }
         Err(Error::NotFound(format!("No device with LABEL={}", label)))
     }
+
+    /// Find the device with the given GPT/MBR partition UUID (PARTUUID).
+    ///
+    /// Scans physical partitions and active LVM logical volumes.
+    pub fn findfs_partuuid(&mut self, partuuid: &str) -> Result<String> {
+        self.ensure_ready()?;
+        let partuuid = partuuid.trim();
+        for (dev, tags) in self.blkid_candidates()? {
+            if tags
+                .get("PARTUUID")
+                .is_some_and(|v| v.eq_ignore_ascii_case(partuuid))
+            {
+                return Ok(dev);
+            }
+        }
+        Err(Error::NotFound(format!(
+            "No device with PARTUUID={}",
+            partuuid
+        )))
+    }
+
+    /// Resolve an fstab-style mountable (`UUID=…`, `LABEL=…`, `PARTUUID=…`, or
+    /// a raw `/dev/…` path) to a guest device path GuestKit can mount.
+    ///
+    /// Ubuntu cloud images (and many modern distros) put `/boot` and
+    /// `/boot/efi` on separate partitions referenced only by LABEL/UUID in
+    /// fstab. Without this resolution, `mount_ro("LABEL=BOOT", "/boot")`
+    /// fails and doctor reports empty `/boot` (BOOT-003).
+    pub fn resolve_mountable(&mut self, mountable: &str) -> Result<String> {
+        let spec = mountable.trim();
+        if let Some(uuid) = spec.strip_prefix("UUID=") {
+            return self.findfs_uuid(unquote_fs_token(uuid));
+        }
+        if let Some(label) = spec.strip_prefix("LABEL=") {
+            return self.findfs_label(unquote_fs_token(label));
+        }
+        if let Some(partuuid) = spec.strip_prefix("PARTUUID=") {
+            return self.findfs_partuuid(unquote_fs_token(partuuid));
+        }
+        Ok(spec.to_string())
+    }
+}
+
+/// Strip optional single/double quotes from an fstab UUID/LABEL/PARTUUID value.
+pub(crate) fn unquote_fs_token(s: &str) -> &str {
+    let s = s.trim();
+    if s.len() >= 2
+        && ((s.starts_with('"') && s.ends_with('"'))
+            || (s.starts_with('\'') && s.ends_with('\'')))
+    {
+        &s[1..s.len() - 1]
+    } else {
+        s
+    }
 }
 
 #[cfg(test)]
@@ -432,6 +486,14 @@ mod tests {
         assert_eq!(g.canonical_device_name("/dev/hda").unwrap(), "/dev/sda");
         assert_eq!(g.canonical_device_name("/dev/vda").unwrap(), "/dev/sda");
         assert_eq!(g.canonical_device_name("sda").unwrap(), "/dev/sda");
+    }
+
+    #[test]
+    fn unquote_fs_token_strips_quotes() {
+        assert_eq!(unquote_fs_token("BOOT"), "BOOT");
+        assert_eq!(unquote_fs_token("\"BOOT\""), "BOOT");
+        assert_eq!(unquote_fs_token("'UEFI'"), "UEFI");
+        assert_eq!(unquote_fs_token("  UUID  "), "UUID");
     }
 
     #[test]

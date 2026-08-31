@@ -46,15 +46,21 @@ impl Guestfs {
 
     /// Resolve the device path, create mount root and mountpoint directory.
     /// Shared setup for mount_ro(), mount(), and mount_options().
+    ///
+    /// Accepts raw `/dev/…` paths and fstab specs (`UUID=` / `LABEL=` /
+    /// `PARTUUID=`), resolving the latter via blkid before mounting.
+    /// Returns `(resolved_guest_dev, host_block_path, host_mountpoint)`.
     fn prepare_mount(
         &mut self,
         mountable: &str,
         mountpoint: &str,
-    ) -> Result<(std::path::PathBuf, std::path::PathBuf)> {
+    ) -> Result<(String, std::path::PathBuf, std::path::PathBuf)> {
         self.ensure_ready()?;
 
+        let mountable = self.resolve_mountable(mountable)?;
+
         // Check if this device is already mounted - prevent duplicate mounts
-        if self.mounted.contains_key(mountable) {
+        if self.mounted.contains_key(&mountable) {
             return Err(Error::InvalidState("already_mounted".to_string()));
         }
 
@@ -63,9 +69,9 @@ impl Guestfs {
             || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3)
         {
             // LVM logical volume - use the path directly
-            std::path::PathBuf::from(mountable)
+            std::path::PathBuf::from(&mountable)
         } else {
-            let partition_num = self.parse_device_name(mountable)?;
+            let partition_num = self.parse_device_name(&mountable)?;
 
             if let Some(loop_dev) = &self.loop_device {
                 if partition_num > 0 {
@@ -114,7 +120,7 @@ impl Guestfs {
         fs::create_dir_all(&actual_mountpoint)
             .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
 
-        Ok((device_partition, actual_mountpoint))
+        Ok((mountable, device_partition, actual_mountpoint))
     }
 
     /// Record a successful mount in the mounted map.
@@ -148,18 +154,17 @@ impl Guestfs {
             eprintln!("guestfs: mount_ro {} {}", mountable, mountpoint);
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
-        {
-            Ok(v) => v,
-            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
-            Err(e) => return Err(e),
-        };
+        let (mountable, device_partition, actual_mountpoint) =
+            match self.prepare_mount(mountable, mountpoint) {
+                Ok(v) => v,
+                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) => return Err(e),
+            };
 
         let need_sudo = need_sudo();
 
         // Detect filesystem type to use appropriate mount options
-        // Use the original mountable parameter, as device_partition might not exist yet (LVM)
-        let fs_type = self.vfs_type(mountable).unwrap_or_else(|e| {
+        let fs_type = self.vfs_type(&mountable).unwrap_or_else(|e| {
             log::debug!(
                 "Could not detect filesystem type for {}: {}. Falling back to 'auto'.",
                 mountable,
@@ -252,7 +257,7 @@ impl Guestfs {
             }
         }
 
-        self.record_mount(mountable, &actual_mountpoint);
+        self.record_mount(&mountable, &actual_mountpoint);
 
         Ok(())
     }
@@ -273,12 +278,12 @@ impl Guestfs {
             }
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
-        {
-            Ok(v) => v,
-            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
-            Err(e) => return Err(e),
-        };
+        let (mountable, device_partition, actual_mountpoint) =
+            match self.prepare_mount(mountable, mountpoint) {
+                Ok(v) => v,
+                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) => return Err(e),
+            };
 
         let need_sudo = need_sudo();
 
@@ -305,7 +310,7 @@ impl Guestfs {
             )));
         }
 
-        self.record_mount(mountable, &actual_mountpoint);
+        self.record_mount(&mountable, &actual_mountpoint);
 
         Ok(())
     }
@@ -351,12 +356,12 @@ impl Guestfs {
             }
         }
 
-        let (device_partition, actual_mountpoint) = match self.prepare_mount(mountable, mountpoint)
-        {
-            Ok(v) => v,
-            Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
-            Err(e) => return Err(e),
-        };
+        let (mountable, device_partition, actual_mountpoint) =
+            match self.prepare_mount(mountable, mountpoint) {
+                Ok(v) => v,
+                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) => return Err(e),
+            };
 
         let need_sudo = need_sudo();
 
@@ -386,7 +391,7 @@ impl Guestfs {
             )));
         }
 
-        self.record_mount(mountable, &actual_mountpoint);
+        self.record_mount(&mountable, &actual_mountpoint);
 
         Ok(())
     }
@@ -449,63 +454,12 @@ impl Guestfs {
             }
         }
 
-        // Check if this device is already mounted
-        if self.mounted.contains_key(mountable) {
-            return Ok(());
-        }
-
-        // Determine the actual device path to mount
-        let device_partition = if mountable.starts_with("/dev/mapper/")
-            || (mountable.starts_with("/dev/") && mountable.matches('/').count() >= 3)
-        {
-            std::path::PathBuf::from(mountable)
-        } else {
-            let partition_num = self.parse_device_name(mountable)?;
-
-            if let Some(loop_dev) = &self.loop_device {
-                if partition_num > 0 {
-                    loop_dev.partition_path(partition_num).ok_or_else(|| {
-                        Error::InvalidState("Loop device not connected".to_string())
-                    })?
-                } else {
-                    loop_dev
-                        .device_path()
-                        .ok_or_else(|| {
-                            Error::InvalidState("Loop device not connected".to_string())
-                        })?
-                        .to_path_buf()
-                }
-            } else if let Some(nbd) = &self.nbd_device {
-                if partition_num > 0 {
-                    nbd.partition_path(partition_num)
-                } else {
-                    nbd.device_path().to_path_buf()
-                }
-            } else {
-                return Err(Error::InvalidState(
-                    "No block device available (neither loop nor NBD)".to_string(),
-                ));
-            }
-        };
-
-        // Create mount root if needed (/run when root, else /tmp for unprivileged CLI use)
-        if self.mount_root.is_none() {
-            let mount_dir = Self::create_mount_root()?;
-            self.mount_root.get_or_insert(mount_dir);
-        }
-
-        let mount_root = self
-            .mount_root
-            .as_ref()
-            .ok_or_else(|| Error::InvalidState("No mount root created".to_string()))?;
-        let actual_mountpoint = if mountpoint == "/" {
-            mount_root.clone()
-        } else {
-            mount_root.join(mountpoint.trim_start_matches('/'))
-        };
-
-        fs::create_dir_all(&actual_mountpoint)
-            .map_err(|e| Error::CommandFailed(format!("Failed to create mountpoint: {}", e)))?;
+        let (mountable, device_partition, actual_mountpoint) =
+            match self.prepare_mount(mountable, mountpoint) {
+                Ok(v) => v,
+                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) => return Err(e),
+            };
 
         let need_sudo = need_sudo();
 
@@ -538,7 +492,7 @@ impl Guestfs {
             )));
         }
 
-        self.record_mount(mountable, &actual_mountpoint);
+        self.record_mount(&mountable, &actual_mountpoint);
 
         Ok(())
     }

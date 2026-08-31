@@ -388,7 +388,11 @@ pub(crate) fn mount_all_ro(g: &mut Guestfs) -> Option<String> {
         let mut mounts: Vec<_> = mountpoints.iter().collect();
         mounts.sort_by_key(|(mount, _)| mount.len());
         for (mount, device) in mounts {
-            g.mount_ro(device, mount).ok();
+            if let Err(e) = g.mount_ro(device, mount) {
+                // `/` is often already mounted by inspect_get_mountpoints;
+                // already_mounted is treated as success inside mount_ro.
+                log::warn!("mount_ro({device} -> {mount}) failed: {e:#}");
+            }
         }
     }
     Some(root)
