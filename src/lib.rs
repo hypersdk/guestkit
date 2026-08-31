@@ -69,6 +69,8 @@ pub mod inference;
 pub mod qemu;
 #[cfg(not(target_os = "windows"))]
 pub mod storage;
+#[cfg(not(target_os = "windows"))]
+pub mod vm;
 
 #[cfg(feature = "agent")]
 pub mod collectors;

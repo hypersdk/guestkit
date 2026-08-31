@@ -2064,6 +2064,12 @@ enum Commands {
         raw: Option<String>,
     },
 
+    /// GuestKit-native local QEMU lifecycle (define/plan/start — no libvirt)
+    Vm {
+        #[command(subcommand)]
+        action: crate::vm::VmAction,
+    },
+
     /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
     #[command(name = "agent-call")]
     AgentCall {
@@ -4229,6 +4235,8 @@ pub fn run() -> anyhow::Result<()> {
                 anyhow::bail!("guestkit qga requires rebuilding with --features agent on Unix");
             }
         }
+
+        Commands::Vm { action } => crate::vm::run_cli(action, cli.verbose)?,
 
         Commands::AgentCall {
             socket,

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`guestkit vm`** — GuestKit-native local QEMU lifecycle (`define` / `plan` /
+  `start` / `list` / `status` / `shutdown` / `destroy` / `undefine`) with
+  assurance gate and QMP day-2 ops. No libvirt XML. Docs:
+  [vm-runtime.md](../features/vm-runtime.md).
 - **`guestkit img`** — qemu-img info/check/snapshot/resize/rebase/commit with
   GuestKit JSON errors (`GUESTKIT_QEMU_IMG` override).
 - **`guestkit domain-disks`** — parse libvirt XML or KubeVirt VM/VMI YAML for
