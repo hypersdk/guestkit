@@ -268,11 +268,11 @@ impl BootCheck for VirtioReadinessCheck {
         let has_virtio =
             has_virtio_blk || has_virtio_net || modules.iter().any(|m| m.contains("virtio"));
 
-        let vmware_tools = evidence
-            .vm_tools
-            .detected
-            .iter()
-            .any(|t| t.contains("vmware"));
+        let vmware_tools = evidence.vm_tools.detected.iter().any(|t| {
+            // open-vm-tools is OSS and common on cloud images — not a VMware
+            // migration signal that implies missing virtio.
+            t == "vmware-tools" || t.starts_with("vmware-tools-")
+        });
         let passed = has_virtio || !vmware_tools;
 
         CheckResult {
@@ -429,7 +429,14 @@ impl BootCheck for VmToolsRemnantsCheck {
             .vm_tools
             .detected
             .iter()
-            .filter(|t| t.contains("vmware") || t.contains("hyper-v") || t.contains("virtualbox"))
+            .filter(|t| {
+                // open-vm-tools is harmless on KVM targets; only proprietary
+                // VMware Tools / Hyper-V / VirtualBox additions are remnants.
+                let t = t.as_str();
+                (t == "vmware-tools" || t.starts_with("vmware-tools-"))
+                    || t.contains("hyper-v")
+                    || t.contains("virtualbox")
+            })
             .cloned()
             .collect();
 

@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
 
 ### Fixed
+- **open-vm-tools false positive** — detect OSS `open-vm-tools` separately from
+  proprietary `vmware-tools` so BOOT-006/BOOT-010/MIG-G-005 no longer warn on
+  Ubuntu cloud images that ship `vmware-toolbox-cmd` via open-vm-tools.
+- **`guestkit vm` runtime dirs** — deploy writes `/etc/tmpfiles.d/guestkit.conf`
+  so `/run/guestkit/vms` is recreated owned by the deploy user after reboot.
 - **BOOT-003 false positive on Ubuntu cloud images** — mount `/boot` and
   `/boot/efi` from fstab (`LABEL=`/`UUID=`/`PARTUUID=`). Previously only the
   rootfs was mounted, so a separate BOOT partition looked empty and passport

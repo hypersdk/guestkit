@@ -128,6 +128,11 @@ fn general_checks(ev: &EvidenceSnapshot, _ctx: &AssessContext) -> Vec<Check> {
         .into_iter()
         .filter(|t| {
             let t = t.to_lowercase();
+            // open-vm-tools is OSS and commonly preinstalled on cloud images;
+            // it is not competing proprietary VMware Tools.
+            if t == "open-vm-tools" || t.starts_with("open-vm-tools") {
+                return false;
+            }
             t.contains("vmware")
                 || t.contains("hyper-v")
                 || t.contains("hyperv")
@@ -908,5 +913,15 @@ mod tests {
         let checks = run_all_checks(&ev, &ctx(&report));
         let g5 = checks.iter().find(|c| c.id == "MIG-G-005").unwrap();
         assert!(!g5.passed);
+    }
+
+    #[test]
+    fn open_vm_tools_not_flagged_as_source_remnant() {
+        let report = empty_report();
+        let mut ev = linux_evidence();
+        ev.vm_tools.detected = vec!["open-vm-tools".into()];
+        let checks = run_all_checks(&ev, &ctx(&report));
+        let g5 = checks.iter().find(|c| c.id == "MIG-G-005").unwrap();
+        assert!(g5.passed, "open-vm-tools should not fail MIG-G-005");
     }
 }
