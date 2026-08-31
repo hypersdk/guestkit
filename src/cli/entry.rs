@@ -1847,6 +1847,21 @@ enum Commands {
         action: PolicyAction,
     },
 
+    /// Print or export a cloud cutover profile (aws/azure/gcp/openstack)
+    #[command(name = "cloud-profile")]
+    CloudProfile {
+        /// aws, azure, gcp, openstack
+        target: String,
+        /// Write the Policy YAML
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+        /// Also run `policy check` against this disk
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long)]
+        strict: bool,
+    },
+
     /// Fleet-wide VM analysis
     Fleet {
         #[command(subcommand)]
@@ -1995,6 +2010,80 @@ enum Commands {
         output: Option<PathBuf>,
     },
 
+    /// Offline cloud-init datasource + NoCloud seed
+    #[command(name = "cloud-init")]
+    CloudInit {
+        /// aws/ec2, azure, gcp/gce, openstack, nocloud
+        target: String,
+        image: PathBuf,
+        #[arg(long, value_name = "FILE")]
+        user_data: Option<PathBuf>,
+        #[arg(long, value_name = "FILE")]
+        meta_data: Option<PathBuf>,
+        #[arg(long)]
+        instance_id: Option<String>,
+        /// Write network: {config: disabled}
+        #[arg(long)]
+        disable_network: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+
+    #[command(name = "selinux-relabel")]
+    SelinuxRelabel {
+        image: PathBuf,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+    Sysprep {
+        image: PathBuf,
+        #[arg(long)]
+        hostname: Option<String>,
+        #[arg(long)]
+        no_firstboot: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+    Bitlocker {
+        #[command(subcommand)]
+        action: BitlockerAction,
+    },
+    /// Combined passport + SBOM + BitLocker + score gate
+    Gate {
+        #[arg(long)]
+        passport: Option<PathBuf>,
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long, default_value = "kvm")]
+        target: String,
+        #[arg(long, default_value_t = 80.0)]
+        fail_below: f64,
+        #[arg(long)]
+        sbom_old: Option<PathBuf>,
+        #[arg(long)]
+        sbom_new: Option<PathBuf>,
+        #[arg(long)]
+        rego: Option<PathBuf>,
+        #[arg(long, default_value_t = true)]
+        fail: bool,
+        #[arg(short, long, default_value = "text")]
+        output: String,
+    },
+    /// Sign/verify agent update manifests (`--features agent`)
+    #[command(name = "agent-sign")]
+    AgentSign {
+        #[command(subcommand)]
+        action: AgentSignAction,
+    },
+    #[command(name = "virtio-initramfs")]
+    VirtioInitramfs {
+        image: PathBuf,
+        #[arg(long)]
+        dracut: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -2007,6 +2096,28 @@ enum Commands {
         /// Output format (text, json)
         #[arg(short, long, value_name = "FORMAT", default_value = "text")]
         output: String,
+
+        /// Optional SPDX / CycloneDX / inventory JSON (before)
+        #[arg(long, value_name = "FILE")]
+        sbom_old: Option<PathBuf>,
+
+        /// Optional SPDX / CycloneDX / inventory JSON (after)
+        #[arg(long, value_name = "FILE")]
+        sbom_new: Option<PathBuf>,
+    },
+
+    /// Diff two SBOMs (SPDX, CycloneDX, or GuestKit inventory JSON)
+    #[command(name = "sbom-diff")]
+    SbomDiff {
+        /// Before SBOM JSON
+        old: PathBuf,
+        /// After SBOM JSON
+        new: PathBuf,
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+        /// Exit 1 when any package was added, removed, or version-bumped
+        #[arg(long)]
+        fail_on_drift: bool,
     },
 
     /// Run GuestKit in-guest agent daemon (requires --features agent)
@@ -2149,6 +2260,57 @@ enum PolicyAction {
         /// Fail on any validation failure
         #[arg(long)]
         strict: bool,
+    },
+
+    /// Evaluate a Rego deny-policy against passport/facts JSON
+    Rego {
+        /// Rego source (default policies/cutover.rego if present)
+        #[arg(long, value_name = "FILE")]
+        rego: PathBuf,
+        /// Input JSON (passport.json or policy facts)
+        #[arg(long, value_name = "FILE")]
+        input: PathBuf,
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+        /// Exit 1 when any deny fired
+        #[arg(long)]
+        fail: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum BitlockerAction {
+    Status { image: PathBuf },
+    Escrow {
+        image: PathBuf,
+        #[arg(long)]
+        key_file: PathBuf,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        #[arg(long)]
+        include_secret: bool,
+        #[arg(long)]
+        export_plan: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+enum AgentSignAction {
+    Keygen {
+        #[arg(long)]
+        seed: PathBuf,
+        #[arg(long)]
+        public: PathBuf,
+    },
+    Sign {
+        manifest: PathBuf,
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+    Verify {
+        manifest: PathBuf,
+        #[arg(long)]
+        signature: PathBuf,
     },
 }
 
@@ -3815,6 +3977,37 @@ pub fn run() -> anyhow::Result<()> {
             mcp_serve_command(&image, &target, cli.verbose)?;
         }
 
+        Commands::CloudProfile {
+            target,
+            export,
+            image,
+            strict,
+        } => {
+            let profile = crate::cli::validate::cloud_profiles::CloudProfile::parse(&target)
+                .ok_or_else(|| {
+                    anyhow::anyhow!("unknown cloud profile '{target}' (aws|azure|gcp|openstack)")
+                })?;
+            let policy = profile.to_policy();
+            if let Some(path) = export {
+                std::fs::write(&path, serde_yaml::to_string(&policy)?)?;
+                println!("wrote {} profile to {}", profile.name(), path.display());
+            } else {
+                println!("{}", serde_yaml::to_string(&policy)?);
+            }
+            if let Some(img) = image {
+                policy_check_command(
+                    &img,
+                    None,
+                    Some(profile.name().to_string()),
+                    false,
+                    "text",
+                    None,
+                    strict,
+                    cli.verbose,
+                )?;
+            }
+        }
+
         Commands::Policy { action } => match action {
             PolicyAction::Check {
                 image,
@@ -3835,6 +4028,31 @@ pub fn run() -> anyhow::Result<()> {
                     strict,
                     cli.verbose,
                 )?;
+            }
+            PolicyAction::Rego {
+                rego,
+                input,
+                output,
+                fail,
+            } => {
+                let raw = std::fs::read_to_string(&input)
+                    .with_context(|| format!("read {}", input.display()))?;
+                let facts = crate::cli::validate::rego::facts_from_passport_json(&raw)?;
+                let report = crate::cli::validate::rego::eval_file(&rego, &facts)?;
+                if output == "json" {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!(
+                        "rego {} engine={} allowed={}",
+                        report.package, report.engine, report.allowed
+                    );
+                    for d in &report.denies {
+                        println!("  deny: {d}");
+                    }
+                }
+                if fail && !report.allowed {
+                    anyhow::bail!("{} deny rule(s) fired", report.denies.len());
+                }
             }
         },
 
@@ -4154,8 +4372,178 @@ pub fn run() -> anyhow::Result<()> {
             verbose: cli.verbose,
         })?,
 
-        Commands::ForensicDiff { old, new, output } => {
-            forensic_diff_command(&old, &new, &output, cli.verbose)?;
+        Commands::CloudInit {
+            target,
+            image,
+            user_data,
+            meta_data,
+            instance_id,
+            disable_network,
+            export,
+        } => {
+            let ds = crate::cli::plan::cloud_init::Datasource::parse(&target).ok_or_else(|| {
+                anyhow::anyhow!("unknown datasource '{target}' (aws|azure|gcp|openstack|nocloud)")
+            })?;
+            let ud = user_data
+                .as_ref()
+                .map(std::fs::read_to_string)
+                .transpose()?;
+            let md = meta_data
+                .as_ref()
+                .map(std::fs::read_to_string)
+                .transpose()?;
+            let plan = crate::cli::plan::cloud_init::cloud_init_plan(
+                crate::cli::plan::cloud_init::CloudInitOpts {
+                    vm: &image.display().to_string(),
+                    ds,
+                    user_data: ud.as_deref(),
+                    meta_data: md.as_deref(),
+                    disable_network,
+                    instance_id: instance_id.as_deref(),
+                },
+            );
+            let dest = export.unwrap_or_else(|| image.with_extension("cloud-init.yaml"));
+            std::fs::write(&dest, serde_yaml::to_string(&plan)?)?;
+            println!(
+                "wrote {} ({} ops). apply: guestkit plan apply {} --vm {} --yes",
+                dest.display(),
+                plan.operations.len(),
+                dest.display(),
+                image.display()
+            );
+        }
+
+        Commands::SelinuxRelabel { image, export } => {
+            crate::cli::cutover_cmd::selinux_relabel(&image, export.as_deref())?;
+        }
+        Commands::Sysprep {
+            image,
+            hostname,
+            no_firstboot,
+            export,
+        } => {
+            crate::cli::cutover_cmd::sysprep(
+                &image,
+                hostname.as_deref(),
+                !no_firstboot,
+                export.as_deref(),
+            )?;
+        }
+        Commands::Bitlocker { action } => match action {
+            BitlockerAction::Status { image } => {
+                crate::cli::cutover_cmd::bitlocker_status(&image, cli.verbose)?;
+            }
+            BitlockerAction::Escrow {
+                image,
+                key_file,
+                output,
+                include_secret,
+                export_plan,
+            } => {
+                crate::cli::cutover_cmd::bitlocker_escrow_cmd(
+                    &image,
+                    &key_file,
+                    output.as_deref(),
+                    include_secret,
+                    export_plan.as_deref(),
+                )?;
+            }
+        },
+        Commands::Gate {
+            passport,
+            image,
+            target,
+            fail_below,
+            sbom_old,
+            sbom_new,
+            rego,
+            fail,
+            output,
+        } => {
+            let report = crate::cli::gate::run(crate::cli::gate::GateArgs {
+                passport,
+                image,
+                target,
+                fail_below,
+                sbom_old,
+                sbom_new,
+                rego,
+                fail,
+            })?;
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                crate::cli::gate::print(&report);
+            }
+            if fail && !report.allowed {
+                anyhow::bail!("gate denied");
+            }
+        }
+        Commands::AgentSign { action } => match action {
+            AgentSignAction::Keygen { seed, public } => {
+                crate::cli::agent_sign::keygen(&seed, &public)?;
+            }
+            AgentSignAction::Sign { manifest, output } => {
+                crate::cli::agent_sign::sign(&manifest, &output)?;
+            }
+            AgentSignAction::Verify {
+                manifest,
+                signature,
+            } => {
+                crate::cli::agent_sign::verify(&manifest, &signature)?;
+            }
+        },
+        Commands::VirtioInitramfs {
+            image,
+            dracut,
+            export,
+        } => {
+            let plan = crate::cli::plan::linux_boot::virtio_initramfs_plan(
+                &image.display().to_string(),
+                dracut,
+            );
+            let dest = export.unwrap_or_else(|| image.with_extension("virtio-initramfs.yaml"));
+            std::fs::write(&dest, serde_yaml::to_string(&plan)?)?;
+            println!("wrote {}", dest.display());
+        }
+
+        Commands::ForensicDiff {
+            old,
+            new,
+            output,
+            sbom_old,
+            sbom_new,
+        } => {
+            forensic_diff_command(
+                &old,
+                &new,
+                &output,
+                cli.verbose,
+                sbom_old.as_deref(),
+                sbom_new.as_deref(),
+            )?;
+        }
+
+        Commands::SbomDiff {
+            old,
+            new,
+            output,
+            fail_on_drift,
+        } => {
+            let report = crate::cli::sbom_diff::diff_files(&old, &new)?;
+            if output == "json" {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                crate::cli::sbom_diff::print_text(&report);
+            }
+            if fail_on_drift && report.dirty() {
+                anyhow::bail!(
+                    "SBOM drift: +{} -{} ~{}",
+                    report.added.len(),
+                    report.removed.len(),
+                    report.updated.len()
+                );
+            }
         }
 
         Commands::Agent {

@@ -13,6 +13,8 @@ pub struct ForensicDiffReport {
     pub suspicious_persistence: Vec<String>,
     pub ransomware_indicators: Vec<String>,
     pub summary: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sbom: Option<crate::cli::sbom_diff::SbomDiffReport>,
 }
 
 /// Compute forensic diff between two inspection reports with security drift scoring.
@@ -106,7 +108,24 @@ pub fn compute_forensic_diff(
         suspicious_persistence,
         ransomware_indicators,
         summary,
+        sbom: None,
     }
+}
+
+/// Attach an SBOM package diff (SPDX / CycloneDX / inventory JSON).
+pub fn attach_sbom(report: &mut ForensicDiffReport, sbom: crate::cli::sbom_diff::SbomDiffReport) {
+    if sbom.dirty() {
+        report.config_drift_count += sbom.added.len() + sbom.removed.len() + sbom.updated.len();
+        for p in &sbom.added {
+            let lower = p.name.to_lowercase();
+            if lower.contains("cron") || lower.contains("backdoor") {
+                report
+                    .suspicious_persistence
+                    .push(format!("SBOM added: {} {}", p.name, p.version));
+            }
+        }
+    }
+    report.sbom = Some(sbom);
 }
 
 /// Add config file checksum drift entries between reports.

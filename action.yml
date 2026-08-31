@@ -46,6 +46,22 @@ inputs:
     description: 'Name for the uploaded doctor/plan/passport artifact bundle. Empty disables upload.'
     required: false
     default: 'guestkit-passport'
+  rescue:
+    description: 'Optional rescue operation to export as a dry-run FixPlan (enable-ssh, fix-fstab, enable-rdp, …). Empty skips rescue.'
+    required: false
+    default: ''
+  rescue-user:
+    description: 'Username for rescue operations that need one (enable-ssh, inject-ssh-key, reset-password).'
+    required: false
+    default: ''
+  sbom:
+    description: 'If true, emit SPDX inventory JSON next to the passport.'
+    required: false
+    default: 'false'
+  handoff:
+    description: 'If true, run `guestkit passport handoff` after verify and upload the YAML.'
+    required: false
+    default: 'false'
 
 outputs:
   score:
@@ -185,6 +201,22 @@ runs:
           exit 1
         fi
 
+        if [[ "${{ inputs.handoff }}" == "true" ]]; then
+          guestkit passport handoff "${OUTDIR}/passport.json" -o "${OUTDIR}/handoff.yaml" --fail-below "${GK_FLOOR}" || true
+        fi
+
+        if [[ -n "${{ inputs.rescue }}" ]]; then
+          RESCUE_ARGS=(rescue "${GK_DISK}" -o "${{ inputs.rescue }}" --export-plan "${OUTDIR}/rescue.yaml")
+          if [[ -n "${{ inputs.rescue-user }}" ]]; then
+            RESCUE_ARGS+=(-u "${{ inputs.rescue-user }}")
+          fi
+          guestkit "${RESCUE_ARGS[@]}" || echo "::warning::rescue dry-run export failed"
+        fi
+
+        if [[ "${{ inputs.sbom }}" == "true" ]]; then
+          guestkit inventory "${GK_DISK}" --format spdx -o "${OUTDIR}/sbom.spdx.json" || echo "::warning::sbom emit failed"
+        fi
+
     - name: Upload doctor/plan/passport artifact
       if: always() && inputs.artifact-name != ''
       uses: actions/upload-artifact@v4
@@ -194,4 +226,7 @@ runs:
           ${{ env.GK_GATE_OUTDIR }}/doctor.txt
           ${{ env.GK_GATE_OUTDIR }}/plan.yaml
           ${{ env.GK_GATE_OUTDIR }}/passport.json
+          ${{ env.GK_GATE_OUTDIR }}/handoff.yaml
+          ${{ env.GK_GATE_OUTDIR }}/rescue.yaml
+          ${{ env.GK_GATE_OUTDIR }}/sbom.spdx.json
         if-no-files-found: ignore

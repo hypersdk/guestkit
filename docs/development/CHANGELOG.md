@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `start` / `list` / `status` / `shutdown` / `destroy` / `undefine`) with
   assurance gate and QMP day-2 ops. No libvirt XML. Docs:
   [vm-runtime.md](../features/vm-runtime.md).
+- **`virtctl-guestkit guestfs`** — drop-in for `virtctl guestfs`. Creates a
+  short-lived GuestKit pod on a PVC (`/disk` or `/dev/vda`), no libguestfs
+  appliance. Also `inspect` / `doctor --vm` / `rescue`. Uses `kubectl` (no new
+  crate deps). Docs: [virtctl-guestkit.md](../features/virtctl-guestkit.md).
+- **Cutover bundle** — `gate`, `selinux-relabel`, `sysprep`, `bitlocker`,
+  `cloud-profile`, `policy rego`, `virtio-initramfs`, `agent-sign`;
+  virtctl `resolve`/`gate` (hostDisk only).
+- **Cloud cutover profiles** — `guestkit cloud-profile aws|azure|gcp|openstack`
+  and `policy check -b aws`. cloud-init + boot-score rules, no cloud API calls.
+- **`guestkit policy rego`** — in-process `deny[msg]` subset (+ optional `opa eval`).
+  Example: `policies/cutover.rego`.
+- **`guestkit cloud-init`** — offline datasource pin (`aws`/`azure`/`gcp`/`openstack`/`nocloud`)
+  plus optional NoCloud user-data/meta-data seed. Also
+  `plan generate -p cloud-init-aws`. Closes the migrate-plan "reconfigure
+  datasource" item with a real FileWrite plan.
+- **`guestkit sbom-diff`** — compare SPDX, CycloneDX, or GuestKit inventory
+  JSON; `--fail-on-drift` for CI. `forensic-diff` accepts `--sbom-old/--sbom-new`.
+- **Passport Action extras** — optional rescue dry-run (`--export-plan`), SPDX
+  emit, and `passport handoff` in the composite `action.yml`. New
+  `.github/actions/rescue-dry-run`.
 - **`guestkit img`** — qemu-img info/check/snapshot/resize/rebase/commit with
   GuestKit JSON errors (`GUESTKIT_QEMU_IMG` override).
 - **`guestkit domain-disks`** — parse libvirt XML or KubeVirt VM/VMI YAML for

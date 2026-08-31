@@ -96,7 +96,7 @@ pub fn call_qga_socket_raw(socket_path: &str, json_line: &str, timeout: Duration
     stream.set_write_timeout(Some(timeout))?;
 
     let mut payload = json_line.as_bytes().to_vec();
-    if !payload.ends_with(&[b'\n']) {
+    if !payload.ends_with(b"\n") {
         payload.push(b'\n');
     }
     stream.write_all(&payload).context("write QGA request")?;

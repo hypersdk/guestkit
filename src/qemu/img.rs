@@ -38,7 +38,7 @@ impl QemuImg {
     }
 
     pub fn info_json<P: AsRef<Path>>(&self, image: P) -> Result<Value> {
-        let out = self.run(&["info", "--output=json", &path_str(image.as_ref())])?;
+        let out = self.run(&["info", "--output=json", path_str(image.as_ref())])?;
         serde_json::from_slice(&out.stdout)
             .map_err(|e| Error::InvalidFormat(format!("qemu-img info json: {e}")))
     }
@@ -62,7 +62,7 @@ impl QemuImg {
     }
 
     pub fn snapshot_list<P: AsRef<Path>>(&self, image: P) -> Result<Value> {
-        let out = self.run(&["snapshot", "-l", "--output=json", &path_str(image.as_ref())])?;
+        let out = self.run(&["snapshot", "-l", "--output=json", path_str(image.as_ref())])?;
         if out.stdout.is_empty() {
             return Ok(Value::Array(vec![]));
         }
@@ -74,22 +74,22 @@ impl QemuImg {
     }
 
     pub fn snapshot_create<P: AsRef<Path>>(&self, image: P, name: &str) -> Result<()> {
-        self.run(&["snapshot", "-c", name, &path_str(image.as_ref())])?;
+        self.run(&["snapshot", "-c", name, path_str(image.as_ref())])?;
         Ok(())
     }
 
     pub fn snapshot_delete<P: AsRef<Path>>(&self, image: P, name: &str) -> Result<()> {
-        self.run(&["snapshot", "-d", name, &path_str(image.as_ref())])?;
+        self.run(&["snapshot", "-d", name, path_str(image.as_ref())])?;
         Ok(())
     }
 
     pub fn snapshot_apply<P: AsRef<Path>>(&self, image: P, name: &str) -> Result<()> {
-        self.run(&["snapshot", "-a", name, &path_str(image.as_ref())])?;
+        self.run(&["snapshot", "-a", name, path_str(image.as_ref())])?;
         Ok(())
     }
 
     pub fn resize<P: AsRef<Path>>(&self, image: P, size: &str) -> Result<()> {
-        self.run(&["resize", &path_str(image.as_ref()), size])?;
+        self.run(&["resize", path_str(image.as_ref()), size])?;
         Ok(())
     }
 
@@ -109,7 +109,7 @@ impl QemuImg {
     }
 
     pub fn commit<P: AsRef<Path>>(&self, image: P) -> Result<()> {
-        self.run(&["commit", &path_str(image.as_ref())])?;
+        self.run(&["commit", path_str(image.as_ref())])?;
         Ok(())
     }
 

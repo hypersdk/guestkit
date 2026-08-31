@@ -32,10 +32,16 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Handoff / quarantine](user-guides/handoff-quarantine.md) | Passport → h2kvmctl job, fleet quarantine, virtctl plugin |
 | [VM migration](user-guides/vm-migration.md) | End-to-end migration handoff |
 | [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
+| [Replace virtctl guestfs](features/virtctl-guestkit.md) | `virtctl-guestkit guestfs` on a PVC — GuestKit, not libguestfs |
 | [Guest agent](features/guest-agent.md) | In-guest agent + host `guestkit qga` / `agent-call` |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
 | [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
 | [img / firstboot / virtio-win](user-guides/img-firstboot.md) | qemu-img wrapper, domain disk parse, virtio-win plan, first-boot gate |
+| [Rescue / SBOM CI](devops/10-rescue-sbom-ci.md) | Rescue dry-run Action, `sbom-diff`, forensic-diff SBOM attach |
+| [Cloud profiles / Rego](user-guides/cloud-policy-rego.md) | AWS/Azure/GCP/OpenStack policy packs + `policy rego` |
+| [Cloud-init datasource](user-guides/cloud-init.md) | Offline Ec2/Azure/GCE/NoCloud pin + seed |
+| [Cutover bundle](user-guides/cutover-bundle.md) | gate + sysprep/SELinux/BitLocker + cloud-profile/rego + virtctl resolve |
+| [SELinux / sysprep / BitLocker](user-guides/cutover-prep.md) | Offline relabel, Windows generalize prep, recovery-key escrow |
 
 ## Deployment
 

@@ -72,6 +72,9 @@ pub mod storage;
 #[cfg(not(target_os = "windows"))]
 pub mod vm;
 
+#[cfg(not(target_os = "windows"))]
+pub mod virtctl_guestfs;
+
 #[cfg(feature = "agent")]
 pub mod collectors;
 

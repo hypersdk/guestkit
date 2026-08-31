@@ -21,7 +21,11 @@ jobs:
             ':!crates/zyvor-api/src/qga_socket.rs' \
             ':!src/agent/qga_client.rs' \
             ':!src/agent/cli.rs' \
+            ':!src/agent/qga.rs' \
+            ':!src/agent/inject.rs' \
             ':!src/cli/entry.rs' \
+            ':!crates/guestkit-agent-protocol/**' \
+            ':!crates/zyvor-guest-agent/**' \
             || true)
           if [ -n "$hits" ]; then
             echo "$hits"

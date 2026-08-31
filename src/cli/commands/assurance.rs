@@ -1141,9 +1141,11 @@ pub fn forensic_diff_command(
     new_image: &Path,
     output_format: &str,
     verbose: bool,
+    sbom_old: Option<&Path>,
+    sbom_new: Option<&Path>,
 ) -> Result<()> {
     use super::collect_inspection_data;
-    use crate::cli::forensic_diff::compute_forensic_diff;
+    use crate::cli::forensic_diff::{attach_sbom, compute_forensic_diff};
 
     let mut g1 = init_guestfs_ro(old_image, verbose)?;
     let root1 = mount_all_ro(&mut g1).context("No OS in old image")?;
@@ -1155,7 +1157,10 @@ pub fn forensic_diff_command(
     let report2 = collect_inspection_data(&mut g2, &root2, verbose)?;
     let _ = g2.shutdown();
 
-    let forensic = compute_forensic_diff(&report1, &report2);
+    let mut forensic = compute_forensic_diff(&report1, &report2);
+    if let (Some(a), Some(b)) = (sbom_old, sbom_new) {
+        attach_sbom(&mut forensic, crate::cli::sbom_diff::diff_files(a, b)?);
+    }
 
     if output_format == "json" {
         println!("{}", serde_json::to_string_pretty(&forensic)?);
@@ -1185,6 +1190,12 @@ pub fn forensic_diff_command(
         for r in &forensic.ransomware_indicators {
             println!("  • {}", r);
         }
+    }
+
+    if let Some(sbom) = &forensic.sbom {
+        println!();
+        println!("{}", "SBOM package drift:".cyan());
+        crate::cli::sbom_diff::print_text(sbom);
     }
 
     Ok(())

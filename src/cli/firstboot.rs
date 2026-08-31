@@ -66,10 +66,8 @@ pub fn run(args: FirstBootArgs) -> Result<()> {
     } else {
         println!("{json}");
     }
-    if !report.ready {
-        if args.fail_below.is_some() {
-            anyhow::bail!("firstboot not ready (score/QGA/virtio gate failed)");
-        }
+    if !report.ready && args.fail_below.is_some() {
+        anyhow::bail!("firstboot not ready (score/QGA/virtio gate failed)");
     }
     Ok(())
 }
