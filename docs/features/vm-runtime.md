@@ -88,8 +88,9 @@ guestkit vm define uefi-demo disk.qcow2 \
 | `guestkit vm` | Named lab definitions + QMP lifecycle |
 | **Ephemera** | Production/disposable run: overlay, network, cloud-init, TTL |
 
-Prefer Ephemera for any customer-facing “boot and manage this qcow2.” Prefer
-`guestkit vm` / `guestkit-qemu` for assurance smoke without the Ephemera daemon.
+Prefer Ephemera for any customer-facing “boot and manage this qcow2” (libvirt
+replacement: create/list/get/delete + network/IP). Prefer `guestkit vm` /
+`guestkit-qemu` only for assurance smoke without the Ephemera daemon.
 
 ## See also
 

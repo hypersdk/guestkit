@@ -95,6 +95,18 @@ Docs: [VM lifecycle / suite split](docs/features/vm-runtime.md) ·
 [Ephemera](https://github.com/zyvorai/ephemera) ·
 [Passport handoff](docs/user-guides/handoff-quarantine.md)
 
+### Libvirt / virsh → suite map
+
+| Old habit | Replacement |
+|-----------|-------------|
+| `virsh define` / `start` / `destroy` (host-local QEMU) | **[Ephemera](https://github.com/zyvorai/ephemera)** `create` / `get` / `delete` |
+| libvirt NAT / bridge DHCP / guest IP | Ephemera `user` / `tap`+bridge / `tap`+`netns` (`guest_ip`) |
+| `virsh qemu-agent-command` | `guestkit qga` (or `ephemera exec` with vsock agent) |
+| “Will it boot?” by `virsh start` | `guestkit doctor` / `passport` / `gate` **before** Ephemera create |
+| KubeVirt / OpenShift domains | `virtctl` / Machina (unchanged) |
+
+Full map: [virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md).
+
 ---
 
 ## See it in action
