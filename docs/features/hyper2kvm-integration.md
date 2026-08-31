@@ -70,14 +70,31 @@ For CI pipelines and Passport artifacts, use the **GuestKit CLI** directly:
 guestkit doctor disk.qcow2 --target kvm --explain
 guestkit migrate-plan disk.qcow2 --target kvm
 guestkit migrate-repair disk.qcow2 --target kvm --apply
-guestkit passport emit disk.qcow2 --out passport.json
+guestkit passport emit disk.qcow2 --target kvm -o passport.json
+guestkit passport handoff passport.json -o job.handoff.yaml --fail-below 80
 ```
 
-Then hand off to h2kvm for conversion:
+`handoff` refuses (exit 1) on `hard_blocked`, BitLocker, stale/unsigned
+passports, or score below `--fail-below`. The YAML is the only input
+h2kvm should accept:
 
 ```bash
-h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 \
-  --backend guestkit --libvirt-import
+h2kvmctl local --to-output out.qcow2 --backend guestkit \
+  --passport passport.json
+```
+
+Fleet gate before a wave:
+
+```bash
+guestkit fleet quarantine /var/lib/libvirt/images --threshold 80 --fail
+```
+
+KubeVirt operators (install `virtctl-guestkit` next to `virtctl`):
+
+```bash
+virtctl guestkit doctor --image disk.qcow2 --target kubevirt --explain
+virtctl guestkit passport --image disk.qcow2 --target kubevirt -o p.json
+virtctl guestkit handoff --passport p.json --fail-below 80
 ```
 
 ## Deploy both projects to a lab host

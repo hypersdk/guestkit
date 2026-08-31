@@ -4,12 +4,17 @@
 //! Used by CLI, worker handlers, and zyvor-api. Does not write to stdout.
 
 mod copilot;
+mod handoff;
 mod passport;
 mod repair_extras;
 
 pub use copilot::{
     answer_copilot_question, build_evidence_digest, generate_briefing, CopilotAction,
     CopilotInsight, EvidenceDigest, EvidenceHighlight, MigrationBriefing,
+};
+pub use handoff::{
+    build_handoff, default_output as handoff_default_output, load_and_gate, write_handoff,
+    H2kvmHandoff,
 };
 pub use passport::{
     emit_passport, generate_passport_signing_key, load_trust_keys, verify_passport,
