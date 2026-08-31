@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Performance analysis tool for guestkit
 # Runs comprehensive performance analysis and identifies bottlenecks
 

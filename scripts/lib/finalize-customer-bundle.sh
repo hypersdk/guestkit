@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Finalize customer tarball: branded PDFs, welcome page, path verification.
 # Usage: finalize-customer-bundle.sh <stage> <build-dir> <product> [version]
 set -euo pipefail

@@ -6,25 +6,34 @@ Services & Users — Inspection surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Services & Users** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `services-users`
-- Nav: **Inspection → Services & Users** (sidebar, command palette, or desktop nav)
+- Doc id: `services-users`
+- Nav: **Inspection → Services & Users**
+- Primary interface: `guestkit systemd-services IMAGE`; users via REPL/inspect; TUI
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `services-users` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit systemd-services IMAGE`; users via REPL/inspect; TUI.
+2. `guestkit systemd-services disk.qcow2` (`--failed`, `--service UNIT`).
+3. `guestkit systemd-journal` / `systemd-boot` as needed.
+4. Users: interactive → `users`, or inspect User Accounts.
+5. TUI → Services / Users tabs.
+6. `inspect --include-services`.
+7. **Empty / fail:** Non-systemd OS → sparse services; Windows users via registry inspect.
+8. **Success:** Enabled units listed; users show uid/shell.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Inspect](inspect.md)
+- [Interactive Mode](../onboarding/interactive-mode.md)
+- [Doctor](../assurance/doctor.md)
+- [Guest Agent](../guest-agent/guest-agent.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -4,6 +4,13 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+try {
+  const envText = readFileSync(resolve(ROOT, 'scripts/customer-docs/product.env'), 'utf8')
+  for (const line of envText.split('\n')) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+    if (m) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '')
+  }
+} catch {}
 const CUSTOMER = resolve(ROOT, 'docs/customer')
 const SITE = resolve(process.argv[2] ?? resolve(ROOT, '../hypersdk-web'))
 const PRODUCT = process.env.CUSTOMER_DOCS_PRODUCT || 'Product'

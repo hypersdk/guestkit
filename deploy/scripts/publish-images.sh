@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build and publish Zyvor container images to GHCR.
 #
 # Usage:

@@ -1994,6 +1994,26 @@ enum Commands {
         vsock_port: Option<u32>,
     },
 
+    /// Raw QEMU guest-agent command over a unix socket (replaces `virsh qemu-agent-command`)
+    #[command(name = "qga")]
+    Qga {
+        /// QGA channel unix socket. Auto-discovered when omitted.
+        #[arg(long, value_name = "PATH")]
+        socket: Option<String>,
+
+        /// QGA execute name (e.g. guest-ping, guest-info, guest-exec)
+        #[arg(long, value_name = "CMD")]
+        execute: Option<String>,
+
+        /// JSON object passed as QGA `arguments`
+        #[arg(long, value_name = "JSON")]
+        arguments: Option<String>,
+
+        /// Raw QGA JSON body, e.g. '{"execute":"guest-ping"}'
+        #[arg(long, value_name = "JSON")]
+        raw: Option<String>,
+    },
+
     /// One-shot JSON-RPC call to guest agent unix socket (requires --features agent)
     #[command(name = "agent-call")]
     AgentCall {
@@ -3900,6 +3920,31 @@ pub fn run() -> anyhow::Result<()> {
             {
                 let _ = (socket, listen, vsock_port);
                 anyhow::bail!("guestkit agent-proxy requires rebuilding with --features agent");
+            }
+        }
+
+        Commands::Qga {
+            socket,
+            execute,
+            arguments,
+            raw,
+        } => {
+            #[cfg(all(feature = "agent", unix))]
+            {
+                use crate::agent::cli::{run_qga, QgaArgs};
+                let rt = tokio::runtime::Runtime::new()
+                    .context("failed to start async runtime for qga")?;
+                rt.block_on(run_qga(QgaArgs {
+                    socket,
+                    execute,
+                    arguments,
+                    raw,
+                }))?;
+            }
+            #[cfg(not(all(feature = "agent", unix)))]
+            {
+                let _ = (socket, execute, arguments, raw);
+                anyhow::bail!("guestkit qga requires rebuilding with --features agent on Unix");
             }
         }
 

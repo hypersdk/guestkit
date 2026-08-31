@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Loopback test: event subscription and heartbeat push interleaved with
 //! normal request/response traffic on a shared writer (requires --features agent).
 

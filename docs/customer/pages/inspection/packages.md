@@ -6,25 +6,33 @@ Packages — Inspection surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Packages** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `packages`
-- Nav: **Inspection → Packages** (sidebar, command palette, or desktop nav)
+- Doc id: `packages`
+- Nav: **Inspection → Packages**
+- Primary interface: `guestkit packages|pkg IMAGE` · REPL · TUI Packages
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `packages` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit packages|pkg IMAGE` · REPL · TUI Packages.
+2. `guestkit packages disk.qcow2`.
+3. `--filter nginx` / `--limit 50`.
+4. `--json` for automation.
+5. Or `inspect --include-packages`.
+6. Offline install staging: `GUESTKIT_PACKAGE_CACHE` + `plan apply`.
+7. **Empty / fail:** Empty = no package DB / Windows guest / mount failed.
+8. **Success:** Manager + package rows.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Inspect](inspect.md)
+- [Fix Plans](../fix-plans/fix-plans.md)
+- [Profiles](../profiles/profiles.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -14,13 +14,13 @@ guestkit is a pure Rust toolkit for VM disk inspection and manipulation without 
 - Python bindings for automation
 - 578 disk image manipulation functions
 
-### How is GuestKit different from libguestfs?
+### How is GuestKit different from legacy appliance tooling?
 
-**GuestKit does not use libguestfs.** It is a pure Rust alternative with its own disk, partition, and filesystem stack (`guestkit::guestfs`, loop/NBD, assurance APIs). You do not need `libguestfs-tools`, `guestfish`, or `virt-inspector` to run GuestKit.
+**GuestKit does not use legacy appliance tooling.** It is a pure Rust alternative with its own disk, partition, and filesystem stack (`guestkit::guestfs`, loop/NBD, assurance APIs). You do not need `legacy guest tools`, or `virt-inspector` to run GuestKit.
 
 The table below compares products for migration planning — not a dependency list:
 
-| Feature | guestkit | libguestfs (legacy tooling) |
+| Feature | guestkit | legacy appliance tooling |
 |---------|----------|----------------------------|
 | **Language** | Pure Rust | C + bindings |
 | **Dependencies** | Minimal (qemu-img, nbd for some formats) | Many C libraries |
@@ -31,7 +31,7 @@ The table below compares products for migration planning — not a dependency li
 | **Visual Output** | Beautiful emojis + colors | Plain text |
 | **Migration** | Built-in fstab/crypttab rewriter | Manual scripting |
 
-**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `passport`, `run_boot_inspect`, Zyvor HTTP routes). Do not install libguestfs expecting GuestKit to call it.
+**Bottom line:** Use GuestKit APIs (`doctor`, `migrate-plan`, `passport`, `run_boot_inspect`, Zyvor HTTP routes). Do not install legacy appliance tooling expecting GuestKit to call it.
 
 ### How does GuestKit compare to Red Hat virt-v2v / MTV?
 
@@ -40,10 +40,10 @@ They solve different jobs:
 | Role | Tool |
 |------|------|
 | Discover / export | **HyperSDK** (`hyperctl`) |
-| Convert / deploy to KVM | **hyper2kvm** (`h2kvmctl`) or virt-v2v/MTV |
+| Convert / deploy to KVM | **[h2kvm](https://github.com/zyvorai/h2kvm)** (`h2kvmctl`) or virt-v2v/MTV |
 | Certify cutover (score → fix → re-score) | **GuestKit Cutover Passport** |
 
-RH virt-v2v and MTV are **convert-first**. GuestKit is **assurance-first**: emit a reviewable Passport, gate CI with `passport verify --fail-below 80`, then hand off to hyper2kvm. MTV cannot skip that gate.
+RH virt-v2v and MTV are **convert-first**. GuestKit is **assurance-first**: emit a reviewable Passport, gate CI with `passport verify --fail-below 80`, then hand off to h2kvm. MTV cannot skip that gate.
 
 ```bash
 guestkit passport emit vm.qcow2 --target kvm -o passport.json
@@ -70,10 +70,10 @@ guestkit inspect vm.qcow2 --cache
 
 ### Is guestkit production-ready?
 
-**Yes!** guestkit v0.3.1+ is production-ready with:
-- 97.4% API implementation coverage (578 functions)
+**Yes!** GuestKit v1.1.0+ is production-ready with:
+- Python assurance bindings (`run_doctor`, `run_migrate_repair`) for h2kvm integration
 - Comprehensive test suite with CI/CD
-- Used in [hyper2kvm](https://github.com/ssahani/hyper2kvm) for production VM migrations
+- Used in [h2kvm](https://github.com/zyvorai/h2kvm) for production VM migrations
 - Pure Rust for memory safety
 - Extensive documentation and examples
 
@@ -104,16 +104,25 @@ cargo install guestkit
 
 **From source:**
 ```bash
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 cargo build --release
-sudo cp target/release/guestkit /usr/local/bin/
+sudo cp target/release/guestkit target/release/guestctl \
+  target/release/guestkit-qemu /usr/local/bin/
 ```
 
 **Python bindings:**
 ```bash
-pip install guestkit
+pip install hypersdk-guestkit
 ```
+
+### What binaries does GuestKit install?
+
+| Binary | Role |
+|--------|------|
+| `guestkit` | Scriptable CLI (inspect, doctor, migrate-plan, rescue, …) |
+| `guestctl` | Carbon TUI dashboard |
+| `guestkit-qemu` | Assured QEMU plan / run / QMP ([qemu-runtime.md](../features/qemu-runtime.md)) |
 
 ### What are the system requirements?
 
@@ -126,6 +135,7 @@ pip install guestkit
 - **Required:** Rust 1.70+ (for building)
 - **Optional:** qemu-img (for format conversion)
 - **Runtime:** Linux kernel with loop device support (built-in)
+- **QEMU launch:** `qemu-system-x86_64` / `qemu-system-aarch64` on `PATH` for `guestkit-qemu run`
 
 **Hardware:**
 - KVM support recommended for performance
@@ -502,7 +512,7 @@ See [API Reference](../api/rust-reference.md) for complete list.
 
 ```bash
 # 1. Fork repository
-gh repo fork ssahani/guestkit
+gh repo fork hypersdk/guestkit
 
 # 2. Clone your fork
 git clone https://github.com/YOUR_USERNAME/guestkit
@@ -630,8 +640,8 @@ sudo guestkit inspect vm.qcow2
 ### Is there commercial support?
 
 **Community support:**
-- GitHub Issues: https://github.com/ssahani/guestkit/issues
-- GitHub Discussions: https://github.com/ssahani/guestkit/discussions
+- GitHub Issues: https://github.com/hypersdk/guestkit/issues
+- GitHub Discussions: https://github.com/hypersdk/guestkit/discussions
 
 **Commercial support:** Contact ssahani@vmware.com for enterprise support options.
 
@@ -683,8 +693,8 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
 1. **Documentation:** Start with [Getting Started Guide](getting-started.md)
 2. **FAQ:** This document
-3. **GitHub Discussions:** https://github.com/ssahani/guestkit/discussions
-4. **GitHub Issues:** https://github.com/ssahani/guestkit/issues (for bugs)
+3. **GitHub Discussions:** https://github.com/hypersdk/guestkit/discussions
+4. **GitHub Issues:** https://github.com/hypersdk/guestkit/issues (for bugs)
 5. **Email:** ssahani@vmware.com (for private inquiries)
 
 ### How do I report a bug?
@@ -718,7 +728,7 @@ Documentation contributions welcome!
 
 ```bash
 # Clone repo
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit/docs
 
 # Edit documentation
@@ -736,15 +746,15 @@ gh pr create --title "Docs: Improve my-guide"
 - [Windows Support](windows-support.md) - Windows-specific features
 - [Best Practices](best-practices.md) - Expert recommendations
 - [Troubleshooting](troubleshooting.md) - Problem resolution
-- [GitHub Repository](https://github.com/ssahani/guestkit)
-- [Issue Tracker](https://github.com/ssahani/guestkit/issues)
+- [GitHub Repository](https://github.com/hypersdk/guestkit)
+- [Issue Tracker](https://github.com/hypersdk/guestkit/issues)
 
 ## Still Have Questions?
 
 If your question isn't answered here:
-1. Search [GitHub Discussions](https://github.com/ssahani/guestkit/discussions)
-2. Search [GitHub Issues](https://github.com/ssahani/guestkit/issues)
-3. Ask in [new Discussion](https://github.com/ssahani/guestkit/discussions/new)
-4. For bugs, [create Issue](https://github.com/ssahani/guestkit/issues/new)
+1. Search [GitHub Discussions](https://github.com/hypersdk/guestkit/discussions)
+2. Search [GitHub Issues](https://github.com/hypersdk/guestkit/issues)
+3. Ask in [new Discussion](https://github.com/hypersdk/guestkit/discussions/new)
+4. For bugs, [create Issue](https://github.com/hypersdk/guestkit/issues/new)
 
 We're here to help! 🚀

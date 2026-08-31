@@ -129,20 +129,13 @@ impl Guestfs {
 
         self.setup_nbd_if_needed()?;
 
-        let nbd_partition =
-            if let Some(partition_number) = device.chars().last().and_then(|c| c.to_digit(10)) {
-                let nbd_device = self
-                    .nbd_device
-                    .as_ref()
-                    .ok_or_else(|| Error::InvalidState("NBD device not available".to_string()))?;
-                format!(
-                    "{}p{}",
-                    nbd_device.device_path().display(),
-                    partition_number
-                )
-            } else {
-                return Err(Error::InvalidFormat(format!("Invalid device: {}", device)));
-            };
+        // LVM logical volumes (e.g. /dev/mapper/vg-lv) are already real
+        // device nodes; only bare numbered partitions need resolving to
+        // their NBD/loop-backed path. FilesystemUUIDRegenerator's whole
+        // purpose is regenerating XFS UUIDs on LVM LVs specifically, so
+        // this device must resolve correctly for those paths too, not just
+        // /dev/sdaN-style partitions.
+        let nbd_partition = self.resolve_block_device_path(device)?;
 
         let mut cmd = Command::new("xfs_admin");
 

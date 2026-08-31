@@ -5,6 +5,7 @@ use crate::core::{Error, Result};
 use crate::disk::FileSystem;
 use crate::guestfs::Guestfs;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 impl Guestfs {
     /// List all block devices
@@ -307,6 +308,115 @@ impl Guestfs {
             .last()
             .map(|c| c.is_numeric())
             .unwrap_or(false))
+    }
+
+    /// Resolve a guest-visible device/partition specifier (e.g. `/dev/sda1`,
+    /// `/dev/mapper/vg-lv`) to the real host path that external tools like
+    /// `blkid` can read directly (the NBD or loop device backing this drive).
+    pub(crate) fn resolve_block_device_path(&self, device: &str) -> Result<PathBuf> {
+        if device.starts_with("/dev/mapper/")
+            || (device.starts_with("/dev/") && device.matches('/').count() >= 3)
+            || device.starts_with("/dev/md")
+            || device.starts_with("/dev/dm-")
+        {
+            // LVM logical volume, MD RAID array, or raw dm-N node - already a real device node
+            return Ok(PathBuf::from(device));
+        }
+
+        let partition_num = self.parse_device_name(device)?;
+
+        if let Some(loop_dev) = &self.loop_device {
+            return if partition_num > 0 {
+                loop_dev
+                    .partition_path(partition_num)
+                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))
+            } else {
+                loop_dev
+                    .device_path()
+                    .ok_or_else(|| Error::InvalidState("Loop device not connected".to_string()))
+                    .map(|p| p.to_path_buf())
+            };
+        }
+
+        if let Some(nbd) = &self.nbd_device {
+            return Ok(if partition_num > 0 {
+                nbd.partition_path(partition_num)
+            } else {
+                nbd.device_path().to_path_buf()
+            });
+        }
+
+        Err(Error::InvalidState(
+            "No block device available (neither loop nor NBD)".to_string(),
+        ))
+    }
+
+    /// Get all blkid tags for a device (e.g. TYPE, UUID, LABEL, PARTUUID).
+    ///
+    /// # Arguments
+    ///
+    /// * `device` - Guest-visible device or partition specifier
+    ///
+    /// # Returns
+    ///
+    /// blkid tag name/value pairs (empty if the device has no recognizable
+    /// filesystem/signature).
+    pub fn blkid(&mut self, device: &str) -> Result<Vec<(String, String)>> {
+        self.ensure_ready()?;
+        let host_path = self.resolve_block_device_path(device)?;
+        let tags = crate::guestfs::device_inventory::blkid_export(&host_path.to_string_lossy())?;
+        Ok(tags.into_iter().collect())
+    }
+
+    /// Build the candidate device list (physical partitions plus any active
+    /// LVM logical volumes) with their blkid tags, used by `findfs_uuid`,
+    /// `findfs_label`, and `list_dm_devices`.
+    pub(crate) fn blkid_candidates(&mut self) -> Result<Vec<(String, HashMap<String, String>)>> {
+        let mut candidates = self.list_partitions()?;
+        if let Ok(lvs) = self.lvs() {
+            candidates.extend(lvs);
+        }
+
+        let mut out = Vec::with_capacity(candidates.len());
+        for dev in candidates {
+            let Ok(host_path) = self.resolve_block_device_path(&dev) else {
+                continue;
+            };
+            let tags = crate::guestfs::device_inventory::blkid_export(&host_path.to_string_lossy())
+                .unwrap_or_default();
+            out.push((dev, tags));
+        }
+        Ok(out)
+    }
+
+    /// Find the device with the given filesystem UUID.
+    ///
+    /// Scans physical partitions and active LVM logical volumes.
+    pub fn findfs_uuid(&mut self, uuid: &str) -> Result<String> {
+        self.ensure_ready()?;
+        let uuid = uuid.trim();
+        for (dev, tags) in self.blkid_candidates()? {
+            if tags
+                .get("UUID")
+                .is_some_and(|v| v.eq_ignore_ascii_case(uuid))
+            {
+                return Ok(dev);
+            }
+        }
+        Err(Error::NotFound(format!("No device with UUID={}", uuid)))
+    }
+
+    /// Find the device with the given filesystem label.
+    ///
+    /// Scans physical partitions and active LVM logical volumes.
+    pub fn findfs_label(&mut self, label: &str) -> Result<String> {
+        self.ensure_ready()?;
+        for (dev, tags) in self.blkid_candidates()? {
+            if tags.get("LABEL").map(|v| v.as_str()) == Some(label) {
+                return Ok(dev);
+            }
+        }
+        Err(Error::NotFound(format!("No device with LABEL={}", label)))
     }
 }
 

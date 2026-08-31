@@ -214,7 +214,7 @@ fn probe_device(dev: &str) -> Result<DevInfo> {
 }
 
 /// Get blkid export data as key-value map
-fn blkid_export(dev: &str) -> Result<HashMap<String, String>> {
+pub(crate) fn blkid_export(dev: &str) -> Result<HashMap<String, String>> {
     let output = Command::new("blkid")
         .arg("-o")
         .arg("export")

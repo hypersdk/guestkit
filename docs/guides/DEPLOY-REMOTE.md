@@ -46,7 +46,7 @@ make deploy-remote-fleet FILE=hosts.txt
 
 **Remote:** Fedora/RHEL/CentOS (`dnf`/`yum`) or Debian/Ubuntu (`apt`). Non-root users need passwordless `sudo` for `modprobe` and `install`.
 
-**Runtime deps (not libguestfs):** `qemu-img`, NBD module, `lvm2`/`parted` for some guests. GuestKit reads disks via its own Rust stack.
+**Runtime deps (not legacy appliance tooling):** `qemu-img`, NBD module, `lvm2`/`parted` for some guests. GuestKit reads disks via its own Rust stack.
 
 **Privileges:** Inspecting real VM disks usually requires root or membership in the `disk` group.
 

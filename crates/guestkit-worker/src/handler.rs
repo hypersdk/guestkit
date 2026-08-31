@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Operation handler trait and registry
 
 use async_trait::async_trait;

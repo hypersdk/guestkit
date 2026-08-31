@@ -217,8 +217,12 @@ virt-install \
   --graphics vnc \
   --boot hd
 
-# Monitor boot process
-virsh console migrated-vm
+# Monitor first-boot readiness *before* power-on
+guestkit doctor vm.qcow2 --target kvm --explain
+
+# After the guest is running, use the GuestKit agent (not virsh console)
+guestkit agent-call --socket /var/lib/libvirt/qemu/channel/target/migrated-vm/org.qemu.guest_agent.0 \
+  --method guestkit.getBootAnalysis
 ```
 
 ### 2. VMware to KVM Migration
@@ -680,7 +684,9 @@ pub fn has_luks(&mut self, root: &str) -> Result<bool>
 
 ## Further Reading
 
-- [hyper2kvm Project](https://github.com/ssahani/hyper2kvm) - Production Hyper-V to KVM migration
+- [QEMU / VirtIO runtime](../features/qemu-runtime.md) — assurance-gated local launch
+- [h2kvm integration](../features/hyper2kvm-integration.md)
+- [hyper2kvm Project](https://github.com/zyvorai/h2kvm) - Production Hyper-V to KVM migration
 - [VirtIO Driver Installation](https://docs.fedoraproject.org/en-US/quick-docs/creating-windows-virtual-machines-using-virtio-drivers/)
 - [KVM Networking Guide](https://wiki.libvirt.org/page/Networking)
 - [QEMU Image Formats](https://qemu.readthedocs.io/en/latest/system/images.html)
@@ -688,6 +694,6 @@ pub fn has_luks(&mut self, root: &str) -> Result<bool>
 ## Support
 
 For migration issues:
-- GitHub Issues: https://github.com/ssahani/guestkit/issues
+- GitHub Issues: https://github.com/hypersdk/guestkit/issues
 - Tag with: `migration`, `hyper-v`, `vmware`, etc.
 - Include: OS type, source platform, target platform, error messages

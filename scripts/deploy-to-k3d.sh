@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Deploy guestkit worker to k3d cluster
 
 set -e

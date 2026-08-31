@@ -397,9 +397,9 @@ mod tests {
 
     #[test]
     fn test_dependency_missing_error() {
-        let err = builders::dependency_missing("libguestfs");
+        let err = builders::dependency_missing("qemu-img");
         assert!(err.message.contains("Required dependency not found"));
-        assert!(err.message.contains("libguestfs"));
+        assert!(err.message.contains("qemu-img"));
         assert!(!err.examples.is_empty());
     }
 

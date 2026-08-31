@@ -2,10 +2,11 @@
 
 ## Project Overview
 
-**guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. It does **not** use libguestfs — disk access is via GuestKit's own engine (loop/NBD, partition/filesystem parsers, assurance APIs). Features include:
+**guestkit** is a pure Rust library and CLI for offline VM intelligence and **migration assurance**. It does **not** use legacy appliance tooling — disk access is via GuestKit's own engine (loop/NBD, partition/filesystem parsers, assurance APIs). Features include:
 
 - 🩺 **Doctor / migrate-plan** - Boot probability and hypervisor-aware migration scoring before cutover
 - 🖥️ **TUI Assurance** - Same scoring in `guestctl tui` (Security group · `d`/`t`/`p`/`e` keys)
+- ▶️ **Assured QEMU launch** - `guestkit-qemu` turns evidence into a gated QEMU/VirtIO runtime
 - 🎯 **Killer Summary View** - See OS, version, architecture at a glance
 - 🪟 **Windows Registry Parsing** - Full Windows version detection (incl. `windows-migration` profile)
 - 🔄 **VM Migration Support** - Universal fstab/crypttab rewriter + fix plans
@@ -126,6 +127,19 @@ guestctl tui vm.qcow2 --compare other.qcow2
 
 See [TUI enhancements](../features/tui-enhancements.md) and [migration assurance](../features/migration-assurance.md).
 
+## Assured QEMU launch
+
+After doctor/migrate-plan, launch under the same assurance gate:
+
+```bash
+cargo run --bin guestkit-qemu -- plan vm.qcow2 --json
+cargo run --bin guestkit-qemu -- run vm.qcow2 --min-boot-score 80 \
+  --qmp-socket /tmp/vm.qmp
+```
+
+UEFI guests need explicit firmware paths (`--uefi-code` / `--uefi-vars`).
+Full guide: [qemu-runtime.md](../features/qemu-runtime.md).
+
 ## Web console login
 
 Packaged/remote installs ship a web console with a seeded default administrator:
@@ -146,40 +160,34 @@ docker compose -f deploy/docker-compose.ghcr.yml up -d   # → http://localhost:
 
 See [Docker → Published images](../guides/DOCKER.md#published-images-ghcr) for tags, Helm, and auth options.
 
-## Integration with hyper2kvm
+## Integration with h2kvm
 
-To use guestkit in hyper2kvm:
+h2kvm (formerly hyper2kvm) uses GuestKit as its default offline inspect/repair backend since v1.1.0.
 
-1. **Update hyper2kvm to use guestkit for disk operations**
-2. **Replace Python qemu-img calls with guestkit Rust calls**
-3. **Benefit from memory safety and performance**
+### Python (recommended)
 
-Example integration:
+```bash
+pip install "hypersdk-guestkit>=1.1.0"
+```
 
 ```python
-# In hyper2kvm
-import subprocess
+import guestkit
 
-# Call guestkit from Python
-result = subprocess.run([
-    "guestkit", "convert",
-    "--source", source_path,
-    "--output", output_path,
-    "--compress"
-], capture_output=True, text=True)
+guestkit.run_doctor("source.vmdk", target="kvm", explain=True)
+guestkit.run_migrate_repair("out.qcow2", target="kvm", apply=True)
 ```
 
-Or use PyO3 to create Python bindings:
+h2kvm wraps the same calls in `h2kvm.core.guestkit_client`.
 
-```rust
-use pyo3::prelude::*;
+### CLI handoff
 
-#[pyfunction]
-fn convert_disk(source: String, output: String) -> PyResult<()> {
-    // Call guestkit converter
-    Ok(())
-}
+```bash
+guestkit doctor disk.qcow2 --target kvm --explain
+guestkit migrate-repair disk.qcow2 --target kvm --apply
+h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 --backend guestkit --libvirt-import
 ```
+
+Full guide: [hyper2kvm-integration.md](../features/hyper2kvm-integration.md) · [h2kvm GUESTKIT.md](https://github.com/zyvorai/h2kvm/blob/main/docs/architecture/GUESTKIT.md)
 
 ## Development
 
@@ -220,11 +228,11 @@ RUST_LOG=debug cargo test -- --nocapture
 
 ## Next Steps
 
-1. **Implement guest OS detection** ( FFI)
-2. **Add async disk operations**
-3. **Create Python bindings** (PyO3)
-4. **Integrate with hyper2kvm**
-5. **Add more examples**
+1. **Assurance workflow** — `guestkit doctor` → `migrate-plan` → `migrate-repair`
+2. **Python automation** — `pip install hypersdk-guestkit`; see [python-bindings.md](python-bindings.md)
+3. **h2kvm pipeline** — [hyper2kvm-integration.md](../features/hyper2kvm-integration.md)
+4. **CI gate** — GitHub Action + Passport verify
+5. **Fleet ops** — `guestkit fleet analyze` / `watch`
 
 ## Troubleshooting
 

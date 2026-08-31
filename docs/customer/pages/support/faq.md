@@ -6,25 +6,33 @@ FAQ — Support surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **FAQ** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `faq`
-- Nav: **Support → FAQ** (sidebar, command palette, or desktop nav)
+- Doc id: `faq`
+- Nav: **Support → FAQ**
+- Primary interface: Reference answers; commands embedded
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `faq` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. Reference answers; commands embedded.
+2. Install: `cargo install guestkit`.
+3. Not legacy appliance tooling — use GuestKit stack.
+4. Passport vs virt-v2v: certify then convert.
+5. Extract/list/rescue examples as in FAQ.
+6. Cache under `~/.cache/guestkit/`; escalate with version + repro.
+7. **Empty / fail:** N/A (doc); point to troubleshooting for runtime.
+8. **Success:** Reader can run cited command successfully.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Troubleshooting](troubleshooting.md)
+- [Getting Started](../onboarding/getting-started.md)
+- [VM Migration Guide](../guides/vm-migration.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

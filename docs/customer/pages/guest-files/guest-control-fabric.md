@@ -6,25 +6,33 @@ Guest Control Fabric — Guest Files surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Guest Control Fabric** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `guest-control-fabric`
-- Nav: **Guest Files → Guest Control Fabric** (sidebar, command palette, or desktop nav)
+- Doc id: `guest-control-fabric`
+- Nav: **Guest Files → Guest Control Fabric**
+- Primary interface: Web/API via zyvor-api KubeVirt guest routes
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `guest-control-fabric` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. Web/API via zyvor-api KubeVirt guest routes.
+2. Deploy API+UI (compose/Helm).
+3. `GET .../guest/status` → control state.
+4. `GET .../guest/capabilities` → transport.
+5. Live: `POST .../guest/doctor` or agent-proxy.
+6. Airgap: `POST .../guest/install-agent`; halted VM: `POST .../guest/repair-plan`.
+7. **Empty / fail:** `console_only`/`blind_vm` → install QGA/agent or stop VM for offline path.
+8. **Success:** Envelope with transport, controlState, ok:true.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Guest Agent](../guest-agent/guest-agent.md)
+- [KubeVirt Integration](../integration/kubevirt-integration.md)
+- [Zeus VM Tools](../integration/zeus-vm-tools.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

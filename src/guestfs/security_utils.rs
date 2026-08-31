@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Security validation utilities to prevent command injection and path traversal attacks.
 
 use crate::core::error::{Error, Result};

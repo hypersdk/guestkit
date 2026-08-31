@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Refresh vendored IronWolf shell CSS from ../ironwolf (manual review required).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

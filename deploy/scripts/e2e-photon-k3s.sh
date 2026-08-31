@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # End-to-end: Photon OS OVA → GuestKit inspect/doctor → KubeVirt VM → cluster inspect.
 set -euo pipefail
 

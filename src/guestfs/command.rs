@@ -150,6 +150,16 @@ impl Guestfs {
         let output = self.sh(command)?;
         Ok(output.lines().map(|s| s.to_string()).collect())
     }
+
+    /// Same as [`command`] — quiet variant for call-site compatibility.
+    pub fn command_quiet(&mut self, arguments: &[&str]) -> Result<String> {
+        self.command(arguments)
+    }
+
+    /// Same as [`command`] — guestkit already chroots with /proc,/dev,/sys when needed.
+    pub fn command_with_mounts(&mut self, arguments: &[&str]) -> Result<String> {
+        self.command(arguments)
+    }
 }
 
 #[cfg(test)]

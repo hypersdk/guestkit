@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 #[cfg(feature = "python-bindings")]
 use crate::converters::DiskConverter as RustDiskConverter;
 #[cfg(feature = "python-bindings")]
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Convert a guestkit error to an appropriate Python exception type
 #[cfg(feature = "python-bindings")]
@@ -2273,6 +2273,281 @@ impl Guestfs {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
     }
 
+    // === Additional filesystem/device/LUKS operations ===
+
+    /// Expand a guest path glob.
+    fn glob_expand(&mut self, pattern: String) -> PyResult<Vec<String>> {
+        self.handle
+            .glob_expand(&pattern)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// LVM scan + optional activate.
+    fn lvm_scan(&mut self, activate: bool) -> PyResult<()> {
+        self.handle
+            .lvm_scan(activate)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// blkid key/value map for a device.
+    fn blkid(&mut self, device: String) -> PyResult<Py<PyAny>> {
+        let map = self
+            .handle
+            .blkid(&device)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (k, v) in map {
+                dict.set_item(k, v)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    fn findfs_uuid(&mut self, uuid: String) -> PyResult<String> {
+        self.handle
+            .findfs_uuid(&uuid)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn findfs_label(&mut self, label: String) -> PyResult<String> {
+        self.handle
+            .findfs_label(&label)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn list_dm_devices(&mut self) -> PyResult<Vec<String>> {
+        self.handle
+            .list_dm_devices()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn rm_f(&mut self, path: String) -> PyResult<()> {
+        self.handle
+            .rm_f(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn rename(&mut self, src: String, dest: String) -> PyResult<()> {
+        self.handle
+            .rename(&src, &dest)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn vgchange_activate_all(&mut self, activate: bool) -> PyResult<()> {
+        self.handle
+            .vgchange_activate_all(activate)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// libguestfs-compatible alias for luks_open(device, key, mapname).
+    fn cryptsetup_open(&mut self, device: String, key: String, mapname: String) -> PyResult<()> {
+        self.handle
+            .cryptsetup_open(&device, &key, &mapname)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn available_all_groups(&mut self) -> PyResult<Vec<String>> {
+        self.handle
+            .available_all_groups()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn device_index(&self, device: String) -> PyResult<i32> {
+        self.handle
+            .device_index(&device)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Assemble/activate MD RAID arrays (all discoverable if `devices` is
+    /// empty), returning aggregate stats for whatever is active afterward.
+    fn md_stat(&mut self, devices: Vec<String>) -> PyResult<Py<PyAny>> {
+        let stats = self
+            .handle
+            .md_activate_all(&devices)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in stats {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    fn is_link(&mut self, path: String) -> PyResult<bool> {
+        self.handle
+            .is_link(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Get file stat information with nanosecond-resolution timestamps.
+    fn statns(&mut self, path: String) -> PyResult<Py<PyAny>> {
+        let stat = self.handle.statns(&path).map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            dict.set_item("dev", stat.dev)?;
+            dict.set_item("ino", stat.ino)?;
+            dict.set_item("mode", stat.mode)?;
+            dict.set_item("nlink", stat.nlink)?;
+            dict.set_item("uid", stat.uid)?;
+            dict.set_item("gid", stat.gid)?;
+            dict.set_item("rdev", stat.rdev)?;
+            dict.set_item("size", stat.size)?;
+            dict.set_item("blksize", stat.blksize)?;
+            dict.set_item("blocks", stat.blocks)?;
+            dict.set_item("atime", stat.atime)?;
+            dict.set_item("mtime", stat.mtime)?;
+            dict.set_item("ctime", stat.ctime)?;
+            dict.set_item("atime_nsec", stat.atime_nsec)?;
+            dict.set_item("mtime_nsec", stat.mtime_nsec)?;
+            dict.set_item("ctime_nsec", stat.ctime_nsec)?;
+            Ok(dict.into())
+        })
+    }
+
+    /// Command wrapper (quiet variant).
+    fn command_quiet(&mut self, arguments: Vec<String>) -> PyResult<String> {
+        let args: Vec<&str> = arguments.iter().map(|s| s.as_str()).collect();
+        self.handle
+            .command_quiet(&args)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Command with guest mounts available.
+    fn command_with_mounts(&mut self, arguments: Vec<String>) -> PyResult<String> {
+        let args: Vec<&str> = arguments.iter().map(|s| s.as_str()).collect();
+        self.handle
+            .command_with_mounts(&args)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    /// Bind-mount guest tree to a host path.
+    fn mount_local(&mut self, mountpoint: String) -> PyResult<()> {
+        self.handle
+            .mount_local(&mountpoint)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn mount_local_run(&mut self) -> PyResult<()> {
+        self.handle
+            .mount_local_run()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn umount_local(&mut self) -> PyResult<()> {
+        self.handle
+            .umount_local()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    // --- Hivex (Windows registry) ---
+
+    #[pyo3(signature = (filename, write=false))]
+    fn hivex_open(&mut self, filename: String, write: bool) -> PyResult<i64> {
+        self.handle
+            .hivex_open(&filename, write)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_close(&mut self, handle: i64) -> PyResult<()> {
+        self.handle
+            .hivex_close(handle)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_root(&mut self, handle: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_root(handle)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_name(&mut self, handle: i64, node: i64) -> PyResult<String> {
+        self.handle
+            .hivex_node_name(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_children(&mut self, handle: i64, node: i64) -> PyResult<Vec<i64>> {
+        self.handle
+            .hivex_node_children(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_get_child(&mut self, handle: i64, node: i64, name: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_get_child(handle, node, &name)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_values(&mut self, handle: i64, node: i64) -> PyResult<Vec<i64>> {
+        self.handle
+            .hivex_node_values(handle, node)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_get_value(&mut self, handle: i64, node: i64, key: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_get_value(handle, node, &key)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_key(&mut self, handle: i64, value: i64) -> PyResult<String> {
+        self.handle
+            .hivex_value_key(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_type(&mut self, handle: i64, value: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_value_type(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_string(&mut self, handle: i64, value: i64) -> PyResult<String> {
+        self.handle
+            .hivex_value_string(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_dword(&mut self, handle: i64, value: i64) -> PyResult<i32> {
+        self.handle
+            .hivex_value_dword(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_uint32(&mut self, handle: i64, value: i64) -> PyResult<u32> {
+        self.handle
+            .hivex_value_uint32(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_integer(&mut self, handle: i64, value: i64) -> PyResult<i64> {
+        self.handle
+            .hivex_value_integer(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_value_value(&mut self, handle: i64, value: i64) -> PyResult<Vec<u8>> {
+        self.handle
+            .hivex_value_value(handle, value)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    #[pyo3(signature = (handle, filename=None))]
+    fn hivex_commit(&mut self, handle: i64, filename: Option<String>) -> PyResult<()> {
+        self.handle
+            .hivex_commit(handle, filename.as_deref())
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
+    fn hivex_node_add_child(&mut self, handle: i64, parent: i64, name: String) -> PyResult<i64> {
+        self.handle
+            .hivex_node_add_child(handle, parent, &name)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+    }
+
     /// Add LUKS key
     fn luks_add_key(
         &mut self,
@@ -3339,6 +3614,35 @@ impl Guestfs {
         self.handle.get_trace()
     }
 
+    // === Additional compatibility operations ===
+
+    /// Diagnostic info about this backend instance (implementation, version,
+    /// attach mode, readonly)
+    fn get_backend_info(&self) -> PyResult<Py<PyAny>> {
+        let info = self.handle.get_backend_info().map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in info {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
+    /// Measured performance counters for the most recent launch() call
+    fn get_performance_metrics(&self) -> PyResult<Py<PyAny>> {
+        let metrics = self.handle.get_performance_metrics().map_err(to_pyerr)?;
+
+        Python::attach(|py| {
+            let dict = pyo3::types::PyDict::new(py);
+            for (key, value) in metrics {
+                dict.set_item(key, value)?;
+            }
+            Ok(dict.into())
+        })
+    }
+
     /// Close the handle
     fn close(&mut self) -> PyResult<()> {
         self.handle
@@ -3884,6 +4188,127 @@ impl AsyncGuestfs {
 }
 */
 
+/// Serialize a Rust value to a Python dict via JSON round-trip.
+#[cfg(feature = "python-bindings")]
+fn serde_to_py<T: serde::Serialize>(py: Python<'_>, value: &T) -> PyResult<Py<PyAny>> {
+    let json_str = serde_json::to_string(value).map_err(to_pyerr_generic)?;
+    let json_module = py.import("json")?;
+    let loads = json_module.getattr("loads")?;
+    Ok(loads.call1((json_str,))?.into())
+}
+
+/// Run bootability doctor on an offline disk image.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", explain = false, verbose = false))]
+fn run_doctor(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    explain: bool,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
+    let result = crate::assurance::run_doctor(Path::new(&image), target, explain, verbose)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Run boot inspect summary on an offline disk image.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", verbose = false))]
+fn run_boot_inspect(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
+    let result = crate::assurance::run_boot_inspect(Path::new(&image), target, verbose)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate a hypervisor-aware migration plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", explain = false, verbose = false, export_fix_plan = false))]
+fn run_migrate_plan(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    explain: bool,
+    verbose: bool,
+    export_fix_plan: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::MigratePlanOptions {
+        explain,
+        verbose,
+        export_fix_plan,
+        inject_agent: false,
+        #[cfg(feature = "agent")]
+        agent_binary: None,
+        #[cfg(feature = "agent")]
+        agent_unit: None,
+    };
+    let result = crate::assurance::run_migrate_plan(Path::new(&image), target, &options)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate or apply a boot repair plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, dry_run = true, verbose = false, fix_cloud_init_network = false, validate_fstab = false))]
+fn run_repair_plan(
+    py: Python<'_>,
+    image: String,
+    dry_run: bool,
+    verbose: bool,
+    fix_cloud_init_network: bool,
+    validate_fstab: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::RepairOptions {
+        dry_run,
+        verbose,
+        inject_agent: false,
+        inject_qga: false,
+        enable_systemd: false,
+        fix_cloud_init_network,
+        validate_fstab,
+        #[cfg(feature = "agent")]
+        agent_binary: None,
+        #[cfg(feature = "agent")]
+        agent_unit: None,
+    };
+    let result =
+        crate::assurance::run_repair_plan(Path::new(&image), &options).map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate or apply a hypervisor-aware migration repair plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", apply = false, include_destructive = false, virtio_win = None, verbose = false))]
+fn run_migrate_repair(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    apply: bool,
+    include_destructive: bool,
+    virtio_win: Option<String>,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::MigrateRepairOptions {
+        apply,
+        include_destructive,
+        virtio_win_dir: virtio_win.map(PathBuf::from),
+        verbose,
+    };
+    let result = crate::assurance::run_migrate_repair(Path::new(&image), target, &options)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
 /// Python module definition
 #[cfg(feature = "python-bindings")]
 #[pymodule]
@@ -3892,6 +4317,11 @@ fn guestkit(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
     // m.add_class::<AsyncGuestfs>()?;  // Blocked on pyo3-asyncio PyO3 0.22+ support
     m.add_class::<DiskConverter>()?;
     m.add_class::<LvmCloner>()?;
+    m.add_function(wrap_pyfunction!(run_doctor, m)?)?;
+    m.add_function(wrap_pyfunction!(run_boot_inspect, m)?)?;
+    m.add_function(wrap_pyfunction!(run_migrate_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(run_repair_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(run_migrate_repair, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Demo script to show colorized output functions
 
 cat << 'EOF' > /tmp/test_colors.rs
@@ -47,7 +48,7 @@ fn main() {
     emphasis("All features working!");
 
     thick_separator();
-    dimmed("GuestKit v0.3.0 - https://github.com/ssahani/guestkit");
+    dimmed("GuestKit v0.3.0 - https://github.com/hypersdk/guestkit");
 }
 EOF
 

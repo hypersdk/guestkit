@@ -19,7 +19,8 @@ Disk image (QCOW2/VMDK/…)
         ├─► Fleet clusters      (fleet analyze)
         ├─► Migration waves     (fleet wave-plan)
         ├─► Drift vs baseline   (fleet watch)
-        └─► FixPlan             (repair --fix boot)
+        ├─► FixPlan             (repair --fix boot)
+        └─► GuestKitQemuPlan    (guestkit-qemu plan / run)
 ```
 
 | Module | Role |
@@ -33,10 +34,11 @@ Disk image (QCOW2/VMDK/…)
 | `src/fleet/baseline.rs` | Per-VM golden baseline storage for `fleet watch` |
 | `src/ai/drift.rs` | Semantic drift explanation (baseline vs current) |
 | `src/cli/plan/` | Fix plans — security profiles **and** boot repair |
+| `src/qemu/` | Declarative QEMU/VirtIO config + assurance-gated launcher |
 
 Evidence is cached under `~/.cache/guestkit/` when `doctor` runs successfully.
 
-> **Not libguestfs:** Assurance uses GuestKit's pure Rust disk stack. No `libguestfs-tools` or `guestfish` required.
+> **Not legacy appliance tooling:** Assurance uses GuestKit's pure Rust disk stack. No `legacy guest tools` or `guestkit` required.
 
 ### `run_boot_inspect` / Zyvor HTTP API
 
@@ -52,6 +54,19 @@ curl "$ZYVOR/api/v1/kubevirt/vms/default/my-vm/boot-inspect"
 ```
 
 See [kubevirt-integration.md](kubevirt-integration.md).
+
+### Assured QEMU launch
+
+`guestkit-qemu` consumes the same `EvidenceSnapshot` + `BootabilityReport` and
+refuses to start when blockers remain, the score is below `--min-boot-score`, or
+a UEFI guest has no pflash firmware (unless `--allow-unready`).
+
+```bash
+guestkit-qemu plan vm.qcow2 --json
+guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp
+```
+
+See [qemu-runtime.md](qemu-runtime.md).
 
 ### TUI parity
 
@@ -318,8 +333,23 @@ guestkit repair source.vmdk --fix boot --dry-run
 guestkit repair source.vmdk --fix boot
 guestkit doctor source.vmdk --target proxmox
 
-# 7. Hand off to hyper2kvm / hypervisor import
+# 7. Hand off to h2kvm / hypervisor import
+h2kvmctl local --vmdk source.vmdk --to-output out.qcow2 --backend guestkit
 ```
+
+## Python API (v1.1.0+)
+
+Same assurance engine as CLI — used by **h2kvm** offline fixer:
+
+```python
+import guestkit
+
+report = guestkit.run_doctor("source.vmdk", target="kvm", explain=True)
+plan = guestkit.run_migrate_plan("source.vmdk", target="kvm", export_fix_plan=True)
+guestkit.run_migrate_repair("source.qcow2", target="kvm", apply=True)
+```
+
+See [python-bindings.md](../user-guides/python-bindings.md) and [hyper2kvm-integration.md](hyper2kvm-integration.md).
 
 ## Relationship to fix plans
 
@@ -345,7 +375,7 @@ use guestkit::cli::migrate::plan::compute_migration_score;
 
 - [Guest agent](guest-agent.md) — live in-guest assurance via virtio-serial
 - [Zyvor GuestKit](https://zyvor.dev/guestkit) — platform overview
-- [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, hyper2kvm handoff
+- [VM migration guide](../user-guides/vm-migration.md) — fstab, registry, h2kvm handoff
 - [Fix plans](fix-plans.md) — preview, export, apply
 - [Security profiles](../user-guides/profiles.md) — migration and windows-migration profiles
 - [Changelog](../development/CHANGELOG.md) — v0.3.5+ assurance CLI; v0.3.6 TUI parity

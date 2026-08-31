@@ -882,6 +882,22 @@ impl Guestfs {
         fs::remove_file(&host_path).map_err(Error::Io)
     }
 
+    /// Remove a file, but don't error if it doesn't already exist
+    /// (equivalent to shell `rm -f`).
+    pub fn rm_f(&mut self, path: &str) -> Result<()> {
+        match self.rm(path) {
+            Ok(()) => Ok(()),
+            Err(Error::NotFound(_)) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Rename (move) a file or directory within the guest filesystem
+    /// (libguestfs-compatible name for the existing `mv`).
+    pub fn rename(&mut self, src: &str, dst: &str) -> Result<()> {
+        self.mv(src, dst)
+    }
+
     /// Remove a file or directory recursively (force)
     ///
     pub fn rm_rf(&mut self, path: &str) -> Result<()> {

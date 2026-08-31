@@ -188,6 +188,47 @@ impl Guestfs {
 
         Ok(stats)
     }
+
+    /// Assemble/activate MD RAID arrays and return aggregate stats for
+    /// whatever is active afterward.
+    ///
+    /// If `devices` is empty, attempts `mdadm --assemble --scan` (activate
+    /// any array mdadm can discover); otherwise assembles the named arrays.
+    /// A scan finding nothing to assemble is not an error.
+    pub fn md_activate_all(&mut self, devices: &[String]) -> Result<Vec<(String, i64)>> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: md_activate_all {:?}", devices);
+        }
+
+        let mut cmd = Command::new("mdadm");
+        cmd.arg("--assemble");
+        if devices.is_empty() {
+            cmd.arg("--scan");
+        } else {
+            for device in devices {
+                cmd.arg(device);
+            }
+        }
+
+        // Assembly failing (e.g. nothing left to assemble) is not fatal —
+        // we still report whatever is active afterward.
+        let _ = cmd.output();
+
+        let mut stats = Vec::new();
+        for md in self.list_md_devices()? {
+            if let Ok(detail) = self.md_detail(&md) {
+                for (key, value) in detail {
+                    if let Ok(num) = value.parse::<i64>() {
+                        stats.push((format!("{}.{}", md, key), num));
+                    }
+                }
+            }
+        }
+
+        Ok(stats)
+    }
 }
 
 #[cfg(test)]

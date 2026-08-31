@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Guestkit doctor handler — bootability scoring
 
 use async_trait::async_trait;

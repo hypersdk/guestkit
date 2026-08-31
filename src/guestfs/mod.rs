@@ -21,6 +21,7 @@ pub mod cpio_ops;
 pub mod dd_ops;
 pub mod device;
 pub mod device_inventory;
+pub mod diagnostics;
 pub mod disk_mgmt;
 pub mod disk_ops;
 pub mod dosfs_ops;

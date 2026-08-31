@@ -6,25 +6,33 @@ Troubleshooting — Support surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Troubleshooting** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `troubleshooting`
-- Nav: **Support → Troubleshooting** (sidebar, command palette, or desktop nav)
+- Doc id: `troubleshooting`
+- Nav: **Support → Troubleshooting**
+- Primary interface: Ops runbook — CLI diagnostics
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `troubleshooting` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. Ops runbook — CLI diagnostics.
+2. `guestkit -v inspect …` / `RUST_LOG=debug`.
+3. NBD: `modprobe nbd`; `qemu-nbd --disconnect`.
+4. Loop: `losetup -D`.
+5. `qemu-img check IMAGE`.
+6. Container: privileged + `/dev/nbd*`; gather version + uname + lsmod.
+7. **Empty / fail:** Persistent device busy → disconnect all nbd / reboot.
+8. **Success:** Same failing command succeeds after fix.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [FAQ](faq.md)
+- [Getting Started](../onboarding/getting-started.md)
+- [Filesystems](../inspection/filesystems.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

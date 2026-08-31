@@ -1,6 +1,6 @@
 # KubeVirt integration (Zyvor API)
 
-GuestKit provides **pure Rust** offline disk intelligence. It does **not** use or require [libguestfs](https://libguestfs.org/). Disk access goes through GuestKit's own `guestfs` module (loop devices, NBD, partition/filesystem parsers) and assurance APIs such as `run_doctor` and `run_boot_inspect`.
+GuestKit provides **pure Rust** offline disk intelligence. It does **not** use or require [legacy appliance tooling](https://zyvor.dev/guestkit). Disk access goes through GuestKit's own `guestfs` module (loop devices, NBD, partition/filesystem parsers) and assurance APIs such as `run_doctor` and `run_boot_inspect`.
 
 When `zyvor-api` runs in-cluster with KubeVirt, it exposes live VM discovery plus **offline boot inspect** for stopped VMs — consumed by Zeus OS Guest Intelligence.
 
@@ -82,6 +82,6 @@ Zeus OS proxies these endpoints when `guestkitUrl` is set in migration engines c
 
 - Privileged pod or sufficient access to node disk paths / Longhorn devices
 - RBAC: `get/list` on `virtualmachines`, `virtualmachineinstances`, `persistentvolumeclaims`, `persistentvolumes`
-- **Not required:** libguestfs, guestfish, or virt-inspector
+- **Not required:** legacy appliance tooling, or virt-inspector
 
 See [deploy/README.md](../../deploy/README.md) and [openapi/zyvor-vm-services.yaml](../../deploy/openapi/zyvor-vm-services.yaml).

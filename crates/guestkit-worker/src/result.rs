@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Job result persistence
 
 use guestkit_job_spec::{

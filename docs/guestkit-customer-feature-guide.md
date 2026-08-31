@@ -2,9 +2,9 @@
 
 > **Offline VM intelligence and migration assurance.**
 
-GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no libguestfs appliance to install.
+GuestKit is a pure-Rust control plane that reads a virtual machine's disk image offline, builds a normalized evidence snapshot, and answers the two questions that decide every migration: will it boot, and what must change before cutover. It ships as a scriptable CLI (guestkit), a carbon-themed TUI (guestctl), an assured QEMU launcher (guestkit-qemu), Python bindings, and a self-hosted web platform with KubeVirt integration - all sharing one engine, with no appliance daemon to install.
 
-**70+** CLI subcommands · **6** disk formats read · **0** libguestfs appliances needed · **8** migration targets scored · **0-100** boot assurance score · **5** inspection profiles
+**70+** CLI subcommands · **6** disk formats read · ****0** appliance daemons needed · **8** migration targets scored · **0-100** boot assurance score · **5** inspection profiles
 
 This is the customer-facing onboarding guide — how to access the product, your first workflows, and how to use every feature. A print-ready PDF of the same content sits alongside this file.
 
@@ -20,22 +20,23 @@ This is the customer-facing onboarding guide — how to access the product, your
 7. [Interactive Workspaces](#7-interactive-workspaces)
 8. [Guest Agent & Live Control](#8-guest-agent-live-control)
 9. [KubeVirt & Platform](#9-kubevirt-platform)
-10. [Deployment & Editions](#10-deployment-editions)
+10. [QEMU / VirtIO runtime](#10-qemu-virtio-runtime)
+11. [Deployment & Editions](#11-deployment-editions)
 
 ## Getting started
 
 **How to access it**
 
 - **Web:** Self-hosted web console at http://localhost:8088 (nginx front-end proxies `/api/` to the zyvor-api backend). Start it with `docker compose -f deploy/docker-compose.ghcr.yml up -d`.
-- **CLI:** Two binaries share one command surface: `guestkit` (scriptable CLI) and `guestctl`. Install both with `cargo install guestkit`; run `guestkit --help` or `guestkit commands` to list all subcommands. Launch the TUI with `guestctl tui vm.qcow2`.
+- **CLI:** Three host binaries: `guestkit` (scriptable CLI), `guestctl` (TUI), and `guestkit-qemu` (assured QEMU plan/run/QMP). Install with `cargo install guestkit`; run `guestkit --help` or `guestkit commands` to list subcommands. Launch the TUI with `guestctl tui vm.qcow2`.
 - **API:** REST API served by zyvor-api behind the console's `/api/` path (e.g. `http://localhost:8088/api/`); it enqueues inspect/boot-inspect jobs onto the Redis-backed worker. Live guests are reachable host-side via `guestkit agent-proxy --listen 127.0.0.1:8765` (e.g. `curl http://127.0.0.1:8765/doctor`). Python bindings expose the engine in-process via `from guestkit import Guestfs`.
 - **Login:** Packaged/web installs seed a default administrator: username `admin`, password `Admin@321` (also the default API key where applicable). Change the password, API key and `JWT_SECRET` immediately after first login and enable SSO/SAML from Settings before any network exposure.
-- **Needs:** A Linux host with qemu-img, losetup and qemu-nbd installed; mount and in-cluster boot-inspect need root or a privileged pod.
+- **Needs:** A Linux host with qemu-img, losetup and qemu-nbd installed; mount and in-cluster boot-inspect need root or a privileged pod. `guestkit-qemu run` also needs a QEMU system binary on `PATH`.
 
 **Your first workflows**
 
 - **Pre-flight environment check**
-  1. Install the tools: `cargo install guestkit` (installs `guestkit` and `guestctl`).
+  1. Install the tools: `cargo install guestkit` (installs `guestkit`, `guestctl`, and `guestkit-qemu`).
   1. Verify host tooling is present: `guestkit doctor --help` and confirm qemu-img/losetup/qemu-nbd are installed.
   1. Confirm the disk opens and its format is detected: `guestkit detect vm.qcow2`.
 - **Assurance-first migration (recommended)**
@@ -71,7 +72,7 @@ _Read the full guest OS from a cold disk image - no boot, no agent, no appliance
   - **How:** CLI: run focused subcommands like `guestkit packages|services|users|network disk.qcow2`, or the full `guestkit inspect disk.qcow2` for everything in one pass.
 - **Windows signal parsing** — Reads SAM/SECURITY registry hives to detect BitLocker, domain join, RDP, and driver gaps for Windows guests. Detects System Reserved / ESP boot volumes on multi-partition disks so BCD is not falsely reported missing. Samples hotfixes (HotFix key, `$NtUninstall*`, CBS.log) and VirtIO `.sys` presence for cutover planning. Offline OEM/Volume activation markers, remnant/ghost NICs, and static Tcpip configs feed migration warnings. Offline BitLocker `BootStatus` / FVE artifacts and VSS service inference feed Passport hard-blocks and snapshot readiness. — _See the Windows-specific blockers Linux tools miss._
   - **How:** CLI: `guestkit inspect disk.vmdk --profile windows-migration` parses SAM/SECURITY hives for BitLocker, domain join, RDP and driver gaps.
-- **Pure-Rust engine, no libguestfs** — Partition tables, filesystem signatures, and evidence schema are parsed in Rust; only host NBD/loop is used for mount. — _No guestfish appliance, no fragile daemon - fewer moving parts._
+- **Pure-Rust engine, no legacy appliance tooling** — Partition tables, filesystem signatures, and evidence schema are parsed in Rust; only host NBD/loop is used for mount. — _No guestkit appliance, no fragile daemon - fewer moving parts._
   - **How:** Automatic on every command; add `--trace` (e.g. `guestkit inspect disk.qcow2 --trace`) to see the Rust parsers and the host NBD/loop mount that were used.
 
 > Inspection is always read-only: your source image is never modified.
@@ -94,7 +95,9 @@ _Score boot readiness and generate hypervisor-aware fix plans before you cut ove
   - **How:** CLI: `guestkit migrate-plan vm.vmdk --target proxmox` (add `-o json` to capture the checklist). Targets include kvm, proxmox, qemu, aws, azure, gcp, cloud, hyperv.
 - **CI boot gate** — --fail-below sets an exit-code threshold so pipelines block any image that scores under your bar, JSON still emitted. — _Golden images that regress never reach production._
   - **How:** CLI: `guestkit doctor img.qcow2 --target proxmox -o json --fail-below 80` exits non-zero when the score drops below your bar while still emitting JSON.
-- **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). HyperSDK exports; hyper2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
+- **Assured QEMU launch** — `guestkit-qemu` turns the same evidence + boot score into a VirtIO-aware QEMU definition and refuses to start on blockers, low scores, or missing UEFI firmware. — _Prove the disk boots under KVM before cutover weekend._
+  - **How:** CLI: `guestkit-qemu plan vm.qcow2 --json` then `guestkit-qemu run vm.qcow2 --min-boot-score 80`. See [qemu-runtime.md](features/qemu-runtime.md).
+- **Cutover Passport** — Versioned assurance artifact (scores, blockers, FixPlan digest, BitLocker hard-block, optional live attestation + Ed25519 sign). Transiva exports; h2kvm converts; GuestKit certifies. — _The gate MTV/virt-v2v cannot skip._
   - **How:** CLI: `guestkit passport emit vm.qcow2 --target kvm -o passport.json` then `guestkit passport verify passport.json --fail-below 80`. Web dock: **Passport**.
 - **Windows day-0 pack** — Offline hostname, RDP, WinRM, domain→workgroup markers, timezone, DHCP/DNS, and static IP (by interface GUID) plans. — _Prep Windows guests without powering them on._
   - **How:** CLI: `guestkit plan generate win.qcow2 -p windows-domain-leave`, `-p windows-timezone --timezone UTC`, `-p windows-static-ip --interface-guid … --ip … --mask …`, `-p windows-dhcp` / `-p windows-dns`.
@@ -233,10 +236,10 @@ _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web con
   - **How:** Apply a `VMToolsPolicy` resource (or enable it from the web console) to auto-install/upgrade the KubeVirt guest agent via cloud-init, QGA, ISO or airgap path.
 - **Web console** — Self-hosted zyvor-ui + zyvor-api + guestkit-worker ship as public GHCR images and a Helm chart, backed by a Redis job queue. — _A team-facing UI over the same engine._
   - **How:** Browse to http://localhost:8088 and sign in with `admin` / `Admin@321` (change immediately). The nginx front-end proxies `/api/` to zyvor-api.
-- **Python bindings** — hypersdk-guestkit on PyPI exposes a libguestfs-style Guestfs API (100+ methods) for programmatic inspection. — _Automate disk inspection from Python._
-  - **How:** Python: `from guestkit import Guestfs` then `g = Guestfs(); g.add_drive("vm.qcow2"); g.launch(); g.inspect_os()` — a libguestfs-style API with 100+ methods.
-- **hyper2kvm pipeline** — Pairs with hyper2kvm for VMware-to-KVM conversion, sitting in the wider HyperSDK to GuestKit to v9s to PacketWolf flow. — _One assurance gate inside a full migration pipeline._
-  - **How:** Run hyper2kvm for the VMware-to-KVM conversion and call `guestkit doctor`/`migrate-plan` as the assurance gate in the same pipeline.
+- **Python bindings** — [`hypersdk-guestkit`](https://pypi.org/project/hypersdk-guestkit/) on PyPI: Guestfs handle + assurance APIs (`run_doctor`, `run_migrate_repair`) for programmatic inspection and offline repair.
+  - **How:** Python: `from guestkit import Guestfs` then `g = Guestfs(); g.add_drive("vm.qcow2"); g.launch(); g.inspect_os()` — a GuestKit-style API with 100+ methods.
+- **h2kvm pipeline** — Pairs with h2kvm for VMware-to-KVM conversion, sitting in the wider Transiva to GuestKit to v9s to PacketWolf flow. — _One assurance gate inside a full migration pipeline._
+  - **How:** Run h2kvm for the VMware-to-KVM conversion and call `guestkit doctor`/`migrate-plan` as the assurance gate in the same pipeline.
 - **Pluggable auth** — The web stack supports JWT, local login, and OIDC/SAML hooks with JWKS-verified ID tokens. — _Wire the console into your existing identity._
   - **How:** Web console: go to **Settings** to enable OIDC/SAML (JWKS-verified ID tokens) or keep JWT/local login; rotate the seeded password and `JWT_SECRET` first.
 - **KubeVirt manifest generation** — Emits ready-to-apply DataVolume and VirtualMachine YAML with CDI import URLs, storage class, and CPU/memory sized from the migration plan. — _From disk image to running KubeVirt VM in one manifest._
@@ -246,18 +249,32 @@ _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web con
 
 > In-cluster boot-inspect needs a privileged pod or node disk access plus get/list RBAC on VMs, VMIs, PVCs, and PVs. A running VM returns VM-spec heuristics - offline disk access is for stopped VMs.
 
-## 10. Deployment & Editions
+## 10. QEMU / VirtIO runtime
+
+_Turn migration evidence into an executable, assurance-gated QEMU definition._
+
+- **Evidence → QEMU plan** — `guestkit-qemu plan` reuses `collect_assurance_data` to pick architecture, machine type, disk format, VirtIO devices, firmware needs, and a safe argv vector. — _One inspection path for score and launch config._
+  - **How:** CLI: `guestkit-qemu plan vm.qcow2 --memory-mb 8192 --vcpus 4 --json`.
+- **Gated run** — Launch refuses boot blockers, scores below `--min-boot-score`, or UEFI without pflash unless `--allow-unready`. — _No silent start of unready cutovers._
+  - **How:** CLI: `guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp`.
+- **QMP day-2** — status / pause / resume / balloon / powerdown over a Unix QMP socket. — _Control the VM after assured start._
+  - **How:** CLI: `guestkit-qemu qmp --socket /run/guestkit/vm.qmp status`.
+- **Host networking stays outside** — User-mode (SSH on loopback) by default; TAP/bridge attach only to already-provisioned host devices. — _GuestKit inspects; the platform owns host net._
+
+Full guide: [qemu-runtime.md](features/qemu-runtime.md).
+
+## 11. Deployment & Editions
 
 _Install in one command; run the full open-source stack; scale with Enterprise support._
 
-- **cargo install** — cargo install guestkit installs both the guestkit CLI and guestctl TUI binaries. — _From zero to inspecting in one line._
-  - **How:** CLI: `cargo install guestkit` installs both the `guestkit` CLI and `guestctl` TUI binaries.
+- **cargo install** — cargo install guestkit installs `guestkit`, `guestctl`, and `guestkit-qemu`. — _From zero to inspecting in one line._
+  - **How:** CLI: `cargo install guestkit` installs the CLI, TUI, and QEMU runtime binaries.
 - **Run from GHCR** — Prebuilt public images (zyvor-ui, zyvor-api, guestkit-worker) come up via docker compose with no docker login. — _Stand up the whole console in minutes._
   - **How:** Docker: `docker compose -f deploy/docker-compose.ghcr.yml up -d` brings up zyvor-ui/zyvor-api/guestkit-worker at http://localhost:8088 with no docker login.
 - **Helm & remote deploy** — A Helm chart for clusters plus scripted remote deploy for Docker hosts. — _Ship it where your fleet already lives._
   - **How:** Cluster: `helm install` the chart (provisions Postgres/Redis/MinIO); for Docker hosts use the scripted remote deploy under `scripts/`.
 - **Full open-source stack** — CLI, TUI, Python bindings, assurance APIs, web console, and KubeVirt hooks are all Apache-2.0 in the repo - Enterprise adds support, not features. — _Nothing core is withheld from the open source._
-  - **How:** Clone the repo (`git clone https://github.com/ssahani/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
+  - **How:** Clone the repo (`git clone https://github.com/zyvorai/guestkit`) — CLI, TUI, Python bindings, assurance APIs, web console and KubeVirt hooks are all Apache-2.0.
 - **Enterprise programs** — SLA, air-gapped deployment packages, guided playbooks, and fleet automation for 100+ VM and regulated migrations. — _Backed help for VMware-exit programs at scale._
   - **How:** Contact the account team at info@zyvor.dev for SLA, air-gapped packages, guided playbooks and fleet automation.
 
@@ -265,7 +282,7 @@ _Install in one command; run the full open-source stack; scale with Enterprise s
 
 ## Getting started
 
-1. **Install** — Run cargo install guestkit to get the guestkit CLI and guestctl TUI, or pull the web stack from ghcr.io/hypersdk.
+1. **Install** — Run cargo install guestkit to get the guestkit CLI and guestctl TUI, or pull the web stack from ghcr.io/zyvorai.
 2. **Score boot readiness** — guestkit doctor vm.qcow2 --target proxmox --explain returns a 0-100 boot assurance score with ranked blockers and root-cause chains.
 3. **Export a fix plan** — guestkit migrate-plan vm.vmdk --target proxmox --export plan.yaml writes an executable, reviewable migration fix plan.
 4. **Explore interactively** — guestctl tui vm.qcow2 opens the carbon TUI with the Assurance workspace and fix-plan preview.

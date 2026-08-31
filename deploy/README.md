@@ -163,7 +163,7 @@ curl -X POST "$API/vms/{id}/migration-plan?target=kubevirt"
 # Provision KubeVirt YAML
 curl -X POST "$API/vms/{id}/provision"
 
-# Offline boot inspect (stopped KubeVirt VM — pure Rust GuestKit, not libguestfs)
+# Offline boot inspect (stopped KubeVirt VM — pure Rust GuestKit, not legacy appliance tooling)
 curl "$API/kubevirt/vms/default/my-vm/boot-inspect"
 curl -X POST "$API/kubevirt/boot-inspect" \
   -H 'Content-Type: application/json' \

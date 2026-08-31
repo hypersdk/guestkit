@@ -618,7 +618,7 @@ Gather this information:
 
 ### Where to Get Help
 
-1. **GitHub Issues:** https://github.com/ssahani/guestkit/issues
+1. **GitHub Issues:** https://github.com/hypersdk/guestkit/issues
    - Search existing issues first
    - Include environment info and error messages
    - Provide minimal reproduction case

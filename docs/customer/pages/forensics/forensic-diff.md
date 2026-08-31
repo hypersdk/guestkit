@@ -6,25 +6,33 @@ Forensic Diff — Forensics surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Forensic Diff** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `forensic-diff`
-- Nav: **Forensics → Forensic Diff** (sidebar, command palette, or desktop nav)
+- Doc id: `forensic-diff`
+- Nav: **Forensics → Forensic Diff**
+- Primary interface: `guestkit forensic-diff OLD NEW` · `diff` / `compare`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `forensic-diff` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit forensic-diff OLD NEW` · `diff` / `compare`.
+2. Snapshot before/after.
+3. `forensic-diff before.qcow2 after.qcow2`.
+4. `-o json` for drift score.
+5. Lighter: `guestkit diff a b`.
+6. Fleet continuous: `fleet watch`.
+7. **Empty / fail:** Identical images → low drift; mount fail on either side.
+8. **Success:** Drift findings / security indicators JSON.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Fleet](../fleet/fleet.md)
+- [Inspect](../inspection/inspect.md)
+- [Profiles](../profiles/profiles.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # ─────────────────────────────────────────────────────────────────────────────
 # test-feature-matrix.sh — compile+clippy every Cargo feature/combination and
 # live-exercise the external-service features (ai, cloud).

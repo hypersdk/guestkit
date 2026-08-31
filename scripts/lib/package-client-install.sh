@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 # shellcheck source=/dev/null
 [[ -f "$(dirname "$0")/.package-lib/package-ui.sh" ]] && source "$(dirname "$0")/.package-lib/package-ui.sh"
 
-pkg_banner "GuestKit host dependencies" "qemu-img · nbd · libhivex (pure Rust — not libguestfs)"
+pkg_banner "GuestKit host dependencies" "qemu-img · nbd · libhivex (pure Rust — not legacy appliance tooling)"
 SUDO=""
 [[ "$(id -u)" -ne 0 ]] && command -v sudo &>/dev/null && SUDO=sudo
 pkg_info "Installing qemu-img, nbd, lvm2, parted, libhivex…"

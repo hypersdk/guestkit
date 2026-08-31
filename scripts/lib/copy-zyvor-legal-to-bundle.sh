@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Copy license + Zyvor legal pack into a release/customer bundle directory.
 # Usage: copy-zyvor-legal-to-bundle.sh <stage-dir> <repo-root> [--with-accept]
 set -euo pipefail

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
@@ -15,7 +16,7 @@ SUDO=""
 [[ -x ./guestkit ]] && pkg_ok "guestkit binary" || pkg_fail "guestkit"
 command -v qemu-img &>/dev/null && pkg_ok "qemu-img" || pkg_fail "qemu-img"
 command -v qemu-nbd &>/dev/null && pkg_ok "qemu-nbd" || pkg_warn "qemu-nbd optional"
-command -v guestfish &>/dev/null && pkg_ok "guestfish (optional legacy tool)" || pkg_ok "guestfish not installed (GuestKit does not require libguestfs)"
+pkg_ok "GuestKit does not require an appliance daemon"
 lsmod 2>/dev/null | grep -q '^nbd ' && pkg_ok "nbd module" || pkg_warn "nbd not loaded"
 
 pkg_summary "Host readiness"

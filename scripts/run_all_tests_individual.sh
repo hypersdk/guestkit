@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Run all Phase 3 tests individually with proper cleanup between runs
 #
 # This script runs each test function separately to avoid NBD device conflicts

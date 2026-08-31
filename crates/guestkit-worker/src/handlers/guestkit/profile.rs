@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Guestkit profile handler - Security and compliance profiling
 
 use async_trait::async_trait;

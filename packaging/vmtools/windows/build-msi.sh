@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Build Zeus VM Tools Windows MSI (WiX) or publish a zip scaffold.
 set -euo pipefail
 

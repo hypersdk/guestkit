@@ -2,29 +2,40 @@
 
 ## Purpose
 
-Python Bindings — Interfaces surface.
+Programmatic access to GuestKit offline disk intelligence — assurance scoring and repair from Python.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Automate **doctor / migrate-repair** in CI or migration pipelines
+- Integrate with **h2kvm** (`h2kvm.core.guestkit_client`)
+- Custom inspection scripts via the `Guestfs` handle
 
 ## How to get there
 
-- Route / id: `python-bindings`
-- Nav: **Interfaces → Python Bindings** (sidebar, command palette, or desktop nav)
+- Doc id: `python-bindings`
+- Nav: **Interfaces → Python Bindings**
+- Primary interface: `pip install hypersdk-guestkit` (PyPI) or `maturin develop --features python-bindings`
 
-## What you can do
+## Operate from Python (v1.1.0+)
 
-1. Open `python-bindings` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `pip install "hypersdk-guestkit>=1.1.0"` ([PyPI](https://pypi.org/project/hypersdk-guestkit/1.1.0/)). For local builds: `maturin build --release --features python-bindings`.
+2. `import guestkit`.
+3. **Assurance:** `guestkit.run_doctor("disk.qcow2", target="kvm", explain=True)`.
+4. **Repair (dry-run):** `guestkit.run_migrate_repair("disk.qcow2", apply=False)`.
+5. **Repair (apply):** `guestkit.run_migrate_repair("disk.qcow2", apply=True)`.
+6. **Low-level inspect:** `from guestkit import Guestfs` → `add_drive_ro` → `launch` → `inspect_os`.
+7. **Empty / fail:** Import error → wrong package or missing wheel; launch fail → NBD/sudo.
+8. **Success:** Bootability score + fix plan JSON; or distro/hostname from Guestfs handle.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / `losetup` / `qemu-nbd`; mount/repair often need root.
+
+See also: [examples/python/assurance_doctor.py](../../../../examples/python/assurance_doctor.py)
 
 ## Related pages
 
+- [h2kvm integration](../../../features/hyper2kvm-integration.md)
+- [Inspect](../inspection/inspect.md)
+- [CLI Guide](../onboarding/cli-guide.md)
+- [Guest Files](../guest-files/files.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

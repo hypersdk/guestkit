@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Example: Creating and validating job documents
 
 use guestkit_job_spec::builder::{inspect_job, JobBuilder};

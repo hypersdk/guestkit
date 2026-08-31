@@ -239,7 +239,7 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Caching system for performance
 - Clean build with zero compiler warnings
 - Reorganized documentation structure
-- Removed libguestfs references (pure Rust implementation)
+- Removed legacy-appliance-tooling references (pure Rust implementation)
 
 * Mon Jan 26 2026 ZyvorAI Labs Private Limited <ssahani@zyvor.dev> - 0.3.0-1
 - Add comprehensive TUI dashboard with multiple views

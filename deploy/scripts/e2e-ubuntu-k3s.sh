@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # End-to-end: Ubuntu cloud image → GuestKit inspect/doctor → KubeVirt VM → live + offline tests.
 set -euo pipefail
 

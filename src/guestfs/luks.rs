@@ -413,6 +413,29 @@ impl Guestfs {
         let uuid = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Ok(uuid)
     }
+
+    /// List devices (partitions and active LVM logical volumes) carrying a
+    /// LUKS signature, suitable for passing to `luks_open`.
+    ///
+    /// Despite the name (kept for compatibility with callers migrating off
+    /// libguestfs-style backends), this returns *candidate encrypted block
+    /// devices to unlock*, not already-active `/dev/mapper/*` entries.
+    pub fn list_dm_devices(&mut self) -> Result<Vec<String>> {
+        self.ensure_ready()?;
+
+        let mut luks_devices = Vec::new();
+        for (dev, tags) in self.blkid_candidates()? {
+            if tags.get("TYPE").map(|v| v.as_str()) == Some("crypto_LUKS") {
+                luks_devices.push(dev);
+            }
+        }
+        Ok(luks_devices)
+    }
+
+    /// Alias of [`Self::luks_open`] (libguestfs `cryptsetup_open` name).
+    pub fn cryptsetup_open(&mut self, device: &str, key: &str, mapname: &str) -> Result<()> {
+        self.luks_open(device, key, mapname)
+    }
 }
 
 #[cfg(test)]

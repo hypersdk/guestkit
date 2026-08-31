@@ -158,7 +158,7 @@ install -Dm644 LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 - Add export to JSON, YAML, HTML, PDF
 - Add interactive shell with 20+ commands
 - Add Python bindings via PyO3
-- Remove libguestfs references
+- Remove legacy-appliance-tooling references
 - Reorganize documentation structure
 - Fix compiler warnings
 

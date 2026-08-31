@@ -628,7 +628,7 @@ paths:
           description: ApplyYamlResult
   /kubevirt/vms/{namespace}/{name}/boot-inspect:
     get:
-      summary: Offline boot inspect (GuestKit run_boot_inspect — not libguestfs)
+      summary: Offline boot inspect (GuestKit run_boot_inspect — not legacy appliance tooling)
       parameters:
         - in: path
           name: namespace

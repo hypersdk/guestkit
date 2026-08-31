@@ -24,6 +24,9 @@ pub struct Stat {
     pub atime: i64,
     pub mtime: i64,
     pub ctime: i64,
+    pub atime_nsec: i64,
+    pub mtime_nsec: i64,
+    pub ctime_nsec: i64,
 }
 
 impl Guestfs {
@@ -76,6 +79,9 @@ impl Guestfs {
                 atime: metadata.atime(),
                 mtime: metadata.mtime(),
                 ctime: metadata.ctime(),
+                atime_nsec: metadata.atime_nsec(),
+                mtime_nsec: metadata.mtime_nsec(),
+                ctime_nsec: metadata.ctime_nsec(),
             })
         }
 
@@ -95,8 +101,28 @@ impl Guestfs {
                 atime: 0,
                 mtime: 0,
                 ctime: 0,
+                atime_nsec: 0,
+                mtime_nsec: 0,
+                ctime_nsec: 0,
             })
         }
+    }
+
+    /// Get file or directory status with nanosecond-resolution timestamps.
+    ///
+    /// Same as `stat()`, but the returned `Stat` also carries
+    /// `atime_nsec`/`mtime_nsec`/`ctime_nsec`.
+    pub fn statns(&mut self, path: &str) -> Result<Stat> {
+        self.ensure_ready()?;
+
+        if self.verbose {
+            eprintln!("guestfs: statns {}", path);
+        }
+
+        let host_path = self.resolve_guest_path(path)?;
+        let metadata = fs::metadata(&host_path).map_err(Error::Io)?;
+
+        self.metadata_to_stat(&metadata)
     }
 
     /// Get file inode number

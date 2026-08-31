@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Core type definitions for the VM Operations Job Protocol v1
 
 use chrono::{DateTime, Utc};

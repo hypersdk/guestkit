@@ -32,8 +32,8 @@ See [deploy/README.md](../deploy/README.md) for k3s deploy and CI E2E.
 **Remote Linux host:**
 
 ```bash
-./scripts/package-binary-remote.sh 212.8.252.194 sus --fetch
-./scripts/package-binary-remote.sh 212.8.252.194 sus --reuse-build --skip-deps
+./scripts/package-binary-remote.sh <ephemeral-ip> operator --fetch
+./scripts/package-binary-remote.sh <ephemeral-ip> operator --reuse-build --skip-deps
 ```
 
 **Local / CI** (after `cargo build --release` on Linux):
@@ -70,7 +70,7 @@ tar xzf guestkit-*-linux-amd64.tar.gz && cd guestkit-*-linux-amd64
 
 ## Host requirements (not Kubernetes)
 
-GuestKit uses **pure Rust** disk access — **libguestfs is not required**.
+GuestKit uses **pure Rust** disk access — **legacy appliance tooling is not required**.
 
 - `qemu-img` (and optionally `qemu-nbd` for QCOW2)
 - `nbd` kernel module (`modprobe nbd max_part=16`)

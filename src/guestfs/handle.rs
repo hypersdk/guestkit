@@ -75,7 +75,17 @@ pub struct Guestfs {
     pub(crate) resource_limits: ResourceLimits,
     pub(crate) windows_version_cache: HashMap<String, (String, String, String)>, // Cache for Windows registry data (root -> (product, version, edition))
     pub(crate) open_hives: HashMap<i64, PathBuf>, // Tracks open registry hive files (handle -> host path)
+    /// Node handle → key path from hive root (empty path = root). Keyed by (hive_handle, node).
+    pub(crate) hive_nodes: HashMap<(i64, i64), Vec<String>>,
+    /// Value handle → (node path, value name). Keyed by (hive_handle, value).
+    pub(crate) hive_values: HashMap<(i64, i64), (Vec<String>, String)>,
+    /// Per-hive next allocatable (node_id, value_id); node 0 is always root.
+    pub(crate) hive_next_ids: HashMap<i64, (i64, i64)>,
+    /// Bind-mount target for mount_local / umount_local.
+    pub(crate) local_mountpoint: Option<String>,
     pub(crate) ova_temp: Vec<tempfile::TempDir>, // Keeps VMDKs extracted from OVA archives alive for the handle's lifetime
+    /// Wall-clock time spent in the most recent `launch()` call, success or failure.
+    pub(crate) launch_duration: Option<Duration>,
 }
 
 /// Drive configuration
@@ -119,7 +129,12 @@ impl Guestfs {
             resource_limits: ResourceLimits::default(),
             windows_version_cache: HashMap::new(),
             open_hives: HashMap::new(),
+            hive_nodes: HashMap::new(),
+            hive_values: HashMap::new(),
+            hive_next_ids: HashMap::new(),
+            local_mountpoint: None,
             ova_temp: Vec::new(),
+            launch_duration: None,
         })
     }
 
@@ -282,6 +297,7 @@ impl Guestfs {
 
         // Transition to Launching state
         self.state = GuestfsState::Launching;
+        let launch_started = std::time::Instant::now();
 
         // Open the first drive (multi-drive not yet supported)
         let drive = &self.drives[0];
@@ -357,6 +373,8 @@ impl Guestfs {
 
             Ok(())
         })();
+
+        self.launch_duration = Some(launch_started.elapsed());
 
         match result {
             Ok(_) => {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! File-based job transport
 //!
 //! Watches a directory for new job files and processes them.

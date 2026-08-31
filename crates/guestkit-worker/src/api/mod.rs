@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! REST API server for job submission and management
 
 pub mod handlers;

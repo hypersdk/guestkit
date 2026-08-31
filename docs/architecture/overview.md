@@ -1,4 +1,4 @@
-# GuestKit architecture (v1.0.1)
+# GuestKit architecture (v1.1.0)
 
 Offline VM intelligence and migration assurance — **Rust control plane** with host block-device access for mount-heavy operations.
 
@@ -6,7 +6,7 @@ Offline VM intelligence and migration assurance — **Rust control plane** with 
 
 | Claim | Reality |
 |-------|---------|
-| **No libguestfs appliance** | ✅ No libguestfs daemon or guestfish workflow |
+| **no appliance daemon** | ✅ No legacy appliance tooling daemon workflow |
 | **Pure Rust parsing** | ✅ Partition tables, FS signatures, evidence schema, boot engine, assurance APIs |
 | **In-process QCOW2 file read** | Partial — format detection + selective reads; full cluster walk defers to **qemu-nbd** |
 | **File access inside guests** | Via **loop devices / qemu-nbd** + host mount (`src/guestfs/`), not in-process ext4/NTFS parsers |
@@ -18,9 +18,10 @@ Offline VM intelligence and migration assurance — **Rust control plane** with 
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│  Surfaces: guestkit CLI · guestctl TUI · Python · zyvor-ui      │
+│  Surfaces: guestkit · guestctl · guestkit-qemu · Python · UI    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Assurance: evidence → boot score → migrate-plan → fleet/policy │
+│             → GuestKitQemuPlan (gated QEMU/VirtIO launch)       │
 ├─────────────────────────────────────────────────────────────────┤
 │  AI (optional): deterministic intel + `--features ai` LLM agent │
 ├─────────────────────────────────────────────────────────────────┤
@@ -38,7 +39,8 @@ Parallel platform runtime (same repo):
 
 | Path | Role |
 |------|------|
-| `src/` | Main `guestkit` crate — CLI, guestfs, boot, evidence, assurance, fleet, TUI |
+| `src/` | Main `guestkit` crate — CLI, guestfs, boot, evidence, assurance, fleet, TUI, qemu |
+| `src/qemu/` | Declarative QEMU/VirtIO config, GuestKit plan bridge, QMP client |
 | `src/ai/` | Deterministic intelligence; LLM agent behind `ai` feature |
 | `crates/guestkit-job-spec` | Worker job schema |
 | `crates/guestkit-worker` | Redis-queue disk inspection daemon |
@@ -57,7 +59,8 @@ Disk image → guestfs mount (ro) → EvidenceSnapshot
                     ├─► MigrationScoreReport (migrate-plan)
                     ├─► Policy evaluation (policy check)
                     ├─► Fleet clusters (fleet analyze)
-                    └─► FixPlan (repair / plan apply)
+                    ├─► FixPlan (repair / plan apply)
+                    └─► GuestKitQemuPlan → QEMU argv / QMP
 ```
 
 Evidence is cached under `~/.cache/guestkit/` after successful `doctor` runs.
@@ -66,7 +69,7 @@ Evidence is cached under `~/.cache/guestkit/` after successful `doctor` runs.
 
 Root `Cargo.toml` workspace includes the main package and `guestkit-job-spec`. `zyvor-api` and `guestkit-worker` build as sibling crates with path dependencies (see each crate `Cargo.toml`).
 
-**Version:** 1.0.1 (package) · **License:** Apache-2.0 · **Owner:** ZyvorAI Labs Private Limited
+**Version:** 1.1.0 (package) · **License:** Apache-2.0 · **Owner:** ZyvorAI Labs Private Limited
 
 ## Security model (web stack)
 
@@ -77,6 +80,7 @@ Root `Cargo.toml` workspace includes the main package and `guestkit-job-spec`. `
 ## Further reading
 
 - [Migration assurance](../features/migration-assurance.md)
+- [QEMU / VirtIO runtime](../features/qemu-runtime.md)
 - [KubeVirt integration](../features/kubevirt-integration.md)
 - [CE vs Enterprise](../ce-vs-enterprise.md)
 - [User stories](../USER_STORIES.md)

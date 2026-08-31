@@ -5,7 +5,7 @@ members = [".", "crates/guestkit-agent-protocol", "crates/guestkit-job-spec", "c
 
 [package]
 name = "guestkit"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
 authors = ["ZyvorAI Labs Private Limited <info@zyvor.dev>"]
 license = "Apache-2.0"
@@ -188,6 +188,10 @@ path = "src/main.rs"
 [[bin]]
 name = "guestctl"
 path = "src/bin/guestctl.rs"
+
+[[bin]]
+name = "guestkit-qemu"
+path = "src/bin/guestkit-qemu.rs"
 
 [[bin]]
 name = "zyvor-guest-agent"

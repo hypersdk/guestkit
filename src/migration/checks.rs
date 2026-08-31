@@ -317,7 +317,7 @@ fn linux_checks(ev: &EvidenceSnapshot, ctx: &AssessContext) -> Vec<Check> {
             Cat::Boot,
             2.0,
             CheckSeverity::Info,
-            "no serial console on the kernel command line — virsh console will be blind if boot fails",
+            "no serial console on the kernel command line — first-boot logs will be unavailable if boot fails",
             Some(Hint::EnableSerialConsole),
         )
     });

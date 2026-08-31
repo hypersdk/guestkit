@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # shellcheck shell=bash
 # UI helpers for package-binary-remote.sh (sourced, not executed).
 _PKG_REMOTE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

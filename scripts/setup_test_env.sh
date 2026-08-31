@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
 # Setup test environment for Phase 3 comprehensive tests
 #
 # This script configures the system to allow non-root users to run

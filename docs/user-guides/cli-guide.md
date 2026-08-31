@@ -1,6 +1,9 @@
-# CLI reference (v0.3.19+)
+# CLI reference (v1.1.0+)
 
-`guestkit` and `guestctl` share the same command surface. Use **`guestkit --help`** and **`guestkit <command> --help`** for flags; this page links the curated docs.
+`guestkit` and `guestctl` share the same command surface. The separate
+**`guestkit-qemu`** binary plans and launches QEMU from the same assurance
+engine. Use **`guestkit --help`**, **`guestkit <command> --help`**, and
+**`guestkit-qemu --help`** for flags; this page links the curated docs.
 
 ## Quick start
 
@@ -10,6 +13,8 @@ guestkit doctor disk.qcow2 --target proxmox --explain
 guestkit doctor disk.qcow2 --target proxmox -o json --fail-below 80
 guestkit migrate-plan disk.qcow2 --target kvm --export plan.yaml
 guestctl tui disk.qcow2
+guestkit-qemu plan disk.qcow2 --json
+guestkit-qemu run disk.qcow2 --min-boot-score 80
 ```
 
 ## Where to look
@@ -19,6 +24,7 @@ guestctl tui disk.qcow2
 | Cheat sheet | [quick-reference.md](quick-reference.md) |
 | Install & build | [getting-started.md](getting-started.md) |
 | Migration assurance | [migration-assurance.md](../features/migration-assurance.md) |
+| QEMU / VirtIO runtime | [qemu-runtime.md](../features/qemu-runtime.md) |
 | VM migration workflows | [vm-migration.md](vm-migration.md) |
 | TUI keys & Assurance | [tui-enhancements.md](../features/tui-enhancements.md) |
 | Fix plans & rescue | [fix-plans.md](../features/fix-plans.md) |
@@ -37,6 +43,7 @@ guestctl tui disk.qcow2
 | Inspect | `inspect`, `filesystems`, `packages`, `services`, `users`, `network` |
 | Files | `ls`, `cat`, `cp`, `download`, `upload`, `find` |
 | Assurance | `doctor`, `migrate-plan`, `policy`, `fleet`, `forensic-diff`, `repair --fix boot`, `passport emit\|verify` |
+| QEMU runtime | `guestkit-qemu plan`, `guestkit-qemu run`, `guestkit-qemu qmp` |
 | Plans | `plan generate`, `plan preview`, `plan apply` (`--skip-backup`), `plan rollback` |
 | Rescue | `rescue -o enable-ssh\|inject-ssh-key\|set-hostname\|reset-password\|fix-fstab\|check-grub\|fix-grub\|enable-rdp\|enable-winrm\|set-timezone` |
 | Profiles | `profile security`, `profile windows-migration` |

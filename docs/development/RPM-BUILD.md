@@ -51,7 +51,7 @@ rpmdev-setuptree
 
 ```bash
 # Clone the repository
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 
 # Create source tarball
@@ -69,7 +69,7 @@ rpmbuild -ba SPECS/guestkit.spec
 
 ```bash
 # Clone the repository
-git clone https://github.com/ssahani/guestkit
+git clone https://github.com/hypersdk/guestkit
 cd guestkit
 
 # Create source tarball
@@ -89,7 +89,7 @@ rpmbuild -ba --without python SPECS/guestkit-full.spec
 
 ```bash
 # Download release tarball
-wget https://github.com/ssahani/guestkit/archive/v1.0.1/guestkit-1.0.1.tar.gz \
+wget https://github.com/hypersdk/guestkit/archive/v1.0.1/guestkit-1.0.1.tar.gz \
      -O ~/rpmbuild/SOURCES/guestkit-1.0.1.tar.gz
 
 # Copy spec file
@@ -333,8 +333,8 @@ rpmlint ~/rpmbuild/RPMS/x86_64/guestkit-1.0.1-1.fc39.x86_64.rpm
 
 ## 🆘 Getting Help
 
-- **Issues**: https://github.com/ssahani/guestkit/issues
-- **Discussions**: https://github.com/ssahani/guestkit/discussions
+- **Issues**: https://github.com/hypersdk/guestkit/issues
+- **Discussions**: https://github.com/hypersdk/guestkit/discussions
 - **Email**: ssahani@zyvor.dev
 
 ---

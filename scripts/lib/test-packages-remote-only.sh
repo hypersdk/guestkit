@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Run on remote host: pleasant end-to-end customer install tests for all *-dist tarballs.
 #
 # Usage:

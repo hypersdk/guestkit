@@ -21,13 +21,16 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Interactive shell](user-guides/interactive-mode.md) | REPL mode |
 | [Security profiles](user-guides/profiles.md) | Security, compliance, migration profiles |
 | [Migration assurance](features/migration-assurance.md) | Doctor, migrate-plan, fleet, policy, forensic diff |
+| [QEMU / VirtIO runtime](features/qemu-runtime.md) | Assured `guestkit-qemu plan|run|qmp` from evidence |
 | [Industry use cases](INDUSTRY_USE_CASES.md) | Real-world scenarios, PM/TA view, Zyvor product stack |
 | [Fix plans](features/fix-plans.md) | Offline patch workflow |
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
-| [Python bindings](user-guides/python-bindings.md) | PyO3 API |
-| [VM migration](user-guides/vm-migration.md) | hyper2kvm integration |
-| [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not libguestfs) |
+| [Python bindings](user-guides/python-bindings.md) | Assurance APIs + Guestfs handle (v1.1.0+) |
+| [h2kvm integration](features/hyper2kvm-integration.md) | Convert/deploy pipeline with h2kvm |
+| [VM migration](user-guides/vm-migration.md) | End-to-end migration handoff |
+| [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
+| [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
 
 ## Deployment
 
@@ -53,7 +56,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 
 | Guide | Description |
 |-------|-------------|
-| [Open source vs Enterprise](ce-vs-enterprise.md) | GitHub vs production platform |
+| [Open source vs Enterprise](ce-vs-enterprise.md) | OSS engine vs GuestKit Enterprise control plane |
 | [Enterprise guide](zyvor-enterprise.md) | Sales, SLAs, full HyperSDK suite |
 
 ## Examples

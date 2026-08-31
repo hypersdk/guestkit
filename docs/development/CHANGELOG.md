@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **QEMU/VirtIO runtime** (`src/qemu/`, `guestkit-qemu` binary) — turns GuestKit
+  evidence + boot assurance into a declarative `QemuVm` plan and launches QEMU
+  only when blockers/score/UEFI firmware gates pass (`plan` / `run` / `qmp`).
+  Safe argv construction (no shell), VirtIO block/SCSI/net/balloon/rng/vsock/GPU,
+  OVMF/AAVMF, user/TAP/bridge networking (host TAP/bridge provisioning stays
+  outside GuestKit). Docs: [qemu-runtime.md](../features/qemu-runtime.md).
+- **`guestkit qga`** — drop-in for `virsh qemu-agent-command`; speaks the QGA
+  unix socket directly (auto-discovers libvirt / KubeVirt sockets). Docs:
+  [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
+
+### Changed
+- **Dump `virsh` from the live GuestKit path.** `zyvor-api` no longer
+  `kubectl exec`s `virsh qemu-agent-command` inside virt-launcher. It
+  discovers the QGA unix socket and speaks the QGA wire format through
+  `guestkit qga` / python / perl / socat / nc. `virsh` is an explicit
+  opt-in via `GUESTKIT_ALLOW_VIRSH=1`.
+- Docs and MIG-L-009 no longer tell operators to use `virsh console`
+  or `virsh qemu-agent-command`.
+
+## [1.1.0] - 2026-08-31
+
+### Added
+- **Python assurance bindings** (`guestkit.pyi`, `src/python.rs`) — native PyO3 wrappers for the migration assurance engine:
+  - `run_doctor(image, target="kvm")` — bootability score, blockers, evidence
+  - `run_boot_inspect(image, target="kvm")` — OS release, fstab, bootloader summary
+  - `run_migrate_plan(image, target="kvm")` — hypervisor-aware fix plan
+  - `run_repair_plan(image, dry_run=True)` — repair plan with before/after scores
+  - `run_migrate_repair(image, apply=False)` — primary offline fix path used by **h2kvm**
+- **h2kvm integration** — `h2kvm.core.guestkit_client` delegates to these APIs; VMCraft removed from h2kvm
+- Documentation: [python-bindings.md](../user-guides/python-bindings.md), [hyper2kvm-integration.md](../features/hyper2kvm-integration.md)
+
+### Changed
+- Python package remains **`hypersdk-guestkit`** on PyPI; wheel artifact: `hypersdk_guestkit-*.whl`
+- Assurance APIs return structured `dict` results matching CLI JSON output
+- **Published:** PyPI [`hypersdk-guestkit==1.1.0`](https://pypi.org/project/hypersdk-guestkit/1.1.0/), GitHub Release binaries, crates.io
+
+### Fixed
+- Python 3.13+ builds: document `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` for maturin when needed
+
 ## [1.0.1] - 2026-08-15
 
 ### Fixed

@@ -56,6 +56,23 @@ guestkit repair vm.qcow2 --fix boot --dry-run
 
 Details: [migration-assurance.md](../features/migration-assurance.md)
 
+## Assured QEMU launch (`guestkit-qemu`)
+
+| Command | Purpose |
+|---------|---------|
+| `guestkit-qemu plan IMAGE` | Inspect with GuestKit → print QEMU plan / argv |
+| `guestkit-qemu run IMAGE --min-boot-score 80` | Launch only if assurance gates pass |
+| `guestkit-qemu qmp --socket PATH status\|pause\|resume\|balloon\|powerdown` | Day-2 QMP control |
+
+```bash
+guestkit-qemu plan vm.qcow2 --memory-mb 8192 --vcpus 4 --json
+guestkit-qemu run vm.qcow2 --min-boot-score 80 --qmp-socket /run/guestkit/vm.qmp
+guestkit-qemu run vm.qcow2 --uefi-code /usr/share/OVMF/OVMF_CODE.fd --uefi-vars ./vm_VARS.fd
+guestkit-qemu qmp --socket /run/guestkit/vm.qmp status
+```
+
+Details: [qemu-runtime.md](../features/qemu-runtime.md)
+
 ## Rescue & day-0
 
 | Command | Purpose |

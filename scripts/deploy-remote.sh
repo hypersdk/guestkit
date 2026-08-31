@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # ─────────────────────────────────────────────────────────────
 # GuestKit — Remote deployment (SSH + rsync)
 #
@@ -18,7 +19,7 @@ PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=lib/zyvor-company-accept.sh
 source "${SCRIPT_DIR}/lib/zyvor-company-accept.sh"
 require_zyvor_company_accept "${PROJECT_DIR}"
-VERSION="1.0.0"
+VERSION="1.1.0"
 REMOTE_DIR=""
 DEPLOY_PROFILE="full"
 DEPLOY_LOG="${GUESTKIT_DEPLOY_LOG:-${HOME}/.guestkit/deploy-$(date +%Y%m%d-%H%M%S).log}"
@@ -47,7 +48,7 @@ Usage:
   $0 --fleet hosts.txt
 
 Profiles:
-  🏗️  (default)     Full remote build + system deps (qemu, nbd — not libguestfs)
+  🏗️  (default)     Full remote build + system deps (qemu, nbd — not legacy appliance tooling)
   ⚡  --quick       Rsync + cargo build on remote (skip dep install)
   ⚡  --quick --build-local   Install locally built target/release/guestkit (Linux only)
 

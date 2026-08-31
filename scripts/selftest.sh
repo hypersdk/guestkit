@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 # ============================================================================
 # selftest.sh — Post-installation verification for guestkit
@@ -77,32 +78,7 @@ fi
 # ── System Dependencies ─────────────────────────────────────────────────────
 section "System Dependencies"
 
-# Optional legacy libguestfs on host (GuestKit does NOT use it — pure Rust + qemu/nbd)
-LIBGUESTFS_FOUND=false
-shopt -s nullglob 2>/dev/null || true
-for path in /usr/lib64/libguestfs.so* /usr/lib/x86_64-linux-gnu/libguestfs.so* \
-            /usr/lib/libguestfs.so* /usr/lib/aarch64-linux-gnu/libguestfs.so*; do
-    if [ -e "$path" ]; then
-        LIBGUESTFS_FOUND=true
-        pass "libguestfs library: $path"
-        break
-    fi
-done
-if command -v guestfish &>/dev/null; then
-    LIBGUESTFS_FOUND=true
-    pass "guestfish found: $(command -v guestfish) (optional — not used by GuestKit)"
-fi
-if ldconfig -p 2>/dev/null | grep -q libguestfs; then
-    LIBGUESTFS_FOUND=true
-    pass "libguestfs: registered in ldconfig"
-fi
-if ! $LIBGUESTFS_FOUND; then
-    if [ "${GUESTKIT_SELFTEST_STRICT:-0}" = "1" ]; then
-        fail "GUESTKIT_SELFTEST_STRICT=1 requires libguestfs on host (optional; GuestKit itself does not use it)"
-    else
-        warn "libguestfs not on host (OK — GuestKit uses pure Rust + qemu/nbd)"
-    fi
-fi
+# GuestKit is pure Rust + qemu/nbd — no appliance daemon required.
 
 # QEMU tools
 for tool in qemu-img qemu-nbd; do

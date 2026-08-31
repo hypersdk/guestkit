@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # ============================================================================
 # package-binary-remote.sh — Build GuestKit on a remote Linux host and tarball it
 # ============================================================================

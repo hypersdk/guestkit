@@ -22,6 +22,7 @@ pub mod kubevirt_guest_agent;
 pub mod kubevirt_guest_cr;
 pub mod kubevirt_guest_intel;
 pub mod kubevirt_qga;
+pub mod qga_socket;
 pub mod kubevirt_lifecycle;
 pub mod kubevirt_vmtools_ops;
 pub mod packetwolf_correlate;

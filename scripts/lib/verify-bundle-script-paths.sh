@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Reject customer bundles whose root install scripts resolve paths outside the extract dir.
 #
 # Bundle-root scripts (install-cluster.sh, install.sh, …) must use:

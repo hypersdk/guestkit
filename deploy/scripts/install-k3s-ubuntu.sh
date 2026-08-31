@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Install k3s single-node and deploy prerequisites on Ubuntu (CI or remote host).
 # Idempotent: safe to re-run.
 set -euo pipefail

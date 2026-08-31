@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
 # Pre-snapshot hook: flush MySQL/MariaDB tables if service is active.
 set -eu
 if systemctl is-active --quiet mysql.service 2>/dev/null \

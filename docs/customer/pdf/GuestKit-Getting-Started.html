@@ -24,68 +24,158 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
 <h1>Guest<span>Kit</span></h1>
 <div class="sub">Getting Started</div>
-<div class="badge">2026-07-26</div>
+<div class="badge">2026-08-29</div>
 <div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
-<main><h2>What you need</h2>
-<p>See <a href="admin-basics.md">Admin basics</a> for ports and auth. Summary:</p>
-<p>Primary surfaces are CLI and TUI. Optional API when <code>zyvor-api</code> is deployed.</p>
-<h2>1. Open the product</h2>
-<p>Primary surfaces are CLI and TUI. Optional API when <code>zyvor-api</code> is deployed.</p>
-<h2>2. Sign in / authenticate</h2>
-<p>SAML/OIDC on zyvor-api when enabled; local CLI needs disk/image access.</p>
+<main><p>Offline VM intelligence — inspect disks without booting, score boot readiness, and produce hypervisor-aware fix plans.</p>
+<h2>What you need</h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Linux host</td>
+<td>qemu-img / losetup / qemu-nbd (<code>qemu-utils</code>)</td>
+</tr>
+<tr>
+<td>Disk image</td>
+<td>qcow2 / vmdk / raw (guest shut down for writes)</td>
+</tr>
+<tr>
+<td>Optional UI</td>
+<td><code>:8088</code> zyvor-ui via GHCR compose</td>
+</tr>
+</tbody></table>
+<h2>1. Install</h2>
+<pre><code class="language-bash">cargo install guestkit
+# or install the release binary for your OS
+qemu-img --version
+guestkit version
+</code></pre>
+<h2>2. First doctor run</h2>
+<pre><code class="language-bash">guestkit doctor /path/to/disk.qcow2 --target kvm --explain
+</code></pre>
+<p>Optional TUI: <code>guestctl tui /path/to/disk.qcow2</code>.</p>
 <h2>3. Orient yourself</h2>
-<p>Use the quick map on the <a href="README.md">customer docs home</a>, then open the home surface (<code>getting-started</code>).</p>
-<h2>4. First workflows</h2>
-<p>Follow <a href="workflows.md">Common workflows</a> for the shortest useful paths.</p>
+<ol>
+<li><strong>Onboarding</strong> — Getting Started, CLI Guide, Interactive Mode, TUI</li>
+<li><strong>Inspection</strong> — Inspect, Filesystems, Packages, Network, Files</li>
+<li><strong>Assurance</strong> — Doctor, Migration Plan, Policy, Passport, Fleet</li>
+<li><strong>Fix</strong> — Fix Plans, Repair / Rescue</li>
+</ol>
 <h2>Next steps</h2>
 <ul>
-<li><a href="using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="using-the-dashboard.md">Using the Dashboard</a> (TUI / optional web)</li>
 <li><a href="admin-basics.md">Admin basics</a></li>
+<li><a href="workflows.md">Common workflows</a></li>
 <li><a href="pages/README.md">Page guides</a></li>
 </ul>
 <hr>
-<p>GuestKit is organized by navigation groups (sidebar, desktop nav, or CLI command groups). Use search / command palette when available.</p>
+<p>GuestKit is primarily <strong>CLI + TUI</strong>, with an optional web Image Vault.</p>
 <h2>Surfaces</h2>
 <table>
 <thead>
 <tr>
-<th>Need</th>
 <th>Surface</th>
+<th>How to open</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Inspect</td>
-<td><code>guestkit inspect</code></td>
+<td><strong>CLI</strong></td>
+<td><code>guestkit &lt;cmd&gt;</code> / <code>guestctl &lt;cmd&gt;</code></td>
 </tr>
 <tr>
+<td><strong>TUI</strong></td>
+<td><code>guestctl tui IMAGE</code> (aliases: <code>guestkit tui</code>, <code>guestkit ui</code>)</td>
+</tr>
+<tr>
+<td><strong>Interactive REPL</strong></td>
+<td><code>guestkit interactive IMAGE</code></td>
+</tr>
+<tr>
+<td><strong>File explorer</strong></td>
+<td><code>guestkit explore IMAGE [/path]</code></td>
+</tr>
+<tr>
+<td><strong>Optional web</strong></td>
+<td>GHCR compose → <code>http://&lt;host&gt;:8088</code></td>
+</tr>
+</tbody></table>
+<h2>TUI keys (Assurance)</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>d</code></td>
 <td>Doctor</td>
-<td><code>guestkit doctor</code></td>
 </tr>
 <tr>
-<td>Fix plans</td>
-<td>fix-plans / repair</td>
+<td><code>t</code></td>
+<td>Cycle migration target</td>
 </tr>
 <tr>
-<td>TUI</td>
-<td><code>guestctl</code></td>
+<td><code>p</code></td>
+<td>Preview plan</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td>Export plan</td>
+</tr>
+<tr>
+<td><code>:</code></td>
+<td>Command palette</td>
+</tr>
+<tr>
+<td><code>h</code> / <code>?</code></td>
+<td>Help</td>
 </tr>
 </tbody></table>
 <h2>Browse vs act</h2>
-<p>Inventory and status views are safe to explore. Mutating actions (deploy, migrate, sign, remediate) follow role gates and confirmation dialogs — review impact first.</p>
+<p>Inspect / doctor / export are safe. <strong>Repair</strong>, <strong>plan apply</strong>, and <strong>rescue</strong> mutate disks — shut down the guest, dry-run first, keep a backup.</p>
 <h2>Related</h2>
 <ul>
 <li><a href="getting-started.md">Getting Started</a></li>
-<li><a href="pages/README.md">Page-by-page guides</a></li>
+<li><a href="pages/interfaces/tui.md">TUI</a></li>
+<li><a href="workflows.md">Common workflows</a></li>
 </ul>
 <hr>
+<p>End-to-end GuestKit jobs. Prefer CLI; optional TUI / web where noted.</p>
+<h2>First-hour assurance</h2>
 <ol>
-<li>Open the home surface (<code>getting-started</code>) from <a href="getting-started.md">Getting Started</a>.</li>
-<li>Use the <a href="PAGE_INDEX.md">page index</a> to jump to the domain you need.</li>
-<li>Complete the job, then confirm status on Jobs / Activity / Audit surfaces when present.</li>
+<li>Install CLI (<code>cargo install guestkit</code> or release binary); confirm <code>qemu-img</code></li>
+<li><a href="pages/assurance/doctor.md">Doctor</a> — <code>guestkit doctor IMAGE --target kvm --explain</code></li>
+<li><a href="pages/assurance/migrate-plan.md">Migration Plan</a> — export a FixPlan YAML</li>
+<li>Optional: <a href="pages/interfaces/tui.md">TUI</a> — <code>guestctl tui IMAGE</code></li>
+</ol>
+<h2>Inspect without booting</h2>
+<ol>
+<li><a href="pages/inspection/inspect.md">Inspect</a></li>
+<li><a href="pages/inspection/filesystems.md">Filesystems</a> → mount in <a href="pages/onboarding/interactive-mode.md">Interactive Mode</a> if needed</li>
+<li><a href="pages/inspection/packages.md">Packages</a> / <a href="pages/inspection/network.md">Network</a> / <a href="pages/guest-files/files.md">Guest Files</a></li>
+</ol>
+<h2>Repair then re-score</h2>
+<ol>
+<li>Doctor blockers</li>
+<li><a href="pages/fix-plans/repair.md">Repair</a> dry-run → apply (guest shut down)</li>
+<li>Or <a href="pages/fix-plans/fix-plans.md">Fix Plans</a> — preview → apply</li>
+<li>Re-run Doctor / passport verify</li>
+</ol>
+<h2>Fleet wave</h2>
+<ol>
+<li><a href="pages/fleet/fleet.md">Fleet</a> — <code>fleet analyze</code> / <code>wave-plan</code></li>
+<li><a href="pages/forensics/forensic-diff.md">Forensic Diff</a> or <code>fleet watch</code> for drift</li>
+<li><a href="pages/assurance/policy.md">Policy Gate</a> before cutover</li>
 </ol>
 <h2>Related</h2>
 <ul>
 <li><a href="getting-started.md">Getting Started</a></li>
 <li><a href="pages/README.md">Page-by-page guides</a></li>
+<li><a href="admin-basics.md">Admin basics</a></li>
 </ul>
 </main></body></html>

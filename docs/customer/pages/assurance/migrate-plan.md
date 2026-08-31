@@ -6,25 +6,34 @@ Migration Plan — Assurance surface.
 
 ## When to use it
 
-- Open this surface when the job matches the purpose above
-- Start from the product home / dashboard if you are unsure where to begin
-- Confirm auth and that required backends/operators are reachable if data looks empty
+- Operate **Migration Plan** when your job matches this surface
+- Prefer dry-run / doctor before mutating repairs on disks
+- Shut down the guest before write operations
 
 ## How to get there
 
-- Route / id: `migrate-plan`
-- Nav: **Assurance → Migration Plan** (sidebar, command palette, or desktop nav)
+- Doc id: `migrate-plan`
+- Nav: **Assurance → Migration Plan**
+- Primary interface: `guestkit migrate-plan IMAGE --target …` · TUI `e`
 
-## What you can do
+## Operate from CLI / TUI (UX)
 
-1. Open `migrate-plan` and wait for live data from GuestKit.
-2. Use filters and search when the page provides them.
-3. Drill into a row or card for detail, then jump to related surfaces.
-4. For mutating actions: review impact, role gates, and confirmation dialogs first.
+1. `guestkit migrate-plan IMAGE --target …` · TUI `e`.
+2. `guestkit migrate-plan IMAGE --target proxmox`.
+3. `--explain` / `-o json`.
+4. `--export plan.yaml` for FixPlan.
+5. Optional `--inject-agent`.
+6. Follow with migrate-assess / migrate-repair; TUI: `t`/`p`/`e`.
+7. **Empty / fail:** Missing `--target`; Windows VirtIO gaps need `GUESTKIT_VIRTIO_WIN`.
+8. **Success:** Migration score + checklist; YAML plan if exported.
 
-If the page stays empty, check service health, auth configuration, and that dependencies for this domain are installed.
+Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 
 ## Related pages
 
+- [Doctor](doctor.md)
+- [Fix Plans](../fix-plans/fix-plans.md)
+- [VM Migration Guide](../guides/vm-migration.md)
+- [Migration Assurance](migration-assurance.md)
 - [Getting Started](../../getting-started.md)
 - [Page index](../../PAGE_INDEX.md)

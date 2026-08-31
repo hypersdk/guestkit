@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # shellcheck shell=bash
 # Assemble GuestKit customer tarball layout (shared by remote pack and GitHub release).
 #
@@ -99,7 +100,7 @@ FILES
   guestkit              Main CLI binary
   guestctl              Symlink to guestkit (same CLI)
   install.sh            Client install (deps + verify)
-  install-client-deps.sh  qemu-img, nbd (GuestKit pure Rust — not libguestfs)
+  install-client-deps.sh  qemu-img, nbd (GuestKit pure Rust — not legacy appliance tooling)
   test-host.sh          Host prerequisite checks
   test-selftest.sh      Full GuestKit selftest
   test-package.sh       Quick smoke test
@@ -108,7 +109,7 @@ FILES
   PREREQUISITES.txt     Checklist
 
 REQUIREMENTS — see PREREQUISITES.txt
-  qemu-img, nbd module, disk image file access (libguestfs not required)
+  qemu-img, nbd module, disk image file access (legacy appliance tooling not required)
 
 ORDER: ./install.sh → ./test-host.sh → ./guestkit inspect <image>
 

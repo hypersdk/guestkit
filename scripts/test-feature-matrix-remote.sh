@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # ─────────────────────────────────────────────────────────────────────────────
 # test-feature-matrix-remote.sh — run scripts/test-feature-matrix.sh on a remote
 # Linux host that has the system deps the matrix needs (libhivex, libsystemd,
