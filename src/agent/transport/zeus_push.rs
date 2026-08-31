@@ -246,9 +246,8 @@ async fn push_heartbeat(client: &reqwest::Client, base: &str, agent_id: &str) ->
 async fn push_report(client: &reqwest::Client, base: &str, agent_id: &str) -> Result<()> {
     // See push_heartbeat: build_push_health touches zbus::blocking (systemd D-Bus) and must
     // not run directly on this async task's worker thread.
-    let (recent_events, health_result) = tokio::task::block_in_place(|| {
-        (recent_systemd_events(100), build_push_health())
-    });
+    let (recent_events, health_result) =
+        tokio::task::block_in_place(|| (recent_systemd_events(100), build_push_health()));
     let (health, metrics) = health_result?;
     let body = serde_json::json!({
         "guest_health": health,

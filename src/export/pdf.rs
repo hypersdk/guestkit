@@ -339,7 +339,15 @@ impl PdfExporter {
 
     /// Push a `SetFont` + `SetTextCursor` + `ShowText` op sequence for one line of text,
     /// positioned absolutely (mirrors the old `PdfLayerReference::use_text` API).
-    fn push_text(&self, ops: &mut Vec<Op>, text: &str, size: f32, x_mm: f32, y_mm: f32, bold: bool) {
+    fn push_text(
+        &self,
+        ops: &mut Vec<Op>,
+        text: &str,
+        size: f32,
+        x_mm: f32,
+        y_mm: f32,
+        bold: bool,
+    ) {
         ops.push(Op::SetFont {
             font: PdfFontHandle::Builtin(if bold {
                 BuiltinFont::HelveticaBold
@@ -479,7 +487,11 @@ mod sanity_pdf_output {
             .expect("PDF generation should succeed");
 
         let bytes = std::fs::read(&out_path).expect("PDF file should exist");
-        assert!(bytes.len() > 500, "PDF output suspiciously small: {} bytes", bytes.len());
+        assert!(
+            bytes.len() > 500,
+            "PDF output suspiciously small: {} bytes",
+            bytes.len()
+        );
         assert!(
             bytes.starts_with(b"%PDF-"),
             "output does not start with a PDF header"

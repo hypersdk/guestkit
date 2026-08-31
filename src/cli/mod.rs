@@ -20,15 +20,21 @@ pub mod dependencies;
 #[cfg(not(target_os = "windows"))]
 pub mod diff;
 #[cfg(not(target_os = "windows"))]
+pub mod domain_disks;
+#[cfg(not(target_os = "windows"))]
 pub mod entry;
 #[cfg(not(target_os = "windows"))]
 pub mod errors;
 #[cfg(not(target_os = "windows"))]
 pub mod exporters;
 #[cfg(not(target_os = "windows"))]
+pub mod firstboot;
+#[cfg(not(target_os = "windows"))]
 pub mod forensic_diff;
 #[cfg(not(target_os = "windows"))]
 pub mod formatters;
+#[cfg(not(target_os = "windows"))]
+pub mod img;
 #[cfg(not(target_os = "windows"))]
 pub mod interactive;
 #[cfg(not(target_os = "windows"))]
@@ -50,6 +56,8 @@ pub mod shell;
 pub mod tui;
 #[cfg(not(target_os = "windows"))]
 pub mod validate;
+#[cfg(not(target_os = "windows"))]
+pub mod virtio_win;
 #[cfg(not(target_os = "windows"))]
 pub mod welcome;
 

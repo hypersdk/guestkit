@@ -8,6 +8,7 @@
 
 mod config;
 mod guestkit;
+pub mod img;
 
 #[cfg(unix)]
 pub mod qmp;
@@ -19,3 +20,4 @@ pub use config::{
     Result, VirtioDevice,
 };
 pub use guestkit::{GuestKitQemuOptions, GuestKitQemuPlan};
+pub use img::{ImgCheckReport, QemuImg};

@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`guestkit img`** — qemu-img info/check/snapshot/resize/rebase/commit with
+  GuestKit JSON errors (`GUESTKIT_QEMU_IMG` override).
+- **`guestkit domain-disks`** — parse libvirt XML or KubeVirt VM/VMI YAML for
+  disk sources (replaces `virsh dumpxml | grep source`).
+- **`guestkit virtio-win list|plan`** — resolve a virtio-win tree
+  (`--tree` / `$GUESTKIT_VIRTIO_WIN`) and emit the `migrate-repair --apply` hint.
+- **`guestkit firstboot`** — cutover attestation JSON: offline doctor + live
+  QGA ping + virtio plan + domain disks; `--fail-below` for CI.
 - **QEMU/VirtIO runtime** (`src/qemu/`, `guestkit-qemu` binary) — turns GuestKit
   evidence + boot assurance into a declarative `QemuVm` plan and launches QEMU
   only when blockers/score/UEFI firmware gates pass (`plan` / `run` / `qmp`).

@@ -1118,7 +1118,10 @@ pub fn shrink_command(
                 serde_json::json!({"shrunk": false, "dry_run": true, "would_shrink": true, "virtual_bytes": analysis.virtual_bytes, "actual_bytes": analysis.actual_bytes, "min_fs_bytes": analysis.min_fs_bytes})
             );
         } else {
-            println!("Dry-run: would shrink (min filesystem size: {}).", format_size(analysis.min_fs_bytes));
+            println!(
+                "Dry-run: would shrink (min filesystem size: {}).",
+                format_size(analysis.min_fs_bytes)
+            );
         }
         return Ok(());
     }
@@ -1128,7 +1131,10 @@ pub fn shrink_command(
     progress.finish_and_clear();
 
     match outcome {
-        ShrinkOutcome::Shrunk { old_virtual, new_virtual } => {
+        ShrinkOutcome::Shrunk {
+            old_virtual,
+            new_virtual,
+        } => {
             if json {
                 println!(
                     "{}",

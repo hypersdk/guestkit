@@ -58,10 +58,7 @@ pub enum ShrinkOutcome {
 
 fn path_str(image: &Path) -> Result<&str> {
     image.to_str().ok_or_else(|| {
-        Error::InvalidFormat(format!(
-            "Path contains invalid UTF-8: {}",
-            image.display()
-        ))
+        Error::InvalidFormat(format!("Path contains invalid UTF-8: {}", image.display()))
     })
 }
 
@@ -99,7 +96,10 @@ pub fn analyze_shrink_potential(image: &Path, verbose: bool) -> Result<Option<Sh
         .clone();
 
     if is_lvm_or_extended(&last) {
-        return skip(&mut probe, "last partition is LVM or extended — unsupported in v1");
+        return skip(
+            &mut probe,
+            "last partition is LVM or extended — unsupported in v1",
+        );
     }
 
     let filesystems = probe.list_filesystems()?;
@@ -112,7 +112,12 @@ pub fn analyze_shrink_potential(image: &Path, verbose: bool) -> Result<Option<Sh
                 &format!("last partition filesystem is {other} — only ext2/3/4 supported in v1"),
             )
         }
-        None => return skip(&mut probe, "could not detect a filesystem on the last partition"),
+        None => {
+            return skip(
+                &mut probe,
+                "could not detect a filesystem on the last partition",
+            )
+        }
     };
 
     probe.setup_nbd_if_needed()?;
@@ -197,7 +202,9 @@ fn resize2fs_min_size_bytes(device: &str, verbose: bool) -> Result<u64> {
         .and_then(|l| l.rsplit(':').next())
         .map(str::trim)
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| Error::Detection(format!("could not parse dumpe2fs -h block size: {stdout}")))?;
+        .ok_or_else(|| {
+            Error::Detection(format!("could not parse dumpe2fs -h block size: {stdout}"))
+        })?;
 
     Ok(min_blocks * block_size)
 }
@@ -331,12 +338,17 @@ pub fn shrink_disk(image: &Path, verbose: bool, headroom_pct: u32) -> Result<Shr
             .split_whitespace()
             .next()
             .map(str::to_string)
-            .ok_or_else(|| Error::Detection("could not parse original partition type GUID".to_string()))?;
+            .ok_or_else(|| {
+                Error::Detection("could not parse original partition type GUID".to_string())
+            })?;
         let output = Command::new("sgdisk")
             .arg("-d")
             .arg(analysis.last_partition.to_string())
             .arg("-n")
-            .arg(format!("{}:{start_sector}:{new_part_end_sector}", analysis.last_partition))
+            .arg(format!(
+                "{}:{start_sector}:{new_part_end_sector}",
+                analysis.last_partition
+            ))
             .arg("-t")
             .arg(format!("{}:{type_guid}", analysis.last_partition))
             .arg(&new_whole_disk)
@@ -349,7 +361,11 @@ pub fn shrink_disk(image: &Path, verbose: bool, headroom_pct: u32) -> Result<Shr
             )));
         }
     } else {
-        new_g.part_resize("/dev/sda", analysis.last_partition, new_part_end_sector as i64)?;
+        new_g.part_resize(
+            "/dev/sda",
+            analysis.last_partition,
+            new_part_end_sector as i64,
+        )?;
     }
     rescan_partitions(&new_whole_disk)?;
 
@@ -387,15 +403,13 @@ pub fn shrink_disk(image: &Path, verbose: bool, headroom_pct: u32) -> Result<Shr
 
     // Mount both sides and copy file contents across.
     old_g.mount_ro(&orig_part, "/")?;
-    let old_root = old_g
-        .mount_root
-        .clone()
-        .ok_or_else(|| Error::InvalidState("source mount root missing after mount_ro".to_string()))?;
+    let old_root = old_g.mount_root.clone().ok_or_else(|| {
+        Error::InvalidState("source mount root missing after mount_ro".to_string())
+    })?;
     new_g.mount(&orig_part, "/")?;
-    let new_root = new_g
-        .mount_root
-        .clone()
-        .ok_or_else(|| Error::InvalidState("destination mount root missing after mount".to_string()))?;
+    let new_root = new_g.mount_root.clone().ok_or_else(|| {
+        Error::InvalidState("destination mount root missing after mount".to_string())
+    })?;
 
     copy_tree(&old_root, &new_root, verbose)?;
 
@@ -404,8 +418,12 @@ pub fn shrink_disk(image: &Path, verbose: bool, headroom_pct: u32) -> Result<Shr
     old_g.shutdown()?;
     new_g.shutdown()?;
 
-    std::fs::rename(&new_image, image)
-        .map_err(|e| Error::Io(std::io::Error::new(e.kind(), format!("replacing {}: {e}", image.display()))))?;
+    std::fs::rename(&new_image, image).map_err(|e| {
+        Error::Io(std::io::Error::new(
+            e.kind(),
+            format!("replacing {}: {e}", image.display()),
+        ))
+    })?;
     // Renamed into place — nothing left for the guard to clean up.
     std::mem::forget(_cleanup);
 
@@ -432,10 +450,7 @@ impl Drop for TempImageGuard {
 /// out-of-band writes on its own, so `/dev/nbdXpY` nodes and their sizes
 /// would otherwise stay stale.
 fn rescan_partitions(dev: &str) -> Result<()> {
-    let output = Command::new("blockdev")
-        .arg("--rereadpt")
-        .arg(dev)
-        .output();
+    let output = Command::new("blockdev").arg("--rereadpt").arg(dev).output();
     if matches!(&output, Ok(o) if o.status.success()) {
         return Ok(());
     }
@@ -455,7 +470,10 @@ fn rescan_partitions(dev: &str) -> Result<()> {
 }
 
 fn sibling_path(image: &Path, suffix: &str) -> std::path::PathBuf {
-    let mut name = image.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    let mut name = image
+        .file_name()
+        .map(|n| n.to_os_string())
+        .unwrap_or_default();
     name.push(format!(".{suffix}"));
     image.with_file_name(name)
 }
@@ -494,7 +512,10 @@ fn copy_tree(src: &Path, dst: &Path, verbose: bool) -> Result<()> {
     let src_arg = format!("{}/", src.display());
     if let Ok(rsync) = which("rsync") {
         if verbose {
-            eprintln!("guestfs: rsync -aHAX --numeric-ids {src_arg} {}", dst.display());
+            eprintln!(
+                "guestfs: rsync -aHAX --numeric-ids {src_arg} {}",
+                dst.display()
+            );
         }
         let output = Command::new(rsync)
             .arg("-aHAX")
