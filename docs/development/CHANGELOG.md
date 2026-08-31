@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`--tree` / `$GUESTKIT_VIRTIO_WIN`) and emit the `migrate-repair --apply` hint.
 - **`guestkit firstboot`** — cutover attestation JSON: offline doctor + live
   QGA ping + virtio plan + domain disks; `--fail-below` for CI.
+- **`guestkit fleet quarantine`** — hold disks below `--threshold` (default 80)
+  out of the conversion wave; `--fail` for CI.
+- **`guestkit passport handoff`** — verify a Cutover Passport and write
+  `*.handoff.yaml` for `h2kvmctl --passport`. Refused passports do not convert.
+- **`virtctl-guestkit` / `kubectl-guestkit` plugin** — `virtctl guestkit doctor|passport|handoff`
+  wraps the GuestKit CLI so OpenShift/KubeVirt operators never touch virsh.
 - **QEMU/VirtIO runtime** (`src/qemu/`, `guestkit-qemu` binary) — turns GuestKit
   evidence + boot assurance into a declarative `QemuVm` plan and launches QEMU
   only when blockers/score/UEFI firmware gates pass (`plan` / `run` / `qmp`).

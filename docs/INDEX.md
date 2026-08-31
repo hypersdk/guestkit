@@ -28,6 +28,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Export formats](features/export-formats.md) | JSON, YAML, HTML, PDF |
 | [Python bindings](user-guides/python-bindings.md) | Assurance APIs + Guestfs handle (v1.1.0+) |
 | [h2kvm integration](features/hyper2kvm-integration.md) | Convert/deploy pipeline with h2kvm |
+| [Handoff / quarantine](user-guides/handoff-quarantine.md) | Passport → h2kvmctl job, fleet quarantine, virtctl plugin |
 | [VM migration](user-guides/vm-migration.md) | End-to-end migration handoff |
 | [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
 | [Guest agent](features/guest-agent.md) | In-guest agent + host `guestkit qga` / `agent-call` |

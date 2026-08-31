@@ -4,7 +4,7 @@
 use crate::assurance::{
     run_doctor, run_migrate_plan, run_repair_plan, MigratePlanOptions, RepairOptions,
 };
-use crate::fleet::{analyze_fleet, plan_waves};
+use crate::fleet::{analyze_fleet, plan_waves, quarantine_fleet};
 use anyhow::{Context, Result};
 use colored::Colorize;
 use std::path::{Path, PathBuf};
@@ -530,6 +530,108 @@ pub fn fleet_watch_command(
         );
     }
 
+    Ok(())
+}
+
+/// Fleet quarantine: `guestkit fleet quarantine`
+pub fn fleet_quarantine_command(
+    dir: &Path,
+    output_format: &str,
+    recursive: bool,
+    jobs: usize,
+    threshold: f64,
+    fail: bool,
+    verbose: bool,
+) -> Result<()> {
+    let images = collect_fleet_disk_images(dir, recursive)?;
+    if images.is_empty() {
+        anyhow::bail!("No disk images found in {}", dir.display());
+    }
+    let (snapshots, failed_vms) = collect_fleet_snapshots(&images, jobs.max(1), verbose)?;
+    let mut analysis = analyze_fleet(&snapshots);
+    analysis.total_vms = images.len();
+    analysis.failed_vms = failed_vms.clone();
+    let scored: Vec<(String, f64)> = snapshots.iter().map(|(p, _, s)| (p.clone(), *s)).collect();
+    let report = quarantine_fleet(&scored, &analysis, &failed_vms, threshold);
+
+    if output_format == "json" {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        println!();
+        println!("{}", "Fleet quarantine".bold().cyan());
+        println!("  threshold: {:.0}", report.threshold);
+        println!("  allowed:   {}", report.allowed.len());
+        println!("  quarantine: {}", report.quarantined.len());
+        for a in &report.allowed {
+            println!("  {} {a}", "✓".green());
+        }
+        for q in &report.quarantined {
+            println!(
+                "  {} {} ({})",
+                "✗".red(),
+                q.image,
+                q.detail.as_deref().unwrap_or("quarantined")
+            );
+        }
+    }
+
+    if fail && !report.all_clear() {
+        anyhow::bail!(
+            "{} VM(s) quarantined — do not hand to h2kvmctl",
+            report.quarantined.len()
+        );
+    }
+    Ok(())
+}
+
+/// Passport → h2kvmctl job: `guestkit passport handoff`
+pub fn passport_handoff_command(
+    passport_path: &Path,
+    output: Option<&Path>,
+    fail_below: Option<f64>,
+    require_signature: bool,
+    public_key: Option<&str>,
+    trust_keys: Option<&Path>,
+    max_age_hours: Option<u64>,
+    fail: bool,
+) -> Result<()> {
+    use crate::assurance::{
+        build_handoff, handoff_default_output, load_and_gate, write_handoff, PassportVerifyOptions,
+    };
+
+    let (passport, allowed, extra) = load_and_gate(
+        passport_path,
+        &PassportVerifyOptions {
+            fail_below,
+            require_signature,
+            public_key: public_key.map(|s| s.to_string()),
+            trust_keys_file: trust_keys.map(|p| p.to_path_buf()),
+            max_age_hours,
+        },
+    )?;
+    let doc = build_handoff(passport_path, &passport, allowed, &extra);
+    let dest = output
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| handoff_default_output(passport_path));
+    write_handoff(&doc, &dest)?;
+    if doc.allowed {
+        println!(
+            "{} handoff {} (boot={:.0} migration={:.0})",
+            "✓".green(),
+            dest.display(),
+            doc.scores.boot,
+            doc.scores.migration
+        );
+        println!("  {}", doc.h2kvmctl);
+    } else {
+        println!("{} handoff refused → {}", "✗".red(), dest.display());
+        for b in &doc.blockers {
+            println!("    - {b}");
+        }
+        if fail {
+            anyhow::bail!("passport handoff not allowed");
+        }
+    }
     Ok(())
 }
 

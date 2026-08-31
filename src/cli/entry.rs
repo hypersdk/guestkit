@@ -2294,6 +2294,31 @@ enum PassportAction {
         #[arg(long, value_name = "HOURS")]
         max_age_hours: Option<u64>,
     },
+
+    /// Verify a passport and write the h2kvmctl job document
+    Handoff {
+        /// Passport JSON path
+        passport: PathBuf,
+        /// Output YAML/JSON (default: <passport>.handoff.yaml)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+        #[arg(long, value_name = "SCORE")]
+        fail_below: Option<f64>,
+        #[arg(long)]
+        require_signature: bool,
+        #[arg(long, value_name = "HEX")]
+        public_key: Option<String>,
+        #[arg(long, value_name = "FILE")]
+        trust_keys: Option<PathBuf>,
+        #[arg(long, value_name = "HOURS")]
+        max_age_hours: Option<u64>,
+        /// Exit non-zero when the passport is not allowed to convert
+        #[arg(long, default_value_t = true)]
+        fail: bool,
+        /// Allow writing a refused handoff without failing the process
+        #[arg(long)]
+        allow_refused: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -2360,6 +2385,27 @@ enum FleetAction {
         /// Exit non-zero if any VM has drifted from its baseline (for cron/CI gating)
         #[arg(long)]
         fail_on_drift: bool,
+    },
+
+    /// Hold VMs below a doctor score out of the hyper2kvm wave
+    Quarantine {
+        /// Directory containing disk images
+        dir: PathBuf,
+        /// Output format (text, json)
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+        /// Scan subdirectories
+        #[arg(long)]
+        recursive: bool,
+        /// Parallel workers
+        #[arg(short = 'j', long, value_name = "N")]
+        jobs: Option<usize>,
+        /// Quarantine when boot score is below this (default 80)
+        #[arg(long, default_value_t = 80.0)]
+        threshold: f64,
+        /// Exit non-zero if anyone is quarantined
+        #[arg(long)]
+        fail: bool,
     },
 }
 
@@ -3857,6 +3903,36 @@ pub fn run() -> anyhow::Result<()> {
                     cli.verbose,
                 )?;
             }
+            FleetAction::Quarantine {
+                dir,
+                output,
+                recursive,
+                jobs,
+                threshold,
+                fail,
+            } => {
+                let jobs = jobs
+                    .or_else(|| {
+                        std::env::var("GUESTKIT_FLEET_JOBS")
+                            .ok()
+                            .and_then(|v| v.parse().ok())
+                    })
+                    .unwrap_or_else(|| {
+                        std::thread::available_parallelism()
+                            .map(|n| n.get())
+                            .unwrap_or(2)
+                            .clamp(1, 4)
+                    });
+                crate::cli::commands::assurance::fleet_quarantine_command(
+                    &dir,
+                    &output,
+                    recursive,
+                    jobs,
+                    threshold,
+                    fail,
+                    cli.verbose,
+                )?;
+            }
         },
 
         Commands::MigratePlan {
@@ -3980,6 +4056,28 @@ pub fn run() -> anyhow::Result<()> {
                     public_key.as_deref(),
                     trust_keys.as_deref(),
                     max_age_hours,
+                )?;
+            }
+            PassportAction::Handoff {
+                passport,
+                output,
+                fail_below,
+                require_signature,
+                public_key,
+                trust_keys,
+                max_age_hours,
+                fail,
+                allow_refused,
+            } => {
+                crate::cli::commands::assurance::passport_handoff_command(
+                    &passport,
+                    output.as_deref(),
+                    fail_below,
+                    require_signature,
+                    public_key.as_deref(),
+                    trust_keys.as_deref(),
+                    max_age_hours,
+                    fail && !allow_refused,
                 )?;
             }
         },

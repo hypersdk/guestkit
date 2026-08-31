@@ -197,3 +197,11 @@ path = "src/bin/guestkit-qemu.rs"
 name = "zyvor-guest-agent"
 path = "src/bin/zyvor-guest-agent.rs"
 required-features = ["agent"]
+
+[[bin]]
+name = "virtctl-guestkit"
+path = "src/bin/virtctl-guestkit.rs"
+
+[[bin]]
+name = "kubectl-guestkit"
+path = "src/bin/virtctl-guestkit.rs"
