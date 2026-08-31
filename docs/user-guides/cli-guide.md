@@ -15,6 +15,7 @@ guestkit migrate-plan disk.qcow2 --target kvm --export plan.yaml
 guestctl tui disk.qcow2
 guestkit-qemu plan disk.qcow2 --json
 guestkit-qemu run disk.qcow2 --min-boot-score 80
+guestkit qga --execute guest-ping
 ```
 
 ## Where to look
@@ -25,6 +26,8 @@ guestkit-qemu run disk.qcow2 --min-boot-score 80
 | Install & build | [getting-started.md](getting-started.md) |
 | Migration assurance | [migration-assurance.md](../features/migration-assurance.md) |
 | QEMU / VirtIO runtime | [qemu-runtime.md](../features/qemu-runtime.md) |
+| Dump virsh → GuestKit | [virsh-to-guestkit.md](virsh-to-guestkit.md) |
+| Guest agent | [guest-agent.md](../features/guest-agent.md) |
 | VM migration workflows | [vm-migration.md](vm-migration.md) |
 | TUI keys & Assurance | [tui-enhancements.md](../features/tui-enhancements.md) |
 | Fix plans & rescue | [fix-plans.md](../features/fix-plans.md) |
@@ -44,6 +47,7 @@ guestkit-qemu run disk.qcow2 --min-boot-score 80
 | Files | `ls`, `cat`, `cp`, `download`, `upload`, `find` |
 | Assurance | `doctor`, `migrate-plan`, `policy`, `fleet`, `forensic-diff`, `repair --fix boot`, `passport emit\|verify` |
 | QEMU runtime | `guestkit-qemu plan`, `guestkit-qemu run`, `guestkit-qemu qmp` |
+| Live QGA / agent | `qga`, `agent-call`, `agent-proxy`, `agent-inject` |
 | Plans | `plan generate`, `plan preview`, `plan apply` (`--skip-backup`), `plan rollback` |
 | Rescue | `rescue -o enable-ssh\|inject-ssh-key\|set-hostname\|reset-password\|fix-fstab\|check-grub\|fix-grub\|enable-rdp\|enable-winrm\|set-timezone` |
 | Profiles | `profile security`, `profile windows-migration` |

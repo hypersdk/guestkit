@@ -213,6 +213,8 @@ _Run inside the guest - or reach it host-mediated - even when there's no guest n
 
 - **In-guest agent** — guestkit agent runs like qemu-guest-agent over virtio-serial, reusing the same evidence and fix-plan schema as offline mode. — _One model for cold-disk and live guests._
   - **How:** Run `guestkit agent` inside the booted guest; it serves the same evidence and fix-plan schema over the virtio-serial channel `com.zyvor.guestkit.0`.
+- **`guestkit qga` (dump virsh)** — Speaks the QGA unix socket directly; drop-in for `virsh qemu-agent-command`. zyvor-api uses the same ladder and only falls back to virsh when `GUESTKIT_ALLOW_VIRSH=1`. — _Live guest ops without libvirt-client in the path._
+  - **How:** CLI: `guestkit qga --execute guest-ping` (auto-discovers the socket) or pin `--socket …`. Map: [virsh-to-guestkit.md](user-guides/virsh-to-guestkit.md).
 - **Transport ladder** — The Guest Control Fabric auto-selects the best path per VM - virtio-serial, QGA exec, QGA builtin, push cache, offline disk, or console. — _Guest control that never depends on guest networking._
   - **How:** Host bridge: `guestkit agent-proxy --socket /var/lib/libvirt/qemu/channel/target/$VM/com.zyvor.guestkit.0 --listen 127.0.0.1:8765` auto-selects the best path per VM.
 - **Snapshot quiesce** — Freeze and thaw guest filesystems (fsfreeze) for application-consistent snapshots, plus soft reboot and graceful shutdown. — _Clean snapshots without crash-consistency risk._

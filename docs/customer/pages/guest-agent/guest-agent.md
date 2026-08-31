@@ -24,8 +24,9 @@ Guest Agent — Guest Agent surface.
 4. Boot guest; `guestkit agent-proxy --socket … --listen 127.0.0.1:8765`.
 5. `curl /ping` `/doctor` `/evidence`.
 6. Or `guestkit agent-call --socket … --method guestkit.getEvidence`.
-7. **Empty / fail:** No channel → missing virtio-serial/QGA; Windows needs virtio-serial driver.
-8. **Success:** `/ping` OK; RPC returns doctor JSON.
+7. Prefer **`guestkit qga --execute guest-ping`** over `virsh qemu-agent-command` ([virsh-to-guestkit.md](../../../user-guides/virsh-to-guestkit.md)).
+8. **Empty / fail:** No channel → missing virtio-serial/QGA; Windows needs virtio-serial driver.
+9. **Success:** `/ping` OK; RPC returns doctor JSON.
 
 Host needs Linux + `qemu-img` / losetup / qemu-nbd; mount/repair often need root. GuestKit does not invent disk contents.
 

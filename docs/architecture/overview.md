@@ -23,6 +23,8 @@ Offline VM intelligence and migration assurance — **Rust control plane** with 
 │  Assurance: evidence → boot score → migrate-plan → fleet/policy │
 │             → GuestKitQemuPlan (gated QEMU/VirtIO launch)       │
 ├─────────────────────────────────────────────────────────────────┤
+│  Live QGA: guestkit qga / agent-call (unix socket; no virsh)    │
+├─────────────────────────────────────────────────────────────────┤
 │  AI (optional): deterministic intel + `--features ai` LLM agent │
 ├─────────────────────────────────────────────────────────────────┤
 │  guestfs façade: Rust orchestration + NBD/loop + mount        │
@@ -40,12 +42,13 @@ Parallel platform runtime (same repo):
 | Path | Role |
 |------|------|
 | `src/` | Main `guestkit` crate — CLI, guestfs, boot, evidence, assurance, fleet, TUI, qemu |
+| `src/agent/` | In-guest agent + host `qga_client` / `guestkit qga` |
 | `src/qemu/` | Declarative QEMU/VirtIO config, GuestKit plan bridge, QMP client |
 | `src/ai/` | Deterministic intelligence; LLM agent behind `ai` feature |
 | `crates/guestkit-job-spec` | Worker job schema |
 | `crates/guestkit-worker` | Redis-queue disk inspection daemon |
 | `crates/guestkit-agent-protocol` | Guest agent JSON-RPC framing |
-| `crates/zyvor-api` | Web API, auth, KubeVirt, guest agent CA |
+| `crates/zyvor-api` | Web API, auth, KubeVirt, QGA socket ladder (`qga_socket`) |
 | `crates/zyvor-guest-agent` | In-guest agent binary |
 | `deploy/` | Docker Compose, Helm, UI static assets |
 | `k8s/` | KubeVirt-oriented manifests |
@@ -81,6 +84,8 @@ Root `Cargo.toml` workspace includes the main package and `guestkit-job-spec`. `
 
 - [Migration assurance](../features/migration-assurance.md)
 - [QEMU / VirtIO runtime](../features/qemu-runtime.md)
+- [Dump virsh → GuestKit](../user-guides/virsh-to-guestkit.md)
+- [Guest agent](../features/guest-agent.md)
 - [KubeVirt integration](../features/kubevirt-integration.md)
 - [CE vs Enterprise](../ce-vs-enterprise.md)
 - [User stories](../USER_STORIES.md)

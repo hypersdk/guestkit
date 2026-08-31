@@ -140,6 +140,17 @@ cargo run --bin guestkit-qemu -- run vm.qcow2 --min-boot-score 80 \
 UEFI guests need explicit firmware paths (`--uefi-code` / `--uefi-vars`).
 Full guide: [qemu-runtime.md](../features/qemu-runtime.md).
 
+## Live QGA (no virsh)
+
+```bash
+# Requires --features agent on Unix builds
+cargo run --features agent -- qga --execute guest-ping
+cargo run --features agent -- agent-call --method guestkit.getVersion
+```
+
+Cut-over map from `virsh qemu-agent-command`:
+[virsh-to-guestkit.md](virsh-to-guestkit.md).
+
 ## Web console login
 
 Packaged/remote installs ship a web console with a seeded default administrator:

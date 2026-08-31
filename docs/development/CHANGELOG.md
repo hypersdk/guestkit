@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs and MIG-L-009 no longer tell operators to use `virsh console`
   or `virsh qemu-agent-command`.
 
+### Fixed
+- **`guestkit qga_client`**: import `std::os::unix::fs::FileTypeExt` so
+  `is_socket()` compiles on Unix.
+
 ## [1.1.0] - 2026-08-31
 
 ### Added

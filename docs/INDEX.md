@@ -9,6 +9,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Getting started](user-guides/getting-started.md) | Build, install, first commands |
 | [CLI reference](user-guides/cli-guide.md) | Command index → topic guides & `guestkit --help` |
 | [Quick reference](user-guides/quick-reference.md) | Cheat sheet |
+| [Dump virsh](user-guides/virsh-to-guestkit.md) | Replace `virsh qemu-agent-command` with `guestkit qga` |
 | [FAQ](user-guides/faq.md) | Common questions |
 | [Troubleshooting](user-guides/troubleshooting.md) | Fixes for common issues |
 
@@ -29,6 +30,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [h2kvm integration](features/hyper2kvm-integration.md) | Convert/deploy pipeline with h2kvm |
 | [VM migration](user-guides/vm-migration.md) | End-to-end migration handoff |
 | [KubeVirt + Zeus OS](features/kubevirt-integration.md) | In-cluster boot inspect API (pure Rust, not legacy appliance tooling) |
+| [Guest agent](features/guest-agent.md) | In-guest agent + host `guestkit qga` / `agent-call` |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
 | [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
 

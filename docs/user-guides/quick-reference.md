@@ -73,6 +73,26 @@ guestkit-qemu qmp --socket /run/guestkit/vm.qmp status
 
 Details: [qemu-runtime.md](../features/qemu-runtime.md)
 
+## Live QGA (`guestkit qga` / `agent-call`)
+
+| Command | Purpose |
+|---------|---------|
+| `guestkit qga --execute guest-ping` | Raw QGA over unix socket (auto-discovers libvirt/KubeVirt paths) |
+| `guestkit qga --raw '{"execute":"guest-info"}'` | Full QGA JSON body |
+| `guestkit agent-call --method guestkit.getVersion` | GuestKit JSON-RPC over the same socket |
+| `guestkit agent-proxy --listen 127.0.0.1:8765` | HTTP bridge for live agent methods |
+
+```bash
+guestkit qga --execute guest-ping
+guestkit qga --socket /var/lib/libvirt/qemu/channel/target/web01/org.qemu.guest_agent.0 \
+  --execute guest-ping
+guestkit agent-call --method guestkit.getBootAnalysis
+```
+
+Do **not** use `virsh qemu-agent-command` — cut-over map:
+[virsh-to-guestkit.md](virsh-to-guestkit.md). Emergency fallback only with
+`GUESTKIT_ALLOW_VIRSH=1` inside zyvor-api.
+
 ## Rescue & day-0
 
 | Command | Purpose |

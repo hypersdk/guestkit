@@ -81,3 +81,11 @@ guestkit doctor /var/lib/libvirt/images/web01.qcow2 --target kvm --explain
 # start the domain with virtctl/Machina, then:
 guestkit agent-call --method guestkit.getBootAnalysis
 ```
+
+## See also
+
+- [Guest agent](../features/guest-agent.md)
+- [Guest Control Fabric](../features/guest-control-fabric.md)
+- [CLI quick reference](quick-reference.md)
+- [QEMU / VirtIO runtime](../features/qemu-runtime.md)
+- [Architecture overview](../architecture/overview.md)

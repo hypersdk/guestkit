@@ -107,6 +107,7 @@ Recorded live against real deployments — no staged screenshots.
 | Migration order guessed by hand | `fleet wave-plan` — dependency-aware waves |
 | Deep inspect needs a running guest | Carbon **TUI** + in-guest agent over QGA |
 | Assured first boot still means hand-built QEMU argv | **`guestkit-qemu`** plans/runs from the same evidence gate |
+| Live guest ops still mean `virsh qemu-agent-command` | **`guestkit qga`** / `agent-call` speak the QGA socket directly |
 
 ---
 
@@ -232,6 +233,7 @@ guestkit plan apply plan.yaml --vm disk.qcow2 --yes     # backups + rollback
 ### Live control · platform · AI
 
 - **In-guest agent** (Linux + Windows) over virtio-serial / QGA — inject offline, then `agent-proxy` / `agent-call`
+- **`guestkit qga`** — drop-in for `virsh qemu-agent-command` (direct unix socket; no virsh by default) — [virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md)
 - **Optional AI** (`--features ai`) — read-only tool-calling over the offline evidence snapshot; MCP server via `--features mcp`
 - **KubeVirt** boot-inspect hooks and Guest Control Fabric
 - **Web console** + worker on GHCR · Helm under `deploy/helm/zyvor`
@@ -329,7 +331,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 | **Engine** | Pure-Rust parsers + evidence schema · NBD/loop (`src/`, `crates/`) |
 | **CLI / TUI** | `guestkit` · `guestctl` — doctor, passport, fleet, rescue |
 | **QEMU runtime** | `guestkit-qemu` — assured plan/run + QMP ([qemu-runtime.md](docs/features/qemu-runtime.md)) |
-| **Agent** | Linux + Windows · protocol 1.3 · `agent-inject` / `agent-proxy` |
+| **Agent / QGA** | Linux + Windows · `agent-inject` / `agent-proxy` / **`guestkit qga`** ([virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md)) |
 | **Python** | [hypersdk-guestkit](https://pypi.org/project/hypersdk-guestkit/) — `run_doctor`, `run_migrate_repair` (v1.1.0+) |
 | **h2kvm** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) — convert/deploy partner |
 | **K8s** | KubeVirt hooks · `k8s/` |
@@ -349,6 +351,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 | Remote deploy | [DEPLOY-REMOTE.md](docs/guides/DEPLOY-REMOTE.md) |
 | **h2kvm integration** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) |
 | **QEMU / VirtIO runtime** | [qemu-runtime.md](docs/features/qemu-runtime.md) |
+| **Dump virsh → GuestKit** | [virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md) |
 | Architecture | [overview](docs/architecture/overview.md) |
 | Changelog / roadmap | [CHANGELOG](docs/development/CHANGELOG.md) · [roadmap](docs/development/roadmap.md) |
 

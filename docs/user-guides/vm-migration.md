@@ -684,6 +684,7 @@ pub fn has_luks(&mut self, root: &str) -> Result<bool>
 
 ## Further Reading
 
+- [Dump virsh → GuestKit](virsh-to-guestkit.md) — replace `virsh qemu-agent-command`
 - [QEMU / VirtIO runtime](../features/qemu-runtime.md) — assurance-gated local launch
 - [h2kvm integration](../features/hyper2kvm-integration.md)
 - [hyper2kvm Project](https://github.com/zyvorai/h2kvm) - Production Hyper-V to KVM migration

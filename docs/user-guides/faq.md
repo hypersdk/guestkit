@@ -120,9 +120,17 @@ pip install hypersdk-guestkit
 
 | Binary | Role |
 |--------|------|
-| `guestkit` | Scriptable CLI (inspect, doctor, migrate-plan, rescue, …) |
+| `guestkit` | Scriptable CLI (inspect, doctor, migrate-plan, rescue, **`qga`**, …) |
 | `guestctl` | Carbon TUI dashboard |
 | `guestkit-qemu` | Assured QEMU plan / run / QMP ([qemu-runtime.md](../features/qemu-runtime.md)) |
+
+### Should I use `virsh qemu-agent-command`?
+
+No. Prefer **`guestkit qga`** (raw QGA) or **`guestkit agent-call`** (GuestKit
+JSON-RPC) against the guest-agent unix socket. Domain lifecycle
+(`list`/`start`/`destroy`) stays with `virtctl` / Machina — GuestKit is not a
+libvirt replacement. See [virsh-to-guestkit.md](virsh-to-guestkit.md).
+`GUESTKIT_ALLOW_VIRSH=1` is an emergency zyvor-api opt-in only.
 
 ### What are the system requirements?
 

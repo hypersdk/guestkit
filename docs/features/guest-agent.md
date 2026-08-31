@@ -13,6 +13,8 @@
 
 GuestKit can run **inside** a Linux guest as an in-guest agent (similar to `qemu-guest-agent`), communicating with the host over virtio-serial while reusing the same evidence schema and fix-plan format as offline assurance.
 
+On the **host**, prefer **`guestkit qga`** / **`guestkit agent-call`** against the QGA unix socket — do not call `virsh qemu-agent-command`. Cut-over map: [virsh-to-guestkit.md](../user-guides/virsh-to-guestkit.md).
+
 ## Architecture
 
 ```
