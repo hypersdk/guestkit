@@ -16,8 +16,10 @@
 <p align="center">
   <a href="https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit"><b>Product</b></a> ·
   <a href="#see-it-in-action"><b>Demos</b></a> ·
+  <a href="#who-does-what-customers"><b>Suite path</b></a> ·
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#h2kvm-integration"><b>h2kvm</b></a> ·
+  <a href="https://github.com/zyvorai/ephemera"><b>Ephemera</b></a> ·
   <a href="https://github.com/hypersdk/guestkit/wiki"><b>Wiki</b></a> ·
   <a href="docs/ce-vs-enterprise.md"><b>Open source vs Enterprise</b></a> ·
   <a href="docs/enterprise-trial-install.md"><b>30-day Enterprise trial</b></a> ·
@@ -52,7 +54,47 @@ GuestKit reads the disk **while the guest is off**, scores first-boot probabilit
 
 **Certify with [GuestKit](https://github.com/zyvorai/guestkit) → run & manage with [Ephemera](https://github.com/zyvorai/ephemera) → convert & deploy with [h2kvm](https://github.com/zyvorai/h2kvm) → operate on [Zeus OS](https://zyvor.dev/zeus-os).**
 
-GuestKit certifies and repairs disks (doctor, passport, offline plans). Ephemera boots those qcow2s with networking, cloud-init, and TTL. Do not grow GuestKit into a second disposable-compute plane.
+---
+
+## Who does what (customers)
+
+| You need… | Use |
+|-----------|-----|
+| Score / repair a disk **before** power-on | **This repo (GuestKit)** |
+| Boot the qcow2, give it a network, SSH, TTL, pause/resume | **[Ephemera](https://github.com/zyvorai/ephemera)** |
+| Hypervisor → KVM convert + import | **[h2kvm](https://github.com/zyvorai/h2kvm)** |
+
+GuestKit does **not** own production networking (TAP/bridge/netns/DHCP) or disposable
+fleet lifecycle. That is Ephemera. Keep GuestKit focused on offline intelligence.
+
+### End-to-end: certify → run → manage
+
+```bash
+# ── 1. Certify & repair (GuestKit) ─────────────────────────────
+guestkit doctor disk.qcow2 --target kvm --explain
+guestkit plan generate disk.qcow2 -p virtio-initramfs -o virtio.yaml
+guestkit plan apply virtio.yaml --vm disk.qcow2 --yes   # as needed
+guestkit gate --image disk.qcow2 --fail-below 80        # CI / cutover gate
+guestkit passport emit disk.qcow2 --target kvm -o passport.json
+
+# ── 2. Run & manage (Ephemera) ─────────────────────────────────
+# Point Ephemera at the same (or repaired) qcow2 — see Ephemera README.
+# Overlay keeps the base disk untouched; pick a network mode:
+#
+#   user     — lab SSH via hostfwd (simplest)
+#   tap      — join existing bridge (LAN DHCP)
+#   tap+netns— known guest IP + NAT (isolated)
+#
+#   ephemera create --spec my-vm.json
+#   ephemera get <id>          # status + guest_ip when netns
+#   ephemera exec <id> -- uptime
+#   ephemera delete <id>
+```
+
+Docs: [VM lifecycle / suite split](docs/features/vm-runtime.md) ·
+[Ephemera](https://github.com/zyvorai/ephemera) ·
+[Passport handoff](docs/user-guides/handoff-quarantine.md)
+
 ---
 
 ## See it in action
@@ -335,6 +377,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 | **Agent / QGA** | Linux + Windows · `agent-inject` / `agent-proxy` / **`guestkit qga`** ([virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md)) |
 | **Python** | [hypersdk-guestkit](https://pypi.org/project/hypersdk-guestkit/) — `run_doctor`, `run_migrate_repair` (v1.1.0+) |
 | **h2kvm** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) — convert/deploy partner |
+| **Ephemera** | [zyvorai/ephemera](https://github.com/zyvorai/ephemera) — run/manage certified qcow2s (network, TTL) |
 | **K8s** | KubeVirt hooks · `k8s/` |
 | **Web / worker** | GHCR images · `deploy/` |
 
