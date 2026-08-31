@@ -19,7 +19,10 @@ invocation.
 | Guess “will it boot?” by `virsh start` + `virsh console` | `guestkit doctor disk.qcow2 --target kvm --explain` |
 | Hand-edit fstab after `virt-v2v` | `guestkit migrate-plan disk.qcow2 --target kvm --export plan.yaml` then `guestkit plan apply` |
 | `guestfish` / libguestfs appliance | `guestkit inspect disk.qcow2`, `guestkit extract`, `guestkit rescue` |
-| `virsh dumpxml` just to find the disk path | `guestkit inspect disk.qcow2 --output json` |
+| `virsh dumpxml` just to find the disk path | `guestkit domain-disks domain.xml` |
+| `qemu-img check\|info\|snapshot` | `guestkit img check\|info\|snapshots` |
+| Hunt virtio-win ISO by hand | `guestkit virtio-win plan --image win.qcow2` |
+| `virsh start` then squint at console | `guestkit firstboot disk.qcow2 --target kvm --fail-below 80` |
 | Serial console “did it boot?” | `guestkit agent-call --method guestkit.getBootAnalysis` |
 | Snapshot FS freeze | GuestKit agent implements `guest-fsfreeze-freeze` / `thaw` on the QGA channel |
 

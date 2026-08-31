@@ -33,6 +33,7 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Guest agent](features/guest-agent.md) | In-guest agent + host `guestkit qga` / `agent-call` |
 | [Guest Control Fabric](features/guest-control-fabric.md) | Transport ladder, airgap QGA install, Agent Doctor, capability contract |
 | [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
+| [img / firstboot / virtio-win](user-guides/img-firstboot.md) | qemu-img wrapper, domain disk parse, virtio-win plan, first-boot gate |
 
 ## Deployment
 

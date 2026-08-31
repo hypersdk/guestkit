@@ -1945,6 +1945,56 @@ enum Commands {
         action: PassportAction,
     },
 
+    /// qemu-img operations owned by GuestKit (info/check/snapshot/resize/rebase/commit)
+    Img {
+        #[command(subcommand)]
+        action: ImgAction,
+    },
+
+    /// List disk sources from libvirt XML or KubeVirt VM/VMI YAML
+    #[command(name = "domain-disks")]
+    DomainDisks {
+        /// domain.xml / vm.yaml / vmi.yaml
+        file: PathBuf,
+        /// Only print file= sources, one per line (scriptable)
+        #[arg(long)]
+        files_only: bool,
+        /// JSON output
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Discover a virtio-win tree and plan offline driver injection
+    #[command(name = "virtio-win")]
+    VirtioWin {
+        #[command(subcommand)]
+        action: VirtioWinAction,
+    },
+
+    /// First-boot attestation: offline doctor + optional live QGA ping
+    Firstboot {
+        /// Offline disk image (qcow2/raw/…)
+        image: Option<PathBuf>,
+        /// Target hypervisor profile
+        #[arg(long, default_value = "kvm")]
+        target: String,
+        /// QGA unix socket for live guest-ping
+        #[arg(long)]
+        socket: Option<String>,
+        /// libvirt XML or KubeVirt YAML to attach disk inventory
+        #[arg(long)]
+        domain: Option<PathBuf>,
+        /// virtio-win tree (else GUESTKIT_VIRTIO_WIN)
+        #[arg(long, value_name = "DIR")]
+        virtio_win: Option<PathBuf>,
+        /// Fail when offline score is below N (also requires no blockers)
+        #[arg(long, value_name = "SCORE")]
+        fail_below: Option<f64>,
+        /// Write JSON report to FILE (stdout if omitted)
+        #[arg(short, long, value_name = "FILE")]
+        output: Option<PathBuf>,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -2093,6 +2143,74 @@ enum PolicyAction {
         /// Fail on any validation failure
         #[arg(long)]
         strict: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum ImgAction {
+    /// qemu-img info --output=json
+    Info { image: PathBuf },
+    /// qemu-img check (JSON). --repair runs `-r leaks`
+    Check {
+        image: PathBuf,
+        #[arg(long)]
+        repair: bool,
+    },
+    /// List qcow2 internal snapshots
+    Snapshots { image: PathBuf },
+    /// Create a qcow2 internal snapshot
+    #[command(name = "snapshot-create")]
+    SnapshotCreate {
+        image: PathBuf,
+        #[arg(long)]
+        name: String,
+    },
+    /// Delete a qcow2 internal snapshot
+    #[command(name = "snapshot-delete")]
+    SnapshotDelete {
+        image: PathBuf,
+        #[arg(long)]
+        name: String,
+    },
+    /// Apply (revert to) a qcow2 internal snapshot
+    #[command(name = "snapshot-apply")]
+    SnapshotApply {
+        image: PathBuf,
+        #[arg(long)]
+        name: String,
+    },
+    /// qemu-img resize (size like +10G or 40G)
+    Resize { image: PathBuf, size: String },
+    /// qemu-img rebase -b BACKING
+    Rebase {
+        image: PathBuf,
+        #[arg(long)]
+        backing: PathBuf,
+        /// Skip image-length comparison (`qemu-img rebase -u`)
+        #[arg(long)]
+        unsafe_mode: bool,
+    },
+    /// qemu-img commit (flatten overlay into backing)
+    Commit { image: PathBuf },
+}
+
+#[derive(Subcommand)]
+enum VirtioWinAction {
+    /// List drivers resolved from a virtio-win tree
+    List {
+        #[arg(long)]
+        tree: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show missing critical drivers + migrate-repair hint
+    Plan {
+        #[arg(long)]
+        tree: Option<PathBuf>,
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -3865,6 +3983,72 @@ pub fn run() -> anyhow::Result<()> {
                 )?;
             }
         },
+
+        Commands::Img { action } => match action {
+            ImgAction::Info { image } => crate::cli::img::info(&image)?,
+            ImgAction::Check { image, repair } => crate::cli::img::check(&image, repair)?,
+            ImgAction::Snapshots { image } => crate::cli::img::snapshots(&image)?,
+            ImgAction::SnapshotCreate { image, name } => {
+                crate::cli::img::snapshot_create(&image, &name)?
+            }
+            ImgAction::SnapshotDelete { image, name } => {
+                crate::cli::img::snapshot_delete(&image, &name)?
+            }
+            ImgAction::SnapshotApply { image, name } => {
+                crate::cli::img::snapshot_apply(&image, &name)?
+            }
+            ImgAction::Resize { image, size } => crate::cli::img::resize(&image, &size)?,
+            ImgAction::Rebase {
+                image,
+                backing,
+                unsafe_mode,
+            } => crate::cli::img::rebase(&image, &backing, unsafe_mode)?,
+            ImgAction::Commit { image } => crate::cli::img::commit(&image)?,
+        },
+
+        Commands::DomainDisks {
+            file,
+            files_only,
+            json,
+        } => {
+            let report = crate::cli::domain_disks::parse_domain_disks(&file)?;
+            if files_only {
+                for p in crate::cli::domain_disks::file_sources(&report) {
+                    println!("{}", p.display());
+                }
+            } else {
+                let _ = json;
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            }
+        }
+
+        Commands::VirtioWin { action } => match action {
+            VirtioWinAction::List { tree, json } => {
+                crate::cli::virtio_win::run_list(tree.as_deref(), json)?
+            }
+            VirtioWinAction::Plan { tree, image, json } => {
+                crate::cli::virtio_win::run_plan(tree.as_deref(), image.as_deref(), json)?
+            }
+        },
+
+        Commands::Firstboot {
+            image,
+            target,
+            socket,
+            domain,
+            virtio_win,
+            fail_below,
+            output,
+        } => crate::cli::firstboot::run(crate::cli::firstboot::FirstBootArgs {
+            image,
+            target,
+            socket,
+            domain,
+            virtio_win,
+            fail_below,
+            output,
+            verbose: cli.verbose,
+        })?,
 
         Commands::ForensicDiff { old, new, output } => {
             forensic_diff_command(&old, &new, &output, cli.verbose)?;
