@@ -41,34 +41,11 @@ impl Guestfs {
             eprintln!("guestfs: disk_format {}", filename);
         }
 
-        let output = Command::new("qemu-img")
-            .arg("info")
-            .arg("--output=json")
-            .arg(filename)
-            .output()
-            .map_err(|e| Error::CommandFailed(format!("Failed to execute qemu-img: {}", e)))?;
-
-        if !output.status.success() {
-            return Err(Error::CommandFailed(format!(
-                "qemu-img info failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
-        }
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-
-        // Parse JSON output to get format
-        // For simplicity, use string matching
-        if let Some(format_line) = stdout.lines().find(|l| l.contains("\"format\"")) {
-            if let Some(format) = format_line.split(':').nth(1) {
-                let format = format.trim().trim_matches(|c| c == '"' || c == ',');
-                return Ok(format.to_string());
-            }
-        }
-
-        Err(Error::NotFound(
-            "Format not found in qemu-img output".to_string(),
-        ))
+        let json = self.qemu_img_info_json(filename)?;
+        json.get("format")
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+            .ok_or_else(|| Error::NotFound("Format not found in qemu-img output".to_string()))
     }
 
     /// Check if disk has backing file
@@ -97,13 +74,16 @@ impl Guestfs {
         Ok(stdout.contains("backing file"))
     }
 
-    /// Get virtual size of disk image
+    /// Run `qemu-img info --output=json` and parse it as a JSON object.
     ///
-    pub fn disk_virtual_size(&mut self, filename: &str) -> Result<i64> {
-        if self.verbose {
-            eprintln!("guestfs: disk_virtual_size {}", filename);
-        }
-
+    /// Used instead of line-scanning the raw text: qemu-img's JSON for
+    /// formats like VMDK includes a nested `children[].info` object that
+    /// repeats keys like `virtual-size`/`actual-size` with the *inner
+    /// file's* values (its raw byte length), which appear earlier in the
+    /// text than the real top-level values — a naive
+    /// `.lines().find(|l| l.contains("\"virtual-size\""))` silently returns
+    /// the wrong (much smaller) number for exactly these formats.
+    fn qemu_img_info_json(&self, filename: &str) -> Result<serde_json::Value> {
         let output = Command::new("qemu-img")
             .arg("info")
             .arg("--output=json")
@@ -118,24 +98,38 @@ impl Guestfs {
             )));
         }
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
-
-        // Parse JSON output to get virtual-size
-        if let Some(size_line) = stdout.lines().find(|l| l.contains("\"virtual-size\"")) {
-            if let Some(size_str) = size_line.split(':').nth(1) {
-                let size_str = size_str.trim().trim_matches(|c| c == ',' || c == ' ');
-                if let Ok(size) = size_str.parse::<i64>() {
-                    return Ok(size);
-                }
-            }
-        }
-
-        Err(Error::NotFound(
-            "Virtual size not found in qemu-img output".to_string(),
-        ))
+        serde_json::from_slice(&output.stdout)
+            .map_err(|e| Error::Detection(format!("could not parse qemu-img info JSON: {e}")))
     }
 
-    /// Resize disk image
+    /// Get virtual size of disk image
+    ///
+    pub fn disk_virtual_size(&mut self, filename: &str) -> Result<i64> {
+        if self.verbose {
+            eprintln!("guestfs: disk_virtual_size {}", filename);
+        }
+
+        let json = self.qemu_img_info_json(filename)?;
+        json.get("virtual-size")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| Error::NotFound("Virtual size not found in qemu-img output".to_string()))
+    }
+
+    /// Get actual (allocated) size of disk image — how much host storage it
+    /// really consumes, as opposed to `disk_virtual_size`'s guest-visible size.
+    ///
+    pub fn disk_actual_size(&mut self, filename: &str) -> Result<i64> {
+        if self.verbose {
+            eprintln!("guestfs: disk_actual_size {}", filename);
+        }
+
+        let json = self.qemu_img_info_json(filename)?;
+        json.get("actual-size")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| Error::NotFound("Actual size not found in qemu-img output".to_string()))
+    }
+
+    /// Resize disk image (grow only — use `disk_resize_shrink` to shrink)
     ///
     pub fn disk_resize(&mut self, filename: &str, size: i64) -> Result<()> {
         if self.verbose {
@@ -152,6 +146,34 @@ impl Guestfs {
         if !output.status.success() {
             return Err(Error::CommandFailed(format!(
                 "qemu-img resize failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Shrink a disk image's container to `size` bytes.
+    ///
+    /// Callers are responsible for ensuring the guest filesystem and
+    /// partition table have already been shrunk to fit within `size` —
+    /// this only truncates the container; it does not touch guest data.
+    pub fn disk_resize_shrink(&mut self, filename: &str, size: i64) -> Result<()> {
+        if self.verbose {
+            eprintln!("guestfs: disk_resize_shrink {} {}", filename, size);
+        }
+
+        let output = Command::new("qemu-img")
+            .arg("resize")
+            .arg("--shrink")
+            .arg(filename)
+            .arg(size.to_string())
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute qemu-img: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::CommandFailed(format!(
+                "qemu-img resize --shrink failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             )));
         }

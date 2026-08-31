@@ -80,6 +80,7 @@ pub mod security_utils;
 pub mod sed_ops;
 pub mod selinux_ops;
 pub mod service;
+pub mod shrink;
 pub mod smart_ops;
 pub mod squashfs_ops;
 pub mod ssh;

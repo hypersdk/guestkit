@@ -122,6 +122,10 @@ guestkit migrate-plan vm.vmdk --target kvm --export plan.yaml
 guestkit passport emit vm.qcow2 --target kvm -o passport.json
 guestctl tui vm.qcow2           # Assurance · preview · export
 guestkit-qemu plan vm.qcow2 --json   # assurance → QEMU definition
+
+# Shrink an oversized-but-mostly-empty disk to its real footprint before import
+guestkit shrink disk.qcow2 --dry-run                     # report only
+guestkit shrink disk.qcow2 --min-ratio 3 --headroom-pct 20
 ```
 
 **CI gate** — same score, no CLI install step:
