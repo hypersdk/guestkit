@@ -1995,6 +1995,32 @@ enum Commands {
         output: Option<PathBuf>,
     },
 
+    /// Offline SELinux /.autorelabel plan
+    #[command(name = "selinux-relabel")]
+    SelinuxRelabel {
+        image: PathBuf,
+        #[arg(long, short)]
+        export: Option<PathBuf>,
+    },
+
+    /// Offline Windows sysprep unattend + optional first-boot generalize flag
+    Sysprep {
+        image: PathBuf,
+        #[arg(long)]
+        hostname: Option<String>,
+        /// Do not write /GuestKit/run-sysprep.flag (unattend only)
+        #[arg(long)]
+        no_firstboot: bool,
+        #[arg(long, short)]
+        export: Option<PathBuf>,
+    },
+
+    /// BitLocker detect + host-side recovery-key escrow
+    Bitlocker {
+        #[command(subcommand)]
+        action: BitlockerAction,
+    },
+
     /// Forensic diff with security drift scoring
     #[command(name = "forensic-diff")]
     ForensicDiff {
@@ -2143,6 +2169,25 @@ enum PolicyAction {
         /// Fail on any validation failure
         #[arg(long)]
         strict: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum BitlockerAction {
+    /// Print BitLocker evidence from an offline Windows disk
+    Status { image: PathBuf },
+    /// Escrow a recovery password / BEK on the host (never writes the secret into the guest)
+    Escrow {
+        image: PathBuf,
+        #[arg(long, value_name = "FILE")]
+        key_file: PathBuf,
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Include the raw key in the host JSON (0600). Default stores SHA-256 only.
+        #[arg(long)]
+        include_secret: bool,
+        #[arg(long)]
+        export_plan: Option<PathBuf>,
     },
 }
 
@@ -4147,6 +4192,45 @@ pub fn run() -> anyhow::Result<()> {
             output,
             verbose: cli.verbose,
         })?,
+
+        Commands::SelinuxRelabel { image, export } => {
+            crate::cli::cutover_cmd::selinux_relabel(&image, export.as_deref())?;
+        }
+
+        Commands::Sysprep {
+            image,
+            hostname,
+            no_firstboot,
+            export,
+        } => {
+            crate::cli::cutover_cmd::sysprep(
+                &image,
+                hostname.as_deref(),
+                !no_firstboot,
+                export.as_deref(),
+            )?;
+        }
+
+        Commands::Bitlocker { action } => match action {
+            BitlockerAction::Status { image } => {
+                crate::cli::cutover_cmd::bitlocker_status(&image, cli.verbose)?;
+            }
+            BitlockerAction::Escrow {
+                image,
+                key_file,
+                output,
+                include_secret,
+                export_plan,
+            } => {
+                crate::cli::cutover_cmd::bitlocker_escrow_cmd(
+                    &image,
+                    &key_file,
+                    output.as_deref(),
+                    include_secret,
+                    export_plan.as_deref(),
+                )?;
+            }
+        },
 
         Commands::ForensicDiff { old, new, output } => {
             forensic_diff_command(&old, &new, &output, cli.verbose)?;

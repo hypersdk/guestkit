@@ -360,11 +360,10 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
         Hint::ScheduleSelinuxRelabel => vec![op(
             "mig-selinux-relabel",
             "Schedule SELinux relabel on next boot",
-            OperationType::CommandExec(CommandExec {
-                command: "touch /.autorelabel".into(),
-                expected_exit: 0,
-                timeout: Some(10),
-                interpreter: None,
+            OperationType::FileWrite(FileWrite {
+                path: "/.autorelabel".into(),
+                content: String::new(),
+                mode: Some("0644".into()),
             }),
             Priority::Low,
             true,

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`guestkit selinux-relabel`** — offline `/.autorelabel` FixPlan (also
+  `guestkit plan generate -p selinux-relabel`). Migration repair now emits
+  FileWrite instead of a live `touch`.
+- **`guestkit sysprep`** — offline Windows unattend.xml + SetupComplete.cmd
+  + optional `/GuestKit/run-sysprep.flag` so generalize runs at first boot.
+  Does not execute sysprep.exe against a powered-off hive.
+- **`guestkit bitlocker status|escrow`** — print offline BitLocker evidence;
+  escrow a recovery key on the host (SHA-256 by default, mode 0600) and write
+  a guest marker that contains **no secret**.
 - **`guestkit img`** — qemu-img info/check/snapshot/resize/rebase/commit with
   GuestKit JSON errors (`GUESTKIT_QEMU_IMG` override).
 - **`guestkit domain-disks`** — parse libvirt XML or KubeVirt VM/VMI YAML for

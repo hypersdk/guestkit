@@ -171,6 +171,18 @@ pub fn list_profiles() -> Vec<(&'static str, &'static str)> {
             "linux-ssh",
             "Generate-only: offline Linux SSH enablement (wants symlink + sshd drop-in; optional --user/--key)",
         ),
+        (
+            "selinux-relabel",
+            "Generate-only: offline touch /.autorelabel for next-boot SELinux relabel",
+        ),
+        (
+            "windows-sysprep",
+            "Generate-only: offline sysprep unattend + optional first-boot generalize flag (--hostname)",
+        ),
+        (
+            "bitlocker-escrow",
+            "Host-side BitLocker recovery-key escrow (guestkit bitlocker escrow); never writes the secret into the guest",
+        ),
     ]
 }
 
@@ -278,7 +290,7 @@ mod tests {
     #[test]
     fn test_list_profiles_count() {
         let profiles = list_profiles();
-        assert_eq!(profiles.len(), 13);
+        assert_eq!(profiles.len(), 16);
     }
 
     #[test]
@@ -299,6 +311,9 @@ mod tests {
         assert!(names.contains(&"windows-timezone"));
         assert!(names.contains(&"windows-static-ip"));
         assert!(names.contains(&"linux-ssh"));
+        assert!(names.contains(&"selinux-relabel"));
+        assert!(names.contains(&"windows-sysprep"));
+        assert!(names.contains(&"bitlocker-escrow"));
     }
 
     #[test]

@@ -573,6 +573,12 @@ impl PlanCommand {
                 | "windows_dns"
                 | "dns"
                 | "set-dns"
+                | "selinux-relabel"
+                | "selinux_relabel"
+                | "autorelabel"
+                | "windows-sysprep"
+                | "windows_sysprep"
+                | "sysprep"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -624,6 +630,12 @@ impl PlanCommand {
                     let servers =
                         dns.ok_or_else(|| anyhow::anyhow!("--dns is required for windows-dns"))?;
                     generator.windows_dns_plan(guid, servers)?
+                }
+                "selinux-relabel" | "selinux_relabel" | "autorelabel" => {
+                    crate::cli::plan::cutover_prep::selinux_relabel_plan(vm_disk)
+                }
+                "windows-sysprep" | "windows_sysprep" | "sysprep" => {
+                    crate::cli::plan::cutover_prep::windows_sysprep_plan(vm_disk, hostname, true)
                 }
                 _ => unreachable!(),
             };

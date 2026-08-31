@@ -13,6 +13,8 @@
 pub mod apply;
 #[cfg(not(target_os = "windows"))]
 pub mod command;
+#[cfg(not(target_os = "windows"))]
+pub mod cutover_prep;
 pub mod export;
 #[cfg(not(target_os = "windows"))]
 pub mod firstboot_stage;
