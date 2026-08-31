@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`virtctl-guestkit guestfs`** — drop-in for `virtctl guestfs`. Creates a
+  short-lived GuestKit pod on a PVC (`/disk` or `/dev/vda`), no libguestfs
+  appliance. Also `inspect` / `doctor --vm` / `rescue`. Uses `kubectl` (no new
+  crate deps). Docs: [virtctl-guestkit.md](../features/virtctl-guestkit.md).
 - **Cutover bundle** — `gate`, `selinux-relabel`, `sysprep`, `bitlocker`,
   `cloud-profile`, `policy rego`, `virtio-initramfs`, `agent-sign`;
   virtctl `resolve`/`gate` (hostDisk only).
