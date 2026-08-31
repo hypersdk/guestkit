@@ -2,8 +2,10 @@
 //! Policy-based validation module
 
 pub mod benchmarks;
+pub mod cloud_profiles;
 pub mod expr;
 pub mod policy;
+pub mod rego;
 pub mod rules;
 
 use crate::Guestfs;

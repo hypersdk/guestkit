@@ -1847,6 +1847,21 @@ enum Commands {
         action: PolicyAction,
     },
 
+    /// Print or export a cloud cutover profile (aws/azure/gcp/openstack)
+    #[command(name = "cloud-profile")]
+    CloudProfile {
+        /// aws, azure, gcp, openstack
+        target: String,
+        /// Write the Policy YAML
+        #[arg(short, long)]
+        export: Option<PathBuf>,
+        /// Also run `policy check` against this disk
+        #[arg(long)]
+        image: Option<PathBuf>,
+        #[arg(long)]
+        strict: bool,
+    },
+
     /// Fleet-wide VM analysis
     Fleet {
         #[command(subcommand)]
@@ -1993,6 +2008,25 @@ enum Commands {
         /// Write JSON report to FILE (stdout if omitted)
         #[arg(short, long, value_name = "FILE")]
         output: Option<PathBuf>,
+    },
+
+    /// Offline cloud-init datasource + NoCloud seed
+    #[command(name = "cloud-init")]
+    CloudInit {
+        /// aws/ec2, azure, gcp/gce, openstack, nocloud
+        target: String,
+        image: PathBuf,
+        #[arg(long, value_name = "FILE")]
+        user_data: Option<PathBuf>,
+        #[arg(long, value_name = "FILE")]
+        meta_data: Option<PathBuf>,
+        #[arg(long)]
+        instance_id: Option<String>,
+        /// Write network: {config: disabled}
+        #[arg(long)]
+        disable_network: bool,
+        #[arg(short, long)]
+        export: Option<PathBuf>,
     },
 
     /// Forensic diff with security drift scoring
@@ -2165,6 +2199,21 @@ enum PolicyAction {
         /// Fail on any validation failure
         #[arg(long)]
         strict: bool,
+    },
+
+    /// Evaluate a Rego deny-policy against passport/facts JSON
+    Rego {
+        /// Rego source (default policies/cutover.rego if present)
+        #[arg(long, value_name = "FILE")]
+        rego: PathBuf,
+        /// Input JSON (passport.json or policy facts)
+        #[arg(long, value_name = "FILE")]
+        input: PathBuf,
+        #[arg(short, long, value_name = "FORMAT", default_value = "text")]
+        output: String,
+        /// Exit 1 when any deny fired
+        #[arg(long)]
+        fail: bool,
     },
 }
 
@@ -3831,6 +3880,37 @@ pub fn run() -> anyhow::Result<()> {
             mcp_serve_command(&image, &target, cli.verbose)?;
         }
 
+        Commands::CloudProfile {
+            target,
+            export,
+            image,
+            strict,
+        } => {
+            let profile = crate::cli::validate::cloud_profiles::CloudProfile::parse(&target)
+                .ok_or_else(|| {
+                    anyhow::anyhow!("unknown cloud profile '{target}' (aws|azure|gcp|openstack)")
+                })?;
+            let policy = profile.to_policy();
+            if let Some(path) = export {
+                std::fs::write(&path, serde_yaml::to_string(&policy)?)?;
+                println!("wrote {} profile to {}", profile.name(), path.display());
+            } else {
+                println!("{}", serde_yaml::to_string(&policy)?);
+            }
+            if let Some(img) = image {
+                policy_check_command(
+                    &img,
+                    None,
+                    Some(profile.name().to_string()),
+                    false,
+                    "text",
+                    None,
+                    strict,
+                    cli.verbose,
+                )?;
+            }
+        }
+
         Commands::Policy { action } => match action {
             PolicyAction::Check {
                 image,
@@ -3851,6 +3931,31 @@ pub fn run() -> anyhow::Result<()> {
                     strict,
                     cli.verbose,
                 )?;
+            }
+            PolicyAction::Rego {
+                rego,
+                input,
+                output,
+                fail,
+            } => {
+                let raw = std::fs::read_to_string(&input)
+                    .with_context(|| format!("read {}", input.display()))?;
+                let facts = crate::cli::validate::rego::facts_from_passport_json(&raw)?;
+                let report = crate::cli::validate::rego::eval_file(&rego, &facts)?;
+                if output == "json" {
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                } else {
+                    println!(
+                        "rego {} engine={} allowed={}",
+                        report.package, report.engine, report.allowed
+                    );
+                    for d in &report.denies {
+                        println!("  deny: {d}");
+                    }
+                }
+                if fail && !report.allowed {
+                    anyhow::bail!("{} deny rule(s) fired", report.denies.len());
+                }
             }
         },
 
@@ -4169,6 +4274,47 @@ pub fn run() -> anyhow::Result<()> {
             output,
             verbose: cli.verbose,
         })?,
+
+        Commands::CloudInit {
+            target,
+            image,
+            user_data,
+            meta_data,
+            instance_id,
+            disable_network,
+            export,
+        } => {
+            let ds = crate::cli::plan::cloud_init::Datasource::parse(&target).ok_or_else(|| {
+                anyhow::anyhow!("unknown datasource '{target}' (aws|azure|gcp|openstack|nocloud)")
+            })?;
+            let ud = user_data
+                .as_ref()
+                .map(|p| std::fs::read_to_string(p))
+                .transpose()?;
+            let md = meta_data
+                .as_ref()
+                .map(|p| std::fs::read_to_string(p))
+                .transpose()?;
+            let plan = crate::cli::plan::cloud_init::cloud_init_plan(
+                crate::cli::plan::cloud_init::CloudInitOpts {
+                    vm: &image.display().to_string(),
+                    ds,
+                    user_data: ud.as_deref(),
+                    meta_data: md.as_deref(),
+                    disable_network,
+                    instance_id: instance_id.as_deref(),
+                },
+            );
+            let dest = export.unwrap_or_else(|| image.with_extension("cloud-init.yaml"));
+            std::fs::write(&dest, serde_yaml::to_string(&plan)?)?;
+            println!(
+                "wrote {} ({} ops). apply: guestkit plan apply {} --vm {} --yes",
+                dest.display(),
+                plan.operations.len(),
+                dest.display(),
+                image.display()
+            );
+        }
 
         Commands::ForensicDiff {
             old,

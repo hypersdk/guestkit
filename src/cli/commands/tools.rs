@@ -300,9 +300,16 @@ pub fn validate_command(
         if verbose {
             println!("📋 Using benchmark: {}", bench);
         }
-        let benchmark_type = Benchmark::from_str(&bench)
-            .ok_or_else(|| anyhow::anyhow!("Unknown benchmark: {}", bench))?;
-        benchmark_type.to_policy()
+        if let Some(c) = crate::cli::validate::cloud_profiles::CloudProfile::parse(&bench) {
+            c.to_policy()
+        } else {
+            let benchmark_type = Benchmark::from_str(&bench).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Unknown benchmark: {bench} (try cis-ubuntu, aws, azure, gcp, openstack)"
+                )
+            })?;
+            benchmark_type.to_policy()
+        }
     } else {
         // Use example policy as default
         if verbose {
