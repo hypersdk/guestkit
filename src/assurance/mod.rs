@@ -439,3 +439,84 @@ pub fn run_repair_plan(image: &Path, options: &RepairOptions) -> Result<RepairPl
         },
     })
 }
+
+/// Options for hypervisor-aware migration repair (`migrate-repair`).
+#[derive(Debug, Clone, Default)]
+pub struct MigrateRepairOptions {
+    pub apply: bool,
+    pub include_destructive: bool,
+    pub virtio_win_dir: Option<std::path::PathBuf>,
+    pub verbose: bool,
+}
+
+/// Result of `run_migrate_repair`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MigrateRepairResult {
+    pub dry_run: bool,
+    pub applied: bool,
+    pub assessment_score: f64,
+    pub fix_plan: FixPlan,
+    pub notes: Vec<String>,
+    pub message: String,
+}
+
+/// Generate or apply a hypervisor-aware migration repair plan.
+pub fn run_migrate_repair(
+    image: &Path,
+    target: &str,
+    options: &MigrateRepairOptions,
+) -> Result<MigrateRepairResult> {
+    use crate::cli::plan::PlanApplicator;
+    use crate::migration::{MigrationRepairPlanner, RepairOptions as MigRepairOptions};
+
+    let (evidence, assessment) = run_migrate_assess(image, target, options.verbose)?;
+    let (plan, notes) = MigrationRepairPlanner::from_assessment(
+        &assessment,
+        &evidence,
+        &MigRepairOptions {
+            include_destructive: options.include_destructive,
+            virtio_win_dir: options.virtio_win_dir.clone(),
+        },
+    );
+
+    if plan.operations.is_empty() {
+        return Ok(MigrateRepairResult {
+            dry_run: !options.apply,
+            applied: false,
+            assessment_score: assessment.overall_score,
+            fix_plan: plan,
+            notes,
+            message: format!(
+                "No automated repairs required (score {:.0}).",
+                assessment.overall_score
+            ),
+        });
+    }
+
+    if !options.apply {
+        let op_count = plan.operations.len();
+        return Ok(MigrateRepairResult {
+            dry_run: true,
+            applied: false,
+            assessment_score: assessment.overall_score,
+            fix_plan: plan,
+            notes,
+            message: format!("Dry run — {op_count} operation(s) would be applied."),
+        });
+    }
+
+    let applicator = PlanApplicator::new(image.display().to_string(), false);
+    let result = applicator.apply(&plan)?;
+    if !result.success {
+        anyhow::bail!("repair plan apply failed: {}", result.message);
+    }
+
+    Ok(MigrateRepairResult {
+        dry_run: false,
+        applied: true,
+        assessment_score: assessment.overall_score,
+        fix_plan: plan,
+        notes,
+        message: result.message,
+    })
+}

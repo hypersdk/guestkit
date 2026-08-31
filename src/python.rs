@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 #[cfg(feature = "python-bindings")]
 use crate::converters::DiskConverter as RustDiskConverter;
 #[cfg(feature = "python-bindings")]
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Convert a guestkit error to an appropriate Python exception type
 #[cfg(feature = "python-bindings")]
@@ -4188,6 +4188,127 @@ impl AsyncGuestfs {
 }
 */
 
+/// Serialize a Rust value to a Python dict via JSON round-trip.
+#[cfg(feature = "python-bindings")]
+fn serde_to_py<T: serde::Serialize>(py: Python<'_>, value: &T) -> PyResult<Py<PyAny>> {
+    let json_str = serde_json::to_string(value).map_err(to_pyerr_generic)?;
+    let json_module = py.import("json")?;
+    let loads = json_module.getattr("loads")?;
+    Ok(loads.call1((json_str,))?.into())
+}
+
+/// Run bootability doctor on an offline disk image.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", explain = false, verbose = false))]
+fn run_doctor(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    explain: bool,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
+    let result = crate::assurance::run_doctor(
+        Path::new(&image),
+        target,
+        explain,
+        verbose,
+    )
+    .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Run boot inspect summary on an offline disk image.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", verbose = false))]
+fn run_boot_inspect(py: Python<'_>, image: String, target: &str, verbose: bool) -> PyResult<Py<PyAny>> {
+    let result = crate::assurance::run_boot_inspect(Path::new(&image), target, verbose)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate a hypervisor-aware migration plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", explain = false, verbose = false, export_fix_plan = false))]
+fn run_migrate_plan(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    explain: bool,
+    verbose: bool,
+    export_fix_plan: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::MigratePlanOptions {
+        explain,
+        verbose,
+        export_fix_plan,
+        inject_agent: false,
+        #[cfg(feature = "agent")]
+        agent_binary: None,
+        #[cfg(feature = "agent")]
+        agent_unit: None,
+    };
+    let result = crate::assurance::run_migrate_plan(Path::new(&image), target, &options)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate or apply a boot repair plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, dry_run = true, verbose = false, fix_cloud_init_network = false, validate_fstab = false))]
+fn run_repair_plan(
+    py: Python<'_>,
+    image: String,
+    dry_run: bool,
+    verbose: bool,
+    fix_cloud_init_network: bool,
+    validate_fstab: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::RepairOptions {
+        dry_run,
+        verbose,
+        inject_agent: false,
+        inject_qga: false,
+        enable_systemd: false,
+        fix_cloud_init_network,
+        validate_fstab,
+        #[cfg(feature = "agent")]
+        agent_binary: None,
+        #[cfg(feature = "agent")]
+        agent_unit: None,
+    };
+    let result = crate::assurance::run_repair_plan(Path::new(&image), &options)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
+/// Generate or apply a hypervisor-aware migration repair plan.
+#[cfg(feature = "python-bindings")]
+#[pyfunction]
+#[pyo3(signature = (image, target = "kvm", apply = false, include_destructive = false, virtio_win = None, verbose = false))]
+fn run_migrate_repair(
+    py: Python<'_>,
+    image: String,
+    target: &str,
+    apply: bool,
+    include_destructive: bool,
+    virtio_win: Option<String>,
+    verbose: bool,
+) -> PyResult<Py<PyAny>> {
+    let options = crate::assurance::MigrateRepairOptions {
+        apply,
+        include_destructive,
+        virtio_win_dir: virtio_win.map(PathBuf::from),
+        verbose,
+    };
+    let result = crate::assurance::run_migrate_repair(Path::new(&image), target, &options)
+        .map_err(to_pyerr_generic)?;
+    serde_to_py(py, &result)
+}
+
 /// Python module definition
 #[cfg(feature = "python-bindings")]
 #[pymodule]
@@ -4196,6 +4317,11 @@ fn guestkit(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
     // m.add_class::<AsyncGuestfs>()?;  // Blocked on pyo3-asyncio PyO3 0.22+ support
     m.add_class::<DiskConverter>()?;
     m.add_class::<LvmCloner>()?;
+    m.add_function(wrap_pyfunction!(run_doctor, m)?)?;
+    m.add_function(wrap_pyfunction!(run_boot_inspect, m)?)?;
+    m.add_function(wrap_pyfunction!(run_migrate_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(run_repair_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(run_migrate_repair, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

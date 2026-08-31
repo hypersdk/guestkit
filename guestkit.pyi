@@ -519,3 +519,41 @@ class AsyncGuestfs:
         """
         ...
 '''
+
+def run_doctor(
+    image: str,
+    target: str = "kvm",
+    explain: bool = False,
+    verbose: bool = False,
+) -> Dict[str, Any]: ...
+
+def run_boot_inspect(
+    image: str,
+    target: str = "kvm",
+    verbose: bool = False,
+) -> Dict[str, Any]: ...
+
+def run_migrate_plan(
+    image: str,
+    target: str = "kvm",
+    explain: bool = False,
+    verbose: bool = False,
+    export_fix_plan: bool = False,
+) -> Dict[str, Any]: ...
+
+def run_repair_plan(
+    image: str,
+    dry_run: bool = True,
+    verbose: bool = False,
+    fix_cloud_init_network: bool = False,
+    validate_fstab: bool = False,
+) -> Dict[str, Any]: ...
+
+def run_migrate_repair(
+    image: str,
+    target: str = "kvm",
+    apply: bool = False,
+    include_destructive: bool = False,
+    virtio_win: Optional[str] = None,
+    verbose: bool = False,
+) -> Dict[str, Any]: ...
