@@ -573,6 +573,13 @@ impl PlanCommand {
                 | "windows_dns"
                 | "dns"
                 | "set-dns"
+                | "cloud-init-aws"
+                | "cloud-init-ec2"
+                | "cloud-init-azure"
+                | "cloud-init-gcp"
+                | "cloud-init-gce"
+                | "cloud-init-openstack"
+                | "cloud-init-nocloud"
         ) {
             if !Path::new(vm_disk).exists() {
                 anyhow::bail!("VM disk not found: {vm_disk}");
@@ -625,6 +632,60 @@ impl PlanCommand {
                         dns.ok_or_else(|| anyhow::anyhow!("--dns is required for windows-dns"))?;
                     generator.windows_dns_plan(guid, servers)?
                 }
+                "cloud-init-aws" | "cloud-init-ec2" => {
+                    crate::cli::plan::cloud_init::cloud_init_plan(
+                        crate::cli::plan::cloud_init::CloudInitOpts {
+                            vm: vm_disk,
+                            ds: crate::cli::plan::cloud_init::Datasource::Ec2,
+                            user_data: None,
+                            meta_data: None,
+                            disable_network: false,
+                            instance_id: None,
+                        },
+                    )
+                }
+                "cloud-init-azure" => crate::cli::plan::cloud_init::cloud_init_plan(
+                    crate::cli::plan::cloud_init::CloudInitOpts {
+                        vm: vm_disk,
+                        ds: crate::cli::plan::cloud_init::Datasource::Azure,
+                        user_data: None,
+                        meta_data: None,
+                        disable_network: false,
+                        instance_id: None,
+                    },
+                ),
+                "cloud-init-gcp" | "cloud-init-gce" => {
+                    crate::cli::plan::cloud_init::cloud_init_plan(
+                        crate::cli::plan::cloud_init::CloudInitOpts {
+                            vm: vm_disk,
+                            ds: crate::cli::plan::cloud_init::Datasource::Gce,
+                            user_data: None,
+                            meta_data: None,
+                            disable_network: false,
+                            instance_id: None,
+                        },
+                    )
+                }
+                "cloud-init-openstack" => crate::cli::plan::cloud_init::cloud_init_plan(
+                    crate::cli::plan::cloud_init::CloudInitOpts {
+                        vm: vm_disk,
+                        ds: crate::cli::plan::cloud_init::Datasource::OpenStack,
+                        user_data: None,
+                        meta_data: None,
+                        disable_network: false,
+                        instance_id: None,
+                    },
+                ),
+                "cloud-init-nocloud" => crate::cli::plan::cloud_init::cloud_init_plan(
+                    crate::cli::plan::cloud_init::CloudInitOpts {
+                        vm: vm_disk,
+                        ds: crate::cli::plan::cloud_init::Datasource::NoCloud,
+                        user_data: None,
+                        meta_data: None,
+                        disable_network: false,
+                        instance_id: hostname,
+                    },
+                ),
                 _ => unreachable!(),
             };
             Self::write_plan_file(output, format, &plan)?;

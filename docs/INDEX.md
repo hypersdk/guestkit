@@ -36,6 +36,8 @@ Operator cheat sheets (cutover cookbook, day-0/rescue, Passport, env vars): **[G
 | [Dump virsh](user-guides/virsh-to-guestkit.md) | Command map: QGA / inspect / doctor replace virsh; lifecycle stays virtctl/Machina |
 | [img / firstboot / virtio-win](user-guides/img-firstboot.md) | qemu-img wrapper, domain disk parse, virtio-win plan, first-boot gate |
 | [Rescue / SBOM CI](devops/10-rescue-sbom-ci.md) | Rescue dry-run Action, `sbom-diff`, forensic-diff SBOM attach |
+| [Cloud profiles / Rego](user-guides/cloud-policy-rego.md) | AWS/Azure/GCP/OpenStack policy packs + `policy rego` |
+| [Cloud-init datasource](user-guides/cloud-init.md) | Offline Ec2/Azure/GCE/NoCloud pin + seed |
 
 ## Deployment
 

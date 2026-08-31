@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cloud cutover profiles** — `guestkit cloud-profile aws|azure|gcp|openstack`
+  and `policy check -b aws`. cloud-init + boot-score rules, no cloud API calls.
+- **`guestkit policy rego`** — in-process `deny[msg]` subset (+ optional `opa eval`).
+  Example: `policies/cutover.rego`.
+- **`guestkit cloud-init`** — offline datasource pin (`aws`/`azure`/`gcp`/`openstack`/`nocloud`)
+  plus optional NoCloud user-data/meta-data seed. Also
+  `plan generate -p cloud-init-aws`. Closes the migrate-plan "reconfigure
+  datasource" item with a real FileWrite plan.
 - **`guestkit sbom-diff`** — compare SPDX, CycloneDX, or GuestKit inventory
   JSON; `--fail-on-drift` for CI. `forensic-diff` accepts `--sbom-old/--sbom-new`.
 - **Passport Action extras** — optional rescue dry-run (`--export-plan`), SPDX
