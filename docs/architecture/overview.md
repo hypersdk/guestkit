@@ -1,4 +1,4 @@
-# GuestKit architecture (v1.0.1)
+# GuestKit architecture (v1.1.0)
 
 Offline VM intelligence and migration assurance — **Rust control plane** with host block-device access for mount-heavy operations.
 
@@ -66,7 +66,7 @@ Evidence is cached under `~/.cache/guestkit/` after successful `doctor` runs.
 
 Root `Cargo.toml` workspace includes the main package and `guestkit-job-spec`. `zyvor-api` and `guestkit-worker` build as sibling crates with path dependencies (see each crate `Cargo.toml`).
 
-**Version:** 1.0.1 (package) · **License:** Apache-2.0 · **Owner:** ZyvorAI Labs Private Limited
+**Version:** 1.1.0 (package) · **License:** Apache-2.0 · **Owner:** ZyvorAI Labs Private Limited
 
 ## Security model (web stack)
 

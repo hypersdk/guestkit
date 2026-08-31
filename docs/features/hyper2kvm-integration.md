@@ -47,10 +47,12 @@ guestkit_client.migrate_repair(path, target="kvm", apply=True)
 
 ```bash
 pip install 'hypersdk-guestkit>=1.1.0'
-pip install 'h2kvm[full]'
+# h2kvm 1.1.0 — GitHub Release wheel (PyPI pending)
+pip install https://github.com/zyvorai/h2kvm/releases/download/v1.1.0/h2kvm-1.1.0-py3-none-any.whl
+# or: cd h2kvm && pip install '.[full]'
 ```
 
-If 1.1.0 is not on PyPI yet, build from source:
+Development wheels from a GuestKit checkout:
 
 ```bash
 cd guestkit

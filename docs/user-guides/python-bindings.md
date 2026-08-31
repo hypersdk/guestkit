@@ -29,8 +29,6 @@ Python bindings for GuestKit — pure-Rust offline disk inspection, assurance sc
 pip install "hypersdk-guestkit>=1.1.0"
 ```
 
-If 1.1.0 is not yet published, build from source (below).
-
 ### Verify
 
 ```python

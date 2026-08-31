@@ -76,7 +76,7 @@ Prefer `import guestkit` for new code. The wrapper remains for backward compatib
 # GuestKit CLI
 GUESTKIT_ZYVOR_ACCEPT=1 ./scripts/deploy-remote.sh HOST user --quick --key
 
-# h2kvm (installs hypersdk-guestkit when on PyPI)
+# h2kvm (pip installs hypersdk-guestkit>=1.1.0 from PyPI)
 cd /path/to/h2kvm
 ./scripts/deploy-remote.sh HOST user --keep-sources
 ```

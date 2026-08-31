@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Python package remains **`hypersdk-guestkit`** on PyPI; wheel artifact: `hypersdk_guestkit-*.whl`
 - Assurance APIs return structured `dict` results matching CLI JSON output
+- **Published:** PyPI [`hypersdk-guestkit==1.1.0`](https://pypi.org/project/hypersdk-guestkit/1.1.0/), GitHub Release binaries, crates.io
 
 ### Fixed
 - Python 3.13+ builds: document `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` for maturin when needed
