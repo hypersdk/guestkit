@@ -21,7 +21,24 @@ def test_import_guestkit():
     import guestkit
     assert guestkit is not None
     assert hasattr(guestkit, '__version__')
-    assert guestkit.__version__ == '0.3.0'
+    # Version comes from CARGO_PKG_VERSION (currently 1.1.0)
+    parts = guestkit.__version__.split('.')
+    assert len(parts) == 3
+    assert int(parts[0]) >= 1
+
+
+def test_assurance_api_exports():
+    """v1.1.0+ assurance bindings used by h2kvm offline fixer."""
+    import guestkit
+    for name in (
+        'run_doctor',
+        'run_boot_inspect',
+        'run_migrate_plan',
+        'run_repair_plan',
+        'run_migrate_repair',
+    ):
+        assert hasattr(guestkit, name), f"missing guestkit.{name}"
+        assert callable(getattr(guestkit, name))
 
 
 def test_import_classes():
@@ -134,6 +151,8 @@ class TestWithDiskImage:
     These tests will be skipped if GUESTKIT_TEST_IMAGE environment
     variable is not set.
     """
+
+    pytestmark = pytest.mark.requires_image
 
     @pytest.fixture
     def disk_image(self):

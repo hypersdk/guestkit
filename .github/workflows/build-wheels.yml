@@ -125,6 +125,15 @@ jobs:
           python -c "from guestkit import Guestfs; print('✓ Guestfs imported successfully')"
           python -c "from guestkit import DiskConverter; print('✓ DiskConverter imported successfully')"
 
+      - name: Test assurance APIs (v1.1.0+)
+        run: |
+          python -c "
+          import guestkit
+          for fn in ('run_doctor','run_boot_inspect','run_migrate_plan','run_repair_plan','run_migrate_repair'):
+              assert hasattr(guestkit, fn), fn
+          print('✓ assurance APIs present')
+          "
+
       - name: Test context manager
         run: |
           python -c "from guestkit import Guestfs; g = Guestfs(); print('✓ Guestfs instantiated')"
