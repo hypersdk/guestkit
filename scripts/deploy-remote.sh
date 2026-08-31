@@ -419,6 +419,18 @@ if [ -z "${GUESTKIT_BUILD_FEATURES:-}" ]; then
 fi
 bash scripts/build-linux-release.sh 2>&1 | tail -8
 $SUDO install -m755 target/release/guestkit /usr/local/bin/guestkit
+# Companion CLIs built from the same workspace (optional if a target was skipped).
+for bin in virtctl-guestkit kubectl-guestkit guestkit-qemu; do
+    if [ -x "target/release/${bin}" ]; then
+        $SUDO install -m755 "target/release/${bin}" "/usr/local/bin/${bin}"
+        echo "Installed: ${bin}"
+    fi
+done
+# Runtime dirs for `guestkit vm` (definitions + QMP/pid sockets).
+$SUDO mkdir -p /var/lib/guestkit/vms /run/guestkit/vms
+if [ "$(id -u)" -ne 0 ]; then
+    $SUDO chown -R "$(id -u):$(id -g)" /var/lib/guestkit /run/guestkit 2>/dev/null || true
+fi
 echo "Installed: $(guestkit --version 2>/dev/null || echo ok)"
 REMOTE
 }
@@ -429,6 +441,15 @@ set -e
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 $SUDO install -m755 "${REMOTE_STAGING}/bin/guestkit" /usr/local/bin/guestkit
+for bin in virtctl-guestkit kubectl-guestkit guestkit-qemu; do
+    if [ -x "${REMOTE_STAGING}/bin/${bin}" ]; then
+        $SUDO install -m755 "${REMOTE_STAGING}/bin/${bin}" "/usr/local/bin/${bin}"
+    fi
+done
+$SUDO mkdir -p /var/lib/guestkit/vms /run/guestkit/vms
+if [ "$(id -u)" -ne 0 ]; then
+    $SUDO chown -R "$(id -u):$(id -g)" /var/lib/guestkit /run/guestkit 2>/dev/null || true
+fi
 echo "Installed: $(guestkit --version 2>/dev/null || echo ok)"
 REMOTE
 }
@@ -453,7 +474,8 @@ do_uninstall() {
 set -e
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
-$SUDO rm -f /usr/local/bin/guestkit
+$SUDO rm -f /usr/local/bin/guestkit /usr/local/bin/virtctl-guestkit \
+    /usr/local/bin/kubectl-guestkit /usr/local/bin/guestkit-qemu
 rm -rf "${REMOTE_STAGING}"
 $SUDO rm -rf /var/cache/guestkit 2>/dev/null || true
 echo "guestkit removed"

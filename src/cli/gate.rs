@@ -40,7 +40,7 @@ pub fn run(args: GateArgs) -> Result<GateReport> {
 
     if passport_path.is_none() {
         if let Some(image) = &args.image {
-            let tmp = image.with_extension("gate-passport.json");
+            let tmp = writable_gate_passport_path(image)?;
             crate::cli::commands::assurance::passport_emit_command(
                 image,
                 &args.target,
@@ -127,6 +127,71 @@ pub fn print(r: &GateReport) {
     );
     for d in &r.denies {
         println!("  deny: {d}");
+    }
+}
+
+/// Prefer `<image>.gate-passport.json` beside the disk; if that directory is not
+/// writable (common for `/var/lib/libvirt/images`), fall back to `$TMPDIR`.
+fn writable_gate_passport_path(image: &std::path::Path) -> Result<PathBuf> {
+    let sibling = image.with_extension("gate-passport.json");
+    if let Some(parent) = sibling.parent() {
+        let probe = parent.join(format!(
+            ".guestkit-gate-write-probe-{}",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&probe)
+        {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&probe);
+                return Ok(sibling);
+            }
+            Err(_) => {
+                let _ = std::fs::remove_file(&probe);
+            }
+        }
+    }
+    let stem = image
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("disk");
+    let mut tmp = std::env::temp_dir();
+    tmp.push(format!(
+        "guestkit-gate-{}-{}.passport.json",
+        stem,
+        std::process::id()
+    ));
+    Ok(tmp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gate_passport_falls_back_when_image_dir_not_writable() {
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("disk.qcow2");
+        std::fs::write(&image, b"x").unwrap();
+        // Make the directory non-writable for the current user when possible.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(dir.path()).unwrap().permissions();
+            perms.set_mode(0o555);
+            std::fs::set_permissions(dir.path(), perms).unwrap();
+            let path = writable_gate_passport_path(&image).unwrap();
+            assert!(
+                path.starts_with(std::env::temp_dir()),
+                "expected temp fallback, got {}",
+                path.display()
+            );
+            let mut perms = std::fs::metadata(dir.path()).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(dir.path(), perms).unwrap();
+        }
     }
 }
 
