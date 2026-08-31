@@ -431,6 +431,15 @@ $SUDO mkdir -p /var/lib/guestkit/vms /run/guestkit/vms
 if [ "$(id -u)" -ne 0 ]; then
     $SUDO chown -R "$(id -u):$(id -g)" /var/lib/guestkit /run/guestkit 2>/dev/null || true
 fi
+# Persist /run/guestkit across reboot (tmpfs).
+OWNER_USER="$(id -un)"
+OWNER_GROUP="$(id -gn)"
+$SUDO tee /etc/tmpfiles.d/guestkit.conf >/dev/null <<EOF
+d /run/guestkit 0755 ${OWNER_USER} ${OWNER_GROUP} -
+d /run/guestkit/vms 0755 ${OWNER_USER} ${OWNER_GROUP} -
+d /var/lib/guestkit/vms 0755 ${OWNER_USER} ${OWNER_GROUP} -
+EOF
+$SUDO systemd-tmpfiles --create /etc/tmpfiles.d/guestkit.conf 2>/dev/null || true
 echo "Installed: $(guestkit --version 2>/dev/null || echo ok)"
 REMOTE
 }
@@ -450,6 +459,14 @@ $SUDO mkdir -p /var/lib/guestkit/vms /run/guestkit/vms
 if [ "$(id -u)" -ne 0 ]; then
     $SUDO chown -R "$(id -u):$(id -g)" /var/lib/guestkit /run/guestkit 2>/dev/null || true
 fi
+OWNER_USER="$(id -un)"
+OWNER_GROUP="$(id -gn)"
+$SUDO tee /etc/tmpfiles.d/guestkit.conf >/dev/null <<EOF
+d /run/guestkit 0755 ${OWNER_USER} ${OWNER_GROUP} -
+d /run/guestkit/vms 0755 ${OWNER_USER} ${OWNER_GROUP} -
+d /var/lib/guestkit/vms 0755 ${OWNER_USER} ${OWNER_GROUP} -
+EOF
+$SUDO systemd-tmpfiles --create /etc/tmpfiles.d/guestkit.conf 2>/dev/null || true
 echo "Installed: $(guestkit --version 2>/dev/null || echo ok)"
 REMOTE
 }

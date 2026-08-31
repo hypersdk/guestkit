@@ -1178,8 +1178,19 @@ impl Guestfs {
     pub fn inspect_vm_tools(&mut self, root: &str) -> Result<Vec<String>> {
         self.with_mount(root, |guestfs| {
             let mut tools = Vec::new();
-            // VMware Tools
-            if guestfs
+            // open-vm-tools (OSS) ships vmware-toolbox-cmd too. Prefer the OSS
+            // markers so Ubuntu cloud images are not flagged as proprietary
+            // VMware Tools remnants (BOOT-006 / BOOT-010 false positives).
+            let has_open_vm = guestfs.exists("/usr/bin/vmtoolsd").unwrap_or(false)
+                || guestfs
+                    .exists("/lib/systemd/system/open-vm-tools.service")
+                    .unwrap_or(false)
+                || guestfs
+                    .exists("/usr/lib/systemd/system/open-vm-tools.service")
+                    .unwrap_or(false);
+            if has_open_vm {
+                tools.push("open-vm-tools".to_string());
+            } else if guestfs
                 .exists("/usr/bin/vmware-toolbox-cmd")
                 .unwrap_or(false)
                 || guestfs.exists("/etc/vmware-tools").unwrap_or(false)
