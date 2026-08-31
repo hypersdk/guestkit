@@ -190,6 +190,10 @@ name = "guestctl"
 path = "src/bin/guestctl.rs"
 
 [[bin]]
+name = "guestkit-qemu"
+path = "src/bin/guestkit-qemu.rs"
+
+[[bin]]
 name = "zyvor-guest-agent"
 path = "src/bin/zyvor-guest-agent.rs"
 required-features = ["agent"]

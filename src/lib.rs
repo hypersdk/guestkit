@@ -66,6 +66,8 @@ pub mod guestfs;
 #[cfg(not(target_os = "windows"))]
 pub mod inference;
 #[cfg(not(target_os = "windows"))]
+pub mod qemu;
+#[cfg(not(target_os = "windows"))]
 pub mod storage;
 
 #[cfg(feature = "agent")]
