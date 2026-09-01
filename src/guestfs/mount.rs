@@ -262,6 +262,53 @@ impl Guestfs {
         Ok(())
     }
 
+    /// Upgrade an already-mounted filesystem to read-write via `mount -o
+    /// remount,rw`.
+    ///
+    /// `inspect_get_mountpoints()` mounts the guest root read-only (just to
+    /// read `/etc/fstab`) and deliberately leaves it mounted so a caller's
+    /// later mount loop can detect it via the `already_mounted` error —
+    /// but `mount()`/`mount_options()`/`mount_vfs()` used to treat that
+    /// error as "nothing to do" and return `Ok(())`, leaving root read-only
+    /// for the rest of the session even though the caller asked for
+    /// read-write. Found live: injecting the guest-agent token into a fresh
+    /// Ubuntu 24.04 image failed mounting `LABEL=UEFI` at `/boot/efi` with
+    /// "Read-only file system" — `mkdir` for that never-before-created
+    /// directory ran against a root still mounted read-only from
+    /// inspection.
+    fn remount_rw(&mut self, mountable: &str) -> Result<()> {
+        let resolved = self.resolve_mountable(mountable)?;
+        let mountpoint = self.mounted.get(&resolved).cloned().ok_or_else(|| {
+            Error::InvalidState(format!(
+                "already_mounted but no recorded mountpoint for {resolved}"
+            ))
+        })?;
+
+        let mut cmd = if need_sudo() {
+            let mut sudo_cmd = Command::new("sudo");
+            sudo_cmd.arg("mount");
+            sudo_cmd
+        } else {
+            Command::new("mount")
+        };
+
+        let output = cmd
+            .args(["-o", "remount,rw"])
+            .arg(&mountpoint)
+            .output()
+            .map_err(|e| Error::CommandFailed(format!("Failed to execute mount: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(Error::CommandFailed(format!(
+                "remount rw of {} failed: {}. You may need sudo/root permissions.",
+                mountpoint, stderr
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Mount a filesystem read-write
     ///
     pub fn mount(&mut self, mountable: &str, mountpoint: &str) -> Result<()> {
@@ -281,7 +328,9 @@ impl Guestfs {
         let (mountable, device_partition, actual_mountpoint) =
             match self.prepare_mount(mountable, mountpoint) {
                 Ok(v) => v,
-                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) if e.to_string().contains("already_mounted") => {
+                    return self.remount_rw(mountable);
+                }
                 Err(e) => return Err(e),
             };
 
@@ -356,10 +405,13 @@ impl Guestfs {
             }
         }
 
+        let requests_ro = options.split(',').any(|o| o.trim() == "ro");
         let (mountable, device_partition, actual_mountpoint) =
             match self.prepare_mount(mountable, mountpoint) {
                 Ok(v) => v,
-                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) if e.to_string().contains("already_mounted") => {
+                    return if requests_ro { Ok(()) } else { self.remount_rw(mountable) };
+                }
                 Err(e) => return Err(e),
             };
 
@@ -454,10 +506,13 @@ impl Guestfs {
             }
         }
 
+        let requests_ro = options.split(',').any(|o| o.trim() == "ro");
         let (mountable, device_partition, actual_mountpoint) =
             match self.prepare_mount(mountable, mountpoint) {
                 Ok(v) => v,
-                Err(e) if e.to_string().contains("already_mounted") => return Ok(()),
+                Err(e) if e.to_string().contains("already_mounted") => {
+                    return if requests_ro { Ok(()) } else { self.remount_rw(mountable) };
+                }
                 Err(e) => return Err(e),
             };
 
