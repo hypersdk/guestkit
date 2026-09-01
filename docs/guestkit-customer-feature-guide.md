@@ -143,12 +143,12 @@ _Audit posture, hunt for compromise, and prove compliance - all from the offline
   - **How:** CLI: `guestkit secrets vm.qcow2` sweeps the offline disk for exposed credentials and keys.
 - **Malware & rootkit detection** — guestkit malware scans for rootkits and known-bad artifacts offline, where in-guest malware can't hide from the scanner. — _Inspect a suspect image without executing it._
   - **How:** CLI: `guestkit malware vm.qcow2` scans for rootkits and known-bad artifacts without executing the image.
-- **CVE & patch analysis** — guestkit cve maps installed packages to known vulnerabilities and missing security patches. — _See the VM's exposure without a live agent._
-  - **How:** CLI: `guestkit cve vm.qcow2` maps installed packages to known vulnerabilities and missing patches.
+- **CVE & patch analysis** — guestkit patch --check-cves maps installed packages to known vulnerabilities and missing security patches. — _See the VM's exposure without a live agent._
+  - **How:** CLI: `guestkit patch vm.qcow2 --check-cves` (or `guestkit inventory vm.qcow2 --include-cves`) maps installed packages to known vulnerabilities and missing patches.
 - **Compliance checking** — guestkit compliance and audit evaluate images against security standards with detailed reporting. — _Turn every VM into an audit artifact._
   - **How:** CLI: `guestkit compliance vm.qcow2` (or `guestkit audit vm.qcow2`) evaluates the image against security standards with a detailed report.
-- **Threat hunting & IOC** — guestkit threat-intel, hunt, and anomaly correlate indicators, detect anomalies, and surface suspicious persistence offline. — _Forensic triage on a dead disk, safely._
-  - **How:** CLI: `guestkit threat-intel vm.qcow2`, `guestkit hunt vm.qcow2`, and `guestkit anomaly vm.qcow2` correlate indicators and surface suspicious persistence.
+- **Threat hunting & IOC** — guestkit intelligence, hunt, and anomaly correlate indicators, detect anomalies, and surface suspicious persistence offline. — _Forensic triage on a dead disk, safely._
+  - **How:** CLI: `guestkit intelligence vm.qcow2`, `guestkit hunt vm.qcow2`, and `guestkit anomaly vm.qcow2` correlate indicators and surface suspicious persistence.
 - **Forensic timeline & reconstruction** — guestkit timeline and reconstruct build an incident timeline from multiple on-disk sources and visualize the attack path. — _Rebuild what happened without booting the evidence._
   - **How:** CLI: `guestkit timeline vm.qcow2` builds an incident timeline and `guestkit reconstruct vm.qcow2` visualizes the attack path.
 
@@ -156,10 +156,10 @@ _Audit posture, hunt for compromise, and prove compliance - all from the offline
 
 _Produce SBOMs, license reports, and shareable documents from any image._
 
-- **SBOM generation** — guestkit sbom emits a software bill of materials in SPDX or CycloneDX from the guest package set. — _Supply-chain inventory for every VM you run._
-  - **How:** CLI: `guestkit sbom vm.qcow2 --format spdx` (or `cyclonedx`) emits a software bill of materials from the guest package set.
-- **License compliance** — guestkit licenses inventories package licenses across the disk for compliance review. — _Know your license exposure before an audit asks._
-  - **How:** CLI: `guestkit licenses vm.qcow2` inventories package licenses across the disk.
+- **SBOM generation** — guestkit inventory emits a software bill of materials in SPDX or CycloneDX from the guest package set. — _Supply-chain inventory for every VM you run._
+  - **How:** CLI: `guestkit inventory vm.qcow2 --format spdx` (or `cyclonedx`) emits a software bill of materials from the guest package set.
+- **License compliance** — guestkit license inventories package licenses across the disk for compliance review. — _Know your license exposure before an audit asks._
+  - **How:** CLI: `guestkit license vm.qcow2` inventories package licenses across the disk.
 - **Self-contained HTML reports** — --export html builds an interactive, collapsible, print-friendly report with all CSS and JS embedded. — _Email a single file to any stakeholder._
   - **How:** CLI: add `--export html` to any inspect run, e.g. `guestkit inspect vm.qcow2 --export html` for a single self-contained file.
 - **Git-friendly Markdown** — --export markdown produces version-controllable inventory documents for VM-configuration history. — _Track infrastructure drift in your docs repo._
@@ -232,8 +232,8 @@ _Run inside the guest - or reach it host-mediated - even when there's no guest n
 
 _Boot-inspect stopped VMs in-cluster and drive it all from a self-hosted web console._
 
-- **Offline boot-inspect for stopped VMs** — zyvor-api resolves a stopped VM's root PVC and runs guestkit boot-inspect, returning fstab validity, bootloader, and cloud-init state. — _Assurance for halted VMs without booting them._
-  - **How:** Web console: open a stopped VM and run Boot Inspect (zyvor-api resolves the root PVC and runs `guestkit boot-inspect`); available via the `/api/` boot-inspect endpoint.
+- **Offline boot-inspect for stopped VMs** — zyvor-api resolves a stopped VM's root PVC and runs GuestKit's boot-inspect evidence collection in-process, returning fstab validity, bootloader, and cloud-init state. — _Assurance for halted VMs without booting them._
+  - **How:** Web console: open a stopped VM and run Boot Inspect (zyvor-api resolves the root PVC and calls GuestKit's `run_boot_inspect` library API directly — not a separate CLI command); available via the `/api/` boot-inspect endpoint.
 - **Zeus VM Tools** — A Kubernetes-native guest agent with cloud-init, QGA, ISO, and airgap install paths plus VMToolsPolicy auto-install/upgrade reconciliation. — _The VMware Tools equivalent for KubeVirt._
   - **How:** Apply a `VMToolsPolicy` resource (or enable it from the web console) to auto-install/upgrade the KubeVirt guest agent via cloud-init, QGA, ISO or airgap path.
 - **Web console** — Self-hosted zyvor-ui + zyvor-api + guestkit-worker ship as public GHCR images and a Helm chart, backed by a Redis job queue. — _A team-facing UI over the same engine._
@@ -293,4 +293,4 @@ _Install in one command; run the full open-source stack; scale with Enterprise s
 > **Good to know:** GuestKit runs on Linux hosts and needs host tooling (losetup, qemu-nbd, and qemu-img for conversion); mount and in-cluster boot-inspect operations require root or a privileged pod. Offline disk analysis targets stopped VMs - running VMs return VM-spec heuristics or need the live guest agent. Deep guest intelligence is Linux-first; the native Windows agent MSI is scaffolded, and Windows relies on virtio-win today. LLM-assisted features require building with --features ai; deterministic intelligence works without it. Reporting notes: --output and --export are mutually exclusive, HTML reports truncate to 100 packages, and PDF is produced via external tools.
 
 ---
-_GuestKit is developed by ZyvorAI Labs. Contact **info@zyvor.dev** · Proprietary & Confidential._
+_GuestKit is developed by ZyvorAI Labs (Apache License 2.0). Contact **info@zyvor.dev**._

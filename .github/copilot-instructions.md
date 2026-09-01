@@ -47,7 +47,7 @@ Key conventions and repository-specific patterns
 - No C dependencies: core disk parsing is implemented in pure Rust; qemu-img/qemu-nbd are optional external tools used only for conversion or advanced formats.
 - Device strategy: LoopDevice is preferred (fast path for RAW/IMG); NBD (qemu-nbd) used as fallback for QCOW2/VMDK; this strategy is implemented in Guestfs::launch().
 - Cargo features:
-  - default = ["guest-inspect"]
+  - default = ["guest-inspect", "journal-native"]
   - python-bindings (enable PyO3 / maturin)
   - ai (optional rig-core + reqwest)
   Build with features where relevant: cargo build --features python-bindings
@@ -100,10 +100,8 @@ Publishing Python wheels to PyPI (PyO3)
   - Alternative: build wheel then upload via twine: twine upload target/wheels/*
 
 GitHub Releases (binaries & artifacts)
-- CI already builds release artifacts (see build-release job). To publish binaries to GitHub Releases:
-  - Download artifacts from CI or build locally for each target.
-  - Create a release with gh: gh release create vX.Y.Z path/to/artifact -t "vX.Y.Z" -n "Notes"
-- For reproducible multi-target artifacts, rely on CI to build and upload artifacts; attach them to the release.
+- `.github/workflows/release.yml` already automates this end to end on a tag push: it builds/uploads binary artifacts per target, creates the GitHub Release via `softprops/action-gh-release@v2`, and runs `cargo publish`. Pushing an annotated tag is normally all that's needed.
+- To publish manually instead: download artifacts from CI or build locally for each target, then `gh release create vX.Y.Z path/to/artifact -t "vX.Y.Z" -n "Notes"`.
 
 Release checklist (quick)
 - Run cargo fmt && cargo clippy --all-targets --all-features -- -D warnings
@@ -114,7 +112,4 @@ Release checklist (quick)
 - For Python: maturin build, test wheel, maturin publish
 
 Automation
-- CI (build-release job) already builds and uploads artifacts; use GitHub Actions to automate tagging→release with a workflow (not present by default).
-- Add a `release` workflow if you want fully automated publish on tag (recommended to gate publishes behind trusted maintainers and secrets).
-
-If you want, expand this section into a step-by-step release script or provide templates for GitHub Actions to automate releases.
+- `.github/workflows/release.yml` is the fully automated tag→release pipeline described above — it already exists, gated to trusted maintainers via repo secrets.

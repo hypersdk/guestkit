@@ -105,8 +105,7 @@ integration/
 ├── python/
 │   └── guestkit_wrapper.py     # Legacy subprocess wrapper
 └── tests/
-    ├── test_integration.py
-    └── test_performance.py
+    └── test_integration.py
 ```
 
 ## See also

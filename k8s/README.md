@@ -274,6 +274,5 @@ sudo kubectl delete namespace guestkit-workers
 
 ## See Also
 
-- [QUICKSTART-REAL-INTEGRATION.md](../QUICKSTART-REAL-INTEGRATION.md) - Local quickstart
-- [PHASE-3-COMPLETE.md](../PHASE-3-COMPLETE.md) - Integration details
-- [COMPLETE-SYSTEM-SUMMARY.md](../COMPLETE-SYSTEM-SUMMARY.md) - Full system overview
+- [deploy/README.md](../deploy/README.md) - Local quickstart and deployment
+- [docs/architecture/overview.md](../docs/architecture/overview.md) - Full system overview
