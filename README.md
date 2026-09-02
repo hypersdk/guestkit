@@ -19,7 +19,7 @@
   <a href="#who-does-what-customers"><b>Suite path</b></a> ·
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#h2kvm-integration"><b>h2kvm</b></a> ·
-  <a href="https://github.com/zyvorai/ephemera"><b>Ephemera</b></a> ·
+  <a href="https://github.com/zyvorai/fluxvm"><b>FluxVM</b></a> ·
   <a href="https://github.com/hypersdk/guestkit/wiki"><b>Wiki</b></a> ·
   <a href="docs/ce-vs-enterprise.md"><b>Open source vs Enterprise</b></a> ·
   <a href="docs/enterprise-trial-install.md"><b>30-day Enterprise trial</b></a> ·
@@ -52,7 +52,7 @@ GuestKit reads the disk **while the guest is off**, scores first-boot probabilit
 | ****0** appliance daemons | **8** migration targets |
 | **Apache-2.0** | Used in CI, labs, and hypervisor-exit programs |
 
-**Certify with [GuestKit](https://github.com/zyvorai/guestkit) → run & manage with [Ephemera](https://github.com/zyvorai/ephemera) → convert & deploy with [h2kvm](https://github.com/zyvorai/h2kvm) → operate on [Zeus OS](https://zyvor.dev/zeus-os).**
+**Certify with [GuestKit](https://github.com/zyvorai/guestkit) → run & manage with [FluxVM](https://github.com/zyvorai/fluxvm) → convert & deploy with [h2kvm](https://github.com/zyvorai/h2kvm) → operate on [Zeus OS](https://zyvor.dev/zeus-os).**
 
 ---
 
@@ -61,11 +61,11 @@ GuestKit reads the disk **while the guest is off**, scores first-boot probabilit
 | You need… | Use |
 |-----------|-----|
 | Score / repair a disk **before** power-on | **This repo (GuestKit)** |
-| Boot the qcow2, give it a network, SSH, TTL, pause/resume | **[Ephemera](https://github.com/zyvorai/ephemera)** |
+| Boot the qcow2, give it a network, SSH, TTL, pause/resume | **[FluxVM](https://github.com/zyvorai/fluxvm)** |
 | Hypervisor → KVM convert + import | **[h2kvm](https://github.com/zyvorai/h2kvm)** |
 
 GuestKit does **not** own production networking (TAP/bridge/netns/DHCP) or disposable
-fleet lifecycle. That is Ephemera. Keep GuestKit focused on offline intelligence.
+fleet lifecycle. That is FluxVM. Keep GuestKit focused on offline intelligence.
 
 ### End-to-end: certify → run → manage
 
@@ -77,32 +77,32 @@ guestkit plan apply virtio.yaml --vm disk.qcow2 --yes   # as needed
 guestkit gate --image disk.qcow2 --fail-below 80        # CI / cutover gate
 guestkit passport emit disk.qcow2 --target kvm -o passport.json
 
-# ── 2. Run & manage (Ephemera) ─────────────────────────────────
-# Point Ephemera at the same (or repaired) qcow2 — see Ephemera README.
+# ── 2. Run & manage (FluxVM) ─────────────────────────────────
+# Point FluxVM at the same (or repaired) qcow2 — see FluxVM README.
 # Overlay keeps the base disk untouched; pick a network mode:
 #
 #   user     — lab SSH via hostfwd (simplest)
 #   tap      — join existing bridge (LAN DHCP)
 #   tap+netns— known guest IP + NAT (isolated)
 #
-#   ephemera create --spec my-vm.json
-#   ephemera get <id>          # status + guest_ip when netns
-#   ephemera exec <id> -- uptime
-#   ephemera delete <id>
+#   fluxvm create --spec my-vm.json
+#   fluxvm get <id>          # status + guest_ip when netns
+#   fluxvm exec <id> -- uptime
+#   fluxvm delete <id>
 ```
 
 Docs: [VM lifecycle / suite split](docs/features/vm-runtime.md) ·
-[Ephemera](https://github.com/zyvorai/ephemera) ·
+[FluxVM](https://github.com/zyvorai/fluxvm) ·
 [Passport handoff](docs/user-guides/handoff-quarantine.md)
 
 ### Libvirt / virsh → suite map
 
 | Old habit | Replacement |
 |-----------|-------------|
-| `virsh define` / `start` / `destroy` (host-local QEMU) | **[Ephemera](https://github.com/zyvorai/ephemera)** `create` / `get` / `delete` |
-| libvirt NAT / bridge DHCP / guest IP | Ephemera `user` / `tap`+bridge / `tap`+`netns` (`guest_ip`) |
-| `virsh qemu-agent-command` | `guestkit qga` (or `ephemera exec` with vsock agent) |
-| “Will it boot?” by `virsh start` | `guestkit doctor` / `passport` / `gate` **before** Ephemera create |
+| `virsh define` / `start` / `destroy` (host-local QEMU) | **[FluxVM](https://github.com/zyvorai/fluxvm)** `create` / `get` / `delete` |
+| libvirt NAT / bridge DHCP / guest IP | FluxVM `user` / `tap`+bridge / `tap`+`netns` (`guest_ip`) |
+| `virsh qemu-agent-command` | `guestkit qga` (or `fluxvm exec` with vsock agent) |
+| “Will it boot?” by `virsh start` | `guestkit doctor` / `passport` / `gate` **before** FluxVM create |
 | KubeVirt / OpenShift domains | `virtctl` / Machina (unchanged) |
 
 Full map: [virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md).
@@ -392,7 +392,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 | **Agent / QGA** | Linux + Windows · `agent-inject` / `agent-proxy` / **`guestkit qga`** ([virsh-to-guestkit.md](docs/user-guides/virsh-to-guestkit.md)) |
 | **Python** | [hypersdk-guestkit](https://pypi.org/project/hypersdk-guestkit/) — `run_doctor`, `run_migrate_repair` (v1.1.0+) |
 | **h2kvm** | [hyper2kvm-integration.md](docs/features/hyper2kvm-integration.md) — convert/deploy partner |
-| **Ephemera** | [zyvorai/ephemera](https://github.com/zyvorai/ephemera) — run/manage certified qcow2s (network, TTL) |
+| **FluxVM** | [zyvorai/fluxvm](https://github.com/zyvorai/fluxvm) — run/manage certified qcow2s (network, TTL) |
 | **K8s** | KubeVirt hooks · `k8s/` |
 | **Web / worker** | GHCR images · `deploy/` |
 

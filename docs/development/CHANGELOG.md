@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Suite positioning** — GuestKit certifies/repairs disks; **Ephemera** runs and
+- **Suite positioning** — GuestKit certifies/repairs disks; **FluxVM** runs and
   manages VMs (network, cloud-init, TTL) and is the host-local **libvirt/virsh
   replacement**. `guestkit vm` stays a minimal lab/CI smoke path. Docs:
   [vm-runtime.md](../features/vm-runtime.md),

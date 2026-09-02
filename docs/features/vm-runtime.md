@@ -11,11 +11,11 @@ There is no libvirt XML and no virsh dependency on this path.
 | Product | Owns |
 |---------|------|
 | **GuestKit** | Certify + repair the disk: doctor, passport, gate, offline plans (SELinux, cloud-init, virtio, sysprep, …) |
-| **[Ephemera](https://github.com/zyvorai/ephemera)** | Run + manage the VM: QEMU/CH/Firecracker, TAP/netns/DHCP, cloud-init seed, TTL, pause/resume, fleets/CRD |
+| **[FluxVM](https://github.com/zyvorai/fluxvm)** | Run + manage the VM: QEMU/CH/Firecracker, TAP/netns/DHCP, cloud-init seed, TTL, pause/resume, fleets/CRD |
 
 **Do not** grow GuestKit into a second disposable-compute plane. Host networking
 (create TAP/bridge, netns+dnsmasq, known guest IP) and production lifecycle
-belong in Ephemera. GuestKit may keep minimal `guestkit vm` / `guestkit-qemu`
+belong in FluxVM. GuestKit may keep minimal `guestkit vm` / `guestkit-qemu`
 for convert-and-boot smoke tests with **user-mode** (or a pre-created TAP).
 
 Recommended pipeline:
@@ -24,12 +24,12 @@ Recommended pipeline:
 guestkit doctor / plan apply / passport emit
         │
         ▼  (passport verify passes)
-ephemera create --spec …   # qcow2 + network + cloud-init + TTL
+fluxvm create --spec …   # qcow2 + network + cloud-init + TTL
 ```
 
 KubeVirt / OpenShift domain objects still stay with `virtctl` / Machina.
 Use `guestkit vm` only when you need a host-local QEMU smoke boot without
-Ephemera installed.
+FluxVM installed.
 
 ## Commands
 
@@ -57,7 +57,7 @@ guestkit vm undefine demo
 (or when blockers are present). Pass `--force` to override.
 
 For customer cutover, prefer raising the score with offline plans and emitting
-a passport — then hand off to Ephemera — instead of relying on `--force`.
+a passport — then hand off to FluxVM — instead of relying on `--force`.
 
 ## Networking (intentionally minimal)
 
@@ -66,7 +66,7 @@ Default is QEMU **user-mode** networking. Optional `--ssh-port` forwards
 **pre-created** host TAP.
 
 GuestKit does **not** create bridges, TAP devices, netns, or DHCP servers.
-For LAN DHCP, known guest IPs, macvtap, or netns isolation, use **Ephemera**
+For LAN DHCP, known guest IPs, macvtap, or netns isolation, use **FluxVM**
 (`network.mode: tap|user|macvtap`, optional `netns: true`).
 
 ## UEFI
@@ -79,22 +79,22 @@ guestkit vm define uefi-demo disk.qcow2 \
   --uefi-vars /var/lib/guestkit/vms/uefi-demo_VARS.fd
 ```
 
-## Relation to `guestkit-qemu` and Ephemera
+## Relation to `guestkit-qemu` and FluxVM
 
 | Tool | Role |
 |------|------|
 | `guestkit doctor` / `passport` / `plan` | Certify and repair |
 | `guestkit-qemu plan\|run` | One-shot assurance → QEMU argv (lab) |
 | `guestkit vm` | Named lab definitions + QMP lifecycle |
-| **Ephemera** | Production/disposable run: overlay, network, cloud-init, TTL |
+| **FluxVM** | Production/disposable run: overlay, network, cloud-init, TTL |
 
-Prefer Ephemera for any customer-facing “boot and manage this qcow2” (libvirt
+Prefer FluxVM for any customer-facing “boot and manage this qcow2” (libvirt
 replacement: create/list/get/delete + network/IP). Prefer `guestkit vm` /
-`guestkit-qemu` only for assurance smoke without the Ephemera daemon.
+`guestkit-qemu` only for assurance smoke without the FluxVM daemon.
 
 ## See also
 
 - [QEMU / VirtIO runtime](qemu-runtime.md)
 - [Dump virsh](../user-guides/virsh-to-guestkit.md)
 - [Handoff / quarantine](../user-guides/handoff-quarantine.md)
-- [Ephemera](https://github.com/zyvorai/ephemera) — create/run/network/TTL
+- [FluxVM](https://github.com/zyvorai/fluxvm) — create/run/network/TTL
