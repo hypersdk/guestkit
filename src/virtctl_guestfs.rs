@@ -237,9 +237,8 @@ fn container_command(req: &GuestfsRequest) -> String {
             "set -e; if [ -e /dev/vda ]; then DISK=/dev/vda; elif [ -d /disk ]; then DISK=$(find /disk -maxdepth 2 -type f \\( -name '*.qcow2' -o -name '*.raw' -o -name '*.img' \\) 2>/dev/null | head -1); [ -n \"$DISK\" ] || DISK=/disk; fi; echo disk=$DISK; exec guestkit rescue \"$DISK\" {extras}"
         ),
     };
-    serde_json::to_string(&vec!["sh", "-c", &script]).unwrap_or_else(|_| {
-        "[\"sh\",\"-c\",\"exec sh\"]".into()
-    })
+    serde_json::to_string(&vec!["sh", "-c", &script])
+        .unwrap_or_else(|_| "[\"sh\",\"-c\",\"exec sh\"]".into())
 }
 
 /// Cluster entry: resolve PVC, build pod, attach or stream logs, delete.
@@ -305,7 +304,15 @@ fn wait_and_enter(kubectl: &str, req: &GuestfsRequest, name: &str) -> Result<()>
         }
         _ => {
             let status = Command::new(kubectl)
-                .args(["-n", &req.namespace, "logs", "-f", name, "-c", CONTAINER_NAME])
+                .args([
+                    "-n",
+                    &req.namespace,
+                    "logs",
+                    "-f",
+                    name,
+                    "-c",
+                    CONTAINER_NAME,
+                ])
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .status()
@@ -340,7 +347,15 @@ fn kubectl_apply(kubectl: &str, namespace: &str, yaml: &str) -> Result<()> {
 
 fn kubectl_delete(kubectl: &str, namespace: &str, name: &str) -> Result<()> {
     let _ = Command::new(kubectl)
-        .args(["-n", namespace, "delete", "pod", name, "--wait=false", "--ignore-not-found=true"])
+        .args([
+            "-n",
+            namespace,
+            "delete",
+            "pod",
+            name,
+            "--wait=false",
+            "--ignore-not-found=true",
+        ])
         .status();
     Ok(())
 }
@@ -367,7 +382,13 @@ pub fn resolve_namespace(explicit: Option<&str>, kubectl: &str) -> String {
         }
     }
     if let Ok(out) = Command::new(kubectl)
-        .args(["config", "view", "--minify", "--output", "jsonpath={..namespace}"])
+        .args([
+            "config",
+            "view",
+            "--minify",
+            "--output",
+            "jsonpath={..namespace}",
+        ])
         .output()
     {
         if out.status.success() {

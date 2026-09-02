@@ -2280,7 +2280,9 @@ enum PolicyAction {
 
 #[derive(Subcommand)]
 enum BitlockerAction {
-    Status { image: PathBuf },
+    Status {
+        image: PathBuf,
+    },
     Escrow {
         image: PathBuf,
         #[arg(long)]

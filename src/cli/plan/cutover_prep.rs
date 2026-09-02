@@ -250,13 +250,11 @@ mod tests {
     fn sysprep_plan_arms_flag_when_requested() {
         let p = windows_sysprep_plan("win.qcow2", Some("WEB01"), true);
         assert!(p.operations.iter().any(|o| o.id == "sysprep-flag"));
-        let unattend = p
-            .operations
-            .iter()
-            .find(|o| o.id == "unattend")
-            .unwrap();
+        let unattend = p.operations.iter().find(|o| o.id == "unattend").unwrap();
         match &unattend.op_type {
-            OperationType::FileWrite(fw) => assert!(fw.content.contains("<ComputerName>WEB01</ComputerName>")),
+            OperationType::FileWrite(fw) => {
+                assert!(fw.content.contains("<ComputerName>WEB01</ComputerName>"))
+            }
             _ => panic!("expected file write"),
         }
     }

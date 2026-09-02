@@ -2,6 +2,8 @@
 //! CLI module for guestkit
 
 #[cfg(not(target_os = "windows"))]
+pub mod agent_sign;
+#[cfg(not(target_os = "windows"))]
 pub mod ai;
 #[cfg(not(target_os = "windows"))]
 pub mod batch;
@@ -17,10 +19,6 @@ pub mod commands_list;
 pub mod cost;
 #[cfg(not(target_os = "windows"))]
 pub mod cutover_cmd;
-#[cfg(not(target_os = "windows"))]
-pub mod gate;
-#[cfg(not(target_os = "windows"))]
-pub mod agent_sign;
 #[cfg(not(target_os = "windows"))]
 pub mod dependencies;
 #[cfg(not(target_os = "windows"))]
@@ -39,6 +37,8 @@ pub mod firstboot;
 pub mod forensic_diff;
 #[cfg(not(target_os = "windows"))]
 pub mod formatters;
+#[cfg(not(target_os = "windows"))]
+pub mod gate;
 #[cfg(not(target_os = "windows"))]
 pub mod img;
 #[cfg(not(target_os = "windows"))]

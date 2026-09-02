@@ -19,8 +19,7 @@ pub fn virtio_initramfs_plan(vm: &str, dracut: bool) -> FixPlan {
             id: "dracut-virtio".into(),
             op_type: OperationType::FileWrite(FileWrite {
                 path: "/etc/dracut.conf.d/99-guestkit-virtio.conf".into(),
-                content: "add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\n"
-                    .into(),
+                content: "add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\n".into(),
                 mode: Some("0644".into()),
             }),
             priority: Priority::High,

@@ -410,7 +410,11 @@ impl Guestfs {
             match self.prepare_mount(mountable, mountpoint) {
                 Ok(v) => v,
                 Err(e) if e.to_string().contains("already_mounted") => {
-                    return if requests_ro { Ok(()) } else { self.remount_rw(mountable) };
+                    return if requests_ro {
+                        Ok(())
+                    } else {
+                        self.remount_rw(mountable)
+                    };
                 }
                 Err(e) => return Err(e),
             };
@@ -511,7 +515,11 @@ impl Guestfs {
             match self.prepare_mount(mountable, mountpoint) {
                 Ok(v) => v,
                 Err(e) if e.to_string().contains("already_mounted") => {
-                    return if requests_ro { Ok(()) } else { self.remount_rw(mountable) };
+                    return if requests_ro {
+                        Ok(())
+                    } else {
+                        self.remount_rw(mountable)
+                    };
                 }
                 Err(e) => return Err(e),
             };

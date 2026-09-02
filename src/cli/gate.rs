@@ -59,12 +59,14 @@ pub fn run(args: GateArgs) -> Result<GateReport> {
     }
 
     if let Some(pp) = &passport_path {
-        let raw = std::fs::read_to_string(pp)
-            .with_context(|| format!("read {}", pp.display()))?;
+        let raw = std::fs::read_to_string(pp).with_context(|| format!("read {}", pp.display()))?;
         let v: serde_json::Value = serde_json::from_str(&raw).context("parse passport")?;
         boot = v.pointer("/scores/boot").and_then(|x| x.as_f64());
         migration = v.pointer("/scores/migration").and_then(|x| x.as_f64());
-        hard_blocked = v.get("hard_blocked").and_then(|x| x.as_bool()).unwrap_or(false);
+        hard_blocked = v
+            .get("hard_blocked")
+            .and_then(|x| x.as_bool())
+            .unwrap_or(false);
         bitlocker_blocker = v
             .pointer("/windows/bitlocker_blocker")
             .and_then(|x| x.as_bool())
@@ -135,10 +137,7 @@ pub fn print(r: &GateReport) {
 fn writable_gate_passport_path(image: &std::path::Path) -> Result<PathBuf> {
     let sibling = image.with_extension("gate-passport.json");
     if let Some(parent) = sibling.parent() {
-        let probe = parent.join(format!(
-            ".guestkit-gate-write-probe-{}",
-            std::process::id()
-        ));
+        let probe = parent.join(format!(".guestkit-gate-write-probe-{}", std::process::id()));
         match std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -153,10 +152,7 @@ fn writable_gate_passport_path(image: &std::path::Path) -> Result<PathBuf> {
             }
         }
     }
-    let stem = image
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("disk");
+    let stem = image.file_stem().and_then(|s| s.to_str()).unwrap_or("disk");
     let mut tmp = std::env::temp_dir();
     tmp.push(format!(
         "guestkit-gate-{}-{}.passport.json",

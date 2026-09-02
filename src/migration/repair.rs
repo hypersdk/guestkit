@@ -123,7 +123,9 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
                         "Persist virtio modules in dracut configuration",
                         OperationType::FileWrite(FileWrite {
                             path: "/etc/dracut.conf.d/99-guestkit-virtio.conf".into(),
-                            content: "add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\n".into(),
+                            content:
+                                "add_drivers+=\" virtio_blk virtio_scsi virtio_net virtio_pci \"\n"
+                                    .into(),
                             mode: Some("0644".into()),
                         }),
                         Priority::Medium,
@@ -185,7 +187,8 @@ fn linux_ops(hint: &Hint, ev: &EvidenceSnapshot, notes: &mut Vec<String>) -> Vec
                         false,
                         None,
                         Some(ValidationCheck {
-                            command: "lsinitramfs /boot/initrd.img-$(uname -r) | grep -q virtio".into(),
+                            command: "lsinitramfs /boot/initrd.img-$(uname -r) | grep -q virtio"
+                                .into(),
                             expected_exit: 0,
                             expected_output: None,
                         }),

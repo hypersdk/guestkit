@@ -61,10 +61,7 @@ pub fn bitlocker_status(image: &Path, verbose: bool) -> Result<()> {
                         println!("any_protected: {}", st.any_protected);
                         println!("offline_uncertain: {}", st.offline_uncertain);
                         for v in st.volumes {
-                            println!(
-                                "  volume {} protection={}",
-                                v.mount_point, v.protection
-                            );
+                            println!("  volume {} protection={}", v.mount_point, v.protection);
                         }
                     } else {
                         println!("no BitLockerState on evidence");

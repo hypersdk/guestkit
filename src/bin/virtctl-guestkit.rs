@@ -253,7 +253,11 @@ fn run_cli() -> Result<()> {
                 extra,
             )
         }
-        PluginCmd::Resolve { vm, namespace, json } => {
+        PluginCmd::Resolve {
+            vm,
+            namespace,
+            json,
+        } => {
             let info = inspect_vm(&kubectl, &vm, namespace.as_deref())?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&info)?);
@@ -458,9 +462,8 @@ fn resolve_image(
 
 fn inspect_vm(kubectl: &str, name: &str, namespace: Option<&str>) -> Result<VmDisks> {
     let ns = namespace.unwrap_or("default");
-    let v = kubectl_json(kubectl, &["get", "vm", name, "-n", ns, "-o", "json"]).or_else(|_| {
-        kubectl_json(kubectl, &["get", "vmi", name, "-n", ns, "-o", "json"])
-    })?;
+    let v = kubectl_json(kubectl, &["get", "vm", name, "-n", ns, "-o", "json"])
+        .or_else(|_| kubectl_json(kubectl, &["get", "vmi", name, "-n", ns, "-o", "json"]))?;
     let kind = v
         .get("kind")
         .and_then(|k| k.as_str())
