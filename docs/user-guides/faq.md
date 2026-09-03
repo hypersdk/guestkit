@@ -198,7 +198,6 @@ Output includes:
 - Installed applications
 - Users
 
-See [Windows Support Guide](windows-support.md) for details.
 
 ### How do I extract files from a VM?
 
@@ -389,7 +388,6 @@ sudo guestkit interactive windows.qcow2
 virt-win-reg windows.qcow2 --merge custom.reg
 ```
 
-See [Windows Support Guide](windows-support.md) for details.
 
 ### How do I reset a Windows local password offline?
 
@@ -421,7 +419,6 @@ virt-win-reg windows.qcow2 --merge virtio.reg
 - Attach virtio-win.iso to VM
 - Install drivers from Device Manager
 
-See [Windows Support - VirtIO Drivers](windows-support.md#virtio-driver-injection).
 
 ## Performance Questions
 
@@ -514,8 +511,6 @@ See [Python Bindings Guide](python-bindings.md).
 - Windows registry (15+ functions)
 - And many more...
 
-See [API Reference](../api/rust-reference.md) for complete list.
-
 ### How do I contribute to guestkit?
 
 ```bash
@@ -537,7 +532,7 @@ cargo clippy
 gh pr create --title "Add: My enhancement"
 ```
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](../development/CONTRIBUTING.md) for guidelines.
 
 ## Troubleshooting Questions
 
@@ -751,8 +746,6 @@ gh pr create --title "Docs: Improve my-guide"
 - [Getting Started](getting-started.md) - Quick start guide
 - [CLI Guide](cli-guide.md) - Command reference
 - [VM Migration Guide](vm-migration.md) - Migration workflows
-- [Windows Support](windows-support.md) - Windows-specific features
-- [Best Practices](best-practices.md) - Expert recommendations
 - [Troubleshooting](troubleshooting.md) - Problem resolution
 - [GitHub Repository](https://github.com/zyvorai/guestkit)
 - [Issue Tracker](https://github.com/zyvorai/guestkit/issues)

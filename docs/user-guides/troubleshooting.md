@@ -626,9 +626,8 @@ Gather this information:
 2. **GitHub Discussions:** For questions and troubleshooting
 
 3. **Documentation:**
-   - [API Reference](../API_REFERENCE.md)
-   - [Contributing Guide](../CONTRIBUTING.md)
-   - [Examples](../examples/)
+   - [Contributing Guide](../development/CONTRIBUTING.md)
+   - [Examples](../../examples/)
 
 ### Reporting Bugs
 
@@ -700,15 +699,8 @@ for disk in disks.chunks(10) {
 
 ---
 
-## Performance Optimization Tips
-
-See [PERFORMANCE.md](PERFORMANCE.md) for detailed performance tuning guide.
-
----
-
 ## Additional Resources
 
-- [Architecture Documentation](ARCHITECTURE.md)
-- [Security Policy](../SECURITY.md)
-- [Roadmap](../ROADMAP.md)
+- [Security Policy](../../SECURITY.md)
+- [Roadmap](../development/roadmap.md)
 - [Changelog](../development/CHANGELOG.md)

@@ -555,6 +555,5 @@ echo "Baselines saved to $BASELINE_DIR/"
 
 ## See Also
 
-- [CLI Guide](CLI_GUIDE.md) - Complete CLI reference
-- [Export Guide](EXPORT_GUIDE.md) - Report generation and export
-- [Comparison Guide](COMPARISON_GUIDE.md) - VM comparison and diff tools
+- [CLI Guide](cli-guide.md) - Complete CLI reference
+- [Export formats](../features/export-formats.md) - Report generation and export

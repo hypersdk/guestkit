@@ -288,6 +288,26 @@ guestkit rescue win.qcow2 -o reset-password --user Administrator --password '…
 guestkit plan apply plan.yaml --vm disk.qcow2 --yes     # backups + rollback
 ```
 
+### Local VM lifecycle, disk tools, and cutover
+
+```bash
+guestkit vm define demo disk.qcow2 --memory-mb 4096 --vcpus 2
+guestkit vm start demo && guestkit vm status demo
+guestkit img check disk.qcow2 --repair
+guestkit domain-disks /etc/libvirt/qemu/web01.xml
+guestkit firstboot win.qcow2 --hostname web01 --run 'echo hi'
+guestkit gate --image disk.qcow2 --fail-below 80 --rego policies/cutover.rego
+guestkit sbom-diff before.spdx.json after.spdx.json --fail-on-drift
+virtctl-guestkit guestfs -n ns pvc
+```
+
+- **`guestkit vm`** — local QEMU lifecycle (define/start/pause/resume/destroy) for a lab or single box; production run/network/TTL is FluxVM's job — [features/vm-runtime.md](docs/features/vm-runtime.md)
+- **`guestkit img` / `domain-disks` / `firstboot`** — qemu-img wrapper, libvirt/YAML domain disk parsing, virtio-win plan, first-boot gate — [user-guides/img-firstboot.md](docs/user-guides/img-firstboot.md)
+- **Cutover bundle** — `gate` + SELinux/sysprep/BitLocker prep + cloud cutover profiles/Rego policy checks — [user-guides/cutover-bundle.md](docs/user-guides/cutover-bundle.md), [user-guides/cutover-prep.md](docs/user-guides/cutover-prep.md)
+- **Passport handoff / fleet quarantine** — hand a passport to an h2kvmctl job, quarantine a fleet — [user-guides/handoff-quarantine.md](docs/user-guides/handoff-quarantine.md)
+- **Rescue dry-run Action + `sbom-diff`** — forensic-diff SBOM attach, CI extras — [devops/10-rescue-sbom-ci.md](docs/devops/10-rescue-sbom-ci.md)
+- **`virtctl-guestkit guestfs`** — drop-in for `virtctl guestfs` on a PVC, backed by GuestKit not libguestfs — [features/virtctl-guestkit.md](docs/features/virtctl-guestkit.md)
+
 ### Live control · platform · AI
 
 - **In-guest agent** (Linux + Windows) over virtio-serial / QGA — inject offline, then `agent-proxy` / `agent-call`
