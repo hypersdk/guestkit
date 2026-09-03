@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-03
+
+### Security
+- Patched RUSTSEC-2026-0176/0177 (pyo3 0.27.2 -> 0.29.2: out-of-bounds read in `PyList`/`PyTuple` iterators, missing `Sync` bound on `PyCFunction::new_closure` closures) and RUSTSEC-2026-0258 (h2 0.4.14 -> 0.4.16: unbounded empty DATA frames). `cargo audit` now reports zero vulnerabilities.
+- Verified the pyo3 bump beyond `cargo check`: a real `maturin build --release --features python-bindings` produced a working wheel, installed cleanly into a fresh venv, and `import guestkit` reports the right version -- no breaking API changes hit this crate's bindings code between 0.27 and 0.29.
+
 ## [1.2.0] - 2026-09-03
 
 ### Added
