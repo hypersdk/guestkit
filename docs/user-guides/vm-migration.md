@@ -695,6 +695,6 @@ pub fn has_luks(&mut self, root: &str) -> Result<bool>
 ## Support
 
 For migration issues:
-- GitHub Issues: https://github.com/hypersdk/guestkit/issues
+- GitHub Issues: https://github.com/zyvorai/guestkit/issues
 - Tag with: `migration`, `hyper-v`, `vmware`, etc.
 - Include: OS type, source platform, target platform, error messages

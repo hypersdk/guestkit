@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml"><img src="https://github.com/hypersdk/guestkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/zyvorai/guestkit/actions/workflows/ci.yml"><img src="https://github.com/zyvorai/guestkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://crates.io/crates/guestkit"><img src="https://img.shields.io/crates/v/guestkit.svg" alt="crates.io"></a>
   <a href="https://pypi.org/project/hypersdk-guestkit/"><img src="https://img.shields.io/pypi/v/hypersdk-guestkit.svg" alt="PyPI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache-2.0"></a>
@@ -20,7 +20,7 @@
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#h2kvm-integration"><b>h2kvm</b></a> ·
   <a href="https://github.com/zyvorai/fluxvm"><b>FluxVM</b></a> ·
-  <a href="https://github.com/hypersdk/guestkit/wiki"><b>Wiki</b></a> ·
+  <a href="https://github.com/zyvorai/guestkit/wiki"><b>Wiki</b></a> ·
   <a href="docs/ce-vs-enterprise.md"><b>Open source vs Enterprise</b></a> ·
   <a href="docs/enterprise-trial-install.md"><b>30-day Enterprise trial</b></a> ·
   <a href="https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo"><b>Book a demo</b></a>
@@ -187,7 +187,7 @@ guestkit shrink disk.qcow2 --min-ratio 3 --headroom-pct 20
 **CI gate** — same score, no CLI install step:
 
 ```yaml
-- uses: hypersdk/guestkit@v1
+- uses: zyvorai/guestkit@v1
   with:
     disk: vm.qcow2
     target: kvm
@@ -362,7 +362,7 @@ open http://localhost:8088
 
 Try the control plane before you buy — same packaging pattern as Veyron:
 
-1. Download the **trial** asset from [GitHub Releases](https://github.com/hypersdk/guestkit/releases?q=enterprise-trial) (`guestkit-enterprise-*-trial-linux-amd64.tar.gz`)
+1. Download the **trial** asset from [GitHub Releases](https://github.com/zyvorai/guestkit/releases?q=enterprise-trial) (`guestkit-enterprise-*-trial-linux-amd64.tar.gz`)
 2. Verify the `.sha256`, extract, run `./install.sh`
 3. Keep bundled `trial.token` next to the install — after 30 days email **sales@zyvor.dev**
 
@@ -402,7 +402,7 @@ Try the control plane before you buy — same packaging pattern as Veyron:
 
 | Goal | Document |
 |------|----------|
-| Operator wiki | [hypersdk/guestkit/wiki](https://github.com/hypersdk/guestkit/wiki) |
+| Operator wiki | [zyvorai/guestkit/wiki](https://github.com/zyvorai/guestkit/wiki) |
 | Docs home | [docs/README.md](docs/README.md) · [INDEX](docs/INDEX.md) |
 | **DevOps runbooks** | [docs/devops](docs/devops/README.md) |
 | Feature guide | [guestkit-customer-feature-guide.md](docs/guestkit-customer-feature-guide.md) |

@@ -5,7 +5,7 @@ Try the **commercial control plane** (Command Center, Migration Factory, Passpor
 This is **not** the Apache-2.0 offline CLI in this repo (`cargo install guestkit` stays free forever).  
 The evaluation package is a self-contained compiled binary attached to this repository — no source, no Node.js required.
 
-**Download:** [Latest Enterprise trial release](https://github.com/hypersdk/guestkit/releases?q=enterprise-trial) · tag `v*-enterprise-trial`
+**Download:** [Latest Enterprise trial release](https://github.com/zyvorai/guestkit/releases?q=enterprise-trial) · tag `v*-enterprise-trial`
 
 ---
 
@@ -28,8 +28,8 @@ TAG=v1.0.0-enterprise-trial
 VER=1.0.0
 ARCHIVE=guestkit-enterprise-${VER}-trial-linux-amd64.tar.gz
 
-curl -LO "https://github.com/hypersdk/guestkit/releases/download/${TAG}/${ARCHIVE}"
-curl -LO "https://github.com/hypersdk/guestkit/releases/download/${TAG}/${ARCHIVE}.sha256"
+curl -LO "https://github.com/zyvorai/guestkit/releases/download/${TAG}/${ARCHIVE}"
+curl -LO "https://github.com/zyvorai/guestkit/releases/download/${TAG}/${ARCHIVE}.sha256"
 sha256sum -c "${ARCHIVE}.sha256"
 
 tar xzf "${ARCHIVE}"
@@ -78,7 +78,7 @@ Console: `cd console && python3 -m http.server 8081` → http://HOST:8081
 - **How long?** 30 days from token issue — expiry is inside the signed JWT, not a local clock.
 - **What happens after 30 days?** The API refuses to start and points you to **sales@zyvor.dev**.
 - **Extension / full license?** Email **sales@zyvor.dev** — fastest path either way.
-- **Open-source doctor?** Unaffected — keep using [this repo](https://github.com/hypersdk/guestkit) under Apache-2.0.
+- **Open-source doctor?** Unaffected — keep using [this repo](https://github.com/zyvorai/guestkit) under Apache-2.0.
 
 ---
 

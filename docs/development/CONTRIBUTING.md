@@ -28,7 +28,7 @@ This project follows the Rust Code of Conduct. Please be respectful and construc
    ```
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/hypersdk/guestkit.git
+   git remote add upstream https://github.com/zyvorai/guestkit.git
    ```
 
 ## Development Setup

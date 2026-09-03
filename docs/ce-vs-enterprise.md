@@ -5,7 +5,7 @@
 
 Product: [zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_medium=guestkit) · [Book a demo](https://zyvor.dev/contact?utm_source=github&utm_medium=guestkit&intent=demo) · [sales@zyvor.dev](mailto:sales@zyvor.dev)
 
-**30-day Enterprise trial (binary):** [v1.0.0-enterprise-trial](https://github.com/hypersdk/guestkit/releases/tag/v1.0.0-enterprise-trial) · [install guide](enterprise-trial-install.md)
+**30-day Enterprise trial (binary):** [v1.0.0-enterprise-trial](https://github.com/zyvorai/guestkit/releases/tag/v1.0.0-enterprise-trial) · [install guide](enterprise-trial-install.md)
 
 ---
 
@@ -27,7 +27,7 @@ Product: [zyvor.dev/guestkit](https://zyvor.dev/guestkit?utm_source=github&utm_m
 | --- | --- | --- |
 | `doctor` / `migrate-plan` / repair / harden | ✅ CLI · TUI · Python · zyvor-ui | ✅ Same engine via workers / adapter |
 | Disk formats · boot score 0–100 | ✅ | ✅ Surfaced in Command Center & Image Vault |
-| Passport emit (CLI / `hypersdk/guestkit@v1`) | ✅ | ✅ Keep using + in-product Authority |
+| Passport emit (CLI / `zyvorai/guestkit@v1`) | ✅ | ✅ Keep using + in-product Authority |
 | Fleet / policy-as-code | ✅ | ✅ + control-plane waves & Policies UI |
 | In-guest agent (Linux + Windows) | ✅ | ✅ Online agent doctor / repair in Vault |
 

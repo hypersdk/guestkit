@@ -41,7 +41,7 @@ Phases 0–4 of the optional AI layer are complete — richer systemd/Windows ev
 
 ## In progress / next
 
-The previously tracked Unreleased slices (Passport signing, day-0/rescue, GCF telemetry, Helm, Windows depth, fleet parallel, cloud pulls, AES SAM, PackageInstall fetch, GRUB repair) are **shipped in Unreleased**. Next work is issue-driven — pick from [GitHub Issues](https://github.com/hypersdk/guestkit/issues) or propose a small PR.
+The previously tracked Unreleased slices (Passport signing, day-0/rescue, GCF telemetry, Helm, Windows depth, fleet parallel, cloud pulls, AES SAM, PackageInstall fetch, GRUB repair) are **shipped in Unreleased**. Next work is issue-driven — pick from [GitHub Issues](https://github.com/zyvorai/guestkit/issues) or propose a small PR.
 
 ## Parked (later)
 
@@ -54,7 +54,7 @@ None currently.
 
 ## How to contribute
 
-Pick an item from [GitHub Issues](https://github.com/hypersdk/guestkit/issues) or propose a small PR with tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Pick an item from [GitHub Issues](https://github.com/zyvorai/guestkit/issues) or propose a small PR with tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Docs
 

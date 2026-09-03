@@ -134,7 +134,7 @@ Full integration guide: [hyper2kvm-integration.md](../features/hyper2kvm-integra
 ## Build from Source
 
 ```bash
-git clone https://github.com/hypersdk/guestkit
+git clone https://github.com/zyvorai/guestkit
 cd guestkit
 pip install maturin
 

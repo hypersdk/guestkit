@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-03
+
 ### Added
+- **GuestKit-assured QEMU/VirtIO runtime and `guestkit-qemu` CLI**, replacing `virsh qemu-agent-command` with direct QGA socket access.
+- **`guestkit vm`** — local QEMU lifecycle management without libvirt.
+- **`virtctl-guestkit guestfs`** — a drop-in for `virtctl guestfs`.
+- **Cutover bundle**: gate, SELinux/sysprep/BitLocker handling, virtio-initramfs, agent-sign.
+- **Cloud cutover profiles**, Rego policy checks, and an offline cloud-init datasource.
+- **Passport handoff, fleet quarantine**, and the `virtctl-guestkit` plugin.
+- **`guestkit img`, domain-disks, virtio-win, and firstboot** commands.
+- `sbom-diff`, rescue dry-run Action, and Passport Action extras.
 - **`guestkit shrink <image>`** -- shrinks an oversized-but-mostly-empty guest disk's declared virtual size to match its real data footprint, so it stops looking far bigger than it actually is to downstream tools. Motivated by a real KubeVirt/CDI import failure: a VMware "growable" VMDK declared at 500GB virtual holding 6GB of actual data uploaded successfully, then was rejected by CDI at the finish line because the cluster's storage didn't have 500GB free -- CDI requires the destination to fit the full declared virtual size regardless of real usage.
   - `--dry-run` -- report what would happen without changing anything.
   - `--min-ratio N` (default `3.0`) -- only shrink when virtual/actual size ratio is at least this much.
@@ -21,4 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **`disk_virtual_size()` / `disk_format()` returned the wrong value for VMDK and other formats with a nested `children` block in `qemu-img info --output=json`** -- both parsed the JSON by scanning raw text for the first line containing `"virtual-size"`/`"format"`, but qemu-img's JSON nests a `children[].info` object (the underlying file's own size/format) that repeats those same keys *earlier* in the text than the real top-level values. For a VMDK this silently returned the file's raw byte length (e.g. 6GB) instead of its declared virtual size (e.g. 500GB) -- caught while building the `shrink` command above, whose whole purpose is telling those two numbers apart. Both now parse the full JSON via `serde_json` and read only the top-level keys.
 - **Two simultaneous `Guestfs` handles in one process silently mounted on top of each other, discarding one filesystem's contents** (`guestfs::mount::create_mount_root`) -- the per-handle mount directory was named `guestkit-<pid>` using only the process ID, so a second handle created in the same process (needed by `shrink` for its simultaneous source + destination filesystems) computed the *identical* path; `fs::create_dir_all` on an already-existing directory succeeds silently, so the second `mount()` call mounted its filesystem directly on top of the first's, shadowing it. Caught by verifying `shrink`'s output disk's actual contents rather than trusting its "success" log line -- the very first working end-to-end run had silently produced an empty destination filesystem (`lost+found` only, all real data discarded). Fixed with a per-process atomic counter appended to the directory name; every prior caller only ever used one handle at a time, so this was previously latent.
+- `guestfs::mount()` now remounts read-write when a caller's mount hits an already-mounted device, instead of failing.
+- Gate passport writes on non-writable image directories; companion CLIs are now installed on deploy.
+- BOOT-003 false positive when `/boot` is a separate fstab partition.
+- `guestkit qga_client` build failure (missing `FileTypeExt` import for `is_socket`).
+- Stopped flagging `open-vm-tools` as a proprietary VMware remnant.
+- Patched RUSTSEC-2026-0185 (quinn-proto, remote memory exhaustion via unbounded out-of-order stream reassembly) and cleared rustfmt drift that was blocking CI.
+- Various stale CLI names, dead links, and a license contradiction in the docs.
+
+### Security
+- RUSTSEC-2026-0185 (see above).
+
+### Docs
+- Documented the split: GuestKit certifies disks, Ephemera (now FluxVM) runs and manages VMs — including pointing the suite handoff and virsh guide at FluxVM.
 

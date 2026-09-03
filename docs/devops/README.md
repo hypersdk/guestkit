@@ -4,7 +4,7 @@ Operational docs for platform / migration / SRE teams who gate cutovers with **G
 
 | Runbook | When you need it |
 |---------|------------------|
-| [01 — Passport CI gate](01-passport-ci-gate.md) | Fail convert if score &lt; floor — GitHub Actions: [`hypersdk/guestkit` action](01-passport-ci-gate.md#1-github-actions--hypersdkguestkit-composite-action) |
+| [01 — Passport CI gate](01-passport-ci-gate.md) | Fail convert if score &lt; floor — GitHub Actions: [`zyvorai/guestkit` action](01-passport-ci-gate.md#1-github-actions--zyvoraiguestkit-composite-action) |
 | [02 — Offline repair worker](02-offline-repair-worker.md) | Jump box / GHCR worker, root, NBD |
 | [03 — Air-gap packages & VirtIO](03-airgap-packages-virtio.md) | Mirror, cache, `GUESTKIT_VIRTIO_WIN` |
 | [04 — Fleet analyze at scale](04-fleet-analyze.md) | Directory of images, snowflakes |
@@ -15,7 +15,7 @@ Operational docs for platform / migration / SRE teams who gate cutovers with **G
 | [09 — SBOM / inventory CI](09-sbom-inventory-ci.md) | SPDX/CycloneDX artifacts |
 | [10 — Rescue dry-run + SBOM diff](10-rescue-sbom-ci.md) | Action extras, `sbom-diff --fail-on-drift` |
 
-**Related:** [Wiki](https://github.com/hypersdk/guestkit/wiki) · [Migration assurance](../features/migration-assurance.md) · [DOCKER / GHCR](../guides/DOCKER.md) · Blogs: [integrate pipeline](https://zyvor.dev/blog/guestkit-integrate-migration-pipeline) · [DevOps runbooks](https://zyvor.dev/blog/guestkit-devops-runbooks)
+**Related:** [Wiki](https://github.com/zyvorai/guestkit/wiki) · [Migration assurance](../features/migration-assurance.md) · [DOCKER / GHCR](../guides/DOCKER.md) · Blogs: [integrate pipeline](https://zyvor.dev/blog/guestkit-integrate-migration-pipeline) · [DevOps runbooks](https://zyvor.dev/blog/guestkit-devops-runbooks)
 
 ## Operating model
 

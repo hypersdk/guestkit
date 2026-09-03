@@ -72,4 +72,4 @@ Contact **sales@zyvor.dev** or [zyvor.dev/contact](https://zyvor.dev/contact?int
 
 **Start here:** [zyvor.dev/guestkit](https://zyvor.dev/guestkit) · compare editions: [ce-vs-enterprise.md](ce-vs-enterprise.md)
 
-Community bugs and contributions stay on [GitHub Issues](https://github.com/hypersdk/guestkit/issues).
+Community bugs and contributions stay on [GitHub Issues](https://github.com/zyvorai/guestkit/issues).

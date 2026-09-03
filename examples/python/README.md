@@ -16,7 +16,7 @@ This directory contains example scripts demonstrating the GuestKit Python bindin
 **Build GuestKit with Python bindings:**
 ```bash
 # Clone and build
-git clone https://github.com/hypersdk/guestkit
+git clone https://github.com/zyvorai/guestkit
 cd guestkit
 cargo build --release --features python
 

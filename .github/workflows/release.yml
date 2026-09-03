@@ -230,7 +230,7 @@ jobs:
   update-action-major-tag:
     name: Move v1 tag (GitHub Action)
     # action.yml is versioned independently of the CLI's v0.x tags — v1 is
-    # the moving major tag downstream `uses: hypersdk/guestkit@v1` consumers
+    # the moving major tag downstream `uses: zyvorai/guestkit@v1` consumers
     # pin to (same convention as actions/checkout@v4). Skip prereleases
     # (tags containing a `-`, e.g. v0.4.0-rc1) so v1 only ever points at a
     # stable, fully-built release commit.

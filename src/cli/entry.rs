@@ -3829,7 +3829,7 @@ pub fn run() -> anyhow::Result<()> {
             println!("{} {}", invocation::name(), VERSION);
             println!("A modern VM disk inspection and manipulation toolkit");
             println!();
-            println!("Project: https://github.com/hypersdk/guestkit");
+            println!("Project: https://github.com/zyvorai/guestkit");
             println!("License: Apache-2.0");
             println!("Copyright: ZyvorAI Labs Private Limited");
         }

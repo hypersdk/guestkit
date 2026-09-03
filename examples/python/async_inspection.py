@@ -311,5 +311,5 @@ if __name__ == "__main__":
 
     print("\n✅ Example completed!")
     print("\nFor more information:")
-    print("  - Documentation: https://github.com/hypersdk/guestkit")
-    print("  - Python API: https://github.com/hypersdk/guestkit/tree/main/docs/api")
+    print("  - Documentation: https://github.com/zyvorai/guestkit")
+    print("  - Python API: https://github.com/zyvorai/guestkit/tree/main/docs/api")

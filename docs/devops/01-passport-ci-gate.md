@@ -24,7 +24,7 @@ echo $?   # must be 0
 
 ---
 
-## 1. GitHub Actions — `hypersdk/guestkit` composite Action
+## 1. GitHub Actions — `zyvorai/guestkit` composite Action
 
 The real implementation of this runbook lives at [`action.yml`](../../action.yml)
 in this repo, and is dogfooded on every change by
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: hypersdk/guestkit@v1
+      - uses: zyvorai/guestkit@v1
         id: gate
         with:
           disk: vm.qcow2

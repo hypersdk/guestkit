@@ -1,6 +1,6 @@
 name: 'GuestKit Passport Gate'
 description: 'Score a VM disk offline and fail the job if the GuestKit Cutover Passport score is below a floor.'
-author: 'hypersdk'
+author: 'zyvorai'
 
 branding:
   icon: 'shield'
@@ -88,7 +88,7 @@ runs:
           # `grep -m1` lets grep close the pipe after its first match,
           # which kills curl with "Failure writing output to destination"
           # (exit 23) under `pipefail`.
-          BODY="$(curl -fsSL https://api.github.com/repos/hypersdk/guestkit/releases/latest)"
+          BODY="$(curl -fsSL https://api.github.com/repos/zyvorai/guestkit/releases/latest)"
           VERSION="$(printf '%s' "${BODY}" | grep -m1 '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')"
         fi
         VERSION="${VERSION#v}"
@@ -104,7 +104,7 @@ runs:
         set -euo pipefail
         VERSION="${{ steps.resolve-version.outputs.version }}"
         ASSET="guestkit-${VERSION}-linux-amd64.tar.gz"
-        BASE_URL="https://github.com/hypersdk/guestkit/releases/download/v${VERSION}"
+        BASE_URL="https://github.com/zyvorai/guestkit/releases/download/v${VERSION}"
         WORKDIR="${RUNNER_TEMP}/guestkit-install"
         mkdir -p "${WORKDIR}"
         cd "${WORKDIR}"
